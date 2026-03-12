@@ -1,9 +1,10 @@
 """
 src/scheduler.py
-24시간 루틴 자동 실행 + Discord 보고
+24시간 루틴 자동 실행 + Discord 보고 + 메모리 자동 저장
 """
 
 import os
+import re
 import json
 import asyncio
 from pathlib import Path
@@ -35,6 +36,7 @@ ROUTINES = [
         "schedule": {"hour": 6, "minute": 0},
         "channel": "daily-brief",
         "emoji": "📋",
+        "memory_targets": [],  # 읽기 전용 루틴
     },
     {
         "id": "signal-scan",
@@ -42,6 +44,7 @@ ROUTINES = [
         "schedule": {"hour": 12, "minute": 0},
         "channel": "signals",
         "emoji": "🔍",
+        "memory_targets": ["signals.jsonl"],
     },
     {
         "id": "experiment-check",
@@ -49,6 +52,7 @@ ROUTINES = [
         "schedule": {"hour": 16, "minute": 0},
         "channel": "experiments",
         "emoji": "🧪",
+        "memory_targets": ["experiments.jsonl"],
     },
     {
         "id": "daily-log",
@@ -56,6 +60,7 @@ ROUTINES = [
         "schedule": {"hour": 22, "minute": 0},
         "channel": "daily-brief",
         "emoji": "📝",
+        "memory_targets": ["decisions.jsonl"],
     },
     {
         "id": "weekly-review",
@@ -63,6 +68,7 @@ ROUTINES = [
         "schedule": {"day_of_week": "sun", "hour": 20, "minute": 0},
         "channel": "weekly-review",
         "emoji": "📊",
+        "memory_targets": ["decisions.jsonl"],
     },
 ]
 
@@ -116,6 +122,77 @@ async def run_claude_async(prompt: str, cwd: Path) -> str:
         return f"⚠️ 오류: {e}"
 
 
+def extract_json_blocks(text: str) -> list[dict]:
+    """루틴 결과에서 JSON 블록을 추출"""
+    items = []
+    # ```json ... ``` 코드 블록에서 추출
+    for match in re.finditer(r"```json\s*\n(.*?)\n\s*```", text, re.DOTALL):
+        raw = match.group(1).strip()
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+                if isinstance(obj, dict) and not obj.get("_schema"):
+                    items.append(obj)
+            except json.JSONDecodeError:
+                pass
+    return items
+
+
+def append_to_jsonl(file_path: Path, items: list[dict]):
+    """JSONL 파일에 항목 추가 (중복 방지)"""
+    if not items:
+        return 0
+
+    existing = set()
+    if file_path.exists():
+        for line in file_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith('{"_schema'):
+                existing.add(line)
+
+    added = 0
+    with open(file_path, "a") as f:
+        for item in items:
+            # 날짜 자동 추가
+            if "date" not in item:
+                item["date"] = datetime.now().strftime("%Y-%m-%d")
+            line = json.dumps(item, ensure_ascii=False)
+            if line not in existing:
+                f.write(line + "\n")
+                added += 1
+    return added
+
+
+def save_routine_memory(
+    result: str, routine: dict, product_dir: Path
+):
+    """루틴 결과에서 JSON을 추출해 JSONL 메모리에 자동 append"""
+    targets = routine.get("memory_targets", [])
+    if not targets:
+        return
+
+    items = extract_json_blocks(result)
+    if not items:
+        return
+
+    memory_dir = product_dir / "memory"
+    total = 0
+    for target in targets:
+        target_path = memory_dir / target
+        if target_path.exists():
+            added = append_to_jsonl(target_path, items)
+            total += added
+
+    if total > 0:
+        print(
+            f"[Scheduler] 메모리 저장: {total}건 → "
+            f"{', '.join(targets)}"
+        )
+
+
 def send_discord_webhook(webhook_url: str, content: str, title: str = ""):
     """웹훅으로 Discord 메시지 전송 (봇 없이도 가능한 폴백)"""
     payload = {"content": f"**{title}**\n{content}" if title else content}
@@ -147,6 +224,17 @@ async def run_routine_for_product(routine: dict, product: dict):
 
     # Claude Code 실행
     result = await run_claude_async(prompt, product_dir)
+
+    # 메모리 자동 저장
+    save_routine_memory(result, routine, product_dir)
+
+    # 루틴 로그 항상 저장 (파일)
+    log_dir = product_dir / "memory" / "routine-logs"
+    log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / (
+        f"{routine['id']}-{datetime.now().strftime('%Y%m%d-%H%M')}.md"
+    )
+    log_file.write_text(f"# {routine['name']}\n\n{result}")
 
     # Discord 보고
     config = load_discord_config(product_slug)
@@ -187,14 +275,8 @@ async def run_routine_for_product(routine: dict, product: dict):
     else:
         print(
             f"[Scheduler] {product_name}"
-            " - Discord 설정 없음. 결과를 파일에 저장."
+            " - Discord 설정 없음. 파일에만 저장됨."
         )
-        log_dir = product_dir / "memory" / "routine-logs"
-        log_dir.mkdir(exist_ok=True)
-        log_file = log_dir / (
-            f"{routine['id']}-{datetime.now().strftime('%Y%m%d-%H%M')}.md"
-        )
-        log_file.write_text(f"# {routine['name']}\n\n{result}")
 
 
 async def run_routine(routine_id: str):
@@ -260,7 +342,7 @@ async def on_ready():
             channel = client.get_channel(channel_id)
             if channel:
                 await channel.send(
-                    f"**solopreneur-agents 시작됨**\n"
+                    f"**AI 비서 시스템 시작됨**\n"
                     f"다음 루틴 스케줄:\n"
                     + "\n".join(
                         f"• {r['emoji']} {r['name']}: {r['schedule']}"

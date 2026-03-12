@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    container_name: solopreneur-bot
+    container_name: agent-bot
     restart: unless-stopped
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
@@ -19,7 +19,7 @@ services:
 
   scheduler:
     build: .
-    container_name: solopreneur-scheduler
+    container_name: agent-scheduler
     restart: unless-stopped
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}

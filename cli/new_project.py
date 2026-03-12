@@ -301,13 +301,16 @@ def _generate_project_claude_md(
         p["name"] for p in load_products() if p["name"] != product["name"]
     ]
 
+    # core/ 경로를 동적으로 결정
+    core_path = Path(__file__).parent.parent.resolve() / "core"
+
     content = f"""# CLAUDE.md -- {project_name}
 # 자동 생성: {datetime.now().strftime('%Y-%m-%d')} | {product['name']}
 
 ## Layer 0: Universal (읽기 전용)
-@/app/core/OWNER.md
-@/app/core/PRINCIPLES.md
-@/app/core/VOICE.md
+@{core_path}/OWNER.md
+@{core_path}/PRINCIPLES.md
+@{core_path}/VOICE.md
 
 ## Layer 1: Product
 @../../product/brief.md
@@ -426,7 +429,7 @@ def main():
     console.print(
         Panel.fit(
             "[bold cyan]새 프로젝트 생성[/bold cyan]",
-            title="solopreneur-agents",
+            title="새 프로젝트",
         )
     )
 

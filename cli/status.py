@@ -71,7 +71,7 @@ def get_project_status(project_dir: Path) -> str:
 def main():
     console.print(
         Panel.fit(
-            f"[bold cyan]solopreneur-agents[/bold cyan] 현황\n"
+            f"[bold cyan]제품 현황[/bold cyan]\n"
             f"[dim]{datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]",
             title="현황 대시보드",
         )

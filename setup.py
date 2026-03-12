@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-solopreneur-agents 설치 마법사
+Solo Founder Agents 설치 마법사
 실행: python setup.py
 """
 
@@ -92,8 +92,8 @@ def save_env(updates: dict):
 def step_welcome():
     console.print(
         Panel.fit(
-            "[bold cyan]solopreneur-agents[/bold cyan] 설치 마법사\n\n"
-            "3단계로 24/7 AI 비서 시스템을 구축합니다.\n"
+            "[bold cyan]Solo Founder Agents[/bold cyan] 설치 마법사\n\n"
+            "당신의 제품에 맞는 24/7 AI 비서 시스템을 구축합니다.\n"
             "소요 시간: 약 5~10분",
             title="시작",
         )
@@ -139,11 +139,11 @@ def step_configure():
 
     # 오너 정보
     if not env.get("OWNER_NAME"):
-        name = Prompt.ask("이름 (예: 승원)")
+        name = Prompt.ask("이름")
         updates["OWNER_NAME"] = name
 
     if not env.get("OWNER_ROLE"):
-        role = Prompt.ask("직군/역할 (예: Data PO + 솔로프리너)")
+        role = Prompt.ask("직군/역할 (예: 개발자, 디자이너, PM 등)")
         updates["OWNER_ROLE"] = role
 
     # Discord 토큰
@@ -186,6 +186,24 @@ def step_configure():
         save_env(updates)
         console.print("[green]v .env 저장됨[/green]")
 
+    # OWNER.md에 실제 오너 정보 반영
+    env = load_env()
+    owner_md = Path("core/OWNER.md")
+    if owner_md.exists():
+        owner_name = env.get("OWNER_NAME", "")
+        owner_role = env.get("OWNER_ROLE", "")
+        if owner_name:
+            content = owner_md.read_text()
+            content = content.replace(
+                "- 이름: (setup.py에서 자동 설정)",
+                f"- 이름: {owner_name}",
+            )
+            content = content.replace(
+                "- 역할: (setup.py에서 자동 설정)",
+                f"- 역할: {owner_role}",
+            )
+            owner_md.write_text(content)
+
     return True
 
 
@@ -197,7 +215,7 @@ def step_setup_products():
 
     while True:
         name = Prompt.ask(
-            "제품/조직 이름 (예: 토론철, PNA, 빅밸류)\n"
+            "제품/조직 이름\n"
             "엔터만 치면 완료"
         )
         if not name:
@@ -351,6 +369,10 @@ def _generate_product_claude_md(
     """제품 레벨 CLAUDE.md 자동 생성"""
     owner_name = env.get("OWNER_NAME", "오너")
 
+    # core/ 경로를 setup 시점에 결정
+    agents_dir = Path(__file__).parent.resolve()
+    core_path = agents_dir / "core"
+
     content = f"""# CLAUDE.md -- {product['name']}
 # 자동 생성됨. 직접 수정 가능.
 
@@ -359,9 +381,9 @@ def _generate_product_claude_md(
 {product['name']} 외의 프로젝트는 이 세션에서 존재하지 않는다.
 
 ## 오너 컨텍스트
-@/app/core/OWNER.md
-@/app/core/PRINCIPLES.md
-@/app/core/VOICE.md
+@{core_path}/OWNER.md
+@{core_path}/PRINCIPLES.md
+@{core_path}/VOICE.md
 
 ## 제품 컨텍스트
 @./product/brief.md
@@ -458,7 +480,9 @@ def step_finish(products):
             "- 시스템 재시작: [cyan]docker compose restart[/cyan]\n"
             "- 로그 확인: [cyan]docker compose logs -f[/cyan]\n\n"
             "[bold]등록된 제품:[/bold]\n"
-            + "\n".join(f"  - {p['name']}" for p in products),
+            + "\n".join(f"  - {p['name']}" for p in products)
+            + "\n\n[yellow]참고: Claude Code Max 플랜이 필요합니다.[/yellow]\n"
+            "[dim]Docker 내부 인증: docker compose exec bot claude login[/dim]",
             title="완료",
         )
     )
