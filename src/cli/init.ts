@@ -1,11 +1,11 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { execSync } from "child_process";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import { getAssetsDir } from "../util/paths.js";
 import { saveEnv, saveProducts, type Product } from "../util/config.js";
+import { commandExists, defaultReposPath } from "../util/platform.js";
 
 function copyDirSync(src: string, dest: string): void {
   fs.mkdirSync(dest, { recursive: true });
@@ -23,17 +23,7 @@ function copyDirSync(src: string, dest: string): void {
 }
 
 function checkCommand(cmd: string): boolean {
-  try {
-    execSync(`which ${cmd}`, { stdio: "ignore" });
-    return true;
-  } catch {
-    try {
-      execSync(`where ${cmd}`, { stdio: "ignore" });
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  return commandExists(cmd);
 }
 
 export async function initCommand(): Promise<void> {
@@ -56,8 +46,8 @@ export async function initCommand(): Promise<void> {
   }
 
   if (!checks.Docker) {
-    console.log(chalk.red("\nDocker is required. Install: https://docs.docker.com/desktop/"));
-    process.exit(1);
+    console.log(chalk.yellow("\n  Docker not found (optional). Some features like isolated execution require it."));
+    console.log(chalk.dim("  Install: https://docs.docker.com/desktop/\n"));
   }
 
   // Step 2: Copy assets to workspace
@@ -162,7 +152,7 @@ export async function initCommand(): Promise<void> {
       name: "reposPath",
       message: "Project storage path:",
       type: "input",
-      default: path.join(os.homedir(), "repos"),
+      default: defaultReposPath(),
     },
   ]);
   envUpdates.REPOS_BASE_PATH = reposPath;

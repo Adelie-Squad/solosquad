@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { RoutineConfig } from "./routines.js";
+import { normalizeLine } from "../util/platform.js";
 
 /** Extract JSON blocks from routine results. */
 export function extractJsonBlocks(text: string): Record<string, unknown>[] {
@@ -35,7 +36,7 @@ export function appendToJsonl(
 
   const existing = new Set<string>();
   if (fs.existsSync(filePath)) {
-    for (const line of fs.readFileSync(filePath, "utf-8").split("\n")) {
+    for (const line of normalizeLine(fs.readFileSync(filePath, "utf-8")).split("\n")) {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith('{"_schema')) {
         existing.add(trimmed);

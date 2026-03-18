@@ -1,8 +1,13 @@
 import fs from "fs";
 import path from "path";
-import { execSync } from "child_process";
 import chalk from "chalk";
 import { loadEnv, loadProducts } from "../util/config.js";
+import {
+  commandExists,
+  IS_WINDOWS,
+  platformInfo,
+  shellName,
+} from "../util/platform.js";
 
 function check(label: string, ok: boolean, hint?: string): boolean {
   if (ok) {
@@ -13,17 +18,14 @@ function check(label: string, ok: boolean, hint?: string): boolean {
   return ok;
 }
 
-function commandExists(cmd: string): boolean {
-  try {
-    execSync(`which ${cmd} 2>/dev/null || where ${cmd} 2>nul`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
+function warn(label: string, hint?: string): void {
+  console.log(` ${chalk.yellow("△")} ${label}${hint ? chalk.dim(` — ${hint}`) : ""}`);
 }
 
 export async function doctorCommand(): Promise<void> {
   console.log(chalk.bold("\nSolo Founder Agents — Doctor\n"));
+  console.log(chalk.dim(`Platform: ${platformInfo()}`));
+  console.log(chalk.dim(`Shell: ${shellName()}\n`));
 
   let issues = 0;
 
@@ -31,9 +33,23 @@ export async function doctorCommand(): Promise<void> {
   console.log(chalk.dim("Runtime:"));
   const nodeVer = parseInt(process.versions.node);
   if (!check("Node.js >= 18", nodeVer >= 18, `found v${process.versions.node}`)) issues++;
-  if (!check("Docker", commandExists("docker"), "https://docs.docker.com/desktop/")) issues++;
+
+  const hasDocker = commandExists("docker");
+  if (hasDocker) {
+    check("Docker", true);
+  } else {
+    warn("Docker (optional)", "needed for isolated execution");
+  }
+
   if (!check("git", commandExists("git"))) issues++;
   if (!check("Claude Code CLI", commandExists("claude"), "npm install -g @anthropic-ai/claude-code")) issues++;
+
+  // Windows-specific checks
+  if (IS_WINDOWS) {
+    if (!commandExists("pwsh")) {
+      warn("PowerShell 7+", "winget install Microsoft.PowerShell");
+    }
+  }
 
   // 2. Configuration
   console.log(chalk.dim("\nConfiguration:"));

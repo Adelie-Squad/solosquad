@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
 import { getWorkspaceDir, getReposBase } from "./paths.js";
+import { normalizeLine } from "./platform.js";
 
 export interface Product {
   name: string;
@@ -15,7 +16,7 @@ export function loadEnv(dir?: string): Record<string, string> {
   const env: Record<string, string> = {};
   if (!fs.existsSync(envFile)) return env;
 
-  for (const line of fs.readFileSync(envFile, "utf-8").split("\n")) {
+  for (const line of normalizeLine(fs.readFileSync(envFile, "utf-8")).split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
     const idx = trimmed.indexOf("=");
@@ -31,7 +32,7 @@ export function saveEnv(updates: Record<string, string>, dir?: string): void {
   const lines: string[] = [];
 
   if (fs.existsSync(envFile)) {
-    for (const line of fs.readFileSync(envFile, "utf-8").split("\n")) {
+    for (const line of normalizeLine(fs.readFileSync(envFile, "utf-8")).split("\n")) {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith("#") && trimmed.includes("=")) {
         const key = trimmed.slice(0, trimmed.indexOf("=")).trim();

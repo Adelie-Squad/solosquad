@@ -1,0 +1,9 @@
+# Force LF line endings for all text files
+* text=auto eol=lf
+*.md text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.tsv text eol=lf
+*.jsonl text eol=lf

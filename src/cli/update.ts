@@ -3,6 +3,7 @@ import chalk from "chalk";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { npmGlobalInstallCmd } from "../util/platform.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -67,13 +68,14 @@ export async function updateCommand(channel: string): Promise<void> {
     rl.close();
 
     if (answer.toLowerCase() === "y") {
-      console.log("\nUpdating...");
+      const updateCmd = npmGlobalInstallCmd("solo-founder-agents@latest");
+      console.log(`\nUpdating... ${chalk.dim(updateCmd)}`);
       try {
-        execSync("npm update -g solo-founder-agents", { stdio: "inherit" });
+        execSync(updateCmd, { stdio: "inherit" });
         console.log(chalk.green("\n✓ Updated successfully!"));
         console.log(chalk.dim("Run `solo-agents doctor` to verify."));
       } catch {
-        console.log(chalk.red("\nUpdate failed. Try manually: npm update -g solo-founder-agents"));
+        console.log(chalk.red(`\nUpdate failed. Try manually: ${updateCmd}`));
       }
     }
   } else {
