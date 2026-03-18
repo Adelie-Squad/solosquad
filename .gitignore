@@ -26,7 +26,11 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Python
+# Node
+node_modules/
+dist/
+
+# Python (legacy)
 __pycache__/
 *.pyc
 *.pyo
@@ -36,5 +40,5 @@ venv/
 # Docker
 *.pid
 
-# Plan files (development reference only)
-docs/plan_files/
+# Claude Code
+.claude/

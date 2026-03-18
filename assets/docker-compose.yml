@@ -1,0 +1,53 @@
+services:
+  bot:
+    build: .
+    container_name: agent-bot
+    restart: unless-stopped
+    environment:
+      - MESSENGER=${MESSENGER:-discord}
+      # Discord
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      # Slack
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_COMMAND_CHANNEL=${SLACK_COMMAND_CHANNEL:-owner-command}
+      # Telegram
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      # Common
+      - CLAUDE_CODE_PATH=${CLAUDE_CODE_PATH:-claude}
+      - OWNER_NAME=${OWNER_NAME}
+      - OWNER_ROLE=${OWNER_ROLE}
+      - REPOS_BASE_PATH=${REPOS_BASE_PATH:-/repos}
+      - TZ=Asia/Seoul
+    volumes:
+      - ${REPOS_BASE_PATH:-./repos}:/repos
+      - ./core:/app/core:ro
+      - ./routines:/app/routines:ro
+      - ./.env:/app/.env:ro
+    command: python src/bot.py
+
+  scheduler:
+    build: .
+    container_name: agent-scheduler
+    restart: unless-stopped
+    environment:
+      - MESSENGER=${MESSENGER:-discord}
+      # Discord
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      # Slack
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      # Telegram
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      # Common
+      - CLAUDE_CODE_PATH=${CLAUDE_CODE_PATH:-claude}
+      - REPOS_BASE_PATH=${REPOS_BASE_PATH:-/repos}
+      - TZ=Asia/Seoul
+    volumes:
+      - ${REPOS_BASE_PATH:-./repos}:/repos
+      - ./core:/app/core:ro
+      - ./routines:/app/routines:ro
+      - ./.env:/app/.env:ro
+    command: python src/scheduler.py

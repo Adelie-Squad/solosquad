@@ -1,0 +1,114 @@
+# 프로젝트 워크플로우 상태 파일
+# 이 파일은 Orchestrator 세션에서 생성하고, 각 팀 세션에서 업데이트합니다.
+#
+# status 값:
+#   pending        - 아직 시작 전
+#   in_progress    - 현재 실행 중
+#   completed      - 완료
+#   needs_revision - 이전 stage 수정으로 재생성 필요
+#
+# 사용법:
+#   1. Orchestrator가 프로젝트 초기화 시 이 파일 생성
+#   2. 각 팀 세션이 작업 시작/완료 시 해당 stage 업데이트
+#   3. Orchestrator가 전체 상태를 확인하여 다음 Phase 안내
+
+project:
+  id: "{{project_id}}"
+  name: "{{project_name}}"
+  type: "{{pmf | experiment | feature | rebrand | prototype}}"
+  created: "{{YYYY-MM-DD}}"
+  version: v1
+
+workflow:
+  # Phase 1: Research
+  - stage: research
+    phase: 1
+    agents:
+      - experience/user-researcher
+      - experience/desk-researcher
+    team: experience
+    status: pending
+    depends_on: []
+    artifacts: []
+    handoff: null
+
+  # Phase 1: Idea Refinement (병렬)
+  - stage: idea-refinement
+    phase: 1
+    agents:
+      - strategy/idea-refiner
+    team: strategy
+    status: pending
+    depends_on: []
+    artifacts: []
+    handoff: null
+
+  # Phase 2: Planning
+  - stage: planning
+    phase: 2
+    agents:
+      - strategy/pmf-planner
+      - strategy/feature-planner
+      - strategy/scope-estimator
+    team: strategy
+    status: pending
+    depends_on: [research, idea-refinement]
+    artifacts: []
+    handoff: null
+
+  # Phase 2: Branding (병렬, 브랜드 중요도 HIGH인 경우)
+  # - stage: branding
+  #   phase: 2
+  #   agents:
+  #     - growth/brand-marketer
+  #   team: growth
+  #   status: pending
+  #   depends_on: [research]
+  #   artifacts: []
+  #   handoff: null
+
+  # Phase 3: Design
+  - stage: design
+    phase: 3
+    agents:
+      - experience/ux-designer
+      - experience/ui-designer
+    team: experience
+    status: pending
+    depends_on: [planning]
+    artifacts: []
+    handoff: null
+
+  # Phase 4: Development
+  - stage: development
+    phase: 4
+    agents:
+      - engineering/fde
+    team: engineering
+    status: pending
+    depends_on: [design]
+    artifacts: []
+    handoff: null
+
+  # Phase 4: Marketing (병렬)
+  - stage: marketing
+    phase: 4
+    agents:
+      - growth/gtm-strategist
+      - growth/content-writer
+    team: growth
+    status: pending
+    depends_on: [planning]
+    artifacts: []
+    handoff: null
+
+  # Phase 5: Launch
+  - stage: launch
+    phase: 5
+    agents:
+      - growth/paid-marketer
+    team: growth
+    status: pending
+    depends_on: [development, marketing]
+    artifacts: []
+    handoff: null
