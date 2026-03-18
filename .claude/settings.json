@@ -1,0 +1,55 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(chmod +x:*)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:npmjs.com)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(sudo rm:*)",
+      "Bash(npm uninstall -g:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -qE '(\\.env$|credentials|secrets)' && { echo 'Blocked: cannot edit secrets/credentials files directly' >&2; exit 2; } || exit 0"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // empty' | grep -qE '^npx tsc' && exit 0; jq -r '.tool_input.command // empty' | grep -qE '^npm run build' && exit 0; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

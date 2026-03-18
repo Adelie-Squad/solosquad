@@ -40,5 +40,5 @@ venv/
 # Docker
 *.pid
 
-# Claude Code
-.claude/
+# Claude Code (local only — shared config is committed)
+.claude/settings.local.json
