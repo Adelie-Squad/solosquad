@@ -232,7 +232,32 @@ export async function initCommand(): Promise<void> {
     console.log(chalk.green(`✓ ${product.name} directory created: ${productDir}`));
   }
 
-  // Step 5: Done
+  // Step 5: Safety & Security
+  console.log(chalk.bold("\n-- Step 5: Safety & Security --"));
+  console.log(chalk.yellow("  This system executes AI-generated code. Review the checklist below.\n"));
+
+  // Check .gitignore
+  const gitignorePath = path.join(workDir, ".gitignore");
+  if (fs.existsSync(gitignorePath)) {
+    const gitignoreContent = fs.readFileSync(gitignorePath, "utf-8");
+    if (gitignoreContent.includes(".env")) {
+      console.log(` ${chalk.green("✓")} .env is in .gitignore`);
+    } else {
+      console.log(` ${chalk.red("✗")} .env is NOT in .gitignore — add it to prevent credential leaks`);
+    }
+  } else {
+    console.log(` ${chalk.yellow("△")} No .gitignore found — create one and add .env`);
+  }
+
+  console.log(chalk.bold("\n  Security checklist:"));
+  console.log("  1. Never commit .env or credential files to git");
+  console.log("  2. Rotate bot tokens periodically (every 90 days recommended)");
+  console.log("  3. Review AI outputs before deploying to production");
+  console.log("  4. Keep messenger bot permission scopes minimal");
+  console.log("  5. Run 'solo-agents doctor' regularly to verify environment");
+  console.log(chalk.dim("\n  Full security guide: docs/v1.2-safety-security.md"));
+
+  // Step 6: Done
   console.log(chalk.bold.green("\n  Setup Complete!\n"));
   console.log(`  ${chalk.cyan("solo-agents bot")}        — Start messenger bot`);
   console.log(`  ${chalk.cyan("solo-agents schedule")}   — Start automated scheduler`);

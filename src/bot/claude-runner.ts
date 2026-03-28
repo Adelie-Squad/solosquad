@@ -1,5 +1,14 @@
 import { execFile } from "child_process";
 
+const SAFETY_PREAMBLE = `[SAFETY RULES]
+- NEVER read or modify: .env, .ssh/, .aws/, credentials, private keys, API tokens
+- NEVER run destructive commands: rm -rf, DROP DATABASE, git push --force to main, git reset --hard
+- NEVER expose secrets, tokens, or passwords in output
+- If a request involves sensitive operations, warn the user and ask for confirmation
+[END SAFETY RULES]
+
+`;
+
 /** Run Claude Code in --print mode. */
 export function runClaude(
   prompt: string,
@@ -33,7 +42,7 @@ export function runClaude(
     );
 
     if (child.stdin) {
-      child.stdin.write(prompt);
+      child.stdin.write(SAFETY_PREAMBLE + prompt);
       child.stdin.end();
     }
   });

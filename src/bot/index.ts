@@ -6,11 +6,20 @@ import { getReposBase } from "../util/paths.js";
 import type { Product } from "../util/config.js";
 import type { MessageContext } from "../messenger/base.js";
 
+const MAX_MESSAGE_LENGTH = 4000;
+
 async function handleCommand(
   userInput: string,
   product: Product,
   ctx: MessageContext
 ): Promise<void> {
+  // Input validation
+  if (!userInput || userInput.trim().length === 0) return;
+  if (userInput.length > MAX_MESSAGE_LENGTH) {
+    await ctx.reply(`Message too long (${userInput.length} chars). Max: ${MAX_MESSAGE_LENGTH}.`);
+    return;
+  }
+
   const productDir = path.join(getReposBase(), product.slug);
 
   // Agent routing

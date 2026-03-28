@@ -3,6 +3,19 @@ import path from "path";
 import type { RoutineConfig } from "./routines.js";
 import { normalizeLine } from "../util/platform.js";
 
+const SENSITIVE_PATTERN = /(?:token|secret|password|api_key|private_key|apikey)\s*[:=]\s*\S+/gi;
+
+/** Redact sensitive patterns from string values. */
+function sanitizeForStorage(item: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(item)) {
+    cleaned[key] = typeof value === "string"
+      ? value.replace(SENSITIVE_PATTERN, "[REDACTED]")
+      : value;
+  }
+  return cleaned;
+}
+
 /** Extract JSON blocks from routine results. */
 export function extractJsonBlocks(text: string): Record<string, unknown>[] {
   const items: Record<string, unknown>[] = [];
@@ -50,7 +63,7 @@ export function appendToJsonl(
     if (!item.date) {
       item.date = new Date().toISOString().slice(0, 10);
     }
-    const line = JSON.stringify(item);
+    const line = JSON.stringify(sanitizeForStorage(item));
     if (!existing.has(line)) {
       lines.push(line);
       added++;
