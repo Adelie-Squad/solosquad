@@ -16,7 +16,7 @@ export function getAssetsDir(): string {
   return path.resolve(__dirname, "..", "..", "..", "assets");
 }
 
-/** Current workspace directory (where solo-agents init was run). */
+/** Current workspace directory (where solosquad init was run). */
 export function getWorkspaceDir(): string {
   return process.cwd();
 }

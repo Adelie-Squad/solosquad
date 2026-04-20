@@ -515,12 +515,12 @@ Orchestrator:
 Phase 1 (Research) 시작합니다. 다음 세션들을 병렬로 실행하세요:
 
 [세션 A - Experience Team]
-  cd solopreneur-agents
+  cd solosquad
   claude "projects/jeonse-guard/sessions/experience/CLAUDE.md 읽고 작업 시작"
   → User Researcher + Desk Researcher 실행
 
 [세션 B - Strategy Team]
-  cd solopreneur-agents
+  cd solosquad
   claude "projects/jeonse-guard/sessions/strategy/CLAUDE.md 읽고 작업 시작"
   → Idea Refiner 실행
 

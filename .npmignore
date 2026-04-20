@@ -1,21 +1,44 @@
-# Source
+# Source (dist only)
 src/
 bin/
 tsconfig.json
 
-# Python (legacy)
+# Legacy Python
 *.py
 requirements.txt
 __pycache__/
 
-# Dev
-.env
+# Development
 .claude/
-.git/
+.env
+.env.example
+scripts/
 tests/
 node_modules/
+
+# Docs (README.md is auto-included by npm)
+docs/
+CONTRIBUTING.md
 *.md
 !README.md
 
-# Docs
-docs/
+# Git/CI
+.git/
+.github/
+.gitignore
+
+# Docker (not needed in npm package)
+Dockerfile
+docker-compose.yml
+
+# Project data
+projects/
+memory/
+repos/
+
+# Legacy directories
+core/
+routines/
+templates/
+agents/
+orchestrator/

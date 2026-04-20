@@ -12,7 +12,7 @@ if (!fs.existsSync(pkgPath)) {
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
 
 export const program = new Command()
-  .name("solo-agents")
+  .name("solosquad")
   .version(pkg.version)
   .description("24/7 AI assistant system for solo founders");
 

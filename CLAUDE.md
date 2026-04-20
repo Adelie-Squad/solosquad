@@ -1,4 +1,4 @@
-# Solo Founder Agents
+# SoloSquad
 
 > A 24/7 AI assistant system for solo founders. Powered by Claude Code + messenger bot (Discord/Slack/Telegram) + automated routines + team-based agents.
 
@@ -13,14 +13,14 @@ Output ≠ Goal. Output = Means to achieve the goal.
 TypeScript + Node.js. Distributed as npm package.
 
 ```bash
-npm install -g solo-founder-agents
-solo-agents init          # Setup wizard
-solo-agents bot           # Start messenger bot
-solo-agents schedule      # Start automated scheduler
-solo-agents status        # Dashboard
-solo-agents update        # Self-update (OpenClaw-style)
-solo-agents doctor        # Environment diagnostics
-solo-agents run-routine   # Manual routine execution
+npm install -g solosquad
+solosquad init          # Setup wizard
+solosquad bot           # Start messenger bot
+solosquad schedule      # Start automated scheduler
+solosquad status        # Dashboard
+solosquad update        # Self-update (OpenClaw-style)
+solosquad doctor        # Environment diagnostics
+solosquad run-routine   # Manual routine execution
 ```
 
 ## Project Structure
@@ -28,14 +28,14 @@ solo-agents run-routine   # Manual routine execution
 ```
 package.json                        → npm package config
 tsconfig.json                       → TypeScript config
-bin/solo-agents.ts                  → CLI entry point
+bin/solosquad.ts                  → CLI entry point
 src/
   cli/                              → CLI commands (init, bot, schedule, status, update, doctor)
   bot/                              → Agent routing + Claude Code execution
   messenger/                        → Platform adapters (Discord, Slack, Telegram)
   scheduler/                        → Cron-based routine execution + memory
   util/                             → Config, paths, logger
-assets/                             → Bundled assets (copied on `solo-agents init`)
+assets/                             → Bundled assets (copied on `solosquad init`)
   agents/{team}/{agent}/SKILL.md    → Agent definitions (25)
   agents/_teams/{team}/TEAM_KNOWLEDGE.md → Shared team knowledge
   core/                             → Owner profile, principles, writing style

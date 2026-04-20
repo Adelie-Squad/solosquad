@@ -43,7 +43,7 @@ export function statusCommand(): void {
 
   const products = loadProducts();
   if (!products.length) {
-    console.log(chalk.red("No products registered. Run: solo-agents init\n"));
+    console.log(chalk.red("No products registered. Run: solosquad init\n"));
     return;
   }
 
@@ -91,8 +91,8 @@ export function statusCommand(): void {
 
   console.log(chalk.dim("─────────────────────────────"));
   console.log(chalk.bold("Commands:"));
-  console.log(`  ${chalk.cyan("solo-agents bot")}        Start bot`);
-  console.log(`  ${chalk.cyan("solo-agents schedule")}   Start scheduler`);
-  console.log(`  ${chalk.cyan("solo-agents update")}     Check for updates`);
-  console.log(`  ${chalk.cyan("solo-agents doctor")}     Diagnose issues\n`);
+  console.log(`  ${chalk.cyan("solosquad bot")}        Start bot`);
+  console.log(`  ${chalk.cyan("solosquad schedule")}   Start scheduler`);
+  console.log(`  ${chalk.cyan("solosquad update")}     Check for updates`);
+  console.log(`  ${chalk.cyan("solosquad doctor")}     Diagnose issues\n`);
 }

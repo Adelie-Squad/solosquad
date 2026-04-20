@@ -80,7 +80,7 @@ export class SlackAdapter implements MessengerAdapter {
         product = products[0] || null;
       }
       if (!product) {
-        await say("No product configured. Run `solo-agents init` first.");
+        await say("No product configured. Run `solosquad init` first.");
         return;
       }
 

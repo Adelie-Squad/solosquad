@@ -28,4 +28,4 @@ jobs:
         shell: bash
         run: |
           npm install -g .
-          solo-agents doctor --ci || true
+          solosquad doctor --ci || true

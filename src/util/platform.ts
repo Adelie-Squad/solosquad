@@ -17,12 +17,12 @@ export function commandExists(cmd: string): boolean {
   }
 }
 
-/** Global config directory (~/.solo-agents or %APPDATA%/solo-agents). */
+/** Global config directory (~/.solosquad or %APPDATA%/solosquad). */
 export function globalConfigDir(): string {
   if (IS_WINDOWS) {
-    return path.join(process.env.APPDATA || os.homedir(), "solo-agents");
+    return path.join(process.env.APPDATA || os.homedir(), "solosquad");
   }
-  return path.join(os.homedir(), ".solo-agents");
+  return path.join(os.homedir(), ".solosquad");
 }
 
 /** npm global install command (auto-detects sudo need on Unix). */
@@ -35,7 +35,7 @@ export function npmGlobalInstallCmd(pkg: string): string {
 /** Default repos base path per OS. */
 export function defaultReposPath(): string {
   if (IS_WINDOWS) {
-    return path.join(os.homedir(), "Documents", "solo-agents-repos");
+    return path.join(os.homedir(), "Documents", "solosquad-repos");
   }
   return path.join(os.homedir(), "repos");
 }

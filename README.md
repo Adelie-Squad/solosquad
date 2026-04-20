@@ -1,8 +1,8 @@
-# Solo Founder Agents
+# SoloSquad
 
 > A 24/7 AI assistant system for solo founders. Operates product-specific agents using Claude Code.
 
-Running a company alone doesn't mean working alone. Solo Founder Agents gives you a full virtual team — 25 specialized AI agents organized into 4 teams — that operates around the clock via your favorite messenger, scheduled routines, and CLI tools. Just talk to it like you'd talk to a co-founder, and the right specialist picks up.
+Running a company alone doesn't mean working alone. SoloSquad gives you a full virtual team — 25 specialized AI agents organized into 4 teams — that operates around the clock via your favorite messenger, scheduled routines, and CLI tools. Just talk to it like you'd talk to a co-founder, and the right specialist picks up.
 
 **Supports:** Discord | Slack | Telegram — choose one or multiple during setup.
 **Platforms:** Windows | macOS | Linux — cross-platform CLI with CI-tested support.
@@ -104,8 +104,8 @@ Results are posted to your messenger channels and auto-saved to memory.
 ### One-Command Install (npm)
 
 ```bash
-npm install -g solo-founder-agents
-solo-agents init
+npm install -g solosquad
+solosquad init
 ```
 
 The wizard configures your owner profile, registers your products, generates all directory structures, initializes memory files, and gets you operational. OpenClaw-style `update` and `doctor` commands built in.
@@ -179,13 +179,13 @@ source ~/.bashrc
 
 ### 1. Install
 ```bash
-npm install -g solo-founder-agents
+npm install -g solosquad
 ```
 
 ### 2. Initialize Workspace
 ```bash
 mkdir my-workspace && cd my-workspace
-solo-agents init
+solosquad init
 ```
 
 The setup wizard handles:
@@ -198,7 +198,7 @@ The setup wizard handles:
 
 ### 3. Verify
 ```bash
-solo-agents doctor
+solosquad doctor
 ```
 
 `doctor` now shows platform info, shell name, and OS-specific checks (e.g. PowerShell 7 on Windows). Docker is checked as optional.
@@ -210,13 +210,13 @@ solo-agents doctor
 ### CLI Commands
 
 ```bash
-solo-agents init          # Setup wizard
-solo-agents bot           # Start messenger bot
-solo-agents schedule      # Start automated scheduler
-solo-agents status        # Show project dashboard
-solo-agents update        # Check for updates and self-update
-solo-agents doctor        # Check environment and diagnose issues
-solo-agents run-routine   # Run a routine manually
+solosquad init          # Setup wizard
+solosquad bot           # Start messenger bot
+solosquad schedule      # Start automated scheduler
+solosquad status        # Show project dashboard
+solosquad update        # Check for updates and self-update
+solosquad doctor        # Check environment and diagnose issues
+solosquad run-routine   # Run a routine manually
 ```
 
 ### Send Commands via Messenger
@@ -232,9 +232,9 @@ Bot: [product-name (content-writer)] ...
 
 ### Run Routines Manually
 ```bash
-solo-agents run-routine                    # Interactive selection
-solo-agents run-routine signal-scan        # Run specific routine
-solo-agents run-routine --all              # Run all routines
+solosquad run-routine                    # Interactive selection
+solosquad run-routine signal-scan        # Run specific routine
+solosquad run-routine --all              # Run all routines
 ```
 
 ### Work Directly in a Project Directory
@@ -294,14 +294,14 @@ Each product's AI agents can **only see that product's context**. Other product 
 ├── tsconfig.json           ← TypeScript config
 ├── .gitattributes          ← LF line ending enforcement (cross-platform)
 ├── .github/workflows/      ← CI matrix (3 OS × 3 Node versions)
-├── bin/solo-agents.ts      ← CLI entry point
+├── bin/solosquad.ts      ← CLI entry point
 ├── src/
 │   ├── cli/                ← CLI commands (init, bot, schedule, status, update, doctor)
 │   ├── bot/                ← Agent routing + Claude Code execution
 │   ├── messenger/          ← Platform adapters (Discord, Slack, Telegram)
 │   ├── scheduler/          ← Cron-based routine execution + memory auto-save
 │   └── util/               ← Config, paths, logger, platform detection
-├── assets/                 ← Bundled with npm package, copied on `solo-agents init`
+├── assets/                 ← Bundled with npm package, copied on `solosquad init`
 │   ├── agents/             ← 25 specialized agents (SKILL.md files)
 │   ├── core/               ← Owner profile, principles, writing style
 │   ├── routines/           ← Routine prompts (editable after init)
@@ -329,8 +329,8 @@ The CLI runs natively on Windows, macOS, and Linux. Key features:
 
 - **Unified command detection**: No more `which`/`where` hacks — uses `command -v` on Unix, `where` on Windows
 - **CRLF-safe parsing**: All file parsers (`.env`, JSONL, TSV) normalize line endings automatically
-- **OS-aware defaults**: Repos path defaults to `~/Documents/solo-agents-repos` on Windows, `~/repos` on Unix
-- **sudo auto-detection**: `solo-agents update` detects when `sudo` is needed on Linux/macOS
+- **OS-aware defaults**: Repos path defaults to `~/Documents/solosquad-repos` on Windows, `~/repos` on Unix
+- **sudo auto-detection**: `solosquad update` detects when `sudo` is needed on Linux/macOS
 - **CI matrix**: Every push is tested on Ubuntu, macOS, and Windows × Node 18/20/22
 
 ## Security
@@ -351,10 +351,10 @@ See `docs/v1.2-safety-security.md` for the full security framework.
 
 ```bash
 # Update to latest version (auto-detects sudo on Unix)
-solo-agents update
+solosquad update
 
 # Check environment health (shows platform info)
-solo-agents doctor
+solosquad doctor
 
 # Docker management (if using Docker deployment)
 docker compose restart
@@ -366,7 +366,7 @@ docker compose down
 
 ## Customizing Routines
 
-After `solo-agents init`, edit the `.md` files in the `routines/` folder in your workspace. No rebuild required.
+After `solosquad init`, edit the `.md` files in the `routines/` folder in your workspace. No rebuild required.
 
 ```bash
 # Example: Edit Morning Brief prompt
@@ -387,10 +387,10 @@ A: Change `MESSENGER=slack` (or `telegram`, or `discord,slack`) in `.env` and re
 A: Set `MESSENGER=discord,slack` in `.env`. The bot and scheduler will connect to both platforms.
 
 **Q: How do I add a product later?**
-A: Re-run `solo-agents init`. Existing settings are preserved; only the new product is added.
+A: Re-run `solosquad init`. Existing settings are preserved; only the new product is added.
 
 **Q: How do I update to the latest version?**
-A: Run `solo-agents update` — it checks npm for the latest version and offers to update.
+A: Run `solosquad update` — it checks npm for the latest version and offers to update.
 
 **Q: What if agent routing is wrong?**
 A: Edit the keyword-agent mapping in `src/bot/agent-router.ts` in the package source, or raise an issue.

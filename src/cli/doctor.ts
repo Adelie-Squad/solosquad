@@ -23,7 +23,7 @@ function warn(label: string, hint?: string): void {
 }
 
 export async function doctorCommand(ci?: boolean): Promise<void> {
-  console.log(chalk.bold("\nSolo Founder Agents — Doctor\n"));
+  console.log(chalk.bold("\nSoloSquad — Doctor\n"));
   console.log(chalk.dim(`Platform: ${platformInfo()}`));
   console.log(chalk.dim(`Shell: ${shellName()}\n`));
 
@@ -54,7 +54,7 @@ export async function doctorCommand(ci?: boolean): Promise<void> {
   // 2. Configuration
   console.log(chalk.dim("\nConfiguration:"));
   const envExists = fs.existsSync(".env");
-  if (!check(".env file", envExists, "Run: solo-agents init")) issues++;
+  if (!check(".env file", envExists, "Run: solosquad init")) issues++;
 
   if (envExists) {
     const env = loadEnv();
@@ -83,12 +83,12 @@ export async function doctorCommand(ci?: boolean): Promise<void> {
 
   // 3. Project structure
   console.log(chalk.dim("\nProject structure:"));
-  if (!check("core/products.json", fs.existsSync("core/products.json"), "Run: solo-agents init")) issues++;
-  if (!check("agents/", fs.existsSync("agents"), "Run: solo-agents init")) issues++;
-  if (!check("routines/", fs.existsSync("routines"), "Run: solo-agents init")) issues++;
+  if (!check("core/products.json", fs.existsSync("core/products.json"), "Run: solosquad init")) issues++;
+  if (!check("agents/", fs.existsSync("agents"), "Run: solosquad init")) issues++;
+  if (!check("routines/", fs.existsSync("routines"), "Run: solosquad init")) issues++;
 
   const products = loadProducts();
-  if (!check(`Products registered (${products.length})`, products.length > 0, "Run: solo-agents init")) issues++;
+  if (!check(`Products registered (${products.length})`, products.length > 0, "Run: solosquad init")) issues++;
 
   // 4. Summary
   console.log();

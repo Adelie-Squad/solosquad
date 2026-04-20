@@ -1,4 +1,4 @@
-# Solo Founder Agents — Architecture & Design
+# SoloSquad — Architecture & Design
 
 > 현재 구현된 시스템 아키텍처, 멀티세션 조율, 메모리 구조를 정리한 기술 문서.
 
@@ -10,22 +10,22 @@
 TypeScript + Node.js 기반 npm 패키지. 1인 창업자를 위한 24/7 AI 비서 시스템.
 
 ```bash
-npm install -g solo-founder-agents
-solo-agents init          # 워크스페이스 초기화
-solo-agents bot           # 메신저 봇 실행
-solo-agents schedule      # 자동 스케줄러
-solo-agents update        # npm 최신 버전 확인 + 자동 업데이트
-solo-agents doctor        # 환경 진단
-solo-agents status        # 대시보드
-solo-agents run-routine   # 수동 루틴 실행
+npm install -g solosquad
+solosquad init          # 워크스페이스 초기화
+solosquad bot           # 메신저 봇 실행
+solosquad schedule      # 자동 스케줄러
+solosquad update        # npm 최신 버전 확인 + 자동 업데이트
+solosquad doctor        # 환경 진단
+solosquad status        # 대시보드
+solosquad run-routine   # 수동 루틴 실행
 ```
 
 ---
 
 ## 2. 코드 구조
 ```
-package.json                     → npm 패키지 (solo-founder-agents)
-bin/solo-agents.ts               → CLI 진입점
+package.json                     → npm 패키지 (solosquad)
+bin/solosquad.ts               → CLI 진입점
 src/
   cli/                           → CLI 명령 (init, bot, schedule, update, doctor, status, run-routine)
   bot/
@@ -256,8 +256,8 @@ Windows, macOS, Linux 3개 OS에서 동일하게 동작하는 CLI.
 | `parseJsonl(content)` | CRLF-safe JSONL 파싱 |
 | `parseTsv(content)` | CRLF-safe TSV 파싱 |
 | `npmGlobalInstallCmd(pkg)` | sudo 자동 판단 (Unix: root 여부 체크, Windows: 불필요) |
-| `defaultReposPath()` | OS별 기본 저장 경로 (Windows: `~/Documents/solo-agents-repos`, Unix: `~/repos`) |
-| `globalConfigDir()` | OS별 설정 디렉토리 (Windows: `%APPDATA%/solo-agents`, Unix: `~/.solo-agents`) |
+| `defaultReposPath()` | OS별 기본 저장 경로 (Windows: `~/Documents/solosquad-repos`, Unix: `~/repos`) |
+| `globalConfigDir()` | OS별 설정 디렉토리 (Windows: `%APPDATA%/solosquad`, Unix: `~/.solosquad`) |
 | `platformInfo()` / `shellName()` | 진단용 플랫폼/셸 정보 |
 
 ### 줄바꿈 정규화
@@ -272,18 +272,18 @@ Windows, macOS, Linux 3개 OS에서 동일하게 동작하는 CLI.
 `.github/workflows/ci.yml`: GitHub Actions 매트릭스
 - OS: `ubuntu-latest`, `macos-latest`, `windows-latest`
 - Node: 18, 20, 22
-- 빌드 + smoke test (`npm install -g . && solo-agents doctor --ci`)
+- 빌드 + smoke test (`npm install -g . && solosquad doctor --ci`)
 
 ---
 
 ## 10. 업데이트 전략 (OpenClaw 방식)
 ```bash
-solo-agents update              # npm 최신 버전 확인 → 자동 업데이트
-solo-agents update --channel dev  # 개발 채널
-solo-agents doctor              # 환경 진단 (Node, Docker, Claude, 토큰, 설정)
+solosquad update              # npm 최신 버전 확인 → 자동 업데이트
+solosquad update --channel dev  # 개발 채널
+solosquad doctor              # 환경 진단 (Node, Docker, Claude, 토큰, 설정)
 ```
 
-- npm registry에서 최신 버전 조회 (`npm view solo-founder-agents version`)
+- npm registry에서 최신 버전 조회 (`npm view solosquad version`)
 - 로컬 `package.json` 버전과 비교
 - `npmGlobalInstallCmd()`로 OS에 맞는 설치 명령 생성 (Linux/macOS: sudo 자동 판단)
 - 사용자 확인 후 업데이트 실행

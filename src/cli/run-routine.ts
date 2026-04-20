@@ -14,7 +14,7 @@ export async function runRoutineCommand(
 ): Promise<void> {
   const products = loadProducts();
   if (!products.length) {
-    console.log(chalk.red("No products registered. Run: solo-agents init"));
+    console.log(chalk.red("No products registered. Run: solosquad init"));
     process.exit(1);
   }
 

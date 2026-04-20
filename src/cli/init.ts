@@ -28,7 +28,7 @@ function checkCommand(cmd: string): boolean {
 
 export async function initCommand(): Promise<void> {
   console.log(
-    chalk.cyan.bold("\n  Solo Founder Agents") + " Setup Wizard\n" +
+    chalk.cyan.bold("\n  SoloSquad") + " Setup Wizard\n" +
     chalk.dim("  Build a 24/7 AI assistant system tailored to your products.\n")
   );
 
@@ -254,14 +254,14 @@ export async function initCommand(): Promise<void> {
   console.log("  2. Rotate bot tokens periodically (every 90 days recommended)");
   console.log("  3. Review AI outputs before deploying to production");
   console.log("  4. Keep messenger bot permission scopes minimal");
-  console.log("  5. Run 'solo-agents doctor' regularly to verify environment");
+  console.log("  5. Run 'solosquad doctor' regularly to verify environment");
   console.log(chalk.dim("\n  Full security guide: docs/v1.2-safety-security.md"));
 
   // Step 6: Done
   console.log(chalk.bold.green("\n  Setup Complete!\n"));
-  console.log(`  ${chalk.cyan("solo-agents bot")}        — Start messenger bot`);
-  console.log(`  ${chalk.cyan("solo-agents schedule")}   — Start automated scheduler`);
-  console.log(`  ${chalk.cyan("solo-agents status")}     — Show dashboard`);
-  console.log(`  ${chalk.cyan("solo-agents update")}     — Check for updates`);
-  console.log(`  ${chalk.cyan("solo-agents doctor")}     — Diagnose issues\n`);
+  console.log(`  ${chalk.cyan("solosquad bot")}        — Start messenger bot`);
+  console.log(`  ${chalk.cyan("solosquad schedule")}   — Start automated scheduler`);
+  console.log(`  ${chalk.cyan("solosquad status")}     — Show dashboard`);
+  console.log(`  ${chalk.cyan("solosquad update")}     — Check for updates`);
+  console.log(`  ${chalk.cyan("solosquad doctor")}     — Diagnose issues\n`);
 }

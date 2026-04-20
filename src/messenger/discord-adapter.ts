@@ -86,7 +86,7 @@ export class DiscordAdapter implements MessengerAdapter {
 
       const product = this.getProductByGuild(message.guild!.id);
       if (!product) {
-        await message.channel.send("No product linked to this server. Re-run `solo-agents init`.");
+        await message.channel.send("No product linked to this server. Re-run `solosquad init`.");
         return;
       }
 
