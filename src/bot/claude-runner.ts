@@ -22,7 +22,14 @@ export function runClaude(
     const child = execFile(
       "claude",
       ["--print"],
-      { cwd, signal: controller.signal, maxBuffer: 10 * 1024 * 1024 },
+      {
+        cwd,
+        signal: controller.signal,
+        maxBuffer: 10 * 1024 * 1024,
+        // On Windows, `claude` is a .cmd wrapper installed by npm. execFile
+        // does not resolve PATHEXT without a shell, so invoke via cmd.exe.
+        shell: process.platform === "win32",
+      },
       (error, stdout, _stderr) => {
         clearTimeout(timer);
         if (error) {
