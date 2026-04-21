@@ -40,7 +40,15 @@ export class TelegramAdapter implements MessengerAdapter {
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
     if (!token || !chatId) {
-      console.log("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required. Check .env.");
+      console.log("[Telegram] Cannot start — missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.");
+      console.log("  Required in .env:");
+      console.log("    TELEGRAM_BOT_TOKEN  format: <n>:<str>  (from @BotFather → /newbot)");
+      console.log("    TELEGRAM_CHAT_ID    integer for DM/group (may be negative), or @channelname for channels");
+      console.log("  To obtain chat_id:");
+      console.log("    1. Send any message to the bot (or add it to a group)");
+      console.log("    2. Open https://api.telegram.org/bot<TOKEN>/getUpdates");
+      console.log("    3. Copy the numeric chat.id field");
+      console.log("  For groups with all-messages read, disable Privacy Mode in @BotFather.");
       process.exit(1);
     }
 
@@ -68,7 +76,7 @@ export class TelegramAdapter implements MessengerAdapter {
   async startNotifier(): Promise<void> {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
-      console.log("TELEGRAM_BOT_TOKEN is not set.");
+      console.log("[Telegram] TELEGRAM_BOT_TOKEN is not set. Check .env.");
       process.exit(1);
     }
 

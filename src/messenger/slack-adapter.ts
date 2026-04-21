@@ -44,7 +44,16 @@ export class SlackAdapter implements MessengerAdapter {
     const appToken = process.env.SLACK_APP_TOKEN;
 
     if (!botToken || !appToken) {
-      console.log("SLACK_BOT_TOKEN and SLACK_APP_TOKEN are required. Check .env.");
+      console.log("[Slack] Cannot start — missing tokens.");
+      console.log("  Required in .env:");
+      console.log("    SLACK_BOT_TOKEN  format: xoxb-<n>-<n>-<str>  (NOT xoxp-, that's a user token)");
+      console.log("    SLACK_APP_TOKEN  format: xapp-1-<str>-<n>-<str>  (NOT the Signing Secret)");
+      console.log("  Also verify in api.slack.com/apps:");
+      console.log("    - Socket Mode: Enabled");
+      console.log("    - App-Level Token scope: connections:write");
+      console.log("    - Bot Token scopes: channels:read, chat:write, app_mentions:read, channels:history");
+      console.log("    - Event Subscriptions: message.channels");
+      console.log("    - Install/Reinstall workspace after scope changes");
       process.exit(1);
     }
 
@@ -54,6 +63,13 @@ export class SlackAdapter implements MessengerAdapter {
       token: botToken,
       appToken: appToken,
       socketMode: true,
+    });
+
+    app.error(async (err) => {
+      console.log(`[Slack] Bolt error: ${err.message || err}`);
+      if ((err as Error & { code?: string }).code) {
+        console.log(`[Slack] code: ${(err as Error & { code?: string }).code}`);
+      }
     });
 
     this.client = app.client;
@@ -103,7 +119,7 @@ export class SlackAdapter implements MessengerAdapter {
   async startNotifier(): Promise<void> {
     const botToken = process.env.SLACK_BOT_TOKEN;
     if (!botToken) {
-      console.log("SLACK_BOT_TOKEN is not set.");
+      console.log("[Slack] SLACK_BOT_TOKEN is not set. Check .env (format: xoxb-<n>-<n>-<str>).");
       process.exit(1);
     }
 

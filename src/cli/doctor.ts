@@ -8,6 +8,7 @@ import {
   platformInfo,
   shellName,
 } from "../util/platform.js";
+import { getWorkspaceDir } from "../util/paths.js";
 
 function check(label: string, ok: boolean, hint?: string): boolean {
   if (ok) {
@@ -22,7 +23,20 @@ function warn(label: string, hint?: string): void {
   console.log(` ${chalk.yellow("△")} ${label}${hint ? chalk.dim(` — ${hint}`) : ""}`);
 }
 
-export async function doctorCommand(ci?: boolean): Promise<void> {
+function isPlaceholder(value: string | undefined): boolean {
+  if (!value) return true;
+  return value.includes("your-") || value === "";
+}
+
+function tokenKeysForMessenger(messenger: string): string[] {
+  const keys: string[] = [];
+  if (messenger.includes("discord")) keys.push("DISCORD_TOKEN");
+  if (messenger.includes("slack")) keys.push("SLACK_BOT_TOKEN", "SLACK_APP_TOKEN");
+  if (messenger.includes("telegram")) keys.push("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID");
+  return keys;
+}
+
+export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Promise<void> {
   console.log(chalk.bold("\nSoloSquad — Doctor\n"));
   console.log(chalk.dim(`Platform: ${platformInfo()}`));
   console.log(chalk.dim(`Shell: ${shellName()}\n`));
@@ -44,41 +58,48 @@ export async function doctorCommand(ci?: boolean): Promise<void> {
   if (!check("git", commandExists("git"))) issues++;
   if (!check("Claude Code CLI", commandExists("claude"), "npm install -g @anthropic-ai/claude-code")) issues++;
 
-  // Windows-specific checks
   if (IS_WINDOWS) {
     if (!commandExists("pwsh")) {
       warn("PowerShell 7+", "winget install Microsoft.PowerShell");
     }
   }
 
-  // 2. Configuration
+  // 2. Configuration — reads process.env (post dotenv/config load in bin/solosquad.ts)
   console.log(chalk.dim("\nConfiguration:"));
-  const envExists = fs.existsSync(".env");
-  if (!check(".env file", envExists, "Run: solosquad init")) issues++;
+  const envFile = path.join(getWorkspaceDir(), ".env");
+  const envFileExists = fs.existsSync(envFile);
+  if (!check(".env file", envFileExists, "Run: solosquad init")) issues++;
 
-  if (envExists) {
-    const env = loadEnv();
-    const messenger = env.MESSENGER || "discord";
-    if (!check("MESSENGER set", !!env.MESSENGER, "Set MESSENGER in .env")) issues++;
+  // Detect .env vs process.env divergence — this catches the "dotenv not loaded" class of bug.
+  const fileEnv = envFileExists ? loadEnv() : {};
+  const divergent: string[] = [];
+  for (const [k, v] of Object.entries(fileEnv)) {
+    if (process.env[k] !== v) divergent.push(k);
+  }
+  if (envFileExists && divergent.length > 0) {
+    warn(
+      `.env vs process.env mismatch on: ${divergent.join(", ")}`,
+      "dotenv not loaded? Ensure bin entry does `import \"dotenv/config\"`"
+    );
+  }
 
-    if (messenger.includes("discord")) {
-      const hasToken = !!env.DISCORD_TOKEN && !env.DISCORD_TOKEN.includes("your-");
-      if (!check("DISCORD_TOKEN", hasToken, "Set a valid Discord bot token")) issues++;
-    }
-    if (messenger.includes("slack")) {
-      const hasBotToken = !!env.SLACK_BOT_TOKEN && !env.SLACK_BOT_TOKEN.includes("your-");
-      const hasAppToken = !!env.SLACK_APP_TOKEN && !env.SLACK_APP_TOKEN.includes("your-");
-      if (!check("SLACK_BOT_TOKEN", hasBotToken, "Set a valid Slack bot token")) issues++;
-      if (!check("SLACK_APP_TOKEN", hasAppToken, "Set a valid Slack app token")) issues++;
-    }
-    if (messenger.includes("telegram")) {
-      const hasToken = !!env.TELEGRAM_BOT_TOKEN && !env.TELEGRAM_BOT_TOKEN.includes("your-");
-      if (!check("TELEGRAM_BOT_TOKEN", hasToken, "Set a valid Telegram bot token")) issues++;
-      if (!check("TELEGRAM_CHAT_ID", !!env.TELEGRAM_CHAT_ID && env.TELEGRAM_CHAT_ID !== "your-chat-id")) issues++;
-    }
+  const messenger = (process.env.MESSENGER || "").trim();
+  if (!check("MESSENGER set (process.env)", !!messenger, "Set MESSENGER in .env or shell")) {
+    issues++;
+  }
 
-    const reposPath = env.REPOS_BASE_PATH || "";
-    if (!check("REPOS_BASE_PATH exists", !!reposPath && fs.existsSync(reposPath), `Path: ${reposPath}`)) issues++;
+  if (messenger) {
+    for (const key of tokenKeysForMessenger(messenger)) {
+      const val = process.env[key];
+      if (!check(key, !isPlaceholder(val), `Set a valid value (currently: ${val ? "placeholder" : "unset"})`)) {
+        issues++;
+      }
+    }
+  }
+
+  const reposPath = process.env.REPOS_BASE_PATH || "";
+  if (!check("REPOS_BASE_PATH exists", !!reposPath && fs.existsSync(reposPath), `Path: ${reposPath || "(unset)"}`)) {
+    issues++;
   }
 
   // 3. Project structure
@@ -90,7 +111,13 @@ export async function doctorCommand(ci?: boolean): Promise<void> {
   const products = loadProducts();
   if (!check(`Products registered (${products.length})`, products.length > 0, "Run: solosquad init")) issues++;
 
-  // 4. Summary
+  // 4. Live messenger API check (opt-in)
+  if (messengerCheck && messenger) {
+    console.log(chalk.dim("\nMessenger API check:"));
+    issues += await runMessengerChecks(messenger);
+  }
+
+  // 5. Summary
   console.log();
   if (issues === 0) {
     console.log(chalk.green.bold("✓ All checks passed. System is ready.\n"));
@@ -100,5 +127,77 @@ export async function doctorCommand(ci?: boolean): Promise<void> {
 
   if (ci && issues > 0) {
     process.exit(1);
+  }
+}
+
+// -- Live API probes --
+
+async function runMessengerChecks(messenger: string): Promise<number> {
+  let failures = 0;
+  if (messenger.includes("discord")) {
+    if (!(await checkDiscord())) failures++;
+  }
+  if (messenger.includes("slack")) {
+    if (!(await checkSlack())) failures++;
+  }
+  if (messenger.includes("telegram")) {
+    if (!(await checkTelegram())) failures++;
+  }
+  return failures;
+}
+
+async function checkDiscord(): Promise<boolean> {
+  const token = process.env.DISCORD_TOKEN;
+  if (isPlaceholder(token)) {
+    return check("Discord /users/@me", false, "DISCORD_TOKEN not set");
+  }
+  try {
+    const res = await fetch("https://discord.com/api/v10/users/@me", {
+      headers: { Authorization: `Bot ${token}` },
+    });
+    if (!res.ok) {
+      return check("Discord /users/@me", false, `HTTP ${res.status}`);
+    }
+    const body = (await res.json()) as { username?: string };
+    return check(`Discord /users/@me → ${body.username ?? "(ok)"}`, true);
+  } catch (e) {
+    return check("Discord /users/@me", false, `${e}`);
+  }
+}
+
+async function checkSlack(): Promise<boolean> {
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (isPlaceholder(token)) {
+    return check("Slack auth.test", false, "SLACK_BOT_TOKEN not set");
+  }
+  try {
+    const res = await fetch("https://slack.com/api/auth.test", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as { ok?: boolean; error?: string; user?: string };
+    if (!body.ok) {
+      return check("Slack auth.test", false, body.error || "unknown");
+    }
+    return check(`Slack auth.test → ${body.user ?? "(ok)"}`, true);
+  } catch (e) {
+    return check("Slack auth.test", false, `${e}`);
+  }
+}
+
+async function checkTelegram(): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (isPlaceholder(token)) {
+    return check("Telegram getMe", false, "TELEGRAM_BOT_TOKEN not set");
+  }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const body = (await res.json()) as { ok?: boolean; result?: { username?: string }; description?: string };
+    if (!body.ok) {
+      return check("Telegram getMe", false, body.description || "unknown");
+    }
+    return check(`Telegram getMe → @${body.result?.username ?? "(ok)"}`, true);
+  } catch (e) {
+    return check("Telegram getMe", false, `${e}`);
   }
 }

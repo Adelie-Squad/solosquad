@@ -2,8 +2,8 @@ import path from "path";
 import { createAdapters } from "../messenger/index.js";
 import { findAgent, loadAgentSkill } from "./agent-router.js";
 import { runClaude } from "./claude-runner.js";
-import { getReposBase } from "../util/paths.js";
-import type { Product } from "../util/config.js";
+import { getReposBase, getWorkspaceDir } from "../util/paths.js";
+import { loadEnv, type Product } from "../util/config.js";
 import type { MessageContext } from "../messenger/base.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
@@ -13,7 +13,6 @@ async function handleCommand(
   product: Product,
   ctx: MessageContext
 ): Promise<void> {
-  // Input validation
   if (!userInput || userInput.trim().length === 0) return;
   if (userInput.length > MAX_MESSAGE_LENGTH) {
     await ctx.reply(`Message too long (${userInput.length} chars). Max: ${MAX_MESSAGE_LENGTH}.`);
@@ -22,7 +21,6 @@ async function handleCommand(
 
   const productDir = path.join(getReposBase(), product.slug);
 
-  // Agent routing
   const route = findAgent(userInput);
   let skillContext = "";
 
@@ -46,7 +44,21 @@ async function handleCommand(
   }
 }
 
+function resolveMessengerSource(): { value: string; source: string } {
+  const fromEnv = process.env.MESSENGER;
+  if (!fromEnv) return { value: "discord", source: "default" };
+
+  const fileEnv = loadEnv(getWorkspaceDir());
+  const fileValue = fileEnv.MESSENGER;
+  if (fileValue && fileValue === fromEnv) return { value: fromEnv, source: ".env" };
+  if (fileValue && fileValue !== fromEnv) return { value: fromEnv, source: "shell (overrides .env)" };
+  return { value: fromEnv, source: "shell" };
+}
+
 export async function startBot(): Promise<void> {
+  const { value, source } = resolveMessengerSource();
+  console.log(`[Bot] MESSENGER=${value} (from ${source})`);
+
   const adapters = await createAdapters();
   const platforms = adapters.map((a) => a.platform);
   console.log(`[Bot] Starting with adapters: ${platforms.join(", ")}`);

@@ -129,6 +129,13 @@ The wizard configures your owner profile, registers your products, generates all
 | Slack | Bot Token + App Token | [Slack API](https://api.slack.com/apps) (Socket Mode) |
 | Telegram | Bot Token + Chat ID | [@BotFather](https://t.me/BotFather) on Telegram |
 
+**Per-platform required configuration:**
+- **Discord** — enable **MESSAGE CONTENT** privileged gateway intent; invite the bot to a server whose name contains your product name/slug.
+- **Slack** — enable **Socket Mode**; App-Level Token scope `connections:write`; Bot Token scopes `channels:read`, `channels:manage`, `chat:write`, `groups:read`, `app_mentions:read`, `channels:history`; subscribe to `message.channels`; `/invite @bot` into `#owner-command`.
+- **Telegram** — obtain `TELEGRAM_CHAT_ID` by sending a message to the bot and fetching `chat.id` from `https://api.telegram.org/bot<TOKEN>/getUpdates`. For group messages, disable Group Privacy in BotFather.
+
+If the bot does not connect after `solosquad init`, run `solosquad doctor --messenger-check` to validate tokens against live APIs (`auth.test` / `/users/@me` / `getMe`).
+
 ---
 
 ## Installation

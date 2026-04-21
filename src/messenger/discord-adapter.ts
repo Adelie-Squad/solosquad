@@ -53,7 +53,14 @@ export class DiscordAdapter implements MessengerAdapter {
   async startBot(onCommand: CommandHandler): Promise<void> {
     const token = process.env.DISCORD_TOKEN;
     if (!token) {
-      console.log("DISCORD_TOKEN is not set. Check your .env file.");
+      console.log("[Discord] Cannot start — DISCORD_TOKEN is not set.");
+      console.log("  Required in .env:");
+      console.log("    DISCORD_TOKEN  format: <base64>.<base64>.<base64>  (the Bot Token, NOT the Client Secret)");
+      console.log("  Also verify in discord.com/developers:");
+      console.log("    - Bot → Privileged Gateway Intents → MESSAGE CONTENT: enabled");
+      console.log("    - OAuth2 scopes: bot, applications.commands");
+      console.log("    - Bot permissions: View Channels, Send Messages, Read Message History");
+      console.log("    - Invite the bot to a server whose name contains the product name/slug");
       process.exit(1);
     }
 
@@ -105,7 +112,7 @@ export class DiscordAdapter implements MessengerAdapter {
   async startNotifier(): Promise<void> {
     const token = process.env.DISCORD_TOKEN;
     if (!token) {
-      console.log("DISCORD_TOKEN is not set.");
+      console.log("[Discord] DISCORD_TOKEN is not set. Check .env.");
       process.exit(1);
     }
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] });

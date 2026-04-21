@@ -401,9 +401,36 @@ A: 네. `.env`에서 `MESSENGER=discord,slack`으로 설정하면 두 플랫폼 
 → `solosquad doctor`로 환경을 진단하세요.
 
 ### 메신저에서 봇이 응답하지 않음
-→ `solosquad doctor`로 토큰이 올바른지 확인
-→ 봇이 서버/워크스페이스에 초대되었는지 확인
-→ `#owner-command` 채널에서 메시지를 보냈는지 확인
+먼저 `solosquad doctor`로 환경 불일치를 확인하세요. 특히 `.env vs process.env mismatch` 경고가 뜨면 `solosquad`를 최신 버전으로 업데이트해야 합니다 (`.env` 로드 버그는 v1.1.3에서 수정됨).
+
+이어서 `solosquad doctor --messenger-check`로 토큰을 실제 API에 검증합니다.
+
+플랫폼별 체크리스트:
+
+**Slack**
+- api.slack.com/apps → 해당 앱 → **Socket Mode**: Enabled
+- **App-Level Token** scope: `connections:write`
+- **Bot Token Scopes**: `channels:read`, `channels:manage`, `chat:write`, `groups:read`, `app_mentions:read`, `channels:history`
+- **Event Subscriptions** → Subscribe to bot events: `message.channels`
+- Scope 변경 후 **Reinstall to Workspace** 재실행
+- `#owner-command` 채널에서 `/invite @봇이름`로 봇 초대
+- Bot Token 포맷 `xoxb-...` (User Token `xoxp-`와 혼동 금지)
+- App Token 포맷 `xapp-1-...` (Signing Secret과 혼동 금지)
+
+**Discord**
+- discord.com/developers → 앱 → **Bot** → **Privileged Gateway Intents** → **MESSAGE CONTENT**: ON
+- **OAuth2 → URL Generator** → scopes: `bot`, `applications.commands`
+- Bot permissions: View Channels, Send Messages, Read Message History
+- 생성된 OAuth2 URL로 봇을 서버에 초대
+- 서버명에 제품 이름 또는 slug가 포함되어야 자동 매핑됨 (예: 제품 slug가 `myapp`이면 서버명에 `myapp` 포함)
+- Token은 **Bot Token** (Client Secret 아님)
+
+**Telegram**
+- `@BotFather`에게 `/newbot` → 토큰 복사
+- `TELEGRAM_BOT_TOKEN` 포맷: `<숫자>:<문자열>`
+- `TELEGRAM_CHAT_ID` 획득: 봇에게 메시지를 하나 보낸 뒤 `https://api.telegram.org/bot<TOKEN>/getUpdates` 접속 → `chat.id` 복사
+- 개인/그룹: 숫자 (그룹은 음수), 채널: `@channelname`
+- 그룹 내 모든 메시지 수신: `@BotFather` → `/mybots` → 해당 봇 → Bot Settings → Group Privacy → Disabled
 
 ### 루틴이 실행되지 않음
 → `solosquad schedule`이 실행 중인지 확인
