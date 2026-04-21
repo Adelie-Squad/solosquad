@@ -65,7 +65,7 @@ export async function initCommand(): Promise<void> {
   }
 
   // Copy config files
-  for (const file of [".env.example", "docker-compose.yml"]) {
+  for (const file of [".env.example", "docker-compose.yml", "Dockerfile"]) {
     const src = path.join(assetsDir, file);
     const dest = path.join(workDir, file);
     if (fs.existsSync(src) && !fs.existsSync(dest)) {

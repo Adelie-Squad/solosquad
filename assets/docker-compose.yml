@@ -1,53 +1,37 @@
 services:
   bot:
     build: .
-    container_name: agent-bot
+    image: solosquad:latest
+    container_name: solosquad-bot
     restart: unless-stopped
+    env_file: .env
+    working_dir: /workspace
     environment:
-      - MESSENGER=${MESSENGER:-discord}
-      # Discord
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      # Slack
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      - SLACK_COMMAND_CHANNEL=${SLACK_COMMAND_CHANNEL:-owner-command}
-      # Telegram
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      # Common
-      - CLAUDE_CODE_PATH=${CLAUDE_CODE_PATH:-claude}
-      - OWNER_NAME=${OWNER_NAME}
-      - OWNER_ROLE=${OWNER_ROLE}
-      - REPOS_BASE_PATH=${REPOS_BASE_PATH:-/repos}
-      - TZ=Asia/Seoul
+      - REPOS_BASE_PATH=/repos
+      - TZ=${TZ:-Asia/Seoul}
     volumes:
+      # Workspace contents (agents, routines, core, templates, orchestrator, .env, memory, ...)
+      - .:/workspace
+      # Product repos tree
       - ${REPOS_BASE_PATH:-./repos}:/repos
-      - ./core:/app/core:ro
-      - ./routines:/app/routines:ro
-      - ./.env:/app/.env:ro
-    command: python src/bot.py
+      # Claude Code CLI authentication from host
+      # macOS/Linux default: ${HOME}/.claude
+      # Override via CLAUDE_AUTH_DIR in .env if creds live elsewhere.
+      - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
+    command: ["solosquad", "bot"]
 
   scheduler:
     build: .
-    container_name: agent-scheduler
+    image: solosquad:latest
+    container_name: solosquad-scheduler
     restart: unless-stopped
+    env_file: .env
+    working_dir: /workspace
     environment:
-      - MESSENGER=${MESSENGER:-discord}
-      # Discord
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      # Slack
-      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      # Telegram
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      # Common
-      - CLAUDE_CODE_PATH=${CLAUDE_CODE_PATH:-claude}
-      - REPOS_BASE_PATH=${REPOS_BASE_PATH:-/repos}
-      - TZ=Asia/Seoul
+      - REPOS_BASE_PATH=/repos
+      - TZ=${TZ:-Asia/Seoul}
     volumes:
+      - .:/workspace
       - ${REPOS_BASE_PATH:-./repos}:/repos
-      - ./core:/app/core:ro
-      - ./routines:/app/routines:ro
-      - ./.env:/app/.env:ro
-    command: python src/scheduler.py
+      - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
+    command: ["solosquad", "schedule"]
