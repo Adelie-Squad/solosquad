@@ -19,16 +19,21 @@ export function runClaude(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+    // On Windows, `claude` is a .cmd wrapper installed by npm. execFile cannot
+    // resolve PATHEXT without a shell, so invoke via cmd.exe with the args
+    // merged into the command string (Node's DEP0190 forbids shell:true + argv).
+    const useShell = process.platform === "win32";
+    const command = useShell ? "claude --print" : "claude";
+    const args = useShell ? [] : ["--print"];
+
     const child = execFile(
-      "claude",
-      ["--print"],
+      command,
+      args,
       {
         cwd,
         signal: controller.signal,
         maxBuffer: 10 * 1024 * 1024,
-        // On Windows, `claude` is a .cmd wrapper installed by npm. execFile
-        // does not resolve PATHEXT without a shell, so invoke via cmd.exe.
-        shell: process.platform === "win32",
+        shell: useShell,
       },
       (error, stdout, _stderr) => {
         clearTimeout(timer);

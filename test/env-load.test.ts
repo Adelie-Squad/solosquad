@@ -35,12 +35,21 @@ function runDoctor(
       delete baseEnv[k];
     }
   }
-  const res = spawnSync("npx", ["tsx", BIN, "doctor"], {
-    cwd,
-    env: { ...baseEnv, ...extraEnv },
-    encoding: "utf-8",
-    shell: process.platform === "win32",
-  });
+  const useShell = process.platform === "win32";
+  const cmd = useShell ? "npx" : "npx";
+  const cmdline = useShell ? `npx tsx "${BIN}" doctor` : "npx";
+  const res = useShell
+    ? spawnSync(cmdline, [], {
+        cwd,
+        env: { ...baseEnv, ...extraEnv },
+        encoding: "utf-8",
+        shell: true,
+      })
+    : spawnSync(cmd, ["tsx", BIN, "doctor"], {
+        cwd,
+        env: { ...baseEnv, ...extraEnv },
+        encoding: "utf-8",
+      });
   return { stdout: (res.stdout || "") + (res.stderr || ""), status: res.status };
 }
 
