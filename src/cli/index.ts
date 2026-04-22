@@ -76,3 +76,16 @@ program
     const { runRoutineCommand } = await import("./run-routine.js");
     await runRoutineCommand(routineId, opts.all);
   });
+
+program
+  .command("migrate")
+  .description("Migrate workspace to the current SoloSquad version")
+  .option("--apply", "Actually apply the migration (default is dry-run)")
+  .option("--rollback", "Restore a workspace from a previous backup")
+  .option("--list-backups", "List available backups")
+  .option("--delete-backup <id>", "Delete a specific backup by id")
+  .option("--to <version>", "Target version (default: current CLI version)")
+  .action(async (opts) => {
+    const { migrateCommand } = await import("./migrate.js");
+    await migrateCommand(opts);
+  });

@@ -8,7 +8,7 @@ import {
   platformInfo,
   shellName,
 } from "../util/platform.js";
-import { getWorkspaceDir } from "../util/paths.js";
+import { getWorkspaceRoot } from "../util/paths.js";
 
 function check(label: string, ok: boolean, hint?: string): boolean {
   if (ok) {
@@ -64,11 +64,35 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     }
   }
 
-  // 2. Configuration — reads process.env (post dotenv/config load in bin/solosquad.ts)
+  // 2. Workspace layout detection — v1.2.2 has .solosquad/, v1.1.x has flat config dirs
+  console.log(chalk.dim("\nWorkspace layout:"));
+  const workspace = getWorkspaceRoot();
+  const solosquadDir = path.join(workspace, ".solosquad");
+  const isNew = fs.existsSync(solosquadDir);
+  const legacyMarkers = ["agents", "routines", "core"].every((d) =>
+    fs.existsSync(path.join(workspace, d))
+  );
+
+  if (isNew) {
+    check(`Workspace root: ${workspace}`, true);
+    check(".solosquad/ present", true);
+    const wsYaml = path.join(solosquadDir, "workspace.yaml");
+    if (!check(".solosquad/workspace.yaml", fs.existsSync(wsYaml), "Run: solosquad init")) issues++;
+  } else if (legacyMarkers) {
+    warn(
+      `Legacy v1.1.x layout at ${workspace}`,
+      "Run: solosquad migrate --dry-run  (preview),  --apply  (upgrade to v1.2.2)"
+    );
+    issues++;
+  } else {
+    warn("No workspace detected here", "Run: solosquad init");
+  }
+
+  // 3. Configuration — reads process.env (post dotenv/config load in bin/solosquad.ts)
   console.log(chalk.dim("\nConfiguration:"));
-  const envFile = path.join(getWorkspaceDir(), ".env");
+  const envFile = isNew ? path.join(solosquadDir, ".env") : path.join(workspace, ".env");
   const envFileExists = fs.existsSync(envFile);
-  if (!check(".env file", envFileExists, "Run: solosquad init")) issues++;
+  if (!check(isNew ? ".solosquad/.env file" : ".env file", envFileExists, "Run: solosquad init")) issues++;
 
   // Detect .env vs process.env divergence — this catches the "dotenv not loaded" class of bug.
   const fileEnv = envFileExists ? loadEnv() : {};
@@ -83,9 +107,16 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     );
   }
 
-  const messenger = (process.env.MESSENGER || "").trim();
+  const rawMessenger = (process.env.MESSENGER || "").trim();
+  const messenger = rawMessenger.split(",")[0].trim();
   if (!check("MESSENGER set (process.env)", !!messenger, "Set MESSENGER in .env or shell")) {
     issues++;
+  }
+  if (rawMessenger.includes(",")) {
+    warn(
+      `MESSENGER contains multiple values: "${rawMessenger}"`,
+      "v1.2.2 supports only one messenger per workspace. Using first value."
+    );
   }
 
   if (messenger) {
@@ -97,19 +128,27 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     }
   }
 
-  const reposPath = process.env.REPOS_BASE_PATH || "";
-  if (!check("REPOS_BASE_PATH exists", !!reposPath && fs.existsSync(reposPath), `Path: ${reposPath || "(unset)"}`)) {
-    issues++;
+  if (!isNew) {
+    const reposPath = process.env.REPOS_BASE_PATH || "";
+    if (!check("REPOS_BASE_PATH exists", !!reposPath && fs.existsSync(reposPath), `Path: ${reposPath || "(unset)"}`)) {
+      issues++;
+    }
   }
 
-  // 3. Project structure
+  // 4. Project structure
   console.log(chalk.dim("\nProject structure:"));
-  if (!check("core/products.json", fs.existsSync("core/products.json"), "Run: solosquad init")) issues++;
-  if (!check("agents/", fs.existsSync("agents"), "Run: solosquad init")) issues++;
-  if (!check("routines/", fs.existsSync("routines"), "Run: solosquad init")) issues++;
+  if (isNew) {
+    if (!check(".solosquad/agents/", fs.existsSync(path.join(solosquadDir, "agents")), "Run: solosquad init")) issues++;
+    if (!check(".solosquad/routines/", fs.existsSync(path.join(solosquadDir, "routines")), "Run: solosquad init")) issues++;
+  } else {
+    if (!check("core/products.json", fs.existsSync("core/products.json"), "Run: solosquad init")) issues++;
+    if (!check("agents/", fs.existsSync("agents"), "Run: solosquad init")) issues++;
+    if (!check("routines/", fs.existsSync("routines"), "Run: solosquad init")) issues++;
+  }
 
   const products = loadProducts();
-  if (!check(`Products registered (${products.length})`, products.length > 0, "Run: solosquad init")) issues++;
+  const unitLabel = isNew ? "Organizations" : "Products";
+  if (!check(`${unitLabel} registered (${products.length})`, products.length > 0, isNew ? "Run: solosquad add org <name>" : "Run: solosquad init")) issues++;
 
   // 4. Live messenger API check (opt-in)
   if (messengerCheck && messenger) {

@@ -16,31 +16,35 @@ const adapterLoaders: Record<string, () => Promise<MessengerAdapter>> = {
   },
 };
 
+function resolvePlatform(raw: string | undefined): string {
+  const first = (raw || "discord").split(",")[0].trim().toLowerCase();
+  return first || "discord";
+}
+
 async function createSingle(platform: string): Promise<MessengerAdapter> {
-  const p = platform.trim().toLowerCase();
-  const loader = adapterLoaders[p];
-  if (!loader) throw new Error(`Unsupported messenger platform: ${p}`);
+  const loader = adapterLoaders[platform];
+  if (!loader) throw new Error(`Unsupported messenger platform: ${platform}`);
   return loader();
 }
 
-/** Create a single adapter (first configured platform). */
+/** Create a single adapter from MESSENGER env var (v1.2.2+ enforces single platform). */
 export async function createAdapter(platform?: string): Promise<MessengerAdapter> {
-  const raw = platform || process.env.MESSENGER || "discord";
-  const first = raw.split(",")[0].trim();
-  return createSingle(first);
+  const p = resolvePlatform(platform || process.env.MESSENGER);
+  return createSingle(p);
 }
 
-/** Create adapters for all configured platforms. */
+/**
+ * Returns a single-element adapter array (v1.2.2+ enforces one messenger per
+ * workspace). Kept as an array-returning function so existing callers
+ * `adapters.map(a => a.startBot(...))` don't need changes; the multi-platform
+ * comma syntax is collapsed to the first value with a warning.
+ */
 export async function createAdapters(platforms?: string): Promise<MessengerAdapter[]> {
   const raw = platforms || process.env.MESSENGER || "discord";
-  const names = raw.split(",").map((p) => p.trim().toLowerCase()).filter(Boolean);
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const n of names) {
-    if (!seen.has(n)) {
-      seen.add(n);
-      unique.push(n);
-    }
+  if (raw.includes(",")) {
+    console.log(
+      `[Bot] MESSENGER contains multiple values ("${raw}"). v1.2.2 supports one messenger per workspace — using "${resolvePlatform(raw)}".`
+    );
   }
-  return Promise.all(unique.map(createSingle));
+  return [await createSingle(resolvePlatform(raw))];
 }

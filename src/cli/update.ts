@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { npmGlobalInstallCmd } from "../util/platform.js";
+import { detectWorkspaceVersion } from "../migrations/detect.js";
+import { getWorkspaceRoot } from "../util/paths.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -60,6 +62,27 @@ export async function updateCommand(channel: string): Promise<void> {
 
   if (isNewer(latest, current)) {
     console.log(chalk.green.bold(`\nNew version available: v${latest}`));
+
+    // Warn if installed CLI is already ahead of the workspace layout.
+    const workspaceVersion = detectWorkspaceVersion(getWorkspaceRoot());
+    if (workspaceVersion && workspaceVersion !== latest && !isNewer(workspaceVersion, latest)) {
+      // Detect a known structural jump (1.1.x → 1.2.x)
+      if (workspaceVersion.startsWith("1.1") && latest.startsWith("1.2")) {
+        console.log(
+          chalk.yellow(
+            "\n  ⚠ This update includes breaking workspace-layout changes."
+          )
+        );
+        console.log(
+          chalk.yellow(
+            "    After updating the CLI, run:"
+          )
+        );
+        console.log(chalk.cyan("      solosquad migrate --dry-run        (preview)"));
+        console.log(chalk.cyan("      solosquad migrate --apply          (perform migration)"));
+      }
+    }
+
     console.log(`\nRun to update:`);
     console.log(chalk.cyan(`  ${npmGlobalInstallCmd("solosquad@latest")}\n`));
 
