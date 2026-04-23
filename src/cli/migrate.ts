@@ -4,9 +4,10 @@ import { getWorkspaceRoot } from "../util/paths.js";
 import { runMigration } from "../migrations/runner.js";
 import { listBackups, restoreBackup, deleteBackup, getBackupRoot } from "../migrations/backup.js";
 
-const CLI_VERSION_TARGET = "1.2.0";
+const CLI_VERSION_TARGET = "1.2.1";
 
 export interface MigrateCliOpts {
+  dryRun?: boolean;
   apply?: boolean;
   rollback?: boolean;
   listBackups?: boolean;
@@ -27,6 +28,11 @@ export async function migrateCommand(opts: MigrateCliOpts): Promise<void> {
   if (opts.rollback) {
     await rollbackCommand();
     return;
+  }
+
+  if (opts.apply && opts.dryRun) {
+    console.log(chalk.red("✗ --dry-run 과 --apply 를 동시에 쓸 수 없습니다."));
+    process.exit(1);
   }
 
   const workspace = getWorkspaceRoot();

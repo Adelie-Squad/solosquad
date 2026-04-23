@@ -101,3 +101,55 @@ export function getReposBase(): string {
   }
   return process.env.REPOS_BASE_PATH || path.join(os.homedir(), "repos");
 }
+
+/** v1.2.2+: path to an org directory under the workspace. */
+export function getOrgDir(orgSlug: string, workspace?: string): string {
+  return path.join(workspace ?? getWorkspaceRoot(), orgSlug);
+}
+
+/** v1.2.2+: path to an org's `repositories/` container folder. */
+export function getRepositoriesDir(orgSlug: string, workspace?: string): string {
+  return path.join(getOrgDir(orgSlug, workspace), "repositories");
+}
+
+/** v1.2.2+: path to a specific repo directory (under `<org>/repositories/<repo>`). */
+export function getRepoDir(orgSlug: string, repoSlug: string, workspace?: string): string {
+  return path.join(getRepositoriesDir(orgSlug, workspace), repoSlug);
+}
+
+/**
+ * Resolve the runtime cwd for a given org/repo.
+ *
+ * Normal case (post-sync): `<workspace>/<org>/repositories/<repo>` exists — return it.
+ *
+ * Legacy case (org = repo, .git at org root, pre-sync): fall back to the org
+ * root so the bot/scheduler keep working for single-repo migrated orgs.
+ */
+export function resolveRepoCwd(
+  orgSlug: string,
+  repoSlug: string | null,
+  workspace?: string
+): string {
+  const root = workspace ?? getWorkspaceRoot();
+  if (repoSlug) {
+    const canonical = path.join(root, orgSlug, "repositories", repoSlug);
+    if (fs.existsSync(canonical)) return canonical;
+  }
+  const orgDir = path.join(root, orgSlug);
+  const legacyGit = path.join(orgDir, ".git");
+  if (fs.existsSync(legacyGit)) return orgDir;
+  return orgDir;
+}
+
+/** System-reserved folder names that must not be treated as repos. */
+export const RESERVED_ORG_CHILDREN = new Set([
+  ".solosquad",
+  ".org.yaml",
+  "memory",
+  "workflows",
+  "repositories",
+  "slack",
+  "discord",
+  "telegram",
+  "product",
+]);

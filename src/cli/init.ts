@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import inquirer from "inquirer";
-import yaml from "js-yaml";
 import {
   getAssetsDir,
   getSolosquadConfigDir,
@@ -11,13 +10,13 @@ import {
 import {
   normalizeMessenger,
   saveEnv,
-  saveOrgYaml,
   saveWorkspaceYaml,
-  type OrgYaml,
 } from "../util/config.js";
 import { commandExists } from "../util/platform.js";
+import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
+import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 
-const SOLOSQUAD_VERSION = "1.2.0";
+const SOLOSQUAD_VERSION = "1.2.1";
 
 const ORG_EXAMPLES = `
   Examples (Elon Musk's portfolio, for illustration):
@@ -31,6 +30,74 @@ const ORG_EXAMPLES = `
   slug. Otherwise, pick a short name (lowercase, hyphen-separated).
 `;
 
+async function registerRepoInline(
+  input: string,
+  orgDir: string,
+  orgSlug: string
+): Promise<{ slug: string; role: string } | null> {
+  const reposDir = path.join(orgDir, "repositories");
+  fs.mkdirSync(reposDir, { recursive: true });
+
+  let repoDir: string;
+  try {
+    if (looksLikeGitUrl(input)) {
+      const slug = slugFromUrl(input);
+      repoDir = path.join(reposDir, slug);
+      if (fs.existsSync(repoDir)) {
+        console.log(chalk.yellow(`  ! ${slug} already exists — skipping clone.`));
+      } else {
+        console.log(chalk.dim(`  Cloning ${input} → ${path.relative(process.cwd(), repoDir)}...`));
+        cloneRepo(input, repoDir);
+      }
+    } else {
+      const src = path.resolve(input);
+      if (!fs.existsSync(src)) {
+        console.log(chalk.red(`  ✗ Path does not exist: ${src}`));
+        return null;
+      }
+      const slug = path.basename(src);
+      repoDir = path.join(reposDir, slug);
+      if (path.resolve(repoDir) === path.resolve(src)) {
+        // In-place register
+      } else if (fs.existsSync(repoDir)) {
+        console.log(chalk.yellow(`  ! ${slug} already exists at destination — skipping move.`));
+      } else {
+        const { confirm } = await inquirer.prompt([
+          {
+            name: "confirm",
+            type: "confirm",
+            message: `Move ${src} → ${repoDir} ?`,
+            default: true,
+          },
+        ]);
+        if (!confirm) return null;
+        fs.renameSync(src, repoDir);
+      }
+    }
+  } catch (err) {
+    console.log(chalk.red(`  ✗ ${(err as Error).message}`));
+    return null;
+  }
+
+  const { role } = await inquirer.prompt([
+    {
+      name: "role",
+      type: "list",
+      message: "Role:",
+      choices: ["main", "frontend", "backend", "data", "infra", "docs", "unknown"],
+      default: isGitRepo(repoDir) ? "main" : "unknown",
+    },
+  ]);
+
+  const doc = scaffoldRepoYaml({
+    orgDir,
+    orgSlug,
+    repoDir,
+    role,
+  });
+  return { slug: doc.slug, role: doc.role };
+}
+
 function copyDirSync(src: string, dest: string): void {
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
@@ -42,10 +109,6 @@ function copyDirSync(src: string, dest: string): void {
       fs.copyFileSync(srcPath, destPath);
     }
   }
-}
-
-function slugify(s: string): string {
-  return s.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
 export async function initCommand(): Promise<void> {
@@ -206,6 +269,7 @@ export async function initCommand(): Promise<void> {
   const { orgName } = await inquirer.prompt([
     { name: "orgName", message: "Organization name:", type: "input" },
   ]);
+  let orgSlug: string | null = null;
   if (!orgName) {
     console.log(chalk.yellow("  No organization provided — skipping. Run `solosquad add org <name>` later."));
   } else {
@@ -225,37 +289,38 @@ export async function initCommand(): Promise<void> {
       },
     ]);
 
-    const orgSlug = slugify(orgName);
-    const orgDir = path.join(workspace, orgSlug);
-    const orgDoc: OrgYaml = {
+    const { orgDir } = scaffoldOrg({
+      workspace,
       name: orgName,
-      slug: orgSlug,
       provider,
-      remote_url: remoteUrl || null,
-      homepage: null,
-      products: [],
-      description: "",
-      created_at: new Date().toISOString(),
-    };
-    fs.mkdirSync(orgDir, { recursive: true });
-    fs.mkdirSync(path.join(orgDir, "memory", "routine-logs"), { recursive: true });
-    fs.mkdirSync(path.join(orgDir, "workflows"), { recursive: true });
-    fs.mkdirSync(path.join(orgDir, messenger), { recursive: true });
-
-    // Write memory schemas (JSONL headers, matching legacy init behavior)
-    const schemas: Record<string, string> = {
-      "hypotheses.jsonl": '{"_schema":"hypothesis","fields":["id","statement","risk","method","status","date"]}\n',
-      "experiments.jsonl": '{"_schema":"experiment","fields":["id","hypothesis_id","method","result","signal_strength","date","next_action"]}\n',
-      "decisions.jsonl": '{"_schema":"decision","fields":["date","decision","alternatives","reasoning","emotion_weight"]}\n',
-      "signals.jsonl": '{"_schema":"signal","fields":["date","source","type","content","relevance","action"]}\n',
-    };
-    for (const [name, body] of Object.entries(schemas)) {
-      const p = path.join(orgDir, "memory", name);
-      if (!fs.existsSync(p)) fs.writeFileSync(p, body);
-    }
-
-    saveOrgYaml(orgDir, orgDoc);
+      remoteUrl: remoteUrl || null,
+      messenger,
+    });
+    orgSlug = path.basename(orgDir);
     console.log(chalk.green(`✓ ${orgSlug}/ organization created`));
+
+    // Step 5.1: Register repositories (loop)
+    console.log(chalk.bold("\n-- Step 5.1: Register Repositories (optional) --"));
+    console.log(chalk.dim(
+      "  You can paste a git URL to clone, or a local path to register.\n" +
+      "  Leave empty to skip. Repeat to add more."
+    ));
+
+    while (true) {
+      const { repoInput } = await inquirer.prompt([
+        {
+          name: "repoInput",
+          message: `Add repo to ${orgSlug} (git URL or local path, blank to finish):`,
+          type: "input",
+        },
+      ]);
+      if (!repoInput) break;
+
+      const registered = await registerRepoInline(repoInput, orgDir, orgSlug);
+      if (registered) {
+        console.log(chalk.green(`✓ ${registered.slug} (${registered.role}) registered`));
+      }
+    }
   }
 
   // Step 6: Security checklist
@@ -287,11 +352,12 @@ export async function initCommand(): Promise<void> {
   console.log(chalk.dim("      workspace.yaml"));
   console.log(chalk.dim("      .env"));
   console.log(chalk.dim("      agents/ routines/ core/ templates/ orchestrator/"));
-  if (orgName) {
-    console.log(chalk.dim(`    ${slugify(orgName)}/    (org)`));
+  if (orgSlug) {
+    console.log(chalk.dim(`    ${orgSlug}/              (org)`));
     console.log(chalk.dim("      .org.yaml"));
     console.log(chalk.dim("      memory/ workflows/"));
     console.log(chalk.dim(`      ${messenger}/`));
+    console.log(chalk.dim("      repositories/        (repos live here)"));
   }
   console.log(chalk.dim("    docker-compose.yml  Dockerfile"));
 
@@ -301,8 +367,8 @@ export async function initCommand(): Promise<void> {
   console.log(`  ${chalk.cyan("solosquad status")}     — Show dashboard`);
   console.log(`  ${chalk.cyan("solosquad update")}     — Check for updates`);
   console.log(`  ${chalk.cyan("solosquad doctor")}     — Diagnose issues`);
-  console.log(`  ${chalk.cyan("solosquad migrate")}    — Upgrade workspace layout\n`);
-
-  // Silence unused-var lint if yaml goes unused in some code paths
-  void yaml;
+  console.log(`  ${chalk.cyan("solosquad migrate")}    — Upgrade workspace layout`);
+  console.log(`  ${chalk.cyan("solosquad add org")}    — Add another organization`);
+  console.log(`  ${chalk.cyan("solosquad add repo")}   — Add a repository`);
+  console.log(`  ${chalk.cyan("solosquad sync")}       — Sync repositories/ with .org.yaml\n`);
 }

@@ -79,7 +79,20 @@ solosquad doctor
 5. `solosquad doctor` 로 건강 상태 확인
 6. `solosquad bot` 다시 시작
 
-### 4.1 Dry-run이 무엇을 보여주나
+### 4.1 Apply 전 필수 체크리스트 (주의사항)
+
+- [ ] **`solosquad bot` / `solosquad schedule` 완전히 종료** — 실행 중이면 파일 lock 때문에 이동 실패 가능 (Ctrl+C 또는 `docker compose down`)
+- [ ] **VSCode / JetBrains IDE 에서 해당 워크스페이스·repo 닫기** — Windows 에서 특히 파일 핸들이 걸려 rename/move 가 막힘
+- [ ] **외부에서 절대경로로 하드코딩한 스크립트·바로가기 확인** — `C:\...\Documents\solosquad-repos\<slug>` 같은 경로가 있으면 마이그레이션 후 `<workspace>\<slug>` 로 수정 필요
+- [ ] **먼저 dry-run 실행** — `solosquad migrate`(플래그 없음) 또는 `--dry-run`
+- [ ] **작업 중 코드는 미리 commit/stash** — 마이그레이션은 `.git/` 포함 폴더 전체를 옮기지만, dirty working tree 는 사용자가 직접 정리해두는 편이 안전
+
+### 4.2 알려진 이슈 (v1.1.x → v1.2.0 점프 시)
+
+- **`solosquad update` 가 마이그레이션 경고를 띄우지 않습니다.** 마이그레이션 감지 코드는 v1.2.0 에서 새로 추가됐기 때문에, v1.1.5 CLI 가 업데이트를 수행하는 순간에는 경고 로직이 존재하지 않습니다. v1.2.x → v1.3.x 같은 이후 점프부터는 정상 경고. v1.1.x 에서 올라오는 사용자는 **업데이트 직후 `solosquad migrate` 를 수동으로 한 번 실행**하세요.
+- **`--dry-run` 플래그가 CLI 에 등록돼 있지 않을 수 있습니다** (v1.2.0 초기 빌드). `solosquad migrate`(플래그 없음) 만 입력해도 dry-run 으로 동작합니다. 실제 이관은 `--apply`.
+
+### 4.3 Dry-run이 무엇을 보여주나
 
 ```bash
 $ solosquad migrate --dry-run
@@ -102,14 +115,14 @@ Nothing written yet. Re-run with `--apply` to perform the migration.
 
 **Dry-run은 아무것도 바꾸지 않습니다.** 마음에 안 들면 그냥 무시하면 됨.
 
-### 4.2 Apply가 자동으로 해주는 것
+### 4.4 Apply가 자동으로 해주는 것
 
 - 작업 전 워크스페이스 **전체 스냅샷 백업** (기본: `~/.solosquad-backups/<타임스탬프>/`)
 - 파일·폴더 이동/이름변경
 - 새 설정 파일 자동 생성 (`.solosquad/workspace.yaml`, `.org.yaml` 등)
 - 마이그레이션 후 `doctor` 자동 실행으로 검증
 
-### 4.3 여러 버전을 건너뛸 때
+### 4.5 여러 버전을 건너뛸 때
 
 v1.1.2를 쓰다가 v1.3.0으로 직접 업데이트할 경우, 마이그레이션이 **체인**으로 순차 실행됩니다:
 
@@ -269,11 +282,64 @@ A. `solosquad update --channel dev`로 전환 가능 (단, 안정성 없음). `-
 
 ---
 
-## 11. 요약
+## 11. 마이그레이션 이후 — org/repo 관리 명령 (v1.2.0+)
+
+v1.2.0 부터는 단일 트리 아래에서 여러 org/repo 를 운영할 수 있습니다.
+
+### 11.1 사업(org) 추가
+
+```bash
+solosquad add org <name>               # 대화형
+solosquad add org my-side --provider github --remote-url https://github.com/my-side
+```
+
+`<workspace>/<name>/` 폴더 + `.org.yaml` + `memory/` + `workflows/` + `repositories/` + `<messenger>/` 자동 생성.
+
+### 11.2 저장소(repo) 추가
+
+URL 이면 clone, 경로면 등록(필요시 이동).
+
+```bash
+solosquad add repo https://github.com/foo/bar.git     # clone + 등록
+solosquad add repo ./existing-local-repo              # 이동(확인 후) + 등록
+solosquad add repo --org tesla --role frontend <url>  # 플래그로 org/role 지정
+```
+
+사업이 **하나뿐이면 자동 선택**, 여럿이면 질문 또는 `--org <slug>` 플래그. cwd 가 특정 org 안이면 그 org 자동 선택.
+
+### 11.3 Bulk 동기화
+
+이미 `repositories/` 에 clone 해둔 repo 들을 한 번에 등록:
+
+```bash
+solosquad sync                         # 모든 org 스캔
+solosquad sync --org tesla             # 특정 org만
+solosquad sync --dry-run               # 미리보기
+```
+
+동작:
+- `repositories/<folder>` 중 `.git` 있는데 `repo.yaml` 없는 경우 자동 등록
+- `.org.yaml.products[].repos` 를 실제 상태와 맞춰 갱신
+- `.git` 없는 폴더는 경고 스킵
+- `.org.yaml` 에 나열됐지만 실제 폴더가 없는 repo 는 경고
+
+### 11.4 Legacy 정리 (v1.1.x → v1.2.0 마이그레이션 직후)
+
+마이그레이션 스크립트는 각 product 를 org 로 바꾸되, **`.git` 을 org 루트에 그대로** 둡니다 (v1.1.x 에서 product=repo 였던 자취). `solosquad sync` 첫 실행 시 이 상태를 감지하고 두 가지 선택을 제공:
+
+- **Normalize (권장)** — 코드와 `.git` 을 `<org>/repositories/<org-slug>/` 로 이동. 앞으로 repo 여러 개 붙일 거면 필수.
+- **Keep legacy** — 현상 유지. `<org>/.solosquad/repo.yaml` 을 org 루트에 생성해 "org = 단일 repo" 로 고정. 저장소 한 개만 쓸 거면 OK.
+
+Normalize 후 봇은 자동으로 `<org>/repositories/<repo>/` 를 cwd 로 사용. Keep legacy 면 org 루트가 cwd.
+
+---
+
+## 12. 요약
 
 - 일반 업데이트: `solosquad update` → y
 - 마이그레이션 업데이트: `npm install -g solosquad@latest` → `solosquad migrate --dry-run` → `--apply`
 - 문제 시: `solosquad migrate --rollback`
-- 불안할 때: dry-run만 먼저 돌려보고 출력 확인
+- 마이그레이션 직후: `solosquad sync` 로 legacy 정리
+- 사업/저장소 추가: `solosquad add org <name>` / `solosquad add repo <url|path>`
 
 업데이트는 두렵지 않아야 합니다. 백업은 자동, 롤백은 한 줄, 진행은 선택.

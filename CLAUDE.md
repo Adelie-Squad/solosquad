@@ -21,6 +21,10 @@ solosquad status        # Dashboard
 solosquad update        # Self-update (OpenClaw-style)
 solosquad doctor        # Environment diagnostics
 solosquad run-routine   # Manual routine execution
+solosquad migrate       # Upgrade workspace layout across versions
+solosquad add org       # Add another organization to workspace
+solosquad add repo      # Clone (URL) or register (local path) a repository
+solosquad sync          # Sync org/repositories/ with .org.yaml
 ```
 
 ## Project Structure
@@ -47,9 +51,9 @@ assets/                             → Bundled assets (copied on `solosquad ini
 ## 3-Layer Context
 
 ```
-Layer 0: Universal (core/)       → Shared across all sessions
-Layer 1: Product (~/repos/{slug}/) → Per-product isolation
-Layer 2: Project (projects/{id}/)  → Per-project isolation
+Layer 0: Universal (.solosquad/core/)                       → Shared across all sessions
+Layer 1: Organization (<workspace>/<org>/)                  → Per-org memory, workflows, channels
+Layer 2: Repository (<workspace>/<org>/repositories/<repo>/) → Per-repo code + .solosquad/repo.yaml
 ```
 
 ## Team Composition

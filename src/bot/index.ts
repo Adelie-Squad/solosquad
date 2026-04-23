@@ -4,6 +4,7 @@ import { findAgent, loadAgentSkill } from "./agent-router.js";
 import { runClaude } from "./claude-runner.js";
 import { getReposBase, getWorkspaceDir } from "../util/paths.js";
 import { loadEnv, type Product } from "../util/config.js";
+import { resolveOrgCwd } from "./workflow-resolver.js";
 import type { MessageContext } from "../messenger/base.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
@@ -19,7 +20,17 @@ async function handleCommand(
     return;
   }
 
-  const productDir = path.join(getReposBase(), product.slug);
+  // v1.2.0+: product.slug == org slug. Resolve cwd based on active workflow /
+  // main repo / legacy layout.
+  const orgDir = path.join(getReposBase(), product.slug);
+  const { cwd, reason, workflowId, repoSlug } = resolveOrgCwd(orgDir);
+  if (reason === "workflow" && workflowId) {
+    console.log(`[Bot] cwd → workflow "${workflowId}" stage target_repo=${repoSlug}`);
+  } else if (reason === "main-repo" && repoSlug) {
+    console.log(`[Bot] cwd → main repo "${repoSlug}"`);
+  } else {
+    console.log(`[Bot] cwd → org root (legacy / no repos)`);
+  }
 
   const route = findAgent(userInput);
   let skillContext = "";
@@ -35,7 +46,7 @@ async function handleCommand(
   }
 
   const prompt = skillContext ? `${skillContext}${userInput}` : userInput;
-  const result = await runClaude(prompt, productDir);
+  const result = await runClaude(prompt, cwd);
 
   if (result) {
     await ctx.reply(result);

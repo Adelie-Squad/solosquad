@@ -3,6 +3,7 @@ import path from "path";
 import cron from "node-cron";
 import { createAdapters } from "../messenger/index.js";
 import { runClaude } from "../bot/claude-runner.js";
+import { resolveOrgCwd } from "../bot/workflow-resolver.js";
 import { loadProducts, loadMessengerConfig } from "../util/config.js";
 import { getReposBase } from "../util/paths.js";
 import { ROUTINES, loadRoutinePrompt, type RoutineConfig } from "./routines.js";
@@ -19,17 +20,22 @@ async function runRoutineForProduct(
   routine: RoutineConfig,
   product: { name: string; slug: string }
 ): Promise<void> {
-  const productDir = path.join(getReposBase(), product.slug);
-  console.log(`[Scheduler] ${product.name} - ${routine.name} starting`);
+  // v1.2.0+: product.slug == org slug. Routines always run at org level so
+  // memory/routine-logs (org scope) is the persistence target — but the Claude
+  // session still launches in the active repo to give it real code context.
+  const orgDir = path.join(getReposBase(), product.slug);
+  const { cwd, reason, repoSlug } = resolveOrgCwd(orgDir);
+  const repoLabel = reason === "legacy-root" ? "(org root)" : `(repo: ${repoSlug})`;
+  console.log(`[Scheduler] ${product.name} - ${routine.name} starting ${repoLabel}`);
 
   const prompt = loadRoutinePrompt(routine.id);
-  const result = await runClaude(prompt, productDir, 180_000);
+  const result = await runClaude(prompt, cwd, 180_000);
 
-  // Auto-save to memory
-  saveRoutineMemory(result, routine, productDir);
+  // Auto-save to memory (always at org level, regardless of which repo ran the prompt)
+  saveRoutineMemory(result, routine, orgDir);
 
   // Save routine log
-  const logDir = path.join(productDir, "memory", "routine-logs");
+  const logDir = path.join(orgDir, "memory", "routine-logs");
   fs.mkdirSync(logDir, { recursive: true });
   const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, "").replace("T", "-");
   fs.writeFileSync(
@@ -40,7 +46,7 @@ async function runRoutineForProduct(
   // Send to all connected messengers
   const title = `${routine.emoji} [${routine.name}] ${product.name} | ${now()}`;
   for (const adapter of adapters) {
-    const config = loadMessengerConfig(product.slug, adapter.platform);
+    const config = loadMessengerConfig(orgDir, adapter.platform);
     const sent = await adapter.sendToChannel(config, routine.channel, result, title);
     if (sent) {
       console.log(`[Scheduler] ${product.name} - ${routine.name} → ${adapter.platform} sent`);
@@ -72,9 +78,11 @@ async function sendStartupNotification(): Promise<void> {
     "**AI Assistant System Started**\nRoutine schedule:\n" +
     ROUTINES.map((r) => `• ${r.emoji} ${r.name}: ${r.cron}`).join("\n");
 
+  const workspace = getReposBase();
   for (const adapter of adapters) {
     for (const product of products) {
-      const config = loadMessengerConfig(product.slug, adapter.platform);
+      const orgDir = path.join(workspace, product.slug);
+      const config = loadMessengerConfig(orgDir, adapter.platform);
       await adapter.sendToChannel(config, "daily-brief", msg);
     }
   }
