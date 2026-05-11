@@ -74,10 +74,12 @@
 
 | 버전 | 주제 | 문서 |
 |---|---|---|
-| `v1.3.x` | 자율 실행 엔진 | `docs/v1.3-autonomous-engine.md` |
-| `v1.4.x` | 스킬 자유도 | `docs/v1.4-skill-freedom.md` |
-| `v1.5.x` | 지식 온톨로지 | `docs/v1.5-knowledge-ontology.md` |
-| `v1.6.x` | 웹 대시보드 | `docs/v1.6-web-dashboard.md` |
+| `v1.3.x` | (예약 — 추후 추가) | — |
+| `v1.4.x` | PM 모드 + 멀티 에이전트 오케스트레이션 | `docs/v1.4-pm-mode-orchestration.md` |
+| `v1.5.x` | 자율 실행 엔진 | `docs/v1.5-autonomous-engine.md` |
+| `v1.6.x` | 스킬 자유도 | `docs/v1.6-skill-freedom.md` |
+| `v1.7.x` | 지식 온톨로지 | `docs/v1.7-knowledge-ontology.md` |
+| `v1.8.x` | 웹 대시보드 | `docs/v1.8-web-dashboard.md` |
 
 ---
 
