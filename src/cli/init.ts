@@ -8,6 +8,7 @@ import {
   getWorkspaceRoot,
 } from "../util/paths.js";
 import {
+  DEFAULT_WORKSPACE_SETTINGS,
   normalizeMessenger,
   saveEnv,
   saveWorkspaceYaml,
@@ -16,7 +17,30 @@ import { commandExists } from "../util/platform.js";
 import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 
-const SOLOSQUAD_VERSION = "1.2.1";
+const SOLOSQUAD_VERSION = "1.2.4";
+
+const TIMEZONE_PRESETS = [
+  { name: "Asia/Seoul (UTC+09) — recommended", value: "Asia/Seoul" },
+  { name: "America/Los_Angeles (UTC-08/-07)", value: "America/Los_Angeles" },
+  { name: "America/New_York (UTC-05/-04)", value: "America/New_York" },
+  { name: "Europe/London (UTC+00/+01)", value: "Europe/London" },
+  { name: "UTC", value: "UTC" },
+  { name: "Other — type IANA string", value: "__other__" },
+];
+
+function isValidHHMM(s: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+}
+
+function isValidIanaTimezone(tz: string): boolean {
+  try {
+    // Throws RangeError on invalid IANA name
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const ORG_EXAMPLES = `
   Examples (Elon Musk's portfolio, for illustration):
@@ -197,9 +221,8 @@ export async function initCommand(): Promise<void> {
       message: "Messenger platform (one per workspace):",
       type: "list",
       choices: [
-        { name: "Discord  — Best for team channels", value: "discord" },
-        { name: "Slack    — Great for workspace integration", value: "slack" },
-        { name: "Telegram — Lightweight, mobile-friendly", value: "telegram" },
+        { name: "Discord — Best for team channels", value: "discord" },
+        { name: "Slack   — Great for workspace integration", value: "slack" },
       ],
     },
   ]);
@@ -214,7 +237,8 @@ export async function initCommand(): Promise<void> {
   if (messenger === "discord") {
     console.log(chalk.yellow("\nDiscord Bot Token required."));
     console.log("  https://discord.com/developers/applications → Bot → Reset Token");
-    console.log("  Also enable: Bot → Privileged Gateway Intents → MESSAGE CONTENT\n");
+    console.log("  Also enable: Bot → Privileged Gateway Intents → MESSAGE CONTENT");
+    console.log("  Bot permissions: View Channels, Send Messages, Read Message History, Create Public Threads\n");
     const { token } = await inquirer.prompt([
       { name: "token", message: "Discord Bot Token:", type: "password" },
     ]);
@@ -225,7 +249,8 @@ export async function initCommand(): Promise<void> {
     console.log("  1. https://api.slack.com/apps → Create New App");
     console.log("  2. OAuth & Permissions → Bot Token (xoxb-...)");
     console.log("  3. Socket Mode → Enable → App-Level Token (xapp-...)");
-    console.log("  4. Event Subscriptions → subscribe to message.channels\n");
+    console.log("  4. Bot Token scopes: channels:read, channels:manage, chat:write, app_mentions:read, channels:history");
+    console.log("  5. Event Subscriptions → subscribe to message.channels\n");
     const { botToken, appToken } = await inquirer.prompt([
       { name: "botToken", message: "Slack Bot Token (xoxb-...):", type: "password" },
       { name: "appToken", message: "Slack App Token (xapp-...):", type: "password" },
@@ -233,21 +258,65 @@ export async function initCommand(): Promise<void> {
     envUpdates.SLACK_BOT_TOKEN = botToken;
     envUpdates.SLACK_APP_TOKEN = appToken;
   }
-  if (messenger === "telegram") {
-    console.log(chalk.yellow("\nTelegram Bot Token + Chat ID required."));
-    console.log("  @BotFather → /newbot → copy token");
-    console.log("  Send a message to your bot, then fetch chat.id from");
-    console.log("  https://api.telegram.org/bot<TOKEN>/getUpdates\n");
-    const { token, chatId } = await inquirer.prompt([
-      { name: "token", message: "Telegram Bot Token:", type: "password" },
-      { name: "chatId", message: "Telegram Chat ID:", type: "input" },
-    ]);
-    envUpdates.TELEGRAM_BOT_TOKEN = token;
-    envUpdates.TELEGRAM_CHAT_ID = chatId;
-  }
 
   saveEnv(envUpdates, workspace);
   console.log(chalk.green("✓ .solosquad/.env saved"));
+
+  // Step 3.5: Timezone and brief schedule (v1.2.4+)
+  console.log(chalk.bold("\n-- Step 3.5: Timezone & Daily Briefs --"));
+  console.log(
+    chalk.dim(
+      "  SoloSquad posts two daily briefs (morning/evening) in the #workflow channel.\n" +
+        "  All routine schedules use this timezone."
+    )
+  );
+
+  let { timezone } = await inquirer.prompt([
+    {
+      name: "timezone",
+      message: "Timezone:",
+      type: "list",
+      choices: TIMEZONE_PRESETS,
+      default: DEFAULT_WORKSPACE_SETTINGS.timezone,
+    },
+  ]);
+  if (timezone === "__other__") {
+    const { customTz } = await inquirer.prompt([
+      {
+        name: "customTz",
+        message: "IANA timezone string (e.g. Asia/Tokyo):",
+        type: "input",
+        validate: (v: string) =>
+          isValidIanaTimezone(v) || "Invalid IANA timezone name",
+      },
+    ]);
+    timezone = customTz;
+  }
+
+  const { morningTime, eveningTime } = await inquirer.prompt([
+    {
+      name: "morningTime",
+      message: "Morning brief time (HH:MM):",
+      type: "input",
+      default: DEFAULT_WORKSPACE_SETTINGS.briefings.morning.time,
+      validate: (v: string) => isValidHHMM(v) || "HH:MM (00:00–23:59)",
+    },
+    {
+      name: "eveningTime",
+      message: "Evening brief time (HH:MM):",
+      type: "input",
+      default: DEFAULT_WORKSPACE_SETTINGS.briefings.evening.time,
+      validate: (v: string) => isValidHHMM(v) || "HH:MM (00:00–23:59)",
+    },
+  ]);
+  console.log(
+    chalk.dim(
+      `  Background routines (signal-scan ${DEFAULT_WORKSPACE_SETTINGS.background_routines.signal_scan.time}, ` +
+        `experiment-check ${DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check.time}, ` +
+        `weekly-review ${DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review.day} ${DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review.time}) ` +
+        `feed into the briefs. Edit workspace.yaml later to change.`
+    )
+  );
 
   // Step 4: workspace.yaml
   saveWorkspaceYaml(
@@ -255,6 +324,16 @@ export async function initCommand(): Promise<void> {
       version: SOLOSQUAD_VERSION,
       display_name: workspaceName || path.basename(workspace),
       persona: "personal",
+      timezone,
+      briefings: {
+        morning: { time: morningTime, enabled: true },
+        evening: { time: eveningTime, enabled: true },
+      },
+      background_routines: {
+        signal_scan: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.signal_scan },
+        experiment_check: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check },
+        weekly_review: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review },
+      },
       created_at: new Date().toISOString(),
       last_migrated_to: SOLOSQUAD_VERSION,
     },

@@ -32,7 +32,6 @@ function tokenKeysForMessenger(messenger: string): string[] {
   const keys: string[] = [];
   if (messenger.includes("discord")) keys.push("DISCORD_TOKEN");
   if (messenger.includes("slack")) keys.push("SLACK_BOT_TOKEN", "SLACK_APP_TOKEN");
-  if (messenger.includes("telegram")) keys.push("TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID");
   return keys;
 }
 
@@ -180,7 +179,12 @@ async function runMessengerChecks(messenger: string): Promise<number> {
     if (!(await checkSlack())) failures++;
   }
   if (messenger.includes("telegram")) {
-    if (!(await checkTelegram())) failures++;
+    check(
+      "Telegram",
+      false,
+      "Telegram support was removed in v1.2.4. Switch MESSENGER to discord or slack."
+    );
+    failures++;
   }
   return failures;
 }
@@ -224,19 +228,3 @@ async function checkSlack(): Promise<boolean> {
   }
 }
 
-async function checkTelegram(): Promise<boolean> {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (isPlaceholder(token)) {
-    return check("Telegram getMe", false, "TELEGRAM_BOT_TOKEN not set");
-  }
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
-    const body = (await res.json()) as { ok?: boolean; result?: { username?: string }; description?: string };
-    if (!body.ok) {
-      return check("Telegram getMe", false, body.description || "unknown");
-    }
-    return check(`Telegram getMe → @${body.result?.username ?? "(ok)"}`, true);
-  } catch (e) {
-    return check("Telegram getMe", false, `${e}`);
-  }
-}

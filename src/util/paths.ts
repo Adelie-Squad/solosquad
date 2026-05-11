@@ -150,6 +150,5 @@ export const RESERVED_ORG_CHILDREN = new Set([
   "repositories",
   "slack",
   "discord",
-  "telegram",
   "product",
 ]);

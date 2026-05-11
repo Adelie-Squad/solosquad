@@ -1,6 +1,7 @@
 import type { Migration } from "./types.js";
 import { migration as v11xToV120 } from "./scripts/1.1.x-to-1.2.0.js";
 import { migration as v120ToV121 } from "./scripts/1.2.0-to-1.2.1.js";
+import { migration as v121ToV124 } from "./scripts/1.2.1-to-1.2.4.js";
 import { versionMatches } from "./detect.js";
 
 /**
@@ -11,6 +12,7 @@ import { versionMatches } from "./detect.js";
 export const MIGRATIONS: Migration[] = [
   v11xToV120,
   v120ToV121,
+  v121ToV124,
 ];
 
 /**

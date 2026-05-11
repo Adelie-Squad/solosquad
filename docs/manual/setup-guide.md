@@ -9,7 +9,7 @@
 1. [이 시스템이 뭔가요?](#1-이-시스템이-뭔가요)
 2. [왜 이 시스템인가?](#2-왜-이-시스템인가)
 3. [준비물](#3-준비물)
-4. [메신저 봇 설정 (상세)](#4-메신저-봇-설정-상세) — Slack / Discord / Telegram
+4. [메신저 봇 설정 (상세)](#4-메신저-봇-설정-상세) — Slack / Discord
 5. [설치 & 초기화](#5-설치--초기화)
 6. [24/7 운영 방식 선택](#6-247-운영-방식-선택) — 로컬 데스크탑 vs 클라우드
 7. [설치 확인 & 일상 사용](#7-설치-확인--일상-사용)
@@ -47,13 +47,15 @@
 
 잠든 사이에도, 다른 일을 하는 동안에도 AI가 알아서 일합니다.
 
-| 시간 | AI가 하는 일 |
+| 시간 (기본값) | AI가 하는 일 |
 |------|------------|
-| 아침 6시 | 오늘의 브리핑 |
-| 낮 12시 | 시장 시그널 탐지 |
-| 오후 4시 | 실험 상태 점검 |
-| 밤 10시 | 하루 기록 |
-| 일요일 저녁 | 주간 회고 |
+| 오전 8시 | Morning Brief — 야간 일과 요약 + 오늘 예정 |
+| 낮 12시 | 시장 시그널 탐지 (백그라운드) |
+| 오후 4시 | 실험 상태 점검 (백그라운드) |
+| 오후 6시 | Evening Brief — 주간 일과 요약 + 야간 예정 |
+| 일요일 8시 | 주간 회고 (백그라운드) |
+
+시간대는 setup 시 선택 가능(기본 `Asia/Seoul`). 브리프 시간도 `workspace.yaml`에서 자유롭게 변경.
 
 결과는 모두 메신저 채널로 자동 보고됩니다.
 
@@ -135,15 +137,14 @@ claude --version
 
 ## 4. 메신저 봇 설정 (상세)
 
-AI가 메신저에서 메시지를 주고받으려면 **봇 계정**이 필요합니다. SoloSquad는 Slack·Discord·Telegram 세 플랫폼을 지원하며, 각각 설정 절차가 다릅니다. 본 섹션은 각 플랫폼별로 **실수 없이** 설정할 수 있도록 모든 단계를 구체적으로 설명합니다.
-
-세 가지를 모두 쓸 필요는 없습니다. 아래 선택 기준을 참고하세요.
+AI가 메신저에서 메시지를 주고받으려면 **봇 계정**이 필요합니다. SoloSquad는 **Slack과 Discord** 두 플랫폼을 지원하며(v1.2.4부터 Telegram 지원 중단), 한 워크스페이스당 1개만 선택합니다. 본 섹션은 플랫폼별로 **실수 없이** 설정할 수 있도록 모든 단계를 구체적으로 설명합니다.
 
 | 플랫폼 | 추천 대상 | 장점 | 단점 |
 |---|---|---|---|
 | **Slack** | 워크스페이스 중심 협업, 조용한 UI 선호 | 채널 구조가 깔끔, 검색 강력 | 설정 단계 가장 많음 (Socket Mode·Event Subscriptions·Reinstall) |
 | **Discord** | 혼자 쓰되 UI가 친근한 걸 원할 때 | 봇이 채널을 자동 생성, 설정 단순 | 서버 이름에 제품 slug가 포함되어야 자동 매핑됨 |
-| **Telegram** | 모바일 중심, 가장 가볍게 | 설정 최단, 언제 어디서나 알림 | 채널 자동 생성 없음, chat_id 수동 확보 필요 |
+
+> **v1.2.4 변경**: Telegram 지원은 제거되었습니다. 기존 `MESSENGER=telegram` 사용자는 Discord 또는 Slack으로 전환 필요. 자세한 마이그레이션은 8장 참조.
 
 ---
 
@@ -379,85 +380,14 @@ solosquad bot
 
 ---
 
-### 4.3 Telegram 봇 설정
+### 4.3 Telegram 지원 (제거됨)
 
-> **최종 결과물:** `.env`에 `TELEGRAM_BOT_TOKEN`과 `TELEGRAM_CHAT_ID`가 저장되고, Telegram에서 봇에게 보낸 메시지에 응답.
+v1.2.4부터 Telegram 어댑터는 제거되었습니다. 사유:
+- v1.2.4에서 모든 진행을 `#workflow` 채널 + native thread로 통합했는데, Telegram은 native thread가 없어 prefix workaround로 동작 → 다른 플랫폼과 UX 격차가 커짐
+- 1인 사용자에 한해 단일 chat_id 구조가 멀티 워크플로 동시 진행과 충돌
+- 유지 비용 대비 사용자 비율이 낮음
 
-세 플랫폼 중 설정이 가장 단순하지만, `chat_id`를 수동으로 확보하는 단계가 있습니다.
-
-#### Step 1 — @BotFather에게 봇 생성 요청
-
-1. Telegram에서 `@BotFather` 검색 → 공식 배지(파란 체크) 확인 후 채팅 시작
-2. `/newbot` 전송
-3. 봇 이름 입력 (예: `My AI Team`)
-4. 봇 유저네임 입력 (**반드시 `bot`으로 끝남**, 예: `my_ai_team_bot`)
-5. BotFather 응답 메시지에 **HTTP API Token**이 포함됨 → 복사해서 메모장에 저장
-
-이 값이 `.env`의 `TELEGRAM_BOT_TOKEN`입니다. 포맷: `<숫자>:<문자열>` (예: `7123456789:AAH...`)
-
-#### Step 2 — (선택) Privacy Mode 해제 — 그룹 사용 시
-
-봇을 **그룹 채팅**에서 쓸 계획이라면, 기본적으로 봇은 `/command` 형태나 자기를 @멘션한 메시지만 받습니다. 모든 메시지를 받으려면:
-
-1. `@BotFather`에게 `/mybots` 전송
-2. 방금 만든 봇 선택
-3. **Bot Settings** → **Group Privacy** → **Turn off**
-
-개인 DM으로만 쓸 거면 이 단계 생략 가능.
-
-#### Step 3 — Chat ID 확보
-
-SoloSquad는 **특정 chat_id로만 동작**합니다 (다른 사람 메시지는 무시). 이 id를 찾아 `.env`에 저장해야 함.
-
-방법 1 — 개인 DM 또는 그룹에서:
-
-1. 생성한 봇에게 Telegram에서 **아무 메시지나 하나 전송** (예: `start`)
-   - 그룹으로 쓴다면 그 그룹에 봇을 추가하고 그룹 내에서 한 번 @봇이름 멘션
-2. 웹브라우저에서 아래 URL 열기 (토큰만 본인 것으로 바꿈):
-   ```
-   https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates
-   ```
-3. JSON 응답에서 `"chat":{"id":...}` 값을 찾아 복사
-   - 개인 DM: 양수 (예: `123456789`)
-   - 그룹: 음수 (예: `-987654321`)
-   - supergroup: 큰 음수 (예: `-1001234567890`)
-
-방법 2 — 채널로 쓰는 경우:
-
-- Chat ID 대신 `@channelname` 형태로도 가능
-- 봇을 채널의 관리자로 추가 필요 (채널 설정 → Administrators)
-
-#### Step 4 — `.env`에 저장
-
-```env
-MESSENGER=telegram
-TELEGRAM_BOT_TOKEN=7123456789:AAHxxxxx
-TELEGRAM_CHAT_ID=123456789
-```
-
-#### Step 5 — 동작 검증
-
-```bash
-solosquad doctor --messenger-check
-```
-`Telegram getMe → @<봇유저네임>`이 ✓면 토큰 유효.
-
-```bash
-solosquad bot
-```
-→ `[Telegram Bot] Polling started...` 로그 확인.
-
-Telegram에서 봇에게 "안녕" 전송 → 응답 오면 성공.
-
-#### Telegram 설정 체크리스트
-
-- [ ] @BotFather에서 봇 생성
-- [ ] HTTP API Token 복사
-- [ ] (그룹 사용 시) Privacy Mode OFF
-- [ ] 봇에게 최소 1회 메시지 전송
-- [ ] `getUpdates` URL에서 `chat.id` 획득
-- [ ] `.env`에 토큰과 chat_id 저장
-- [ ] `solosquad doctor --messenger-check` 통과
+**기존 Telegram 사용자의 전환**: 8장 "업데이트" 끝부분 참조.
 
 ---
 
@@ -506,7 +436,10 @@ solosquad init
 -- Step 3: Configuration --
 Your name:                (본인 이름)
 Your role:                (예: developer, designer, founder)
-Messenger platform:       (Discord / Slack / Telegram — 한 워크스페이스당 1개)
+Messenger platform:       (Discord / Slack — 한 워크스페이스당 1개, v1.2.4부터 Telegram 제거)
+Timezone:                 (기본 Asia/Seoul, IANA tz 자유 입력 가능)
+Morning brief time:       (HH:MM, 기본 08:00)
+Evening brief time:       (HH:MM, 기본 18:00)
 <플랫폼별 토큰 입력>       (4장에서 얻은 값)
 Project storage path:     (Enter → OS별 기본값)
 
@@ -546,7 +479,7 @@ solosquad doctor --messenger-check
 
 ## 6. 24/7 운영 방식 선택
 
-봇이 Slack/Discord/Telegram과 연결을 유지하려면 `solosquad bot` 프로세스가 **계속 실행 중**이어야 합니다. 여기서 방식이 갈립니다.
+봇이 Slack/Discord와 연결을 유지하려면 `solosquad bot` 프로세스가 **계속 실행 중**이어야 합니다. 여기서 방식이 갈립니다.
 
 | 방식 | 대상 | 난이도 | 유지비 | PC 전원 |
 |---|---|---|---|---|
@@ -726,7 +659,6 @@ claude login
 
 ```
 Slack/Discord:  #owner-command 채널에 "안녕" 전송
-Telegram:       봇에게 직접 "안녕" DM
 ```
 
 봇이 `[제품명 (agent-name)] ...` 형태로 응답하면 전 구간 정상.
@@ -745,17 +677,19 @@ Telegram:       봇에게 직접 "안녕" DM
 
 60+ 키워드 → 25 에이전트 매핑. 매칭 없으면 general 모드.
 
-### 7.3 자동 루틴
+### 7.3 자동 루틴 (v1.2.4+)
 
-매일 자동 실행:
+채널은 `#owner-command`(입력)와 `#workflow`(실행) 2개. 모든 자동 출력은 `#workflow`에 모이며, 백그라운드 루틴은 시스템 스레드에 분류됩니다.
 
-| 시간 | 내용 | 보고 채널 |
-|---|---|---|
-| 06:00 | 오늘 브리핑 | #daily-brief |
-| 12:00 | 시장 시그널 | #signals |
-| 16:00 | 실험 상태 점검 | #experiments |
-| 22:00 | 일일 기록 | #daily-brief |
-| 일 20:00 | 주간 회고 | #weekly-review |
+| 기본 시각 | 내용 | 종류 | 위치 |
+|---|---|---|---|
+| 08:00 | Morning Brief | user-brief | `#workflow` root |
+| 12:00 | Signal Scan | background | `#workflow` → `system-daily-signals` 스레드 |
+| 16:00 | Experiment Check | background | `#workflow` → `system-experiments` 스레드 |
+| 18:00 | Evening Brief | user-brief | `#workflow` root |
+| 일 20:00 | Weekly Review | background | `#workflow` → `system-weekly-review` 스레드 |
+
+시간대(`timezone`)와 시각은 `.solosquad/workspace.yaml`에서 변경 가능. `enabled: false`로 개별 끄기 가능.
 
 스케줄러 시작 (봇과 별도):
 ```bash
@@ -856,7 +790,7 @@ solosquad init
 ```bash
 solosquad doctor --messenger-check
 ```
-세 플랫폼의 live API로 토큰을 검증합니다.
+두 플랫폼의 live API로 토큰을 검증합니다.
 
 **Slack 체크리스트:** 4.1 Step 9의 체크리스트 재확인. 특히:
 - Event Subscriptions 활성화 + `message.channels` 구독
@@ -865,11 +799,10 @@ solosquad doctor --messenger-check
 
 **Discord 체크리스트:** 4.2 마지막 체크리스트. 특히:
 - **Message Content Intent** ON
+- 봇 권한 **Create Public Threads** (v1.2.4+, 시스템 스레드 생성용)
 - 서버 이름에 제품 이름/slug 포함
 
-**Telegram 체크리스트:** 4.3 마지막. 특히:
-- `chat_id`가 올바른 값인지 (숫자/음수/@channel 구분)
-- 그룹 사용 시 Privacy Mode OFF
+**기존 Telegram 사용자**: v1.2.4부터 Telegram 지원이 제거되었습니다. `.solosquad/.env`의 `MESSENGER=telegram`을 `discord` 또는 `slack`으로 변경하고, 해당 플랫폼 setup(4.1 또는 4.2)을 새로 진행하세요.
 
 ### 루틴이 실행되지 않음
 - `solosquad schedule`이 실행 중인지 (`ps`, `docker compose ps`)

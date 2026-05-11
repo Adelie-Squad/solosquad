@@ -10,10 +10,12 @@ const adapterLoaders: Record<string, () => Promise<MessengerAdapter>> = {
     const { SlackAdapter } = await import("./slack-adapter.js");
     return new SlackAdapter();
   },
-  async telegram() {
-    const { TelegramAdapter } = await import("./telegram-adapter.js");
-    return new TelegramAdapter();
-  },
+};
+
+/** Telegram was removed in v1.2.4. Helps users with old `MESSENGER=telegram` get a clear message. */
+const REMOVED_PLATFORMS: Record<string, string> = {
+  telegram:
+    "Telegram support was removed in v1.2.4. Set MESSENGER=discord or MESSENGER=slack in .solosquad/.env and restart.",
 };
 
 function resolvePlatform(raw: string | undefined): string {
@@ -23,7 +25,13 @@ function resolvePlatform(raw: string | undefined): string {
 
 async function createSingle(platform: string): Promise<MessengerAdapter> {
   const loader = adapterLoaders[platform];
-  if (!loader) throw new Error(`Unsupported messenger platform: ${platform}`);
+  if (!loader) {
+    const removed = REMOVED_PLATFORMS[platform];
+    if (removed) throw new Error(removed);
+    throw new Error(
+      `Unsupported messenger platform: ${platform}. Supported: discord, slack.`
+    );
+  }
   return loader();
 }
 

@@ -111,7 +111,7 @@ program
   .command("doctor")
   .description("Check environment and diagnose issues")
   .option("--ci", "CI mode: exit with non-zero code on failure, no color")
-  .option("--messenger-check", "Validate messenger tokens against live APIs (Slack/Discord/Telegram)")
+  .option("--messenger-check", "Validate messenger tokens against live APIs (Slack/Discord)")
   .action(async (opts) => {
     const { doctorCommand } = await import("./doctor.js");
     await doctorCommand(opts.ci, opts.messengerCheck);

@@ -67,9 +67,9 @@ Layer 2: Repository (<workspace>/<org>/repositories/<repo>/) → Per-repo code +
 
 ## Messenger Support
 
-Set via `MESSENGER` env var: `discord` (default), `slack`, or `telegram`.
-Multiple platforms: `MESSENGER=discord,slack` (comma-separated).
-Adapter pattern in `src/messenger/` — all platforms share the same bot logic and routing.
+Set via `MESSENGER` env var: `discord` (default) or `slack`. One per workspace (v1.2.0+).
+Telegram support was removed in v1.2.4. Adapter pattern in `src/messenger/` — both
+platforms share the same bot logic and routing.
 
 ## Agent Routing
 
@@ -77,17 +77,24 @@ Send a message in the command channel and `src/bot/agent-router.ts` analyzes key
 - 60+ keywords → 25 agent mappings (`AGENT_ROUTES` dictionary)
 - Falls back to general mode if no match
 
-## Automated Routines + Memory Storage
+## Automated Routines + Memory Storage (v1.2.4+)
 
-| Time | Routine | Channel | Memory Storage |
-|------|---------|---------|----------------|
-| 06:00 daily | Morning Brief | #daily-brief | - |
-| 12:00 daily | Signal Scan | #signals | signals.jsonl |
-| 16:00 daily | Experiment Check | #experiments | experiments.jsonl |
-| 22:00 daily | Daily Log | #daily-brief | decisions.jsonl |
-| Sun 20:00 | Weekly Review | #weekly-review | decisions.jsonl |
+Two messenger channels: `#owner-command` (user input + reply) and `#workflow`
+(briefs at channel root, background routines in system threads, per-workflow threads).
 
-JSON blocks from routine results are auto-extracted → appended to JSONL memory. All logs are saved to `memory/routine-logs/`.
+Default schedule (all times in workspace.yaml `timezone`, default `Asia/Seoul`):
+
+| Time (default) | Routine | Kind | Where | Memory |
+|---|---|---|---|---|
+| 08:00 daily | Morning Brief | user-brief | #workflow root | — |
+| 12:00 daily | Signal Scan | background | #workflow → `system-daily-signals` | signals.jsonl |
+| 16:00 daily | Experiment Check | background | #workflow → `system-experiments` | experiments.jsonl |
+| 18:00 daily | Evening Brief | user-brief | #workflow root | decisions.jsonl |
+| Sun 20:00 | Weekly Review | background | #workflow → `system-weekly-review` | decisions.jsonl |
+
+Times are configurable per workspace in `workspace.yaml` (`briefings.morning.time`,
+`briefings.evening.time`, `background_routines.*`). JSON blocks from routine results
+are auto-extracted → appended to JSONL memory. All logs in `memory/routine-logs/`.
 
 ## Multi-Session Execution Rules
 

@@ -5,6 +5,7 @@ import {
   type Message,
   type Guild,
   type TextChannel,
+  type ThreadChannel,
 } from "discord.js";
 import fs from "fs";
 import path from "path";
@@ -14,6 +15,7 @@ import { normalizeLine } from "../util/platform.js";
 import { loadProducts, type Product } from "../util/config.js";
 import {
   DEFAULT_CHANNELS,
+  SYSTEM_THREADS,
   type MessengerAdapter,
   type MessageContext,
   type CommandHandler,
@@ -59,7 +61,7 @@ export class DiscordAdapter implements MessengerAdapter {
       console.log("  Also verify in discord.com/developers:");
       console.log("    - Bot → Privileged Gateway Intents → MESSAGE CONTENT: enabled");
       console.log("    - OAuth2 scopes: bot, applications.commands");
-      console.log("    - Bot permissions: View Channels, Send Messages, Read Message History");
+      console.log("    - Bot permissions: View Channels, Send Messages, Read Message History, Create Public Threads");
       console.log("    - Invite the bot to a server whose name contains the product name/slug");
       process.exit(1);
     }
@@ -115,7 +117,7 @@ export class DiscordAdapter implements MessengerAdapter {
       console.log("[Discord] DISCORD_TOKEN is not set. Check .env.");
       process.exit(1);
     }
-    this.client = new Client({ intents: [GatewayIntentBits.Guilds] });
+    this.client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
     await this.client.login(token);
   }
 
@@ -123,7 +125,8 @@ export class DiscordAdapter implements MessengerAdapter {
     productConfig: Record<string, unknown>,
     channelName: string,
     text: string,
-    title?: string
+    title?: string,
+    threadName?: string
   ): Promise<boolean> {
     if (!this.client?.isReady()) return false;
 
@@ -140,13 +143,18 @@ export class DiscordAdapter implements MessengerAdapter {
 
     const content = title ? `**${title}**\n\n${text}` : text;
     const chunks = content.match(/.{1,1900}/gs) || [content];
+
     try {
+      const target: TextChannel | ThreadChannel = threadName
+        ? await this.ensureThread(channel, threadName)
+        : channel;
+
       for (const chunk of chunks) {
-        await channel.send(chunk);
+        await target.send(chunk);
       }
       return true;
     } catch (e) {
-      console.log(`[Discord] Failed to send to #${channelName}: ${e}`);
+      console.log(`[Discord] Failed to send to #${channelName}${threadName ? `/${threadName}` : ""}: ${e}`);
       return false;
     }
   }
@@ -194,7 +202,49 @@ export class DiscordAdapter implements MessengerAdapter {
     if (created.length) {
       console.log(`[Discord] ${guild.name}: channels created → ${created.join(", ")}`);
     }
+
+    // v1.2.4+: ensure system threads exist inside #workflow
+    await this.ensureSystemThreads(guild);
     return created;
+  }
+
+  private async ensureSystemThreads(guild: Guild): Promise<void> {
+    const workflowChannel = guild.channels.cache.find(
+      (ch) => ch.type === ChannelType.GuildText && ch.name === "workflow"
+    ) as TextChannel | undefined;
+    if (!workflowChannel) return;
+
+    try {
+      const active = await workflowChannel.threads.fetchActive();
+      const existing = new Set(active.threads.map((t) => t.name));
+      for (const tName of SYSTEM_THREADS) {
+        if (!existing.has(tName)) {
+          const thread = await workflowChannel.threads.create({
+            name: tName,
+            autoArchiveDuration: 10080, // 7 days
+            reason: "SoloSquad system thread",
+          });
+          await thread.send(`Initialized: \`${tName}\` thread. Background routines post here.`);
+          console.log(`[Discord] ${guild.name}: thread created → ${tName}`);
+        }
+      }
+    } catch (e) {
+      console.log(`[Discord] ensureSystemThreads failed: ${e}`);
+    }
+  }
+
+  private async ensureThread(
+    channel: TextChannel,
+    threadName: string
+  ): Promise<ThreadChannel> {
+    const active = await channel.threads.fetchActive();
+    const found = active.threads.find((t) => t.name === threadName);
+    if (found) return found;
+    return channel.threads.create({
+      name: threadName,
+      autoArchiveDuration: 10080,
+      reason: "SoloSquad routine thread",
+    });
   }
 
   private syncGuildProductMapping(): void {

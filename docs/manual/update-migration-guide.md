@@ -87,7 +87,33 @@ solosquad doctor
 - [ ] **먼저 dry-run 실행** — `solosquad migrate`(플래그 없음) 또는 `--dry-run`
 - [ ] **작업 중 코드는 미리 commit/stash** — 마이그레이션은 `.git/` 포함 폴더 전체를 옮기지만, dirty working tree 는 사용자가 직접 정리해두는 편이 안전
 
-### 4.2 알려진 이슈 (v1.1.x → v1.2.0 점프 시)
+### 4.2 v1.2.4 업데이트 시 주의사항
+
+v1.2.4는 메신저 채널 구조와 라우틴 모델을 바꾸고, **Telegram 지원을 제거**합니다. 기존 사용자는 다음을 확인하세요.
+
+**전 사용자 공통**:
+- `solosquad migrate --apply` 가 `.solosquad/workspace.yaml`에 `timezone` / `briefings` / `background_routines` 필드를 주입 (기본 Asia/Seoul · 08:00 / 18:00).
+- 메신저 채널은 자동으로 줄어들지 않음. 봇이 더 이상 `daily-brief` / `signals` / `experiments` / `weekly-review` / `errors` 로 송신하지 않으므로, 원하면 메신저 UI에서 수동 archive.
+- JSONL 메모리·workflows 디렉터리는 손대지 않음.
+
+**Discord 사용자**:
+- 봇 권한에 **Create Public Threads** 추가 후 동일 서버에 re-invite (덮어쓰기, 데이터 영향 없음). 시스템 스레드 4개(`system-daily-signals` 등) 자동 생성에 필요.
+
+**Slack 사용자**:
+- Bot Token Scopes에 **`channels:manage`** 추가 후 "Reinstall to Workspace". 없으면 `#workflow` 채널 생성 실패.
+
+**Telegram 사용자 (지원 제거)**:
+- v1.2.4부터 `MESSENGER=telegram`은 작동하지 않음. 봇 시작 시 명확한 에러 메시지 출력.
+- 전환 절차:
+  1. `solosquad migrate --apply` 먼저 실행 (workspace.yaml 신규 필드 주입은 메신저와 무관)
+  2. Discord 또는 Slack 봇 setup (manual의 4.1 또는 4.2)
+  3. `.solosquad/.env`에서 `MESSENGER=telegram` → `discord` 또는 `slack` 으로 변경
+  4. `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` 라인 삭제 (남아 있어도 무시되지만 정리 권장)
+  5. `solosquad bot` 재시작 → 새 플랫폼의 `#owner-command` + `#workflow` 자동 생성
+
+JSONL 메모리는 그대로 보존되므로, 새 메신저로 전환해도 과거 시그널·실험·결정은 모두 살아 있습니다.
+
+### 4.3 알려진 이슈 (v1.1.x → v1.2.0 점프 시)
 
 - **`solosquad update` 가 마이그레이션 경고를 띄우지 않습니다.** 마이그레이션 감지 코드는 v1.2.0 에서 새로 추가됐기 때문에, v1.1.5 CLI 가 업데이트를 수행하는 순간에는 경고 로직이 존재하지 않습니다. v1.2.1 부터는 **모든 CLI 명령 시작 시 preAction 배너**로 불일치를 알립니다 (migrate/update/doctor 제외). v1.1.x 에서 올라오는 사용자는 **업데이트 직후 `solosquad migrate` 를 수동으로 한 번 실행**하세요.
 - **`--dry-run` 플래그가 CLI 에 등록돼 있지 않을 수 있습니다** (v1.2.0 초기 빌드). v1.2.1 부터는 정식 등록됐으므로 `solosquad migrate --dry-run` 그대로 동작. 플래그 없이 `solosquad migrate` 만 써도 기본이 dry-run 입니다.

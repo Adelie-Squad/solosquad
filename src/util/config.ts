@@ -17,12 +17,67 @@ export interface Product {
   github_org?: string;
 }
 
+export interface BriefingConfig {
+  time: string; // "HH:MM" in workspace timezone
+  enabled?: boolean;
+}
+
+export interface WeeklyRoutineConfig {
+  day: string; // lowercase day name: sunday, monday, ...
+  time: string;
+  enabled?: boolean;
+}
+
 export interface WorkspaceYaml {
   version: string;
   display_name: string;
   persona?: string;
+  /** IANA timezone (e.g. "Asia/Seoul"). v1.2.4+. Defaults applied at load time. */
+  timezone?: string;
+  /** v1.2.4+: user-facing daily briefs. */
+  briefings?: {
+    morning?: BriefingConfig;
+    evening?: BriefingConfig;
+  };
+  /** v1.2.4+: background routines that feed into the briefs. */
+  background_routines?: {
+    signal_scan?: BriefingConfig;
+    experiment_check?: BriefingConfig;
+    weekly_review?: WeeklyRoutineConfig;
+  };
   created_at: string;
   last_migrated_to?: string;
+}
+
+/** v1.2.4 defaults — used both at init and as fallbacks when fields are missing. */
+export const DEFAULT_WORKSPACE_SETTINGS = {
+  timezone: "Asia/Seoul",
+  briefings: {
+    morning: { time: "08:00", enabled: true },
+    evening: { time: "18:00", enabled: true },
+  },
+  background_routines: {
+    signal_scan: { time: "12:00", enabled: true },
+    experiment_check: { time: "16:00", enabled: true },
+    weekly_review: { day: "sunday", time: "20:00", enabled: true },
+  },
+} as const;
+
+/** Merge a partial WorkspaceYaml with defaults for v1.2.4+ fields. */
+export function applyWorkspaceDefaults(ws: WorkspaceYaml): WorkspaceYaml {
+  return {
+    ...ws,
+    timezone: ws.timezone ?? DEFAULT_WORKSPACE_SETTINGS.timezone,
+    briefings: {
+      morning: { ...DEFAULT_WORKSPACE_SETTINGS.briefings.morning, ...(ws.briefings?.morning ?? {}) },
+      evening: { ...DEFAULT_WORKSPACE_SETTINGS.briefings.evening, ...(ws.briefings?.evening ?? {}) },
+    },
+    background_routines: {
+      signal_scan: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.signal_scan, ...(ws.background_routines?.signal_scan ?? {}) },
+      experiment_check: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check, ...(ws.background_routines?.experiment_check ?? {}) },
+      weekly_review: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review, ...(ws.background_routines?.weekly_review ?? {}) },
+    },
+  };
 }
 
 export interface OrgProduct {

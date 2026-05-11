@@ -22,12 +22,16 @@ export interface MessengerAdapter {
   /** Connect for sending only (scheduler mode). */
   startNotifier(): Promise<void>;
 
-  /** Send a message to a named channel. */
+  /**
+   * Send a message to a named channel. If `threadName` is provided, the
+   * message is posted inside that named thread (Discord/Slack native threads).
+   */
   sendToChannel(
     productConfig: Record<string, unknown>,
     channelName: string,
     text: string,
-    title?: string
+    title?: string,
+    threadName?: string
   ): Promise<boolean>;
 
   /** Ensure required channels exist. */
@@ -35,10 +39,14 @@ export interface MessengerAdapter {
 }
 
 export const DEFAULT_CHANNELS = [
-  "daily-brief",
-  "experiments",
-  "weekly-review",
-  "signals",
   "owner-command",
-  "errors",
+  "workflow",
+];
+
+/** System threads created inside #workflow. Background routines post here. */
+export const SYSTEM_THREADS = [
+  "system-daily-signals",
+  "system-experiments",
+  "system-weekly-review",
+  "system-errors",
 ];

@@ -4,7 +4,7 @@
 
 Running a company alone doesn't mean working alone. SoloSquad gives you a full virtual team — 25 specialized AI agents organized into 4 teams — that operates around the clock via your favorite messenger, scheduled routines, and CLI tools. Just talk to it like you'd talk to a co-founder, and the right specialist picks up.
 
-**Supports:** Discord | Slack | Telegram — pick one per workspace. For multi-platform use, create multiple workspaces.
+**Supports:** Discord | Slack — pick one per workspace (Telegram support removed in v1.2.4). For multi-platform use, create multiple workspaces.
 **Platforms:** Windows | macOS | Linux — cross-platform CLI with CI-tested support.
 
 ---
@@ -50,11 +50,10 @@ Pick the platform that fits your workflow. A workspace is bound to a single mess
 
 | Platform | Best For | Key Advantage |
 |----------|----------|---------------|
-| **Discord** | Channel-based teams | Auto-creates channels, rich category organization |
-| **Slack** | Workspace integration | Socket Mode, native workspace feel |
-| **Telegram** | Lightweight / mobile | Simple setup, works anywhere |
+| **Discord** | Channel-based teams | Auto-creates channels + native threads, rich category organization |
+| **Slack** | Workspace integration | Socket Mode, native threads, workspace feel |
 
-Set `MESSENGER=discord`, `MESSENGER=slack`, or `MESSENGER=telegram`. For both Slack and Discord, run `solosquad init` in two different workspace directories — each gets its own `.env`, bot tokens, and persona.
+Set `MESSENGER=discord` or `MESSENGER=slack`. For both platforms, run `solosquad init` in two different workspace directories — each gets its own `.env`, bot tokens, and persona.
 
 ### 3-Layer Context Isolation
 
@@ -127,14 +126,12 @@ The wizard configures your owner profile, registers your products, generates all
 |----------|--------------|-----------------|
 | Discord | Bot Token | [Discord Developer Portal](https://discord.com/developers/applications) |
 | Slack | Bot Token + App Token | [Slack API](https://api.slack.com/apps) (Socket Mode) |
-| Telegram | Bot Token + Chat ID | [@BotFather](https://t.me/BotFather) on Telegram |
 
 **Per-platform required configuration:**
-- **Discord** — enable **MESSAGE CONTENT** privileged gateway intent; invite the bot to a server whose name contains your product name/slug.
-- **Slack** — enable **Socket Mode**; App-Level Token scope `connections:write`; Bot Token scopes `channels:read`, `channels:manage`, `chat:write`, `groups:read`, `app_mentions:read`, `channels:history`; subscribe to `message.channels`; `/invite @bot` into `#owner-command`.
-- **Telegram** — obtain `TELEGRAM_CHAT_ID` by sending a message to the bot and fetching `chat.id` from `https://api.telegram.org/bot<TOKEN>/getUpdates`. For group messages, disable Group Privacy in BotFather.
+- **Discord** — enable **MESSAGE CONTENT** privileged gateway intent; bot permissions include **Create Public Threads** (v1.2.4+); invite the bot to a server whose name contains your product name/slug.
+- **Slack** — enable **Socket Mode**; App-Level Token scope `connections:write`; Bot Token scopes `channels:read`, `channels:manage`, `chat:write`, `app_mentions:read`, `channels:history`; subscribe to `message.channels`; `/invite @bot` into `#owner-command`.
 
-If the bot does not connect after `solosquad init`, run `solosquad doctor --messenger-check` to validate tokens against live APIs (`auth.test` / `/users/@me` / `getMe`).
+If the bot does not connect after `solosquad init`, run `solosquad doctor --messenger-check` to validate tokens against live APIs (`auth.test` / `/users/@me`).
 
 ---
 
@@ -198,7 +195,8 @@ solosquad init
 The setup wizard handles:
 - Environment check (Node.js, Docker, git, Claude Code)
 - Copies agent definitions, routines, templates to your workspace
-- Messenger platform selection (Discord / Slack / Telegram / multi-platform)
+- Messenger platform selection (Discord / Slack)
+- Timezone + morning/evening brief times (v1.2.4+, default Asia/Seoul · 08:00 / 18:00)
 - Token configuration with guided instructions
 - Product/organization registration (multiple supported)
 - Auto-generates product directories + memory + messenger config
@@ -228,7 +226,7 @@ solosquad run-routine   # Run a routine manually
 
 ### Send Commands via Messenger
 
-Send a message in the command channel (`#owner-command` on Discord/Slack, or direct message on Telegram). Keywords are analyzed to auto-route to the appropriate agent.
+Send a message in the `#owner-command` channel on Discord or Slack. Keywords are analyzed to auto-route to the appropriate agent.
 
 ```
 You: Draft landing page copy
@@ -278,18 +276,22 @@ Each product's AI agents can **only see that product's context**. Other product 
 
 ---
 
-## Automated Routine Schedule
+## Automated Routine Schedule (v1.2.4+)
 
-| Time | Routine | Report Channel | Memory Storage |
-|------|---------|----------------|----------------|
-| 06:00 daily | Morning Brief | `#daily-brief` | - |
-| 12:00 daily | Signal Scan | `#signals` | `signals.jsonl` |
-| 16:00 daily | Experiment Check | `#experiments` | `experiments.jsonl` |
-| 22:00 daily | Daily Log | `#daily-brief` | `decisions.jsonl` |
-| Sun 20:00 | Weekly Review | `#weekly-review` | `decisions.jsonl` |
+Two channels only — `#owner-command` (input) and `#workflow` (all automated output).
+Background routines post to **system threads** inside `#workflow`.
 
-- JSON blocks in routine results are auto-extracted and appended to JSONL memory
-- All routine logs are always saved to `memory/routine-logs/`
+| Default Time | Routine | Kind | Where | Memory |
+|------|---------|------|-------|--------|
+| 08:00 daily | Morning Brief | user-brief | `#workflow` root | — |
+| 12:00 daily | Signal Scan | background | `#workflow` → `system-daily-signals` | `signals.jsonl` |
+| 16:00 daily | Experiment Check | background | `#workflow` → `system-experiments` | `experiments.jsonl` |
+| 18:00 daily | Evening Brief | user-brief | `#workflow` root | `decisions.jsonl` |
+| Sun 20:00 | Weekly Review | background | `#workflow` → `system-weekly-review` | `decisions.jsonl` |
+
+- Times follow `workspace.yaml` `timezone` (default `Asia/Seoul`) and can be edited per-routine.
+- JSON blocks in routine results are auto-extracted and appended to JSONL memory.
+- All routine logs are saved to `memory/routine-logs/`.
 
 ---
 
@@ -305,7 +307,7 @@ Each product's AI agents can **only see that product's context**. Other product 
 ├── src/
 │   ├── cli/                ← CLI commands (init, bot, schedule, status, update, doctor)
 │   ├── bot/                ← Agent routing + Claude Code execution
-│   ├── messenger/          ← Platform adapters (Discord, Slack, Telegram)
+│   ├── messenger/          ← Platform adapters (Discord, Slack)
 │   ├── scheduler/          ← Cron-based routine execution + memory auto-save
 │   └── util/               ← Config, paths, logger, platform detection
 ├── assets/                 ← Bundled with npm package, copied on `solosquad init`
@@ -388,7 +390,7 @@ vim routines/morning-brief.md
 A: Subscribe to Claude Code Max plan, then run `claude login` in your terminal.
 
 **Q: How do I switch messenger platforms?**
-A: Change `MESSENGER=slack` (or `discord`, or `telegram`) in `.env` and restart the bot.
+A: Change `MESSENGER=slack` (or `discord`) in `.env` and restart the bot.
 
 **Q: How do I use multiple messengers simultaneously?**
 A: Create a separate workspace for each platform. Each `solosquad init` yields its own `.env` and bot tokens, so `~/solosquad-slack/` and `~/solosquad-discord/` can run side by side without stepping on each other.
