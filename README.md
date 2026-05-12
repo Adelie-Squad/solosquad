@@ -4,7 +4,7 @@
 
 Running a company alone doesn't mean working alone. SoloSquad gives you a full virtual team — 25 specialized AI agents organized into 4 teams — that operates around the clock via your favorite messenger, scheduled routines, and CLI tools. Just talk to it like you'd talk to a co-founder, and the right specialist picks up.
 
-**Supports:** Discord | Slack — pick one per workspace (Telegram support removed in v1.2.4). For multi-platform use, create multiple workspaces.
+**Supports:** Discord | Slack — pick one per workspace (Telegram support removed in v0.2.4). For multi-platform use, create multiple workspaces.
 **Platforms:** Windows | macOS | Linux — cross-platform CLI with CI-tested support.
 
 ---
@@ -128,7 +128,7 @@ The wizard configures your owner profile, registers your products, generates all
 | Slack | Bot Token + App Token | [Slack API](https://api.slack.com/apps) (Socket Mode) |
 
 **Per-platform required configuration:**
-- **Discord** — enable **MESSAGE CONTENT** privileged gateway intent; bot permissions include **Create Public Threads** (v1.2.4+); invite the bot to a server whose name contains your product name/slug.
+- **Discord** — enable **MESSAGE CONTENT** privileged gateway intent; bot permissions include **Create Public Threads** (v0.2.4+); invite the bot to a server whose name contains your product name/slug.
 - **Slack** — enable **Socket Mode**; App-Level Token scope `connections:write`; Bot Token scopes `channels:read`, `channels:manage`, `chat:write`, `app_mentions:read`, `channels:history`; subscribe to `message.channels`; `/invite @bot` into `#owner-command`.
 
 If the bot does not connect after `solosquad init`, run `solosquad doctor --messenger-check` to validate tokens against live APIs (`auth.test` / `/users/@me`).
@@ -196,7 +196,7 @@ The setup wizard handles:
 - Environment check (Node.js, Docker, git, Claude Code)
 - Copies agent definitions, routines, templates to your workspace
 - Messenger platform selection (Discord / Slack)
-- Timezone + morning/evening brief times (v1.2.4+, default Asia/Seoul · 08:00 / 18:00)
+- Timezone + morning/evening brief times (v0.2.4+, default Asia/Seoul · 08:00 / 18:00)
 - Token configuration with guided instructions
 - Product/organization registration (multiple supported)
 - Auto-generates product directories + memory + messenger config
@@ -276,7 +276,7 @@ Each product's AI agents can **only see that product's context**. Other product 
 
 ---
 
-## Automated Routine Schedule (v1.2.4+)
+## Automated Routine Schedule (v0.2.4+)
 
 Two channels only — `#owner-command` (input) and `#workflow` (all automated output).
 Background routines post to **system threads** inside `#workflow`.
@@ -352,7 +352,7 @@ The system includes safety measures for AI-powered autonomous execution:
 - **Security Engineer agent**: Dedicated agent for security review, vulnerability assessment, and secure coding guidance
 - **Init safety guide**: Security checklist and .gitignore verification during setup
 
-See `docs/v1.2-safety-security.md` for the full security framework.
+See `docs/v0.2-safety-security.md` for the full security framework.
 
 ---
 

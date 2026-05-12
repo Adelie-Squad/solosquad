@@ -137,14 +137,14 @@ claude --version
 
 ## 4. 메신저 봇 설정 (상세)
 
-AI가 메신저에서 메시지를 주고받으려면 **봇 계정**이 필요합니다. SoloSquad는 **Slack과 Discord** 두 플랫폼을 지원하며(v1.2.4부터 Telegram 지원 중단), 한 워크스페이스당 1개만 선택합니다. 본 섹션은 플랫폼별로 **실수 없이** 설정할 수 있도록 모든 단계를 구체적으로 설명합니다.
+AI가 메신저에서 메시지를 주고받으려면 **봇 계정**이 필요합니다. SoloSquad는 **Slack과 Discord** 두 플랫폼을 지원하며(v0.2.4부터 Telegram 지원 중단), 한 워크스페이스당 1개만 선택합니다. 본 섹션은 플랫폼별로 **실수 없이** 설정할 수 있도록 모든 단계를 구체적으로 설명합니다.
 
 | 플랫폼 | 추천 대상 | 장점 | 단점 |
 |---|---|---|---|
 | **Slack** | 워크스페이스 중심 협업, 조용한 UI 선호 | 채널 구조가 깔끔, 검색 강력 | 설정 단계 가장 많음 (Socket Mode·Event Subscriptions·Reinstall) |
 | **Discord** | 혼자 쓰되 UI가 친근한 걸 원할 때 | 봇이 채널을 자동 생성, 설정 단순 | 서버 이름에 제품 slug가 포함되어야 자동 매핑됨 |
 
-> **v1.2.4 변경**: Telegram 지원은 제거되었습니다. 기존 `MESSENGER=telegram` 사용자는 Discord 또는 Slack으로 전환 필요. 자세한 마이그레이션은 8장 참조.
+> **v0.2.4 변경**: Telegram 지원은 제거되었습니다. 기존 `MESSENGER=telegram` 사용자는 Discord 또는 Slack으로 전환 필요. 자세한 마이그레이션은 8장 참조.
 
 ---
 
@@ -382,8 +382,8 @@ solosquad bot
 
 ### 4.3 Telegram 지원 (제거됨)
 
-v1.2.4부터 Telegram 어댑터는 제거되었습니다. 사유:
-- v1.2.4에서 모든 진행을 `#workflow` 채널 + native thread로 통합했는데, Telegram은 native thread가 없어 prefix workaround로 동작 → 다른 플랫폼과 UX 격차가 커짐
+v0.2.4부터 Telegram 어댑터는 제거되었습니다. 사유:
+- v0.2.4에서 모든 진행을 `#workflow` 채널 + native thread로 통합했는데, Telegram은 native thread가 없어 prefix workaround로 동작 → 다른 플랫폼과 UX 격차가 커짐
 - 1인 사용자에 한해 단일 chat_id 구조가 멀티 워크플로 동시 진행과 충돌
 - 유지 비용 대비 사용자 비율이 낮음
 
@@ -436,7 +436,7 @@ solosquad init
 -- Step 3: Configuration --
 Your name:                (본인 이름)
 Your role:                (예: developer, designer, founder)
-Messenger platform:       (Discord / Slack — 한 워크스페이스당 1개, v1.2.4부터 Telegram 제거)
+Messenger platform:       (Discord / Slack — 한 워크스페이스당 1개, v0.2.4부터 Telegram 제거)
 Timezone:                 (기본 Asia/Seoul, IANA tz 자유 입력 가능)
 Morning brief time:       (HH:MM, 기본 08:00)
 Evening brief time:       (HH:MM, 기본 18:00)
@@ -677,7 +677,7 @@ Slack/Discord:  #owner-command 채널에 "안녕" 전송
 
 60+ 키워드 → 25 에이전트 매핑. 매칭 없으면 general 모드.
 
-### 7.3 자동 루틴 (v1.2.4+)
+### 7.3 자동 루틴 (v0.2.4+)
 
 채널은 `#owner-command`(입력)와 `#workflow`(실행) 2개. 모든 자동 출력은 `#workflow`에 모이며, 백그라운드 루틴은 시스템 스레드에 분류됩니다.
 
@@ -767,7 +767,7 @@ solosquad init
 - [ ] `solosquad doctor` 주기적으로 실행
 - [ ] 클라우드 운영 시: SSH 키 인증만 허용, 방화벽은 아웃바운드만 허용
 
-상세: `docs/v1.2-safety-security.md`
+상세: `docs/v0.2-safety-security.md`
 
 ---
 
@@ -785,7 +785,7 @@ solosquad init
 
 ### 메신저에서 봇이 응답하지 않음
 
-우선 `solosquad doctor`로 환경 불일치를 확인하세요. 특히 `.env vs process.env mismatch` 경고가 뜨면 `solosquad`를 최신 버전으로 업데이트해야 합니다 (`.env` 로드 버그는 v1.1.3에서 수정됨).
+우선 `solosquad doctor`로 환경 불일치를 확인하세요. 특히 `.env vs process.env mismatch` 경고가 뜨면 `solosquad`를 최신 버전으로 업데이트해야 합니다 (`.env` 로드 버그는 v0.1.3에서 수정됨).
 
 ```bash
 solosquad doctor --messenger-check
@@ -799,10 +799,10 @@ solosquad doctor --messenger-check
 
 **Discord 체크리스트:** 4.2 마지막 체크리스트. 특히:
 - **Message Content Intent** ON
-- 봇 권한 **Create Public Threads** (v1.2.4+, 시스템 스레드 생성용)
+- 봇 권한 **Create Public Threads** (v0.2.4+, 시스템 스레드 생성용)
 - 서버 이름에 제품 이름/slug 포함
 
-**기존 Telegram 사용자**: v1.2.4부터 Telegram 지원이 제거되었습니다. `.solosquad/.env`의 `MESSENGER=telegram`을 `discord` 또는 `slack`으로 변경하고, 해당 플랫폼 setup(4.1 또는 4.2)을 새로 진행하세요.
+**기존 Telegram 사용자**: v0.2.4부터 Telegram 지원이 제거되었습니다. `.solosquad/.env`의 `MESSENGER=telegram`을 `discord` 또는 `slack`으로 변경하고, 해당 플랫폼 setup(4.1 또는 4.2)을 새로 진행하세요.
 
 ### 루틴이 실행되지 않음
 - `solosquad schedule`이 실행 중인지 (`ps`, `docker compose ps`)
@@ -827,7 +827,7 @@ docker compose up -d --build   # Docker 사용 시 이미지 재빌드
 A: Claude Code Max 구독료만 있으면 시작 가능. 클라우드 운영 시 VPS 월 $4~6 추가.
 
 **Q: Discord와 Slack을 동시에 쓸 수 있나요?**
-A: 한 워크스페이스에서는 불가능합니다. 대신 **워크스페이스를 두 개** 만들면 됩니다 — 예: `~/solopreneur/`(Slack 봇) + `~/elon-24-7/`(Discord 봇). 각 워크스페이스가 독립된 `.env`·토큰·봇 계정을 가지므로 서로 간섭하지 않고 동시 운영됩니다. 이 제약은 v1.2.0부터 적용되며, 이전 v1.1.x의 `MESSENGER=discord,slack` 복수 지정은 더 이상 지원하지 않습니다.
+A: 한 워크스페이스에서는 불가능합니다. 대신 **워크스페이스를 두 개** 만들면 됩니다 — 예: `~/solopreneur/`(Slack 봇) + `~/elon-24-7/`(Discord 봇). 각 워크스페이스가 독립된 `.env`·토큰·봇 계정을 가지므로 서로 간섭하지 않고 동시 운영됩니다. 이 제약은 v0.2.0부터 적용되며, 이전 v0.1.x의 `MESSENGER=discord,slack` 복수 지정은 더 이상 지원하지 않습니다.
 
 **Q: 시간대가 한국이 아니면?**
 A: `.env`의 `TZ=`를 변경 (예: `TZ=America/Los_Angeles`). Docker도 동일.

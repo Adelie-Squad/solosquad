@@ -67,8 +67,8 @@ Layer 2: Repository (<workspace>/<org>/repositories/<repo>/) → Per-repo code +
 
 ## Messenger Support
 
-Set via `MESSENGER` env var: `discord` (default) or `slack`. One per workspace (v1.2.0+).
-Telegram support was removed in v1.2.4. Adapter pattern in `src/messenger/` — both
+Set via `MESSENGER` env var: `discord` (default) or `slack`. One per workspace (v0.2.0+).
+Telegram support was removed in v0.2.4. Adapter pattern in `src/messenger/` — both
 platforms share the same bot logic and routing.
 
 ## Agent Routing
@@ -77,7 +77,7 @@ Send a message in the command channel and `src/bot/agent-router.ts` analyzes key
 - 60+ keywords → 25 agent mappings (`AGENT_ROUTES` dictionary)
 - Falls back to general mode if no match
 
-## Automated Routines + Memory Storage (v1.2.4+)
+## Automated Routines + Memory Storage (v0.2.4+)
 
 Two messenger channels: `#owner-command` (user input + reply) and `#workflow`
 (briefs at channel root, background routines in system threads, per-workflow threads).
