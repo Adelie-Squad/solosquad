@@ -1,415 +1,248 @@
 # SoloSquad
 
-> A 24/7 AI assistant system for solo founders. Operates product-specific agents using Claude Code.
+> A 24/7 AI assistant system for solo founders — Discord/Slack bot + scheduled routines + team-based agents, distributed as a single npm package.
 
-Running a company alone doesn't mean working alone. SoloSquad gives you a full virtual team — 25 specialized AI agents organized into 4 teams — that operates around the clock via your favorite messenger, scheduled routines, and CLI tools. Just talk to it like you'd talk to a co-founder, and the right specialist picks up.
+Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team of **25 specialist AI agents** across 4 disciplines (Strategy, Growth, Experience, Engineering), reachable from your messenger, with automated daily routines and per-product memory isolation.
 
-**Supports:** Discord | Slack — pick one per workspace (Telegram support removed in v0.2.4). For multi-platform use, create multiple workspaces.
-**Platforms:** Windows | macOS | Linux — cross-platform CLI with CI-tested support.
+```
+Output ≠ Goal. Output = Means to achieve the goal.
+```
+
+**Platforms:** Windows · macOS · Linux (cross-platform CLI, CI-tested)
+**Messenger:** Discord or Slack — one per workspace (Telegram support removed in v0.2.4)
+**Stack:** TypeScript + Node.js 18+ · Claude Code as the AI engine · file-based memory (JSONL)
 
 ---
 
-## What This Is
+## Documentation
 
-A self-hosted AI operations system that turns Claude Code into a **team of domain experts** for your startup. Instead of one generic chatbot, you get:
+📖 **The canonical user guide is the menu-divided HTML manual:**
 
-- A **Strategy team** that validates PMF hypotheses, scopes features, and analyzes data
-- A **Growth team** that writes copy, plans GTM, and runs paid campaigns
-- An **Experience team** that conducts user research, designs UX flows, and builds UI systems
-- An **Engineering team** that architects systems, writes code, manages infra, and collects data
+> **[`docs/manual/concept-guide.html`](docs/manual/concept-guide.html)** — open it in a browser.
 
-Each agent carries 200+ lines of domain-specific expertise — not generic instructions, but structured frameworks, quality checklists, and handoff protocols that mirror how real teams operate.
+It covers, in ten menu-divided sections:
+
+| # | Section | What's inside |
+|---|---|---|
+| 1 | Getting Started | Project intent, core concepts, expected value |
+| 2 | How It Works | System architecture, folder hierarchy, memory model, workflow definition |
+| 3 | Concept Glossary | `SKILL.md`, `KNOWLEDGE.md`, `CLAUDE.md`, `agent.md` comparison; per-layer file inventory |
+| 4 | Onboarding | Branches for new users, existing-repo migration, and version upgrades |
+| 5 | Messenger Setup | Full 9-step Slack and 8-step Discord token walkthroughs |
+| 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
+| 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
+| 8 | Version Differences | v0.2.4 (npm-published) vs v0.3 / v0.4 / v0.5 / v0.6 / v1.0+ (planned) |
+| 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
+| 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
+
+Every feature is tagged with a version badge: 🟢 v0.2.4 (available now) · 🟡 v0.3+ (planned) · 🔴 removed (e.g. Telegram).
+
+For internal architecture, release planning, and decision history, see [`docs/product-roadmap.md`](docs/product-roadmap.md).
 
 ---
 
-## Why This Exists
-
-Solo founders face a structural disadvantage: every decision — strategy, design, marketing, engineering — falls on one person. AI can help, but a single chat thread doesn't scale. You end up re-explaining context, losing decisions, and doing shallow work across too many domains.
-
-This system solves that by giving each domain its own specialist agent, persistent memory, and structured workflows — so you can think at the strategic level while your agents handle the execution depth.
-
----
-
-## Key Features
-
-### 25 Agents, 4 Teams, 1 Command
-
-Send a message in your messenger. The system analyzes your intent across 60+ keywords and routes it to the right specialist. No manual selection needed.
-
-```
-You: "Analyze our signup funnel drop-off"
-→ Routes to Data Analyst (Strategy team)
-
-You: "Write a launch announcement for Product Hunt"
-→ Routes to Content Writer (Growth team)
-```
-
-### Messenger Support — One per Workspace
-
-Pick the platform that fits your workflow. A workspace is bound to a single messenger; use separate workspaces if you need more than one platform.
-
-| Platform | Best For | Key Advantage |
-|----------|----------|---------------|
-| **Discord** | Channel-based teams | Auto-creates channels + native threads, rich category organization |
-| **Slack** | Workspace integration | Socket Mode, native threads, workspace feel |
-
-Set `MESSENGER=discord` or `MESSENGER=slack`. For both platforms, run `solosquad init` in two different workspace directories — each gets its own `.env`, bot tokens, and persona.
-
-### 3-Layer Context Isolation
-
-The system prevents context bleeding across products and projects:
-
-```
-Layer 0: Universal     → Owner profile, principles, voice (shared everywhere)
-Layer 1: Product       → Briefs, memory, signals (per-product)
-Layer 2: Project       → Agents, experiments, status (per-project)
-```
-
-Each product gets its own workspace. Agents working on Product A never see Product B's data.
-
-### Persistent Memory That Compounds
-
-Routines run on schedule, extract structured data, and append to JSONL memory files. Over time, your agents build a growing knowledge base of signals, experiments, and decisions — so every interaction gets smarter.
-
-### Multi-Session Team Orchestration
-
-For complex projects (PMF validation, feature launches, rebranding), the Orchestrator breaks work into phases and coordinates multiple team sessions running in parallel:
-
-```
-Phase 1: Research    → User Researcher + Desk Researcher + Idea Refiner (parallel)
-Phase 2: Planning    → PMF Planner + Feature Planner
-Phase 3: Design      → UX Designer → UI Designer (sequential)
-Phase 4: Build       → Architect → Frontend + Backend (parallel)
-Phase 5: QA + Mktg   → QA Engineer + GTM Strategist (parallel)
-Phase 6: Launch      → Paid Marketer (after QA Go)
-```
-
-Agents hand off context to each other via a structured **Handoff Protocol** — summary, artifacts, key decisions, open questions — so nothing gets lost between stages.
-
-### 24/7 Automated Routines
-
-Five scheduled routines run daily without intervention:
-
-| Time | What It Does |
-|------|-------------|
-| 06:00 | Morning Brief — priorities and blockers for the day |
-| 12:00 | Signal Scan — market signals, competitor moves, trends |
-| 16:00 | Experiment Check — status of running experiments |
-| 22:00 | Daily Log — decisions made, lessons learned |
-| Sun 20:00 | Weekly Review — full week retrospective |
-
-Results are posted to your messenger channels and auto-saved to memory.
-
-### One-Command Install (npm)
+## Quick Start (5 minutes)
 
 ```bash
+# 1. Prerequisites (one-time)
+brew install node git                             # macOS — see concept-guide §4.2 for Windows/Linux
+npm install -g @anthropic-ai/claude-code
+
+# 2. Install SoloSquad
 npm install -g solosquad
-solosquad init
+mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
+solosquad init                                    # wizard asks for messenger token
+claude login                                      # browser opens for Claude Max account
+solosquad doctor                                  # verify environment
+
+# 3. Start the bot
+solosquad bot                                     # foreground
+# or
+docker compose up -d --build                      # background + auto-restart
 ```
 
-The wizard configures your owner profile, registers your products, generates all directory structures, initializes memory files, and gets you operational. OpenClaw-style `update` and `doctor` commands built in.
+Then send `안녕` or `hello` to `#owner-command` in your Slack/Discord channel — a specialist agent responds.
+
+**Messenger token setup** takes 5–10 minutes (Slack) or 3–5 minutes (Discord). Follow [concept-guide.html §5](docs/manual/concept-guide.html) step-by-step.
 
 ---
 
-## Prerequisites
+## What you get
 
-| Item | Required |
-|------|----------|
-| [Claude Code Max Plan](https://claude.ai) | Required |
-| Node.js 18+ | Required |
-| Docker Desktop | Optional (for isolated execution) |
-| Messenger Bot Token | Required (one of the below) |
-| GitHub PAT | Optional (auto-create repos) |
-
-**Messenger tokens (pick one or more):**
-| Platform | What You Need | Where to Get It |
-|----------|--------------|-----------------|
-| Discord | Bot Token | [Discord Developer Portal](https://discord.com/developers/applications) |
-| Slack | Bot Token + App Token | [Slack API](https://api.slack.com/apps) (Socket Mode) |
-
-**Per-platform required configuration:**
-- **Discord** — enable **MESSAGE CONTENT** privileged gateway intent; bot permissions include **Create Public Threads** (v0.2.4+); invite the bot to a server whose name contains your product name/slug.
-- **Slack** — enable **Socket Mode**; App-Level Token scope `connections:write`; Bot Token scopes `channels:read`, `channels:manage`, `chat:write`, `app_mentions:read`, `channels:history`; subscribe to `message.channels`; `/invite @bot` into `#owner-command`.
-
-If the bot does not connect after `solosquad init`, run `solosquad doctor --messenger-check` to validate tokens against live APIs (`auth.test` / `/users/@me`).
-
----
-
-## Installation
-
-### OS-specific prerequisites
-
-<details>
-<summary><b>macOS</b></summary>
-
-```bash
-brew install node git
-brew install --cask docker   # optional
-npm install -g @anthropic-ai/claude-code
-```
-</details>
-
-<details>
-<summary><b>Windows</b></summary>
-
-```powershell
-winget install OpenJS.NodeJS.LTS
-winget install Git.Git
-winget install Docker.DockerDesktop   # optional
-npm install -g @anthropic-ai/claude-code
-
-# Recommended
-winget install Microsoft.WindowsTerminal
-winget install Microsoft.PowerShell
-```
-</details>
-
-<details>
-<summary><b>Linux (Ubuntu/Debian)</b></summary>
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs git
-sudo apt install -y docker.io   # optional
-npm install -g @anthropic-ai/claude-code
-
-# npm global without sudo
-mkdir -p ~/.npm-global
-npm config set prefix '~/.npm-global'
-echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
-source ~/.bashrc
-```
-</details>
-
-### 1. Install
-```bash
-npm install -g solosquad
-```
-
-### 2. Initialize Workspace
-```bash
-mkdir my-workspace && cd my-workspace
-solosquad init
-```
-
-The setup wizard handles:
-- Environment check (Node.js, Docker, git, Claude Code)
-- Copies agent definitions, routines, templates to your workspace
-- Messenger platform selection (Discord / Slack)
-- Timezone + morning/evening brief times (v0.2.4+, default Asia/Seoul · 08:00 / 18:00)
-- Token configuration with guided instructions
-- Product/organization registration (multiple supported)
-- Auto-generates product directories + memory + messenger config
-
-### 3. Verify
-```bash
-solosquad doctor
-```
-
-`doctor` now shows platform info, shell name, and OS-specific checks (e.g. PowerShell 7 on Windows). Docker is checked as optional.
-
----
-
-## Usage
-
-### CLI Commands
-
-```bash
-solosquad init          # Setup wizard
-solosquad bot           # Start messenger bot
-solosquad schedule      # Start automated scheduler
-solosquad status        # Show project dashboard
-solosquad update        # Check for updates and self-update
-solosquad doctor        # Check environment and diagnose issues
-solosquad run-routine   # Run a routine manually
-```
-
-### Send Commands via Messenger
-
-Send a message in the `#owner-command` channel on Discord or Slack. Keywords are analyzed to auto-route to the appropriate agent.
-
-```
-You: Draft landing page copy
-Bot: [product-name (content-writer)] ...
-```
-
-60+ keywords → 25 agents auto-matched. Falls back to general mode if no keyword match.
-
-### Run Routines Manually
-```bash
-solosquad run-routine                    # Interactive selection
-solosquad run-routine signal-scan        # Run specific routine
-solosquad run-routine --all              # Run all routines
-```
-
-### Work Directly in a Project Directory
-```bash
-cd ~/repos/my-product/projects/pmf-validation
-claude
-# CLAUDE.md auto-loads with isolated context
-```
-
----
-
-## Core Concept: Per-Product Isolation
-
-When you register multiple products, each gets its own isolated workspace.
-
-```
-~/repos/
-├── product-a/           ← Product A workspace
-│   ├── CLAUDE.md        ← Auto-generated (Product A context)
-│   ├── product/         ← Brief, weekly status
-│   ├── memory/          ← Hypotheses, experiments, decisions, signals
-│   │   └── routine-logs/ ← Routine execution logs
-│   └── projects/        ← Per-project isolation
-│       └── pmf-validation/
-│           ├── CLAUDE.md
-│           └── ...
-├── product-b/           ← Product B workspace
-│   └── ...
-└── product-c/
-    └── ...
-```
-
-Each product's AI agents can **only see that product's context**. Other product data is walled off.
-
----
-
-## Automated Routine Schedule (v0.2.4+)
-
-Two channels only — `#owner-command` (input) and `#workflow` (all automated output).
-Background routines post to **system threads** inside `#workflow`.
-
-| Default Time | Routine | Kind | Where | Memory |
-|------|---------|------|-------|--------|
-| 08:00 daily | Morning Brief | user-brief | `#workflow` root | — |
-| 12:00 daily | Signal Scan | background | `#workflow` → `system-daily-signals` | `signals.jsonl` |
-| 16:00 daily | Experiment Check | background | `#workflow` → `system-experiments` | `experiments.jsonl` |
-| 18:00 daily | Evening Brief | user-brief | `#workflow` root | `decisions.jsonl` |
-| Sun 20:00 | Weekly Review | background | `#workflow` → `system-weekly-review` | `decisions.jsonl` |
-
-- Times follow `workspace.yaml` `timezone` (default `Asia/Seoul`) and can be edited per-routine.
-- JSON blocks in routine results are auto-extracted and appended to JSONL memory.
-- All routine logs are saved to `memory/routine-logs/`.
-
----
-
-## Structure
-
-```
-(this repo / npm package)
-├── package.json            ← npm package config
-├── tsconfig.json           ← TypeScript config
-├── .gitattributes          ← LF line ending enforcement (cross-platform)
-├── .github/workflows/      ← CI matrix (3 OS × 3 Node versions)
-├── bin/solosquad.ts      ← CLI entry point
-├── src/
-│   ├── cli/                ← CLI commands (init, bot, schedule, status, update, doctor)
-│   ├── bot/                ← Agent routing + Claude Code execution
-│   ├── messenger/          ← Platform adapters (Discord, Slack)
-│   ├── scheduler/          ← Cron-based routine execution + memory auto-save
-│   └── util/               ← Config, paths, logger, platform detection
-├── assets/                 ← Bundled with npm package, copied on `solosquad init`
-│   ├── agents/             ← 25 specialized agents (SKILL.md files)
-│   ├── core/               ← Owner profile, principles, writing style
-│   ├── routines/           ← Routine prompts (editable after init)
-│   ├── orchestrator/       ← Project workflow orchestration
-│   └── templates/          ← PRD, handoff, status templates
-└── dist/                   ← Compiled JavaScript (auto-generated)
-```
-
----
-
-## Team-Based Agents (25)
+### 25 agents across 4 teams, keyword-routed automatically
 
 | Team | Agents | Role |
-|------|--------|------|
-| **Strategy** | PMF Planner, Feature Planner, Policy Architect, Data Analyst, Business Strategist, Idea Refiner, Scope Estimator | Strategy, planning, analysis |
-| **Growth** | GTM Strategist, Content Writer, Brand Marketer, Paid Marketer | Marketing, branding |
-| **Experience** | User Researcher, Desk Researcher, UX Designer, UI Designer | Research, design |
-| **Engineering** | Creative Frontend, FDE, Architect, Backend Developer, API Developer, Data Collector, Data Engineer, Cloud Admin, QA Engineer, Security Engineer | Development, infrastructure, quality, security |
+|---|---|---|
+| **Strategy** (7) | PMF Planner · Feature Planner · Data Analyst · Business Strategist · Idea Refiner · Scope Estimator · Policy Architect | Market analysis, hypothesis design, planning |
+| **Growth** (4) | GTM Strategist · Content Writer · Brand Marketer · Paid Marketer | Marketing, branding, copy, paid acquisition |
+| **Experience** (4) | User Researcher · Desk Researcher · UX Designer · UI Designer | Research, design |
+| **Engineering** (10) | Creative Frontend · FDE · Architect · Backend · API · Data Collector · Data Engineer · Cloud Admin · QA · Security | Development, infra, quality, security |
+
+```
+You: "Write landing page copy"        → Content Writer (Growth)
+You: "Analyze the signup funnel"      → Data Analyst (Strategy)
+You: "Design the login UI"            → UI Designer (Experience)
+You: "Design the signup API"          → API Developer (Engineering)
+```
+
+60+ keyword mappings route to the right specialist. No manual selection needed. Falls back to general mode when no match.
+
+### Five automated routines, runs while you sleep
+
+| Default time | Routine | Output channel | Memory |
+|---|---|---|---|
+| 08:00 daily | Morning Brief | `#workflow` root | — |
+| 12:00 daily | Signal Scan | `#workflow` → `system-daily-signals` thread | `signals.jsonl` |
+| 16:00 daily | Experiment Check | `#workflow` → `system-experiments` thread | `experiments.jsonl` |
+| 18:00 daily | Evening Brief | `#workflow` root | `decisions.jsonl` |
+| Sun 20:00 | Weekly Review | `#workflow` → `system-weekly-review` thread | `decisions.jsonl` |
+
+All times configurable in `.solosquad/workspace.yaml` (timezone defaults to `Asia/Seoul`).
+
+### 3-Layer context isolation
+
+```
+Layer 0 · Workspace (universal)    → Owner profile, principles, 25 agent definitions
+   ↓
+Layer 1 · Organization (per-product) → Memory, workflows, messenger channels
+   ↓
+Layer 2 · Repository (per-codebase) → Code + repo-specific skills
+```
+
+Product A's agents never see Product B's data. Multiple products coexist cleanly under one workspace.
+
+### Self-hosted
+
+Runs on your Mac Mini, PC, or VPS. Your data stays with you. Only outbound calls: Claude API and your messenger's servers.
 
 ---
 
-## Cross-Platform Support
-
-The CLI runs natively on Windows, macOS, and Linux. Key features:
-
-- **Unified command detection**: No more `which`/`where` hacks — uses `command -v` on Unix, `where` on Windows
-- **CRLF-safe parsing**: All file parsers (`.env`, JSONL, TSV) normalize line endings automatically
-- **OS-aware defaults**: Repos path defaults to `~/Documents/solosquad-repos` on Windows, `~/repos` on Unix
-- **sudo auto-detection**: `solosquad update` detects when `sudo` is needed on Linux/macOS
-- **CI matrix**: Every push is tested on Ubuntu, macOS, and Windows × Node 18/20/22
-
-## Security
-
-The system includes safety measures for AI-powered autonomous execution:
-
-- **Input validation**: Message length limits and empty input checks on all messenger adapters
-- **Safety preamble**: Claude subprocess receives safety rules blocking access to .env, .ssh, credentials and destructive commands
-- **Output sanitization**: Sensitive patterns (tokens, passwords, API keys) are redacted before memory storage
-- **Security Engineer agent**: Dedicated agent for security review, vulnerability assessment, and secure coding guidance
-- **Init safety guide**: Security checklist and .gitignore verification during setup
-
-See `docs/v0.2-safety-security.md` for the full security framework.
-
----
-
-## System Management
+## CLI Reference (v0.2.4)
 
 ```bash
-# Update to latest version (auto-detects sudo on Unix)
-solosquad update
+solosquad init                   # workspace setup wizard
+solosquad bot                    # start messenger bot
+solosquad schedule               # start automated routine scheduler
+solosquad status                 # dashboard (orgs, workflows, recent activity)
+solosquad doctor                 # environment diagnostics
+solosquad doctor --messenger-check  # validate tokens via live API
+solosquad update                 # check & install latest npm release
+solosquad run-routine [name]     # manual routine execution
+solosquad migrate                # upgrade workspace layout (dry-run by default)
+solosquad migrate --apply        # perform migration
+solosquad migrate --rollback     # restore from backup
+solosquad add org <name>         # add an organization
+solosquad add repo <url|path>    # clone or register a repository
+solosquad sync                   # sync repositories/ with .org.yaml
+```
 
-# Check environment health (shows platform info)
-solosquad doctor
+See concept-guide §6 for planned v0.3+ commands (PM mode, autonomous runs, workflow maker, memory search).
 
-# Docker management (if using Docker deployment)
-docker compose restart
-docker compose logs -f
-docker compose down
+---
+
+## Architecture Overview
+
+Two long-running processes plus a file-based memory layer:
+
+| Process | Role |
+|---|---|
+| `solosquad bot` | Receives messenger messages → keyword-routes to the right agent's `SKILL.md` → invokes `claude --print` → replies |
+| `solosquad schedule` | Runs cron-based routines, appends results to JSONL memory files |
+
+For production-grade always-on, choose one of:
+- Docker Compose (recommended, background + auto-restart)
+- macOS `launchd` plist / Windows NSSM service
+- VPS + systemd (see [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
+
+Full details in concept-guide §9.
+
+---
+
+## Versions
+
+Current npm release: **v0.2.4** (npm registry: `1.2.4`).
+
+The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stable API guarantees. Planned milestones:
+
+| Version | Theme | Highlights |
+|---|---|---|
+| v0.3 (planned) | PM mode + multi-agent orchestration | PM session, ephemeral subagents, slash commands (`/think /plan /build /review /ship`), `solosquad rollback` |
+| v0.4 (planned) | Autonomous overnight engine | `program.md`, metric gate + git rollback, Data Reconciliation, 3-tier guardrails |
+| v0.5 (planned) | Workflow maker + skill system | New agents/workflows from messenger chat, repo `.claude/skills/` analyzer, 4-channel triggers |
+| v0.6 (planned) | Topology stabilization + memory archive | `agents/{team}/KNOWLEDGE.md` co-location, `<org>/agent-profile.yaml` + `core/` + `domain/`, `.solosquad/knowledge/`, FTS5 cold archive |
+| **v1.0** (planned) | **Formal launch** | Stable API · breaking-change policy starts |
+| v1.1 (planned) | Dashboard interaction | Companion web dashboard (separate repo) |
+| v1.2 (planned) | Knowledge ontology | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
+
+Decision log: [`docs/product-roadmap.md`](docs/product-roadmap.md) §4.
+
+---
+
+## Multi-Workspace
+
+Want both Slack and Discord, or separate personas? Create multiple workspaces:
+
+```bash
+~/solopreneur/      # Slack bot, business persona
+~/personal-lab/     # Discord bot, hobby persona
+```
+
+Each has independent `.env`, tokens, memory, and messenger account. They run side-by-side without interference. (Note: a single workspace is bound to one messenger — the v0.1.x `MESSENGER=discord,slack` syntax is no longer supported.)
+
+---
+
+## Repository Layout
+
+```
+package.json                      → npm package config
+tsconfig.json                     → TypeScript config
+bin/solosquad.ts                  → CLI entry point
+src/
+  cli/                            → CLI commands (init, bot, schedule, status, update, doctor, …)
+  bot/                            → Agent routing + Claude Code execution
+  messenger/                      → Discord / Slack adapters
+  scheduler/                      → Cron-based routines + memory append
+  util/                           → Config, paths, logger, platform helpers
+  migrations/                     → Versioned workspace migration scripts
+assets/                           → Bundled defaults (copied to user workspace on `solosquad init`)
+  agents/{team}/{agent}/SKILL.md  → 25 specialist definitions
+  agents/_teams/{team}/TEAM_KNOWLEDGE.md  → Shared team craft (relocates to agents/{team}/KNOWLEDGE.md in v0.6)
+  core/                           → Owner profile, principles, voice (universal layer)
+  routines/                       → Routine prompts (5 routines)
+  orchestrator/SKILL.md           → PM role definition (activated in v0.3)
+  templates/                      → PRD / handoff / status / session templates
+  Dockerfile, docker-compose.yml  → Container deployment templates
+docs/
+  manual/concept-guide.html       → 📖 Canonical user manual (10 sections)
+  product-roadmap.md              → Release status + planning + decision log
+  architecture.md                 → Internal system design
+  cloud-deployment.md             → VPS + systemd setup
+  v0.3-…md … v1.2-…md             → Per-version planning specs
+  reference/                      → Design vocabulary sources
+  trend-record/                   → Peer-project comparisons
 ```
 
 ---
 
-## Customizing Routines
+## References (peer-project inspirations)
 
-After `solosquad init`, edit the `.md` files in the `routines/` folder in your workspace. No rebuild required.
+| Project | Adopted pattern |
+|---|---|
+| [Anthropic Effective Harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) | initializer + coding agent split; context compaction; subagent spawning |
+| [gstack](https://github.com/garrytan/gstack) | slash chain protocol — direct source for v0.3 `/think /plan /build /review /ship` |
+| [Hermes Agent](https://github.com/nousresearch/hermes-agent) | hot+cold FTS5 memory archive, trajectory → skill auto-summary (planned for v0.6) |
+| [autoresearch](https://github.com/karpathy/autoresearch) | metric gate + git keep/rollback loop (planned for v0.4) |
+| [phuryn/pm-skills](https://github.com/phuryn/pm-skills) | auto-load + slash dual-trigger SKILL routing (planned for v0.5) |
+| [OpenClaw](https://github.com/openclaw/openclaw) | npm publishing + `update` / `doctor` CLI patterns |
 
-```bash
-# Example: Edit Morning Brief prompt
-vim routines/morning-brief.md
-```
-
----
-
-## FAQ
-
-**Q: How do I authenticate Claude Code?**
-A: Subscribe to Claude Code Max plan, then run `claude login` in your terminal.
-
-**Q: How do I switch messenger platforms?**
-A: Change `MESSENGER=slack` (or `discord`) in `.env` and restart the bot.
-
-**Q: How do I use multiple messengers simultaneously?**
-A: Create a separate workspace for each platform. Each `solosquad init` yields its own `.env` and bot tokens, so `~/solosquad-slack/` and `~/solosquad-discord/` can run side by side without stepping on each other.
-
-**Q: How do I add a product later?**
-A: Re-run `solosquad init`. Existing settings are preserved; only the new product is added.
-
-**Q: How do I update to the latest version?**
-A: Run `solosquad update` — it checks npm for the latest version and offers to update.
-
-**Q: What if agent routing is wrong?**
-A: Edit the keyword-agent mapping in `src/bot/agent-router.ts` in the package source, or raise an issue.
+Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration, MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/product-roadmap.md` §4 for the reasoning.
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Active solo development. Issues and pull requests welcome, but the API is unstable until v1.0. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-MIT License
+MIT — see [`LICENSE`](LICENSE).
