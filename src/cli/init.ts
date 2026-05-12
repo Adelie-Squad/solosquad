@@ -17,7 +17,7 @@ import { commandExists } from "../util/platform.js";
 import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 
-const SOLOSQUAD_VERSION = "1.2.4";
+const SOLOSQUAD_VERSION = "1.3.0";
 
 const TIMEZONE_PRESETS = [
   { name: "Asia/Seoul (UTC+09) — recommended", value: "Asia/Seoul" },

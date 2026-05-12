@@ -173,11 +173,15 @@ export class PmRunner {
   ): Promise<InternalTurnResult> {
     const { record, fresh } = this.deps.sessions.ensure(call.orgSlug, call.userId);
     const sessionId = record.sessionId;
+    // After a rotation, the new session-id was just minted by SessionStore.rotate
+    // and has never been used with claude — treat it as fresh so we pass
+    // --session-id <uuid> instead of --resume <uuid>.
+    const useResume = !fresh && !rotatedAlready;
 
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
-      resume: !fresh,
+      resume: useResume,
       input: singleUserMessage(call.userText),
       excludeDynamicSystemPromptSections: true,
       includePartialMessages: true,

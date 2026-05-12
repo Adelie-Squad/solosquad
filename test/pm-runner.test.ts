@@ -190,6 +190,12 @@ test("PM rotates session-id on 'No conversation found' and retries once", async 
   assert.equal(reply.text, "recovered");
   assert.equal(rig.fake.invocations.length, 2);
 
+  // Retry after rotation must use the new session-id with resume=false
+  // (the rotated UUID has never been seen by Claude Code yet).
+  assert.equal(rig.fake.invocations[0].resume, true, "first call resumes existing session");
+  assert.equal(rig.fake.invocations[1].resume, false, "retry uses --session-id on the new UUID");
+  assert.notEqual(rig.fake.invocations[1].sessionId, rec.sessionId, "retry uses the rotated UUID");
+
   const sink = rig.events.get(`${rig.orgSlug}:U1`)!;
   const kinds = sink.history.map((e) => e.kind);
   assert.ok(kinds.includes("pm.session_lost"));
