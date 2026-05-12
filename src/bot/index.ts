@@ -5,6 +5,8 @@ import { PmRunner, AuthExpiredError } from "./pm-runner.js";
 import { SessionStore } from "./session-store.js";
 import { FileEventSink, pmEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
+import { handleSlashIfAny } from "./slash-commands.js";
+import { commitSnapshot } from "./git-snapshot.js";
 import { getReposBase, getWorkspaceDir } from "../util/paths.js";
 import { loadEnv, loadMessengerConfig, type Product } from "../util/config.js";
 import type { MessageContext, MessengerAdapter } from "../messenger/base.js";
@@ -32,21 +34,40 @@ async function handleCommand(
     return;
   }
 
+  // v1.3.1: slash command pre-processing. Unknown slashes get a direct
+  // reply from the bot (no PM call). Known slashes are wrapped in a
+  // [SLASH /xyz] marker so the PM SKILL.md can parse them deterministically.
+  const slashHandling = handleSlashIfAny(userInput);
+  if (slashHandling.shortCircuit) {
+    if (slashHandling.directReply) await ctx.reply(slashHandling.directReply);
+    return;
+  }
+  const forwardText = slashHandling.forwardText;
+
   // v1.3.0 (PM mode): PM session cwd is fixed at the org root (per
   // docs/plan/v0.3-pm-mode-orchestration.md §3.2.1). target_repo cwd
   // branching happens inside subagent prompts, not by switching PM cwd.
   const orgCwd = path.join(getReposBase(), product.slug);
 
   console.log(
-    `[Bot] PM turn: user=${ctx.userId} org=${product.slug} text="${userInput.slice(0, 60)}${userInput.length > 60 ? "…" : ""}"`
+    `[Bot] PM turn: user=${ctx.userId} org=${product.slug} text="${forwardText.slice(0, 60)}${forwardText.length > 60 ? "…" : ""}"`
   );
+
+  // v1.3.1: snapshot memory/ + workflows/ before the turn. PM may make
+  // changes; a follow-up snapshot after the turn lets `solosquad rollback`
+  // revert just this turn's delta if needed.
+  try {
+    commitSnapshot(workspaceRoot, product.slug, `before-spawn: ${ctx.userId} ${new Date().toISOString()}`);
+  } catch (e) {
+    console.log(`[Bot] snapshot (before) skipped: ${e instanceof Error ? e.message : e}`);
+  }
 
   try {
     const reply = await pmRunner.handleUserMessage({
       userId: ctx.userId,
       orgSlug: product.slug,
       orgCwd,
-      userText: userInput,
+      userText: forwardText,
     });
     if (reply.text) {
       await ctx.reply(reply.text);
@@ -61,6 +82,11 @@ async function handleCommand(
     console.log(
       `[Bot] PM turn done: cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`
     );
+    try {
+      commitSnapshot(workspaceRoot, product.slug, `after-spawn: ${ctx.userId} cost=$${reply.costUsd.toFixed(4)} spawns=${reply.spawnCount}`);
+    } catch (e) {
+      console.log(`[Bot] snapshot (after) skipped: ${e instanceof Error ? e.message : e}`);
+    }
   } catch (err) {
     if (err instanceof AuthExpiredError) {
       await ctx.reply(

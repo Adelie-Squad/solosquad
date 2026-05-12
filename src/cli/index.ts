@@ -237,6 +237,19 @@ workflowGroup
   });
 
 program
+  .command("rollback")
+  .description("Revert <org>/memory and <org>/workflows to an earlier snapshot")
+  .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .option("--workflow <id>", "Filter snapshots to a specific workflow")
+  .option("--to <sha>", "Target snapshot SHA (defaults to last pre-spawn)")
+  .option("--list", "List snapshot history instead of reverting")
+  .option("-y, --yes", "Skip confirmation prompt")
+  .action(async (opts) => {
+    const { rollbackCommand } = await import("./rollback.js");
+    await rollbackCommand(opts);
+  });
+
+program
   .command("migrate")
   .description("Migrate workspace to the current SoloSquad version")
   .option("--dry-run", "Preview the migration without applying it (default)")
