@@ -32,29 +32,58 @@ solosquad sync          # Sync org/repositories/ with .org.yaml
 ```
 package.json                        → npm package config
 tsconfig.json                       → TypeScript config
-bin/solosquad.ts                  → CLI entry point
+bin/solosquad.ts                    → CLI entry point
 src/
   cli/                              → CLI commands (init, bot, schedule, status, update, doctor)
   bot/                              → Agent routing + Claude Code execution
-  messenger/                        → Platform adapters (Discord, Slack, Telegram)
+  messenger/                        → Platform adapters (Discord, Slack)
   scheduler/                        → Cron-based routine execution + memory
   util/                             → Config, paths, logger
 assets/                             → Bundled assets (copied on `solosquad init`)
-  agents/{team}/{agent}/SKILL.md    → Agent definitions (25)
-  agents/_teams/{team}/TEAM_KNOWLEDGE.md → Shared team knowledge
+  agents/{team}/SKILL.md            → Agent definitions (25 — v0.6: KNOWLEDGE.md co-located)
+  agents/{team}/KNOWLEDGE.md        → Team(=domain) shared knowledge (v0.6 §2.1)
+  knowledge/                        → Bundled workspace knowledge starter (v0.6 §2.3)
   core/                             → Owner profile, principles, writing style
   routines/                         → Routine prompts (editable)
-  orchestrator/SKILL.md             → Project workflow orchestration
+  orchestrator/SKILL.md             → PM (orchestrator) role definition
   templates/                        → PRD, handoff, status file templates
 ```
 
-## 3-Layer Context
+## 3-Layer Context (v0.6 토폴로지)
 
 ```
-Layer 0: Universal (.solosquad/core/)                       → Shared across all sessions
-Layer 1: Organization (<workspace>/<org>/)                  → Per-org memory, workflows, channels
-Layer 2: Repository (<workspace>/<org>/repositories/<repo>/) → Per-repo code + .solosquad/repo.yaml
+Layer 0: Workspace / Universal
+├── .solosquad/core/         → Owner profile, principles, voice
+├── .solosquad/knowledge/    → User accumulated craft, decision frameworks (v0.6 §2.3)
+├── .solosquad/agents/       → Per-user agent overrides (3-tier search)
+└── assets/                  → Bundled defaults (read-only)
+
+Layer 1: Organization (<workspace>/<org>/)
+├── .org.yaml                → Org metadata
+├── core/                    → Org philosophy, tone (override Layer 0 core) — v0.6 §2.2
+├── agent-profile.yaml       → Per-agent modifier for this org — v0.6 §2.2
+├── domain/                  → Org domain knowledge (market, customers, product) — v0.6 §2.2
+├── memory/                  → Routine logs, decisions, signals (JSONL + FTS5 archive in v0.6)
+├── workflows/<id>/          → Active workflows (status, handoff, events)
+├── .solosquad/sessions/     → PM session IDs per user (v0.3)
+├── slack/ | discord/        → Channel config
+└── repositories/<repo>/     → See Layer 2
+
+Layer 2: Repository (<workspace>/<org>/repositories/<repo>/)
+├── code                     → User's actual product code
+├── .claude/skills/          → Repo-specific skills (kept here, not bubbled up)
+└── .solosquad/repo.yaml     → Repo metadata
 ```
+
+**Spawn-time context assembly (v0.6 §2.2)** — 8-layer JIT injection:
+[1] `assets/knowledge/` + `.solosquad/knowledge/` (selective by keyword)
+[2] `agents/{team}/KNOWLEDGE.md` (only if same team)
+[3] `agents/{team}/{agent}/SKILL.md` (agent identity, immutable, workspace)
+[4] `<org>/core/` (org philosophy)
+[5] `<org>/agent-profile.yaml` (defaults + this agent's section)
+[6] `<org>/domain/`
+[7] `<org>/workflows/<id>/_handoff.md` slice + `<org>/memory/`
+[8] target repo context (when target_repo set)
 
 ## Team Composition
 
@@ -76,6 +105,8 @@ platforms share the same bot logic and routing.
 Send a message in the command channel and `src/bot/agent-router.ts` analyzes keywords to auto-inject the appropriate agent's SKILL.md.
 - 60+ keywords → 25 agent mappings (`AGENT_ROUTES` dictionary)
 - Falls back to general mode if no match
+- v0.5 onward: 4-channel triggers (slash / keyword / freq auto-load / explicit PM call), see `docs/v0.5-workflow-maker.md` §7
+- v0.6 onward: FTS5 archive fallback for past memory recall (`docs/v0.6-default-workflow-tuning.md` §4)
 
 ## Automated Routines + Memory Storage (v0.2.4+)
 

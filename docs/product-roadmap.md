@@ -117,6 +117,7 @@
 
 ## 4. 결정 로그 (주요)
 
+- **2026-05-12 (오후, 2nd)** — **보고서×Baseline 비교 결과를 v0.3~v0.6 스펙에 통합**. `docs/reference/AI_Agent_Harness_Report.md`(개념·어휘)와 `docs/trend-record/2026-05-11-baseline-survey.md`(실측·우선순위)를 비교 → 보고서는 추상 어휘 출처, Baseline은 구현 우선순위 출처로 역할 분리. 통합 결과: v0.3에 차용 어휘 매핑표 + 슬래시 5종 + git rollback / v0.4에 Data Reconciliation provenance + 3단계 가드레일 program.md 스키마 + signal-scan active trigger / v0.5에 stateless-vs-stateful frontmatter + 4채널 trigger(slash/keyword/freq/explicit) + 빈도 카운팅 auto-load / v0.6 placeholder 해소 — 핸드오프 3변형(hierarchical/graph/dynamic) + trajectory→skill 제안 + FTS5 cold archive. 거부 항목: 보고서식 사전 가드레일 3계층 구축(솔로 비용 과다), 시맨틱 임베딩 버스(25 agent 규모에 과잉), Salesforce Lineage GUI(이미 git diff Markdown으로 정렬됨), Hermes trajectory 자동 등록(v0.6은 제안만).
 - **2026-05-12 (오후)** — **버전 라벨 일괄 다운시프트**: 프리-런치 작업 전체를 `v0.x.x`로 재라벨. `v1.0.0`을 정식 출시 마일스톤으로 예약. 종전 v1.7 웹 대시보드는 v1.1로 이동하되 **콘텐츠 변경** — 대시보드 자체는 별도 리포(`solopreneur-dashboard`/`solopreneur-api`)에서 개발하므로 본 리포는 *상호작용 인터페이스만*. 종전 v1.8 지식 온톨로지는 v1.2로 이동(콘텐츠 유지). 문서 파일명 14개 일괄 rename + 모든 .md 내부 v1.X → v0.X 일괄 치환. npm 실제 출시 버전은 immutable이므로 그대로(1.2.x).
 - **2026-05-12** — 장기 로드맵 v0.3~v1.2 재배치. PM 모드를 v0.3으로 앞당기고, 스킬 분석기 + 스킬 자유도를 v0.5(워크플로우 메이커)로 통합. 빈 v0.6은 디폴트 워크플로우 튜닝 슬롯으로 전환. 웹 대시보드 v1.1, 지식 온톨로지 v1.2 (Founder Layer + MCP 외부 연결로 범위 확장). 사유: 메신저-네이티브 패러다임이 다른 모든 기능의 진입점이며, 통합 가능 스펙 두 개를 합쳐 표면적 축소.
 - **2026-04-23** — `<org>/repositories/` 중간 계층 도입. 피어 프로젝트(OpenClaw/Ralph/Hermes) 조사에서 "시스템 폴더 + 코드 섞기" 패턴이 없음을 확인. GitHub flat 관례 재현 논거 철회.
