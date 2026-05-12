@@ -143,9 +143,10 @@
 
 ## 5. 관련 문서
 
+- **종합 개념서 (HTML, 신규):** `docs/manual/concept-guide.html` — 컨셉·아키텍처·온보딩·메신저 연결·명령어·용어 사전을 메뉴별로 정리. 브라우저로 직접 열어 사용
 - **아키텍처:** `docs/architecture.md`
-- **설치 가이드:** `docs/setup-guide.md`
-- **업데이트/마이그레이션 (사용자용):** `docs/upgrade-migration-guide.md`
+- **설치 가이드:** `docs/manual/setup-guide.md`
+- **업데이트/마이그레이션 (사용자용):** `docs/manual/update-migration-guide.md`
 - **클라우드 배포:** `docs/cloud-deployment.md`
 - **메신저 디버깅 (v0.1.3 ~ v0.1.5 이력):** `docs/v0.2.1-messenger-debugging.md`
 - **안전/보안:** `docs/v0.2-safety-security.md`
