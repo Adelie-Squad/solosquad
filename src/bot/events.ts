@@ -90,6 +90,10 @@ export interface SpawnStartEvent extends BaseEvent {
   toolUseId: string;
   agent: string;
   description: string;
+  /** v1.3.2+: workflow stage this spawn belongs to (parsed from PM's [stage:<id>] marker). */
+  stageId?: string;
+  /** v1.3.2+: workflow id (parsed from PM's [stage:<id> wf:<wf-id>] marker). */
+  workflowId?: string;
 }
 
 export interface SpawnCompleteEvent extends BaseEvent {

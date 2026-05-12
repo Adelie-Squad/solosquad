@@ -125,14 +125,21 @@ export class WorkflowReconciler {
     if (!Array.isArray(doc.stages)) return [];
 
     const events = this.readWorkflowEvents(orgSlug, workflowId);
+
+    // v1.3.2: precise stage_id ↔ task_id mapping via spawn.start.stageId.
+    // Build a stage -> [taskIds] index, then check spawn.complete coverage.
+    const stageToTaskIds = new Map<string, string[]>();
+    for (const e of events) {
+      if (e.kind !== "spawn.start") continue;
+      const stageId = (e as { stageId?: string }).stageId;
+      if (!stageId) continue;
+      const list = stageToTaskIds.get(stageId) ?? [];
+      list.push((e as { taskId: string }).taskId);
+      stageToTaskIds.set(stageId, list);
+    }
     const completedTaskIds = new Set(
       events
         .filter((e) => e.kind === "spawn.complete")
-        .map((e) => (e as { taskId: string }).taskId)
-    );
-    const failedTaskIds = new Set(
-      events
-        .filter((e) => e.kind === "spawn.fail")
         .map((e) => (e as { taskId: string }).taskId)
     );
 
@@ -140,19 +147,17 @@ export class WorkflowReconciler {
     let mutated = false;
     for (const stage of doc.stages) {
       if (stage.status !== "in_progress") continue;
-      // Heuristic: any spawn for this stage that has a completion?
-      // We don't strictly map task_id to stage_id yet (that mapping lands
-      // in v0.3.2 via the workspace-meta builder). For now, if the stage
-      // is in_progress and no spawn.complete event exists at all for it,
-      // flip to needs_revision and let the PM ask the user.
-      const stageTouchedByCompletedSpawn = events.some(
-        (e) =>
-          e.kind === "spawn.complete" &&
-          stage.agent &&
-          (e as { taskId: string }).taskId.includes(stage.agent)
-      );
 
-      if (stageTouchedByCompletedSpawn) continue;
+      const stageTasks = stageToTaskIds.get(stage.id) ?? [];
+      const anyCompleted = stageTasks.some((tid) => completedTaskIds.has(tid));
+
+      if (stageTasks.length === 0) {
+        // No spawn tied to this stage at all → mark needs_revision; PM never
+        // got to delegate (or the marker was missing from the prompt).
+      } else if (anyCompleted) {
+        // A spawn for this stage did complete → it's not actually stuck.
+        continue;
+      }
 
       stage.status = "needs_revision";
       mutated = true;
@@ -176,9 +181,6 @@ export class WorkflowReconciler {
       fs.writeFileSync(statusPath, yaml.dump(doc, { lineWidth: 100 }));
     }
 
-    // Touch completed/failed sets to keep the unused-warning silent.
-    void completedTaskIds;
-    void failedTaskIds;
     return out;
   }
 

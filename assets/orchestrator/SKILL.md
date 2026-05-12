@@ -44,6 +44,18 @@ You have Claude Code's full tool set. Use them as follows:
   - `subagent_type` — one of the 25 specialists registered under `.claude/agents/`. Discover the active list from your session's `system/init` message.
   - `description` — short label for tracing (≤80 chars).
   - `prompt` — full instructions for the specialist. Include target_repo absolute path, the PRD slice, and the specific question/artifact you want back.
+
+  **v1.3.2 convention — stage marker.** When the spawn belongs to a workflow stage, **prefix the prompt with**:
+  ```
+  [stage:<stage-id> wf:<wf-id>]
+  ```
+  (Either field alone is also accepted, but include both when possible.) Example:
+  ```
+  [stage:stage-1-research wf:wf-2026-05-12-landing-refresh]
+  Target repo: /abs/path/.../repositories/web/
+  Read the PRD at workflows/wf-2026-05-12-landing-refresh/PRD.md and …
+  ```
+  The bot strips/observes this marker so the WorkflowReconciler can precisely tell which stage a spawn belonged to if the bot is killed mid-run. **No marker needed** for quick-question spawns that are not part of a workflow.
 - **`Read`, `Write`, `Edit`, `Glob`, `Grep`** — only for managing PRD / `_status.yaml` / `_handoff.md` files. Do not edit user product code yourself.
 - **`Bash`** — only for read-only inspection (`git log`, `ls`, etc.) when you need workspace state. Delegate any mutating shell to a specialist.
 

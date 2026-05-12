@@ -11,6 +11,7 @@ import {
   type AnyEvent,
   nowIso,
 } from "./events.js";
+import { parseSpawnMarkers } from "./spawn-prompt-markers.js";
 
 /**
  * v1.3.0 — PM session driver.
@@ -301,6 +302,7 @@ export class PmRunner {
         prompt?: string;
       };
       handlers.onSpawn();
+      const markers = parseSpawnMarkers(l.prompt ?? "");
       sink.append({
         ts: nowIso(),
         kind: "spawn.start",
@@ -308,6 +310,8 @@ export class PmRunner {
         toolUseId: l.tool_use_id,
         agent: l.description ?? "(unknown)",
         description: l.description ?? "",
+        stageId: markers.stageId,
+        workflowId: markers.workflowId,
       });
       return;
     }
