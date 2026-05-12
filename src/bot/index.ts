@@ -4,9 +4,10 @@ import { RealClaudeProcessFactory } from "./claude-process.js";
 import { PmRunner, AuthExpiredError } from "./pm-runner.js";
 import { SessionStore } from "./session-store.js";
 import { FileEventSink, pmEventsPath } from "./events.js";
+import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
 import { getReposBase, getWorkspaceDir } from "../util/paths.js";
-import { loadEnv, type Product } from "../util/config.js";
-import type { MessageContext } from "../messenger/base.js";
+import { loadEnv, loadMessengerConfig, type Product } from "../util/config.js";
+import type { MessageContext, MessengerAdapter } from "../messenger/base.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
 
@@ -105,5 +106,47 @@ export async function startBot(): Promise<void> {
   const platforms = adapters.map((a) => a.platform);
   console.log(`[Bot] Starting with adapters: ${platforms.join(", ")}`);
 
+  // v1.3.1: reconcile any in-flight stage / undelivered PM message left over
+  // from a prior crash. Run before adapters start so the recovery deliveries
+  // land in #owner-command after the bot is connected.
+  const reconciler = new WorkflowReconciler(workspaceRoot, sessions);
+  const report = await reconciler.reconcileAll();
+  console.log(
+    `[Bot] Reconcile: workflows=${report.scannedWorkflows} sessions=${report.scannedSessions} ` +
+      `stages_flipped=${report.recoveredStages.length} pending_deliveries=${report.pendingDeliveries.length}`
+  );
+
   await Promise.all(adapters.map((a) => a.startBot(handleCommand)));
+
+  // Deliver any recovered messages now that adapters are connected.
+  if (report.pendingDeliveries.length > 0) {
+    await deliverRecoveredMessages(adapters, report.pendingDeliveries);
+  }
+}
+
+async function deliverRecoveredMessages(
+  adapters: MessengerAdapter[],
+  deliveries: PendingDelivery[]
+): Promise<void> {
+  for (const d of deliveries) {
+    const orgDir = path.join(getReposBase(), d.orgSlug);
+    const header =
+      d.source === "cc-jsonl"
+        ? `🔁 Recovered reply (bot restarted before delivery, for <@${d.userId}>):`
+        : `🔁 Bot restart notice (for <@${d.userId}>):`;
+    for (const adapter of adapters) {
+      const config = loadMessengerConfig(orgDir, adapter.platform);
+      const sent = await adapter.sendToChannel(
+        config,
+        "owner-command",
+        d.text,
+        header
+      );
+      if (sent) {
+        console.log(
+          `[Bot] Recovered message delivered for ${d.userId} via ${adapter.platform} (source=${d.source})`
+        );
+      }
+    }
+  }
 }
