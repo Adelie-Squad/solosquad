@@ -147,6 +147,15 @@ function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
           cron: weeklyToCron(r.weekly_review!.day, r.weekly_review!.time),
           enabled: r.weekly_review!.enabled !== false,
         };
+      case "pm-compaction": {
+        const pmCfg = merged.pm ?? {};
+        const time = pmCfg.compaction_time ?? "23:00";
+        return {
+          routine,
+          cron: timeToDailyCron(time),
+          enabled: true,
+        };
+      }
       default:
         // Unknown routine — disable rather than crash
         return { routine, cron: "0 0 1 1 *", enabled: false };

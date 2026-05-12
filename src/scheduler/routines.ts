@@ -68,6 +68,15 @@ export const ROUTINES: RoutineConfig[] = [
     emoji: "📊",
     memoryTargets: ["decisions.jsonl"],
   },
+  {
+    id: "pm-compaction",
+    name: "PM Compaction",
+    kind: "background",
+    channel: "workflow",
+    threadName: "system-pm-compaction",
+    emoji: "🗂",
+    memoryTargets: [],
+  },
 ];
 
 /** Load routine prompt from routines/{id}.md */
