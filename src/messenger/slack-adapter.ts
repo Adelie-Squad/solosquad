@@ -19,7 +19,8 @@ class SlackMessageContext implements MessageContext {
   _agentLabel = "";
   constructor(
     private sayFn: (text: string) => Promise<void>,
-    private product: Product
+    private product: Product,
+    readonly userId: string
   ) {}
 
   async reply(text: string): Promise<void> {
@@ -105,9 +106,11 @@ export class SlackAdapter implements MessengerAdapter {
       }
 
       const userText = ((msg.text as string) || "").trim();
+      const userId = (msg.user as string) || "anonymous";
       const ctx = new SlackMessageContext(
         async (text: string) => { await say(text); },
-        product
+        product,
+        userId
       );
       try {
         await onCommand(userText, product, ctx);

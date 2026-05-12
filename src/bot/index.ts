@@ -1,13 +1,24 @@
 import path from "path";
 import { createAdapters } from "../messenger/index.js";
-import { findAgent, loadAgentSkill } from "./agent-router.js";
-import { runClaude } from "./claude-runner.js";
+import { RealClaudeProcessFactory } from "./claude-process.js";
+import { PmRunner, AuthExpiredError } from "./pm-runner.js";
+import { SessionStore } from "./session-store.js";
+import { FileEventSink, pmEventsPath } from "./events.js";
 import { getReposBase, getWorkspaceDir } from "../util/paths.js";
 import { loadEnv, type Product } from "../util/config.js";
-import { resolveOrgCwd } from "./workflow-resolver.js";
 import type { MessageContext } from "../messenger/base.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
+
+const workspaceRoot = getWorkspaceDir();
+const claude = new RealClaudeProcessFactory();
+const sessions = new SessionStore(workspaceRoot);
+const pmRunner = new PmRunner({
+  claude,
+  sessions,
+  events: (orgSlug, userId) =>
+    new FileEventSink(pmEventsPath(workspaceRoot, orgSlug, userId)),
+});
 
 async function handleCommand(
   userInput: string,
@@ -20,38 +31,46 @@ async function handleCommand(
     return;
   }
 
-  // v1.2.0+: product.slug == org slug. Resolve cwd based on active workflow /
-  // main repo / legacy layout.
-  const orgDir = path.join(getReposBase(), product.slug);
-  const { cwd, reason, workflowId, repoSlug } = resolveOrgCwd(orgDir);
-  if (reason === "workflow" && workflowId) {
-    console.log(`[Bot] cwd → workflow "${workflowId}" stage target_repo=${repoSlug}`);
-  } else if (reason === "main-repo" && repoSlug) {
-    console.log(`[Bot] cwd → main repo "${repoSlug}"`);
-  } else {
-    console.log(`[Bot] cwd → org root (legacy / no repos)`);
-  }
+  // v1.3.0 (PM mode): PM session cwd is fixed at the org root (per
+  // docs/plan/v0.3-pm-mode-orchestration.md §3.2.1). target_repo cwd
+  // branching happens inside subagent prompts, not by switching PM cwd.
+  const orgCwd = path.join(getReposBase(), product.slug);
 
-  const route = findAgent(userInput);
-  let skillContext = "";
+  console.log(
+    `[Bot] PM turn: user=${ctx.userId} org=${product.slug} text="${userInput.slice(0, 60)}${userInput.length > 60 ? "…" : ""}"`
+  );
 
-  if (route) {
-    const [team, agent] = route;
-    const skill = loadAgentSkill(team, agent);
-    if (skill) {
-      skillContext = `\n\n--- Agent Skill ---\n${skill}\n--- End Skill ---\n\n`;
-      ctx._agentLabel = ` (${agent})`;
-      console.log(`[Bot] Routing: ${userInput.slice(0, 50)}... → ${team}/${agent}`);
+  try {
+    const reply = await pmRunner.handleUserMessage({
+      userId: ctx.userId,
+      orgSlug: product.slug,
+      orgCwd,
+      userText: userInput,
+    });
+    if (reply.text) {
+      await ctx.reply(reply.text);
+    } else {
+      await ctx.reply("(no reply generated — please try again or check `solosquad doctor`)");
     }
-  }
-
-  const prompt = skillContext ? `${skillContext}${userInput}` : userInput;
-  const result = await runClaude(prompt, cwd);
-
-  if (result) {
-    await ctx.reply(result);
-  } else {
-    await ctx.reply("Failed to generate a response.");
+    if (reply.rateLimited) {
+      await ctx.reply(
+        "⚠️ Claude Code reported a rate-limit constraint. Subsequent calls may be deferred."
+      );
+    }
+    console.log(
+      `[Bot] PM turn done: cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`
+    );
+  } catch (err) {
+    if (err instanceof AuthExpiredError) {
+      await ctx.reply(
+        "🔐 Claude Code is not logged in. Run `claude login` on the host running this bot, then try again."
+      );
+      return;
+    }
+    console.log(`[Bot] PM error: ${err instanceof Error ? err.message : String(err)}`);
+    await ctx.reply(
+      `An error occurred while processing your message: ${err instanceof Error ? err.message : "unknown error"}`
+    );
   }
 }
 
@@ -69,6 +88,18 @@ function resolveMessengerSource(): { value: string; source: string } {
 export async function startBot(): Promise<void> {
   const { value, source } = resolveMessengerSource();
   console.log(`[Bot] MESSENGER=${value} (from ${source})`);
+
+  // v1.3.0: confirm Claude Code is authenticated before listening.
+  const auth = await claude.authStatus();
+  if (!auth.loggedIn) {
+    console.log(
+      "[Bot] ⚠ Claude Code is not logged in. The bot will start and reply with login instructions for every command. Run `claude login` to fix."
+    );
+  } else {
+    console.log(
+      `[Bot] Claude Code authenticated (${auth.authMethod ?? "?"}, ${auth.subscriptionType ?? "?"})`
+    );
+  }
 
   const adapters = await createAdapters();
   const platforms = adapters.map((a) => a.platform);

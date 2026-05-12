@@ -28,6 +28,19 @@ export interface WeeklyRoutineConfig {
   enabled?: boolean;
 }
 
+export interface PmConfig {
+  /** Cap per claude --print call. Workspace default. */
+  max_budget_usd?: number;
+  /** Hard timeout per PM invocation. */
+  invoke_timeout_seconds?: number;
+  /** Real-time partial reply streaming (--include-partial-messages). */
+  include_partial_messages?: boolean;
+  /** Cross-call prompt-cache friendliness (--exclude-dynamic-system-prompt-sections). */
+  exclude_dynamic_system_prompt_sections?: boolean;
+  /** Per-session in-process mutex queue depth (pm-runner). */
+  mutex_queue_depth?: number;
+}
+
 export interface WorkspaceYaml {
   version: string;
   display_name: string;
@@ -45,6 +58,8 @@ export interface WorkspaceYaml {
     experiment_check?: BriefingConfig;
     weekly_review?: WeeklyRoutineConfig;
   };
+  /** v1.3.0+: PM mode configuration. */
+  pm?: PmConfig;
   created_at: string;
   last_migrated_to?: string;
 }
@@ -60,6 +75,14 @@ export const DEFAULT_WORKSPACE_SETTINGS = {
     signal_scan: { time: "12:00", enabled: true },
     experiment_check: { time: "16:00", enabled: true },
     weekly_review: { day: "sunday", time: "20:00", enabled: true },
+  },
+  /** v1.3.0 (PM mode) defaults. */
+  pm: {
+    max_budget_usd: 5,
+    invoke_timeout_seconds: 300,
+    include_partial_messages: true,
+    exclude_dynamic_system_prompt_sections: true,
+    mutex_queue_depth: 4,
   },
 } as const;
 
@@ -77,6 +100,7 @@ export function applyWorkspaceDefaults(ws: WorkspaceYaml): WorkspaceYaml {
       experiment_check: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check, ...(ws.background_routines?.experiment_check ?? {}) },
       weekly_review: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review, ...(ws.background_routines?.weekly_review ?? {}) },
     },
+    pm: { ...DEFAULT_WORKSPACE_SETTINGS.pm, ...(ws.pm ?? {}) },
   };
 }
 

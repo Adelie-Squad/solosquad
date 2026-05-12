@@ -23,10 +23,13 @@ import {
 
 class DiscordMessageContext implements MessageContext {
   _agentLabel = "";
+  readonly userId: string;
   constructor(
     private message: Message,
     private product: Product
-  ) {}
+  ) {
+    this.userId = message.author.id;
+  }
 
   async reply(text: string): Promise<void> {
     const chunks = text.match(/.{1,1900}/gs) || [text];
