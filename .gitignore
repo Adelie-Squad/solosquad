@@ -1,13 +1,6 @@
-# Projects (user-specific data)
-projects/*
-!projects/.gitkeep
-
 # Environment
 .env
 repos/
-
-# Generated
-core/products.json
 
 # OS files
 .DS_Store
