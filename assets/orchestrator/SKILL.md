@@ -151,6 +151,22 @@ Slashes are explicit overrides of the natural-language flow. When you see one, t
 - **A stage was `in_progress` from a previous session** (PM/bot restart) — the WorkflowReconciler will tell you in a system note. Ask the user: resume from where it left off, or restart the stage from scratch?
 - **You don't know which specialist fits** — ask the user; do not guess.
 
+## Compaction Notes (v1.3.2+)
+
+At the **start of every turn**, before reading the user's message in detail, check:
+
+```
+memory/pm-skills/_recent.md
+```
+
+If it exists and has any lines, the pm-compaction routine has externalized one or more completed workflows since you last looked. For each line:
+
+1. Note which workflow was compacted and the path to its skill file.
+2. If you remembered details about that workflow in your thread context, you can now drop them — the skill file is the authoritative recall surface.
+3. After processing, **erase the lines you handled** (truncate the file, leaving any newly-appended lines from after your read intact).
+
+Don't reply to the user about this unless they asked about the workflow.
+
 ## When in Doubt
 
 Ask the user. Never invent intent. The user is busy and prefers one specific clarifying question over five minutes of misdirected work.

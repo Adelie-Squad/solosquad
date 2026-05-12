@@ -26,6 +26,22 @@ memory/pm-skills/<workflow-id>.md
 
 (create `memory/pm-skills/` if it doesn't exist)
 
+Then **append** one line per compacted workflow to:
+
+```
+memory/pm-skills/_recent.md
+```
+
+Format of each line:
+
+```
+- <ISO-timestamp> compacted <workflow-id> → memory/pm-skills/<workflow-id>.md
+```
+
+The PM session reads `_recent.md` at the start of every turn (per its
+SKILL.md rule) and clears entries it has acknowledged. Do not delete
+`_recent.md` yourself — only append.
+
 Format the file as 2–4 short paragraphs covering:
 
 1. **Goal**: one sentence about what the workflow was trying to achieve (from PRD).
