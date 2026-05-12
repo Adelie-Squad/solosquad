@@ -102,11 +102,19 @@ platforms share the same bot logic and routing.
 
 ## Agent Routing
 
-Send a message in the command channel and `src/bot/agent-router.ts` analyzes keywords to auto-inject the appropriate agent's SKILL.md.
-- 60+ keywords → 25 agent mappings (`AGENT_ROUTES` dictionary)
-- Falls back to general mode if no match
-- v0.5 onward: 4-channel triggers (slash / keyword / freq auto-load / explicit PM call), see `docs/v0.5-workflow-maker.md` §7
-- v0.6 onward: FTS5 archive fallback for past memory recall (`docs/v0.6-default-workflow-tuning.md` §4)
+**v1.3.0 (PM mode, Phase A):** `#owner-command` messages drive a long-lived
+Claude Code PM session per (user, org) via `src/bot/pm-runner.ts`. The PM
+delegates to specialists through Claude Code's native `Task` tool. Specialists
+are auto-discovered from `<org>/.claude/agents/<name>.md` (synced from
+`assets/agents/{team}/{agent}/SKILL.md` by `agents-builder.ts`). Each user
+gets their own session-id stored in `<org>/.solosquad/sessions/<user>.json`.
+
+Legacy keyword routing (`src/bot/agent-router.ts`) is retained for the
+scheduler and as future fallback — 60+ keywords → 25 agent mappings.
+
+- v0.3.1+: workflow reconciler + `pm`/`workflow`/`rollback` CLIs
+- v0.5 onward: 4-channel triggers (slash / keyword / freq auto-load / explicit PM call), see `docs/plan/v0.5-workflow-maker.md` §7
+- v0.6 onward: FTS5 archive fallback for past memory recall (`docs/plan/v0.6-default-workflow-tuning.md` §4)
 
 ## Automated Routines + Memory Storage (v0.2.4+)
 
