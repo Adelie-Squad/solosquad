@@ -127,6 +127,19 @@ program
     await runRoutineCommand(routineId, opts.all);
   });
 
+program
+  .command("run")
+  .description("Autonomous program runner (v0.4 — parser only until v0.3 PM mode lands)")
+  .option("--program <prog>", "Program id or path to program.md")
+  .option("--hours <n>", "Time budget in hours (overrides program.md)")
+  .option("--cycles <n>", "Cycle budget (overrides program.md)")
+  .option("--status", "Show active and recent program runs")
+  .option("--verify <cycle>", "Re-run evaluator on a past cycle and check determinism")
+  .action(async (opts) => {
+    const { runCommand } = await import("./run.js");
+    await runCommand(opts);
+  });
+
 const addGroup = program
   .command("add")
   .description("Add an organization or repository to the workspace");
@@ -163,6 +176,64 @@ program
   .action(async (opts) => {
     const { syncCommand } = await import("./sync.js");
     await syncCommand(opts);
+  });
+
+const pmGroup = program
+  .command("pm")
+  .description("Manage PM sessions (v1.3.0+)");
+
+pmGroup
+  .command("status")
+  .description("Show active PM sessions, cumulative cost, and activity")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (opts) => {
+    const { pmStatusCommand } = await import("./pm.js");
+    await pmStatusCommand(opts);
+  });
+
+pmGroup
+  .command("reset")
+  .description("Archive a user's PM session and mint a new one")
+  .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .option("--user <id>", "User id to reset (interactive picker if omitted)")
+  .option("--reason <text>", "Reason for the rotation", "user-requested")
+  .option("-y, --yes", "Skip confirmation prompt")
+  .action(async (opts) => {
+    const { pmResetCommand } = await import("./pm.js");
+    await pmResetCommand(opts);
+  });
+
+pmGroup
+  .command("compact")
+  .description("Run pm-compaction routine to externalize completed workflows")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (opts) => {
+    const { pmCompactCommand } = await import("./pm.js");
+    await pmCompactCommand(opts);
+  });
+
+const workflowGroup = program
+  .command("workflow")
+  .description("Inspect workflows + their stages");
+
+workflowGroup
+  .command("list")
+  .description("List all workflows in the workspace (or for one org)")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (opts) => {
+    const { workflowListCommand } = await import("./workflow.js");
+    await workflowListCommand(opts);
+  });
+
+workflowGroup
+  .command("show")
+  .description("Show a specific workflow's stages + recent events")
+  .argument("<workflow-id>", "Workflow id (e.g. wf-2026-05-12-landing-refresh)")
+  .option("--org <slug>", "Restrict to a specific organization")
+  .option("--events <n>", "Number of recent events to show", (v) => parseInt(v, 10), 8)
+  .action(async (workflowId, opts) => {
+    const { workflowShowCommand } = await import("./workflow.js");
+    await workflowShowCommand(workflowId, opts);
   });
 
 program
