@@ -159,9 +159,21 @@ export function revertToSnapshot(
     return { ok: false, error: `commit not found: ${targetSha}` };
   }
 
-  const checkout = runGit(paths, ["checkout", targetSha, "--", "memory", "workflows"]);
-  if (checkout.code !== 0) {
-    return { ok: false, error: `checkout failed: ${checkout.out}` };
+  // Checkout each tracked tree separately so that an empty (never-committed)
+  // tree doesn't cause "pathspec did not match" on the whole revert.
+  let anyCheckedOut = false;
+  for (const tree of ["memory", "workflows"]) {
+    // Check if the tree exists in the target commit
+    const lsTree = runGit(paths, ["ls-tree", "--name-only", targetSha, "--", tree]);
+    if (lsTree.code !== 0 || !lsTree.out.trim()) continue;
+    const checkout = runGit(paths, ["checkout", targetSha, "--", tree]);
+    if (checkout.code !== 0) {
+      return { ok: false, error: `checkout failed for ${tree}: ${checkout.out}` };
+    }
+    anyCheckedOut = true;
+  }
+  if (!anyCheckedOut) {
+    return { ok: false, error: `no tracked trees in ${targetSha} — nothing to revert` };
   }
 
   const commit = runGit(paths, [

@@ -4,6 +4,79 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] — 2026-05-12
+
+**Phase B of v0.3.** Closes the recovery + CLI gaps that were intentionally
+deferred from 1.3.0. No breaking changes; bots running 1.3.0 will pick this
+up via `solosquad update`.
+
+### Added
+- `src/bot/cc-jsonl-reader.ts` — reads the last assistant turn out of
+  Claude Code's session jsonl (`~/.claude/projects/<cwd>/<sid>.jsonl`).
+  Defensive against format drift — returns null on any parse miss.
+- `src/bot/workflow-reconciler.ts` — bot-startup recovery. Flips orphaned
+  `in_progress` stages to `needs_revision` (with a stage_needs_revision
+  event) so PM can ask the user how to proceed on next interaction. For
+  PM sessions whose last `pm.message_in` has no paired `pm.message_out`,
+  pulls the reply text from Claude Code's jsonl and re-delivers via the
+  messenger (or surfaces a fallback "bot restarted, please resend"
+  notice). Writes `pm.message_out` so the next boot doesn't re-notify.
+- `src/bot/workspace-meta.ts` — typed read helper used by the new CLIs
+  and the reconciler: `listWorkflows`, `loadWorkflowSummary`,
+  `resolveTargetRepoPath`, `latestHandoffPath`. Pure read; no mutation.
+- `src/bot/slash-commands.ts` — `/think /plan /build /review /ship /help`
+  pre-processor. Wraps known prefixes as `[SLASH /xyz] <args>` so the PM
+  SKILL.md has a stable parse target; unknown slashes short-circuit with a
+  bot-side hint; `/help` short-circuits with usage text. Natural-language
+  messages pass through unchanged.
+- `src/bot/git-snapshot.ts` — per-org internal bare repo at
+  `<org>/.solosquad/snapshot.git` tracking only `memory/` + `workflows/`.
+  bot/index.ts now commits before + after every PM turn. Repo code under
+  `<org>/repositories/<repo>/` stays in its own .git and is never touched.
+- `src/cli/pm.ts` — `solosquad pm status / reset / compact` commands.
+  `status` lists active sessions per org with cumulative cost and last
+  interaction. `reset` archives a user's session and mints a new UUID
+  (interactive picker when args are omitted; `-y` to skip confirmation).
+  `compact` points users at the routine.
+- `src/cli/workflow.ts` — `solosquad workflow list / show <id>`. `list`
+  groups by org with colored per-status stage counts. `show` prints the
+  stages table, PRD/handoff paths, and the last N events.
+- `src/cli/rollback.ts` — `solosquad rollback [--workflow <id>] [--to <sha>] [--list]`.
+  Defaults to the most recent `before-spawn:` snapshot. Repo code is
+  untouched.
+- `assets/routines/pm-compaction.md` + scheduler entry — daily 23:00
+  routine (`workspace.yaml.pm.compaction_time`) that externalizes
+  fully-completed workflows into `memory/pm-skills/<wf-id>.md` ≤400 words.
+  Skip rules avoid recompacting and ignore workflows >180 days old.
+- 31 new unit tests covering cc-jsonl-reader, workflow-reconciler,
+  workspace-meta, slash-commands, and git-snapshot. Full suite is 60 green.
+
+### Changed
+- `src/bot/index.ts` — startup runs `WorkflowReconciler.reconcileAll()`
+  after adapters connect; pending deliveries are forwarded to
+  `#owner-command`. Each `handleCommand` now: (1) pre-processes slashes,
+  (2) commits a `before-spawn:` snapshot, (3) calls PM, (4) commits
+  `after-spawn:` on success.
+- `src/messenger/base.ts` already had `userId` from 1.3.0 — used now by
+  the recovery delivery header.
+- `src/util/config.ts` — `PmConfig.compaction_time` field added; default
+  "23:00". `applyWorkspaceDefaults` fills it in for older workspaces.
+
+### Compatibility
+- No migration script needed for 1.3.0 → 1.3.1. `applyWorkspaceDefaults`
+  injects the new field at runtime. Bots running an older 1.3.0 keep
+  working; reconciler + slash + snapshot land automatically on next start.
+- `solosquad rollback` requires an internal git binary; falls back to
+  no-op (with a warning) if git is missing.
+
+### Known limitations
+- The reconciler matches in-flight stage to spawn events by a substring
+  heuristic on `agent` name; a proper stage_id ↔ task_id mapping ships
+  with v0.3.2 (`workspace-meta.ts` extension).
+- The pm-compaction routine prompt is run as a regular routine (single
+  shot `claude --print`) — it does not yet update the PM session
+  directly. The PM picks up the compacted file lazily when asked.
+
 ## [1.3.0] — 2026-05-12
 
 **Phase A of v0.3 PM mode.** The bot's `#owner-command` handler now drives a
