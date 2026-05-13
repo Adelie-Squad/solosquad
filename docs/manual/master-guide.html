@@ -1,0 +1,2111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoloSquad 종합 개념서</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-side: #f7f8fa;
+    --bg-code: #1e2128;
+    --fg: #1f2328;
+    --fg-mute: #6e7681;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg); color: var(--fg);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  body { display: flex; min-height: 100vh; }
+  /* Sidebar */
+  aside.sidebar {
+    width: 280px; min-width: 280px;
+    background: var(--bg-side);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    overflow-y: auto;
+    height: 100vh; position: sticky; top: 0;
+  }
+  aside h1 {
+    font-size: 17px; font-weight: 700;
+    margin: 0 0 4px 24px; color: var(--fg);
+  }
+  aside .tag {
+    font-size: 11px; color: var(--fg-mute);
+    margin: 0 0 20px 24px; display: block;
+  }
+  nav ul { list-style: none; margin: 0; padding: 0; }
+  nav > ul > li { margin: 2px 0; }
+  nav > ul > li > a {
+    display: block; padding: 8px 24px;
+    color: var(--fg); text-decoration: none;
+    font-weight: 600; font-size: 14px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+  }
+  nav > ul > li > a:hover { background: rgba(0,0,0,.03); }
+  nav > ul > li > a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  nav .sub { padding-left: 0; margin: 0; }
+  nav .sub li a {
+    display: block; padding: 4px 24px 4px 44px;
+    color: var(--fg-mute); text-decoration: none;
+    font-size: 13px; font-weight: 400;
+  }
+  nav .sub li a:hover { color: var(--accent); }
+  nav > ul > li > a.active + .sub { display: block; }
+  nav > ul > li > a:not(.active) + .sub { display: none; }
+  /* Content */
+  main.content {
+    flex: 1; padding: 40px 56px 80px;
+    max-width: 920px;
+  }
+  main section { display: none; }
+  main section.active { display: block; }
+  main h2 {
+    font-size: 28px; margin: 0 0 8px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  main h2 .num {
+    color: var(--fg-mute); font-weight: 400; margin-right: 8px;
+  }
+  main h3 {
+    font-size: 19px; margin: 32px 0 8px;
+    scroll-margin-top: 20px;
+  }
+  main h4 { font-size: 15px; margin: 20px 0 6px; }
+  main p { margin: 8px 0; }
+  main ul, main ol { padding-left: 24px; margin: 8px 0; }
+  main li { margin: 4px 0; }
+  main code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size: 13px;
+    background: rgba(175,184,193,.2);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  main pre {
+    background: var(--bg-code); color: #e4e8ee;
+    padding: 14px 16px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px;
+    line-height: 1.5;
+  }
+  main pre code {
+    background: transparent; padding: 0; color: inherit;
+  }
+  main table {
+    border-collapse: collapse; width: 100%;
+    margin: 14px 0; font-size: 13.5px;
+  }
+  main th, main td {
+    border: 1px solid var(--border);
+    padding: 8px 12px; text-align: left;
+    vertical-align: top;
+  }
+  main th { background: var(--bg-side); font-weight: 600; }
+  main blockquote {
+    margin: 12px 0; padding: 10px 16px;
+    background: var(--bg-side);
+    border-left: 4px solid var(--accent);
+    color: var(--fg);
+  }
+  main blockquote p:first-child { margin-top: 0; }
+  main blockquote p:last-child { margin-bottom: 0; }
+  /* Version badges */
+  .badge {
+    display: inline-block; font-size: 11px;
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; vertical-align: middle;
+    margin-left: 6px;
+  }
+  .badge.now {
+    background: var(--green-soft); color: var(--green);
+  }
+  .badge.plan {
+    background: var(--amber-soft); color: var(--amber);
+  }
+  .badge.removed {
+    background: var(--red-soft); color: var(--red);
+  }
+  /* Inline icons */
+  .ok { color: var(--green); }
+  .warn { color: var(--amber); }
+  .err { color: var(--red); }
+  /* Definition list */
+  dl.terms dt {
+    font-weight: 700; margin-top: 14px;
+    font-family: ui-monospace, monospace;
+    color: var(--accent);
+    font-size: 14px;
+  }
+  dl.terms dd { margin-left: 0; margin-top: 4px; color: var(--fg); }
+  /* Path tree */
+  .tree {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    background: var(--bg-side);
+    padding: 14px 16px;
+    border-radius: 8px;
+    white-space: pre;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  /* Footer in content */
+  .footer-note {
+    margin-top: 40px; padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--fg-mute);
+  }
+  /* Anchors */
+  a.anchor-link {
+    color: var(--accent); text-decoration: none;
+  }
+  a.anchor-link:hover { text-decoration: underline; }
+  /* Step blocks */
+  .step {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 12px 0;
+    background: var(--bg);
+  }
+  .step .step-head {
+    font-weight: 700; color: var(--accent);
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  /* Callout */
+  .callout {
+    margin: 14px 0; padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid;
+  }
+  .callout.info { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); }
+  .callout.warn { background: var(--amber-soft); border-color: var(--amber); color: var(--fg); }
+  .callout.tip  { background: var(--green-soft); border-color: var(--green); color: var(--fg); }
+  .callout strong { display: block; margin-bottom: 4px; }
+  /* Responsive */
+  @media (max-width: 900px) {
+    body { flex-direction: column; }
+    aside.sidebar { width: 100%; height: auto; position: relative; }
+    main.content { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h1>SoloSquad</h1>
+  <span class="tag">종합 개념서 · v0.2.4 기준</span>
+  <nav>
+    <ul>
+      <li>
+        <a data-target="s1" class="active">1. 시작하기</a>
+        <ul class="sub">
+          <li><a href="#s1-1">1.1 프로젝트 소개</a></li>
+          <li><a href="#s1-2">1.2 핵심 컨셉</a></li>
+          <li><a href="#s1-3">1.3 기대 가치</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s2">2. 작동 원리</a>
+        <ul class="sub">
+          <li><a href="#s2-1">2.1 시스템 아키텍처</a></li>
+          <li><a href="#s2-2">2.2 폴더 위계 구조</a></li>
+          <li><a href="#s2-3">2.3 컨텍스트 & 메모리</a></li>
+          <li><a href="#s2-4">2.4 워크플로우 정의</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s3">3. 개념 정리</a>
+        <ul class="sub">
+          <li><a href="#s3-1">3.1 SKILL.md</a></li>
+          <li><a href="#s3-2">3.2 KNOWLEDGE.md</a></li>
+          <li><a href="#s3-3">3.3 CLAUDE.md</a></li>
+          <li><a href="#s3-4">3.4 SKILL vs agent.md</a></li>
+          <li><a href="#s3-5">3.5 위계별 파일 종류</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s4">4. 온보딩</a>
+        <ul class="sub">
+          <li><a href="#s4-1">4.1 사용자 유형 판별</a></li>
+          <li><a href="#s4-2">4.2 신규 사용자</a></li>
+          <li><a href="#s4-3">4.3 기존 리포 마이그레이션</a></li>
+          <li><a href="#s4-4">4.4 이전 버전 업데이트</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s5">5. 메신저 연결</a>
+        <ul class="sub">
+          <li><a href="#s5-1">5.1 Slack (9단계)</a></li>
+          <li><a href="#s5-2">5.2 Discord (8단계)</a></li>
+          <li><a href="#s5-3">5.3 동작 검증</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s6">6. 사용법</a>
+        <ul class="sub">
+          <li><a href="#s6-1">6.1 명령어 레퍼런스</a></li>
+          <li><a href="#s6-2">6.2 일상 운영</a></li>
+          <li><a href="#s6-3">6.3 권장 첫 작업</a></li>
+          <li><a href="#s6-4">6.4 자동 루틴</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s7">7. 용어 사전</a>
+        <ul class="sub">
+          <li><a href="#s7-1">7.1 핵심 용어</a></li>
+          <li><a href="#s7-2">7.2 파일명 사전</a></li>
+          <li><a href="#s7-3">7.3 약어 사전</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s8">8. 버전별 차이</a>
+        <ul class="sub">
+          <li><a href="#s8-1">8.1 현재 npm (v0.2.4)</a></li>
+          <li><a href="#s8-2">8.2 추후 업데이트</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s9">9. 운영 가이드</a>
+        <ul class="sub">
+          <li><a href="#s9-1">9.1 24/7 운영 방식</a></li>
+          <li><a href="#s9-2">9.2 멀티 워크스페이스</a></li>
+          <li><a href="#s9-3">9.3 제품 여러 개 운영</a></li>
+          <li><a href="#s9-4">9.4 보안 체크리스트</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s10">10. 트러블슈팅 &amp; FAQ</a>
+        <ul class="sub">
+          <li><a href="#s10-1">10.1 설치·실행 문제</a></li>
+          <li><a href="#s10-2">10.2 마이그레이션 문제</a></li>
+          <li><a href="#s10-3">10.3 FAQ</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</aside>
+
+<main class="content">
+
+<!-- ========================== SECTION 1 ========================== -->
+<section id="s1" class="active">
+  <h2><span class="num">1.</span>시작하기</h2>
+
+  <h3 id="s1-1">1.1 프로젝트 소개</h3>
+  <p><strong>SoloSquad</strong>는 1인 창업자(솔로 파운더)를 위한 24/7 AI 비서 시스템입니다. 익숙한 메신저(Slack 또는 Discord)에서 25명의 전문 AI 팀원과 대화하며 제품을 만들고, 시장을 분석하고, 마케팅을 돌리고, 코드를 작성합니다.</p>
+  <p>설치는 npm 한 줄. 별도의 웹 대시보드나 GUI 도구 없이 "메신저-네이티브"로 모든 작업을 처리합니다.</p>
+
+  <pre><code>npm install -g solosquad
+solosquad init</code></pre>
+
+  <p>4개 팀, 25명의 AI 전문가가 내장되어 있습니다.</p>
+
+  <table>
+    <thead><tr><th>팀</th><th>역할</th><th>주요 에이전트</th></tr></thead>
+    <tbody>
+      <tr><td><strong>전략 (Strategy)</strong></td><td>시장 분석·사업 기획·가설 수립·일정 산정</td><td>PMF Planner, Feature Planner, Data Analyst, Business Strategist, Idea Refiner, Scope Estimator, Policy Architect</td></tr>
+      <tr><td><strong>그로스 (Growth)</strong></td><td>마케팅 전략·콘텐츠·브랜딩·광고</td><td>GTM Strategist, Content Writer, Brand Marketer, Paid Marketer</td></tr>
+      <tr><td><strong>경험 (Experience)</strong></td><td>유저 리서치·시장 조사·UX/UI 설계</td><td>User Researcher, Desk Researcher, UX Designer, UI Designer</td></tr>
+      <tr><td><strong>엔지니어링 (Engineering)</strong></td><td>프론트·백엔드·API·데이터·인프라·품질·보안</td><td>Creative Frontend, FDE, Architect, Backend Developer, API Developer, Data Collector, Data Engineer, Cloud Admin, QA Engineer, Security Engineer</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s1-2">1.2 핵심 컨셉</h3>
+
+  <h4>"Output ≠ Goal" 철학</h4>
+  <blockquote>출력물(Output)은 목표가 아니다. 출력물은 목표를 달성하기 위한 수단이다.</blockquote>
+  <p>잘 짜인 디자인, 멋진 문서, 깔끔한 코드 — 이런 결과물 자체가 사업의 성공을 보장하지 않습니다. SoloSquad는 결과물을 만들어내는 도구지만, 그 결과물이 *솔로 파운더의 성공이라는 목표*에 어떻게 기여하는지를 항상 우선시합니다.</p>
+
+  <h4>메신저-네이티브</h4>
+  <p>웹 GUI나 데스크탑 앱이 없습니다. 사용자가 이미 매일 켜놓는 메신저가 곧 인터페이스입니다. <code>#owner-command</code> 채널에서 자연어로 명령하고, <code>#workflow</code> 채널에서 자동 보고를 받습니다.</p>
+
+  <h4>3-Layer Context (격리)</h4>
+  <p>여러 사업을 동시에 운영해도 정보가 섞이지 않도록 3계층으로 분리합니다.</p>
+  <div class="tree">Layer 0: Workspace (보편)        모든 세션이 공유 — 사용자 프로필·원칙·25 에이전트 정의
+   ↓
+Layer 1: Organization (조직)     사업/제품 단위 — 메모리·워크플로·채널·메신저
+   ↓
+Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 skill</div>
+
+  <h4>자기 호스팅 (Self-Hosted)</h4>
+  <p>사용자의 PC·Mac Mini·VPS에서 직접 실행됩니다. SoloSquad 운영자 서버에 데이터를 보내지 않습니다. Claude API와 메신저 서버만이 외부 통신 상대.</p>
+
+  <h3 id="s1-3">1.3 기대 가치</h3>
+
+  <ul>
+    <li><strong>혼자지만 혼자가 아님</strong> — 4개 팀, 25명의 전문 AI 팀원이 항상 대기</li>
+    <li><strong>잠든 사이에도 일</strong> — 자동 루틴이 매일 5회 시장 신호 탐지·실험 점검·일일/주간 회고 수행</li>
+    <li><strong>멀티 제품 격리</strong> — 본업 + 사이드 프로젝트가 섞이지 않도록 조직별 메모리·채널 분리</li>
+    <li><strong>점진적 진화</strong> — v0.x는 솔로 파운더 자기 사용을 위한 빠른 반복 단계. v1.0에서 정식 API 안정성 약속 시작</li>
+    <li><strong>오픈 소스 npm 패키지</strong> — 외부 SaaS 의존성 없음. 코드와 데이터를 본인이 소유</li>
+  </ul>
+
+  <div class="callout info">
+    <strong>버전 표기 안내</strong>
+    문서 안에서 ✅<span class="badge now">v0.2.4</span>는 npm에서 지금 받을 수 있는 기능, 🚧<span class="badge plan">v0.3~v0.6</span>은 기획 중인 향후 업데이트입니다. 자세한 차이는 8장 참조.
+  </div>
+</section>
+
+<!-- ========================== SECTION 2 ========================== -->
+<section id="s2">
+  <h2><span class="num">2.</span>작동 원리</h2>
+
+  <h3 id="s2-1">2.1 시스템 아키텍처</h3>
+  <p>SoloSquad는 3개의 핵심 프로세스와 1개의 영속 저장소로 구성됩니다.</p>
+
+  <table>
+    <thead><tr><th>컴포넌트</th><th>역할</th><th>실행 방식</th></tr></thead>
+    <tbody>
+      <tr><td><code>solosquad bot</code></td><td>메신저 메시지 수신 → 적합한 에이전트 SKILL.md 주입 → Claude Code 실행 → 응답 전송</td><td>장기 실행 프로세스 (24/7)</td></tr>
+      <tr><td><code>solosquad schedule</code></td><td>cron 일정에 따라 정해진 routine 실행 (모닝 브리프, 시그널 스캔 등)</td><td>장기 실행 프로세스 (24/7)</td></tr>
+      <tr><td>Messenger Adapter</td><td>Discord 또는 Slack 어댑터. bot/scheduler가 공통 인터페이스로 사용</td><td>bot/scheduler 내부 모듈</td></tr>
+      <tr><td>File-based Memory</td><td>JSONL append-only 기록 + Markdown 워크플로 산출물. <code>&lt;org&gt;/memory/</code>, <code>&lt;org&gt;/workflows/</code></td><td>파일시스템</td></tr>
+    </tbody>
+  </table>
+
+  <h4>메시지 처리 흐름 (현재 v0.2.4)</h4>
+  <pre><code>사용자 메시지 "랜딩페이지 카피 써줘"
+   ↓
+src/bot/agent-router.ts
+   ↓  키워드 매칭 (60+ 키워드 → 25 agent)
+"카피" → growth/content-writer
+   ↓
+SKILL.md를 시스템 프롬프트로 주입
+   ↓
+claude --print &lt;프롬프트&gt;
+   ↓
+응답을 메신저 채널로 전송</code></pre>
+
+  <h4>v0.3 이후 (PM 모드)<span class="badge plan">v0.3+</span></h4>
+  <p>키워드 매칭 단발 호출이 아니라, PM 에이전트가 영구 session으로 사용자와 멀티턴 대화하며 specialist 25명을 ephemeral subagent로 spawn하는 구조로 전환됩니다.</p>
+
+  <pre><code>사용자 → PM session (claude --resume &lt;id&gt;)
+            ↓
+            PRD 작성 → _status.yaml 분해 → specialist spawn
+            ↓
+            Task: desk-researcher "경쟁사 카피 5개" (fresh session)
+            ↓
+            결과 요약을 PM 컨텍스트에 합침
+            ↓
+            다음 specialist spawn 또는 사용자 보고</code></pre>
+
+  <h3 id="s2-2">2.2 폴더 위계 구조</h3>
+
+  <h4>현재 npm 배포 (v0.2.4) 구조</h4>
+  <div class="tree">~/solosquad-workspace/                 (사용자 워크스페이스 루트)
+├── .solosquad/                       (시스템 설정)
+│   ├── workspace.yaml                (timezone, briefings, background_routines)
+│   ├── .env                          (메신저 토큰, MESSENGER, ...)
+│   ├── agents/{team}/{agent}/SKILL.md   (선택 — 사용자가 override한 SKILL)
+│   ├── routines/                     (선택 — 사용자가 override한 routine)
+│   └── core/                         (선택 — 사용자가 override한 owner/principles/voice)
+└── &lt;org-slug&gt;/                       (조직, 1개 이상)
+    ├── .org.yaml                     (조직 메타: name, messenger)
+    ├── memory/                       (JSONL 메모리)
+    │   ├── signals.jsonl
+    │   ├── experiments.jsonl
+    │   ├── decisions.jsonl
+    │   └── routine-logs/
+    ├── workflows/&lt;wf-id&gt;/             (프로젝트별 워크플로)
+    │   ├── _status.yaml
+    │   ├── _handoff.md
+    │   └── stage-N-{name}/
+    ├── repositories/&lt;repo-slug&gt;/      (코드 저장소들)
+    │   └── (코드 파일들 + 자체 .git/, .claude/, CLAUDE.md 등)
+    ├── slack/  또는  discord/         (채널 매핑 설정)
+    └── product/                      (조직별 자체 산출물)
+
+(npm install 시) assets/                (번들 디폴트, 변경 불필요)
+├── agents/{team}/{agent}/SKILL.md    (25개)
+├── agents/_teams/{team}/TEAM_KNOWLEDGE.md  (팀별 공유 craft)
+├── core/{OWNER,PRINCIPLES,VOICE}.md
+├── routines/                         (5개)
+├── orchestrator/SKILL.md             (PM 프롬프트, v0.3에서 활성화)
+├── templates/                        (PRD, handoff, status template)
+├── Dockerfile, docker-compose.yml    (컨테이너 배포용)</div>
+
+  <h4>v0.6 추가 예정 자산<span class="badge plan">v0.6</span></h4>
+  <ul>
+    <li><code>assets/agents/{team}/KNOWLEDGE.md</code> — 기존 <code>_teams/*/TEAM_KNOWLEDGE.md</code> 가 co-location으로 이동 (Team=Domain)</li>
+    <li><code>.solosquad/knowledge/</code> — 사용자 누적 공용 지식 (의사결정 프레임워크·도메인 용어집)</li>
+    <li><code>&lt;org&gt;/agent-profile.yaml</code> — 조직별 agent modifier (톤·강조점·금지사항)</li>
+    <li><code>&lt;org&gt;/core/</code> — 조직 철학·톤 (workspace core override)</li>
+    <li><code>&lt;org&gt;/domain/</code> — 조직 도메인 지식 (시장·고객·제품)</li>
+    <li><code>&lt;org&gt;/memory/archive.sqlite</code> — FTS5 cold archive (7일 이상 된 JSONL을 검색 가능 형태로 보관)</li>
+  </ul>
+
+  <h3 id="s2-3">2.3 컨텍스트 & 메모리 관리</h3>
+
+  <h4>현재 메모리 구조 (v0.2.4)</h4>
+  <p>모든 routine 결과는 JSONL append-only로 기록됩니다. JSON 한 줄 = 한 이벤트.</p>
+  <pre><code>&lt;org&gt;/memory/signals.jsonl 예시:
+{"ts":"2026-05-12T12:00:00Z","kind":"signal","source":"reddit/r/saas","content":"...","urgency":"med"}
+{"ts":"2026-05-12T12:00:15Z","kind":"signal","source":"twitter","content":"...","urgency":"high"}</code></pre>
+
+  <h4>3계층 컨텍스트 (보고서 P/E/T 어휘)</h4>
+  <table>
+    <thead><tr><th>계층</th><th>위치</th><th>용도</th><th>TTL</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Persistent (영구)</strong></td><td>워크스페이스 + 조직의 SKILL.md, KNOWLEDGE.md, core/, principles</td><td>역할 정의·craft·정책</td><td>영구</td></tr>
+      <tr><td><strong>Episodic (에피소드)</strong></td><td><code>&lt;org&gt;/workflows/&lt;id&gt;/</code>, JSONL 메모리</td><td>특정 워크플로·기간의 진행 기록</td><td>일~월</td></tr>
+      <tr><td><strong>Transient (일시)</strong></td><td>Claude session prompt 컨텍스트</td><td>현재 호출 직전의 작업 메모리</td><td>5분 (Anthropic prompt cache TTL)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Just-in-Time Injection 원칙 (v0.5+)<span class="badge plan">v0.5+</span></h4>
+  <p>모든 SKILL.md를 매 호출마다 컨텍스트에 넣지 않습니다. 사용자 메시지의 키워드, 슬래시 명령, 빈도 카운팅에 따라 *그 호출에 필요한 SKILL만* 선택적으로 주입.</p>
+
+  <h4>FTS5 Cold Archive (v0.6+)<span class="badge plan">v0.6</span></h4>
+  <p>JSONL이 누적되면 검색이 느려지므로, 7일 이상 된 항목은 SQLite FTS5 가상 테이블로 옮겨 토큰 매칭 기반 검색 가능하게 보관합니다. 시맨틱 임베딩 인프라 없이 검색성 확보.</p>
+
+  <h3 id="s2-4">2.4 워크플로우 정의</h3>
+
+  <h4>4종 디폴트 워크플로우</h4>
+  <table>
+    <thead><tr><th>타입</th><th>목적</th><th>주요 단계</th></tr></thead>
+    <tbody>
+      <tr><td>PMF Discovery</td><td>새 제품-시장 적합도 탐색</td><td>Research → Planning → Design → Build → Launch</td></tr>
+      <tr><td>Feature Expansion</td><td>기존 제품에 기능 추가</td><td>Analysis → Planning → Design → Build</td></tr>
+      <tr><td>Rebranding</td><td>브랜드 리포지셔닝</td><td>Research → Branding → Design → Marketing</td></tr>
+      <tr><td>Rapid Prototype</td><td>최소 가능 검증</td><td>Refine → Build → Launch</td></tr>
+    </tbody>
+  </table>
+
+  <h4>핵심 파일: <code>_status.yaml</code> + <code>_handoff.md</code></h4>
+  <p><code>_status.yaml</code>은 단계별 진행 상태(<code>pending → in_progress → completed</code>)를 추적. <code>_handoff.md</code>는 각 단계가 종료 시 다음 에이전트에게 전달할 컨텍스트 슬라이스.</p>
+
+  <pre><code>_handoff.md 표준 섹션:
+- Summary: 3줄 요약
+- Artifacts: 산출물 목록
+- Key Decisions: 결정 + 근거
+- Context for Next Agent: 다음 에이전트가 알아야 할 것
+- Open Questions: 미해결 질문</code></pre>
+
+  <h4>v0.6 핸드오프 3변형<span class="badge plan">v0.6</span></h4>
+  <p>단계마다 협업 패턴이 다른데 같은 템플릿을 강요하는 현재 한계를 해소.</p>
+  <ul>
+    <li><strong>hierarchical</strong> — PM → specialist 표준 흐름. 기존 4섹션 유지</li>
+    <li><strong>graph</strong> — 양방향 수렴 루프 (예: research ↔ data-analyst). <code>state_object_diff</code>, <code>loop_count</code> 추가</li>
+    <li><strong>dynamic</strong> — 결과 내용에 따라 다음 에이전트가 분기. <code>routing_signal</code> 추가</li>
+  </ul>
+</section>
+
+<!-- ========================== SECTION 3 ========================== -->
+<section id="s3">
+  <h2><span class="num">3.</span>개념 정리</h2>
+
+  <h3 id="s3-1">3.1 SKILL.md — 에이전트 정체성 정의</h3>
+  <p><code>SKILL.md</code>는 한 에이전트의 "이 역할은 어떻게 일하는가"를 기술한 매뉴얼입니다. Anthropic의 Agent Skills 공식 포맷을 따릅니다.</p>
+
+  <pre><code>---
+name: "Business Strategist"
+description: "사업 전략·시장 분석·경쟁 포지셔닝"
+team: strategy
+stateful: false          # v0.5+ — false면 매 호출이 fresh session
+triggers:                # v0.5+ — 4채널 진입점
+  slash: ["/strategize"]
+  keyword: ["사업 전략", "비즈니스 모델"]
+---
+
+# Business Strategist Agent
+
+당신은 1인 창업자를 돕는 사업 전략 전문가입니다.
+
+## Process
+1. 시장 컨텍스트 파악
+2. 경쟁 분석
+3. 가설 수립 + 검증 방법 제시
+...</code></pre>
+
+  <ul>
+    <li><strong>위치</strong>: <code>assets/agents/{team}/{agent}/SKILL.md</code> (워크스페이스 위계)</li>
+    <li><strong>로드 시점</strong>: bot이 spawn 시점에 시스템 프롬프트로 주입</li>
+    <li><strong>속성</strong>: <strong>Stateless</strong> — 매 호출이 독립이며, state는 외부(workflows/handoff/memory)에 보관</li>
+  </ul>
+
+  <h3 id="s3-2">3.2 KNOWLEDGE.md — 팀(=도메인) 공유 지식<span class="badge plan">v0.6</span></h3>
+  <p>같은 팀의 모든 에이전트가 공유하는 craft·정의·anti-pattern을 한 파일에 모읍니다. v0.6에서 <code>agents/{team}/KNOWLEDGE.md</code> 위치로 도입 예정.</p>
+
+  <table>
+    <thead><tr><th></th><th>SKILL.md</th><th>KNOWLEDGE.md</th></tr></thead>
+    <tbody>
+      <tr><td>범위</td><td>개별 에이전트 1명</td><td>한 팀 전체 (예: strategy팀 7명)</td></tr>
+      <tr><td>내용</td><td>역할 정체성·작동 절차</td><td>팀 craft·용어·anti-pattern</td></tr>
+      <tr><td>로드 조건</td><td>해당 에이전트 spawn 시</td><td>같은 팀 에이전트 누구라도 spawn 시</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <strong>v0.2.4 현재의 구조</strong>
+    지금은 <code>assets/agents/_teams/{team}/TEAM_KNOWLEDGE.md</code> 위치에 평행 hierarchy로 있습니다. v0.6에서 <code>agents/{team}/KNOWLEDGE.md</code>로 co-location하여 팀 폴더 안에서 함께 관리되도록 재편됩니다.
+  </div>
+
+  <h3 id="s3-3">3.3 CLAUDE.md — 프로젝트/리포 지침</h3>
+  <p><code>CLAUDE.md</code>는 Claude Code(범용 코딩 CLI)가 매 세션 시작 시 자동으로 읽어들이는 프로젝트 지침 파일입니다. SoloSquad의 자체 컨벤션이 아니라, <strong>Claude Code 공식 컨벤션</strong>입니다.</p>
+
+  <ul>
+    <li><strong>위치</strong>: 프로젝트 루트 (또는 <code>.claude/</code> 폴더 안)</li>
+    <li><strong>용도</strong>: 코드베이스 구조, 사용 기술, 사용자 지침을 모델에게 전달</li>
+    <li><strong>로드 시점</strong>: Claude Code가 자동 — 사용자가 명시 지시 불필요</li>
+  </ul>
+
+  <p>SoloSquad의 루트 <code>CLAUDE.md</code>는 *SoloSquad 자체를 개발하는* 개발자(이 리포에서 코딩하는 사람)를 위한 지침입니다. 사용자가 자기 제품 리포에서 작업할 때는 *그 리포의 CLAUDE.md*가 적용됩니다.</p>
+
+  <pre><code>예시: 사용자의 SaaS 리포 CLAUDE.md
+# My SaaS
+
+TypeScript + Next.js. Vercel 배포.
+
+## Conventions
+- 컴포넌트는 src/components/ 아래에 PascalCase
+- API route는 src/pages/api/
+...</code></pre>
+
+  <h3 id="s3-4">3.4 SKILL.md vs AGENTS.md — 역할이 다른 두 표준</h3>
+  <p>SoloSquad는 <strong>둘 다 채택</strong>합니다. 같은 자리에 있는 듯해도 책임이 다르기 때문입니다.</p>
+
+  <table>
+    <thead><tr><th></th><th>SKILL.md (Anthropic 공식)</th><th>AGENTS.md (cross-tool 표준) <span class="badge plan">v0.4</span></th></tr></thead>
+    <tbody>
+      <tr><td>역할</td><td>개별 <strong>agent의 정체성·동작 매뉴얼</strong></td><td>워크스페이스 <strong>영속 가이드</strong> (프로젝트 컨벤션·금지 경로·도구 사용 규칙)</td></tr>
+      <tr><td>위치</td><td><code>assets/agents/{team}/{agent}/SKILL.md</code> (25 specialist 각각)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code 마켓플레이스 호환)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> 1개</td></tr>
+      <tr><td>frontmatter</td><td>YAML, <code>name</code>·<code>description</code> 필수 + v0.4 도구·모델 override</td><td>없음 — 자유 markdown</td></tr>
+      <tr><td>편집 주체</td><td>v0.5 analyzer는 자동 분류·머지. 사람이 손볼 수 있음.</td><td><strong>사람 only</strong>. 어떤 AI 에이전트도 이 파일을 수정하지 못함 (Codex `/goal` 정신과 동일).</td></tr>
+      <tr><td>다른 도구 호환</td><td>Claude Code Plugin 마켓플레이스와 직접 연동.</td><td>Codex·Aider·Cursor 모두 인식하는 cross-tool 표준 (<a href="https://developers.openai.com/codex/agents-md/">Codex AGENTS.md spec</a>).</td></tr>
+      <tr><td>v0.4 자율 실행에서</td><td>spawn된 specialist가 자기 SKILL.md를 컨텍스트로 받음.</td><td><code>immutable_paths</code>·<code>modifiable_paths</code>·외부 호출 화이트리스트가 박제되어 모든 <code>goal.md</code> 실행이 자동 상속.</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>요점:</strong> SKILL.md는 "이 agent가 누구인지·뭘 잘하는지"를 적고, AGENTS.md는 "이 워크스페이스를 만지는 모든 AI 도구가 따라야 할 룰"을 적습니다. 둘은 경쟁 관계가 아니라 **다른 레이어**입니다. CLAUDE.md(Anthropic 진영 내러티브)도 별도로 공존합니다.</p>
+
+  <h3 id="s3-5">3.5 위계별 파일 종류 (마스터 표)</h3>
+
+  <h4>워크스페이스 위계 (Layer 0)</h4>
+  <table>
+    <thead><tr><th>경로</th><th>파일</th><th>의미</th><th>사용 시점</th></tr></thead>
+    <tbody>
+      <tr><td><code>assets/agents/{team}/{agent}/</code></td><td><code>SKILL.md</code></td><td>25 specialist 정체성 매뉴얼</td><td>해당 agent spawn 시</td></tr>
+      <tr><td><code>assets/agents/_teams/{team}/</code> <span class="badge now">v0.2.4</span><br><code>assets/agents/{team}/</code> <span class="badge plan">v0.6</span></td><td><code>TEAM_KNOWLEDGE.md</code><br><code>KNOWLEDGE.md</code></td><td>팀 공유 craft</td><td>같은 팀 agent spawn 시 (v0.6 자동)</td></tr>
+      <tr><td><code>assets/core/</code></td><td><code>OWNER.md</code> / <code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>사용자 프로필 / 행동 원칙 / 글쓰기 톤</td><td>모든 세션 기본 컨텍스트</td></tr>
+      <tr><td><code>assets/orchestrator/</code></td><td><code>SKILL.md</code></td><td>PM(오케스트레이터) 역할 정의 <span class="badge plan">v0.3 활성화</span></td><td>PM session</td></tr>
+      <tr><td><code>assets/routines/</code></td><td><code>morning-brief.md</code><br><code>evening-brief.md</code><br><code>signal-scan.md</code><br><code>experiment-check.md</code><br><code>weekly-review.md</code></td><td>5종 자동 routine 프롬프트</td><td>scheduler가 cron 시각에</td></tr>
+      <tr><td><code>assets/templates/</code></td><td><code>handoff.md</code> / <code>prd-{type}.md</code> / <code>status.yaml</code> / ...</td><td>워크플로 스캐폴딩 템플릿</td><td>새 워크플로 생성 시</td></tr>
+      <tr><td><code>.solosquad/knowledge/</code> <span class="badge plan">v0.6</span></td><td>(사용자 자유)</td><td>누적 공용 지식 (의사결정 프레임워크 등)</td><td>키워드 매칭 시 selective load</td></tr>
+      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>AGENTS.md</code></td><td>cross-tool 영속 가이드 (immutable_paths·modifiable_paths·Output 가드 박제). Codex·Aider·Cursor도 동일 파일 인식.</td><td>모든 자율 실행 (<code>solosquad goal run</code>)이 자동 상속. CLAUDE.md와 공존.</td></tr>
+    </tbody>
+  </table>
+
+  <h4>조직 위계 (Layer 1)</h4>
+  <table>
+    <thead><tr><th>경로</th><th>파일</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>&lt;org&gt;/</code></td><td><code>.org.yaml</code></td><td>조직 메타 (이름, 메신저, 활성 repo)</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/</code></td><td><code>signals.jsonl</code><br><code>experiments.jsonl</code><br><code>decisions.jsonl</code><br><code>routine-logs/*.jsonl</code></td><td>routine 결과·결정 이벤트</td></tr>
+      <tr><td><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/</code></td><td><code>_status.yaml</code><br><code>_handoff.md</code><br><code>_events.jsonl</code> <span class="badge plan">v0.3</span><br><code>stage-N-{name}/</code></td><td>활성 워크플로 상태·핸드오프·산출물</td></tr>
+      <tr><td><code>&lt;org&gt;/goals/&lt;goal-id&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>goal.md</code><br><code>results.tsv</code><br><code>_best.json</code><br><code>_last-run.md</code></td><td>자율 실행 의도서 (1회 실행 단위) + cycle 누적 결과 + ship 후보 commit + 마지막 run 요약. <code>solosquad goal run</code>이 갱신.</td></tr>
+      <tr><td><code>&lt;org&gt;/slack/</code> 또는 <code>discord/</code></td><td>채널 매핑 yaml</td><td>메신저 채널 ↔ 조직 매핑</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/sessions/</code> <span class="badge plan">v0.3</span></td><td><code>{user-id}.json</code></td><td>PM session id</td></tr>
+      <tr><td><code>&lt;org&gt;/core/</code> <span class="badge plan">v0.6</span></td><td><code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>조직 철학·톤 (workspace core override)</td></tr>
+      <tr><td><code>&lt;org&gt;/agent-profile.yaml</code> <span class="badge plan">v0.6</span></td><td>(YAML)</td><td>25 agent의 조직별 modifier</td></tr>
+      <tr><td><code>&lt;org&gt;/domain/</code> <span class="badge plan">v0.6</span></td><td><code>market.md</code> / <code>customers.md</code> / <code>product.md</code></td><td>조직 도메인 지식</td></tr>
+    </tbody>
+  </table>
+
+  <h4>리포 위계 (Layer 2)</h4>
+  <table>
+    <thead><tr><th>경로</th><th>파일</th><th>의미</th></tr></thead>
+    <tbody>
+      <tr><td><code>&lt;org&gt;/repositories/&lt;repo&gt;/</code></td><td>(코드 파일들 + 자체 <code>.git/</code>)</td><td>사용자 제품 코드</td></tr>
+      <tr><td>위 경로</td><td><code>.solosquad/repo.yaml</code></td><td>리포 메타 (slug, role, target_org)</td></tr>
+      <tr><td>위 경로</td><td><code>CLAUDE.md</code></td><td>Claude Code가 자동 로드하는 리포 지침</td></tr>
+      <tr><td>위 경로</td><td><code>.claude/skills/</code></td><td>리포 한정 skill (Claude Code Plugin 호환)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========================== SECTION 4 ========================== -->
+<section id="s4">
+  <h2><span class="num">4.</span>온보딩</h2>
+
+  <h3 id="s4-1">4.1 사용자 유형 판별</h3>
+  <p>본인이 어느 유형인지 먼저 확인하세요. 유형에 따라 진행할 절차가 달라집니다.</p>
+
+  <table>
+    <thead><tr><th>상황</th><th>해당 유형</th><th>이동</th></tr></thead>
+    <tbody>
+      <tr><td>SoloSquad를 처음 설치. 빈 PC/Mac에 워크스페이스부터 만들고 싶음</td><td><strong>A. 신규 사용자</strong></td><td>§4.2</td></tr>
+      <tr><td>이미 운영 중인 제품 리포가 있고, 거기에 AI 팀을 붙이고 싶음</td><td><strong>B. 기존 리포 마이그레이션</strong></td><td>§4.3</td></tr>
+      <tr><td>예전 버전(v0.1.x 등)으로 이미 사용 중. 최신으로 업데이트해야 함</td><td><strong>C. 버전 업데이트</strong></td><td>§4.4</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s4-2">4.2 신규 사용자 — 첫 워크스페이스 만들기</h3>
+
+  <div class="step">
+    <div class="step-head">Step 1 — 준비물 설치</div>
+    <p>Node.js 18+, git, Claude Code CLI가 필요합니다.</p>
+    <p><strong>macOS:</strong></p>
+    <pre><code>brew install node git
+npm install -g @anthropic-ai/claude-code</code></pre>
+    <p><strong>Windows (PowerShell):</strong></p>
+    <pre><code>winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+npm install -g @anthropic-ai/claude-code</code></pre>
+    <p><strong>Linux (Ubuntu):</strong></p>
+    <pre><code>curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs git
+npm install -g @anthropic-ai/claude-code</code></pre>
+    <p>확인:</p>
+    <pre><code>node --version    # v18 이상
+git --version
+claude --version</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — Claude Code Max 구독</div>
+    <p>https://claude.ai 접속 → 설정 → Claude Code → Max 플랜 구독.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — 메신저 봇 토큰 미리 준비</div>
+    <p>Slack 또는 Discord 중 하나 선택. 본 문서 §5에서 토큰 발급 단계를 안내합니다. <strong>먼저 5장을 끝내고 돌아오세요.</strong></p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — SoloSquad 설치</div>
+    <pre><code>npm install -g solosquad
+solosquad --version</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — 워크스페이스 초기화</div>
+    <pre><code>mkdir ~/solosquad-workspace
+cd ~/solosquad-workspace
+solosquad init</code></pre>
+    <p>마법사가 차례로 묻습니다. 입력 가이드:</p>
+    <ul>
+      <li><strong>Your name</strong>: 본인 이름</li>
+      <li><strong>Your role</strong>: founder / developer / designer 등</li>
+      <li><strong>Messenger platform</strong>: <code>discord</code> 또는 <code>slack</code></li>
+      <li><strong>Timezone</strong>: 기본 <code>Asia/Seoul</code> (IANA tz 자유 입력 가능)</li>
+      <li><strong>Morning/Evening brief time</strong>: HH:MM 형식. 기본 08:00 / 18:00</li>
+      <li><strong>메신저 토큰</strong>: §5에서 받은 값 붙여넣기</li>
+      <li><strong>Project storage path</strong>: Enter 누르면 OS별 기본값</li>
+      <li><strong>Product/Organization name</strong>: 사업/제품 이름 (여러 개 가능)</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — Claude Code 로그인</div>
+    <pre><code>claude login</code></pre>
+    <p>브라우저가 열리며 Claude 계정으로 로그인. 이 OS 사용자 계정에 귀속됩니다.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — 환경 진단</div>
+    <pre><code>solosquad doctor                  # 기본 진단
+solosquad doctor --messenger-check  # 토큰까지 실제 검증</code></pre>
+    <p>모두 <span class="ok">✓</span>이면 통과.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — 봇 + 스케줄러 기동</div>
+    <p>각각 별도 터미널 또는 Docker로 실행.</p>
+    <pre><code># Option A — 터미널 두 개
+solosquad bot          # 메신저 봇
+solosquad schedule     # 자동 routine
+
+# Option B — Docker (워크스페이스 폴더에서)
+docker compose up -d --build</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 9 — 첫 메시지</div>
+    <p>Slack 또는 Discord의 <code>#owner-command</code>에 <code>안녕</code>을 보내세요. 봇이 응답하면 성공.</p>
+  </div>
+
+  <h3 id="s4-3">4.3 기존 리포 마이그레이션</h3>
+  <p>이미 코드 리포가 있고 거기에 AI 팀을 붙이고 싶을 때.</p>
+
+  <h4>현재 (v0.2.4) 방법<span class="badge now">v0.2.4</span></h4>
+  <ol>
+    <li>먼저 §4.2 Step 1~7로 워크스페이스를 만듭니다 (조직 1개라도 생성).</li>
+    <li>리포를 워크스페이스로 등록:
+      <pre><code>cd ~/solosquad-workspace
+solosquad add repo /path/to/existing-repo      # 로컬 경로
+solosquad add repo https://github.com/me/x.git # 또는 git URL (clone)</code></pre>
+    </li>
+    <li>조직이 여러 개면 어느 조직 소속인지 물어봅니다. 단일이면 자동 배정.</li>
+    <li>리포가 <code>&lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;/</code>로 들어갑니다.</li>
+    <li>해당 리포에 자체 <code>.claude/skills/</code>나 <code>CLAUDE.md</code>가 있으면 그대로 유지 — 해당 리포의 작업 시 Claude Code가 자동으로 로드.</li>
+  </ol>
+
+  <h4>v0.5에서 추가 예정<span class="badge plan">v0.5</span></h4>
+  <p>기존 리포의 <code>.claude/skills/</code>를 SoloSquad 자산으로 흡수하는 분석기가 도입됩니다.</p>
+  <pre><code>solosquad analyze repo /path/to/legacy-repo
+# → 4-라벨 분류 (role / workflow / codebase-fact / domain)
+# → 분석 보고서 Markdown 생성
+
+solosquad add repo /path/to/legacy-repo --from-report 2026-XX-XX-initial.md
+# → backup → 결정적 머지 → verify</code></pre>
+
+  <h3 id="s4-4">4.4 이전 버전 사용자 업데이트</h3>
+
+  <h4>버전 규칙 (semver)</h4>
+  <ul>
+    <li><code>vN.N.N</code> 3자리 (예: <code>v0.1.5</code>, <code>v0.2.0</code>)</li>
+    <li><strong>patch</strong> (세 번째 자리): 버그 수정·작은 개선 — 마이그레이션 거의 없음</li>
+    <li><strong>minor</strong> (두 번째 자리): 새 기능·구조 변경 — 마이그레이션 필요할 수 있음</li>
+    <li><strong>major</strong> (첫 번째 자리): 근본적 개편 — 마이그레이션 필수</li>
+  </ul>
+  <p>npm 실제 출시 번호는 별도 semver 트랙. 문서 라벨 <code>v0.x</code> ↔ npm 버전 1:1 매칭 아님 — 정책은 <code>docs/product-roadmap.md</code> §3.5.</p>
+
+  <h4>현재 버전 확인</h4>
+  <pre><code>solosquad --version           # 설치된 CLI 버전
+solosquad update              # 레지스트리 최신과 비교 (실제 업데이트 전 안내만)</code></pre>
+
+  <h4>일반 업데이트 (마이그레이션 불필요)</h4>
+  <p>대부분의 patch 업데이트는 아래 한 줄로 끝.</p>
+  <pre><code>solosquad update              # "New version available" → y → 자동 설치
+# 또는 수동
+npm install -g solosquad@latest
+solosquad --version
+solosquad doctor              # ✓ 다섯 줄 모두 통과해야 정상</code></pre>
+
+  <h4>구조 변경 업데이트 (마이그레이션 필요)</h4>
+  <p><code>solosquad update</code>가 다음과 같은 경고를 표시하면 마이그레이션 필요:</p>
+  <pre><code>⚠ This update includes breaking changes to the workspace layout.
+  A workspace migration is required. After updating the CLI, run:
+    solosquad migrate --dry-run   (preview)
+    solosquad migrate --apply     (perform)</code></pre>
+
+  <div class="callout warn">
+    <strong>Apply 전 필수 체크리스트</strong>
+    <ul>
+      <li><code>solosquad bot</code> / <code>solosquad schedule</code> 완전히 종료 — 실행 중이면 파일 lock 때문에 이동 실패 가능 (<code>Ctrl+C</code> 또는 <code>docker compose down</code>)</li>
+      <li>VSCode / JetBrains IDE에서 해당 워크스페이스·repo 닫기 (Windows에서 파일 핸들 lock)</li>
+      <li>외부 하드코딩 경로 점검 — <code>C:\...\Documents\solosquad-repos\&lt;slug&gt;</code> 같은 경로가 있으면 마이그레이션 후 <code>&lt;workspace&gt;\&lt;slug&gt;</code>로 수정</li>
+      <li>먼저 dry-run 실행 — <code>solosquad migrate</code>(플래그 없음) 또는 <code>--dry-run</code></li>
+      <li>작업 중 코드는 미리 <code>git commit</code> / <code>stash</code></li>
+    </ul>
+  </div>
+
+  <p><strong>실행 순서:</strong></p>
+  <ol>
+    <li><code>npm install -g solosquad@latest</code> — CLI 먼저</li>
+    <li>워크스페이스로 <code>cd</code></li>
+    <li><code>solosquad migrate --dry-run</code> — 미리보기</li>
+    <li>출력 검토 후 <code>solosquad migrate --apply</code></li>
+    <li><code>solosquad doctor</code>로 검증</li>
+    <li><code>solosquad bot</code> 재시작</li>
+  </ol>
+
+  <h4>Dry-run 출력 예시</h4>
+  <pre><code>$ solosquad migrate --dry-run
+Workspace: /Users/you/solosquad-workspace
+Detected structure: v0.1.x  (source)
+Target version:     v0.2.0  (installed CLI)
+
+Migration plan (1.1.x → 1.2.0):
+
+  ✓ Move workspace config to .solosquad/
+  ✓ Convert each product → organization directory
+  ✓ Rename projects/ → workflows/
+  ✓ Remove obsolete env vars (REPOS_BASE_PATH)
+
+Estimated disk usage: +0 MB (moves only, no copies)
+Backup location:      /Users/you/.solosquad-backups/2026-...
+
+Nothing written yet. Re-run with `--apply` to perform the migration.</code></pre>
+  <p><strong>Dry-run은 아무것도 바꾸지 않습니다.</strong> 마음에 안 들면 그냥 무시.</p>
+
+  <h4>Apply가 자동으로 해주는 것</h4>
+  <ul>
+    <li>작업 전 워크스페이스 <strong>전체 스냅샷 백업</strong> (<code>~/.solosquad-backups/&lt;타임스탬프&gt;/</code>)</li>
+    <li>파일·폴더 이동/이름변경</li>
+    <li>새 설정 파일 자동 생성 (<code>.solosquad/workspace.yaml</code>, <code>.org.yaml</code> 등)</li>
+    <li>마이그레이션 후 <code>doctor</code> 자동 실행으로 검증</li>
+  </ul>
+
+  <h4>여러 버전을 건너뛸 때 (체인 마이그레이션)</h4>
+  <p>v0.1.2를 쓰다가 v0.3.0으로 직접 업데이트할 경우 마이그레이션이 <strong>체인으로 순차 실행</strong>됩니다:</p>
+  <pre><code>Chaining migrations:
+  1.1.x → 1.2.0  (layout restructure)
+  1.2.0 → 1.3.0  (cross-repo enhancements)</code></pre>
+  <p>각 단계는 dry-run 후 한꺼번에 apply. 중간 실패 시 해당 단계까지만 롤백.</p>
+
+  <h4>v0.2.4 업데이트 특별 사항</h4>
+  <p>v0.2.4는 메신저 채널 구조와 routine 모델을 바꾸고 <strong>Telegram 지원을 제거</strong>합니다.</p>
+
+  <p><strong>전 사용자 공통:</strong></p>
+  <ul>
+    <li><code>migrate --apply</code>가 <code>.solosquad/workspace.yaml</code>에 <code>timezone</code>·<code>briefings</code>·<code>background_routines</code> 필드 주입 (기본 Asia/Seoul · 08:00 / 18:00)</li>
+    <li>메신저 채널은 자동으로 줄어들지 않음. 봇이 더 이상 <code>daily-brief</code>·<code>signals</code>·<code>experiments</code>·<code>weekly-review</code>·<code>errors</code>로 송신하지 않으므로 원하면 메신저 UI에서 수동 archive</li>
+    <li>JSONL 메모리·workflows 디렉터리는 손대지 않음</li>
+  </ul>
+
+  <p><strong>Discord 사용자:</strong></p>
+  <ul>
+    <li>봇 권한에 <strong>Create Public Threads</strong> 추가 → 동일 서버에 re-invite (덮어쓰기, 데이터 영향 없음). 시스템 스레드 4개(<code>system-daily-signals</code> 등) 자동 생성에 필요.</li>
+  </ul>
+
+  <p><strong>Slack 사용자:</strong></p>
+  <ul>
+    <li>Bot Token Scopes에 <strong><code>channels:manage</code></strong> 추가 → "Reinstall to Workspace". 없으면 <code>#workflow</code> 채널 생성 실패.</li>
+  </ul>
+
+  <p><strong>Telegram 사용자 (지원 제거)<span class="badge removed">v0.2.4 제거</span></strong></p>
+  <ul>
+    <li>v0.2.4부터 <code>MESSENGER=telegram</code>은 작동하지 않음. 봇 시작 시 명확한 에러 메시지 출력.</li>
+    <li>전환 절차:
+      <ol>
+        <li><code>solosquad migrate --apply</code> 먼저 실행 (workspace.yaml 신규 필드 주입은 메신저와 무관)</li>
+        <li>Discord 또는 Slack 봇 setup (§5.1 또는 §5.2)</li>
+        <li><code>.solosquad/.env</code>에서 <code>MESSENGER=telegram</code> → <code>discord</code> 또는 <code>slack</code></li>
+        <li><code>TELEGRAM_BOT_TOKEN</code> / <code>TELEGRAM_CHAT_ID</code> 라인 삭제 (남아 있어도 무시되지만 정리 권장)</li>
+        <li><code>solosquad bot</code> 재시작 → 새 플랫폼의 <code>#owner-command</code> + <code>#workflow</code> 자동 생성</li>
+      </ol>
+    </li>
+    <li>JSONL 메모리는 그대로 보존 — 새 메신저로 전환해도 과거 시그널·실험·결정은 모두 살아 있음</li>
+  </ul>
+
+  <h4>알려진 이슈 (v0.1.x → v0.2.0 점프 시)</h4>
+  <ul>
+    <li><strong><code>solosquad update</code>가 마이그레이션 경고를 띄우지 않을 수 있음</strong> — 마이그레이션 감지 코드가 v0.2.0에 신규 추가됐기 때문. v0.1.x에서 올라오는 사용자는 업데이트 직후 <code>solosquad migrate</code>를 수동으로 한 번 실행.</li>
+    <li><strong><code>--dry-run</code> 플래그 미등록</strong> — v0.2.0 초기 빌드에서. v0.2.1+에서 정식 등록. 플래그 없이 <code>solosquad migrate</code>만 써도 기본 dry-run.</li>
+  </ul>
+
+  <h4>마이그레이션 후 첫 작업 — <code>solosquad sync</code></h4>
+  <p>v0.1.x → v0.2.0 마이그레이션 스크립트는 각 product를 org로 바꾸되 <code>.git</code>을 org 루트에 그대로 둡니다 (v0.1.x의 product=repo 자취). <code>sync</code> 첫 실행 시 두 가지 선택 제공:</p>
+  <pre><code>⚠ bv-ai-native-po/ has a .git folder at the organization root (v0.1.x legacy layout).
+  How would you like to handle this?
+  ❯ Normalize — move code into repositories/&lt;org-slug&gt;/ (recommended)
+    Keep legacy — register repo.yaml at org root, skip restructure</code></pre>
+  <ul>
+    <li><strong>Normalize (권장)</strong> — 코드와 <code>.git</code>이 <code>&lt;org&gt;/repositories/&lt;org-slug&gt;/</code>로 이동. 시스템 폴더는 org 루트 유지. 앞으로 repo 여러 개 붙일 거면 필수.</li>
+    <li><strong>Keep legacy</strong> — 현상 유지. <code>&lt;org&gt;/.solosquad/repo.yaml</code>을 org 루트에 생성. 저장소 한 개만 쓸 거면 OK.</li>
+  </ul>
+
+  <h4>Docker 사용자 업데이트 흐름</h4>
+  <pre><code># 1. 컨테이너 중지
+docker compose down
+
+# 2. 호스트에서 CLI 업데이트 (마이그레이션 감지 + 실행용)
+npm install -g solosquad@latest
+
+# 3. 마이그레이션 필요 시
+solosquad migrate --dry-run
+solosquad migrate --apply
+
+# 4. Docker 이미지 재빌드
+docker compose up -d --build</code></pre>
+  <p><strong>마이그레이션은 반드시 호스트에서</strong>. 컨테이너 안에서 하면 볼륨 매핑 혼란 가능.</p>
+
+  <h4>멀티 워크스페이스 업데이트</h4>
+  <p>페르소나별 워크스페이스 여러 개 사용 시 CLI 업데이트는 한 번이지만 <strong>마이그레이션은 각 워크스페이스에서 개별 실행</strong>:</p>
+  <pre><code>npm install -g solosquad@latest
+
+cd ~/solopreneur
+solosquad migrate --dry-run
+solosquad migrate --apply
+
+cd ~/elon-24-7
+solosquad migrate --dry-run
+solosquad migrate --apply</code></pre>
+  <p>각 워크스페이스는 독립 백업 — 하나 실패해도 다른 워크스페이스 영향 없음.</p>
+
+  <h4>롤백</h4>
+  <pre><code>solosquad migrate --rollback   # 가장 최근 백업으로 복원</code></pre>
+  <p><strong>주의:</strong> 롤백 후에는 복원된 버전에 맞는 CLI를 쓰세요. v0.2.0로 마이그레이션했다가 v0.1.5로 롤백했다면:</p>
+  <pre><code>npm install -g solosquad@1.1.5</code></pre>
+  <p>CLI와 워크스페이스 버전 불일치 시 <code>doctor</code>가 경고합니다.</p>
+
+  <h4>백업 관리</h4>
+  <p>백업 기본 위치: <code>~/.solosquad-backups/&lt;ISO-타임스탬프&gt;-v&lt;소스버전&gt;/</code></p>
+  <pre><code>solosquad migrate --list-backups        # 목록
+solosquad migrate --delete-backup &lt;id&gt;  # 수동 삭제</code></pre>
+  <p>자동 보존: 최근 <strong>5개만 유지</strong>. 6번째 마이그레이션 시 가장 오래된 백업 삭제. 중요한 시점의 백업은 외장 디스크나 클라우드 드라이브로 별도 보관 권장.</p>
+
+  <h4>업그레이드 실패 트러블슈팅</h4>
+  <p><strong>"Cannot find package.json" 류 에러</strong></p>
+  <pre><code>npm cache clean --force
+npm uninstall -g solosquad
+npm install -g solosquad@latest</code></pre>
+
+  <p><strong>마이그레이션 중단</strong></p>
+  <pre><code>solosquad migrate --rollback   # 가장 최근 백업으로 복원</code></pre>
+  <p>그 다음 GitHub Issues에 로그와 함께 보고.</p>
+
+  <p><strong>Claude Code 인증 풀림</strong> — v0.2.0+ Docker 이미지가 <code>${HOME}/.claude</code>를 마운트하므로 호스트의 <code>claude login</code> 상태가 컨테이너에 공유됩니다:</p>
+  <pre><code>claude login
+docker compose restart</code></pre>
+
+  <h4>베타·개발 채널</h4>
+  <pre><code>solosquad update --channel dev     # 베타 (안정성 보장 없음)
+solosquad update --channel stable  # 기본</code></pre>
+</section>
+
+<!-- ========================== SECTION 5 ========================== -->
+<section id="s5">
+  <h2><span class="num">5.</span>메신저 연결</h2>
+  <p>AI가 메신저에서 메시지를 주고받으려면 <strong>봇 계정</strong>이 필요합니다. SoloSquad는 <strong>Slack과 Discord</strong> 두 플랫폼을 지원하며, 한 워크스페이스당 1개만 선택합니다.</p>
+
+  <table>
+    <thead><tr><th>플랫폼</th><th>추천 대상</th><th>장점</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Slack</strong></td><td>워크스페이스 중심 협업, 조용한 UI</td><td>채널 구조 깔끔, 검색 강력</td><td>설정 단계 가장 많음</td></tr>
+      <tr><td><strong>Discord</strong></td><td>혼자 쓰되 친근한 UI</td><td>봇이 채널 자동 생성, 설정 단순</td><td>서버 이름에 제품 slug 포함 필요</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s5-1">5.1 Slack 봇 설정 (9단계)</h3>
+  <p><strong>최종 결과물:</strong> <code>.env</code>에 <code>SLACK_BOT_TOKEN=xoxb-...</code>와 <code>SLACK_APP_TOKEN=xapp-...</code>가 저장되고, Slack 워크스페이스의 <code>#owner-command</code> 채널에서 봇이 응답.</p>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Slack 앱 생성</div>
+    <ol>
+      <li>https://api.slack.com/apps 접속 (본인 Slack 계정 로그인)</li>
+      <li>우측 상단 <strong>Create New App</strong> → <strong>From scratch</strong></li>
+      <li>App Name 입력 (예: <code>My AI Team</code>) + 배포할 워크스페이스 선택 → <strong>Create App</strong></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — OAuth & Permissions (봇 권한)</div>
+    <p>좌측 <strong>Features → OAuth & Permissions</strong> 이동 → <strong>Bot Token Scopes</strong> 블록에서 다음 6개 추가:</p>
+    <table>
+      <thead><tr><th>Scope</th><th>왜 필요</th></tr></thead>
+      <tbody>
+        <tr><td><code>channels:read</code></td><td>봇이 어느 채널에 있는지 조회</td></tr>
+        <tr><td><code>channels:history</code></td><td>공개 채널 메시지 읽기</td></tr>
+        <tr><td><code>chat:write</code></td><td>응답 메시지 전송</td></tr>
+        <tr><td><code>app_mentions:read</code></td><td><code>@봇이름</code> 호출 감지</td></tr>
+        <tr><td><code>groups:read</code></td><td>비공개 채널에서도 동작시키려면 필요</td></tr>
+        <tr><td><code>channels:manage</code></td><td>루틴이 채널 자동 생성/변경 시</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn"><strong>주의</strong>User Token Scopes가 아니라 <strong>Bot Token Scopes</strong> 블록에 추가해야 합니다.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — 워크스페이스 1차 설치</div>
+    <p><strong>OAuth Tokens for Your Workspace</strong> → <strong>Install to Workspace</strong> → Allow → <strong>Bot User OAuth Token</strong> (<code>xoxb-...</code>) 복사 → 메모장 저장. 이 값이 <code>SLACK_BOT_TOKEN</code>.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — Socket Mode</div>
+    <ol>
+      <li>좌측 <strong>Settings → Socket Mode</strong></li>
+      <li><strong>Enable Socket Mode</strong> ON</li>
+      <li>App-Level Token 생성 팝업에서 Token Name + Scope <code>connections:write</code> 추가 → Generate</li>
+      <li>생성된 <code>xapp-1-...</code> 즉시 복사 (페이지 벗어나면 못 봄). 이 값이 <code>SLACK_APP_TOKEN</code>.</li>
+    </ol>
+    <div class="callout warn"><strong>자주 하는 실수</strong>App Token에 Signing Secret을 넣는 경우. App Token은 <code>xapp-</code>로 시작.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — Event Subscriptions</div>
+    <p>좌측 <strong>Features → Event Subscriptions</strong></p>
+    <ol>
+      <li><strong>Enable Events</strong> ON</li>
+      <li><strong>Subscribe to bot events</strong> 확장 → Add Bot User Event:
+        <ul>
+          <li><code>message.channels</code> (공개 채널)</li>
+          <li><code>message.groups</code> (비공개 채널 — <code>#owner-command</code>가 🔒이면 필수)</li>
+          <li><code>app_mention</code> (<code>@봇</code> 호출)</li>
+        </ul>
+      </li>
+      <li><strong>Save Changes</strong></li>
+    </ol>
+    <div class="callout warn"><strong>이 단계 누락 시</strong>봇은 정상 기동하지만 메시지가 전혀 전달되지 않음.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — 워크스페이스 재설치 (필수)</div>
+    <p>Scope/Event 변경 후 노란 배너 → <strong>reinstall your app</strong> 클릭. Bot Token이 새로 발급될 수 있음 — 새 값으로 메모장과 <code>.env</code> 갱신.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — #owner-command 채널</div>
+    <ol>
+      <li>채널 생성: <code>owner-command</code> (정확히 이 이름)</li>
+      <li>공개/비공개 선택 (비공개면 Step 5의 <code>message.groups</code> 필수)</li>
+      <li>채널 상단 → Integrations → Add apps → 본인 봇 → Add. 또는 <code>/invite @봇이름</code></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — .env 작성</div>
+    <pre><code>MESSENGER=slack
+SLACK_BOT_TOKEN=xoxb-1234567890-...
+SLACK_APP_TOKEN=xapp-1-...
+SLACK_COMMAND_CHANNEL=owner-command</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 9 — 검증</div>
+    <pre><code>solosquad doctor --messenger-check
+solosquad bot</code></pre>
+    <p><code>Slack auth.test → &lt;봇사용자명&gt;</code>이 ✓이고, <code>#owner-command</code>에 "안녕" → 응답 오면 성공.</p>
+  </div>
+
+  <h3 id="s5-2">5.2 Discord 봇 설정 (8단계)</h3>
+  <p><strong>최종 결과물:</strong> <code>.env</code>에 <code>DISCORD_TOKEN=...</code>이 저장되고, Discord 서버의 <code>#owner-command</code>에서 봇이 응답.</p>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Application 생성</div>
+    <ol>
+      <li>https://discord.com/developers/applications 접속</li>
+      <li>우측 상단 <strong>New Application</strong></li>
+      <li>이름 입력 → <strong>Create</strong></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — Bot 토큰 발급</div>
+    <ol>
+      <li>좌측 <strong>Bot</strong> 클릭</li>
+      <li><strong>Reset Token</strong> → Yes</li>
+      <li>나타난 토큰을 즉시 복사 (한 번만 보여줌). 이 값이 <code>DISCORD_TOKEN</code>.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — Privileged Gateway Intents</div>
+    <p>같은 Bot 페이지 아래로 스크롤 → <strong>Privileged Gateway Intents</strong>:</p>
+    <ul>
+      <li><strong>Message Content Intent</strong> — <strong class="err">필수</strong> (켜지 않으면 메시지 본문이 빈 문자열로 도착해 봇이 응답 못 함)</li>
+    </ul>
+    <p>Save Changes.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — OAuth2 URL Generator</div>
+    <p>좌측 <strong>OAuth2 → URL Generator</strong></p>
+    <ul>
+      <li><strong>Scopes</strong>: <code>bot</code>, <code>applications.commands</code></li>
+      <li><strong>Bot Permissions</strong>: View Channels, Send Messages, Read Message History, Manage Channels, Create Public Threads (v0.2.4+)</li>
+    </ul>
+    <p>Generated URL 복사 → 브라우저에서 열기 → 서버 선택 → Authorize.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — 서버 이름 규칙</div>
+    <p>봇이 서버를 제품에 연결하려면 <strong>서버 이름에 제품 slug</strong>가 포함되어야 함.</p>
+    <ul>
+      <li>제품 등록: <code>My Startup</code> (slug: <code>my-startup</code>)</li>
+      <li>Discord 서버 이름이 <code>My Startup</code> · <code>My Startup Workspace</code> · <code>my-startup-dev</code> → 자동 매핑 성공</li>
+      <li>이름이 <code>Awesome Team</code>이면 매핑 실패 → 서버 설정 → Overview → Server Name으로 변경</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — 채널 자동 생성 확인</div>
+    <p>봇 초대 후 <code>solosquad bot</code> 실행 시 자동 생성:</p>
+    <div class="tree">📁 AI Team Reports
+  #daily-brief
+  #signals
+  #experiments
+  #weekly-review
+  #owner-command       ← 여기서 봇에게 명령</div>
+    <p>이미 같은 이름 채널이 있으면 생성 생략.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — .env 작성</div>
+    <pre><code>MESSENGER=discord
+DISCORD_TOKEN=MTIzNDU2...</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — 검증</div>
+    <pre><code>solosquad doctor --messenger-check
+solosquad bot</code></pre>
+    <p><code>Discord /users/@me → &lt;봇사용자명&gt;</code>이 ✓이고, <code>#owner-command</code>에 "안녕" → 응답 오면 성공.</p>
+  </div>
+
+  <h3 id="s5-3">5.3 동작 검증</h3>
+  <p>두 플랫폼 공통:</p>
+  <pre><code>solosquad doctor                    # 기본 환경 점검
+solosquad doctor --messenger-check  # 메신저 토큰까지 live API로 검증
+solosquad bot                       # 봇 기동, 콘솔에 로그 출력
+solosquad bot --debug               # 자세한 로그</code></pre>
+
+  <p><code>#owner-command</code>에 <code>안녕</code> → 봇이 <code>[제품명 (agent-name)] ...</code> 형태로 응답하면 전 구간 정상.</p>
+
+  <div class="callout info">
+    <strong>Telegram은?</strong>
+    v0.2.4부터 Telegram 지원이 제거되었습니다. 사유는 native thread 부재로 인한 UX 격차, 단일 chat_id 구조와 멀티 워크플로 충돌, 사용자 비율 대비 유지 비용. 기존 사용자는 §4.4를 참조해 Discord 또는 Slack으로 전환하세요.
+  </div>
+</section>
+
+<!-- ========================== SECTION 6 ========================== -->
+<section id="s6">
+  <h2><span class="num">6.</span>사용법</h2>
+
+  <h3 id="s6-1">6.1 명령어 레퍼런스</h3>
+
+  <h4>현재 사용 가능 (v0.2.4)<span class="badge now">v0.2.4</span></h4>
+  <table>
+    <thead><tr><th>명령어</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><code>solosquad init</code></td><td>워크스페이스 초기화 마법사 — 에이전트·routine 복사, 메신저 토큰 입력, 제품 등록</td></tr>
+      <tr><td><code>solosquad bot</code></td><td>메신저 봇 기동. 사용자 메시지 처리</td></tr>
+      <tr><td><code>solosquad schedule</code></td><td>자동 routine 스케줄러 기동 (cron)</td></tr>
+      <tr><td><code>solosquad status</code></td><td>대시보드: 등록 제품, 워크플로, 최근 활동</td></tr>
+      <tr><td><code>solosquad doctor</code></td><td>환경 진단 (Node, git, claude, 토큰, 경로)</td></tr>
+      <tr><td><code>solosquad doctor --messenger-check</code></td><td>메신저 토큰을 live API로 검증</td></tr>
+      <tr><td><code>solosquad update</code></td><td>npm 최신 버전 비교 + 자동 설치 안내</td></tr>
+      <tr><td><code>solosquad run-routine</code></td><td>대화형 routine 수동 실행</td></tr>
+      <tr><td><code>solosquad run-routine &lt;name&gt;</code></td><td>특정 routine 실행 (signal-scan, morning-brief, ...)</td></tr>
+      <tr><td><code>solosquad run-routine --all</code></td><td>모든 routine 순차 실행</td></tr>
+      <tr><td><code>solosquad migrate</code></td><td>버전 간 워크스페이스 구조 변환 (기본 dry-run)</td></tr>
+      <tr><td><code>solosquad migrate --apply</code></td><td>실제 마이그레이션 수행</td></tr>
+      <tr><td><code>solosquad migrate --rollback</code></td><td>직전 backup으로 복원</td></tr>
+      <tr><td><code>solosquad add org &lt;name&gt;</code></td><td>워크스페이스에 새 조직 추가</td></tr>
+      <tr><td><code>solosquad add repo &lt;url|path&gt;</code></td><td>리포 등록 (clone 또는 로컬 이동)</td></tr>
+      <tr><td><code>solosquad sync</code></td><td>repositories/ 스캔 + .org.yaml 동기화 + legacy .git 정리 안내</td></tr>
+    </tbody>
+  </table>
+
+  <h4>추후 추가 예정<span class="badge plan">v0.3+</span></h4>
+  <table>
+    <thead><tr><th>명령어</th><th>버전</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td><code>solosquad pm status / reset / compact</code></td><td>v0.3</td><td>PM session 상태·재시작·compaction</td></tr>
+      <tr><td><code>solosquad workflow list / show &lt;id&gt;</code></td><td>v0.3</td><td>워크플로 목록·상세</td></tr>
+      <tr><td><code>solosquad rollback --workflow &lt;id&gt;</code></td><td>v0.3</td><td>특정 워크플로 직전 spawn 결과 revert</td></tr>
+      <tr><td><code>solosquad goal new / list / show / run / status / stop / verify</code></td><td>v0.4</td><td>자율 실행 goal 관리 + 밤새 실행 루프 (Codex <code>/goal</code> + <code>AGENTS.md</code> 2계층)</td></tr>
+      <tr><td><code>solosquad agent add / list / info / validate</code></td><td>v0.5</td><td>새 agent 스캐폴딩·관리</td></tr>
+      <tr><td><code>solosquad analyze repo &lt;path&gt;</code></td><td>v0.5</td><td>기존 리포 .claude/skills/ 4-라벨 분류 보고서</td></tr>
+      <tr><td><code>solosquad add repo --from-report &lt;file&gt;</code></td><td>v0.5</td><td>분석 보고서 기반 결정적 머지</td></tr>
+      <tr><td><code>solosquad memory search &lt;query&gt;</code></td><td>v0.6</td><td>FTS5 archive 검색</td></tr>
+      <tr><td><code>solosquad memory stats</code></td><td>v0.6</td><td>메모리 사용량·archive 통계</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s6-2">6.2 일상 운영</h3>
+
+  <h4>메신저에서 일 시키기 (v0.2.4)</h4>
+  <p>자연어로 보내면 60+ 키워드를 매칭해 25 specialist 중 자동 배정.</p>
+  <table>
+    <thead><tr><th>입력 예시</th><th>배정 에이전트</th></tr></thead>
+    <tbody>
+      <tr><td>"랜딩페이지 카피 써줘"</td><td>Content Writer (그로스)</td></tr>
+      <tr><td>"경쟁사 분석해줘"</td><td>Desk Researcher (경험)</td></tr>
+      <tr><td>"이번 주 실험 결과 정리해줘"</td><td>Data Analyst (전략)</td></tr>
+      <tr><td>"회원가입 API 설계해줘"</td><td>API Developer (엔지니어링)</td></tr>
+      <tr><td>"로그인 화면 UI 만들어줘"</td><td>UI Designer (경험)</td></tr>
+      <tr><td>"가격 정책 짜줘"</td><td>Business Strategist (전략)</td></tr>
+      <tr><td>"이번 분기 GTM 계획 세워줘"</td><td>GTM Strategist (그로스)</td></tr>
+    </tbody>
+  </table>
+  <p>매칭 없으면 general 모드로 응답.</p>
+
+  <h4>v0.3+ PM 모드<span class="badge plan">v0.3</span></h4>
+  <p>키워드 단발 호출이 PM과의 멀티턴 대화로 바뀝니다.</p>
+  <pre><code>사용자: "랜딩페이지 리디자인 진행해줘"
+PM:    기존 랜딩의 어떤 부분을 바꾸시려는가요?
+        (1) 히어로 섹션  (2) 가격 섹션  (3) 전체 리뉴얼
+사용자: 1번
+PM:    [PRD 작성 → desk-researcher spawn → ui-designer spawn → ...]
+       완료. stage-1-research/와 stage-2-design/에 산출물.</code></pre>
+
+  <h4>슬래시 명령 (v0.3+)<span class="badge plan">v0.3</span></h4>
+  <p>의도를 명시하고 싶으면 자연어 대신 슬래시 사용 (gstack 패턴 차용).</p>
+  <ul>
+    <li><code>/think &lt;주제&gt;</code> — 가설·시장 신호 정리 (PRD 분해 전)</li>
+    <li><code>/plan &lt;주제&gt;</code> — PRD 작성 + status.yaml 분해</li>
+    <li><code>/build</code> — 직전 plan의 ready stage 실행</li>
+    <li><code>/review</code> — 완료 stage 종합 + 차단 이슈 보고</li>
+    <li><code>/ship</code> — release/배포 routine 트리거</li>
+  </ul>
+
+  <h3 id="s6-3">6.3 권장 첫 작업 (온보딩 직후)</h3>
+  <ol>
+    <li><code>solosquad doctor</code>가 모두 ✓ 인지 확인.</li>
+    <li>메신저 <code>#owner-command</code>에 <code>안녕</code> → 응답 확인.</li>
+    <li>첫 routine 수동 실행:
+      <pre><code>solosquad run-routine signal-scan</code></pre>
+      <code>#workflow</code> 채널의 <code>system-daily-signals</code> 스레드에 결과가 표시되는지 확인.
+    </li>
+    <li><strong>사용자 프로필 수정</strong> — <code>assets/core/OWNER.md</code> (또는 <code>.solosquad/core/OWNER.md</code>)를 본인 이름·역할·관심사로 갱신. 모든 agent가 매 세션 이 파일을 참조.</li>
+    <li><strong>행동 원칙</strong> — <code>core/PRINCIPLES.md</code>에 본인의 의사결정 기준 적기 (예: "현금흐름 우선", "VC 펀딩 받지 않음", "주 50시간 이하 작업").</li>
+    <li><strong>글쓰기 톤</strong> — <code>core/VOICE.md</code>에 콘텐츠 어조 명시 (예: "전문적이지만 따뜻한 톤, 과장 표현 금지").</li>
+    <li>제품 이름 결정 + 워크플로 폴더 생성 (<code>~/solosquad-workspace/&lt;org&gt;/workflows/wf-2026-XX-XX-test/</code> 직접 생성).</li>
+    <li>brief 시각 조정 — <code>.solosquad/workspace.yaml</code>의 <code>briefings.morning.time</code> 등 본인 생활 패턴에 맞춰 수정.</li>
+  </ol>
+
+  <h3 id="s6-4">6.4 자동 루틴</h3>
+  <p>v0.2.4 기준 5종이 매일/매주 자동 실행됩니다.</p>
+
+  <table>
+    <thead><tr><th>기본 시각</th><th>이름</th><th>종류</th><th>출력 위치</th><th>메모리</th></tr></thead>
+    <tbody>
+      <tr><td>08:00 매일</td><td>Morning Brief</td><td>user-brief</td><td><code>#workflow</code> root</td><td>—</td></tr>
+      <tr><td>12:00 매일</td><td>Signal Scan</td><td>background</td><td><code>#workflow</code> → <code>system-daily-signals</code></td><td><code>signals.jsonl</code></td></tr>
+      <tr><td>16:00 매일</td><td>Experiment Check</td><td>background</td><td><code>#workflow</code> → <code>system-experiments</code></td><td><code>experiments.jsonl</code></td></tr>
+      <tr><td>18:00 매일</td><td>Evening Brief</td><td>user-brief</td><td><code>#workflow</code> root</td><td><code>decisions.jsonl</code></td></tr>
+      <tr><td>일요일 20:00</td><td>Weekly Review</td><td>background</td><td><code>#workflow</code> → <code>system-weekly-review</code></td><td><code>decisions.jsonl</code></td></tr>
+    </tbody>
+  </table>
+
+  <h4>시간대·시각·활성화 변경</h4>
+  <p><code>.solosquad/workspace.yaml</code>을 직접 편집:</p>
+  <pre><code>timezone: Asia/Seoul        # IANA tz 자유
+briefings:
+  morning:
+    time: "08:00"
+    enabled: true
+  evening:
+    time: "18:00"
+    enabled: true
+background_routines:
+  signal_scan:
+    time: "12:00"
+    enabled: true
+  experiment_check:
+    time: "16:00"
+    enabled: true
+  weekly_review:
+    day: "sunday"
+    time: "20:00"
+    enabled: true</code></pre>
+
+  <h4>수동 실행</h4>
+  <pre><code>solosquad run-routine                # 인터랙티브 메뉴
+solosquad run-routine signal-scan    # 특정 루틴
+solosquad run-routine --all          # 전부</code></pre>
+</section>
+
+<!-- ========================== SECTION 7 ========================== -->
+<section id="s7">
+  <h2><span class="num">7.</span>용어 사전</h2>
+  <p>AI/개발 초보자가 이 문서나 코드를 읽다 막힐 만한 모든 용어와 파일명을 친절히 설명합니다.</p>
+
+  <h3 id="s7-1">7.1 핵심 용어</h3>
+  <dl class="terms">
+    <dt>Workspace (워크스페이스)</dt>
+    <dd>SoloSquad 사용자의 최상위 폴더. 보통 <code>~/solosquad-workspace</code>. 안에 1개 이상의 organization을 담는다. 워크스페이스는 사용자 한 명의 "AI 비서 본부".</dd>
+
+    <dt>Organization (조직, org)</dt>
+    <dd>워크스페이스 안의 사업/제품 단위. 예: 본업, 사이드 프로젝트. 각자 메모리·워크플로·메신저 채널이 분리된다. 폴더명이 <code>&lt;slug&gt;</code>가 됨 (예: <code>my-startup</code>).</dd>
+
+    <dt>Repository (리포지토리, repo)</dt>
+    <dd>실제 코드가 있는 git 저장소. 조직 1개에 여러 repo가 있을 수 있다. 위치: <code>&lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;/</code>.</dd>
+
+    <dt>Agent (에이전트)</dt>
+    <dd>한 역할(예: Business Strategist)을 수행하는 AI 일꾼. SoloSquad는 25명의 specialist + 1명의 PM(v0.3+)이 있음.</dd>
+
+    <dt>Specialist (스페셜리스트)</dt>
+    <dd>특정 도메인 전문가 agent. 25명. PM(orchestrator)과 구분.</dd>
+
+    <dt>PM / Orchestrator (PM, 오케스트레이터)</dt>
+    <dd>사용자와 직접 대화하는 영구 에이전트. v0.3에서 도입. specialist를 spawn해서 멀티 단계 워크플로를 진행.</dd>
+
+    <dt>SKILL.md</dt>
+    <dd>한 agent의 정체성·작동 방식을 적은 매뉴얼 파일. Anthropic Agent Skills 공식 포맷.</dd>
+
+    <dt>KNOWLEDGE.md (v0.6+)</dt>
+    <dd>한 팀(=도메인)의 공유 craft·정의·anti-pattern을 모은 파일. 같은 팀 agent가 spawn될 때 자동 inject.</dd>
+
+    <dt>Routine (루틴)</dt>
+    <dd>정해진 시각에 자동 실행되는 작업. SoloSquad에는 5종 (Morning Brief, Signal Scan, Experiment Check, Evening Brief, Weekly Review).</dd>
+
+    <dt>Workflow (워크플로)</dt>
+    <dd>여러 단계의 작업을 묶은 프로젝트. PMF Discovery·Feature Expansion·Rebranding·Rapid Prototype 4종 디폴트. 각 워크플로는 <code>&lt;org&gt;/workflows/&lt;id&gt;/</code> 폴더로 존재.</dd>
+
+    <dt>Stage (스테이지)</dt>
+    <dd>워크플로 안의 한 단계. <code>stage-1-research/</code> 같은 폴더로 산출물 저장.</dd>
+
+    <dt>Handoff (핸드오프)</dt>
+    <dd>한 stage가 끝날 때 다음 agent에게 컨텍스트를 넘기는 산출물. <code>_handoff.md</code> 파일에 Summary·Artifacts·Decisions 등 표준 섹션으로 작성.</dd>
+
+    <dt>Brief (브리프)</dt>
+    <dd>아침/저녁에 봇이 전달하는 요약 보고. Morning Brief = 야간 일과 + 오늘 예정. Evening Brief = 주간 일과 + 야간 예정.</dd>
+
+    <dt>Signal Scan (시그널 스캔)</dt>
+    <dd>시장에서 관련된 신호(트렌드·경쟁사 움직임·뉴스)를 자동으로 탐지하는 routine. 결과는 <code>signals.jsonl</code>에 누적.</dd>
+
+    <dt>Experiment Check (실험 점검)</dt>
+    <dd>진행 중인 가설/실험의 상태를 점검하는 routine. <code>experiments.jsonl</code>에 누적.</dd>
+
+    <dt>Agent Router (에이전트 라우터)</dt>
+    <dd>사용자 메시지를 보고 어떤 specialist를 호출할지 결정하는 모듈. 현재(v0.2.4)는 키워드 매칭, v0.5+ 4채널 trigger로 확장.</dd>
+
+    <dt>Spawn (스폰)</dt>
+    <dd>PM(또는 router)이 specialist agent를 새 fresh session으로 시작시키는 동작. 매번 독립 — state는 외부 파일에 보관.</dd>
+
+    <dt>Stateless / Stateful (무상태/유상태)</dt>
+    <dd>매 호출이 독립이면 stateless, 호출 간에 state를 들고 있으면 stateful. SoloSquad의 specialist는 stateless, PM session은 stateful.</dd>
+
+    <dt>JIT (Just-in-Time) Injection</dt>
+    <dd>모든 컨텍스트를 미리 로드하지 않고 *그 호출에 필요한 것만* 그때그때 주입하는 원칙. 토큰 비용 폭증 방지.</dd>
+
+    <dt>Memory (메모리)</dt>
+    <dd>routine·결정·신호 결과를 영속 저장하는 곳. 현재(v0.2.4)는 JSONL append-only, v0.6+ FTS5 archive 추가.</dd>
+
+    <dt>P/E/T (Persistent / Episodic / Transient)</dt>
+    <dd>메모리를 영속/에피소드/일시 3계층으로 분류하는 어휘. SoloSquad의 SKILL은 Persistent, workflows는 Episodic, Claude session prompt는 Transient.</dd>
+
+    <dt>3-Layer Context</dt>
+    <dd>워크스페이스(Layer 0) / 조직(Layer 1) / 리포(Layer 2) 3 계층. 데이터 격리의 기본 단위.</dd>
+
+    <dt>PRD (Product Requirements Document)</dt>
+    <dd>제품 요구사항 문서. PM이 작성하여 specialist들에게 전달.</dd>
+
+    <dt>PMF (Product-Market Fit)</dt>
+    <dd>제품-시장 적합도. 사업이 "이 제품이 정말 필요한 시장이 있는가"를 검증하는 단계.</dd>
+
+    <dt>GTM (Go-To-Market)</dt>
+    <dd>시장 진입 전략. 어떤 채널·메시지·가격으로 첫 사용자를 얻을지 계획.</dd>
+
+    <dt>Anthropic / Claude</dt>
+    <dd>Anthropic은 Claude AI 모델을 만든 회사. Claude Code는 Anthropic이 만든 코딩 CLI. SoloSquad는 Claude Code를 백엔드 엔진으로 사용.</dd>
+
+    <dt>Claude Code</dt>
+    <dd>Anthropic이 만든 범용 코딩 CLI 도구. SoloSquad는 이 도구의 <code>claude</code> 명령을 호출해 AI 응답을 받는다. 별도 설치 필요: <code>npm install -g @anthropic-ai/claude-code</code>.</dd>
+
+    <dt>npm (Node Package Manager)</dt>
+    <dd>Node.js 패키지(라이브러리·CLI) 설치 도구. <code>npm install -g solosquad</code>로 SoloSquad 설치.</dd>
+
+    <dt>CLI (Command Line Interface)</dt>
+    <dd>명령줄 인터페이스. 터미널에서 명령어를 쳐서 사용하는 프로그램. <code>solosquad</code>가 CLI.</dd>
+
+    <dt>cron (크론)</dt>
+    <dd>정해진 시각에 작업을 반복 실행하는 표준 스케줄 형식. SoloSquad의 routine은 cron 기반.</dd>
+
+    <dt>JSONL (JSON Lines)</dt>
+    <dd>한 줄 = 한 JSON 객체인 텍스트 파일 포맷. append-only로 이벤트를 누적할 때 유용. SoloSquad 메모리의 기본 포맷.</dd>
+
+    <dt>FTS5 (Full-Text Search version 5)</dt>
+    <dd>SQLite 내장 전문검색 확장. 키워드 기반으로 텍스트를 빠르게 찾는다. v0.6에서 메모리 archive 인덱스로 도입.</dd>
+
+    <dt>MCP (Model Context Protocol)</dt>
+    <dd>AI 에이전트와 외부 도구·데이터를 잇는 표준 통신 규약. Anthropic이 2024년 발표. SoloSquad는 외부 연결(Notion·Figma 등)에 MCP 사용 가능.</dd>
+
+    <dt>IANA tz (시간대 데이터베이스)</dt>
+    <dd>국제 표준 시간대 이름 (예: <code>Asia/Seoul</code>, <code>America/Los_Angeles</code>). workspace.yaml의 <code>timezone</code> 값에 사용.</dd>
+
+    <dt>YAML</dt>
+    <dd>사람이 읽기 쉬운 설정 파일 포맷. SoloSquad는 <code>workspace.yaml</code>, <code>.org.yaml</code>, <code>_status.yaml</code> 등에 사용. JSON보다 들여쓰기로 구조를 표현.</dd>
+
+    <dt>Frontmatter (프론트매터)</dt>
+    <dd>Markdown 파일 맨 위에 <code>---</code>로 감싼 YAML 메타데이터. SKILL.md의 <code>name</code>·<code>description</code>·<code>triggers</code> 등이 frontmatter.</dd>
+
+    <dt>Docker / docker-compose</dt>
+    <dd>컨테이너 가상화 도구. SoloSquad 봇·스케줄러를 백그라운드로 자동 재시작하며 돌리고 싶을 때 사용. 선택 사항.</dd>
+
+    <dt>VPS (Virtual Private Server)</dt>
+    <dd>클라우드의 가상 서버. PC를 24/7 켜둘 수 없을 때 SoloSquad를 클라우드에서 실행. 월 $4~6.</dd>
+
+    <dt>Slug</dt>
+    <dd>URL/폴더 친화적 이름. 소문자·하이픈만 사용. 예: "My Startup" → <code>my-startup</code>.</dd>
+  </dl>
+
+  <h3 id="s7-2">7.2 파일명 사전</h3>
+  <p>워크스페이스나 코드에서 마주칠 모든 파일의 의미.</p>
+
+  <dl class="terms">
+    <dt>.env</dt>
+    <dd>환경 변수(API 토큰 등) 비밀 값을 담는 파일. <code>SLACK_BOT_TOKEN</code>·<code>DISCORD_TOKEN</code> 등. <strong>절대 git에 커밋하지 말 것</strong>.</dd>
+
+    <dt>.env.example</dt>
+    <dd>.env의 템플릿. 어떤 변수를 채워야 하는지 보여주는 샘플. 토큰 값은 비어 있음. git에 포함 OK.</dd>
+
+    <dt>.gitignore</dt>
+    <dd>git이 추적하지 않을 파일 패턴. SoloSquad에서 .env·node_modules·dist·repos 등이 무시됨.</dd>
+
+    <dt>.npmignore</dt>
+    <dd>npm 패키지 배포 시 제외할 파일 패턴. dev 전용 파일들.</dd>
+
+    <dt>package.json</dt>
+    <dd>npm 패키지의 설명서. 이름·버전·의존성·실행 스크립트 명세. SoloSquad의 <code>solosquad</code> 명령이 어디서 시작되는지도 여기에 적혀 있음.</dd>
+
+    <dt>package-lock.json</dt>
+    <dd>의존성 버전을 정확히 고정한 자동 생성 파일. 직접 편집 안 함.</dd>
+
+    <dt>tsconfig.json</dt>
+    <dd>TypeScript 컴파일 설정. ES2022·strict 모드 등.</dd>
+
+    <dt>workspace.yaml</dt>
+    <dd>워크스페이스 전역 설정. <code>.solosquad/workspace.yaml</code>. timezone·briefings·background_routines 시각, 메신저 종류 등.</dd>
+
+    <dt>.org.yaml</dt>
+    <dd>조직별 설정. <code>&lt;org&gt;/.org.yaml</code>. 조직 이름·메신저·등록된 repo 목록.</dd>
+
+    <dt>repo.yaml</dt>
+    <dd>리포별 설정. <code>&lt;repo&gt;/.solosquad/repo.yaml</code>. repo slug·역할(main/sub)·target_org.</dd>
+
+    <dt>SKILL.md</dt>
+    <dd>에이전트 정의 매뉴얼. Anthropic Agent Skills 포맷. §3.1 참조.</dd>
+
+    <dt>KNOWLEDGE.md (v0.6+)</dt>
+    <dd>팀(=도메인) 공유 지식. §3.2 참조.</dd>
+
+    <dt>TEAM_KNOWLEDGE.md (v0.2.4)</dt>
+    <dd>v0.6에서 KNOWLEDGE.md로 이름·위치 변경 예정.</dd>
+
+    <dt>CLAUDE.md</dt>
+    <dd>Claude Code가 매 세션 자동 로드하는 프로젝트 지침. §3.3 참조.</dd>
+
+    <dt>OWNER.md</dt>
+    <dd>사용자 본인의 프로필·관심사·작업 패턴. 모든 agent가 매 세션 참조. <code>assets/core/OWNER.md</code>.</dd>
+
+    <dt>PRINCIPLES.md</dt>
+    <dd>본인의 의사결정 원칙. 모든 agent가 따라야 할 가이드. <code>assets/core/PRINCIPLES.md</code>.</dd>
+
+    <dt>VOICE.md</dt>
+    <dd>본인의 글쓰기 톤·문체. Content Writer 등 글을 쓰는 agent의 출력 톤 가이드. <code>assets/core/VOICE.md</code>.</dd>
+
+    <dt>_status.yaml</dt>
+    <dd>워크플로 진행 상태. 각 stage가 <code>pending → in_progress → completed</code> 어느 상태인지.</dd>
+
+    <dt>_handoff.md</dt>
+    <dd>stage 완료 시 다음 agent에게 전달하는 컨텍스트. Summary·Artifacts·Decisions·Open Questions 표준 섹션.</dd>
+
+    <dt>_events.jsonl (v0.3+)</dt>
+    <dd>PM session의 모든 이벤트 로그. PM 메시지·spawn·subagent 완료 등.</dd>
+
+    <dt>signals.jsonl</dt>
+    <dd>Signal Scan routine의 결과. 시장 신호를 한 줄씩 누적.</dd>
+
+    <dt>experiments.jsonl</dt>
+    <dd>Experiment Check routine의 결과. 진행 중 실험 상태.</dd>
+
+    <dt>decisions.jsonl</dt>
+    <dd>Evening Brief·Weekly Review에서 정한 결정 누적.</dd>
+
+    <dt>routine-logs/*.jsonl</dt>
+    <dd>routine 실행 전체 로그. 디버깅·회고에 사용.</dd>
+
+    <dt>Dockerfile</dt>
+    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때.</dd>
+
+    <dt>docker-compose.yml</dt>
+    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정.</dd>
+
+    <dt>README.md</dt>
+    <dd>프로젝트 첫인상 문서. npm/GitHub에 표시되는 메인 설명. SoloSquad의 README는 설치·빠른 사용법.</dd>
+
+    <dt>LICENSE</dt>
+    <dd>라이선스 파일. SoloSquad는 MIT 라이선스.</dd>
+
+    <dt>CONTRIBUTING.md</dt>
+    <dd>이 프로젝트에 기여하는 방법 안내 (개발자용).</dd>
+  </dl>
+
+  <h3 id="s7-3">7.3 약어 사전</h3>
+  <dl class="terms">
+    <dt>API</dt>
+    <dd>Application Programming Interface. 소프트웨어 간 통신 규약. Slack API·Claude API 등.</dd>
+
+    <dt>CAC</dt>
+    <dd>Customer Acquisition Cost. 고객 1명을 얻는 데 드는 비용. 마케팅 지표.</dd>
+
+    <dt>CLI</dt>
+    <dd>Command Line Interface. 명령줄 도구.</dd>
+
+    <dt>CRUD</dt>
+    <dd>Create·Read·Update·Delete. 데이터의 기본 4 연산.</dd>
+
+    <dt>DAG</dt>
+    <dd>Directed Acyclic Graph. 방향성 있고 순환이 없는 그래프. 워크플로 단계 의존성 표현.</dd>
+
+    <dt>E2E</dt>
+    <dd>End-to-End. 전체 사용자 흐름을 테스트하는 방식.</dd>
+
+    <dt>ESM</dt>
+    <dd>ECMAScript Module. JavaScript 모듈 표준 (Node16+).</dd>
+
+    <dt>FDE</dt>
+    <dd>Forward Deployed Engineer. 고객 현장에 깊이 들어가는 엔지니어. SoloSquad 엔지니어링 팀의 한 agent.</dd>
+
+    <dt>FTS5</dt>
+    <dd>Full-Text Search v5. SQLite 내장 전문검색 확장.</dd>
+
+    <dt>GTM</dt>
+    <dd>Go-To-Market. 시장 진입 전략.</dd>
+
+    <dt>IANA</dt>
+    <dd>Internet Assigned Numbers Authority. 인터넷 표준 명명을 관리하는 기관. SoloSquad는 IANA의 시간대 이름(<code>Asia/Seoul</code> 등)을 사용.</dd>
+
+    <dt>JIT</dt>
+    <dd>Just-in-Time. 필요한 순간에만 로드/실행. 컨텍스트 관리 원칙.</dd>
+
+    <dt>LTV</dt>
+    <dd>Lifetime Value. 한 고객으로부터 얻는 전체 매출. LTV:CAC ≥ 3:1이 SaaS 통상 건강 지표.</dd>
+
+    <dt>MCP</dt>
+    <dd>Model Context Protocol. AI ↔ 외부 도구 표준.</dd>
+
+    <dt>npm</dt>
+    <dd>Node Package Manager. JavaScript 패키지 관리자.</dd>
+
+    <dt>PaaS</dt>
+    <dd>Platform-as-a-Service. 서버 관리 없이 앱만 올리면 되는 클라우드. Railway·Fly.io.</dd>
+
+    <dt>PMF</dt>
+    <dd>Product-Market Fit. 제품-시장 적합도.</dd>
+
+    <dt>PRD</dt>
+    <dd>Product Requirements Document. 제품 요구사항 문서.</dd>
+
+    <dt>QA</dt>
+    <dd>Quality Assurance. 품질 보증·테스트.</dd>
+
+    <dt>SaaS</dt>
+    <dd>Software-as-a-Service. 구독형 소프트웨어.</dd>
+
+    <dt>SDK</dt>
+    <dd>Software Development Kit. 특정 플랫폼에 앱 만들 때 쓰는 도구 모음.</dd>
+
+    <dt>SQL</dt>
+    <dd>Structured Query Language. 데이터베이스 질의 언어.</dd>
+
+    <dt>SSH</dt>
+    <dd>Secure Shell. 원격 서버 접속 프로토콜. VPS 운영 시 사용.</dd>
+
+    <dt>TS</dt>
+    <dd>TypeScript. JavaScript에 정적 타입을 더한 언어. SoloSquad의 구현 언어.</dd>
+
+    <dt>TTL</dt>
+    <dd>Time-To-Live. 데이터/캐시 유효 시간.</dd>
+
+    <dt>tz</dt>
+    <dd>timezone (시간대) 약어.</dd>
+
+    <dt>UI / UX</dt>
+    <dd>User Interface (사용자 인터페이스) / User Experience (사용자 경험).</dd>
+
+    <dt>VPS</dt>
+    <dd>Virtual Private Server. 가상 사설 서버. 클라우드.</dd>
+
+    <dt>YAML</dt>
+    <dd>YAML Ain't Markup Language. 사람이 읽기 쉬운 설정 파일 포맷.</dd>
+  </dl>
+</section>
+
+<!-- ========================== SECTION 8 ========================== -->
+<section id="s8">
+  <h2><span class="num">8.</span>버전별 차이</h2>
+  <p>현재 npm에서 받을 수 있는 기능과 향후 출시 예정 기능을 명확히 구분합니다.</p>
+
+  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.2.4)<span class="badge now">사용 가능</span></h3>
+
+  <h4>코어 기능</h4>
+  <ul>
+    <li><code>npm install -g solosquad</code> 한 줄 설치 (Mac/Windows/Linux)</li>
+    <li>25 specialist agents (전략 7 / 그로스 4 / 경험 4 / 엔지니어링 10)</li>
+    <li>키워드 기반 agent-router (60+ 키워드 → 25 agent 매핑)</li>
+    <li>2채널 메신저 (Discord / Slack — 워크스페이스당 1개)</li>
+    <li>5종 자동 routine (Morning/Evening Brief, Signal Scan, Experiment Check, Weekly Review)</li>
+    <li>3-Layer Context (workspace / organization / repository)</li>
+    <li>JSONL append-only 메모리 (signals, experiments, decisions, routine-logs)</li>
+    <li>workspace.yaml 설정 (timezone, briefing 시각, routine 활성화)</li>
+    <li>마이그레이션 프레임워크 (v0.1.x → v0.2.x backup → apply → verify → rollback)</li>
+    <li>Docker compose 옵션 (백그라운드 + 자동 재시작)</li>
+    <li>VPS systemd 서비스 등록 가이드 (docs/cloud-deployment.md)</li>
+    <li>다중 조직 / 다중 repo 지원 (<code>solosquad add org/repo/sync</code>)</li>
+    <li>환경 진단 (<code>solosquad doctor</code>·<code>--messenger-check</code>)</li>
+  </ul>
+
+  <h4>실험적 / 제한적</h4>
+  <ul>
+    <li>Orchestrator SKILL.md는 번들에 포함되어 있으나 bot이 아직 호출하지 않음 (v0.3에서 활성화)</li>
+    <li>워크플로 자동 진행 없음 — <code>_status.yaml</code>은 수동 관리</li>
+  </ul>
+
+  <h4>제거됨</h4>
+  <ul>
+    <li>Telegram 어댑터 — v0.2.4부터 미지원<span class="badge removed">v0.2.4 제거</span></li>
+    <li>채널 자동 정리 안 됨 — 이전 daily-brief·signals·experiments·weekly-review·errors 5개 채널은 사용자가 메신저 UI에서 수동 archive</li>
+  </ul>
+
+  <h3 id="s8-2">8.2 추후 업데이트<span class="badge plan">기획 단계</span></h3>
+
+  <h4>v0.3 — PM 모드 + 멀티 에이전트 오케스트레이션</h4>
+  <ul>
+    <li>PM 에이전트가 사용자와의 모든 소통 전담 (영구 session, <code>claude --resume</code>)</li>
+    <li>specialist는 ephemeral subagent로 spawn (depth=1)</li>
+    <li>슬래시 5종 (<code>/think /plan /build /review /ship</code>)</li>
+    <li><code>_events.jsonl</code> 표준 (PM session 이벤트 로그)</li>
+    <li>PM compaction routine (완료 워크플로 → memory/pm-skills 외부화)</li>
+    <li><code>solosquad rollback --workflow &lt;id&gt;</code> CLI (사후 게이트)</li>
+    <li>8-layer spawn assembly 인터페이스 (v0.6 자산 자동 활성)</li>
+  </ul>
+
+  <h4>v0.4 — 밤새 자율 작업 완료 엔진</h4>
+  <ul>
+    <li>2계층 구조: <code>goal.md</code> (1회 실행 의도) + <code>AGENTS.md</code> (영속 가이드, cross-tool 표준)</li>
+    <li>OpenAI Codex <code>/goal</code> 패턴 차용 — 사람만 수정, 모델은 시작·완료만</li>
+    <li>Data Reconciliation: <code>metric_provenance</code> 필드 의무화 (Goodhart 법칙 방지)</li>
+    <li>3단계 가드레일 goal.md 스키마 (Input/Runtime/Output) + AGENTS.md immutable_paths 박제</li>
+    <li>signal-scan active trigger (신호 발견 → follow-up routine 자동 큐잉)</li>
+    <li><code>solosquad goal run &lt;goal-id&gt; --hours 8</code> (전체 CLI: new/list/show/run/status/stop/verify)</li>
+  </ul>
+
+  <h4>v0.5 — 워크플로우 메이커 + 스킬 시스템 통합</h4>
+  <ul>
+    <li>메신저에서 PM과 대화하며 새 agent/workflow 생성</li>
+    <li>SKILL.md 스키마 확장: <code>stateful: bool</code>, <code>triggers</code> 4채널 (slash/keyword/freq/explicit)</li>
+    <li>빈도 카운팅 기반 auto-load (시맨틱 임베딩 없이)</li>
+    <li>3-tier 검색 (project local > user global > bundle)</li>
+    <li><code>solosquad analyze repo</code> — 기존 리포 .claude/skills/ 4-라벨 분류 보고서</li>
+    <li><code>solosquad add repo --from-report</code> — 결정적 머지</li>
+    <li>Hot-reload (봇 재시작 없이 새 SKILL 라우팅)</li>
+  </ul>
+
+  <h4>v0.6 — 토폴로지 안정화 + 디폴트 워크플로우 튜닝 + 메모리 인프라</h4>
+  <ul>
+    <li><strong>Team = Domain 통합</strong> — <code>agents/_teams/{team}/TEAM_KNOWLEDGE.md</code> → <code>agents/{team}/KNOWLEDGE.md</code> co-location</li>
+    <li><strong>Organization Layer Specialization</strong> — <code>&lt;org&gt;/core/</code>·<code>agent-profile.yaml</code>·<code>domain/</code> 신설</li>
+    <li><strong>Workspace Knowledge Layer</strong> — <code>.solosquad/knowledge/</code> 신설 (사용자 누적 공용 지식)</li>
+    <li><strong>FTS5 cold archive</strong> — 7일 이상 된 JSONL을 SQLite FTS5로 이동, 라우터 검색 fallback</li>
+    <li>핸드오프 3변형 (hierarchical / graph / dynamic)</li>
+    <li>Trajectory → skill 자동 추출 (제안만, 자동 등록은 v1.0 후 결정)</li>
+    <li>4종 디폴트 워크플로 회고 + 갱신</li>
+    <li>PM의 워크플로 추천 로직 강화</li>
+  </ul>
+
+  <h4>v1.0 — 정식 출시 (Formal Launch)</h4>
+  <ul>
+    <li>v0.6까지 안정화 + 솔로 파운더 자기 사용 검증 완료</li>
+    <li>안정 API 약속 시작</li>
+    <li>Breaking change 정책 도입</li>
+  </ul>
+
+  <h4>v1.1 — 대시보드 상호작용</h4>
+  <ul>
+    <li>웹 대시보드 자체는 별도 리포(<code>solopreneur-dashboard</code>/<code>solopreneur-api</code>)에서 개발</li>
+    <li>본 리포는 상호작용 클라이언트·인박스만 제공</li>
+  </ul>
+
+  <h4>v1.2 — 사용자 지식·암묵지 온톨로지</h4>
+  <ul>
+    <li>누적된 메모리/이벤트 데이터를 그래프 백엔드로 인덱싱</li>
+    <li>MCP 외부 연결 (Notion·Obsidian·외부 API·타 에이전트)</li>
+  </ul>
+
+  <h4>참고 문서</h4>
+  <ul>
+    <li><code>docs/plan/v0.3-pm-mode-orchestration.md</code></li>
+    <li><code>docs/plan/v0.4-autonomous-engine.md</code></li>
+    <li><code>docs/plan/v0.5-workflow-maker.md</code></li>
+    <li><code>docs/plan/v0.6-default-workflow-tuning.md</code></li>
+    <li><code>docs/plan/v0.7-uninstall-lifecycle.md</code></li>
+    <li><code>docs/plan/v1.1-dashboard-interaction.md</code></li>
+    <li><code>docs/plan/v1.2-knowledge-ontology.md</code></li>
+    <li><code>docs/plan/product-roadmap.md</code> — 전체 결정 로그</li>
+    <li><code>docs/reference/AI_Agent_Harness_Report.md</code> — 설계 어휘 출처</li>
+    <li><code>docs/trend-record/2026-05-11-baseline-survey.md</code> — 피어 프로젝트 비교</li>
+  </ul>
+
+  <div class="footer-note">
+    이 문서는 SoloSquad <strong>v0.2.4 (npm 1.2.4)</strong> 기준이며, v0.3~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
+  </div>
+</section>
+
+<!-- ========================== SECTION 9 ========================== -->
+<section id="s9">
+  <h2><span class="num">9.</span>운영 가이드</h2>
+
+  <h3 id="s9-1">9.1 24/7 운영 방식 선택</h3>
+  <p>봇이 메신저와 연결을 유지하려면 <code>solosquad bot</code>이 계속 실행 중이어야 합니다. 방식 비교:</p>
+  <table>
+    <thead><tr><th>방식</th><th>대상</th><th>난이도</th><th>유지비</th><th>PC 전원</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. 로컬 데스크탑</strong></td><td>Mac Mini 등 항상 켜두는 PC</td><td>낮음</td><td>전기비만</td><td>항상 켜둬야 함</td></tr>
+      <tr><td><strong>B. 클라우드 VPS</strong></td><td>집에 서버 없음, 완전 24/7</td><td>중</td><td>월 $4~6+</td><td>PC 꺼도 무관</td></tr>
+    </tbody>
+  </table>
+
+  <h4>A-1. 터미널 열어두기 (가장 간단)</h4>
+  <pre><code>solosquad bot</code></pre>
+  <p>터미널이 열려 있는 동안만 동작. <code>Ctrl+C</code>나 창 닫으면 멈춤. PC 슬립 시 연결 끊김.</p>
+
+  <p><strong>macOS 슬립 방지 (Mac Mini에 특히 유용):</strong></p>
+  <pre><code>caffeinate -dims</code></pre>
+  <p>또는 시스템 설정 → 에너지 절약 → "디스플레이 끄기 제외" + 절전 모드 비활성화.</p>
+
+  <p><strong>Windows 슬립 방지:</strong> 설정 → 시스템 → 전원 → "절대 절전 모드로 설정 안 함".</p>
+
+  <p>스케줄러도 병행하려면 별도 터미널:</p>
+  <pre><code>solosquad schedule</code></pre>
+
+  <h4>A-2. Docker Compose (백그라운드 + 자동 재시작, 권장)</h4>
+  <p>전제: Docker Desktop 설치 (https://docs.docker.com/desktop/). macOS Apple Silicon/Intel 모두 동작. <code>solosquad init</code>이 <code>Dockerfile</code>과 <code>docker-compose.yml</code>을 워크스페이스에 복사했는지 확인.</p>
+  <pre><code>cd ~/solosquad-workspace
+docker compose up -d --build      # 최초 빌드 + 백그라운드 기동
+docker compose logs -f bot        # 봇 로그
+docker compose logs -f scheduler  # 스케줄러 로그
+docker compose ps                 # 서비스 상태
+docker compose restart            # 재시작
+docker compose down               # 정지</code></pre>
+
+  <p><strong>Claude Code 인증 공유:</strong> 컨테이너 내부의 <code>claude</code> CLI도 인증이 필요. <code>docker-compose.yml</code>이 호스트의 <code>${HOME}/.claude</code>를 컨테이너의 <code>/root/.claude</code>로 마운트 → 호스트 로그인 세션 공유.</p>
+  <ol>
+    <li>호스트에서 <code>claude login</code> 완료</li>
+    <li><code>docker compose up -d --build</code></li>
+    <li>컨테이너 안의 <code>claude</code>가 호스트 자격증명을 읽어 동일 계정으로 동작</li>
+  </ol>
+  <p>다른 경로면 <code>.env</code>에 명시:</p>
+  <pre><code>CLAUDE_AUTH_DIR=/Users/youruser/.claude</code></pre>
+
+  <p><strong>PC 재부팅 후:</strong> Docker Desktop 자동 시작 설정 시 (Docker Desktop 설정 → "Start Docker Desktop when you log in") 컨테이너는 <code>restart: unless-stopped</code> 정책으로 자동 복귀.</p>
+
+  <div class="callout warn">
+    <strong>Windows Docker 주의</strong>
+    <code>${HOME}/.claude</code> 볼륨 마운트는 macOS/Linux 기준. Windows에서 Docker를 쓴다면 <code>CLAUDE_AUTH_DIR</code>을 <code>C:/Users/yourname/.claude</code> 같은 절대 경로로 명시하거나, A-1 또는 A-3 방식 권장.
+  </div>
+
+  <h4>A-3. macOS launchd / Windows NSSM (서비스화)</h4>
+  <p>Docker 없이 네이티브 프로세스를 로그인 시 자동 시작하려면.</p>
+
+  <p><strong>macOS — launchd</strong>. <code>~/Library/LaunchAgents/com.solosquad.bot.plist</code>:</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.solosquad.bot&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;
+    &lt;string&gt;/usr/local/bin/solosquad&lt;/string&gt;
+    &lt;string&gt;bot&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/YOURNAME/solosquad-workspace&lt;/string&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.log&lt;/string&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.err&lt;/string&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+  <p>경로(<code>/usr/local/bin/solosquad</code>)는 <code>which solosquad</code>로 확인. 등록/시작:</p>
+  <pre><code>launchctl load ~/Library/LaunchAgents/com.solosquad.bot.plist
+launchctl start com.solosquad.bot
+tail -f /tmp/solosquad-bot.log</code></pre>
+  <p>스케줄러도 동일하게 <code>com.solosquad.scheduler.plist</code> 추가.</p>
+
+  <p><strong>Windows — NSSM:</strong></p>
+  <ol>
+    <li>https://nssm.cc 에서 NSSM 다운로드 → <code>nssm.exe</code>를 PATH에 추가</li>
+    <li>관리자 PowerShell:
+      <pre><code>nssm install SolosquadBot "C:\Users\YOU\AppData\Roaming\npm\solosquad.cmd" bot
+nssm set SolosquadBot AppDirectory "C:\Users\YOU\solosquad-workspace"
+nssm start SolosquadBot</code></pre>
+    </li>
+  </ol>
+
+  <h4>B. 클라우드 VPS (고급)</h4>
+  <p>"집에 서버 둘 생각 없음" 또는 "PC 꺼도 봇은 살아있어야" 할 때.</p>
+
+  <p><strong>고려 시점:</strong></p>
+  <ul>
+    <li>집에 24/7 켜둘 PC 없음</li>
+    <li>여행 중이거나 노트북만 쓰는 라이프스타일</li>
+    <li>팀원 추가로 봇을 공동 운영해야 함</li>
+    <li>안정성이 사업에 직결 (자동 알림/루틴 실패가 손실)</li>
+  </ul>
+
+  <table>
+    <thead><tr><th>제공업체</th><th>월 비용</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>Hetzner</td><td>~$4</td><td>유럽 기반, 가성비 최고</td></tr>
+      <tr><td>Vultr</td><td>$5</td><td>서울 리전 있음</td></tr>
+      <tr><td>Linode</td><td>$5</td><td>안정적</td></tr>
+      <tr><td>DigitalOcean</td><td>$6</td><td>커뮤니티 자료 풍부</td></tr>
+      <tr><td>Railway (PaaS)</td><td>$5+</td><td>GitHub 연동 자동 배포, 서버 관리 불필요</td></tr>
+      <tr><td>Fly.io (Docker PaaS)</td><td>$5+</td><td>도쿄 리전, 글로벌 배포</td></tr>
+      <tr><td>AWS ECS Fargate</td><td>$10~15</td><td>엔터프라이즈급</td></tr>
+    </tbody>
+  </table>
+
+  <p>빠른 요약 (VPS + systemd):</p>
+  <pre><code># VPS SSH 접속 후
+sudo apt update && sudo apt install -y nodejs npm git
+npm install -g @anthropic-ai/claude-code solosquad
+mkdir ~/solosquad && cd ~/solosquad
+solosquad init
+claude login
+# systemd 서비스 등록 — 상세는 docs/cloud-deployment.md</code></pre>
+
+  <div class="callout info">
+    <strong>상세 가이드</strong>
+    <code>docs/cloud-deployment.md</code>에 VPS 최초 설정, Node.js 설치, solosquad 글로벌 설치, systemd 서비스 등록, 로그 관리, 업데이트, 백업이 정리되어 있습니다.
+  </div>
+
+  <h3 id="s9-2">9.2 멀티 워크스페이스 (페르소나 분리)</h3>
+  <p>Slack과 Discord를 동시에 쓰고 싶거나, 본업/사이드 페르소나를 분리하고 싶을 때 워크스페이스를 여러 개 만듭니다.</p>
+  <pre><code>~/solopreneur/      # Slack 봇, 본업 페르소나
+~/personal-lab/     # Discord 봇, 사이드 페르소나</code></pre>
+  <p>각각 독립된 <code>.env</code>·토큰·봇 계정을 갖습니다. 서로 간섭 없이 동시 운영 가능. 이 제약은 v0.2.0부터 — 이전 v0.1.x의 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 지원하지 않습니다.</p>
+
+  <p><strong>업데이트 시:</strong> CLI 업데이트는 한 번이면 되지만 <strong>마이그레이션은 각 워크스페이스에서 개별 실행</strong> (§4.4 참조).</p>
+
+  <h3 id="s9-3">9.3 제품 여러 개 운영 (조직·저장소 관리)</h3>
+  <p>한 워크스페이스 안에 조직(=제품/사업)을 여러 개 둘 수 있습니다. 각 조직은 완전 격리된 메모리·워크플로·메신저 채널을 갖습니다.</p>
+
+  <h4>조직 추가</h4>
+  <pre><code>solosquad add org &lt;name&gt;                        # 대화형 (provider/remote_url 질의)
+solosquad add org my-side --provider github --remote-url https://github.com/my-side</code></pre>
+  <p><code>&lt;workspace&gt;/&lt;name&gt;/</code> 폴더 + <code>.org.yaml</code> + <code>memory/</code> (routine-logs/ + 4개 JSONL 스키마) + <code>workflows/</code> + <code>repositories/</code> + 메신저 폴더 자동 생성.</p>
+
+  <h4>저장소 추가</h4>
+  <p>URL이면 clone, 경로면 등록(필요시 이동).</p>
+  <pre><code>solosquad add repo https://github.com/foo/bar.git                       # clone + 등록
+solosquad add repo ./existing-local-repo                                # 이동(확인 후) + 등록
+solosquad add repo https://github.com/foo/bar.git --org tesla --role frontend
+solosquad add repo &lt;url|path&gt; --slug my-custom-slug                     # 폴더명 override</code></pre>
+
+  <p><strong>org 자동 판정 순서:</strong></p>
+  <ol>
+    <li><code>--org &lt;slug&gt;</code> 명시 → 즉시 사용</li>
+    <li>워크스페이스에 조직이 하나뿐 → 자동 선택 (묻지 않음)</li>
+    <li>현재 cwd가 특정 org 폴더 안 → 그 org 자동</li>
+    <li>복수 org + 위 모두 해당 안 됨 → 대화형 선택</li>
+  </ol>
+
+  <p><strong>자동 추출:</strong></p>
+  <ul>
+    <li><code>remote_url</code> — git remote에서 읽어 <code>repo.yaml</code>에 기록</li>
+    <li><code>language</code> — <code>package.json</code> (TypeScript 자동 감지) / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code>에서 감지</li>
+    <li><code>role</code> 기본값 — <code>.git</code> 있으면 <code>main</code>, 없으면 <code>unknown</code></li>
+  </ul>
+
+  <h4>Bulk 동기화</h4>
+  <p>이미 <code>repositories/</code>에 clone해둔 repo들을 한 번에 등록:</p>
+  <pre><code>solosquad sync                # 모든 org 스캔
+solosquad sync --org tesla    # 특정 org만
+solosquad sync --dry-run      # 미리보기 (아무 것도 쓰지 않음)</code></pre>
+  <p><strong>동작:</strong></p>
+  <ul>
+    <li><code>&lt;org&gt;/repositories/&lt;folder&gt;</code> 중 <code>.git</code> 있는데 <code>repo.yaml</code> 없는 경우 → 자동 등록</li>
+    <li>이미 등록된 repo → <code>=</code> 표시로 스킵</li>
+    <li><code>.git</code> 없는 폴더 → <code>?</code> 경고 표시 후 스킵</li>
+    <li><code>.org.yaml.products[].repos</code>를 실제 존재 repo 목록으로 갱신</li>
+    <li><code>.org.yaml</code>에 나열됐지만 실제 폴더가 없는 repo → <code>-</code> 빨간색 경고</li>
+  </ul>
+
+  <h4>Cross-repo workflow (v0.2.1+)</h4>
+  <p>v0.2.1 런타임은 워크플로우 <code>_status.yaml</code>의 stage에 <code>target_repo</code> 필드가 있으면 해당 stage 실행 시 그 repo를 cwd로 사용합니다. 여러 repo에 걸친 작업 흐름을 하나의 workflow로 조율 가능:</p>
+  <pre><code># &lt;org&gt;/workflows/model-y-refresh/_status.yaml
+stages:
+  - id: stage-1-vision
+    target_repo: autopilot-vision       # Claude가 이 repo를 cwd로
+    status: in_progress
+    depends_on: []
+
+  - id: stage-2-planner
+    target_repo: autopilot-planner      # 다른 repo
+    status: pending
+    depends_on: [stage-1-vision]</code></pre>
+  <p><strong>활성 stage 판정:</strong></p>
+  <ol>
+    <li><code>status: in_progress</code>인 stage가 있으면 그것</li>
+    <li>없으면 <code>status: pending</code> 중 <code>depends_on</code>이 모두 completed인 첫 stage</li>
+    <li>둘 다 없으면 role=main repo → org 루트 순 fallback</li>
+  </ol>
+  <p>stage 상태 전환 (<code>pending → in_progress → completed</code>)은 현재 수동 편집. 자동화는 v0.3+ 로드맵 (PM이 진행).</p>
+
+  <h3 id="s9-4">9.4 보안 체크리스트</h3>
+  <p>이 시스템은 AI가 코드와 명령을 실행합니다. 다음을 꼭 확인.</p>
+  <ul>
+    <li><code>.env</code>가 <code>.gitignore</code>에 포함되어 있는지</li>
+    <li>봇 토큰 주기적 교체 (90일 권장)</li>
+    <li>AI 출력을 프로덕션에 배포하기 전 반드시 검토</li>
+    <li>메신저 봇 권한은 최소로 설정 — §5의 scope 리스트 이상 주지 않기</li>
+    <li><code>solosquad doctor</code> 주기적 실행</li>
+    <li>클라우드 운영 시: SSH 키 인증만 허용, 방화벽은 아웃바운드만 허용</li>
+  </ul>
+  <p>상세: <code>docs/plan/v0.2-safety-security.md</code></p>
+</section>
+
+<!-- ========================== SECTION 10 ========================== -->
+<section id="s10">
+  <h2><span class="num">10.</span>트러블슈팅 &amp; FAQ</h2>
+
+  <h3 id="s10-1">10.1 설치·실행 문제</h3>
+
+  <h4>"solosquad를 찾을 수 없습니다"</h4>
+  <ul>
+    <li><code>npm install -g solosquad</code>로 설치했는지 확인</li>
+    <li><code>node --version</code>으로 Node.js 18+ 확인</li>
+    <li>Linux에서 권한 오류 시: <code>sudo npm install -g solosquad</code> 또는 <code>~/.npm-global</code> 설정</li>
+  </ul>
+
+  <h4>"claude를 찾을 수 없습니다"</h4>
+  <pre><code>npm install -g @anthropic-ai/claude-code
+claude login
+solosquad doctor       # 최종 확인</code></pre>
+
+  <h4>메신저에서 봇이 응답하지 않음</h4>
+  <p>먼저 환경 불일치 확인:</p>
+  <pre><code>solosquad doctor                    # 기본 진단
+solosquad doctor --messenger-check  # 토큰 live API 검증</code></pre>
+  <p><code>.env vs process.env mismatch</code> 경고가 뜨면 solosquad 최신 버전으로 업데이트해야 합니다 (<code>.env</code> 로드 버그는 v0.1.3에서 수정).</p>
+
+  <p><strong>Slack 체크리스트</strong> (§5.1 Step 9 재확인):</p>
+  <ul>
+    <li>Event Subscriptions 활성화 + <code>message.channels</code> 구독</li>
+    <li>Scope 변경 후 Reinstall to Workspace 수행</li>
+    <li><code>#owner-command</code> 채널에 봇 초대</li>
+  </ul>
+
+  <p><strong>Discord 체크리스트</strong> (§5.2 마지막 체크리스트):</p>
+  <ul>
+    <li><strong>Message Content Intent</strong> ON</li>
+    <li>봇 권한 <strong>Create Public Threads</strong> (v0.2.4+, 시스템 스레드 생성용)</li>
+    <li>서버 이름에 제품 이름/slug 포함</li>
+  </ul>
+
+  <p><strong>기존 Telegram 사용자</strong>: v0.2.4부터 지원 제거. <code>.solosquad/.env</code>의 <code>MESSENGER=telegram</code>을 <code>discord</code> 또는 <code>slack</code>으로 변경하고 setup 새로 진행 (§4.4 참조).</p>
+
+  <h4>루틴이 실행되지 않음</h4>
+  <ul>
+    <li><code>solosquad schedule</code>이 실행 중인지 (<code>ps</code> 또는 <code>docker compose ps</code>)</li>
+    <li>수동 테스트: <code>solosquad run-routine signal-scan</code></li>
+  </ul>
+
+  <h4>Docker: <code>claude: command not found</code> (컨테이너 내부)</h4>
+  <ul>
+    <li><code>CLAUDE_AUTH_DIR</code> 볼륨 마운트가 올바른지 확인</li>
+    <li>컨테이너 안에서 직접 인증: <code>docker exec -it solosquad-bot claude login</code></li>
+  </ul>
+
+  <h4>업데이트 후 동작 이상</h4>
+  <pre><code>solosquad doctor
+solosquad update                    # 이미 최신이면 안내만 출력
+docker compose up -d --build        # Docker 사용 시 이미지 재빌드</code></pre>
+
+  <h3 id="s10-2">10.2 마이그레이션 트러블슈팅</h3>
+
+  <h4>"Cannot find package.json" 류 에러</h4>
+  <pre><code>npm cache clean --force
+npm uninstall -g solosquad
+npm install -g solosquad@latest</code></pre>
+
+  <h4>마이그레이션 중단</h4>
+  <pre><code>solosquad migrate --rollback   # 가장 최근 백업으로 복원</code></pre>
+  <p>그 다음 GitHub Issues에 로그와 함께 보고.</p>
+
+  <h4>마이그레이션 후 <code>bot</code>이 안 뜸</h4>
+  <pre><code>solosquad doctor</code></pre>
+  <p>출력 확인. 토큰 누락·<code>.env</code> 위치 이상이 흔한 원인.</p>
+
+  <h4>Claude Code 인증 풀림</h4>
+  <pre><code>claude login
+docker compose restart    # Docker 사용 시</code></pre>
+
+  <h4>어떤 버전으로 업그레이드할지 모르겠음</h4>
+  <p>릴리스 노트를 먼저 확인:</p>
+  <ul>
+    <li>GitHub Releases: https://github.com/Adelie-Squad/solosquad/releases</li>
+    <li><code>docs/product-roadmap.md</code></li>
+  </ul>
+  <p>breaking change가 포함된 minor 업데이트는 중요 프로젝트용으로는 <strong>일주일 정도 관찰</strong> 후 올라가는 것도 합리적.</p>
+
+  <h3 id="s10-3">10.3 자주 묻는 질문 (FAQ)</h3>
+
+  <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
+  A. Claude Code Max 구독료만 있으면 시작 가능. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
+
+  <p><strong>Q. Discord와 Slack을 동시에 쓸 수 있나요?</strong><br>
+  A. 한 워크스페이스에서는 불가능. <strong>워크스페이스를 두 개</strong> 만들면 됩니다 — 예: <code>~/solopreneur/</code>(Slack 봇) + <code>~/elon-24-7/</code>(Discord 봇). 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 미지원.</p>
+
+  <p><strong>Q. 시간대가 한국이 아니면?</strong><br>
+  A. <code>.env</code>의 <code>TZ=</code>를 변경 (예: <code>TZ=America/Los_Angeles</code>). Docker도 동일.</p>
+
+  <p><strong>Q. AI가 틀린 답을 하면?</strong><br>
+  A. AI는 도구입니다. 중요한 결정은 반드시 본인이 직접 확인. <code>solosquad rollback</code> (v0.3+)으로 spawn 결과 revert 가능.</p>
+
+  <p><strong>Q. Mac Mini 대신 Raspberry Pi로 돌릴 수 있나요?</strong><br>
+  A. Node.js 18+이 돌면 가능. 단, Claude Code CLI는 arm64 기반 리눅스를 공식 지원하는지 먼저 확인 필요.</p>
+
+  <p><strong>Q. 완전 오프라인에서 쓸 수 있나요?</strong><br>
+  A. 불가. Claude API와 Slack/Discord 서버 통신이 필수.</p>
+
+  <p><strong>Q. 업데이트 전에 꼭 해야 할 일이 있나요?</strong><br>
+  A. <code>solosquad bot</code> / <code>schedule</code>이 실행 중이면 먼저 정지. <code>docker compose down</code> 또는 터미널 <code>Ctrl+C</code>.</p>
+
+  <p><strong>Q. 매번 업데이트해야 하나요?</strong><br>
+  A. 아닙니다. 안정적으로 쓰고 있다면 급할 이유는 없음. 다만 <strong>보안 hotfix</strong>(예: v0.1.3 dotenv 누락)는 빠르게 적용 권장.</p>
+
+  <p><strong>Q. 업데이트 자동화가 가능한가요?</strong><br>
+  A. Docker 환경이면 <code>docker compose up -d --build</code>를 cron에 걸면 이미지 최신화됩니다. 단 <strong>마이그레이션 필요 시엔 자동화 불가</strong> — 사람의 확인이 들어가는 게 원칙.</p>
+
+  <p><strong>Q. 예전 버전으로 고정하고 싶어요.</strong><br>
+  A. <code>npm install -g solosquad@1.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
+
+  <p><strong>Q. 여러 사람이 한 머신에서 씁니다.</strong><br>
+  A. 각자 OS 계정을 다르게 쓰고, 각 계정의 홈 디렉토리에 독립된 워크스페이스를 두세요. 마이그레이션도 계정별로 따로 진행.</p>
+
+  <p><strong>Q. 베타·개발 채널이 있나요?</strong><br>
+  A. <code>solosquad update --channel dev</code>로 전환 가능 (단, 안정성 보장 없음). <code>--channel stable</code>이 기본.</p>
+</section>
+
+</main>
+
+<script>
+  // Top-level menu switching (show/hide section)
+  const menuLinks = document.querySelectorAll('nav > ul > li > a[data-target]');
+  const sections = document.querySelectorAll('main section');
+
+  function activate(target) {
+    menuLinks.forEach(a => {
+      a.classList.toggle('active', a.dataset.target === target);
+    });
+    sections.forEach(s => {
+      s.classList.toggle('active', s.id === target);
+    });
+    // Scroll to top of content area when switching sections
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  menuLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      activate(a.dataset.target);
+    });
+  });
+
+  // Sub-link click: switch to parent section first, then scroll to anchor
+  document.querySelectorAll('nav .sub li a').forEach(sublink => {
+    sublink.addEventListener('click', e => {
+      e.preventDefault();
+      const hash = sublink.getAttribute('href');           // "#s1-2"
+      const sectionId = hash.replace('#', '').split('-')[0]; // "s1"
+      activate(sectionId);
+      // After activating, scroll to the specific sub-anchor
+      requestAnimationFrame(() => {
+        const target = document.querySelector(hash);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  });
+
+  // Initial state: section 1 active
+  activate('s1');
+</script>
+
+</body>
+</html>
