@@ -580,22 +580,24 @@ TypeScript + Next.js. Vercel 배포.
 - API route는 src/pages/api/
 ...</code></pre>
 
-  <h3 id="s3-4">3.4 SKILL.md vs AGENTS.md — 역할이 다른 두 표준</h3>
-  <p>SoloSquad는 <strong>둘 다 채택</strong>합니다. 같은 자리에 있는 듯해도 책임이 다르기 때문입니다.</p>
+  <h3 id="s3-4">3.4 SKILL.md vs AGENTS.md — 다른 레이어, 다른 역할</h3>
+  <p>SoloSquad는 <strong>두 파일을 모두 사용하되 책임이 명확히 다릅니다</strong>. 한 워크스페이스에서 SKILL.md는 여러 개, AGENTS.md는 단 1개.</p>
 
   <table>
     <thead><tr><th></th><th>SKILL.md (Anthropic 공식)</th><th>AGENTS.md (cross-tool 표준) <span class="badge plan">v0.4</span></th></tr></thead>
     <tbody>
-      <tr><td>역할</td><td>개별 <strong>agent의 정체성·동작 매뉴얼</strong></td><td>워크스페이스 <strong>영속 가이드</strong> (프로젝트 컨벤션·금지 경로·도구 사용 규칙)</td></tr>
-      <tr><td>위치</td><td><code>assets/agents/{team}/{agent}/SKILL.md</code> (25 specialist 각각)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code 마켓플레이스 호환)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> 1개</td></tr>
+      <tr><td>역할</td><td>개별 <strong>agent의 정체성·동작 매뉴얼</strong></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (프로젝트 컨벤션·금지 경로·도구 사용 규칙)</td></tr>
+      <tr><td>위치·개수</td><td><code>assets/agents/{team}/{agent}/SKILL.md</code> (25 specialist 각각)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code 마켓플레이스 호환)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> <strong>단 1개</strong></td></tr>
       <tr><td>frontmatter</td><td>YAML, <code>name</code>·<code>description</code> 필수 + v0.4 도구·모델 override</td><td>없음 — 자유 markdown</td></tr>
-      <tr><td>편집 주체</td><td>v0.5 analyzer는 자동 분류·머지. 사람이 손볼 수 있음.</td><td><strong>사람 only</strong>. 어떤 AI 에이전트도 이 파일을 수정하지 못함 (Codex `/goal` 정신과 동일).</td></tr>
-      <tr><td>다른 도구 호환</td><td>Claude Code Plugin 마켓플레이스와 직접 연동.</td><td>Codex·Aider·Cursor 모두 인식하는 cross-tool 표준 (<a href="https://developers.openai.com/codex/agents-md/">Codex AGENTS.md spec</a>).</td></tr>
+      <tr><td>편집 주체</td><td>v0.5 analyzer는 자동 분류·머지. 사람이 손볼 수 있음.</td><td><strong>사람 only</strong>. 어떤 AI 에이전트도 이 파일을 수정하지 못함 (Codex `/goal` 신뢰 앵커 정신과 동일).</td></tr>
+      <tr><td>다른 도구 호환</td><td>Claude Code Plugin 마켓플레이스와 직접 연동.</td><td>Codex·Aider·Cursor·최신 Claude Code 모두 인식하는 <strong>cross-tool 표준</strong> (<a href="https://developers.openai.com/codex/agents-md/">Codex AGENTS.md spec</a>).</td></tr>
       <tr><td>v0.4 자율 실행에서</td><td>spawn된 specialist가 자기 SKILL.md를 컨텍스트로 받음.</td><td><code>immutable_paths</code>·<code>modifiable_paths</code>·외부 호출 화이트리스트가 박제되어 모든 <code>goal.md</code> 실행이 자동 상속.</td></tr>
     </tbody>
   </table>
 
-  <p><strong>요점:</strong> SKILL.md는 "이 agent가 누구인지·뭘 잘하는지"를 적고, AGENTS.md는 "이 워크스페이스를 만지는 모든 AI 도구가 따라야 할 룰"을 적습니다. 둘은 경쟁 관계가 아니라 **다른 레이어**입니다. CLAUDE.md(Anthropic 진영 내러티브)도 별도로 공존합니다.</p>
+  <p><strong>요점:</strong> SKILL.md는 "이 agent가 누구인지·뭘 잘하는지"를 적고, AGENTS.md는 "이 워크스페이스를 만지는 모든 AI 도구가 따라야 할 룰"을 적습니다. 둘은 경쟁이 아니라 다른 레이어입니다.</p>
+
+  <p><strong>CLAUDE.md는 더 이상 사용하지 않습니다 <span class="badge plan">v0.4 결정</span>.</strong> 종전에는 CLAUDE.md와 AGENTS.md를 워크스페이스 루트에 함께 두는 설계였으나, 같은 위계에 두 파일을 두면 "어디 적어야 하지" 혼란이 발생하고 두 출처가 발산할 위험이 큽니다. v0.4부터 SoloSquad는 워크스페이스 영속 가이드를 <code>AGENTS.md</code> 단일 파일로 통일합니다. 기존 CLAUDE.md는 마이그레이션이 손대지 않고 컨텐츠만 AGENTS.md로 1회 복사 — 사용자가 필요 없으면 수동 삭제. 최신 Claude Code도 AGENTS.md를 fallback으로 인식하므로 호환성 손실 없음.</p>
 
   <h3 id="s3-5">3.5 위계별 파일 종류 (마스터 표)</h3>
 
@@ -610,7 +612,7 @@ TypeScript + Next.js. Vercel 배포.
       <tr><td><code>assets/routines/</code></td><td><code>morning-brief.md</code><br><code>evening-brief.md</code><br><code>signal-scan.md</code><br><code>experiment-check.md</code><br><code>weekly-review.md</code></td><td>5종 자동 routine 프롬프트</td><td>scheduler가 cron 시각에</td></tr>
       <tr><td><code>assets/templates/</code></td><td><code>handoff.md</code> / <code>prd-{type}.md</code> / <code>status.yaml</code> / ...</td><td>워크플로 스캐폴딩 템플릿</td><td>새 워크플로 생성 시</td></tr>
       <tr><td><code>.solosquad/knowledge/</code> <span class="badge plan">v0.6</span></td><td>(사용자 자유)</td><td>누적 공용 지식 (의사결정 프레임워크 등)</td><td>키워드 매칭 시 selective load</td></tr>
-      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>AGENTS.md</code></td><td>cross-tool 영속 가이드 (immutable_paths·modifiable_paths·Output 가드 박제). Codex·Aider·Cursor도 동일 파일 인식.</td><td>모든 자율 실행 (<code>solosquad goal run</code>)이 자동 상속. CLAUDE.md와 공존.</td></tr>
+      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>AGENTS.md</code></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (immutable_paths·modifiable_paths·Output 가드 박제). Codex·Aider·Cursor·최신 Claude Code 모두 동일 파일 인식하는 cross-tool 표준. 사람 only 편집.</td><td>모든 자율 실행 (<code>solosquad goal run</code>) + PM session이 자동 상속. (CLAUDE.md는 v0.4부터 사용하지 않음 — §3.4 참조)</td></tr>
     </tbody>
   </table>
 
