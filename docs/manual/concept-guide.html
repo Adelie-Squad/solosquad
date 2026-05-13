@@ -1188,7 +1188,7 @@ solosquad bot --debug               # 자세한 로그</code></pre>
       <tr><td><code>solosquad pm status / reset / compact</code></td><td>v0.3</td><td>PM session 상태·재시작·compaction</td></tr>
       <tr><td><code>solosquad workflow list / show &lt;id&gt;</code></td><td>v0.3</td><td>워크플로 목록·상세</td></tr>
       <tr><td><code>solosquad rollback --workflow &lt;id&gt;</code></td><td>v0.3</td><td>특정 워크플로 직전 spawn 결과 revert</td></tr>
-      <tr><td><code>solosquad run --program &lt;file&gt; --hours N</code></td><td>v0.4</td><td>자율 실험 루프 (밤새 작업)</td></tr>
+      <tr><td><code>solosquad goal new / list / show / run / status / stop / verify</code></td><td>v0.4</td><td>자율 실행 goal 관리 + 밤새 실행 루프 (Codex <code>/goal</code> + <code>AGENTS.md</code> 2계층)</td></tr>
       <tr><td><code>solosquad agent add / list / info / validate</code></td><td>v0.5</td><td>새 agent 스캐폴딩·관리</td></tr>
       <tr><td><code>solosquad analyze repo &lt;path&gt;</code></td><td>v0.5</td><td>기존 리포 .claude/skills/ 4-라벨 분류 보고서</td></tr>
       <tr><td><code>solosquad add repo --from-report &lt;file&gt;</code></td><td>v0.5</td><td>분석 보고서 기반 결정적 머지</td></tr>
@@ -1650,11 +1650,12 @@ solosquad run-routine --all          # 전부</code></pre>
 
   <h4>v0.4 — 밤새 자율 작업 완료 엔진</h4>
   <ul>
-    <li><code>program.md</code> 작성 → 자율 실험 루프 (autoresearch 패턴)</li>
+    <li>2계층 구조: <code>goal.md</code> (1회 실행 의도) + <code>AGENTS.md</code> (영속 가이드, cross-tool 표준)</li>
+    <li>OpenAI Codex <code>/goal</code> 패턴 차용 — 사람만 수정, 모델은 시작·완료만</li>
     <li>Data Reconciliation: <code>metric_provenance</code> 필드 의무화 (Goodhart 법칙 방지)</li>
-    <li>3단계 가드레일 program.md 스키마 (Input/Runtime/Output)</li>
+    <li>3단계 가드레일 goal.md 스키마 (Input/Runtime/Output) + AGENTS.md immutable_paths 박제</li>
     <li>signal-scan active trigger (신호 발견 → follow-up routine 자동 큐잉)</li>
-    <li><code>solosquad run --program program.md --hours 8</code></li>
+    <li><code>solosquad goal run &lt;goal-id&gt; --hours 8</code> (전체 CLI: new/list/show/run/status/stop/verify)</li>
   </ul>
 
   <h4>v0.5 — 워크플로우 메이커 + 스킬 시스템 통합</h4>
