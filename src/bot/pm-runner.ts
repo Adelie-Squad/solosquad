@@ -12,6 +12,7 @@ import {
   nowIso,
 } from "./events.js";
 import { parseSpawnMarkers } from "./spawn-prompt-markers.js";
+import { parseFocusMarker, stripFocusMarkers } from "./focus-markers.js";
 
 /**
  * v1.3.0 — PM session driver.
@@ -179,6 +180,12 @@ export class PmRunner {
     // --session-id <uuid> instead of --resume <uuid>.
     const useResume = !fresh && !rotatedAlready;
 
+    // v1.3.2: tell PM its currently-focused workflow (if any). The append
+    // text is cache-friendly — same workflow id ⇒ same prompt ⇒ cache hit.
+    const focusHint = record.activeWorkflowId
+      ? `\n\n[ambient] Your currently-focused workflow is \`${record.activeWorkflowId}\`. If you switch focus, include \`[focus:<new-wf-id>]\` (or \`[focus:none]\`) in your reply.`
+      : "";
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -188,6 +195,7 @@ export class PmRunner {
       includePartialMessages: true,
       maxBudgetUsd: this.deps.maxBudgetUsd ?? 5,
       timeoutMs: this.deps.timeoutMs ?? 300_000,
+      appendSystemPrompt: focusHint || undefined,
     });
 
     let costUsd = 0;
@@ -263,7 +271,19 @@ export class PmRunner {
       );
     }
 
-    const text = lastResultText || collectedAssistantText.join("");
+    const rawText = lastResultText || collectedAssistantText.join("");
+
+    // v1.3.2: apply any [focus:<wf-id>] marker, then strip from user-facing reply.
+    const focusUpdate = parseFocusMarker(rawText);
+    if (focusUpdate) {
+      this.deps.sessions.setActiveWorkflow(
+        call.orgSlug,
+        call.userId,
+        focusUpdate.workflowId ?? undefined
+      );
+    }
+    const text = focusUpdate ? stripFocusMarkers(rawText) : rawText;
+
     return {
       text,
       costUsd,

@@ -236,6 +236,18 @@ workflowGroup
     await workflowShowCommand(workflowId, opts);
   });
 
+workflowGroup
+  .command("focus")
+  .description("Set the active workflow for a user's PM session (or --clear)")
+  .argument("[workflow-id]", "Workflow id to focus on; omit when using --clear")
+  .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .option("--user <id>", "User id (interactive picker if omitted)")
+  .option("--clear", "Clear focus instead of setting it")
+  .action(async (workflowId, opts) => {
+    const { workflowFocusCommand } = await import("./workflow-focus.js");
+    await workflowFocusCommand(workflowId, opts);
+  });
+
 program
   .command("rollback")
   .description("Revert <org>/memory and <org>/workflows to an earlier snapshot")
