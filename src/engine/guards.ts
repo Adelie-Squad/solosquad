@@ -81,16 +81,7 @@ export function preflightInputGuard(
   guide: PersistentGuide,
   resolved: ResolvedPaths
 ): InputGuardCheck {
-  if (resolved.modifiable.length === 0) {
-    return {
-      ok: false,
-      reason:
-        "modifiable_paths is empty after intersection with AGENTS.md. Goal cannot make any changes.",
-    };
-  }
-
-  // Sanity: if goal's modifiable_paths_override declared a path that the
-  // AGENTS.md immutable list also names, the goal contradicts the guide.
+  // Check override-vs-immutable conflicts FIRST (most informative error).
   if (goal.modifiable_paths_override) {
     for (const p of goal.modifiable_paths_override) {
       for (const imm of guide.immutable_paths) {
@@ -102,6 +93,14 @@ export function preflightInputGuard(
         }
       }
     }
+  }
+
+  if (resolved.modifiable.length === 0) {
+    return {
+      ok: false,
+      reason:
+        "modifiable_paths is empty after intersection with AGENTS.md. Goal cannot make any changes.",
+    };
   }
 
   // Sanity: cost_budget must be enough for at least 1 cycle.
@@ -258,23 +257,59 @@ function uniq(arr: string[]): string[] {
  * to match. Used for both modifiable/immutable resolution and per-event
  * post-hoc verification.
  */
+/**
+ * Match `filepath` against `pattern` using a segment-based prefix model.
+ *
+ * Rules:
+ *  - `<...>` in either side is treated as a single-segment wildcard.
+ *  - `*` is a single-segment wildcard.
+ *  - `**` matches zero or more segments (rest-of-path).
+ *  - If the pattern's segments are a *prefix* of the filepath's segments
+ *    (with wildcards), the filepath matches (i.e. pattern declares a
+ *    directory; any file under it is in scope).
+ *  - The match is symmetric for intersection checks: if pattern is more
+ *    specific than filepath but they overlap, the function returns true.
+ */
 export function pathMatches(filepath: string, pattern: string): boolean {
-  // Normalize both sides
-  const norm = (s: string) => s.replace(/\\/g, "/").replace(/\/$/, "");
-  const f = norm(filepath);
-  const p = norm(pattern);
+  const norm = (s: string) =>
+    s.replace(/\\/g, "/").replace(/\/$/, "").replace(/<[^>]+>/g, "*");
+  const fSegs = norm(filepath).split("/").filter(Boolean);
+  const pSegs = norm(pattern).split("/").filter(Boolean);
 
-  // Direct prefix shortcut (most common: "src/engine" matches "src/engine/foo.ts")
-  if (f === p) return true;
-  if (f.startsWith(p + "/")) return true;
-  if (p.startsWith(f + "/")) return true; // pattern's child === file's parent
+  // Try prefix match in both directions (a is the "more specific" candidate).
+  return prefixMatch(fSegs, pSegs) || prefixMatch(pSegs, fSegs);
+}
 
-  // Convert glob → regex
-  const escaped = p
-    .replace(/[.+^$()|{}[\]]/g, "\\$&")
-    .replace(/\*\*/g, "::DOUBLESTAR::")
-    .replace(/\*/g, "[^/]*")
-    .replace(/::DOUBLESTAR::/g, ".*");
-  const re = new RegExp(`^${escaped}$`);
-  return re.test(f);
+/** Is `aSegs` matchable as a path under (or equal to) the pattern `bSegs`?
+ *  Each segment of bSegs constrains the corresponding segment of aSegs;
+ *  `**` consumes the rest. */
+function prefixMatch(aSegs: string[], bSegs: string[]): boolean {
+  let i = 0;
+  let j = 0;
+  while (i < aSegs.length && j < bSegs.length) {
+    const b = bSegs[j];
+    if (b === "**") {
+      // ** consumes everything to the right.
+      return true;
+    }
+    if (b.includes("*")) {
+      // Single-segment wildcard
+      const re = new RegExp(
+        "^" +
+          b
+            .replace(/[.+^$()|{}[\]]/g, "\\$&")
+            .replace(/\*/g, "[^/]*") +
+          "$"
+      );
+      if (!re.test(aSegs[i])) return false;
+    } else if (b !== aSegs[i]) {
+      return false;
+    }
+    i++;
+    j++;
+  }
+  // bSegs exhausted with a matching prefix → match (any further aSegs are
+  // "under" the matched directory).
+  if (j === bSegs.length) return true;
+  return false;
 }

@@ -153,7 +153,7 @@ function splitH3Sections(body: string): Map<string, string> {
   }
   for (let i = 0; i < hits.length; i++) {
     const end = i + 1 < hits.length ? hits[i + 1].start : body.length;
-    out.set(hits[i].name.replace(/\s+/g, "_"), body.slice(hits[i].bodyStart, end).trim());
+    out.set(hits[i].name.replace(/[\s-]+/g, "_"), body.slice(hits[i].bodyStart, end).trim());
   }
   return out;
 }

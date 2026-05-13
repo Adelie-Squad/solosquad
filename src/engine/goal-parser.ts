@@ -382,15 +382,17 @@ function parsePipeline(body: string, sourcePath: string): PipelineStep[] {
     const trimmed = line.trim();
     if (!trimmed) continue;
     if (trimmed.startsWith("#")) continue;
-    const m = trimmed.match(/^\d+\.\s*([a-z][a-z0-9-]*\/[a-z][a-z0-9-]*)\s*:\s*(.+)$/);
-    if (m) {
-      const agent = m[1];
-      const task = m[2].trim();
-      if (!AGENT_REF.test(agent)) {
-        throw new GoalParseError(`pipeline step agent "${agent}" must be team/agent`, sourcePath);
-      }
-      out.push({ agent, task });
+    const bullet = trimmed.match(/^\d+\.\s*([^:]+):\s*(.+)$/);
+    if (!bullet) continue;
+    const agent = bullet[1].trim();
+    const task = bullet[2].trim();
+    if (!AGENT_REF.test(agent)) {
+      throw new GoalParseError(
+        `pipeline step "${trimmed}" — agent "${agent}" must match team/agent`,
+        sourcePath
+      );
     }
+    out.push({ agent, task });
   }
   if (out.length === 0) {
     throw new GoalParseError(
