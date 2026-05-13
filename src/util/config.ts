@@ -39,7 +39,7 @@ export interface PmConfig {
   exclude_dynamic_system_prompt_sections?: boolean;
   /** Per-session in-process mutex queue depth (pm-runner). */
   mutex_queue_depth?: number;
-  /** v1.3.1+: daily pm-compaction trigger time (HH:MM). */
+  /** v1.2.5+: daily pm-compaction trigger time (HH:MM). */
   compaction_time?: string;
 }
 
@@ -60,7 +60,7 @@ export interface WorkspaceYaml {
     experiment_check?: BriefingConfig;
     weekly_review?: WeeklyRoutineConfig;
   };
-  /** v1.3.0+: PM mode configuration. */
+  /** v1.2.5+: PM mode configuration. */
   pm?: PmConfig;
   created_at: string;
   last_migrated_to?: string;
@@ -78,7 +78,7 @@ export const DEFAULT_WORKSPACE_SETTINGS = {
     experiment_check: { time: "16:00", enabled: true },
     weekly_review: { day: "sunday", time: "20:00", enabled: true },
   },
-  /** v1.3.0 (PM mode) defaults; compaction_time added in v1.3.1. */
+  /** v1.2.5 (PM mode) defaults; compaction_time added in v1.2.5. */
   pm: {
     max_budget_usd: 5,
     invoke_timeout_seconds: 300,

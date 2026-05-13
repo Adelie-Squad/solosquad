@@ -102,7 +102,7 @@ platforms share the same bot logic and routing.
 
 ## Agent Routing
 
-**v1.3.0 (PM mode, Phase A):** `#owner-command` messages drive a long-lived
+**v1.2.5 (PM mode — v0.3 narrative):** `#owner-command` messages drive a long-lived
 Claude Code PM session per (user, org) via `src/bot/pm-runner.ts`. The PM
 delegates to specialists through Claude Code's native `Task` tool. Specialists
 are auto-discovered from `<org>/.claude/agents/<name>.md` (synced from

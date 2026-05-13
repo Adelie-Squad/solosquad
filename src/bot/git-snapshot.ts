@@ -4,7 +4,7 @@ import { execFileSync } from "child_process";
 import { getOrgDir } from "../util/paths.js";
 
 /**
- * v1.3.1 — automatic git snapshots around subagent spawns.
+ * v1.2.5 — automatic git snapshots around subagent spawns.
  *
  * Scope: only the `memory/` and `workflows/` trees under each org. The user's
  * actual code repos live under `<org>/repositories/<repo>/` with their own

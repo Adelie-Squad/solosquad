@@ -127,18 +127,7 @@ program
     await runRoutineCommand(routineId, opts.all);
   });
 
-program
-  .command("run")
-  .description("Autonomous program runner (v0.4 — parser only until v0.3 PM mode lands)")
-  .option("--program <prog>", "Program id or path to program.md")
-  .option("--hours <n>", "Time budget in hours (overrides program.md)")
-  .option("--cycles <n>", "Cycle budget (overrides program.md)")
-  .option("--status", "Show active and recent program runs")
-  .option("--verify <cycle>", "Re-run evaluator on a past cycle and check determinism")
-  .action(async (opts) => {
-    const { runCommand } = await import("./run.js");
-    await runCommand(opts);
-  });
+// `solosquad run` (autonomous program runner) lives on the v0.4 branch.
 
 const addGroup = program
   .command("add")
@@ -180,7 +169,7 @@ program
 
 const pmGroup = program
   .command("pm")
-  .description("Manage PM sessions (v1.3.0+)");
+  .description("Manage PM sessions (v1.2.5+)");
 
 pmGroup
   .command("status")

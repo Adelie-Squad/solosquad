@@ -34,7 +34,7 @@ async function handleCommand(
     return;
   }
 
-  // v1.3.1: slash command pre-processing. Unknown slashes get a direct
+  // v1.2.5: slash command pre-processing. Unknown slashes get a direct
   // reply from the bot (no PM call). Known slashes are wrapped in a
   // [SLASH /xyz] marker so the PM SKILL.md can parse them deterministically.
   const slashHandling = handleSlashIfAny(userInput);
@@ -44,7 +44,7 @@ async function handleCommand(
   }
   const forwardText = slashHandling.forwardText;
 
-  // v1.3.0 (PM mode): PM session cwd is fixed at the org root (per
+  // v1.2.5 (PM mode): PM session cwd is fixed at the org root (per
   // docs/plan/v0.3-pm-mode-orchestration.md §3.2.1). target_repo cwd
   // branching happens inside subagent prompts, not by switching PM cwd.
   const orgCwd = path.join(getReposBase(), product.slug);
@@ -53,7 +53,7 @@ async function handleCommand(
     `[Bot] PM turn: user=${ctx.userId} org=${product.slug} text="${forwardText.slice(0, 60)}${forwardText.length > 60 ? "…" : ""}"`
   );
 
-  // v1.3.1: snapshot memory/ + workflows/ before the turn. PM may make
+  // v1.2.5: snapshot memory/ + workflows/ before the turn. PM may make
   // changes; a follow-up snapshot after the turn lets `solosquad rollback`
   // revert just this turn's delta if needed.
   try {
@@ -116,7 +116,7 @@ export async function startBot(): Promise<void> {
   const { value, source } = resolveMessengerSource();
   console.log(`[Bot] MESSENGER=${value} (from ${source})`);
 
-  // v1.3.0: confirm Claude Code is authenticated before listening.
+  // v1.2.5: confirm Claude Code is authenticated before listening.
   const auth = await claude.authStatus();
   if (!auth.loggedIn) {
     console.log(
@@ -132,7 +132,7 @@ export async function startBot(): Promise<void> {
   const platforms = adapters.map((a) => a.platform);
   console.log(`[Bot] Starting with adapters: ${platforms.join(", ")}`);
 
-  // v1.3.1: reconcile any in-flight stage / undelivered PM message left over
+  // v1.2.5: reconcile any in-flight stage / undelivered PM message left over
   // from a prior crash. Run before adapters start so the recovery deliveries
   // land in #owner-command after the bot is connected.
   const reconciler = new WorkflowReconciler(workspaceRoot, sessions);

@@ -1,5 +1,5 @@
 /**
- * v1.3.2 — parse `[focus:<wf-id>]` markers PM emits in assistant replies.
+ * v1.2.5 — parse `[focus:<wf-id>]` markers PM emits in assistant replies.
  *
  * When PM switches its mental "active workflow" from one to another, it
  * includes a single `[focus:wf-YYYY-MM-DD-slug]` line in its reply. pm-runner

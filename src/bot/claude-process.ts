@@ -1,7 +1,7 @@
 import { execFile, spawn, type ChildProcess } from "child_process";
 
 /**
- * v1.3.0 (PM mode) — typed wrapper around `claude --print` subprocess.
+ * v1.2.5 (PM mode) — typed wrapper around `claude --print` subprocess.
  *
  * Replaces the single-shot `claude-runner.ts` for PM session use. The scheduler
  * still uses `claude-runner.ts` for stateless routine prompts.

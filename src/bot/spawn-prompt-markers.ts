@@ -1,5 +1,5 @@
 /**
- * v1.3.2 — parse stage/workflow markers PM embeds in its Task tool prompts.
+ * v1.2.5 — parse stage/workflow markers PM embeds in its Task tool prompts.
  *
  * Convention (documented in assets/orchestrator/SKILL.md): when PM
  * delegates work to a specialist, it prefixes the Task prompt with:
@@ -11,7 +11,7 @@
  * are recorded on the spawn.start event so the WorkflowReconciler can
  * precisely correlate spawns with stages on bot restart.
  *
- * Replaces the v1.3.1 agent-name substring heuristic.
+ * Replaces the v1.2.5 agent-name substring heuristic.
  */
 
 export interface SpawnMarkers {

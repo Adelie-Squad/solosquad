@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { migration as v124ToV130 } from "../src/migrations/scripts/1.2.4-to-1.3.0.js";
+import { migration as v124ToV125 } from "../src/migrations/scripts/1.2.4-to-1.2.5.js";
 import { loadWorkspaceYaml } from "../src/util/config.js";
 
 function tempV124Workspace(orgs: string[] = ["bv-ai-native-po"]): string {
@@ -43,14 +43,14 @@ function tempV124Workspace(orgs: string[] = ["bv-ai-native-po"]): string {
   return dir;
 }
 
-test("v1.2.4 → v1.3.0: detect() returns true on a fresh 1.2.4 workspace", async () => {
+test("v1.2.4 → v1.2.5: detect() returns true on a fresh 1.2.4 workspace", async () => {
   const ws = tempV124Workspace();
-  assert.equal(await v124ToV130.detect(ws), true);
+  assert.equal(await v124ToV125.detect(ws), true);
 });
 
-test("v1.2.4 → v1.3.0: plan() produces steps for sessions/, agents sync, pm section, version bump", async () => {
+test("v1.2.4 → v1.2.5: plan() produces steps for sessions/, agents sync, pm section, version bump", async () => {
   const ws = tempV124Workspace(["bv-ai-native-po"]);
-  const plan = await v124ToV130.plan(ws);
+  const plan = await v124ToV125.plan(ws);
   const descriptions = plan.steps.map((s) => s.description);
   assert.ok(
     descriptions.some((d) => d.includes("PM session-id store dir for bv-ai-native-po")),
@@ -61,16 +61,16 @@ test("v1.2.4 → v1.3.0: plan() produces steps for sessions/, agents sync, pm se
     "should include agents sync step"
   );
   assert.ok(
-    descriptions.some((d) => d.includes("Bump version: 1.2.4 → 1.3.0")),
+    descriptions.some((d) => d.includes("Bump version: 1.2.4 → 1.2.5")),
     "should include version bump"
   );
   assert.ok(plan.warnings.length > 0);
 });
 
-test("v1.2.4 → v1.3.0: apply() creates sessions/, .claude/agents/, adds pm section, bumps version", async () => {
+test("v1.2.4 → v1.2.5: apply() creates sessions/, .claude/agents/, adds pm section, bumps version", async () => {
   const ws = tempV124Workspace(["bv-ai-native-po"]);
-  const plan = await v124ToV130.plan(ws);
-  await v124ToV130.apply(ws, plan);
+  const plan = await v124ToV125.plan(ws);
+  await v124ToV125.apply(ws, plan);
 
   const sessionsDir = path.join(ws, "bv-ai-native-po", ".solosquad", "sessions");
   assert.ok(fs.existsSync(sessionsDir));
@@ -84,25 +84,25 @@ test("v1.2.4 → v1.3.0: apply() creates sessions/, .claude/agents/, adds pm sec
   );
 
   const yamlAfter = loadWorkspaceYaml(ws)!;
-  assert.equal(yamlAfter.version, "1.3.0");
-  assert.equal(yamlAfter.last_migrated_to, "1.3.0");
+  assert.equal(yamlAfter.version, "1.2.5");
+  assert.equal(yamlAfter.last_migrated_to, "1.2.5");
   assert.ok(yamlAfter.pm);
   assert.equal(yamlAfter.pm!.max_budget_usd, 5);
 });
 
-test("v1.2.4 → v1.3.0: verify() passes on a freshly applied workspace", async () => {
+test("v1.2.4 → v1.2.5: verify() passes on a freshly applied workspace", async () => {
   const ws = tempV124Workspace(["bv-ai-native-po"]);
-  const plan = await v124ToV130.plan(ws);
-  await v124ToV130.apply(ws, plan);
-  const res = await v124ToV130.verify(ws);
+  const plan = await v124ToV125.plan(ws);
+  await v124ToV125.apply(ws, plan);
+  const res = await v124ToV125.verify(ws);
   assert.equal(res.ok, true, res.error);
 });
 
-test("v1.2.4 → v1.3.0: apply() is idempotent (re-running doesn't break anything)", async () => {
+test("v1.2.4 → v1.2.5: apply() is idempotent (re-running doesn't break anything)", async () => {
   const ws = tempV124Workspace(["bv-ai-native-po"]);
-  const plan = await v124ToV130.plan(ws);
-  await v124ToV130.apply(ws, plan);
-  await v124ToV130.apply(ws, plan);
-  const res = await v124ToV130.verify(ws);
+  const plan = await v124ToV125.plan(ws);
+  await v124ToV125.apply(ws, plan);
+  await v124ToV125.apply(ws, plan);
+  const res = await v124ToV125.verify(ws);
   assert.equal(res.ok, true);
 });

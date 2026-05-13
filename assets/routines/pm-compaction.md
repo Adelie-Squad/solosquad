@@ -1,4 +1,4 @@
-# PM Compaction Routine (v1.3.1+)
+# PM Compaction Routine (v1.2.5+)
 
 > You are running the daily PM compaction job. This is a background routine — no user is watching. Be brief, factual, and skip anything that would burn tokens for no gain.
 

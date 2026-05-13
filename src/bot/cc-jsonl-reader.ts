@@ -3,7 +3,7 @@ import path from "path";
 import { homedir } from "os";
 
 /**
- * v1.3.1 — read Claude Code's own session jsonl files.
+ * v1.2.5 — read Claude Code's own session jsonl files.
  *
  * Used by workflow-reconciler.ts when the bot crashed after a PM message
  * was processed (claude wrote the assistant reply to its jsonl) but

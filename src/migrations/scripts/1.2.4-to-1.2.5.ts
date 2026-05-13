@@ -15,10 +15,17 @@ import {
 import { syncAgentsToOrg, listSourceAgents } from "../../bot/agents-builder.js";
 import { getAgentsDir } from "../../util/paths.js";
 
-const TARGET = "1.3.0";
+const TARGET = "1.2.5";
 
 /**
- * v1.2.4 → v1.3.0 — PM mode (Phase A).
+ * v1.2.4 → v1.2.5 — PM mode (v0.3 narrative, packaged as a single
+ * minor-feature patch bump to keep the npm semver chain monotonic).
+ *
+ * Combines all of:
+ *   - v0.3 Phase A   (PM session, --resume, agents-builder, session-store)
+ *   - v0.3 Phase B   (reconciler, cc-jsonl-reader, snapshot/rollback,
+ *                     pm/workflow CLIs, slash commands, pm-compaction)
+ *   - v0.3 Phase B refinements (stage_id marker, focus marker, _recent.md)
  *
  * Per docs/plan/v0.3-pm-mode-orchestration.md §7 + PoC #1/#2 findings.
  *
@@ -30,7 +37,7 @@ const TARGET = "1.3.0";
  *
  * Workspace changes:
  *   - Add `pm` section to workspace.yaml with defaults (max_budget_usd, etc.)
- *   - Bump version 1.2.4 → 1.3.0
+ *   - Bump version 1.2.4 → 1.2.5
  *
  * No JSONL memory or existing workflow data is touched. Existing
  * `claude-runner.ts` single-shot path remains for scheduler routines.
