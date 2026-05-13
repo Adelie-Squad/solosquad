@@ -28,6 +28,13 @@ export interface WeeklyRoutineConfig {
   enabled?: boolean;
 }
 
+export interface GoalConfig {
+  /** v1.3.0 — autonomous engine defaults. */
+  default_hours?: number;
+  default_budget_usd?: number;
+  dedicated_session_prefix?: string;
+}
+
 export interface PmConfig {
   /** Cap per claude --print call. Workspace default. */
   max_budget_usd?: number;
@@ -62,6 +69,8 @@ export interface WorkspaceYaml {
   };
   /** v1.2.5+: PM mode configuration. */
   pm?: PmConfig;
+  /** v1.3.0+: autonomous goal engine configuration. */
+  goal?: GoalConfig;
   created_at: string;
   last_migrated_to?: string;
 }

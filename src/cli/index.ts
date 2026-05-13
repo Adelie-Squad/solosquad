@@ -237,6 +237,83 @@ workflowGroup
     await workflowFocusCommand(workflowId, opts);
   });
 
+const goalGroup = program
+  .command("goal")
+  .description("Autonomous goal runs (v0.4)");
+
+goalGroup
+  .command("new")
+  .description("Scaffold a new goal.md from the template")
+  .argument("[goal-id]", "Kebab-case goal id (e.g. landing-cvr-optim)")
+  .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .action(async (goalId, opts) => {
+    const { goalNewCommand } = await import("./goal.js");
+    await goalNewCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("list")
+  .description("List all goals in the workspace (or for one org)")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (opts) => {
+    const { goalListCommand } = await import("./goal.js");
+    await goalListCommand(opts);
+  });
+
+goalGroup
+  .command("show")
+  .description("Show a specific goal's spec + recent cycles")
+  .argument("<goal-id>", "Goal id")
+  .option("--org <slug>", "Restrict to a specific organization")
+  .option("--events <n>", "Number of recent cycle rows to show", (v) => parseInt(v, 10), 8)
+  .action(async (goalId, opts) => {
+    const { goalShowCommand } = await import("./goal.js");
+    await goalShowCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("run")
+  .description("Run a goal autonomously (background session + cycle loop)")
+  .argument("<goal-id>", "Goal id")
+  .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .option("--hours <n>", "Override time budget (hours)")
+  .option("--cycles <n>", "Override cycle budget")
+  .action(async (goalId, opts) => {
+    const { goalRunCommand } = await import("./goal.js");
+    await goalRunCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("status")
+  .description("Show status of one or all goals (cycle counts, cost, ship candidate)")
+  .argument("[goal-id]", "Optional — restrict to one goal")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (goalId, opts) => {
+    const { goalStatusCommand } = await import("./goal.js");
+    await goalStatusCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("stop")
+  .description("Stop an in-flight goal run (current cycle finishes; next won't start)")
+  .argument("<goal-id>", "Goal id")
+  .option("--org <slug>", "Organization slug")
+  .action(async (goalId, opts) => {
+    const { goalStopCommand } = await import("./goal.js");
+    await goalStopCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("verify")
+  .description("Re-run the evaluator on a past cycle and check determinism")
+  .argument("<goal-id>", "Goal id")
+  .requiredOption("--cycle <n>", "Cycle number to verify")
+  .option("--org <slug>", "Organization slug")
+  .action(async (goalId, opts) => {
+    const { goalVerifyCommand } = await import("./goal.js");
+    await goalVerifyCommand(goalId, opts);
+  });
+
 program
   .command("rollback")
   .description("Revert <org>/memory and <org>/workflows to an earlier snapshot")
