@@ -21,7 +21,7 @@
 | `v0.1.5` | 2026-04-21 | **hotfix** — Windows에서 `claude.cmd` 실행 시 ENOENT | 동일 |
 | `v0.2.0` | 2026-04-23 | GitHub-aligned 레이아웃 재편 + 마이그레이션 프레임워크 | `v0.2.2-terminology-layout.md`, `v0.2.3-migration-process.md` |
 
-### 현재 설치 가능 버전: npm `1.2.x` (문서 라벨 `v0.2.4`)
+### 현재 설치 가능 버전: npm `0.2.x` (문서 라벨 `v0.2.4`)
 
 **다음 배포:** `v0.2.1` — v0.2.0 배포 직후 발견된 UX·구조 이슈 해결 + `add org/repo/sync` 명령 도입.
 
@@ -42,8 +42,8 @@
 | **신규 CLI** | `solosquad add org <name>` — 워크스페이스에 조직 추가<br>`solosquad add repo <url\|path>` — clone 또는 등록(외부 경로 이동 지원, org 자동 판정)<br>`solosquad sync` — repositories/ 스캔 + `.org.yaml` 동기화 + legacy `.git` 감지 & 정리 안내 |
 | **런타임 (A2)** | `src/bot/workflow-resolver.ts` — `resolveOrgCwd()` — 활성 workflow stage 의 `target_repo` → main-role repo → 레거시 루트 순 fallback. 봇·스케줄러 모두 교체 |
 | **Init 개선** | Step 5.1 저장소 다중 등록 루프 — URL/경로 반복 입력 |
-| **마이그레이션** | `1.2.0 → 1.2.1` no-op 스크립트: 각 org 에 `repositories/` 폴더 자동 생성 + workspace.yaml 버전 갱신 (기존 v0.2.0 사용자 silent 업그레이드) |
-| **회귀 테스트 (A3)** | `test/migration-v0.1-to-v0.2.test.ts` — dry-run / apply / multi-messenger / rollback / idempotent / chain to 1.2.1 (6 케이스) |
+| **마이그레이션** | `0.2.0 → 0.2.1` no-op 스크립트: 각 org 에 `repositories/` 폴더 자동 생성 + workspace.yaml 버전 갱신 (기존 v0.2.0 사용자 silent 업그레이드) |
+| **회귀 테스트 (A3)** | `test/migration-v0.1-to-v0.2.test.ts` — dry-run / apply / multi-messenger / rollback / idempotent / chain to 0.2.1 (6 케이스) |
 
 ### 2.2 설계 결정 (2026-04-23)
 
@@ -58,7 +58,7 @@
 2. ✓ `npx tsc --noEmit` — 컴파일 통과
 3. ✓ `node --test test/*.test.ts` — 8/8 통과
 4. ✓ 문서 반영 (v0.2.2 스펙, update-migration-guide, CLAUDE.md)
-5. ✓ `package.json` 1.2.0 → 1.2.1
+5. ✓ `package.json` 0.2.0 → 0.2.1
 6. ⏳ `npm publish` (OTP 필요)
 
 ### 2.4 미구현 (차기)
@@ -91,8 +91,8 @@
 
 | 버전 | 주제 | 문서 |
 |---|---|---|
-| `v1.1.x` | 대시보드 상호작용 (대시보드 자체는 별도 리포 `solopreneur-dashboard` + `solopreneur-api`) | `docs/v1.1-dashboard-interaction.md` |
-| `v1.2.x` | 사용자 지식·암묵지 온톨로지 + MCP 외부 연결 (Notion·Obsidian·API·타 에이전트) | `docs/v1.2-knowledge-ontology.md` |
+| `v0.1.x` | 대시보드 상호작용 (대시보드 자체는 별도 리포 `solopreneur-dashboard` + `solopreneur-api`) | `docs/v1.1-dashboard-interaction.md` |
+| `v0.2.x` | 사용자 지식·암묵지 온톨로지 + MCP 외부 연결 (Notion·Obsidian·API·타 에이전트) | `docs/v1.2-knowledge-ontology.md` |
 
 ### 3.4 재배치 사유 (2026-05-12)
 
@@ -108,9 +108,9 @@
 
 | 영역 | 정책 |
 |---|---|
-| **npm 패키지 버전** | semver 그대로 유지 (현재 npm `latest` = 1.2.x). 과거 출시본을 unpublish 하지 않음 |
+| **npm 패키지 버전** | semver 그대로 유지 (현재 npm `latest` = 0.2.x). 과거 출시본을 unpublish 하지 않음 |
 | **문서 라벨 / 내부 내러티브** | 본 표 기준 `v0.x` ~ `v1.x` 사용. 동일 git 커밋이지만 *서사적 버전*은 다를 수 있음 |
-| **마이그레이션 스크립트 파일명** | `src/migrations/scripts/`의 파일명은 npm 실제 버전 유지 (`1.1.x-to-1.2.0.ts` 등). 사용자 워크스페이스의 version 라벨과 매칭하기 위함 |
+| **마이그레이션 스크립트 파일명** | `src/migrations/scripts/`의 파일명은 npm 실제 버전 유지 (`0.1.x-to-0.2.0.ts` 등). 사용자 워크스페이스의 version 라벨과 매칭하기 위함 |
 | **package.json bump 시점** | v0.6 완료 시 npm `1.x` → `1.0.0` 재정렬 또는 `0.6.x`로 다운브랜드 결정 (별도 결정 필요) |
 
 ---
@@ -119,7 +119,7 @@
 
 - **2026-05-13 (오후)** — **워크스페이스 영속 가이드를 AGENTS.md 단일 출처로 통일**. 직전 결정(AGENTS.md + CLAUDE.md 공존)을 폐기. 사유: (1) 같은 위계에 두 파일이 있으면 사용자가 "어디 적어야 하지" 혼란 + 두 출처 발산 위험. (2) AGENTS.md는 Codex·Aider·Cursor·최신 Claude Code 모두 fallback 인식하는 cross-tool de facto 표준. (3) 단일 출처는 v0.4 신뢰 앵커(human-only 편집) 정신과 정합. 변경 내용: v0.4 doc §4.2 — AGENTS.md가 워크스페이스 단일 영속 가이드. SoloSquad가 CLAUDE.md를 더 이상 생성·갱신하지 않음. 마이그레이션은 기존 CLAUDE.md 컨텐츠를 AGENTS.md로 1회 복사 후 CLAUDE.md 원본은 untouched(사용자가 수동 삭제 결정). `solosquad doctor`가 향후 CLAUDE.md 발견 시 "더 이상 사용되지 않음" 안내 출력. master-guide §3.4 + §3.5 Layer 0 표 동기 갱신. 영향 받는 파일: docs/plan/v0.4-autonomous-engine.md, docs/manual/master-guide.html, docs/plan/product-roadmap.md(본 entry).
 - **2026-05-13** — **v0.4 차용 구조를 Codex `/goal` + `AGENTS.md` 2계층으로 변경**. 종전 결정(Karpathy autoresearch의 `program.md`)을 폐기. 사유: "용어·개념을 새로 만들지 말고 최신 구조를 따르자" 원칙에 따른 에이전트 도구 용어 매핑 조사 결과 (1) "program"이 autoresearch 한정 어휘이고 (2) 2026-04 Codex CLI 0.128.0의 `/goal` + `AGENTS.md` 2계층이 더 모던하며 (3) `AGENTS.md`가 Aider·Codex·Cursor 진영의 cross-tool 표준이라 SoloSquad 사용자가 다른 도구 병용 시 호환을 자연스레 얻음. 주요 변경: `program.md` → `goal.md`, `<org>/programs/` → `<org>/goals/`, CLI `solosquad run --program <id>` → `solosquad goal <verb> <id>` 7개 서브커맨드(new/list/show/run/status/stop/verify), 워크스페이스 루트에 `AGENTS.md` 신설(CLAUDE.md와 공존, immutable_paths·modifiable_paths·Output 가드 디폴트 박제). autoresearch는 메트릭 게이팅·git rollback의 운영 패턴 원조로만 잔존 (어휘 미차용). 영향 받는 docs: v0.4 doc 전체 재작성, v0.5 doc의 v0.4 의존 표기, V0.3-INTEGRATION-TEST-PLAN.md의 out-of-scope 라인, architecture.md 레퍼런스 목록. 코드 변경은 별도 단계(현재 doc-first).
-- **2026-05-12 (오후 4th)** — **v1.1.x 레거시 폴더 정리** (커밋 `0c3bb18`). `33c30c3 Add npm bundled assets`(v1.2.0 refactor) 시점에 청소되어야 했지만 누락된 루트 레거시 5개 폴더(`agents/ core/ routines/ templates/ orchestrator/`) + 빈 `projects/` + v1.1.x bash 스크립트 2개를 제거. **dev 환경 path 해결 버그 동반 수정** — `src/util/paths.ts`가 레거시 루트를 먼저 찾아 `assets/`를 그림자 처리, 23개 미만 agent set + 옛 routines로 작동하던 문제 해소. `.gitignore`·`.npmignore`에서 사망 패턴 정리. **사용자 영향 0** — 해당 폴더들은 이미 `.npmignore` 제외 대상이라 npm 패키지에 포함된 적 없음.
+- **2026-05-12 (오후 4th)** — **v0.1.x 레거시 폴더 정리** (커밋 `0c3bb18`). `33c30c3 Add npm bundled assets`(v0.2.0 refactor) 시점에 청소되어야 했지만 누락된 루트 레거시 5개 폴더(`agents/ core/ routines/ templates/ orchestrator/`) + 빈 `projects/` + v0.1.x bash 스크립트 2개를 제거. **dev 환경 path 해결 버그 동반 수정** — `src/util/paths.ts`가 레거시 루트를 먼저 찾아 `assets/`를 그림자 처리, 23개 미만 agent set + 옛 routines로 작동하던 문제 해소. `.gitignore`·`.npmignore`에서 사망 패턴 정리. **사용자 영향 0** — 해당 폴더들은 이미 `.npmignore` 제외 대상이라 npm 패키지에 포함된 적 없음.
 - **2026-05-12 (오후 3rd)** — **워크스페이스 토폴로지 재편 결정** (v0.6 §2.1~§2.3 신설). 누적 5턴 design 대화에서 제기된 3가지 긴장 해소:
   - (a) "동일 역할 specialist가 N개 org에 중복" — **Team=Domain 통합** (§2.1). `agents/_teams/{team}/TEAM_KNOWLEDGE.md` 평행 hierarchy 제거 → `agents/{team}/KNOWLEDGE.md` co-location. 직교 도메인 태그(`domains: [...]` frontmatter) 안 거부 — 두 분류 레이어 병행 부담 회피, team 폴더 자체가 도메인.
   - (b) "조직별 톤·강조점 다른데 SKILL override는 복잡" — **Organization Layer Specialization** (§2.2). `<org>/core/`·`<org>/agent-profile.yaml`·`<org>/domain/` 3종 신설. 25 SKILL override 대신 modifier yaml 1파일. spawn-time 8-layer JIT injection으로 SKILL은 워크스페이스 불변 유지.
@@ -128,11 +128,11 @@
   - **외부 안 명시적 거부**: 3-repo 물리 분리 / LangGraph v3 / MCP 기반 내부 스킬 레지스트리 / Vector+Graph DB hybrid — 모두 솔로 컨텍스트에 오버엔지니어링. 차용 가치 있는 3종은 흡수(Educational Nudge 행동 패턴 / 도메인 데이터 단일 출처 컨셉 / `repo-data-context` 분리 발상을 폴더로 변환).
   - v0.3 §3.3 spawn 인터페이스를 처음부터 8-layer로 작성 → v0.3 출시 시점에는 layer 1/2/4/5/6 noop, v0.6 자산 도입 시 자동 활성. 릴리스 간 인터페이스 churn 회피.
 - **2026-05-12 (오후, 2nd)** — **보고서×Baseline 비교 결과를 v0.3~v0.6 스펙에 통합**. `docs/reference/AI_Agent_Harness_Report.md`(개념·어휘)와 `docs/trend-record/2026-05-11-baseline-survey.md`(실측·우선순위)를 비교 → 보고서는 추상 어휘 출처, Baseline은 구현 우선순위 출처로 역할 분리. 통합 결과: v0.3에 차용 어휘 매핑표 + 슬래시 5종 + git rollback / v0.4에 Data Reconciliation provenance + 3단계 가드레일 program.md 스키마 + signal-scan active trigger / v0.5에 stateless-vs-stateful frontmatter + 4채널 trigger(slash/keyword/freq/explicit) + 빈도 카운팅 auto-load / v0.6 placeholder 해소 — 핸드오프 3변형(hierarchical/graph/dynamic) + trajectory→skill 제안 + FTS5 cold archive. 거부 항목: 보고서식 사전 가드레일 3계층 구축(솔로 비용 과다), 시맨틱 임베딩 버스(25 agent 규모에 과잉), Salesforce Lineage GUI(이미 git diff Markdown으로 정렬됨), Hermes trajectory 자동 등록(v0.6은 제안만).
-- **2026-05-12 (오후)** — **버전 라벨 일괄 다운시프트**: 프리-런치 작업 전체를 `v0.x.x`로 재라벨. `v1.0.0`을 정식 출시 마일스톤으로 예약. 종전 v1.7 웹 대시보드는 v1.1로 이동하되 **콘텐츠 변경** — 대시보드 자체는 별도 리포(`solopreneur-dashboard`/`solopreneur-api`)에서 개발하므로 본 리포는 *상호작용 인터페이스만*. 종전 v1.8 지식 온톨로지는 v1.2로 이동(콘텐츠 유지). 문서 파일명 14개 일괄 rename + 모든 .md 내부 v1.X → v0.X 일괄 치환. npm 실제 출시 버전은 immutable이므로 그대로(1.2.x).
+- **2026-05-12 (오후)** — **버전 라벨 일괄 다운시프트**: 프리-런치 작업 전체를 `v0.x.x`로 재라벨. `v1.0.0`을 정식 출시 마일스톤으로 예약. 종전 v1.7 웹 대시보드는 v1.1로 이동하되 **콘텐츠 변경** — 대시보드 자체는 별도 리포(`solopreneur-dashboard`/`solopreneur-api`)에서 개발하므로 본 리포는 *상호작용 인터페이스만*. 종전 v1.8 지식 온톨로지는 v1.2로 이동(콘텐츠 유지). 문서 파일명 14개 일괄 rename + 모든 .md 내부 v1.X → v0.X 일괄 치환. npm 실제 출시 버전은 immutable이므로 그대로(0.2.x).
 - **2026-05-12** — 장기 로드맵 v0.3~v1.2 재배치. PM 모드를 v0.3으로 앞당기고, 스킬 분석기 + 스킬 자유도를 v0.5(워크플로우 메이커)로 통합. 빈 v0.6은 디폴트 워크플로우 튜닝 슬롯으로 전환. 웹 대시보드 v1.1, 지식 온톨로지 v1.2 (Founder Layer + MCP 외부 연결로 범위 확장). 사유: 메신저-네이티브 패러다임이 다른 모든 기능의 진입점이며, 통합 가능 스펙 두 개를 합쳐 표면적 축소.
 - **2026-04-23** — `<org>/repositories/` 중간 계층 도입. 피어 프로젝트(OpenClaw/Ralph/Hermes) 조사에서 "시스템 폴더 + 코드 섞기" 패턴이 없음을 확인. GitHub flat 관례 재현 논거 철회.
 - **2026-04-23** — `add repo` 의 org 판정은 "단일=자동, 복수=cwd→질문" 하이브리드. 묻지 않는 편의 vs 오인 방지 균형.
-- **2026-04-23** — Legacy `.git` (v0.1.x 시절 product=repo) 정리는 `sync` 에서 사용자 선택(Normalize vs Keep). 마이그레이션 스크립트는 건드리지 않음 (이미 1.2.0 사용자 존재).
+- **2026-04-23** — Legacy `.git` (v0.1.x 시절 product=repo) 정리는 `sync` 에서 사용자 선택(Normalize vs Keep). 마이그레이션 스크립트는 건드리지 않음 (이미 0.2.0 사용자 존재).
 - **2026-04-22** — 한 워크스페이스 = 한 메신저 플랫폼. 복잡한 멀티 어댑터 동시 운영을 단순화. 복수 플랫폼 사용자는 워크스페이스를 여러 개 만들어 분리.
 - **2026-04-22** — Organization 자동 clone 기능 제거 (v0.3+로 연기 검토). 사용자가 직접 `git clone`.
 - **2026-04-22** — Workspace 루트 이름은 사용자 지정(`.solosquad/` 폴더 감지 기반). 기본 이름 `solosquad`, 페르소나 분리용 다중 루트 허용.

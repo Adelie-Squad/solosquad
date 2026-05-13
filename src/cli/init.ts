@@ -17,7 +17,7 @@ import { commandExists } from "../util/platform.js";
 import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 
-const SOLOSQUAD_VERSION = "1.3.0";
+const SOLOSQUAD_VERSION = "0.4.0";
 
 const TIMEZONE_PRESETS = [
   { name: "Asia/Seoul (UTC+09) — recommended", value: "Asia/Seoul" },
@@ -262,7 +262,7 @@ export async function initCommand(): Promise<void> {
   saveEnv(envUpdates, workspace);
   console.log(chalk.green("✓ .solosquad/.env saved"));
 
-  // Step 3.5: Timezone and brief schedule (v1.2.4+)
+  // Step 3.5: Timezone and brief schedule (v0.2.4+)
   console.log(chalk.bold("\n-- Step 3.5: Timezone & Daily Briefs --"));
   console.log(
     chalk.dim(

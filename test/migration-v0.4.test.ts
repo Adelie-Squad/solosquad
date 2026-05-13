@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { migration as v125ToV130 } from "../src/migrations/scripts/1.2.5-to-1.3.0.js";
+import { migration as v125ToV130 } from "../src/migrations/scripts/0.3.0-to-0.4.0.js";
 import { loadWorkspaceYaml } from "../src/util/config.js";
 
 function temp125Workspace(orgs: string[] = ["acme"]): string {
@@ -13,7 +13,7 @@ function temp125Workspace(orgs: string[] = ["acme"]): string {
   fs.writeFileSync(
     path.join(dir, ".solosquad", "workspace.yaml"),
     [
-      "version: 1.2.5",
+      "version: 0.3.0",
       "display_name: test-workspace",
       "timezone: Asia/Seoul",
       "briefings:",
@@ -43,12 +43,12 @@ function temp125Workspace(orgs: string[] = ["acme"]): string {
   return dir;
 }
 
-test("v1.2.5 → v1.3.0: detect() returns true on a fresh 1.2.5 workspace", async () => {
+test("v0.3.0 → v0.4.0: detect() returns true on a fresh 0.3.0 workspace", async () => {
   const ws = temp125Workspace();
   assert.equal(await v125ToV130.detect(ws), true);
 });
 
-test("v1.2.5 → v1.3.0: apply() creates goals/, AGENTS.md, adds goal section, bumps version", async () => {
+test("v0.3.0 → v0.4.0: apply() creates goals/, AGENTS.md, adds goal section, bumps version", async () => {
   const ws = temp125Workspace(["acme"]);
   const plan = await v125ToV130.plan(ws);
   await v125ToV130.apply(ws, plan);
@@ -64,13 +64,13 @@ test("v1.2.5 → v1.3.0: apply() creates goals/, AGENTS.md, adds goal section, b
 
   // workspace.yaml
   const ywsAfter = loadWorkspaceYaml(ws)!;
-  assert.equal(ywsAfter.version, "1.3.0");
+  assert.equal(ywsAfter.version, "0.4.0");
   assert.ok(ywsAfter.goal);
   assert.equal(ywsAfter.goal!.default_hours, 8);
   assert.equal(ywsAfter.goal!.default_budget_usd, 5);
 });
 
-test("v1.2.5 → v1.3.0: existing CLAUDE.md content is migrated into AGENTS.md but original is untouched", async () => {
+test("v0.3.0 → v0.4.0: existing CLAUDE.md content is migrated into AGENTS.md but original is untouched", async () => {
   const ws = temp125Workspace(["acme"]);
   fs.writeFileSync(
     path.join(ws, "CLAUDE.md"),
@@ -90,7 +90,7 @@ test("v1.2.5 → v1.3.0: existing CLAUDE.md content is migrated into AGENTS.md b
   assert.match(agents, /SoloSquad v0\.4 — Autonomous Goal Conventions/);
 });
 
-test("v1.2.5 → v1.3.0: existing AGENTS.md gets v0.4 section appended only if missing", async () => {
+test("v0.3.0 → v0.4.0: existing AGENTS.md gets v0.4 section appended only if missing", async () => {
   const ws = temp125Workspace(["acme"]);
   fs.writeFileSync(
     path.join(ws, "AGENTS.md"),
@@ -107,7 +107,7 @@ test("v1.2.5 → v1.3.0: existing AGENTS.md gets v0.4 section appended only if m
   assert.match(agents, /SoloSquad v0\.4 — Autonomous Goal Conventions/);
 });
 
-test("v1.2.5 → v1.3.0: verify() passes on a freshly applied workspace", async () => {
+test("v0.3.0 → v0.4.0: verify() passes on a freshly applied workspace", async () => {
   const ws = temp125Workspace(["acme"]);
   const plan = await v125ToV130.plan(ws);
   await v125ToV130.apply(ws, plan);
@@ -115,7 +115,7 @@ test("v1.2.5 → v1.3.0: verify() passes on a freshly applied workspace", async 
   assert.equal(res.ok, true, res.error);
 });
 
-test("v1.2.5 → v1.3.0: apply() is idempotent", async () => {
+test("v0.3.0 → v0.4.0: apply() is idempotent", async () => {
   const ws = temp125Workspace(["acme"]);
   const plan = await v125ToV130.plan(ws);
   await v125ToV130.apply(ws, plan);

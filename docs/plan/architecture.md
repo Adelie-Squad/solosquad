@@ -68,8 +68,8 @@ src/
     runner.ts                    → 체인 해결 → dry-run/apply + verify
     index.ts                     → 마이그레이션 레지스트리 + resolveChain
     scripts/
-      1.1.x-to-1.2.0.ts          → 레이아웃 재편 (.solosquad/, product→org, projects→workflows)
-      1.2.0-to-1.2.1.ts          → 각 org 에 repositories/ 생성 + workspace.yaml 버전 갱신
+      0.1.x-to-0.2.0.ts          → 레이아웃 재편 (.solosquad/, product→org, projects→workflows)
+      0.2.0-to-0.2.1.ts          → 각 org 에 repositories/ 생성 + workspace.yaml 버전 갱신
   util/
     config.ts                    → .env / workspace.yaml / .org.yaml / repo.yaml I/O
     paths.ts                     → 에셋/워크스페이스/org/repo 경로 해석 + RESERVED_ORG_CHILDREN
@@ -379,14 +379,14 @@ claude --prompt "workflows/<id>/sessions/strategy/CLAUDE.md 읽고 작업 시작
 | Idempotent | 이미 마이그레이션된 워크스페이스에 재실행해도 no-op |
 | Reversible | `solosquad migrate --rollback` 으로 백업에서 복원 |
 | Versioned | 각 전환이 독립 스크립트 (`scripts/<from>-to-<to>.ts`) |
-| Chainable | `resolveChain(source, target)` 로 `1.1.x → 1.2.0 → 1.2.1` 자동 연결 |
+| Chainable | `resolveChain(source, target)` 로 `0.1.x → 0.2.0 → 0.2.1` 자동 연결 |
 
 ### Migration 인터페이스
 
 ```ts
 interface Migration {
-  from: string;                                   // "1.1.x", "1.2.0"
-  to: string;                                     // "1.2.0", "1.2.1"
+  from: string;                                   // "0.1.x", "0.2.0"
+  to: string;                                     // "0.2.0", "0.2.1"
   description: string;
   detect(workspace: string): Promise<boolean>;
   plan(workspace: string): Promise<MigrationPlan>;
@@ -397,7 +397,7 @@ interface Migration {
 
 ### 현재 등록된 마이그레이션
 
-1. **1.1.x → 1.2.0** (`scripts/1.1.x-to-1.2.0.ts`)
+1. **0.1.x → 0.2.0** (`scripts/0.1.x-to-0.2.0.ts`)
    - `agents/`, `routines/`, `core/`, `templates/`, `orchestrator/` → `.solosquad/` 하위로 이동
    - `.env` → `.solosquad/.env`
    - 각 product (REPOS_BASE_PATH 아래) → 워크스페이스 루트의 org 디렉토리로 이동
@@ -407,13 +407,13 @@ interface Migration {
    - `REPOS_BASE_PATH` 제거
    - `workspace.yaml` 생성
 
-2. **1.2.0 → 1.2.1** (`scripts/1.2.0-to-1.2.1.ts`)
+2. **0.2.0 → 0.2.1** (`scripts/0.2.0-to-0.2.1.ts`)
    - 각 org 에 `repositories/` 폴더 생성 (이후 `add repo` / `sync` 가 쓸 경로)
-   - `workspace.yaml.version` 1.2.0 → 1.2.1 stamp (배너 억제)
+   - `workspace.yaml.version` 0.2.0 → 0.2.1 stamp (배너 억제)
 
 ### Legacy `.git` 정리는 `sync` 책임
 
-v0.1.x 에서 product=repo 였던 자취로 **migration 직후 org 루트에 `.git/` 가 남음**. 마이그레이션 스크립트는 이를 강제로 이동하지 않음 (이미 1.2.0 에서 작업 중인 사용자 보호). 대신 `solosquad sync` 가 감지해서 사용자에게 옵션 제공:
+v0.1.x 에서 product=repo 였던 자취로 **migration 직후 org 루트에 `.git/` 가 남음**. 마이그레이션 스크립트는 이를 강제로 이동하지 않음 (이미 0.2.0 에서 작업 중인 사용자 보호). 대신 `solosquad sync` 가 감지해서 사용자에게 옵션 제공:
 - **Normalize** → `.git/` 및 코드를 `<org>/repositories/<org-slug>/` 로 이동
 - **Keep legacy** → 현재 위치 유지 + `<org>/.solosquad/repo.yaml` 을 org 루트에 생성
 
@@ -425,7 +425,7 @@ v0.1.x 에서 product=repo 였던 자취로 **migration 직후 org 루트에 `.g
 - 복수 MESSENGER 축소
 - rollback 으로 원복
 - 재실행 시 no-op
-- 1.1.x → 1.2.1 체인 (repositories/ 생성 + workspace.yaml 버전)
+- 0.1.x → 0.2.1 체인 (repositories/ 생성 + workspace.yaml 버전)
 
 6 케이스 전부 통과.
 
@@ -484,7 +484,7 @@ solosquad migrate --rollback        # 백업 복원
 - npm registry 최신 버전 조회 (`npm view solosquad version`)
 - 로컬 `package.json` 버전과 비교
 - CLI 가 업데이트되면 워크스페이스 버전과 비교 → breaking 레이아웃 차이 있으면 `migrate --dry-run` 안내
-- **모든 CLI 명령 시작 시** preAction hook 이 워크스페이스 버전 ≺ CLI 버전 인 경우 경고 배너 (1.2.1+ 부터). migrate/update/doctor 는 배너 제외 (무한 루프/노이즈 방지).
+- **모든 CLI 명령 시작 시** preAction hook 이 워크스페이스 버전 ≺ CLI 버전 인 경우 경고 배너 (0.2.1+ 부터). migrate/update/doctor 는 배너 제외 (무한 루프/노이즈 방지).
 - `npmGlobalInstallCmd()` 로 OS 에 맞는 설치 명령 생성 (Linux/macOS: sudo 자동 판단)
 
 ### 알려진 한계

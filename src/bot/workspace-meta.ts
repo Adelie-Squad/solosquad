@@ -5,7 +5,7 @@ import { getOrgDir, resolveRepoCwd } from "../util/paths.js";
 import { FileEventSink, workflowEventsPath, type AnyEvent } from "./events.js";
 
 /**
- * v1.2.5 — workspace metadata helper.
+ * v0.3.0 — workspace metadata helper.
  *
  * Shared utilities used by:
  *   - workflow CLI (`solosquad workflow list / show`)

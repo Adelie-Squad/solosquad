@@ -13,7 +13,7 @@ import type { GoalSpec, MetricSpec } from "./goal-parser.js";
  * results.tsv schema (10 fields, append-only, schema_version=1):
  *   cycle  timestamp  agent  metric  value  status  commit  provenance  task_id  description
  *
- * task_id is a foreign key into v1.2.5 `_events.jsonl` of the workflow that
+ * task_id is a foreign key into v0.3.0 `_events.jsonl` of the workflow that
  * the cycle's spawn(s) belong to — allows JOIN of cost/duration/stage onto
  * each result row.
  */

@@ -827,7 +827,7 @@ Workspace: /Users/you/solosquad-workspace
 Detected structure: v0.1.x  (source)
 Target version:     v0.2.0  (installed CLI)
 
-Migration plan (1.1.x → 1.2.0):
+Migration plan (0.1.x → 0.2.0):
 
   ✓ Move workspace config to .solosquad/
   ✓ Convert each product → organization directory
@@ -851,8 +851,8 @@ Nothing written yet. Re-run with `--apply` to perform the migration.</code></pre
   <h4>여러 버전을 건너뛸 때 (체인 마이그레이션)</h4>
   <p>v0.1.2를 쓰다가 v0.3.0으로 직접 업데이트할 경우 마이그레이션이 <strong>체인으로 순차 실행</strong>됩니다:</p>
   <pre><code>Chaining migrations:
-  1.1.x → 1.2.0  (layout restructure)
-  1.2.0 → 1.3.0  (cross-repo enhancements)</code></pre>
+  0.1.x → 0.2.0  (layout restructure)
+  0.2.0 → 0.4.0  (cross-repo enhancements)</code></pre>
   <p>각 단계는 dry-run 후 한꺼번에 apply. 중간 실패 시 해당 단계까지만 롤백.</p>
 
   <h4>v0.2.4 업데이트 특별 사항</h4>
@@ -938,7 +938,7 @@ solosquad migrate --apply</code></pre>
   <h4>롤백</h4>
   <pre><code>solosquad migrate --rollback   # 가장 최근 백업으로 복원</code></pre>
   <p><strong>주의:</strong> 롤백 후에는 복원된 버전에 맞는 CLI를 쓰세요. v0.2.0로 마이그레이션했다가 v0.1.5로 롤백했다면:</p>
-  <pre><code>npm install -g solosquad@1.1.5</code></pre>
+  <pre><code>npm install -g solosquad@0.1.5</code></pre>
   <p>CLI와 워크스페이스 버전 불일치 시 <code>doctor</code>가 경고합니다.</p>
 
   <h4>백업 관리</h4>
@@ -1723,7 +1723,7 @@ solosquad run-routine --all          # 전부</code></pre>
   </ul>
 
   <div class="footer-note">
-    이 문서는 SoloSquad <strong>v0.2.4 (npm 1.2.4)</strong> 기준이며, v0.3~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
+    이 문서는 SoloSquad <strong>v0.2.4 (npm 0.2.4)</strong> 기준이며, v0.3~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
   </div>
 </section>
 
@@ -2056,7 +2056,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   A. Docker 환경이면 <code>docker compose up -d --build</code>를 cron에 걸면 이미지 최신화됩니다. 단 <strong>마이그레이션 필요 시엔 자동화 불가</strong> — 사람의 확인이 들어가는 게 원칙.</p>
 
   <p><strong>Q. 예전 버전으로 고정하고 싶어요.</strong><br>
-  A. <code>npm install -g solosquad@1.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
+  A. <code>npm install -g solosquad@0.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
 
   <p><strong>Q. 여러 사람이 한 머신에서 씁니다.</strong><br>
   A. 각자 OS 계정을 다르게 쓰고, 각 계정의 홈 디렉토리에 독립된 워크스페이스를 두세요. 마이그레이션도 계정별로 따로 진행.</p>

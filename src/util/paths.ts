@@ -15,8 +15,8 @@ export function getAssetsDir(): string {
 }
 
 /**
- * Workspace root — the directory that contains either `.solosquad/` (v1.2.2+)
- * or the legacy layout markers (v1.1.x: agents/, routines/, core/).
+ * Workspace root — the directory that contains either `.solosquad/` (v0.2.2+)
+ * or the legacy layout markers (v0.1.x: agents/, routines/, core/).
  * Walks up from CWD. Falls back to CWD if nothing is found (fresh install).
  */
 export function getWorkspaceRoot(): string {
@@ -29,22 +29,22 @@ export function getWorkspaceDir(): string {
   return getWorkspaceRoot();
 }
 
-/** v1.2.2+: path to the hidden `.solosquad/` config directory. */
+/** v0.2.2+: path to the hidden `.solosquad/` config directory. */
 export function getSolosquadConfigDir(workspace?: string): string {
   return path.join(workspace ?? getWorkspaceRoot(), ".solosquad");
 }
 
-/** v1.2.2+: path to workspace.yaml. */
+/** v0.2.2+: path to workspace.yaml. */
 export function getWorkspaceYamlPath(workspace?: string): string {
   return path.join(getSolosquadConfigDir(workspace), "workspace.yaml");
 }
 
-/** v1.2.2+: path to .env (inside .solosquad/). */
+/** v0.2.2+: path to .env (inside .solosquad/). */
 export function getEnvPath(workspace?: string): string {
   return path.join(getSolosquadConfigDir(workspace), ".env");
 }
 
-/** Agents dir — v1.2.2 looks in .solosquad/agents; falls back to workspace-root agents/ for legacy, then assets/. */
+/** Agents dir — v0.2.2 looks in .solosquad/agents; falls back to workspace-root agents/ for legacy, then assets/. */
 export function getAgentsDir(): string {
   const root = getWorkspaceRoot();
   const solosquad = path.join(root, ".solosquad", "agents");
@@ -74,7 +74,7 @@ export function getCoreDir(): string {
   return path.join(getAssetsDir(), "core");
 }
 
-/** Products file (v1.1.x legacy only). v1.2.2+ uses .org.yaml per organization. */
+/** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */
 export function getProductsFile(): string {
   const root = getWorkspaceRoot();
   const solosquad = path.join(root, ".solosquad", "core", "products.json");
@@ -85,10 +85,10 @@ export function getProductsFile(): string {
 /**
  * Directory that holds "product/organization" folders.
  *
- * - v1.2.2+: organizations live directly under the workspace root, so this
+ * - v0.2.2+: organizations live directly under the workspace root, so this
  *   returns the workspace root itself. Legacy callers looking up
  *   `<base>/<slug>/...` still work because the slug sits at the workspace root.
- * - v1.1.x: REPOS_BASE_PATH env var (or ~/repos fallback).
+ * - v0.1.x: REPOS_BASE_PATH env var (or ~/repos fallback).
  *
  * Kept under this name because existing bot/scheduler/adapter code imports it;
  * migration scripts still read `process.env.REPOS_BASE_PATH` directly when
@@ -102,17 +102,17 @@ export function getReposBase(): string {
   return process.env.REPOS_BASE_PATH || path.join(os.homedir(), "repos");
 }
 
-/** v1.2.2+: path to an org directory under the workspace. */
+/** v0.2.2+: path to an org directory under the workspace. */
 export function getOrgDir(orgSlug: string, workspace?: string): string {
   return path.join(workspace ?? getWorkspaceRoot(), orgSlug);
 }
 
-/** v1.2.2+: path to an org's `repositories/` container folder. */
+/** v0.2.2+: path to an org's `repositories/` container folder. */
 export function getRepositoriesDir(orgSlug: string, workspace?: string): string {
   return path.join(getOrgDir(orgSlug, workspace), "repositories");
 }
 
-/** v1.2.2+: path to a specific repo directory (under `<org>/repositories/<repo>`). */
+/** v0.2.2+: path to a specific repo directory (under `<org>/repositories/<repo>`). */
 export function getRepoDir(orgSlug: string, repoSlug: string, workspace?: string): string {
   return path.join(getRepositoriesDir(orgSlug, workspace), repoSlug);
 }

@@ -131,7 +131,7 @@ export async function evaluateCycle(
     compositeScore = bestRes.best?.composite_score ?? 0;
   } else {
     // Revert the engine's snapshot tree back to pre-cycle commit. Repo code
-    // (under <org>/repositories/<repo>/) is untouched per v1.2.5 git-snapshot
+    // (under <org>/repositories/<repo>/) is untouched per v0.3.0 git-snapshot
     // policy.
     const revertResult = revertToSnapshot(
       input.workspace,

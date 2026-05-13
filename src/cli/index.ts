@@ -169,7 +169,7 @@ program
 
 const pmGroup = program
   .command("pm")
-  .description("Manage PM sessions (v1.2.5+)");
+  .description("Manage PM sessions (v0.3.0+)");
 
 pmGroup
   .command("status")

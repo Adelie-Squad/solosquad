@@ -3,7 +3,7 @@ import path from "path";
 import { getOrgDir } from "../util/paths.js";
 
 /**
- * v1.2.5 — `_events.jsonl` append/query.
+ * v0.3.0 — `_events.jsonl` append/query.
  *
  * Two scopes:
  *   - PM session events:    <workspace>/<org>/.solosquad/sessions/<user>.events.jsonl
@@ -90,9 +90,9 @@ export interface SpawnStartEvent extends BaseEvent {
   toolUseId: string;
   agent: string;
   description: string;
-  /** v1.2.5+: workflow stage this spawn belongs to (parsed from PM's [stage:<id>] marker). */
+  /** v0.3.0+: workflow stage this spawn belongs to (parsed from PM's [stage:<id>] marker). */
   stageId?: string;
-  /** v1.2.5+: workflow id (parsed from PM's [stage:<id> wf:<wf-id>] marker). */
+  /** v0.3.0+: workflow id (parsed from PM's [stage:<id> wf:<wf-id>] marker). */
   workflowId?: string;
 }
 

@@ -13,10 +13,10 @@ import {
 } from "../../util/config.js";
 import { getAssetsDir } from "../../util/paths.js";
 
-const TARGET = "1.3.0";
+const TARGET = "0.4.0";
 
 /**
- * v1.2.5 → v1.3.0 — v0.4 autonomous goal engine.
+ * v0.3.0 → v0.4.0 — v0.4 autonomous goal engine.
  *
  * Per docs/plan/v0.4-autonomous-engine.md §9. Non-destructive workspace
  * upgrade:
@@ -27,14 +27,14 @@ const TARGET = "1.3.0";
  *     into AGENTS.md (1-time merge) and the original CLAUDE.md is left
  *     untouched. SoloSquad no longer manages CLAUDE.md after this point.
  *   - `workspace.yaml` gains a `goal:` section with defaults
- *   - Version bump 1.2.5 → 1.3.0
+ *   - Version bump 0.3.0 → 0.4.0
  *
  * Per v0.4 §4.2 decision (2026-05-13 오후): the single workspace
  * persistent guide is AGENTS.md. CLAUDE.md is not generated or
  * maintained going forward.
  */
 export const migration: Migration = {
-  from: "1.2.5",
+  from: "0.3.0",
   to: TARGET,
   description:
     "v0.4 autonomous engine: per-org goals/, workspace AGENTS.md (canonical), goal: config section.",
@@ -42,7 +42,7 @@ export const migration: Migration = {
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
     if (!ws) return false;
-    return ws.version === "1.2.5";
+    return ws.version === "0.3.0";
   },
 
   async plan(workspace: string): Promise<MigrationPlan> {
@@ -94,7 +94,7 @@ export const migration: Migration = {
     steps.push({
       kind: "update",
       to: ".solosquad/workspace.yaml",
-      description: `Bump version: 1.2.5 → ${TARGET}`,
+      description: `Bump version: 0.3.0 → ${TARGET}`,
     });
     steps.push({
       kind: "note",
@@ -139,7 +139,7 @@ export const migration: Migration = {
           "# AGENTS.md\n\n" +
           "> **Canonical workspace guide.** All AI tools (SoloSquad, Codex, Aider, " +
           "Cursor, modern Claude Code) read this file. **Human-edited only.**\n\n" +
-          "> This file was migrated from the previous CLAUDE.md at v1.3.0 (v0.4) " +
+          "> This file was migrated from the previous CLAUDE.md at v0.4.0 (v0.4) " +
           "release. The original CLAUDE.md is left in place but SoloSquad no " +
           "longer reads it. You may delete it if unused.\n\n" +
           "---\n\n" +

@@ -15,10 +15,10 @@ import {
 import { syncAgentsToOrg, listSourceAgents } from "../../bot/agents-builder.js";
 import { getAgentsDir } from "../../util/paths.js";
 
-const TARGET = "1.2.5";
+const TARGET = "0.3.0";
 
 /**
- * v1.2.4 → v1.2.5 — PM mode (v0.3 narrative, packaged as a single
+ * v0.2.4 → v0.3.0 — PM mode (v0.3 narrative, packaged as a single
  * minor-feature patch bump to keep the npm semver chain monotonic).
  *
  * Combines all of:
@@ -37,13 +37,13 @@ const TARGET = "1.2.5";
  *
  * Workspace changes:
  *   - Add `pm` section to workspace.yaml with defaults (max_budget_usd, etc.)
- *   - Bump version 1.2.4 → 1.2.5
+ *   - Bump version 0.2.4 → 0.3.0
  *
  * No JSONL memory or existing workflow data is touched. Existing
  * `claude-runner.ts` single-shot path remains for scheduler routines.
  */
 export const migration: Migration = {
-  from: "1.2.4",
+  from: "0.2.4",
   to: TARGET,
   description:
     "PM mode: per-org sessions/, .claude/agents/ sync (25 specialists), workspace.yaml pm section.",
@@ -51,7 +51,7 @@ export const migration: Migration = {
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
     if (!ws) return false;
-    return ws.version === "1.2.4";
+    return ws.version === "0.2.4";
   },
 
   async plan(workspace: string): Promise<MigrationPlan> {
@@ -83,7 +83,7 @@ export const migration: Migration = {
     steps.push({
       kind: "update",
       to: ".solosquad/workspace.yaml",
-      description: `Bump version: 1.2.4 → ${TARGET}`,
+      description: `Bump version: 0.2.4 → ${TARGET}`,
     });
     steps.push({
       kind: "note",

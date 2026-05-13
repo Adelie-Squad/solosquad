@@ -362,7 +362,7 @@ function buildPipelinePrompt(
     "",
     "Run the following pipeline IN ORDER. For each stage, call the Task tool with",
     "the specified subagent and the stage prompt. Embed `[stage:stage-N-<slug> wf:wf-",
-    `${goal.goal_id}-cycle-${cycle}]\` as the first line of each Task prompt (v1.2.5+ marker).`,
+    `${goal.goal_id}-cycle-${cycle}]\` as the first line of each Task prompt (v0.3.0+ marker).`,
     "",
     "Pipeline:",
     ...goal.pipeline.map(

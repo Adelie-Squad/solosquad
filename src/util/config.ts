@@ -29,7 +29,7 @@ export interface WeeklyRoutineConfig {
 }
 
 export interface GoalConfig {
-  /** v1.3.0 — autonomous engine defaults. */
+  /** v0.4.0 — autonomous engine defaults. */
   default_hours?: number;
   default_budget_usd?: number;
   dedicated_session_prefix?: string;
@@ -46,7 +46,7 @@ export interface PmConfig {
   exclude_dynamic_system_prompt_sections?: boolean;
   /** Per-session in-process mutex queue depth (pm-runner). */
   mutex_queue_depth?: number;
-  /** v1.2.5+: daily pm-compaction trigger time (HH:MM). */
+  /** v0.3.0+: daily pm-compaction trigger time (HH:MM). */
   compaction_time?: string;
 }
 
@@ -54,28 +54,28 @@ export interface WorkspaceYaml {
   version: string;
   display_name: string;
   persona?: string;
-  /** IANA timezone (e.g. "Asia/Seoul"). v1.2.4+. Defaults applied at load time. */
+  /** IANA timezone (e.g. "Asia/Seoul"). v0.2.4+. Defaults applied at load time. */
   timezone?: string;
-  /** v1.2.4+: user-facing daily briefs. */
+  /** v0.2.4+: user-facing daily briefs. */
   briefings?: {
     morning?: BriefingConfig;
     evening?: BriefingConfig;
   };
-  /** v1.2.4+: background routines that feed into the briefs. */
+  /** v0.2.4+: background routines that feed into the briefs. */
   background_routines?: {
     signal_scan?: BriefingConfig;
     experiment_check?: BriefingConfig;
     weekly_review?: WeeklyRoutineConfig;
   };
-  /** v1.2.5+: PM mode configuration. */
+  /** v0.3.0+: PM mode configuration. */
   pm?: PmConfig;
-  /** v1.3.0+: autonomous goal engine configuration. */
+  /** v0.4.0+: autonomous goal engine configuration. */
   goal?: GoalConfig;
   created_at: string;
   last_migrated_to?: string;
 }
 
-/** v1.2.4 defaults — used both at init and as fallbacks when fields are missing. */
+/** v0.2.4 defaults — used both at init and as fallbacks when fields are missing. */
 export const DEFAULT_WORKSPACE_SETTINGS = {
   timezone: "Asia/Seoul",
   briefings: {
@@ -87,7 +87,7 @@ export const DEFAULT_WORKSPACE_SETTINGS = {
     experiment_check: { time: "16:00", enabled: true },
     weekly_review: { day: "sunday", time: "20:00", enabled: true },
   },
-  /** v1.2.5 (PM mode) defaults; compaction_time added in v1.2.5. */
+  /** v0.3.0 (PM mode) defaults; compaction_time added in v0.3.0. */
   pm: {
     max_budget_usd: 5,
     invoke_timeout_seconds: 300,
@@ -98,7 +98,7 @@ export const DEFAULT_WORKSPACE_SETTINGS = {
   },
 } as const;
 
-/** Merge a partial WorkspaceYaml with defaults for v1.2.4+ fields. */
+/** Merge a partial WorkspaceYaml with defaults for v0.2.4+ fields. */
 export function applyWorkspaceDefaults(ws: WorkspaceYaml): WorkspaceYaml {
   return {
     ...ws,
@@ -280,11 +280,11 @@ export function saveRepoYaml(repoDir: string, doc: RepoYaml): void {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Legacy v1.1.x products.json — still readable by migration scripts          */
+/* Legacy v0.1.x products.json — still readable by migration scripts          */
 /* -------------------------------------------------------------------------- */
 
 export function loadProducts(dir?: string): Product[] {
-  // v1.2.2+: if workspace.yaml exists, synthesize Product[] from organizations.
+  // v0.2.2+: if workspace.yaml exists, synthesize Product[] from organizations.
   const workspace = dir ?? getWorkspaceRoot();
   const wsYaml = path.join(workspace, ".solosquad", "workspace.yaml");
   if (fs.existsSync(wsYaml)) {
@@ -294,7 +294,7 @@ export function loadProducts(dir?: string): Product[] {
       github_org: o.yaml.provider === "github" ? extractGithubOrgFromUrl(o.yaml.remote_url ?? undefined) : undefined,
     }));
   }
-  // v1.1.x legacy
+  // v0.1.x legacy
   const file = dir ? path.join(dir, "core", "products.json") : getProductsFile();
   if (!fs.existsSync(file)) return [];
   try {
@@ -316,7 +316,7 @@ export function saveProducts(products: Product[], dir?: string): void {
   fs.writeFileSync(file, JSON.stringify(products, null, 2));
 }
 
-/** Messenger channel config (per-org on v1.2.2+, per-product on v1.1.x). */
+/** Messenger channel config (per-org on v0.2.2+, per-product on v0.1.x). */
 export function loadMessengerConfig(orgOrProductDir: string, platform: string): Record<string, unknown> {
   try {
     const configFile = path.join(orgOrProductDir, platform, "config.yaml");
@@ -327,7 +327,7 @@ export function loadMessengerConfig(orgOrProductDir: string, platform: string): 
   }
 }
 
-/** Guard: MESSENGER must be a single platform in v1.2.2+. */
+/** Guard: MESSENGER must be a single platform in v0.2.2+. */
 export function normalizeMessenger(raw: string | undefined): string {
   if (!raw) return "discord";
   const first = raw.split(",")[0].trim().toLowerCase();

@@ -1,4 +1,4 @@
-# Morning Brief (v1.2.4)
+# Morning Brief (v0.2.4)
 
 > 하루 두 번 발화하는 사용자 브리프 중 **아침** 회.
 > 사용자 timezone 기준 아침 시각(기본 08:00)에 `#workflow` 채널 root에 post.

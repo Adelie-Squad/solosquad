@@ -160,7 +160,7 @@ Full details in concept-guide §9.
 
 ## Versions
 
-Current npm release: **v0.2.4** (npm registry: `1.2.4`).
+Current npm release: **v0.2.4** (npm registry: `0.2.4`).
 
 The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stable API guarantees. Planned milestones:
 

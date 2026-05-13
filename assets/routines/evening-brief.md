@@ -1,4 +1,4 @@
-# Evening Brief (v1.2.4)
+# Evening Brief (v0.2.4)
 
 > 하루 두 번 발화하는 사용자 브리프 중 **저녁** 회.
 > 사용자 timezone 기준 저녁 시각(기본 18:00)에 `#workflow` 채널 root에 post.

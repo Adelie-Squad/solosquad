@@ -8,7 +8,7 @@ export interface RoutineConfig {
   id: string;
   name: string;
   kind: RoutineKind;
-  /** Always "workflow" in v1.2.4+. Kept as field for forward extensibility. */
+  /** Always "workflow" in v0.2.4+. Kept as field for forward extensibility. */
   channel: string;
   /** System thread inside #workflow for background routines. user-brief posts to channel root. */
   threadName?: string;
@@ -17,11 +17,11 @@ export interface RoutineConfig {
 }
 
 /**
- * v1.2.4 routine layout — five entries total:
+ * v0.2.4 routine layout — five entries total:
  *   - 2 user-facing briefs (morning, evening) post to #workflow root
  *   - 3 background routines post to system threads inside #workflow
  *
- * Cron times are not stored here in v1.2.4+. Times are resolved at scheduler
+ * Cron times are not stored here in v0.2.4+. Times are resolved at scheduler
  * startup from workspace.yaml (`briefings`, `background_routines`).
  */
 export const ROUTINES: RoutineConfig[] = [

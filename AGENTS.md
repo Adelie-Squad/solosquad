@@ -31,9 +31,9 @@ solosquad migrate       # Upgrade workspace layout across versions
 solosquad add org       # Add another organization to workspace
 solosquad add repo      # Clone (URL) or register (local path) a repository
 solosquad sync          # Sync org/repositories/ with .org.yaml
-solosquad pm status / reset / compact          # v1.2.5 — PM session ops
-solosquad workflow list / show / focus         # v1.2.5 — workflow inspect
-solosquad rollback --workflow <id>             # v1.2.5 — snapshot revert
+solosquad pm status / reset / compact          # v0.3.0 — PM session ops
+solosquad workflow list / show / focus         # v0.3.0 — workflow inspect
+solosquad rollback --workflow <id>             # v0.3.0 — snapshot revert
 solosquad goal new / list / show / run / status / stop / verify   # v0.4 (planned)
 ```
 
@@ -120,7 +120,7 @@ platforms share the same bot logic and routing.
 
 ## Agent Routing
 
-**v1.2.5 (PM mode — v0.3 narrative):** `#owner-command` messages drive a long-lived
+**v0.3.0 (PM mode — v0.3 narrative):** `#owner-command` messages drive a long-lived
 Claude Code PM session per (user, org) via `src/bot/pm-runner.ts`. The PM
 delegates to specialists through Claude Code's native `Task` tool. Specialists
 are auto-discovered from `<org>/.claude/agents/<name>.md` (synced from
@@ -130,7 +130,7 @@ gets their own session-id stored in `<org>/.solosquad/sessions/<user>.json`.
 Legacy keyword routing (`src/bot/agent-router.ts`) is retained for the
 scheduler and as future fallback — 60+ keywords → 25 agent mappings.
 
-- v1.2.5 covers: workflow reconciler, slash commands (`/think /plan /build /review /ship`), `pm`/`workflow`/`rollback` CLIs, stage_id/focus markers
+- v0.3.0 covers: workflow reconciler, slash commands (`/think /plan /build /review /ship`), `pm`/`workflow`/`rollback` CLIs, stage_id/focus markers
 - v0.4 (planned): autonomous goal runner with metric-driven keep/discard cycles
 - v0.5 onward: 4-channel triggers (slash / keyword / freq auto-load / explicit PM call), see `docs/plan/v0.5-workflow-maker.md` §7
 - v0.6 onward: FTS5 archive fallback for past memory recall (`docs/plan/v0.6-default-workflow-tuning.md` §4)
@@ -149,7 +149,7 @@ Default schedule (all times in workspace.yaml `timezone`, default `Asia/Seoul`):
 | 16:00 daily | Experiment Check | background | #workflow → `system-experiments` | experiments.jsonl |
 | 18:00 daily | Evening Brief | user-brief | #workflow root | decisions.jsonl |
 | Sun 20:00 | Weekly Review | background | #workflow → `system-weekly-review` | decisions.jsonl |
-| 23:00 daily | PM Compaction (v1.2.5) | background | #workflow → `system-pm-compaction` | memory/pm-skills/ |
+| 23:00 daily | PM Compaction (v0.3.0) | background | #workflow → `system-pm-compaction` | memory/pm-skills/ |
 
 Times are configurable per workspace in `workspace.yaml` (`briefings.morning.time`,
 `briefings.evening.time`, `background_routines.*`, `pm.compaction_time`). JSON
@@ -158,7 +158,7 @@ All logs in `memory/routine-logs/`.
 
 ## Multi-Session Execution Rules
 
-### Orchestrator (PM) Session — v1.2.5+
+### Orchestrator (PM) Session — v0.3.0+
 
 1. Load `orchestrator/SKILL.md` (PM mode rewrite)
 2. User idea → clarifying questions (≤2 in one turn) → PRD generation
@@ -193,7 +193,7 @@ Template: `assets/templates/handoff.md`
 Track the entire workflow via `workflows/<wf-id>/_status.yaml`:
 - `pending` → `in_progress` → `completed`
 - `needs_revision`: Requires regeneration due to previous stage changes (set by
-  `WorkflowReconciler` on bot crash recovery — v1.2.5)
+  `WorkflowReconciler` on bot crash recovery — v0.3.0)
 
 Template: `assets/templates/status.yaml`
 
@@ -219,11 +219,11 @@ metric-game / guardrail integrity collapses (Goodhart's Law).
 
 - `src/engine/**` (v0.4 — parser, evaluator, tracker, reconciliation, guards)
 - `src/migrations/scripts/**` once a script is published in a tagged release
-  (1.1.x-to-1.2.0.ts, 1.2.0-to-1.2.1.ts, etc. — fix forward in a new
+  (0.1.x-to-0.2.0.ts, 0.2.0-to-0.2.1.ts, etc. — fix forward in a new
   migration; do not rewrite history)
 - `AGENTS.md` (this file)
-- `CHANGELOG.md` entries for already-published versions (1.2.5 and prior)
-- Published git tags (v1.1.x, v1.2.x — semver immutability)
+- `CHANGELOG.md` entries for already-published versions (0.3.0 and prior)
+- Published git tags (v0.1.x, v0.2.x — semver immutability)
 
 ### Modifiable paths — normal work area
 
@@ -241,7 +241,7 @@ metric-game / guardrail integrity collapses (Goodhart's Law).
 ```bash
 npm install
 npm run build           # tsc emits dist/
-npm test                # node --test, 75 cases as of v1.2.5
+npm test                # node --test, 75 cases as of v0.3.0
 ```
 
 `prepublishOnly` script runs `npm run build` automatically before `npm publish`.
