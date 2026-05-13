@@ -4,6 +4,7 @@
 
 | 일자 | 종류 | 주제 | 파일 |
 |---|---|---|---|
+| 2026-05-13 | Event Record | Tier 1 확장: paperclip / claw3d / Ralphathon (#8–#10) | [2026-05-13-tier1-expansion.md](./2026-05-13-tier1-expansion.md) |
 | 2026-05-11 | Baseline Survey | 7개 레퍼런스 × 3축 진단 (최초 베이스라인) | [2026-05-11-baseline-survey.md](./2026-05-11-baseline-survey.md) |
 
 ---
@@ -28,5 +29,8 @@
 | 5 | phuryn/pm-skills | 멀티에이전트 | 2026-05-11 |
 | 6 | karpathy/autoresearch | 24/7 자동화 | 2026-05-11 |
 | 7 | MiroFish | 멀티에이전트 (관찰) | 2026-05-11 |
+| 8 | paperclipai/paperclip | 멀티에이전트 / 24-7 | 2026-05-13 |
+| 9 | iamlukethedev/claw3d | 멀티에이전트 (시각화) | 2026-05-13 |
+| 10 | Ralphathon (해커톤 문화) | 24-7 자동화 | 2026-05-13 |
 
-승격 규칙: Tier 2에서 2회 이상 의미있는 신호 관측 → Tier 1 승격 후보.
+승격 규칙: Tier 2에서 2회 이상 의미있는 신호 관측 → Tier 1 승격 후보. **사용자 지정 즉시 승격 트랙도 허용** (2026-05-13 #8–#10 사례 — SKILL.md §1 보완 필요, 본 레코드 Open Questions 참조).
