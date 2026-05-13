@@ -18,7 +18,9 @@
   "main": "./dist/src/index.js",
   "files": [
     "dist/",
-    "assets/"
+    "assets/",
+    "AGENTS.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "build": "tsc",
