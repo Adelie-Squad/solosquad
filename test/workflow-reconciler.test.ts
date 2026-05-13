@@ -99,6 +99,58 @@ test("reconcileAll surfaces a fallback notice when no pm.message_out follows pm.
   assert.ok(events.some((e) => e.kind === "pm.message_out"));
 });
 
+test("reconcileAll uses stage_id mapping — completed spawn for stage keeps it in_progress untouched", async () => {
+  const ws = tempWorkspace();
+  const orgSlug = "test-org";
+  writeStatus(ws, orgSlug, "wf-precise", [
+    { id: "stage-1-research", status: "in_progress", agent: "desk-researcher" },
+  ]);
+
+  // Spawn for stage-1-research was both started AND completed — should NOT flip.
+  const evPath = workflowEventsPath(ws, orgSlug, "wf-precise");
+  const sink = new FileEventSink(evPath);
+  sink.append({
+    ts: "2026-05-13T10:00:00Z",
+    kind: "spawn.start",
+    taskId: "task-aaa",
+    toolUseId: "u1",
+    agent: "desk-researcher",
+    description: "research",
+    stageId: "stage-1-research",
+    workflowId: "wf-precise",
+  });
+  sink.append({
+    ts: "2026-05-13T10:00:09Z",
+    kind: "spawn.complete",
+    taskId: "task-aaa",
+    toolUseId: "u1",
+    totalTokens: 1000,
+    toolUses: 0,
+    durationMs: 9000,
+  });
+
+  const reconciler = new WorkflowReconciler(ws, new SessionStore(ws));
+  const report = await reconciler.reconcileAll();
+  // Stage is still in_progress only because PM hasn't updated _status.yaml yet
+  // — but reconciler shouldn't flip it: its spawn DID complete.
+  // (Reconciler is conservative: keep in_progress, let PM decide.)
+  assert.equal(report.recoveredStages.length, 0);
+});
+
+test("reconcileAll uses stage_id mapping — stage with no recorded spawn → needs_revision", async () => {
+  const ws = tempWorkspace();
+  const orgSlug = "test-org";
+  writeStatus(ws, orgSlug, "wf-orphan", [
+    { id: "stage-1-research", status: "in_progress", agent: "desk-researcher" },
+  ]);
+  // No spawn events at all for this stage.
+
+  const reconciler = new WorkflowReconciler(ws, new SessionStore(ws));
+  const report = await reconciler.reconcileAll();
+  assert.equal(report.recoveredStages.length, 1);
+  assert.equal(report.recoveredStages[0].stageId, "stage-1-research");
+});
+
 test("reconcileAll is a no-op when last message_in already has a message_out", async () => {
   const ws = tempWorkspace();
   const orgSlug = "test-org";

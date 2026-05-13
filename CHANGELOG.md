@@ -4,6 +4,57 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] — 2026-05-13
+
+**Phase B refinements.** Closes the three known limitations called out in
+1.3.1's CHANGELOG. No new subsystems — three small contract upgrades that
+make the bot's behavior more precise and inspectable.
+
+### Added
+- `src/bot/spawn-prompt-markers.ts` — parser for the `[stage:<id> wf:<id>]`
+  marker PM embeds in Task tool prompts. Replaces the agent-name substring
+  heuristic the WorkflowReconciler used in 1.3.1.
+- `src/bot/focus-markers.ts` — round-trip for `[focus:<wf-id>]` /
+  `[focus:none]` markers PM emits in its replies. pm-runner detects the
+  last marker, updates SessionStore.activeWorkflowId, and strips the marker
+  from the user-facing text via `stripFocusMarkers`.
+- `src/cli/workflow-focus.ts` — `solosquad workflow focus <wf-id>` (or
+  `--clear`) for manually setting the active workflow on a user's PM
+  session. Multi-user orgs get an interactive picker.
+- 13 new unit tests for the marker parsers + the precise reconciler path.
+  Full suite is 75 green.
+
+### Changed
+- `src/bot/events.ts` — `SpawnStartEvent` gains optional `stageId` and
+  `workflowId` fields populated from the spawn prompt marker.
+- `src/bot/pm-runner.ts` — extracts `[stage:]` from `task_started.prompt`
+  on every spawn and writes both ids onto the `spawn.start` event. Also
+  appends a stable `[ambient] currently-focused workflow` line to the
+  Claude system prompt when the session has an `activeWorkflowId` — same
+  text every turn ⇒ prompt cache stays warm. Strips `[focus:]` markers
+  from the reply before forwarding to the messenger.
+- `src/bot/workflow-reconciler.ts` — no more agent-name substring
+  matching. Builds a `stage_id → [task_ids]` index from `spawn.start`
+  events, then checks `spawn.complete` coverage per stage. A stage with
+  no recorded spawn at all is still flipped to `needs_revision` (PM never
+  got to delegate, or it omitted the marker).
+- `assets/orchestrator/SKILL.md` — documents the `[stage:]` marker
+  convention with an example and adds a "Compaction Notes" rule: PM reads
+  `memory/pm-skills/_recent.md` at the start of every turn, drops any
+  noted workflow details from thread context, then truncates the
+  processed lines.
+- `assets/routines/pm-compaction.md` — routine now appends one line to
+  `memory/pm-skills/_recent.md` for each workflow it externalizes,
+  closing the previously-passive notification gap.
+
+### Compatibility
+- No migration script. Existing 1.3.1 workspaces keep working; new fields
+  on `SpawnStartEvent` are optional. Workspaces without `memory/pm-skills/`
+  get the directory on first compaction run.
+- PM SKILL.md instructs the marker convention but treats it as optional —
+  spawn events without the marker still record correctly, just with
+  `stageId` undefined.
+
 ## [1.3.1] — 2026-05-12
 
 **Phase B of v0.3.** Closes the recovery + CLI gaps that were intentionally
