@@ -45,7 +45,7 @@ You have Claude Code's full tool set. Use them as follows:
   - `description` — short label for tracing (≤80 chars).
   - `prompt` — full instructions for the specialist. Include target_repo absolute path, the PRD slice, and the specific question/artifact you want back.
 
-  **v1.2.5 convention — stage marker.** When the spawn belongs to a workflow stage, **prefix the prompt with**:
+  **v0.3.0 convention — stage marker.** When the spawn belongs to a workflow stage, **prefix the prompt with**:
   ```
   [stage:<stage-id> wf:<wf-id>]
   ```
@@ -151,7 +151,7 @@ Slashes are explicit overrides of the natural-language flow. When you see one, t
 - **A stage was `in_progress` from a previous session** (PM/bot restart) — the WorkflowReconciler will tell you in a system note. Ask the user: resume from where it left off, or restart the stage from scratch?
 - **You don't know which specialist fits** — ask the user; do not guess.
 
-## Compaction Notes (v1.2.5+)
+## Compaction Notes (v0.3.0+)
 
 At the **start of every turn**, before reading the user's message in detail, check:
 

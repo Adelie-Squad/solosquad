@@ -4,7 +4,7 @@ import path from "path";
 import dotenv from "dotenv";
 
 // Walk up from CWD to find the nearest solosquad workspace root, then load
-// its .env. v1.2.2+ stores config at <root>/.solosquad/.env; v1.1.x had it at
+// its .env. v0.2.2+ stores config at <root>/.solosquad/.env; v0.1.x had it at
 // <root>/.env. Fall back to plain `dotenv/config` semantics (CWD/.env) when
 // no workspace is detected (fresh shell, pre-init).
 function loadWorkspaceEnv(): void {

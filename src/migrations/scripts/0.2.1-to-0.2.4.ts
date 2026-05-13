@@ -10,10 +10,10 @@ import {
   saveWorkspaceYaml,
 } from "../../util/config.js";
 
-const TARGET = "1.2.4";
+const TARGET = "0.2.4";
 
 /**
- * v1.2.1 → v1.2.4 — non-destructive workspace.yaml upgrade.
+ * v0.2.1 → v0.2.4 — non-destructive workspace.yaml upgrade.
  *
  * Adds three new fields with defaults:
  *   - timezone               (default: Asia/Seoul)
@@ -26,11 +26,11 @@ const TARGET = "1.2.4";
  * does not delete old channels — it just stops sending to them. Users are
  * advised in the migration output to archive old channels manually.
  *
- * v1.2.2 and v1.2.3 were planning-only releases; the actual code stream goes
- * v1.2.1 → v1.2.4 in a single jump.
+ * v0.2.2 and v0.2.3 were planning-only releases; the actual code stream goes
+ * v0.2.1 → v0.2.4 in a single jump.
  */
 export const migration: Migration = {
-  from: "1.2.1",
+  from: "0.2.1",
   to: TARGET,
   description:
     "Add timezone + briefings + background_routines to workspace.yaml. Channels reduced to 2.",
@@ -38,7 +38,7 @@ export const migration: Migration = {
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
     if (!ws) return false;
-    return ws.version === "1.2.1";
+    return ws.version === "0.2.1";
   },
 
   async plan(workspace: string): Promise<MigrationPlan> {
@@ -78,7 +78,7 @@ export const migration: Migration = {
     steps.push({
       kind: "update",
       to: ".solosquad/workspace.yaml",
-      description: `Bump version: 1.2.1 → ${TARGET}`,
+      description: `Bump version: 0.2.1 → ${TARGET}`,
     });
 
     return {

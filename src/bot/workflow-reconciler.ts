@@ -14,7 +14,7 @@ import {
 import { readLastAssistantTurn, sessionJsonlPath } from "./cc-jsonl-reader.js";
 
 /**
- * v1.2.5 — boot-time reconciliation.
+ * v0.3.0 — boot-time reconciliation.
  *
  * Two recovery paths:
  *
@@ -126,7 +126,7 @@ export class WorkflowReconciler {
 
     const events = this.readWorkflowEvents(orgSlug, workflowId);
 
-    // v1.2.5: precise stage_id ↔ task_id mapping via spawn.start.stageId.
+    // v0.3.0: precise stage_id ↔ task_id mapping via spawn.start.stageId.
     // Build a stage -> [taskIds] index, then check spawn.complete coverage.
     const stageToTaskIds = new Map<string, string[]>();
     for (const e of events) {

@@ -63,7 +63,7 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     }
   }
 
-  // 2. Workspace layout detection — v1.2.2 has .solosquad/, v1.1.x has flat config dirs
+  // 2. Workspace layout detection — v0.2.2 has .solosquad/, v0.1.x has flat config dirs
   console.log(chalk.dim("\nWorkspace layout:"));
   const workspace = getWorkspaceRoot();
   const solosquadDir = path.join(workspace, ".solosquad");
@@ -79,8 +79,8 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     if (!check(".solosquad/workspace.yaml", fs.existsSync(wsYaml), "Run: solosquad init")) issues++;
   } else if (legacyMarkers) {
     warn(
-      `Legacy v1.1.x layout at ${workspace}`,
-      "Run: solosquad migrate --dry-run  (preview),  --apply  (upgrade to v1.2.0)"
+      `Legacy v0.1.x layout at ${workspace}`,
+      "Run: solosquad migrate --dry-run  (preview),  --apply  (upgrade to v0.2.0)"
     );
     issues++;
   } else {
@@ -114,7 +114,7 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   if (rawMessenger.includes(",")) {
     warn(
       `MESSENGER contains multiple values: "${rawMessenger}"`,
-      "v1.2.0+ supports only one messenger per workspace. Using first value."
+      "v0.2.0+ supports only one messenger per workspace. Using first value."
     );
   }
 
@@ -182,7 +182,7 @@ async function runMessengerChecks(messenger: string): Promise<number> {
     check(
       "Telegram",
       false,
-      "Telegram support was removed in v1.2.4. Switch MESSENGER to discord or slack."
+      "Telegram support was removed in v0.2.4. Switch MESSENGER to discord or slack."
     );
     failures++;
   }

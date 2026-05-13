@@ -34,7 +34,7 @@ async function handleLegacyOrg(orgDir: string, orgSlug: string, opts: SyncOpts):
 
   console.log(
     chalk.yellow(
-      `\n⚠ ${orgSlug}/ has a .git folder at the organization root (v1.1.x legacy layout).`
+      `\n⚠ ${orgSlug}/ has a .git folder at the organization root (v0.1.x legacy layout).`
     )
   );
   console.log(chalk.dim(

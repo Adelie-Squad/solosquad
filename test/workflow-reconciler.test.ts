@@ -14,7 +14,7 @@ function tempWorkspace(orgSlug = "test-org"): string {
   fs.mkdirSync(path.join(dir, ".solosquad"), { recursive: true });
   fs.writeFileSync(
     path.join(dir, ".solosquad", "workspace.yaml"),
-    `version: 1.2.5\ndisplay_name: t\ncreated_at: 2026-05-12T00:00:00Z\n`
+    `version: 0.3.0\ndisplay_name: t\ncreated_at: 2026-05-12T00:00:00Z\n`
   );
   fs.mkdirSync(path.join(dir, orgSlug), { recursive: true });
   fs.writeFileSync(

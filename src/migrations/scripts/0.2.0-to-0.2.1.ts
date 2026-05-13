@@ -4,13 +4,13 @@ import yaml from "js-yaml";
 import type { Migration, MigrationPlan, MigrationStep, VerifyResult } from "../types.js";
 import { listOrganizations, loadWorkspaceYaml, saveWorkspaceYaml } from "../../util/config.js";
 
-const TARGET = "1.2.1";
+const TARGET = "0.2.1";
 
 /**
- * v1.2.0 → v1.2.1 — no data migration.
+ * v0.2.0 → v0.2.1 — no data migration.
  *
- * 1.2.1 adds `add org`, `add repo`, `sync` commands and makes `<org>/repositories/`
- * the canonical home for repos. Existing 1.2.0 workspaces keep working; this
+ * 0.2.1 adds `add org`, `add repo`, `sync` commands and makes `<org>/repositories/`
+ * the canonical home for repos. Existing 0.2.0 workspaces keep working; this
  * step pre-creates the `repositories/` folder for every org (so the first `sync`
  * run is instant) and stamps workspace.yaml with the new version so the
  * startup banner stops firing.
@@ -19,14 +19,14 @@ const TARGET = "1.2.1";
  * `solosquad sync`.
  */
 export const migration: Migration = {
-  from: "1.2.0",
+  from: "0.2.0",
   to: TARGET,
   description: "Pre-create repositories/ folders and bump workspace.yaml version",
 
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
     if (!ws) return false;
-    return ws.version === "1.2.0";
+    return ws.version === "0.2.0";
   },
 
   async plan(workspace: string): Promise<MigrationPlan> {
@@ -45,7 +45,7 @@ export const migration: Migration = {
     steps.push({
       kind: "update",
       to: ".solosquad/workspace.yaml",
-      description: `Bump version: 1.2.0 → ${TARGET}`,
+      description: `Bump version: 0.2.0 → ${TARGET}`,
     });
     return {
       steps,

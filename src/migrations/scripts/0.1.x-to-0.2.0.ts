@@ -11,7 +11,7 @@ import type {
 import { loadEnv, loadProducts, saveEnv } from "../../util/config.js";
 import { normalizeLine } from "../../util/platform.js";
 
-const TARGET = "1.2.0";
+const TARGET = "0.2.0";
 
 const ROOT_CONFIG_DIRS = ["agents", "routines", "core", "templates", "orchestrator"];
 const MESSENGER_PLATFORMS = ["slack", "discord", "telegram"];
@@ -65,7 +65,7 @@ function moveFile(from: string, to: string): void {
 }
 
 export const migration: Migration = {
-  from: "1.1.x",
+  from: "0.1.x",
   to: TARGET,
   description: "Restructure to .solosquad/ config + per-org directories",
 
@@ -163,7 +163,7 @@ export const migration: Migration = {
 
     // 4. REPOS_BASE_PATH removal
     if (env.REPOS_BASE_PATH) {
-      irreversible.push("Remove REPOS_BASE_PATH from .env (obsolete in v1.2.0+).");
+      irreversible.push("Remove REPOS_BASE_PATH from .env (obsolete in v0.2.0+).");
       steps.push({
         kind: "update",
         to: ".solosquad/.env",

@@ -21,9 +21,9 @@ export interface VerifyResult {
 }
 
 export interface Migration {
-  /** Source version spec (e.g. "1.1.x" matches 1.1.0–1.1.*). */
+  /** Source version spec (e.g. "0.1.x" matches 0.1.0–1.1.*). */
   from: string;
-  /** Target version (e.g. "1.2.2"). */
+  /** Target version (e.g. "0.2.2"). */
   to: string;
   description: string;
   detect(workspace: string): Promise<boolean>;

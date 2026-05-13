@@ -35,7 +35,7 @@ async function runRoutineForProduct(
   routine: RoutineConfig,
   product: { name: string; slug: string }
 ): Promise<void> {
-  // v1.2.0+: product.slug == org slug. Routines always run at org level so
+  // v0.2.0+: product.slug == org slug. Routines always run at org level so
   // memory/routine-logs (org scope) is the persistence target — but the Claude
   // session still launches in the active repo to give it real code context.
   const orgDir = path.join(getReposBase(), product.slug);
@@ -62,7 +62,7 @@ async function runRoutineForProduct(
     `# ${routine.name}\n\n${result}`
   );
 
-  // v1.2.4+: route to #workflow channel; background routines target a system thread
+  // v0.2.4+: route to #workflow channel; background routines target a system thread
   const title = `${routine.emoji} [${routine.name}] ${product.name} | ${nowLabel()}`;
   for (const adapter of adapters) {
     const config = loadMessengerConfig(orgDir, adapter.platform);
@@ -199,7 +199,7 @@ export async function startScheduler(): Promise<void> {
   }
 
   // Resolve effective schedule from workspace.yaml and register cron jobs
-  const schedules = resolveSchedules(ws ?? ({ version: "1.2.4", display_name: "", created_at: "" } as WorkspaceYaml));
+  const schedules = resolveSchedules(ws ?? ({ version: "0.2.4", display_name: "", created_at: "" } as WorkspaceYaml));
   for (const s of schedules) {
     if (!s.enabled) {
       console.log(`[Scheduler] Skipped: ${s.routine.name} (disabled)`);

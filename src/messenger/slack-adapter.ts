@@ -122,7 +122,7 @@ export class SlackAdapter implements MessengerAdapter {
     console.log("[Slack Bot] Starting Socket Mode...");
     await app.start();
 
-    // v1.2.4+: ensure default channels and system threads exist (symmetry with Discord)
+    // v0.2.4+: ensure default channels and system threads exist (symmetry with Discord)
     await this.ensureChannelsForAllProducts();
   }
 
@@ -135,7 +135,7 @@ export class SlackAdapter implements MessengerAdapter {
 
     const { WebClient } = await import("@slack/web-api");
     this.client = new WebClient(botToken);
-    // v1.2.4+: notifier-side setup ensures #workflow exists before scheduler fires
+    // v0.2.4+: notifier-side setup ensures #workflow exists before scheduler fires
     await this.ensureChannelsForAllProducts();
   }
 
@@ -200,7 +200,7 @@ export class SlackAdapter implements MessengerAdapter {
       console.log(`[Slack] Channels created: ${created.join(", ")}`);
     }
 
-    // v1.2.4+: ensure system threads exist inside #workflow
+    // v0.2.4+: ensure system threads exist inside #workflow
     const workflowId = await this.findChannelByName("workflow");
     if (workflowId) {
       // Auto-join (otherwise chat.postMessage may fail in private/new channels)

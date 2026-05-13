@@ -11,7 +11,7 @@ import { normalizeLine } from "../util/platform.js";
 export function detectWorkspaceVersion(workspace: string): string | null {
   if (!fs.existsSync(workspace)) return null;
 
-  // v1.2.2+: .solosquad/ subdirectory with workspace.yaml
+  // v0.2.2+: .solosquad/ subdirectory with workspace.yaml
   const solosquadDir = path.join(workspace, ".solosquad");
   if (fs.existsSync(solosquadDir)) {
     const wsFile = path.join(solosquadDir, "workspace.yaml");
@@ -25,13 +25,13 @@ export function detectWorkspaceVersion(workspace: string): string | null {
         /* fall through */
       }
     }
-    return "1.2.0";
+    return "0.2.0";
   }
 
-  // v1.1.x: config folders at root, no .solosquad/
+  // v0.1.x: config folders at root, no .solosquad/
   const legacyMarkers = ["agents", "routines", "core"];
   if (legacyMarkers.every((m) => fs.existsSync(path.join(workspace, m)))) {
-    return "1.1.x";
+    return "0.1.x";
   }
 
   return null;
@@ -39,7 +39,7 @@ export function detectWorkspaceVersion(workspace: string): string | null {
 
 /**
  * Walk up from a starting directory to find the nearest workspace root
- * (v1.2.2 = has .solosquad/; v1.1.x = has agents/+routines/+core/).
+ * (v0.2.2 = has .solosquad/; v0.1.x = has agents/+routines/+core/).
  * Returns the absolute path or null.
  */
 export function findWorkspaceRoot(start: string): string | null {
@@ -55,9 +55,9 @@ export function findWorkspaceRoot(start: string): string | null {
 /** Matcher: does a migration's "from" spec match the detected version? */
 export function versionMatches(spec: string, detected: string): boolean {
   if (spec === detected) return true;
-  // "1.1.x" matches "1.1.0", "1.1.5" etc.
+  // "0.1.x" matches "0.1.0", "0.1.5" etc.
   if (spec.endsWith(".x")) {
-    const prefix = spec.slice(0, -1); // "1.1."
+    const prefix = spec.slice(0, -1); // "0.1."
     return detected.startsWith(prefix);
   }
   return false;

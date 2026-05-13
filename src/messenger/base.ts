@@ -4,7 +4,7 @@ export interface MessageContext {
   reply(text: string): Promise<void>;
   typing(): Promise<void>;
   _agentLabel: string;
-  /** v1.2.5 — stable per-user identifier from the messenger platform.
+  /** v0.3.0 — stable per-user identifier from the messenger platform.
    * Used by PM-runner to key session-store: (userId, orgSlug) → session-id.
    * Discord: message.author.id. Slack: event.user. */
   userId: string;

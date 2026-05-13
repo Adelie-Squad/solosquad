@@ -4,7 +4,7 @@ import { getAgentsDir, getOrgDir } from "../util/paths.js";
 import { normalizeLine } from "../util/platform.js";
 
 /**
- * v1.2.5 — `.claude/agents/` synchronizer.
+ * v0.3.0 — `.claude/agents/` synchronizer.
  *
  * Claude Code discovers custom subagents from `<cwd>/.claude/agents/<name>.md`.
  * SoloSquad ships agent SKILL.md files at `assets/agents/{team}/{agent}/SKILL.md`
@@ -16,7 +16,7 @@ import { normalizeLine } from "../util/platform.js";
  * discovery beats inline `--agents` JSON because 25 × 5KB SKILLs blow past the
  * Windows CMD 8191-char argv limit).
  *
- * Triggered by: `solosquad init`, `solosquad sync`, migration 1.2.4 -> 1.2.5.
+ * Triggered by: `solosquad init`, `solosquad sync`, migration 0.2.4 -> 0.3.0.
  */
 
 interface TeamDefaults {

@@ -15,7 +15,7 @@ import { parseSpawnMarkers } from "./spawn-prompt-markers.js";
 import { parseFocusMarker, stripFocusMarkers } from "./focus-markers.js";
 
 /**
- * v1.2.5 — PM session driver.
+ * v0.3.0 — PM session driver.
  *
  * Wraps the long-lived Claude Code session that talks to the user. The flow
  * (per docs/plan/v0.3-pm-mode-orchestration.md §4.2):
@@ -180,7 +180,7 @@ export class PmRunner {
     // --session-id <uuid> instead of --resume <uuid>.
     const useResume = !fresh && !rotatedAlready;
 
-    // v1.2.5: tell PM its currently-focused workflow (if any). The append
+    // v0.3.0: tell PM its currently-focused workflow (if any). The append
     // text is cache-friendly — same workflow id ⇒ same prompt ⇒ cache hit.
     const focusHint = record.activeWorkflowId
       ? `\n\n[ambient] Your currently-focused workflow is \`${record.activeWorkflowId}\`. If you switch focus, include \`[focus:<new-wf-id>]\` (or \`[focus:none]\`) in your reply.`
@@ -273,7 +273,7 @@ export class PmRunner {
 
     const rawText = lastResultText || collectedAssistantText.join("");
 
-    // v1.2.5: apply any [focus:<wf-id>] marker, then strip from user-facing reply.
+    // v0.3.0: apply any [focus:<wf-id>] marker, then strip from user-facing reply.
     const focusUpdate = parseFocusMarker(rawText);
     if (focusUpdate) {
       this.deps.sessions.setActiveWorkflow(

@@ -153,7 +153,7 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
 /** `solosquad pm compact` — manual trigger for the pm-compaction routine. */
 export async function pmCompactCommand(_opts: { org?: string }): Promise<void> {
   // Phase B placeholder — full routine ships with `pm-compaction.md` integration.
-  // For 1.2.5 we just point users at the routine command.
+  // For 0.3.0 we just point users at the routine command.
   console.log(
     chalk.yellow(
       "pm-compaction is delivered as a scheduled routine. To trigger it manually now, run:"

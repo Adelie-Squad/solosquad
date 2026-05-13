@@ -580,18 +580,24 @@ TypeScript + Next.js. Vercel 배포.
 - API route는 src/pages/api/
 ...</code></pre>
 
-  <h3 id="s3-4">3.4 SKILL.md vs agent.md / AGENTS.md</h3>
-  <p>일부 AI 도구는 <code>agent.md</code> 또는 <code>AGENTS.md</code>를 쓰지만, SoloSquad는 Anthropic 공식 포맷인 <code>SKILL.md</code>를 채택합니다.</p>
+  <h3 id="s3-4">3.4 SKILL.md vs AGENTS.md — 다른 레이어, 다른 역할</h3>
+  <p>SoloSquad는 <strong>두 파일을 모두 사용하되 책임이 명확히 다릅니다</strong>. 한 워크스페이스에서 SKILL.md는 여러 개, AGENTS.md는 단 1개.</p>
 
   <table>
-    <thead><tr><th></th><th>SKILL.md (SoloSquad·Anthropic)</th><th>agent.md / AGENTS.md (일부 타 도구)</th></tr></thead>
+    <thead><tr><th></th><th>SKILL.md (Anthropic 공식)</th><th>AGENTS.md (cross-tool 표준) <span class="badge plan">v0.4</span></th></tr></thead>
     <tbody>
-      <tr><td>표준화</td><td>Anthropic Agent Skills 공식 사양</td><td>도구별 변종</td></tr>
-      <tr><td>frontmatter</td><td>YAML, <code>name</code>·<code>description</code> 필수</td><td>도구별 상이</td></tr>
-      <tr><td>구조</td><td>Progressive disclosure (본문 짧게, 상세는 <code>references/</code>)</td><td>대개 단일 파일</td></tr>
-      <tr><td>호환성</td><td>Claude Code Plugin 마켓플레이스와 직접 연동 가능</td><td>도구 락인</td></tr>
+      <tr><td>역할</td><td>개별 <strong>agent의 정체성·동작 매뉴얼</strong></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (프로젝트 컨벤션·금지 경로·도구 사용 규칙)</td></tr>
+      <tr><td>위치·개수</td><td><code>assets/agents/{team}/{agent}/SKILL.md</code> (25 specialist 각각)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code 마켓플레이스 호환)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> <strong>단 1개</strong></td></tr>
+      <tr><td>frontmatter</td><td>YAML, <code>name</code>·<code>description</code> 필수 + v0.4 도구·모델 override</td><td>없음 — 자유 markdown</td></tr>
+      <tr><td>편집 주체</td><td>v0.5 analyzer는 자동 분류·머지. 사람이 손볼 수 있음.</td><td><strong>사람 only</strong>. 어떤 AI 에이전트도 이 파일을 수정하지 못함 (Codex `/goal` 신뢰 앵커 정신과 동일).</td></tr>
+      <tr><td>다른 도구 호환</td><td>Claude Code Plugin 마켓플레이스와 직접 연동.</td><td>Codex·Aider·Cursor·최신 Claude Code 모두 인식하는 <strong>cross-tool 표준</strong> (<a href="https://developers.openai.com/codex/agents-md/">Codex AGENTS.md spec</a>).</td></tr>
+      <tr><td>v0.4 자율 실행에서</td><td>spawn된 specialist가 자기 SKILL.md를 컨텍스트로 받음.</td><td><code>immutable_paths</code>·<code>modifiable_paths</code>·외부 호출 화이트리스트가 박제되어 모든 <code>goal.md</code> 실행이 자동 상속.</td></tr>
     </tbody>
   </table>
+
+  <p><strong>요점:</strong> SKILL.md는 "이 agent가 누구인지·뭘 잘하는지"를 적고, AGENTS.md는 "이 워크스페이스를 만지는 모든 AI 도구가 따라야 할 룰"을 적습니다. 둘은 경쟁이 아니라 다른 레이어입니다.</p>
+
+  <p><strong>CLAUDE.md는 더 이상 사용하지 않습니다 <span class="badge plan">v0.4 결정</span>.</strong> 종전에는 CLAUDE.md와 AGENTS.md를 워크스페이스 루트에 함께 두는 설계였으나, 같은 위계에 두 파일을 두면 "어디 적어야 하지" 혼란이 발생하고 두 출처가 발산할 위험이 큽니다. v0.4부터 SoloSquad는 워크스페이스 영속 가이드를 <code>AGENTS.md</code> 단일 파일로 통일합니다. 기존 CLAUDE.md는 마이그레이션이 손대지 않고 컨텐츠만 AGENTS.md로 1회 복사 — 사용자가 필요 없으면 수동 삭제. 최신 Claude Code도 AGENTS.md를 fallback으로 인식하므로 호환성 손실 없음.</p>
 
   <h3 id="s3-5">3.5 위계별 파일 종류 (마스터 표)</h3>
 
@@ -606,6 +612,7 @@ TypeScript + Next.js. Vercel 배포.
       <tr><td><code>assets/routines/</code></td><td><code>morning-brief.md</code><br><code>evening-brief.md</code><br><code>signal-scan.md</code><br><code>experiment-check.md</code><br><code>weekly-review.md</code></td><td>5종 자동 routine 프롬프트</td><td>scheduler가 cron 시각에</td></tr>
       <tr><td><code>assets/templates/</code></td><td><code>handoff.md</code> / <code>prd-{type}.md</code> / <code>status.yaml</code> / ...</td><td>워크플로 스캐폴딩 템플릿</td><td>새 워크플로 생성 시</td></tr>
       <tr><td><code>.solosquad/knowledge/</code> <span class="badge plan">v0.6</span></td><td>(사용자 자유)</td><td>누적 공용 지식 (의사결정 프레임워크 등)</td><td>키워드 매칭 시 selective load</td></tr>
+      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>AGENTS.md</code></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (immutable_paths·modifiable_paths·Output 가드 박제). Codex·Aider·Cursor·최신 Claude Code 모두 동일 파일 인식하는 cross-tool 표준. 사람 only 편집.</td><td>모든 자율 실행 (<code>solosquad goal run</code>) + PM session이 자동 상속. (CLAUDE.md는 v0.4부터 사용하지 않음 — §3.4 참조)</td></tr>
     </tbody>
   </table>
 
@@ -616,6 +623,7 @@ TypeScript + Next.js. Vercel 배포.
       <tr><td><code>&lt;org&gt;/</code></td><td><code>.org.yaml</code></td><td>조직 메타 (이름, 메신저, 활성 repo)</td></tr>
       <tr><td><code>&lt;org&gt;/memory/</code></td><td><code>signals.jsonl</code><br><code>experiments.jsonl</code><br><code>decisions.jsonl</code><br><code>routine-logs/*.jsonl</code></td><td>routine 결과·결정 이벤트</td></tr>
       <tr><td><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/</code></td><td><code>_status.yaml</code><br><code>_handoff.md</code><br><code>_events.jsonl</code> <span class="badge plan">v0.3</span><br><code>stage-N-{name}/</code></td><td>활성 워크플로 상태·핸드오프·산출물</td></tr>
+      <tr><td><code>&lt;org&gt;/goals/&lt;goal-id&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>goal.md</code><br><code>results.tsv</code><br><code>_best.json</code><br><code>_last-run.md</code></td><td>자율 실행 의도서 (1회 실행 단위) + cycle 누적 결과 + ship 후보 commit + 마지막 run 요약. <code>solosquad goal run</code>이 갱신.</td></tr>
       <tr><td><code>&lt;org&gt;/slack/</code> 또는 <code>discord/</code></td><td>채널 매핑 yaml</td><td>메신저 채널 ↔ 조직 매핑</td></tr>
       <tr><td><code>&lt;org&gt;/.solosquad/sessions/</code> <span class="badge plan">v0.3</span></td><td><code>{user-id}.json</code></td><td>PM session id</td></tr>
       <tr><td><code>&lt;org&gt;/core/</code> <span class="badge plan">v0.6</span></td><td><code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>조직 철학·톤 (workspace core override)</td></tr>
@@ -819,7 +827,7 @@ Workspace: /Users/you/solosquad-workspace
 Detected structure: v0.1.x  (source)
 Target version:     v0.2.0  (installed CLI)
 
-Migration plan (1.1.x → 1.2.0):
+Migration plan (0.1.x → 0.2.0):
 
   ✓ Move workspace config to .solosquad/
   ✓ Convert each product → organization directory
@@ -843,8 +851,8 @@ Nothing written yet. Re-run with `--apply` to perform the migration.</code></pre
   <h4>여러 버전을 건너뛸 때 (체인 마이그레이션)</h4>
   <p>v0.1.2를 쓰다가 v0.3.0으로 직접 업데이트할 경우 마이그레이션이 <strong>체인으로 순차 실행</strong>됩니다:</p>
   <pre><code>Chaining migrations:
-  1.1.x → 1.2.0  (layout restructure)
-  1.2.0 → 1.3.0  (cross-repo enhancements)</code></pre>
+  0.1.x → 0.2.0  (layout restructure)
+  0.2.0 → 0.4.0  (cross-repo enhancements)</code></pre>
   <p>각 단계는 dry-run 후 한꺼번에 apply. 중간 실패 시 해당 단계까지만 롤백.</p>
 
   <h4>v0.2.4 업데이트 특별 사항</h4>
@@ -930,7 +938,7 @@ solosquad migrate --apply</code></pre>
   <h4>롤백</h4>
   <pre><code>solosquad migrate --rollback   # 가장 최근 백업으로 복원</code></pre>
   <p><strong>주의:</strong> 롤백 후에는 복원된 버전에 맞는 CLI를 쓰세요. v0.2.0로 마이그레이션했다가 v0.1.5로 롤백했다면:</p>
-  <pre><code>npm install -g solosquad@1.1.5</code></pre>
+  <pre><code>npm install -g solosquad@0.1.5</code></pre>
   <p>CLI와 워크스페이스 버전 불일치 시 <code>doctor</code>가 경고합니다.</p>
 
   <h4>백업 관리</h4>
@@ -1188,7 +1196,7 @@ solosquad bot --debug               # 자세한 로그</code></pre>
       <tr><td><code>solosquad pm status / reset / compact</code></td><td>v0.3</td><td>PM session 상태·재시작·compaction</td></tr>
       <tr><td><code>solosquad workflow list / show &lt;id&gt;</code></td><td>v0.3</td><td>워크플로 목록·상세</td></tr>
       <tr><td><code>solosquad rollback --workflow &lt;id&gt;</code></td><td>v0.3</td><td>특정 워크플로 직전 spawn 결과 revert</td></tr>
-      <tr><td><code>solosquad run --program &lt;file&gt; --hours N</code></td><td>v0.4</td><td>자율 실험 루프 (밤새 작업)</td></tr>
+      <tr><td><code>solosquad goal new / list / show / run / status / stop / verify</code></td><td>v0.4</td><td>자율 실행 goal 관리 + 밤새 실행 루프 (Codex <code>/goal</code> + <code>AGENTS.md</code> 2계층)</td></tr>
       <tr><td><code>solosquad agent add / list / info / validate</code></td><td>v0.5</td><td>새 agent 스캐폴딩·관리</td></tr>
       <tr><td><code>solosquad analyze repo &lt;path&gt;</code></td><td>v0.5</td><td>기존 리포 .claude/skills/ 4-라벨 분류 보고서</td></tr>
       <tr><td><code>solosquad add repo --from-report &lt;file&gt;</code></td><td>v0.5</td><td>분석 보고서 기반 결정적 머지</td></tr>
@@ -1650,11 +1658,12 @@ solosquad run-routine --all          # 전부</code></pre>
 
   <h4>v0.4 — 밤새 자율 작업 완료 엔진</h4>
   <ul>
-    <li><code>program.md</code> 작성 → 자율 실험 루프 (autoresearch 패턴)</li>
+    <li>2계층 구조: <code>goal.md</code> (1회 실행 의도) + <code>AGENTS.md</code> (영속 가이드, cross-tool 표준)</li>
+    <li>OpenAI Codex <code>/goal</code> 패턴 차용 — 사람만 수정, 모델은 시작·완료만</li>
     <li>Data Reconciliation: <code>metric_provenance</code> 필드 의무화 (Goodhart 법칙 방지)</li>
-    <li>3단계 가드레일 program.md 스키마 (Input/Runtime/Output)</li>
+    <li>3단계 가드레일 goal.md 스키마 (Input/Runtime/Output) + AGENTS.md immutable_paths 박제</li>
     <li>signal-scan active trigger (신호 발견 → follow-up routine 자동 큐잉)</li>
-    <li><code>solosquad run --program program.md --hours 8</code></li>
+    <li><code>solosquad goal run &lt;goal-id&gt; --hours 8</code> (전체 CLI: new/list/show/run/status/stop/verify)</li>
   </ul>
 
   <h4>v0.5 — 워크플로우 메이커 + 스킬 시스템 통합</h4>
@@ -1701,19 +1710,20 @@ solosquad run-routine --all          # 전부</code></pre>
 
   <h4>참고 문서</h4>
   <ul>
-    <li><code>docs/v0.3-pm-mode-orchestration.md</code></li>
-    <li><code>docs/v0.4-autonomous-engine.md</code></li>
-    <li><code>docs/v0.5-workflow-maker.md</code></li>
-    <li><code>docs/v0.6-default-workflow-tuning.md</code></li>
-    <li><code>docs/v1.1-dashboard-interaction.md</code></li>
-    <li><code>docs/v1.2-knowledge-ontology.md</code></li>
-    <li><code>docs/product-roadmap.md</code> — 전체 결정 로그</li>
+    <li><code>docs/plan/v0.3-pm-mode-orchestration.md</code></li>
+    <li><code>docs/plan/v0.4-autonomous-engine.md</code></li>
+    <li><code>docs/plan/v0.5-workflow-maker.md</code></li>
+    <li><code>docs/plan/v0.6-default-workflow-tuning.md</code></li>
+    <li><code>docs/plan/v0.7-uninstall-lifecycle.md</code></li>
+    <li><code>docs/plan/v1.1-dashboard-interaction.md</code></li>
+    <li><code>docs/plan/v1.2-knowledge-ontology.md</code></li>
+    <li><code>docs/plan/product-roadmap.md</code> — 전체 결정 로그</li>
     <li><code>docs/reference/AI_Agent_Harness_Report.md</code> — 설계 어휘 출처</li>
     <li><code>docs/trend-record/2026-05-11-baseline-survey.md</code> — 피어 프로젝트 비교</li>
   </ul>
 
   <div class="footer-note">
-    이 문서는 SoloSquad <strong>v0.2.4 (npm 1.2.4)</strong> 기준이며, v0.3~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
+    이 문서는 SoloSquad <strong>v0.2.4 (npm 0.2.4)</strong> 기준이며, v0.3~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
   </div>
 </section>
 
@@ -1929,7 +1939,7 @@ stages:
     <li><code>solosquad doctor</code> 주기적 실행</li>
     <li>클라우드 운영 시: SSH 키 인증만 허용, 방화벽은 아웃바운드만 허용</li>
   </ul>
-  <p>상세: <code>docs/v0.2-safety-security.md</code></p>
+  <p>상세: <code>docs/plan/v0.2-safety-security.md</code></p>
 </section>
 
 <!-- ========================== SECTION 10 ========================== -->
@@ -2046,7 +2056,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   A. Docker 환경이면 <code>docker compose up -d --build</code>를 cron에 걸면 이미지 최신화됩니다. 단 <strong>마이그레이션 필요 시엔 자동화 불가</strong> — 사람의 확인이 들어가는 게 원칙.</p>
 
   <p><strong>Q. 예전 버전으로 고정하고 싶어요.</strong><br>
-  A. <code>npm install -g solosquad@1.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
+  A. <code>npm install -g solosquad@0.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
 
   <p><strong>Q. 여러 사람이 한 머신에서 씁니다.</strong><br>
   A. 각자 OS 계정을 다르게 쓰고, 각 계정의 홈 디렉토리에 독립된 워크스페이스를 두세요. 마이그레이션도 계정별로 따로 진행.</p>

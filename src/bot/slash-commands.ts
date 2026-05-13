@@ -1,5 +1,5 @@
 /**
- * v1.2.5 — slash command bot-side parsing.
+ * v0.3.0 — slash command bot-side parsing.
  *
  * The PM SKILL.md already instructs the model to recognize 5 slash prefixes
  * (`/think /plan /build /review /ship`) and act differently for each. This

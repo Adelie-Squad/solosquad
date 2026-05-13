@@ -4,7 +4,7 @@ import { getWorkspaceRoot } from "../util/paths.js";
 import { runMigration } from "../migrations/runner.js";
 import { listBackups, restoreBackup, deleteBackup, getBackupRoot } from "../migrations/backup.js";
 
-const CLI_VERSION_TARGET = "1.2.5";
+const CLI_VERSION_TARGET = "0.4.0";
 
 export interface MigrateCliOpts {
   dryRun?: boolean;

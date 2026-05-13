@@ -14,7 +14,7 @@ interface FixtureOptions {
   includeMultiMessenger?: boolean;
 }
 
-/** Create a realistic v1.1.x workspace tree + separate REPOS_BASE_PATH tree. */
+/** Create a realistic v0.1.x workspace tree + separate REPOS_BASE_PATH tree. */
 function makeV11Fixture(options: FixtureOptions = { productSlug: "demo", productName: "Demo" }): {
   workspace: string;
   reposBase: string;
@@ -90,11 +90,11 @@ test("dry-run leaves the workspace untouched", async () => {
   try {
     const result = await runMigration({
       workspace,
-      targetVersion: "1.2.0",
+      targetVersion: "0.2.0",
       dryRun: true,
     });
     assert.equal(result.success, true);
-    assert.equal(result.sourceVersion, "1.1.x");
+    assert.equal(result.sourceVersion, "0.1.x");
 
     // Nothing moved
     assert.ok(fs.existsSync(path.join(workspace, "agents")));
@@ -111,7 +111,7 @@ test("apply moves config into .solosquad/ and product into workspace-root org", 
   try {
     const result = await runMigration({
       workspace,
-      targetVersion: "1.2.0",
+      targetVersion: "0.2.0",
       dryRun: false,
     });
     assert.equal(result.success, true, `migration failed: ${result.error ?? ""}`);
@@ -165,7 +165,7 @@ test("multi-messenger MESSENGER is collapsed to the first value", async () => {
   try {
     const result = await runMigration({
       workspace,
-      targetVersion: "1.2.0",
+      targetVersion: "0.2.0",
       dryRun: false,
     });
     assert.equal(result.success, true);
@@ -186,7 +186,7 @@ test("rollback restores the pre-migration layout", async () => {
   try {
     const result = await runMigration({
       workspace,
-      targetVersion: "1.2.0",
+      targetVersion: "0.2.0",
       dryRun: false,
     });
     assert.equal(result.success, true);
@@ -216,14 +216,14 @@ test("idempotent: running apply on already-migrated workspace is a no-op", async
   try {
     const first = await runMigration({
       workspace,
-      targetVersion: "1.2.0",
+      targetVersion: "0.2.0",
       dryRun: false,
     });
     assert.equal(first.success, true);
 
     const second = await runMigration({
       workspace,
-      targetVersion: "1.2.0",
+      targetVersion: "0.2.0",
       dryRun: false,
     });
     assert.equal(second.success, true);
@@ -233,23 +233,23 @@ test("idempotent: running apply on already-migrated workspace is a no-op", async
   }
 });
 
-test("chain 1.1.x → 1.2.1 creates repositories/ and bumps workspace.yaml", async () => {
+test("chain 0.1.x → 0.2.1 creates repositories/ and bumps workspace.yaml", async () => {
   const { workspace, reposBase } = makeV11Fixture();
   try {
     const result = await runMigration({
       workspace,
-      targetVersion: "1.2.1",
+      targetVersion: "0.2.1",
       dryRun: false,
     });
     assert.equal(result.success, true, `migration failed: ${result.error ?? ""}`);
-    assert.deepEqual(result.chain, ["1.1.x → 1.2.0", "1.2.0 → 1.2.1"]);
+    assert.deepEqual(result.chain, ["0.1.x → 0.2.0", "0.2.0 → 0.2.1"]);
 
     const wsYaml = fs.readFileSync(
       path.join(workspace, ".solosquad", "workspace.yaml"),
       "utf-8"
     );
-    assert.match(wsYaml, /version:\s*['"]?1\.2\.1['"]?/);
-    assert.match(wsYaml, /last_migrated_to:\s*['"]?1\.2\.1['"]?/);
+    assert.match(wsYaml, /version:\s*['"]?0\.2\.1['"]?/);
+    assert.match(wsYaml, /last_migrated_to:\s*['"]?0\.2\.1['"]?/);
 
     assert.ok(
       fs.existsSync(path.join(workspace, "demo", "repositories")),

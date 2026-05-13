@@ -206,7 +206,7 @@ export class DiscordAdapter implements MessengerAdapter {
       console.log(`[Discord] ${guild.name}: channels created → ${created.join(", ")}`);
     }
 
-    // v1.2.4+: ensure system threads exist inside #workflow
+    // v0.2.4+: ensure system threads exist inside #workflow
     await this.ensureSystemThreads(guild);
     return created;
   }

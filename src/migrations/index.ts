@@ -1,8 +1,9 @@
 import type { Migration } from "./types.js";
-import { migration as v11xToV120 } from "./scripts/1.1.x-to-1.2.0.js";
-import { migration as v120ToV121 } from "./scripts/1.2.0-to-1.2.1.js";
-import { migration as v121ToV124 } from "./scripts/1.2.1-to-1.2.4.js";
-import { migration as v124ToV125 } from "./scripts/1.2.4-to-1.2.5.js";
+import { migration as v01xToV020 } from "./scripts/0.1.x-to-0.2.0.js";
+import { migration as v020ToV021 } from "./scripts/0.2.0-to-0.2.1.js";
+import { migration as v021ToV024 } from "./scripts/0.2.1-to-0.2.4.js";
+import { migration as v024ToV030 } from "./scripts/0.2.4-to-0.3.0.js";
+import { migration as v030ToV040 } from "./scripts/0.3.0-to-0.4.0.js";
 import { versionMatches } from "./detect.js";
 
 /**
@@ -11,10 +12,11 @@ import { versionMatches } from "./detect.js";
  * target version is reached.
  */
 export const MIGRATIONS: Migration[] = [
-  v11xToV120,
-  v120ToV121,
-  v121ToV124,
-  v124ToV125,
+  v01xToV020,
+  v020ToV021,
+  v021ToV024,
+  v024ToV030,
+  v030ToV040,
 ];
 
 /**

@@ -66,8 +66,8 @@ export async function updateCommand(channel: string): Promise<void> {
     // Warn if installed CLI is already ahead of the workspace layout.
     const workspaceVersion = detectWorkspaceVersion(getWorkspaceRoot());
     if (workspaceVersion && workspaceVersion !== latest && !isNewer(workspaceVersion, latest)) {
-      // Detect a known structural jump (1.1.x → 1.2.x)
-      // Structural jump markers: 1.1.x → 1.2.0+ reshapes the layout.
+      // Detect a known structural jump (0.1.x → 0.2.x)
+      // Structural jump markers: 0.1.x → 0.2.0+ reshapes the layout.
       if (workspaceVersion.startsWith("1.1.") && latest.startsWith("1.2.")) {
         console.log(
           chalk.yellow(

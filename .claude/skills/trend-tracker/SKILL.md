@@ -21,6 +21,11 @@ allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Glob, Grep
 | 5 | phuryn/pm-skills | 멀티에이전트 | auto-load + slash 듀얼 트리거, PM 스킬 마켓플레이스 |
 | 6 | karpathy/autoresearch | 24/7 자동화 | metric gate + git rollback 자율 루프 |
 | 7 | MiroFish (CAMEL-AI OASIS) | 멀티에이전트 (관찰) | 1M 에이전트 swarm 시뮬레이션 |
+| 8 | paperclipai/paperclip ([site](https://paperclip.ing/)) | 멀티에이전트 / 24-7 자동화 | org chart 기반 에이전트 노동 관리, 월예산 한도·승인 게이트, 멀티런타임(Claude/OpenClaw/Cursor) 오케스트레이션 |
+| 9 | iamlukethedev/claw3d ([site](https://www.claw3d.ai/)) | 멀티에이전트 (시각화/관찰) | 3D 가상 오피스로 에이전트 활동 가시화, OpenClaw/Hermes 등 런타임 무관 supervision 레이어 |
+| 10 | Ralphathon (해커톤 문화) | 24-7 자동화 | Ralph Loop(Huntley) 기반 자율 코딩 while-루프 해커톤. **1차 GitHub 출처 없음** — 강의·커뮤니티·SNS에서 구체 사례·방법 수집 |
+
+**§1 예외 — Ralphathon**: 해커톤 문화는 단일 1차 출처가 없으므로 §3.1의 "트위터 일회성 인용 금지" 규칙을 완화한다. 단, ① 강의 영상·블로그 글·커뮤니티 토론 스레드처럼 **재참조 가능한 URL**만 받아들이고 ② 한 행사·한 사례당 최소 2개 독립 출처를 교차 확인하며 ③ 신호 표의 "출처" 칸에 채널 유형(강의/Discord/X 스레드)을 명시한다.
 
 Tier 2(월간 스캔): Anthropic/OpenAI/DeepMind 공식 블로그, GitHub trending(`agents` `claude-code` `multi-agent` 토픽), HN 1주 누적 상위(키워드: agent, harness, autonomous), X — karpathy / swyx / simonw / Anthropic researchers.
 
@@ -39,7 +44,7 @@ Tier 2(월간 스캔): Anthropic/OpenAI/DeepMind 공식 블로그, GitHub trendi
 1. **스캔**: 요청된 기간/대상에 대해 1차 출처 우선 WebSearch + WebFetch. 트위터 일회성 인용은 1차 출처로 다루지 말 것.
 2. **신호 분류**: 릴리스 / 패턴 / 폐기·대체 / 컨센서스 변화 / 반례 중 어디에 해당하는지.
 3. **3축 매핑**: 위 평가표 작성.
-4. **SoloSquad 정합성**: 채택 가능성 `immediately / next-version / experimental / not-applicable` + 충돌 지점 + 통합 비용 + 제안 액션.
+4. **SoloSquad 정합성**: 채택 가능성 `immediately / next-version / experimental / not-applicable` + 충돌 지점 + 통합 비용 + 제안 액션. **청자는 SoloSquad 개발자(본인)** — end-user 제품 기능이 아니라 ① 개발 워크플로·방법론, ② harness/runtime 내부 구현 차용, 순으로 평가한다. product 로드맵 어휘(v0.5/v1.1 등)는 dev 관점 결론이 그쪽으로 갈 때만 결과로 노출.
 5. **레코드 작성**: `docs/trend-record/YYYY-MM-DD-{slug}.md` 신규 작성. 같은 날 여러 레코드면 `-2`, `-3` 접미사.
 6. **INDEX.md 갱신**: 표 최상단(가장 위 = 가장 최근)에 한 줄 삽입. 하단으로 갈수록 과거.
 7. **이전 가설 깨짐**: 과거 레코드를 덮어쓰지 말고 `## Update YYYY-MM-DD` 섹션으로 추기.
