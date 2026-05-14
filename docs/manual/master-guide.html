@@ -469,7 +469,8 @@ Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 sk
 ├── routines/                         (5개 + pm-compaction)
 ├── orchestrator/SKILL.md             (PM 프롬프트, v0.3 활성화 / v0.4 goal-md-spec append)
 ├── templates/                        (PRD, handoff, status, goal.md, AGENTS.md, workflow.yaml)
-├── Dockerfile, docker-compose.yml    (컨테이너 배포용)</div>
+├── deploy/docker/                    (컨테이너 배포 — Dockerfile, docker-compose.yml, README)
+├── docs/poc/                         (v0.3 PoC integration 스크립트 아카이브)</div>
 
   <p><strong>3-tier 검색 우선순위 (v0.5):</strong> SKILL은 같은 이름이면 <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (번들) 순으로 상위 계층이 override합니다. 라우터가 부트 시 세 위치를 모두 스캔해 한 인덱스로 합칩니다.</p>
 
@@ -861,8 +862,9 @@ solosquad doctor --messenger-check  # 토큰까지 실제 검증</code></pre>
 solosquad bot          # 메신저 봇
 solosquad schedule     # 자동 routine
 
-# Option B — Docker (워크스페이스 폴더에서)
-docker compose up -d --build</code></pre>
+# Option B — Docker (v0.5+ — deploy/docker/ 안에서)
+cd deploy/docker && docker compose up -d --build
+# 자세한 옵션·환경 변수: deploy/docker/README.md 참조</code></pre>
   </div>
 
   <div class="step">
@@ -1040,19 +1042,24 @@ Nothing written yet. Re-run with `--apply` to perform the migration.</code></pre
   </ul>
 
   <h4>Docker 사용자 업데이트 흐름</h4>
-  <pre><code># 1. 컨테이너 중지
+  <pre><code># 모든 명령은 deploy/docker/ 안에서 (v0.5+)
+cd deploy/docker
+
+# 1. 컨테이너 중지
 docker compose down
 
 # 2. 호스트에서 CLI 업데이트 (마이그레이션 감지 + 실행용)
 npm install -g solosquad@latest
 
-# 3. 마이그레이션 필요 시
+# 3. 마이그레이션 필요 시 (워크스페이스 루트에서)
+cd ../..
 solosquad migrate --dry-run
 solosquad migrate --apply
 
 # 4. Docker 이미지 재빌드
+cd deploy/docker
 docker compose up -d --build</code></pre>
-  <p><strong>마이그레이션은 반드시 호스트에서</strong>. 컨테이너 안에서 하면 볼륨 매핑 혼란 가능.</p>
+  <p><strong>마이그레이션은 반드시 호스트에서</strong>. 컨테이너 안에서 하면 볼륨 매핑 혼란 가능. v0.5+ 컨테이너는 <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code>를 추가로 마운트하므로 user-global SKILL override와 backup이 정상 작동합니다.</p>
 
   <h4>멀티 워크스페이스 업데이트</h4>
   <p>페르소나별 워크스페이스 여러 개 사용 시 CLI 업데이트는 한 번이지만 <strong>마이그레이션은 각 워크스페이스에서 개별 실행</strong>:</p>
@@ -1658,11 +1665,11 @@ solosquad run-routine --all          # 전부</code></pre>
     <dt>routine-logs/*.jsonl</dt>
     <dd>routine 실행 전체 로그. 디버깅·회고에 사용.</dd>
 
-    <dt>Dockerfile</dt>
-    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때.</dd>
+    <dt>Dockerfile (deploy/docker/Dockerfile)</dt>
+    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때. v0.5부터 <code>deploy/docker/</code>로 이동.</dd>
 
-    <dt>docker-compose.yml</dt>
-    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정.</dd>
+    <dt>docker-compose.yml (deploy/docker/docker-compose.yml)</dt>
+    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정. v0.5부터 <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code>도 마운트 — user-global SKILL override와 backup 호환.</dd>
 
     <dt>README.md</dt>
     <dd>프로젝트 첫인상 문서. npm/GitHub에 표시되는 메인 설명. SoloSquad의 README는 설치·빠른 사용법.</dd>
