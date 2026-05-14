@@ -1,3 +1,16 @@
+---
+name: cloud-admin
+description: 클라우드 인프라를 관리합니다. 배포, 모니터링, 보안, 비용 최적화를 담당합니다.
+team: engineering
+stateful: false
+triggers:
+  keyword:
+    - 배포
+    - 인프라
+    - 도커
+    - ci/cd
+  explicit: true
+---
 # Cloud Admin Agent
 
 > 클라우드 인프라를 관리합니다. 배포, 모니터링, 보안, 비용 최적화를 담당합니다.

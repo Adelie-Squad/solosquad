@@ -1,3 +1,15 @@
+---
+name: ui-designer
+description: 비주얼 디자인과 디자인 시스템을 구축합니다. UX 설계를 아름답고 일관된 인터페이스로 구현합니다.
+team: experience
+stateful: false
+triggers:
+  keyword:
+    - ui
+    - 디자인 시스템
+    - 목업
+  explicit: true
+---
 # UI Designer Agent
 
 > 비주얼 디자인과 디자인 시스템을 구축합니다. UX 설계를 아름답고 일관된 인터페이스로 구현합니다.

@@ -4,6 +4,7 @@ import { migration as v020ToV021 } from "./scripts/0.2.0-to-0.2.1.js";
 import { migration as v021ToV024 } from "./scripts/0.2.1-to-0.2.4.js";
 import { migration as v024ToV030 } from "./scripts/0.2.4-to-0.3.0.js";
 import { migration as v030ToV040 } from "./scripts/0.3.0-to-0.4.0.js";
+import { migration as v040ToV050 } from "./scripts/0.4.0-to-0.5.0.js";
 import { versionMatches } from "./detect.js";
 
 /**
@@ -17,6 +18,7 @@ export const MIGRATIONS: Migration[] = [
   v021ToV024,
   v024ToV030,
   v030ToV040,
+  v040ToV050,
 ];
 
 /**

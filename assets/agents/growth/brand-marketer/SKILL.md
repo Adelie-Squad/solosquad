@@ -1,3 +1,15 @@
+---
+name: brand-marketer
+description: 브랜드 아이덴티티를 구축하고 일관된 브랜드 경험을 설계합니다.
+team: growth
+stateful: false
+triggers:
+  keyword:
+    - 브랜드
+    - 브랜딩
+    - 네이밍
+  explicit: true
+---
 # Brand Marketer Agent
 
 > 브랜드 아이덴티티를 구축하고 일관된 브랜드 경험을 설계합니다.

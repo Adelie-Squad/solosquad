@@ -152,9 +152,29 @@ addGroup
   .option("--org <slug>", "Target organization slug (auto-picked if only one)")
   .option("--role <role>", "main | frontend | backend | data | infra | docs | unknown")
   .option("--slug <slug>", "Override the repo folder name")
+  .option("--from-report <path>", "Apply a previously generated analyze report (v0.5)")
+  .option(
+    "--merge-policy <policy>",
+    "append | override | replace — role-label merge strategy (default append)"
+  )
   .action(async (input, opts) => {
     const { addRepoCommand } = await import("./add-repo.js");
     await addRepoCommand(input, opts);
+  });
+
+const analyzeGroup = program
+  .command("analyze")
+  .description("Analyze existing assets for SoloSquad onboarding (v0.5)");
+
+analyzeGroup
+  .command("repo")
+  .description("Scan a repo's .claude/skills/, classify, and write a Markdown report")
+  .argument("<path>", "Path to the repository to analyze")
+  .option("--force", "Re-classify every file (drop existing ledger cache)")
+  .option("--prune-orphans", "Remove ledger entries whose files have disappeared")
+  .action(async (repoPath, opts) => {
+    const { analyzeRepoCli } = await import("./analyze.js");
+    await analyzeRepoCli(repoPath, opts);
   });
 
 program
@@ -339,4 +359,35 @@ program
   .action(async (opts) => {
     const { migrateCommand } = await import("./migrate.js");
     await migrateCommand(opts);
+  });
+
+const agentGroup = program
+  .command("agent")
+  .description("Manage SKILL.md agents (v0.5)");
+
+agentGroup
+  .command("validate")
+  .description("Validate a SKILL.md against the v0.5 schema")
+  .argument("[path]", "Path to a SKILL.md file (omit when using --all)")
+  .option("--all", "Validate every bundled + workspace SKILL.md")
+  .option("--corpus", "Also run the Anthropic skills corpus round-trip regression")
+  .action(async (filePath, opts) => {
+    const { agentValidateCommand } = await import("./agent.js");
+    await agentValidateCommand(filePath, opts);
+  });
+
+agentGroup
+  .command("add")
+  .description("Scaffold a new SKILL.md (no LLM) — fill in the body afterward")
+  .requiredOption("--name <name>", "Agent name (kebab-case slug)")
+  .requiredOption("--team <team>", "Team folder (strategy, growth, experience, engineering, …)")
+  .option("--org <org>", "Write under <org>/.agents/ instead of workspace agents dir")
+  .option("--description <text>", "Short description for frontmatter")
+  .action(async (opts) => {
+    const { agentAddCommand } = await import("./agent.js");
+    try {
+      await agentAddCommand(opts);
+    } catch {
+      // Error already printed by agentAddCommand; exit code set there.
+    }
   });

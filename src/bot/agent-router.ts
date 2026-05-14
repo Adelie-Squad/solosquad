@@ -1,108 +1,359 @@
 import fs from "fs";
 import path from "path";
-import { getAgentsDir } from "../util/paths.js";
+import os from "os";
+import { getAgentsDir, getWorkspaceRoot } from "../util/paths.js";
+import {
+  parseSkillMd,
+  validateSkill,
+  type SkillSpec,
+  type FreqTrigger,
+} from "./skill-parser.js";
 
-const AGENT_ROUTES: Record<string, [string, string]> = {
-  // Strategy
-  pmf: ["strategy", "pmf-planner"],
-  "시장 적합": ["strategy", "pmf-planner"],
-  가설: ["strategy", "pmf-planner"],
-  "기능 기획": ["strategy", "feature-planner"],
-  "기능 추가": ["strategy", "feature-planner"],
-  스펙: ["strategy", "feature-planner"],
-  정책: ["strategy", "policy-architect"],
-  약관: ["strategy", "policy-architect"],
-  "데이터 분석": ["strategy", "data-analyst"],
-  지표: ["strategy", "data-analyst"],
-  매출: ["strategy", "data-analyst"],
-  "사업 전략": ["strategy", "business-strategist"],
-  "수익 모델": ["strategy", "business-strategist"],
-  비즈니스: ["strategy", "business-strategist"],
-  아이디어: ["strategy", "idea-refiner"],
-  브레인스토밍: ["strategy", "idea-refiner"],
-  일정: ["strategy", "scope-estimator"],
-  견적: ["strategy", "scope-estimator"],
-  스코프: ["strategy", "scope-estimator"],
-  // Growth (longer keywords first to avoid shadowing)
-  광고: ["growth", "paid-marketer"],
-  퍼포먼스: ["growth", "paid-marketer"],
-  cpa: ["growth", "paid-marketer"],
-  마케팅: ["growth", "gtm-strategist"],
-  gtm: ["growth", "gtm-strategist"],
-  런칭: ["growth", "gtm-strategist"],
-  카피: ["growth", "content-writer"],
-  블로그: ["growth", "content-writer"],
-  글쓰기: ["growth", "content-writer"],
-  콘텐츠: ["growth", "content-writer"],
-  브랜드: ["growth", "brand-marketer"],
-  브랜딩: ["growth", "brand-marketer"],
-  네이밍: ["growth", "brand-marketer"],
-  // Experience
-  "유저 리서치": ["experience", "user-researcher"],
-  인터뷰: ["experience", "user-researcher"],
-  설문: ["experience", "user-researcher"],
-  페르소나: ["experience", "user-researcher"],
-  "시장 조사": ["experience", "desk-researcher"],
-  경쟁사: ["experience", "desk-researcher"],
-  벤치마크: ["experience", "desk-researcher"],
-  ux: ["experience", "ux-designer"],
-  와이어프레임: ["experience", "ux-designer"],
-  사용성: ["experience", "ux-designer"],
-  플로우: ["experience", "ux-designer"],
-  ui: ["experience", "ui-designer"],
-  "디자인 시스템": ["experience", "ui-designer"],
-  목업: ["experience", "ui-designer"],
-  // Engineering
-  프론트: ["engineering", "creative-frontend"],
-  프론트엔드: ["engineering", "creative-frontend"],
-  랜딩: ["engineering", "creative-frontend"],
-  프로토타입: ["engineering", "fde"],
-  mvp: ["engineering", "fde"],
-  "빠르게 만들": ["engineering", "fde"],
-  아키텍처: ["engineering", "architect"],
-  설계: ["engineering", "architect"],
-  "시스템 구조": ["engineering", "architect"],
-  백엔드: ["engineering", "backend-developer"],
-  서버: ["engineering", "backend-developer"],
-  db: ["engineering", "backend-developer"],
-  api: ["engineering", "api-developer"],
-  엔드포인트: ["engineering", "api-developer"],
-  크롤링: ["engineering", "data-collector"],
-  수집: ["engineering", "data-collector"],
-  스크래핑: ["engineering", "data-collector"],
-  파이프라인: ["engineering", "data-engineer"],
-  etl: ["engineering", "data-engineer"],
-  배포: ["engineering", "cloud-admin"],
-  인프라: ["engineering", "cloud-admin"],
-  도커: ["engineering", "cloud-admin"],
-  "ci/cd": ["engineering", "cloud-admin"],
-  테스트: ["engineering", "qa-engineer"],
-  qa: ["engineering", "qa-engineer"],
-  품질: ["engineering", "qa-engineer"],
-  버그: ["engineering", "qa-engineer"],
-  검증: ["engineering", "qa-engineer"],
-  "보안 점검": ["engineering", "security-engineer"],
-  "접근 제어": ["engineering", "security-engineer"],
-  보안: ["engineering", "security-engineer"],
-  시큐리티: ["engineering", "security-engineer"],
-  security: ["engineering", "security-engineer"],
-  취약점: ["engineering", "security-engineer"],
-};
+/**
+ * v0.5 — frontmatter-driven agent router.
+ *
+ * Per docs/plan/v0.5-workflow-maker.md §7. The pre-v0.5 router shipped a
+ * hardcoded 60+ keyword → 25 agent map. v0.5 replaces it with a 3-tier
+ * filesystem scan + 4-channel resolver (slash > explicit > keyword > freq).
+ * `AGENT_ROUTES` is gone — keyword routing lives in each SKILL.md's
+ * `triggers.keyword` frontmatter.
+ *
+ * 3-tier search (lowest priority first; higher tier overrides):
+ *   3. <workspace>/.solosquad/agents/{team}/{agent}/SKILL.md  (bundled, init)
+ *   2. ~/.solosquad/agents/{team}/{agent}/SKILL.md            (user global)
+ *   1. <workspace>/<org>/.agents/{team}/{agent}/SKILL.md      (org local — top)
+ *
+ * SKILL.md without frontmatter (pre-S5 migration state) is silently
+ * skipped. Once S5 lands the 25 bundled SKILLs get auto-backfilled and
+ * routing returns to coverage.
+ *
+ * Hot-reload contract: `buildRoutes()` is pure — call it from a wrapper
+ * that swaps `routeIndexRef` atomically. While one call builds, a previous
+ * index keeps serving. See `src/bot/index.ts` for the swap site.
+ */
 
-/** Find the best matching agent for user input. */
-export function findAgent(userInput: string): [string, string] | null {
-  const lower = userInput.toLowerCase();
-  for (const [keyword, route] of Object.entries(AGENT_ROUTES)) {
-    if (lower.includes(keyword)) return route;
+export type TriggerChannel = "slash" | "keyword" | "freq" | "explicit";
+
+export interface AgentRef {
+  team: string;
+  name: string;
+  source_path: string;
+  /** Which tier resolved this — for diagnostics + duplicate-name reporting. */
+  tier: "org" | "user" | "workspace";
+  stateful: boolean;
+}
+
+export interface FreqRoute {
+  ref: AgentRef;
+  keywords: string[];
+  window_turns: number;
+  threshold: number;
+  cooldown_turns: number;
+}
+
+export interface RouteIndex {
+  slash: Record<string, AgentRef>;
+  /** Keys lowercased. */
+  keyword: Record<string, AgentRef>;
+  freq: FreqRoute[];
+  /** Keyed by SkillSpec.name — case-sensitive (matches PM Task tool naming). */
+  explicit: Record<string, AgentRef>;
+}
+
+export interface BuildRoutesOpts {
+  /** Override workspace agents dir (test fixtures). */
+  agents_root?: string;
+  /** Override user-global agents dir (test fixtures). */
+  user_root?: string;
+  /** Org slug — when set, scans `<workspace>/<org>/.agents/` as top-priority tier. */
+  org?: string;
+  /** Override workspace root — defaults to getWorkspaceRoot(). */
+  workspace_root?: string;
+}
+
+export function buildRoutes(opts: BuildRoutesOpts = {}): RouteIndex {
+  const idx: RouteIndex = { slash: {}, keyword: {}, freq: [], explicit: {} };
+  for (const tier of computeTiers(opts)) {
+    if (!fs.existsSync(tier.path)) continue;
+    for (const scanned of scanSkills(tier.path)) {
+      const ref: AgentRef = {
+        team: scanned.team,
+        name: scanned.spec.name,
+        source_path: scanned.skill_path,
+        tier: tier.kind,
+        stateful: scanned.spec.stateful ?? false,
+      };
+      registerChannels(idx, ref, scanned.spec);
+    }
   }
+  return idx;
+}
+
+function registerChannels(idx: RouteIndex, ref: AgentRef, spec: SkillSpec): void {
+  const t = spec.triggers;
+  if (!t) return;
+  if (t.slash) {
+    for (const s of t.slash) idx.slash[s] = ref;
+  }
+  if (t.keyword) {
+    for (const k of t.keyword) idx.keyword[k.toLowerCase()] = ref;
+  }
+  if (t.explicit) {
+    idx.explicit[ref.name] = ref;
+  }
+  if (t.freq) {
+    idx.freq.push(freqRouteFrom(t.freq, ref));
+  }
+}
+
+function freqRouteFrom(f: FreqTrigger, ref: AgentRef): FreqRoute {
+  return {
+    ref,
+    keywords: f.keywords,
+    window_turns: f.window_turns,
+    threshold: f.threshold,
+    cooldown_turns: f.cooldown_turns ?? 6,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// resolve()
+// ---------------------------------------------------------------------------
+
+export interface ResolveCtx {
+  /** Recent messages, oldest first. Used for freq scoring. */
+  history?: { text: string }[];
+  /** Map of skill name → turns remaining in cooldown (router checks ≥1). */
+  freq_cooldowns?: Record<string, number>;
+}
+
+export interface ResolveResult {
+  ref: AgentRef;
+  channel: TriggerChannel;
+  /** What text token caused the match — for the "🧠 X auto-loaded" notice. */
+  matched: string;
+  /** Only set when channel === "freq" — score that crossed the threshold. */
+  freq_score?: number;
+  /**
+   * When the caller should bump session-store cooldowns for this skill.
+   * Only emitted on a freq match.
+   */
+  start_cooldown?: { skill_name: string; turns: number };
+}
+
+/**
+ * Pure resolver: given a message + history + cooldown state, return the
+ * highest-priority match. Side-effect free — the caller updates cooldowns.
+ */
+export function resolve(
+  message: string,
+  idx: RouteIndex,
+  ctx: ResolveCtx = {}
+): ResolveResult | null {
+  // 1. slash
+  const slashMatch = message.match(/^\s*(\/[A-Za-z][A-Za-z0-9_-]*)/);
+  if (slashMatch) {
+    const cmd = slashMatch[1];
+    const ref = idx.slash[cmd];
+    if (ref) return { ref, channel: "slash", matched: cmd };
+  }
+
+  // 2. explicit — marker `[explicit:<name>]` inside message text.
+  const explicitMatch = message.match(/\[explicit:([^\]]+)\]/);
+  if (explicitMatch) {
+    const ref = idx.explicit[explicitMatch[1].trim()];
+    if (ref) return { ref, channel: "explicit", matched: explicitMatch[1].trim() };
+  }
+
+  // 3. keyword (case-insensitive substring)
+  const lower = message.toLowerCase();
+  for (const [kw, ref] of Object.entries(idx.keyword)) {
+    if (lower.includes(kw)) return { ref, channel: "keyword", matched: kw };
+  }
+
+  // 4. freq (cumulative keyword count over rolling window)
+  if (ctx.history && ctx.history.length > 0 && idx.freq.length > 0) {
+    for (const f of idx.freq) {
+      const remaining = ctx.freq_cooldowns?.[f.ref.name];
+      if (typeof remaining === "number" && remaining > 0) continue; // cooldown
+      const score = scoreFreqRoute(f, ctx.history);
+      if (score >= f.threshold) {
+        return {
+          ref: f.ref,
+          channel: "freq",
+          matched: f.keywords.join(","),
+          freq_score: score,
+          start_cooldown: { skill_name: f.ref.name, turns: f.cooldown_turns },
+        };
+      }
+    }
+  }
+
   return null;
 }
 
-/** Load agent SKILL.md content. */
+function scoreFreqRoute(f: FreqRoute, history: { text: string }[]): number {
+  const window = history.slice(-f.window_turns);
+  const text = window.map((t) => t.text.toLowerCase()).join(" ");
+  let score = 0;
+  for (const kw of f.keywords) {
+    const lower = kw.toLowerCase();
+    let pos = 0;
+    while ((pos = text.indexOf(lower, pos)) !== -1) {
+      score++;
+      pos += lower.length;
+    }
+  }
+  return score;
+}
+
+// ---------------------------------------------------------------------------
+// Back-compat: findAgent
+// ---------------------------------------------------------------------------
+
+/**
+ * Single-shot keyword lookup. Builds the index per call — slow for hot
+ * paths. The npm package surface (src/index.ts) re-exports this so existing
+ * external callers keep working post-v0.5. Bot internals call `resolve()`
+ * with a pre-built `RouteIndex`.
+ */
+export function findAgent(userInput: string): [string, string] | null {
+  const idx = buildRoutes();
+  const result = resolve(userInput, idx);
+  if (!result) return null;
+  return [result.ref.team, result.ref.name];
+}
+
+/** Read a SKILL.md from the workspace agents dir (unchanged from pre-v0.5). */
 export function loadAgentSkill(team: string, agent: string): string {
   const skillFile = path.join(getAgentsDir(), team, agent, "SKILL.md");
   if (fs.existsSync(skillFile)) {
     return fs.readFileSync(skillFile, "utf-8");
   }
   return "";
+}
+
+// ---------------------------------------------------------------------------
+// Internals
+// ---------------------------------------------------------------------------
+
+interface TierSpec {
+  kind: "org" | "user" | "workspace";
+  path: string;
+}
+
+function computeTiers(opts: BuildRoutesOpts): TierSpec[] {
+  const tiers: TierSpec[] = [];
+
+  // Lowest priority first.
+  const workspaceRoot = opts.agents_root ?? getAgentsDir();
+  tiers.push({ kind: "workspace", path: workspaceRoot });
+
+  const userRoot =
+    opts.user_root ?? path.join(os.homedir(), ".solosquad", "agents");
+  tiers.push({ kind: "user", path: userRoot });
+
+  if (opts.org) {
+    const wsRoot = opts.workspace_root ?? getWorkspaceRoot();
+    tiers.push({ kind: "org", path: path.join(wsRoot, opts.org, ".agents") });
+  }
+
+  return tiers;
+}
+
+interface ScannedSkill {
+  team: string;
+  skill_path: string;
+  spec: SkillSpec;
+}
+
+function scanSkills(root: string): ScannedSkill[] {
+  const out: ScannedSkill[] = [];
+  for (const teamEntry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!teamEntry.isDirectory()) continue;
+    // _meta/_teams handled by separate scanners (meta-skill-scanner.ts /
+    // agents-builder.ts respectively).
+    if (teamEntry.name.startsWith("_")) continue;
+    const teamPath = path.join(root, teamEntry.name);
+    for (const agentEntry of fs.readdirSync(teamPath, { withFileTypes: true })) {
+      if (!agentEntry.isDirectory()) continue;
+      const skillPath = path.join(teamPath, agentEntry.name, "SKILL.md");
+      if (!fs.existsSync(skillPath)) continue;
+      let raw: string;
+      try {
+        raw = fs.readFileSync(skillPath, "utf-8");
+      } catch {
+        continue;
+      }
+      let spec: SkillSpec;
+      try {
+        spec = parseSkillMd(raw, skillPath);
+      } catch {
+        // No frontmatter (pre-S5) or malformed — silently skip. S5 migration
+        // fixes the bundled 25; user-authored SKILLs failing here are a
+        // validate-time error reported by `solosquad agent validate`.
+        continue;
+      }
+      if (!validateSkill(spec).ok) continue;
+      out.push({ team: teamEntry.name, skill_path: skillPath, spec });
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Cooldown helpers (for session-store callers)
+// ---------------------------------------------------------------------------
+
+/**
+ * Apply one turn's worth of decay to a freq_cooldowns map. Returns a new
+ * map with zero-or-negative entries removed. Pure — no mutation.
+ */
+export function tickCooldowns(
+  cooldowns: Record<string, number>
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [name, n] of Object.entries(cooldowns)) {
+    const next = n - 1;
+    if (next > 0) out[name] = next;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Hot-reload (atomic swap) — v0.5 §7
+// ---------------------------------------------------------------------------
+//
+// Node is single-threaded, so the "atomicity" we need is just: never expose
+// a half-built RouteIndex. `buildRoutes()` constructs the new index in a
+// local before any caller can observe it, then `installRoutes()` swaps the
+// module-private ref. Concurrent message handlers either see the old index
+// or the new one, never a mixed state.
+//
+// S3 (author loop) calls `rebuildRoutes()` after saving a new SKILL.md.
+// bot/index.ts seeds the initial index at boot.
+
+let routeIndexRef: RouteIndex | null = null;
+
+/**
+ * Build a fresh RouteIndex and atomically install it as the current one.
+ * Returns the installed index for diagnostics.
+ */
+export function rebuildRoutes(opts: BuildRoutesOpts = {}): RouteIndex {
+  const next = buildRoutes(opts);
+  installRoutes(next);
+  return next;
+}
+
+/** Swap the module-private ref. Exposed for tests that build offline. */
+export function installRoutes(idx: RouteIndex): void {
+  routeIndexRef = idx;
+}
+
+/**
+ * Read the currently installed index. Returns null until `rebuildRoutes()`
+ * (or `installRoutes()`) is called at least once.
+ */
+export function getCurrentRoutes(): RouteIndex | null {
+  return routeIndexRef;
 }

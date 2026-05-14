@@ -12,12 +12,20 @@ import {
 } from "../util/config.js";
 import { scaffoldRepoYaml } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
+import { applyReport, type MergePolicy } from "../analyze/applier.js";
+import { rebuildRoutes } from "../bot/agent-router.js";
 
 export interface AddRepoOpts {
   org?: string;
   role?: RepoYaml["role"];
   slug?: string;
+  /** v0.5 §6.5 — apply a previously generated analyze report. */
+  fromReport?: string;
+  /** v0.5 §6.5 — merge strategy for role-label files landing in user agents. */
+  mergePolicy?: MergePolicy;
 }
+
+const MERGE_POLICIES: MergePolicy[] = ["append", "override", "replace"];
 
 const ROLES: RepoYaml["role"][] = ["main", "frontend", "backend", "data", "infra", "docs", "unknown"];
 
@@ -180,4 +188,51 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
   console.log(chalk.green(`✓ ${orgSlug}/repositories/${doc.slug} registered (role: ${doc.role})`));
   if (doc.remote_url) console.log(chalk.dim(`  remote: ${doc.remote_url}`));
   if (doc.language) console.log(chalk.dim(`  language: ${doc.language}`));
+
+  if (opts.fromReport) {
+    if (opts.mergePolicy && !MERGE_POLICIES.includes(opts.mergePolicy)) {
+      console.log(
+        chalk.red(
+          `✗ Unknown --merge-policy: ${opts.mergePolicy}. One of: ${MERGE_POLICIES.join(", ")}`
+        )
+      );
+      process.exit(1);
+    }
+    const reportAbs = path.isAbsolute(opts.fromReport)
+      ? opts.fromReport
+      : path.resolve(repoDir, opts.fromReport);
+    if (!fs.existsSync(reportAbs)) {
+      console.log(chalk.red(`✗ Report file not found: ${reportAbs}`));
+      process.exit(1);
+    }
+    console.log(chalk.cyan(`Applying analyze report: ${reportAbs}`));
+    const result = await applyReport({
+      repo_root: repoDir,
+      org_slug: orgSlug,
+      workspace_root: workspace,
+      merge_policy: opts.mergePolicy ?? "append",
+      verify: () => {
+        try {
+          rebuildRoutes({ org: orgSlug });
+          return { ok: true };
+        } catch (e) {
+          return { ok: false, error: (e as Error).message };
+        }
+      },
+    });
+    if (result.rolled_back) {
+      console.log(
+        chalk.red(
+          `✗ Applier rolled back: ${result.error ?? "verify failed"} (backup: ${result.backup_dir})`
+        )
+      );
+      process.exit(1);
+    }
+    console.log(
+      chalk.green(
+        `✓ Applied ${result.applied_count} entr${result.applied_count === 1 ? "y" : "ies"} (skipped ${result.skipped_count})`
+      )
+    );
+    console.log(chalk.dim(`  backup: ${result.backup_dir}`));
+  }
 }

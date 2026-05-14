@@ -26,6 +26,13 @@ export interface SessionRecord {
   totalCostUsd: number;
   activeWorkflowId?: string;
   archived?: Array<{ sessionId: string; archivedAt: string; reason: string }>;
+  /**
+   * v0.5 §7 — freq channel hysteresis. Map of SKILL name → turns remaining
+   * before that SKILL can be auto-loaded again. Caller (router-runner) ticks
+   * the counter each turn via `tickCooldowns()` and records new entries
+   * returned by `resolve()`'s `start_cooldown`.
+   */
+  freqCooldowns?: Record<string, number>;
 }
 
 function sessionsDir(workspace: string, orgSlug: string): string {
@@ -123,6 +130,38 @@ export class SessionStore {
     if (!existing) return;
     if (workflowId) existing.activeWorkflowId = workflowId;
     else delete existing.activeWorkflowId;
+    this.write(existing);
+  }
+
+  /**
+   * v0.5 §7 — apply one turn of cooldown decay + record any new freq match.
+   * Pure update: returns nothing, persists the result. Idempotent on entries
+   * that have already counted down to zero (they're dropped).
+   */
+  updateFreqCooldowns(
+    orgSlug: string,
+    userId: string,
+    opts: { tick?: boolean; start?: { skillName: string; turns: number } | null } = {}
+  ): void {
+    const existing = this.read(orgSlug, userId);
+    if (!existing) return;
+    let cur = existing.freqCooldowns ?? {};
+    if (opts.tick) {
+      const next: Record<string, number> = {};
+      for (const [name, n] of Object.entries(cur)) {
+        const decremented = n - 1;
+        if (decremented > 0) next[name] = decremented;
+      }
+      cur = next;
+    }
+    if (opts.start) {
+      cur[opts.start.skillName] = opts.start.turns;
+    }
+    if (Object.keys(cur).length === 0) {
+      delete existing.freqCooldowns;
+    } else {
+      existing.freqCooldowns = cur;
+    }
     this.write(existing);
   }
 

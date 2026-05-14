@@ -1,3 +1,15 @@
+---
+name: scope-estimator
+description: 개발 범위를 정의하고 일정을 추정합니다. 기획과 개발 사이의 다리 역할을 합니다.
+team: strategy
+stateful: false
+triggers:
+  keyword:
+    - 일정
+    - 견적
+    - 스코프
+  explicit: true
+---
 # Scope Estimator Agent
 
 > 개발 범위를 정의하고 일정을 추정합니다. 기획과 개발 사이의 다리 역할을 합니다.

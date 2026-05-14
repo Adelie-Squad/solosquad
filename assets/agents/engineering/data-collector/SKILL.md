@@ -1,3 +1,15 @@
+---
+name: data-collector
+description: 다양한 소스에서 데이터를 수집합니다. API, 웹 스크래핑, 이벤트 수집을 담당합니다.
+team: engineering
+stateful: false
+triggers:
+  keyword:
+    - 크롤링
+    - 수집
+    - 스크래핑
+  explicit: true
+---
 # Data Collector Agent
 
 > 다양한 소스에서 데이터를 수집합니다. API, 웹 스크래핑, 이벤트 수집을 담당합니다.

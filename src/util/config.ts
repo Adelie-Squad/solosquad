@@ -71,8 +71,27 @@ export interface WorkspaceYaml {
   pm?: PmConfig;
   /** v0.4.0+: autonomous goal engine configuration. */
   goal?: GoalConfig;
+  /** v0.5.0+: 3-tier skill loader ordering. */
+  skill_loader?: SkillLoaderConfig;
+  /** v0.5.0+: author-loop budget envelope. */
+  author?: AuthorConfig;
   created_at: string;
   last_migrated_to?: string;
+}
+
+export interface SkillLoaderConfig {
+  /** Tier ordering — higher index = higher priority. v0.5 default: [org, user, bundle]. */
+  tiers: ("org" | "user" | "bundle")[];
+}
+
+export interface AuthorConfig {
+  budget?: {
+    daily_usd?: number;
+    weekly_usd?: number;
+    per_call_usd?: number;
+  };
+  /** What to do when a cap is hit. v0.5 default: "pause". */
+  on_cap_action?: "pause" | "warn" | "block";
 }
 
 /** v0.2.4 defaults — used both at init and as fallbacks when fields are missing. */
