@@ -58,12 +58,12 @@ solosquad doctor                                  # verify environment
 # 3. Start the bot
 solosquad bot                                     # foreground
 # or
-docker compose up -d --build                      # background + auto-restart
+cd deploy/docker && docker compose up -d --build  # background + auto-restart
 ```
 
 Then send `안녕` or `hello` to `#owner-command` in your Slack/Discord channel — a specialist agent responds.
 
-**Messenger token setup** takes 5–10 minutes (Slack) or 3–5 minutes (Discord). Follow [concept-guide.html §5](docs/manual/concept-guide.html) step-by-step.
+**Messenger token setup** takes 5–10 minutes (Slack) or 3–5 minutes (Discord). Follow [master-guide.html §5](docs/manual/master-guide.html) step-by-step.
 
 ---
 
@@ -150,11 +150,11 @@ Two long-running processes plus a file-based memory layer:
 | `solosquad schedule` | Runs cron-based routines, appends results to JSONL memory files |
 
 For production-grade always-on, choose one of:
-- Docker Compose (recommended, background + auto-restart)
+- Docker Compose (recommended, background + auto-restart) — see [`deploy/docker/README.md`](deploy/docker/README.md)
 - macOS `launchd` plist / Windows NSSM service
-- VPS + systemd (see [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
+- VPS + systemd (see [`docs/plan/cloud-deployment.md`](docs/plan/cloud-deployment.md))
 
-Full details in concept-guide §9.
+Full details in master-guide §9.
 
 ---
 
@@ -205,18 +205,21 @@ src/
   util/                           → Config, paths, logger, platform helpers
   migrations/                     → Versioned workspace migration scripts
 assets/                           → Bundled defaults (copied to user workspace on `solosquad init`)
-  agents/{team}/{agent}/SKILL.md  → 25 specialist definitions
+  agents/{team}/{agent}/SKILL.md  → 25 specialist definitions (v0.5 frontmatter)
+  agents/_meta/workflow-maker/    → v0.5 author loop meta-skill
   agents/_teams/{team}/TEAM_KNOWLEDGE.md  → Shared team craft (relocates to agents/{team}/KNOWLEDGE.md in v0.6)
   core/                           → Owner profile, principles, voice (universal layer)
-  routines/                       → Routine prompts (5 routines)
-  orchestrator/SKILL.md           → PM role definition (activated in v0.3)
-  templates/                      → PRD / handoff / status / session templates
-  Dockerfile, docker-compose.yml  → Container deployment templates
+  routines/                       → Routine prompts (6 routines incl. v0.3 pm-compaction)
+  orchestrator/SKILL.md           → PM role definition (v0.3+)
+  templates/                      → PRD / handoff / status / goal.md / workflow.yaml
+deploy/
+  docker/                         → Container deployment (Dockerfile + compose + README, v0.5+)
 docs/
-  manual/concept-guide.html       → 📖 Canonical user manual (10 sections)
-  product-roadmap.md              → Release status + planning + decision log
-  architecture.md                 → Internal system design
-  cloud-deployment.md             → VPS + systemd setup
+  manual/master-guide.html        → 📖 Canonical user manual (10 sections)
+  plan/                           → Release planning + decision log (v0.1 → v1.2)
+  plan/architecture.md            → Internal system design
+  plan/cloud-deployment.md        → VPS + systemd setup
+  poc/                            → v0.3 PoC integration scripts (archive)
   v0.3-…md … v1.2-…md             → Per-version planning specs
   reference/                      → Design vocabulary sources
   trend-record/                   → Peer-project comparisons

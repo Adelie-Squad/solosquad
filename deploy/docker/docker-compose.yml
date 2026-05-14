@@ -1,0 +1,49 @@
+# v0.5+ Docker stack — `cd deploy/docker && docker compose up -d --build`.
+# Workspace root is the repo root (`../..` from this file). Override
+# SOLOSQUAD_WORKSPACE in .env if your workspace lives elsewhere.
+
+services:
+  bot:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: solosquad:latest
+    container_name: solosquad-bot
+    restart: unless-stopped
+    env_file: ${SOLOSQUAD_WORKSPACE:-../..}/.env
+    working_dir: /workspace
+    environment:
+      - REPOS_BASE_PATH=/repos
+      - TZ=${TZ:-Asia/Seoul}
+    volumes:
+      # Workspace contents (agents, routines, core, templates, orchestrator,
+      # .env, memory, <org>/.agents/, <org>/.solosquad/, ...).
+      - ${SOLOSQUAD_WORKSPACE:-../..}:/workspace
+      # Product repos tree.
+      - ${REPOS_BASE_PATH:-${SOLOSQUAD_WORKSPACE:-../..}/repos}:/repos
+      # Claude Code CLI authentication from host (macOS/Linux: ${HOME}/.claude).
+      - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
+      # v0.5 — user-global SKILL override (3-tier tier 2) + workspace backups.
+      - ${HOME}/.solosquad:/root/.solosquad
+      - ${HOME}/.solosquad-backups:/root/.solosquad-backups
+    command: ["solosquad", "bot"]
+
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    image: solosquad:latest
+    container_name: solosquad-scheduler
+    restart: unless-stopped
+    env_file: ${SOLOSQUAD_WORKSPACE:-../..}/.env
+    working_dir: /workspace
+    environment:
+      - REPOS_BASE_PATH=/repos
+      - TZ=${TZ:-Asia/Seoul}
+    volumes:
+      - ${SOLOSQUAD_WORKSPACE:-../..}:/workspace
+      - ${REPOS_BASE_PATH:-${SOLOSQUAD_WORKSPACE:-../..}/repos}:/repos
+      - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
+      - ${HOME}/.solosquad:/root/.solosquad
+      - ${HOME}/.solosquad-backups:/root/.solosquad-backups
+    command: ["solosquad", "schedule"]

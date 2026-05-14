@@ -26,9 +26,8 @@ CONTRIBUTING.md
 .github/
 .gitignore
 
-# Docker (not needed in npm package)
-Dockerfile
-docker-compose.yml
+# Deploy (not needed in npm package — installed globally instead)
+deploy/
 
 # Project data
 memory/
