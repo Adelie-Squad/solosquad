@@ -44,43 +44,63 @@ package.json                        → npm package config
 tsconfig.json                       → TypeScript config
 bin/solosquad.ts                    → CLI entry point
 src/
-  cli/                              → CLI commands (init, bot, schedule, status, update, doctor)
+  cli/                              → CLI commands (init, bot, schedule, status, update, doctor,
+                                       agent, workflow, goal, memory, readiness)
   bot/                              → PM runner, claude-process factory, session-store,
                                        events, agents-builder, workflow-reconciler,
-                                       slash-commands, git-snapshot, workspace-meta
+                                       slash-commands, git-snapshot, workspace-meta,
+                                       spawn-assembler (v0.6 8-layer JIT),
+                                       agent-budget (v0.6 — author-budget 일반화)
   messenger/                        → Platform adapters (Discord, Slack)
-  scheduler/                        → Cron-based routine execution + memory
-  util/                             → Config, paths, logger
-  engine/                           → v0.4 autonomous engine (planned — goal-parser,
-                                       agents-md-loader, evaluator, tracker, reconciliation,
-                                       guards, goal-runner)
+  scheduler/                        → Cron-based routine execution + memory,
+                                       trajectory-extractor (v0.6 §3),
+                                       freq-keyword-miner (v0.6 §3.4),
+                                       v06-stats-extract (v0.6 §2.5)
+  memory/                           → FTS5 archive schema + rotate (v0.6 §4)
+  util/                             → Config, paths, logger, cost
+  engine/                           → v0.4 autonomous engine + stop-hook-adapter (v0.6 §5b)
+  migrations/scripts/               → 0.5.0-to-0.6.0.ts (dry-run + apply)
 assets/                             → Bundled assets (copied on `solosquad init`)
-  agents/{team}/SKILL.md            → Agent definitions (25 — v0.6: KNOWLEDGE.md co-located)
+  agents/{team}/SKILL.md            → Agent definitions (25 — v0.6: KNOWLEDGE.md co-located,
+                                       _teams/ 폐지)
   agents/{team}/KNOWLEDGE.md        → Team(=domain) shared knowledge (v0.6 §2.1)
   knowledge/                        → Bundled workspace knowledge starter (v0.6 §2.3)
   core/                             → Owner profile, principles, writing style
-  routines/                         → Routine prompts (editable)
+  routines/                         → Routine prompts (editable) — archive-rotate 신설 (v0.6 §4)
   orchestrator/SKILL.md             → PM (orchestrator) role definition
-  templates/                        → PRD, handoff, status, goal.md, AGENTS.md templates
+  templates/                        → PRD, handoff(×3 변형), status, goal.md, AGENTS.md
 ```
 
 ## 3-Layer Context (v0.6 topology)
 
 ```
 Layer 0: Workspace / Universal
-├── AGENTS.md                  → cross-tool persistent guide (this file's spec
-│                                  for end-user workspaces — v0.4)
+├── AGENTS.md                  → cross-tool persistent guide (human-edited only)
 ├── .solosquad/core/           → Owner profile, principles, voice
 ├── .solosquad/knowledge/      → User accumulated craft, decision frameworks (v0.6 §2.3)
 ├── .solosquad/agents/         → Per-user agent overrides (3-tier search)
 └── assets/                    → Bundled defaults (read-only)
+    ├── agents/{team}/SKILL.md
+    └── agents/{team}/KNOWLEDGE.md   → team(=domain) shared knowledge (v0.6 §2.1
+                                          — _teams/ 폐지)
 
 Layer 1: Organization (<workspace>/<org>/)
-├── .org.yaml                  → Org metadata
+├── .org.yaml                  → Org metadata (schema_version: 1 — v0.6 §6 forward-compat)
 ├── core/                      → Org philosophy, tone (override Layer 0 core) — v0.6 §2.2
-├── agent-profile.yaml         → Per-agent modifier for this org — v0.6 §2.2
-├── domain/                    → Org domain knowledge — v0.6 §2.2
-├── memory/                    → Routine logs, decisions, signals (JSONL + FTS5 archive in v0.6)
+│   ├── PRINCIPLES.md
+│   └── VOICE.md
+├── agent-profile.yaml         → Per-agent modifier (defaults + budget + agent별 섹션,
+│                                  schema_version: 1) — v0.6 §2.2
+├── domain/                    → Org domain knowledge (market.md, customers.md, …)
+│                                  — v0.6 §2.2
+├── memory/
+│   ├── routine-logs/*.jsonl   → 최근 7일 hot (v0.6 §4.2)
+│   ├── archive.sqlite         → FTS5 cold archive (v0.6 §4 — route_hit/route_miss/
+│   │                              author_turn/spawn_decision 인덱싱)
+│   ├── agent-costs.jsonl      → spawn 비용 누적 (v0.6 §2.2 budget)
+│   ├── migration-costs.jsonl  → 마이그레이션 자체 cap (v0.6 §2.2 P0)
+│   ├── spawn-decisions.jsonl  → 8-layer drop 로그 (v0.6 §2.2 P1)
+│   └── stop-hook-events.jsonl → spec-gate 평가 로그 (v0.6 §5b)
 ├── workflows/<id>/            → Active workflows (status, handoff, events) — v0.3
 ├── goals/<goal-id>/           → Autonomous run intents + cycle results — v0.4
 ├── .solosquad/sessions/       → PM session IDs per user — v0.3
@@ -93,15 +113,21 @@ Layer 2: Repository (<workspace>/<org>/repositories/<repo>/)
 └── .solosquad/repo.yaml       → Repo metadata
 ```
 
-**Spawn-time context assembly (v0.6 §2.2)** — 8-layer JIT injection:
+**Spawn-time context assembly (v0.6 §2.2)** — 8-layer JIT injection (in
+order, with token cap + priority drop per v0.6 §2.2 P1):
+
 [1] `assets/knowledge/` + `.solosquad/knowledge/` (selective by keyword)
 [2] `agents/{team}/KNOWLEDGE.md` (only if same team)
-[3] `agents/{team}/{agent}/SKILL.md` (agent identity, immutable, workspace)
-[4] `<org>/core/` (org philosophy)
-[5] `<org>/agent-profile.yaml` (defaults + this agent's section)
+[3] `agents/{team}/{agent}/SKILL.md` (agent identity, immutable, workspace) — never drop
+[4] `<org>/core/` (org philosophy) — never drop
+[5] `<org>/agent-profile.yaml` (defaults + this agent's section) — never drop
 [6] `<org>/domain/`
-[7] `<org>/workflows/<id>/_handoff.md` slice + `<org>/memory/`
-[8] target repo context (when target_repo set)
+[7] `<org>/workflows/<id>/_handoff.md` slice + `<org>/memory/` (recent + FTS5 recall)
+[8] target repo context (when `target_repo` set)
+
+Drop policy: `workspace.yaml.spawn.max_context_tokens` (default 80000) —
+도달 시 우선순위 낮은 layer부터 drop, 결정 로그는
+`<org>/memory/spawn-decisions.jsonl` 에 기록 (FTS5 인덱싱 대상).
 
 ## Team Composition
 
