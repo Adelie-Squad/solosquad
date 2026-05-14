@@ -10,6 +10,7 @@ triggers:
     - 사용성
     - 플로우
   explicit: true
+collab_pattern: hierarchical
 ---
 # UX Designer Agent
 

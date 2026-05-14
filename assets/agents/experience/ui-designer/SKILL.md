@@ -9,6 +9,7 @@ triggers:
     - 디자인 시스템
     - 목업
   explicit: true
+collab_pattern: hierarchical
 ---
 # UI Designer Agent
 

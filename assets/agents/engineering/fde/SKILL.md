@@ -9,6 +9,7 @@ triggers:
     - mvp
     - 빠르게 만들
   explicit: true
+collab_pattern: hierarchical
 ---
 # Forward Deployed Engineer (FDE) Agent
 

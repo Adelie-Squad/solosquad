@@ -9,6 +9,7 @@ triggers:
     - gtm
     - 런칭
   explicit: true
+collab_pattern: hierarchical
 ---
 # GTM Strategist Agent
 

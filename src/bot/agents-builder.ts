@@ -73,9 +73,12 @@ export function listSourceAgents(agentsDir: string = getAgentsDir()): Array<{
   if (!fs.existsSync(agentsDir)) return out;
   for (const teamEntry of fs.readdirSync(agentsDir, { withFileTypes: true })) {
     if (!teamEntry.isDirectory()) continue;
-    if (teamEntry.name.startsWith("_")) continue; // skip _teams/
+    if (teamEntry.name.startsWith("_")) continue; // skip _meta/ + legacy _teams/
     const teamPath = path.join(agentsDir, teamEntry.name);
     for (const agentEntry of fs.readdirSync(teamPath, { withFileTypes: true })) {
+      // KNOWLEDGE.md lives at the team root as a *file* — agent iteration only
+      // descends into agent subdirectories, so it's naturally skipped here.
+      // listTeamKnowledge() below is the dedicated scanner for that file.
       if (!agentEntry.isDirectory()) continue;
       const skillPath = path.join(teamPath, agentEntry.name, "SKILL.md");
       if (fs.existsSync(skillPath)) {
@@ -85,6 +88,33 @@ export function listSourceAgents(agentsDir: string = getAgentsDir()): Array<{
           skillPath,
         });
       }
+    }
+  }
+  return out;
+}
+
+/**
+ * v0.6 §2.1 — Team(=domain) KNOWLEDGE.md scanner.
+ *
+ * Returns `agents/{team}/KNOWLEDGE.md` (one per team that ships shared
+ * knowledge). `_meta/` and any legacy `_teams/` directory are skipped — only
+ * proper team folders are inspected.
+ *
+ * Consumed by `spawn-assembler.ts` layer [2] (already wired to the
+ * post-S2 path — this function is the public surface for diagnostics +
+ * tests).
+ */
+export function listTeamKnowledge(
+  agentsDir: string = getAgentsDir()
+): Array<{ team: string; path: string }> {
+  const out: Array<{ team: string; path: string }> = [];
+  if (!fs.existsSync(agentsDir)) return out;
+  for (const teamEntry of fs.readdirSync(agentsDir, { withFileTypes: true })) {
+    if (!teamEntry.isDirectory()) continue;
+    if (teamEntry.name.startsWith("_")) continue; // skip _meta/ + legacy _teams/
+    const knowledgePath = path.join(agentsDir, teamEntry.name, "KNOWLEDGE.md");
+    if (fs.existsSync(knowledgePath)) {
+      out.push({ team: teamEntry.name, path: knowledgePath });
     }
   }
   return out;

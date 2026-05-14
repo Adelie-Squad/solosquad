@@ -9,6 +9,7 @@ triggers:
     - 프론트엔드
     - 랜딩
   explicit: true
+collab_pattern: hierarchical
 ---
 # Creative Frontend Agent
 

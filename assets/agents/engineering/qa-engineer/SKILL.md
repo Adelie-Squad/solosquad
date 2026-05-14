@@ -11,6 +11,7 @@ triggers:
     - 버그
     - 검증
   explicit: true
+collab_pattern: hierarchical
 ---
 # QA Engineer Agent
 

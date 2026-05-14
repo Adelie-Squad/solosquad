@@ -9,6 +9,7 @@ triggers:
     - 경쟁사
     - 벤치마크
   explicit: true
+collab_pattern: hierarchical
 ---
 # Desk Researcher Agent
 
