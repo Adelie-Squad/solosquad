@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v0.2.4 기준</span>
+  <span class="tag">종합 개념서 · v0.5.0 기준</span>
   <nav>
     <ul>
       <li>
@@ -239,7 +239,9 @@
           <li><a href="#s3-2">3.2 KNOWLEDGE.md</a></li>
           <li><a href="#s3-3">3.3 CLAUDE.md</a></li>
           <li><a href="#s3-4">3.4 SKILL vs agent.md</a></li>
-          <li><a href="#s3-5">3.5 위계별 파일 종류</a></li>
+          <li><a href="#s3-5">3.5 워크플로 메이커 메타-skill</a></li>
+          <li><a href="#s3-6">3.6 4채널 라우팅</a></li>
+          <li><a href="#s3-7">3.7 위계별 파일 종류</a></li>
         </ul>
       </li>
       <li>
@@ -279,7 +281,7 @@
       <li>
         <a data-target="s8">8. 버전별 차이</a>
         <ul class="sub">
-          <li><a href="#s8-1">8.1 현재 npm (v0.2.4)</a></li>
+          <li><a href="#s8-1">8.1 현재 npm (v0.5.0)</a></li>
           <li><a href="#s8-2">8.2 추후 업데이트</a></li>
         </ul>
       </li>
@@ -361,7 +363,7 @@ Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 sk
 
   <div class="callout info">
     <strong>버전 표기 안내</strong>
-    문서 안에서 ✅<span class="badge now">v0.2.4</span>는 npm에서 지금 받을 수 있는 기능, 🚧<span class="badge plan">v0.3~v0.6</span>은 기획 중인 향후 업데이트입니다. 자세한 차이는 8장 참조.
+    문서 안에서 ✅<span class="badge now">v0.5.0</span>은 npm에서 지금 받을 수 있는 기능 (v0.3·v0.4·v0.5 누적), 🚧<span class="badge plan">v0.6+</span>는 기획 중인 향후 업데이트입니다. 자세한 차이는 8장 참조.
   </div>
 </section>
 
@@ -382,66 +384,94 @@ Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 sk
     </tbody>
   </table>
 
-  <h4>메시지 처리 흐름 (현재 v0.2.4)</h4>
-  <pre><code>사용자 메시지 "랜딩페이지 카피 써줘"
-   ↓
-src/bot/agent-router.ts
-   ↓  키워드 매칭 (60+ 키워드 → 25 agent)
-"카피" → growth/content-writer
-   ↓
-SKILL.md를 시스템 프롬프트로 주입
-   ↓
-claude --print &lt;프롬프트&gt;
-   ↓
-응답을 메신저 채널로 전송</code></pre>
+  <h4>메시지 처리 흐름 (현재 v0.5)<span class="badge now">v0.5</span></h4>
+  <p>키워드 단발 호출은 v0.3에서 PM 세션 모델로, v0.5에서 4채널 라우팅 + 3-tier 검색 + atomic swap hot-reload로 진화했습니다. <code>AGENT_ROUTES</code> 하드코딩 상수는 제거되고, 각 SKILL.md의 <code>triggers</code> frontmatter가 부트 시 수집되어 라우터 인덱스를 만듭니다.</p>
 
-  <h4>v0.3 이후 (PM 모드)<span class="badge plan">v0.3+</span></h4>
-  <p>키워드 매칭 단발 호출이 아니라, PM 에이전트가 영구 session으로 사용자와 멀티턴 대화하며 specialist 25명을 ephemeral subagent로 spawn하는 구조로 전환됩니다.</p>
+  <pre><code>사용자 → PM session (claude --resume &lt;session-id&gt;)
+            ↓
+            buildRoutes(): 3-tier 스캔
+              [1] &lt;org&gt;/.agents/                  (org 로컬 override)
+              [2] ~/.solosquad/agents/             (user 글로벌 override)
+              [3] &lt;workspace&gt;/.solosquad/agents/   (번들 25개)
+            ↓
+            4채널 resolver (우선순위: slash > explicit > keyword > freq)
+              · slash    — "/think /plan /build /review /ship" 등
+              · explicit — PM이 추론으로 직접 호출
+              · keyword  — 1턴 메시지 단어 매칭
+              · freq     — 최근 N턴 누적 빈도 임계 초과 시 자동 로드
+                           (cooldown_turns 동안 재발화 금지 — hysteresis)
+            ↓
+            매칭된 SKILL을 컨텍스트에 JIT inject
+            ↓
+            Task: &lt;agent&gt; "..." (fresh subagent session, [stage:&lt;id&gt; wf:&lt;id&gt;] marker 부착)
+            ↓
+            결과 요약을 PM 컨텍스트에 합침 → 다음 spawn 또는 사용자 보고
+            ↓
+            git-snapshot before-spawn / after-spawn 자동 커밋 (&lt;org&gt;/.solosquad/snapshot.git)
 
-  <pre><code>사용자 → PM session (claude --resume &lt;id&gt;)
-            ↓
-            PRD 작성 → _status.yaml 분해 → specialist spawn
-            ↓
-            Task: desk-researcher "경쟁사 카피 5개" (fresh session)
-            ↓
-            결과 요약을 PM 컨텍스트에 합침
-            ↓
-            다음 specialist spawn 또는 사용자 보고</code></pre>
+[병렬] 새 SKILL.md 저장 시 라우터 atomic swap:
+        새 인덱스 빌드 → ref 교체 → 빌드 중 메시지는 이전 인덱스로 처리 (봇 재시작 불필요)</code></pre>
+
+  <p>v0.4 자율 실행 진입 시 <code>solosquad goal run &lt;goal-id&gt;</code>이 background PM session(<code>bg-&lt;goal-id&gt;-&lt;runId&gt;</code>)을 띄워 같은 4채널 라우팅을 cycle 안에서 반복합니다. 메트릭 게이팅 keep/discard, git-snapshot revert, 누적 비용 cap이 cycle 단위로 적용됩니다.</p>
 
   <h3 id="s2-2">2.2 폴더 위계 구조</h3>
 
-  <h4>현재 npm 배포 (v0.2.4) 구조</h4>
+  <h4>현재 npm 배포 (v0.5.0) 구조</h4>
   <div class="tree">~/solosquad-workspace/                 (사용자 워크스페이스 루트)
+├── AGENTS.md                         (v0.4 — 단일 영속 가이드, cross-tool 표준)
 ├── .solosquad/                       (시스템 설정)
-│   ├── workspace.yaml                (timezone, briefings, background_routines)
+│   ├── workspace.yaml                (timezone, briefings, pm, skill_loader, author)
 │   ├── .env                          (메신저 토큰, MESSENGER, ...)
-│   ├── agents/{team}/{agent}/SKILL.md   (선택 — 사용자가 override한 SKILL)
+│   ├── agents/                       (v0.5 — 번들 init 결과, 25개 specialist + frontmatter)
+│   │   ├── {team}/{agent}/SKILL.md
+│   │   └── _meta/workflow-maker/SKILL.md     (v0.5 — author 루프 메타-skill)
 │   ├── routines/                     (선택 — 사용자가 override한 routine)
 │   └── core/                         (선택 — 사용자가 override한 owner/principles/voice)
+├── .agents/                          (v0.5 — 선택, org 로컬 SKILL override, 최우선)
 └── &lt;org-slug&gt;/                       (조직, 1개 이상)
     ├── .org.yaml                     (조직 메타: name, messenger)
+    ├── .agents/                      (v0.5 — 선택, 이 org 전용 SKILL override)
     ├── memory/                       (JSONL 메모리)
     │   ├── signals.jsonl
     │   ├── experiments.jsonl
     │   ├── decisions.jsonl
+    │   ├── author-costs.jsonl        (v0.5 — author 루프 비용 로그)
+    │   ├── pm-skills/                (v0.3 — PM compaction 외부화)
     │   └── routine-logs/
     ├── workflows/&lt;wf-id&gt;/             (프로젝트별 워크플로)
     │   ├── _status.yaml
     │   ├── _handoff.md
+    │   ├── _events.jsonl             (v0.3 — PM 이벤트 로그)
     │   └── stage-N-{name}/
+    ├── goals/&lt;goal-id&gt;/               (v0.4 — 자율 실행 의도 + cycle 결과)
+    │   ├── goal.md
+    │   ├── results.tsv
+    │   ├── _best.json
+    │   └── _last-run.md
+    ├── .solosquad/
+    │   ├── sessions/&lt;user&gt;.json       (v0.3 — PM session id + cumulative cost + activeWorkflowId
+    │   │                               v0.5 — freqCooldowns 필드 매 턴 decay)
+    │   ├── snapshot.git              (v0.3 — memory/ + workflows/ 내부 bare 저장소)
+    │   ├── analysis/                 (v0.5 — repo 분석 보고서 (Markdown))
+    │   └── analysis-ledger.yaml      (v0.5 — analyze repo 증분 ledger: path + SHA256[:12])
     ├── repositories/&lt;repo-slug&gt;/      (코드 저장소들)
     │   └── (코드 파일들 + 자체 .git/, .claude/, CLAUDE.md 등)
     ├── slack/  또는  discord/         (채널 매핑 설정)
     └── product/                      (조직별 자체 산출물)
 
+~/.solosquad/agents/                   (v0.5 — user 글로벌 SKILL override, 모든 워크스페이스 공유)
+
 (npm install 시) assets/                (번들 디폴트, 변경 불필요)
-├── agents/{team}/{agent}/SKILL.md    (25개)
-├── agents/_teams/{team}/TEAM_KNOWLEDGE.md  (팀별 공유 craft)
+├── agents/{team}/{agent}/SKILL.md    (25개 — v0.5에서 frontmatter prepended)
+├── agents/_meta/workflow-maker/       (v0.5 — author 루프 메타-skill + references)
+├── agents/_teams/{team}/TEAM_KNOWLEDGE.md  (팀별 공유 craft — v0.6에서 co-location 예정)
 ├── core/{OWNER,PRINCIPLES,VOICE}.md
-├── routines/                         (5개)
-├── orchestrator/SKILL.md             (PM 프롬프트, v0.3에서 활성화)
-├── templates/                        (PRD, handoff, status template)
+├── routines/                         (5개 + pm-compaction)
+├── orchestrator/SKILL.md             (PM 프롬프트, v0.3 활성화 / v0.4 goal-md-spec append)
+├── templates/                        (PRD, handoff, status, goal.md, AGENTS.md, workflow.yaml)
 ├── Dockerfile, docker-compose.yml    (컨테이너 배포용)</div>
+
+  <p><strong>3-tier 검색 우선순위 (v0.5):</strong> SKILL은 같은 이름이면 <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (번들) 순으로 상위 계층이 override합니다. 라우터가 부트 시 세 위치를 모두 스캔해 한 인덱스로 합칩니다.</p>
 
   <h4>v0.6 추가 예정 자산<span class="badge plan">v0.6</span></h4>
   <ul>
@@ -471,8 +501,18 @@ claude --print &lt;프롬프트&gt;
     </tbody>
   </table>
 
-  <h4>Just-in-Time Injection 원칙 (v0.5+)<span class="badge plan">v0.5+</span></h4>
-  <p>모든 SKILL.md를 매 호출마다 컨텍스트에 넣지 않습니다. 사용자 메시지의 키워드, 슬래시 명령, 빈도 카운팅에 따라 *그 호출에 필요한 SKILL만* 선택적으로 주입.</p>
+  <h4>Just-in-Time Injection 원칙<span class="badge now">v0.5</span></h4>
+  <p>모든 SKILL.md를 매 호출마다 컨텍스트에 넣지 않습니다. 사용자 메시지의 키워드, 슬래시 명령, 빈도 카운팅에 따라 *그 호출에 필요한 SKILL만* 선택적으로 주입. v0.5에서는 4채널 라우터(slash/explicit/keyword/freq)가 매 턴 매칭해 컨텍스트 가산을 결정합니다.</p>
+
+  <h4>v0.5 메모리 처리 흐름<span class="badge now">v0.5</span></h4>
+  <p>한 PM 턴이 진행될 때 다음 파일이 갱신됩니다.</p>
+  <ul>
+    <li><code>&lt;org&gt;/.solosquad/sessions/&lt;user&gt;.json</code> — last interaction, cumulative cost USD, activeWorkflowId, <code>freqCooldowns</code> (매 턴 decay)</li>
+    <li><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/_events.jsonl</code> — PM 메시지·spawn·완료 이벤트</li>
+    <li><code>&lt;org&gt;/.solosquad/snapshot.git</code> — before/after-spawn 커밋 (memory/ + workflows/)</li>
+    <li><code>&lt;org&gt;/memory/author-costs.jsonl</code> — author 루프 단계별(USD) 누적, daily/weekly cap 산정용</li>
+    <li><code>&lt;org&gt;/memory/pm-skills/_recent.md</code> — pm-compaction이 외부화한 완료 워크플로 1줄 요약 (PM이 다음 턴에 자동 인지)</li>
+  </ul>
 
   <h4>FTS5 Cold Archive (v0.6+)<span class="badge plan">v0.6</span></h4>
   <p>JSONL이 누적되면 검색이 느려지므로, 7일 이상 된 항목은 SQLite FTS5 가상 테이블로 옮겨 토큰 매칭 기반 검색 가능하게 보관합니다. 시맨틱 임베딩 인프라 없이 검색성 확보.</p>
@@ -514,16 +554,36 @@ claude --print &lt;프롬프트&gt;
   <h2><span class="num">3.</span>개념 정리</h2>
 
   <h3 id="s3-1">3.1 SKILL.md — 에이전트 정체성 정의</h3>
-  <p><code>SKILL.md</code>는 한 에이전트의 "이 역할은 어떻게 일하는가"를 기술한 매뉴얼입니다. Anthropic의 Agent Skills 공식 포맷을 따릅니다.</p>
+  <p><code>SKILL.md</code>는 한 에이전트의 "이 역할은 어떻게 일하는가"를 기술한 매뉴얼입니다. Anthropic의 Agent Skills 공식 포맷을 따르며, SoloSquad는 라우팅·loop_mode·budget 등 확장 필드를 더해 사용합니다.</p>
 
   <pre><code>---
 name: "Business Strategist"
 description: "사업 전략·시장 분석·경쟁 포지셔닝"
 team: strategy
-stateful: false          # v0.5+ — false면 매 호출이 fresh session
-triggers:                # v0.5+ — 4채널 진입점
+stateful: false                    # v0.5 — 모든 specialist는 stateless
+triggers:                          # v0.5 — 4채널 진입점
   slash: ["/strategize"]
   keyword: ["사업 전략", "비즈니스 모델"]
+  freq:                            # 누적 빈도 자동 로드 (cooldown_turns 동안 재발화 금지)
+    keywords: ["전략", "포지셔닝", "경쟁"]
+    window_turns: 10
+    threshold: 3
+    cooldown_turns: 6
+  explicit: true                   # PM이 추론으로 직접 호출 가능
+inputs:
+  required: [market_context, hypothesis]
+  optional: [time_range]
+outputs:
+  - strategy.md
+handoff_to:
+  - feature-planner
+  - pmf-planner
+loop_mode:                         # v0.5 — spec-gate(Ralph 루프) 모드 명시. null | spec-gate
+  kind: spec-gate
+  stop_when: "all tests pass"
+budget:                            # v0.5 — paperclip envelope 차용. author 루프·explicit 호출에 forward
+  per_call_usd: 1.5
+  daily_usd: 10
 ---
 
 # Business Strategist Agent
@@ -537,9 +597,11 @@ triggers:                # v0.5+ — 4채널 진입점
 ...</code></pre>
 
   <ul>
-    <li><strong>위치</strong>: <code>assets/agents/{team}/{agent}/SKILL.md</code> (워크스페이스 위계)</li>
-    <li><strong>로드 시점</strong>: bot이 spawn 시점에 시스템 프롬프트로 주입</li>
-    <li><strong>속성</strong>: <strong>Stateless</strong> — 매 호출이 독립이며, state는 외부(workflows/handoff/memory)에 보관</li>
+    <li><strong>위치 (3-tier 검색):</strong> <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (번들 25개)</li>
+    <li><strong>로드 시점:</strong> 라우터가 4채널 매칭으로 선택 → PM이 Task tool로 spawn 시 시스템 프롬프트에 주입</li>
+    <li><strong>속성:</strong> <strong>Stateless</strong> (v0.5 강제) — 매 호출이 fresh session이며 state는 외부(workflows/handoff/memory)에 보관. <code>stateful: true</code>는 PM과 v0.4 goal-runner background session 두 actor만 사용</li>
+    <li><strong>필수 필드:</strong> <code>name</code>·<code>description</code> (Anthropic 사양). 나머지는 SoloSquad 확장이며 누락 시 라우터가 fallback 처리</li>
+    <li><strong>loop_mode = spec-gate:</strong> author 루프가 자동으로 <code>&lt;org&gt;/goals/&lt;goal-id&gt;/goal.md</code>도 emit → v0.4 goal-runner에 자율 cycle로 등록</li>
   </ul>
 
   <h3 id="s3-2">3.2 KNOWLEDGE.md — 팀(=도메인) 공유 지식<span class="badge plan">v0.6</span></h3>
@@ -584,12 +646,12 @@ TypeScript + Next.js. Vercel 배포.
   <p>SoloSquad는 <strong>두 파일을 모두 사용하되 책임이 명확히 다릅니다</strong>. 한 워크스페이스에서 SKILL.md는 여러 개, AGENTS.md는 단 1개.</p>
 
   <table>
-    <thead><tr><th></th><th>SKILL.md (Anthropic 공식)</th><th>AGENTS.md (cross-tool 표준) <span class="badge plan">v0.4</span></th></tr></thead>
+    <thead><tr><th></th><th>SKILL.md (Anthropic 공식)</th><th>AGENTS.md (cross-tool 표준) <span class="badge now">v0.4</span></th></tr></thead>
     <tbody>
       <tr><td>역할</td><td>개별 <strong>agent의 정체성·동작 매뉴얼</strong></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (프로젝트 컨벤션·금지 경로·도구 사용 규칙)</td></tr>
-      <tr><td>위치·개수</td><td><code>assets/agents/{team}/{agent}/SKILL.md</code> (25 specialist 각각)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code 마켓플레이스 호환)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> <strong>단 1개</strong></td></tr>
-      <tr><td>frontmatter</td><td>YAML, <code>name</code>·<code>description</code> 필수 + v0.4 도구·모델 override</td><td>없음 — 자유 markdown</td></tr>
-      <tr><td>편집 주체</td><td>v0.5 analyzer는 자동 분류·머지. 사람이 손볼 수 있음.</td><td><strong>사람 only</strong>. 어떤 AI 에이전트도 이 파일을 수정하지 못함 (Codex `/goal` 신뢰 앵커 정신과 동일).</td></tr>
+      <tr><td>위치·개수</td><td>3-tier 검색: <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (25 specialist 번들)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code 마켓플레이스 호환)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> <strong>단 1개</strong></td></tr>
+      <tr><td>frontmatter</td><td>YAML, <code>name</code>·<code>description</code> 필수 + SoloSquad 확장(<code>team</code>·<code>stateful</code>·<code>triggers</code>·<code>loop_mode</code>·<code>budget</code> 등)</td><td>없음 — 자유 markdown</td></tr>
+      <tr><td>편집 주체</td><td>v0.5 analyzer가 자동 분류·머지. v0.5 메신저 author 루프가 1-2턴 대화로 생성. 사람도 손볼 수 있음.</td><td><strong>사람 only</strong>. 어떤 AI 에이전트도 이 파일을 수정하지 못함 (Codex `/goal` 신뢰 앵커 정신과 동일).</td></tr>
       <tr><td>다른 도구 호환</td><td>Claude Code Plugin 마켓플레이스와 직접 연동.</td><td>Codex·Aider·Cursor·최신 Claude Code 모두 인식하는 <strong>cross-tool 표준</strong> (<a href="https://developers.openai.com/codex/agents-md/">Codex AGENTS.md spec</a>).</td></tr>
       <tr><td>v0.4 자율 실행에서</td><td>spawn된 specialist가 자기 SKILL.md를 컨텍스트로 받음.</td><td><code>immutable_paths</code>·<code>modifiable_paths</code>·외부 호출 화이트리스트가 박제되어 모든 <code>goal.md</code> 실행이 자동 상속.</td></tr>
     </tbody>
@@ -597,22 +659,81 @@ TypeScript + Next.js. Vercel 배포.
 
   <p><strong>요점:</strong> SKILL.md는 "이 agent가 누구인지·뭘 잘하는지"를 적고, AGENTS.md는 "이 워크스페이스를 만지는 모든 AI 도구가 따라야 할 룰"을 적습니다. 둘은 경쟁이 아니라 다른 레이어입니다.</p>
 
-  <p><strong>CLAUDE.md는 더 이상 사용하지 않습니다 <span class="badge plan">v0.4 결정</span>.</strong> 종전에는 CLAUDE.md와 AGENTS.md를 워크스페이스 루트에 함께 두는 설계였으나, 같은 위계에 두 파일을 두면 "어디 적어야 하지" 혼란이 발생하고 두 출처가 발산할 위험이 큽니다. v0.4부터 SoloSquad는 워크스페이스 영속 가이드를 <code>AGENTS.md</code> 단일 파일로 통일합니다. 기존 CLAUDE.md는 마이그레이션이 손대지 않고 컨텐츠만 AGENTS.md로 1회 복사 — 사용자가 필요 없으면 수동 삭제. 최신 Claude Code도 AGENTS.md를 fallback으로 인식하므로 호환성 손실 없음.</p>
+  <p><strong>CLAUDE.md는 더 이상 사용하지 않습니다 <span class="badge now">v0.4</span>.</strong> 종전에는 CLAUDE.md와 AGENTS.md를 워크스페이스 루트에 함께 두는 설계였으나, 같은 위계에 두 파일을 두면 "어디 적어야 하지" 혼란이 발생하고 두 출처가 발산할 위험이 큽니다. v0.4부터 SoloSquad는 워크스페이스 영속 가이드를 <code>AGENTS.md</code> 단일 파일로 통일합니다. 기존 CLAUDE.md는 마이그레이션이 손대지 않고 컨텐츠만 AGENTS.md로 1회 복사 — 사용자가 필요 없으면 수동 삭제. 최신 Claude Code도 AGENTS.md를 fallback으로 인식하므로 호환성 손실 없음.</p>
 
-  <h3 id="s3-5">3.5 위계별 파일 종류 (마스터 표)</h3>
+  <h3 id="s3-5">3.5 워크플로 메이커 메타-skill<span class="badge now">v0.5</span></h3>
+  <p>사용자가 코드를 안 만지고 메신저 대화 1-2턴만으로 새 SKILL.md(또는 workflow chain)를 등록할 수 있게 하는 author 루프 시스템입니다. <code>assets/agents/_meta/workflow-maker/SKILL.md</code>가 author 루프 시스템 프롬프트 역할을 하며, PM이 "이 작업을 자동화하고 싶다" 의도를 분류하면 <code>[META workflow-maker]</code> explicit 호출로 진입합니다.</p>
+
+  <h4>5단계 상태기</h4>
+  <ol>
+    <li><strong>CLARIFY</strong> — 입력·출력·실행 빈도 등 1-2턴 명확화 (답 못 하면 default 채택 + 추후 수정 가능 명시)</li>
+    <li><strong>DRAFT</strong> — SKILL.md + (선택) workflow.yaml + (선택) routine cron entry preview</li>
+    <li><strong>SANDBOX_PROMPT</strong> — dry-run sandbox로 1회 실행 → 사용자 확인 요청</li>
+    <li><strong>AWAIT_CONFIRM</strong> — 사용자 승인 게이트 ("확정할까요?")</li>
+    <li><strong>APPLIED</strong> — 결정적 머지: <code>solosquad agent validate &lt;path&gt;</code> → 라우터 atomic swap → 다음 호출부터 즉시 사용 가능. <code>loop_mode.kind: spec-gate</code> draft는 <code>&lt;org&gt;/goals/&lt;goal-id&gt;/goal.md</code>도 자동 emit</li>
+  </ol>
+
+  <h4>CLI 연동</h4>
+  <ul>
+    <li><code>solosquad agent add --name X --team Y</code> — 스캐폴딩 (frontmatter 템플릿 + 빈 body)</li>
+    <li><code>solosquad agent validate &lt;path&gt;</code> — 스키마 + 필수 섹션 검증. author 루프 저장 직후 자동 실행</li>
+    <li><code>solosquad agent validate --all [--corpus]</code> — 워크스페이스 전체 + 번들 + corpus 회귀. CI 게이트(<code>.github/workflows/ci.yml</code>)에서 실행</li>
+    <li><code>solosquad agent list / info</code> — 등록된 SKILL 인벤토리·상세</li>
+  </ul>
+
+  <h4>비용 cap (paperclip envelope)</h4>
+  <p>명확화 + draft + validate + sandbox 각 단계 LLM 호출이 <code>&lt;org&gt;/memory/author-costs.jsonl</code>에 누적됩니다 (<code>ts, skill_draft_id, step, usd</code>). <code>workspace.yaml.author</code> 섹션의 <code>per_call_usd</code>·<code>daily_usd</code>·<code>weekly_usd</code> cap 도달 시 PM이 "Daily budget 도달 — 내일 다시 시도해주세요" 응답.</p>
+
+  <h4>분석 트랙</h4>
+  <p>기존 repo의 <code>.claude/skills/</code> 자산은 <code>solosquad analyze repo &lt;path&gt;</code>로 흡수합니다. 4-라벨 분류(<code>role / workflow / codebase-fact / domain</code>) 보고서가 <code>&lt;org&gt;/.solosquad/analysis/</code>에 저장되고, 사람 검토 후 <code>solosquad add repo --from-report &lt;report&gt;</code>로 결정적 머지(backup → apply → verify). 두 번째 실행은 <code>analysis-ledger.yaml</code>의 hash로 신규/변경분만 LLM 호출.</p>
+
+  <h3 id="s3-6">3.6 4채널 라우팅 + freq cooldown<span class="badge now">v0.5</span></h3>
+  <p>v0.2.4의 60+ 키워드 하드코딩 <code>AGENT_ROUTES</code>는 v0.5에서 제거됐습니다. 각 SKILL.md의 <code>triggers</code> frontmatter가 부트 시 수집되어 라우터 인덱스를 만들고, 4채널 우선순위로 매칭합니다.</p>
+
+  <table>
+    <thead><tr><th>채널</th><th>의미</th><th>예시</th></tr></thead>
+    <tbody>
+      <tr><td><code>slash</code></td><td>명시적 의도 — 즉시 로드 (모호성 없음)</td><td><code>/think /plan /build /review /ship</code></td></tr>
+      <tr><td><code>explicit</code></td><td>PM이 추론으로 직접 호출</td><td><code>[META workflow-maker]</code> 같은 PM-only 채널</td></tr>
+      <tr><td><code>keyword</code></td><td>1턴 메시지 단어 매칭</td><td><code>"사업 전략"</code> → business-strategist</td></tr>
+      <tr><td><code>freq</code></td><td>최근 N턴 누적 빈도 임계 초과 시 자동 로드 (시맨틱 임베딩 없이 카운팅으로 동등 효과)</td><td>최근 10턴에 <code>"등기부"</code>·<code>"신호"</code>·<code>"부동산"</code> 합산 ≥ 3</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>우선순위:</strong> <code>slash &gt; explicit &gt; keyword &gt; freq</code>. 동일 채널 안에서는 3-tier 검색 경로(org &gt; user &gt; bundle)로 override.</p>
+
+  <h4>Freq 채널 hysteresis (cooldown)</h4>
+  <p>한 번 자동 로드된 SKILL은 frontmatter <code>triggers.freq.cooldown_turns</code> (기본 6) 동안 같은 SKILL의 freq 매칭 score 계산을 건너뜁니다. 같은 주제로 길게 대화할 때 매 턴 재발화하는 잡음 회피용. 라우터 메모리 구조: <code>&lt;org&gt;/.solosquad/sessions/&lt;user&gt;.json</code>의 <code>freqCooldowns: { skill_name: until_turn }</code> 필드가 매 턴 decay.</p>
+
+  <h4>Freq 등록 SKILL 상한</h4>
+  <p>workspace당 freq 등록 SKILL 상한은 <strong>20개</strong>. validator가 21번째 등록 시도부터 거부 (매 메시지 정규식 매칭 비용 보호 — p95 &lt; 10ms 목표). 키워드 토큰화 후 hashmap 카운터로 O(|tokens|) 매칭, 정규식은 fallback.</p>
+
+  <h4>자동 로드 통지 (UX)</h4>
+  <p><code>freq</code> 채널로 로드된 SKILL은 사용자에게 1회 알림: <code>🧠 {agent} 컨텍스트 자동 로드됨 (최근 키워드: ...)</code>. 사용자가 의도하지 않은 라우팅을 즉시 거부할 수 있습니다.</p>
+
+  <h4>Hot-reload (atomic swap)</h4>
+  <p>author 루프가 새 SKILL.md를 저장하면 <code>src/bot/index.ts</code>가 라우터를 재빌드합니다. 빌드 중 도착한 메시지는 <em>이전 인덱스</em>로 처리되고, 빌드 완료 후 ref 교체(<code>routeIndexRef = newIndex</code>) — 빌드 중 도달한 메시지가 부분 인덱스에 닿지 않음. 봇 재시작 불필요. 빌드 실패 시 이전 인덱스 유지 + PM에 경고.</p>
+
+  <h4>메타-skill scanner 분리</h4>
+  <p><code>_meta/</code> 폴더는 일반 scanner에서 계속 skip. 별도 <code>listMetaSkills()</code>가 <code>assets/agents/_meta/*/SKILL.md</code>만 스캔하고 <code>triggers.explicit: true</code>만 인정합니다. <code>workflow-maker</code> 메타-skill은 PM이 explicit 호출로만 진입 — slash/keyword/freq 채널 등록은 거부됩니다.</p>
+
+  <h3 id="s3-7">3.7 위계별 파일 종류 (마스터 표)</h3>
 
   <h4>워크스페이스 위계 (Layer 0)</h4>
   <table>
     <thead><tr><th>경로</th><th>파일</th><th>의미</th><th>사용 시점</th></tr></thead>
     <tbody>
-      <tr><td><code>assets/agents/{team}/{agent}/</code></td><td><code>SKILL.md</code></td><td>25 specialist 정체성 매뉴얼</td><td>해당 agent spawn 시</td></tr>
+      <tr><td><code>&lt;workspace&gt;/.solosquad/agents/{team}/{agent}/</code> <span class="badge now">v0.5</span></td><td><code>SKILL.md</code></td><td>25 specialist 정체성 매뉴얼 (번들 init 결과, frontmatter prepended)</td><td>해당 agent spawn 시</td></tr>
+      <tr><td><code>~/.solosquad/agents/</code> <span class="badge now">v0.5</span></td><td><code>{team}/{agent}/SKILL.md</code></td><td>user 글로벌 SKILL override (모든 워크스페이스 공유)</td><td>같은 이름의 번들 SKILL을 override</td></tr>
+      <tr><td><code>&lt;workspace&gt;/.agents/</code> <span class="badge now">v0.5</span></td><td><code>{team}/{agent}/SKILL.md</code></td><td>org 로컬 SKILL override (최우선)</td><td>3-tier 검색의 1순위</td></tr>
+      <tr><td><code>assets/agents/_meta/workflow-maker/</code> <span class="badge now">v0.5</span></td><td><code>SKILL.md</code> + <code>references/*.md</code></td><td>author 루프 메타-skill (PM이 explicit 호출로만 진입)</td><td>PM이 "새 SKILL/workflow 생성" 의도 분류 시</td></tr>
       <tr><td><code>assets/agents/_teams/{team}/</code> <span class="badge now">v0.2.4</span><br><code>assets/agents/{team}/</code> <span class="badge plan">v0.6</span></td><td><code>TEAM_KNOWLEDGE.md</code><br><code>KNOWLEDGE.md</code></td><td>팀 공유 craft</td><td>같은 팀 agent spawn 시 (v0.6 자동)</td></tr>
       <tr><td><code>assets/core/</code></td><td><code>OWNER.md</code> / <code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>사용자 프로필 / 행동 원칙 / 글쓰기 톤</td><td>모든 세션 기본 컨텍스트</td></tr>
-      <tr><td><code>assets/orchestrator/</code></td><td><code>SKILL.md</code></td><td>PM(오케스트레이터) 역할 정의 <span class="badge plan">v0.3 활성화</span></td><td>PM session</td></tr>
-      <tr><td><code>assets/routines/</code></td><td><code>morning-brief.md</code><br><code>evening-brief.md</code><br><code>signal-scan.md</code><br><code>experiment-check.md</code><br><code>weekly-review.md</code></td><td>5종 자동 routine 프롬프트</td><td>scheduler가 cron 시각에</td></tr>
-      <tr><td><code>assets/templates/</code></td><td><code>handoff.md</code> / <code>prd-{type}.md</code> / <code>status.yaml</code> / ...</td><td>워크플로 스캐폴딩 템플릿</td><td>새 워크플로 생성 시</td></tr>
+      <tr><td><code>assets/orchestrator/</code></td><td><code>SKILL.md</code></td><td>PM(오케스트레이터) 역할 정의 <span class="badge now">v0.3</span> + v0.4 goal-md-spec append</td><td>PM session</td></tr>
+      <tr><td><code>assets/routines/</code></td><td><code>morning-brief.md</code><br><code>evening-brief.md</code><br><code>signal-scan.md</code><br><code>experiment-check.md</code><br><code>weekly-review.md</code><br><code>pm-compaction.md</code> <span class="badge now">v0.3</span></td><td>자동 routine 프롬프트 (5종 + PM compaction)</td><td>scheduler가 cron 시각에</td></tr>
+      <tr><td><code>assets/templates/</code></td><td><code>handoff.md</code> / <code>prd-{type}.md</code> / <code>status.yaml</code> / <code>goal.md</code> <span class="badge now">v0.4</span> / <code>AGENTS.md</code> <span class="badge now">v0.4</span> / <code>workflow.yaml</code> <span class="badge now">v0.5</span> / <code>goal-from-skill.md</code> <span class="badge now">v0.5</span></td><td>워크플로·자율 실행·workflow chain 스캐폴딩 템플릿</td><td>새 워크플로/goal/skill 생성 시</td></tr>
       <tr><td><code>.solosquad/knowledge/</code> <span class="badge plan">v0.6</span></td><td>(사용자 자유)</td><td>누적 공용 지식 (의사결정 프레임워크 등)</td><td>키워드 매칭 시 selective load</td></tr>
-      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>AGENTS.md</code></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (immutable_paths·modifiable_paths·Output 가드 박제). Codex·Aider·Cursor·최신 Claude Code 모두 동일 파일 인식하는 cross-tool 표준. 사람 only 편집.</td><td>모든 자율 실행 (<code>solosquad goal run</code>) + PM session이 자동 상속. (CLAUDE.md는 v0.4부터 사용하지 않음 — §3.4 참조)</td></tr>
+      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge now">v0.4</span></td><td><code>AGENTS.md</code></td><td>워크스페이스 <strong>단일 영속 가이드</strong> (immutable_paths·modifiable_paths·Output 가드 박제). Codex·Aider·Cursor·최신 Claude Code 모두 동일 파일 인식하는 cross-tool 표준. 사람 only 편집.</td><td>모든 자율 실행 (<code>solosquad goal run</code>) + PM session이 자동 상속. (CLAUDE.md는 v0.4부터 사용하지 않음 — §3.4 참조)</td></tr>
     </tbody>
   </table>
 
@@ -621,11 +742,15 @@ TypeScript + Next.js. Vercel 배포.
     <thead><tr><th>경로</th><th>파일</th><th>의미</th></tr></thead>
     <tbody>
       <tr><td><code>&lt;org&gt;/</code></td><td><code>.org.yaml</code></td><td>조직 메타 (이름, 메신저, 활성 repo)</td></tr>
-      <tr><td><code>&lt;org&gt;/memory/</code></td><td><code>signals.jsonl</code><br><code>experiments.jsonl</code><br><code>decisions.jsonl</code><br><code>routine-logs/*.jsonl</code></td><td>routine 결과·결정 이벤트</td></tr>
-      <tr><td><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/</code></td><td><code>_status.yaml</code><br><code>_handoff.md</code><br><code>_events.jsonl</code> <span class="badge plan">v0.3</span><br><code>stage-N-{name}/</code></td><td>활성 워크플로 상태·핸드오프·산출물</td></tr>
-      <tr><td><code>&lt;org&gt;/goals/&lt;goal-id&gt;/</code> <span class="badge plan">v0.4</span></td><td><code>goal.md</code><br><code>results.tsv</code><br><code>_best.json</code><br><code>_last-run.md</code></td><td>자율 실행 의도서 (1회 실행 단위) + cycle 누적 결과 + ship 후보 commit + 마지막 run 요약. <code>solosquad goal run</code>이 갱신.</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/</code></td><td><code>signals.jsonl</code><br><code>experiments.jsonl</code><br><code>decisions.jsonl</code><br><code>routine-logs/*.jsonl</code><br><code>pm-skills/*.md</code> <span class="badge now">v0.3</span><br><code>author-costs.jsonl</code> <span class="badge now">v0.5</span></td><td>routine 결과·결정 이벤트·PM compaction 외부화·author 루프 비용 누적</td></tr>
+      <tr><td><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/</code></td><td><code>_status.yaml</code><br><code>_handoff.md</code><br><code>_events.jsonl</code> <span class="badge now">v0.3</span><br><code>stage-N-{name}/</code></td><td>활성 워크플로 상태·핸드오프·산출물</td></tr>
+      <tr><td><code>&lt;org&gt;/goals/&lt;goal-id&gt;/</code> <span class="badge now">v0.4</span></td><td><code>goal.md</code><br><code>results.tsv</code><br><code>_best.json</code><br><code>_last-run.md</code></td><td>자율 실행 의도서 (1회 실행 단위) + cycle 누적 결과 + ship 후보 commit + 마지막 run 요약. <code>solosquad goal run</code>이 갱신.</td></tr>
       <tr><td><code>&lt;org&gt;/slack/</code> 또는 <code>discord/</code></td><td>채널 매핑 yaml</td><td>메신저 채널 ↔ 조직 매핑</td></tr>
-      <tr><td><code>&lt;org&gt;/.solosquad/sessions/</code> <span class="badge plan">v0.3</span></td><td><code>{user-id}.json</code></td><td>PM session id</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/sessions/</code> <span class="badge now">v0.3</span></td><td><code>{user-id}.json</code> — session id, cumulative cost, activeWorkflowId, <code>freqCooldowns</code> <span class="badge now">v0.5</span></td><td>PM session id + 4채널 freq hysteresis 상태</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/snapshot.git</code> <span class="badge now">v0.3</span></td><td>(bare repo)</td><td>memory/ + workflows/ 내부 bare 저장소. PM 턴마다 before/after-spawn 자동 커밋. <code>rollback --workflow &lt;id&gt;</code>의 revert 대상.</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/analysis/</code> <span class="badge now">v0.5</span></td><td><code>YYYY-MM-DD-*.md</code></td><td><code>solosquad analyze repo</code> Markdown 분석 보고서 (4-라벨 분류). 사람 검토 후 <code>--from-report</code>로 머지.</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/analysis-ledger.yaml</code> <span class="badge now">v0.5</span></td><td>(YAML)</td><td>repo 분석 ledger (<code>path + SHA256[:12]</code>). 두 번째 실행은 신규/변경분만 LLM 호출.</td></tr>
+      <tr><td><code>&lt;org&gt;/.agents/</code> <span class="badge now">v0.5</span></td><td><code>{team}/{agent}/SKILL.md</code></td><td>org 로컬 SKILL override (3-tier 검색의 최상위). 같은 이름의 user 글로벌·번들 SKILL을 덮어씀.</td></tr>
       <tr><td><code>&lt;org&gt;/core/</code> <span class="badge plan">v0.6</span></td><td><code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>조직 철학·톤 (workspace core override)</td></tr>
       <tr><td><code>&lt;org&gt;/agent-profile.yaml</code> <span class="badge plan">v0.6</span></td><td>(YAML)</td><td>25 agent의 조직별 modifier</td></tr>
       <tr><td><code>&lt;org&gt;/domain/</code> <span class="badge plan">v0.6</span></td><td><code>market.md</code> / <code>customers.md</code> / <code>product.md</code></td><td>조직 도메인 지식</td></tr>
@@ -761,14 +886,21 @@ solosquad add repo https://github.com/me/x.git # 또는 git URL (clone)</code></
     <li>해당 리포에 자체 <code>.claude/skills/</code>나 <code>CLAUDE.md</code>가 있으면 그대로 유지 — 해당 리포의 작업 시 Claude Code가 자동으로 로드.</li>
   </ol>
 
-  <h4>v0.5에서 추가 예정<span class="badge plan">v0.5</span></h4>
-  <p>기존 리포의 <code>.claude/skills/</code>를 SoloSquad 자산으로 흡수하는 분석기가 도입됩니다.</p>
+  <h4>v0.5 분석기 흐름<span class="badge now">v0.5</span></h4>
+  <p>기존 리포의 <code>.claude/skills/</code>를 SoloSquad 자산으로 흡수하는 분석기가 출시되었습니다.</p>
   <pre><code>solosquad analyze repo /path/to/legacy-repo
 # → 4-라벨 분류 (role / workflow / codebase-fact / domain)
-# → 분석 보고서 Markdown 생성
+# → &lt;org&gt;/.solosquad/analysis/YYYY-MM-DD-*.md 보고서 생성
+# → analysis-ledger.yaml에 path + SHA256[:12] 기록 (두 번째 실행은 신규/변경분만 LLM 호출)
+
+solosquad analyze repo &lt;path&gt; --force            # 모델 업그레이드 시 전체 재분석
+solosquad analyze repo &lt;path&gt; --prune-orphans    # 파일 사라진 ledger 항목 정리
 
 solosquad add repo /path/to/legacy-repo --from-report 2026-XX-XX-initial.md
-# → backup → 결정적 머지 → verify</code></pre>
+# → backup → 결정적 머지 → verify
+
+solosquad add repo &lt;path&gt; --merge-policy append|override|replace
+# → 머지 정책 명시 (기본 append)</code></pre>
 
   <h3 id="s4-4">4.4 이전 버전 사용자 업데이트</h3>
 
@@ -1166,40 +1298,44 @@ solosquad bot --debug               # 자세한 로그</code></pre>
 
   <h3 id="s6-1">6.1 명령어 레퍼런스</h3>
 
-  <h4>현재 사용 가능 (v0.2.4)<span class="badge now">v0.2.4</span></h4>
+  <h4>현재 사용 가능 (v0.5.0)<span class="badge now">v0.5</span></h4>
   <table>
-    <thead><tr><th>명령어</th><th>역할</th></tr></thead>
+    <thead><tr><th>명령어</th><th>도입</th><th>역할</th></tr></thead>
     <tbody>
-      <tr><td><code>solosquad init</code></td><td>워크스페이스 초기화 마법사 — 에이전트·routine 복사, 메신저 토큰 입력, 제품 등록</td></tr>
-      <tr><td><code>solosquad bot</code></td><td>메신저 봇 기동. 사용자 메시지 처리</td></tr>
-      <tr><td><code>solosquad schedule</code></td><td>자동 routine 스케줄러 기동 (cron)</td></tr>
-      <tr><td><code>solosquad status</code></td><td>대시보드: 등록 제품, 워크플로, 최근 활동</td></tr>
-      <tr><td><code>solosquad doctor</code></td><td>환경 진단 (Node, git, claude, 토큰, 경로)</td></tr>
-      <tr><td><code>solosquad doctor --messenger-check</code></td><td>메신저 토큰을 live API로 검증</td></tr>
-      <tr><td><code>solosquad update</code></td><td>npm 최신 버전 비교 + 자동 설치 안내</td></tr>
-      <tr><td><code>solosquad run-routine</code></td><td>대화형 routine 수동 실행</td></tr>
-      <tr><td><code>solosquad run-routine &lt;name&gt;</code></td><td>특정 routine 실행 (signal-scan, morning-brief, ...)</td></tr>
-      <tr><td><code>solosquad run-routine --all</code></td><td>모든 routine 순차 실행</td></tr>
-      <tr><td><code>solosquad migrate</code></td><td>버전 간 워크스페이스 구조 변환 (기본 dry-run)</td></tr>
-      <tr><td><code>solosquad migrate --apply</code></td><td>실제 마이그레이션 수행</td></tr>
-      <tr><td><code>solosquad migrate --rollback</code></td><td>직전 backup으로 복원</td></tr>
-      <tr><td><code>solosquad add org &lt;name&gt;</code></td><td>워크스페이스에 새 조직 추가</td></tr>
-      <tr><td><code>solosquad add repo &lt;url|path&gt;</code></td><td>리포 등록 (clone 또는 로컬 이동)</td></tr>
-      <tr><td><code>solosquad sync</code></td><td>repositories/ 스캔 + .org.yaml 동기화 + legacy .git 정리 안내</td></tr>
+      <tr><td><code>solosquad init</code></td><td>v0.1</td><td>워크스페이스 초기화 마법사 — 에이전트·routine 복사, 메신저 토큰 입력, 제품 등록</td></tr>
+      <tr><td><code>solosquad bot</code></td><td>v0.1</td><td>메신저 봇 기동. v0.3 PM 모드 + v0.5 4채널 라우터 + atomic swap hot-reload</td></tr>
+      <tr><td><code>solosquad schedule</code></td><td>v0.1</td><td>자동 routine 스케줄러 기동 (cron)</td></tr>
+      <tr><td><code>solosquad status</code></td><td>v0.1</td><td>대시보드: 등록 제품, 워크플로, 최근 활동</td></tr>
+      <tr><td><code>solosquad doctor</code></td><td>v0.1</td><td>환경 진단 (Node, git, claude, 토큰, 경로)</td></tr>
+      <tr><td><code>solosquad doctor --messenger-check</code></td><td>v0.2</td><td>메신저 토큰을 live API로 검증</td></tr>
+      <tr><td><code>solosquad update</code></td><td>v0.1</td><td>npm 최신 버전 비교 + 자동 설치 안내</td></tr>
+      <tr><td><code>solosquad run-routine</code></td><td>v0.1</td><td>대화형 routine 수동 실행</td></tr>
+      <tr><td><code>solosquad run-routine &lt;name&gt;</code></td><td>v0.1</td><td>특정 routine 실행 (signal-scan, morning-brief, ...)</td></tr>
+      <tr><td><code>solosquad run-routine --all</code></td><td>v0.1</td><td>모든 routine 순차 실행</td></tr>
+      <tr><td><code>solosquad migrate</code></td><td>v0.2</td><td>버전 간 워크스페이스 구조 변환 (기본 dry-run)</td></tr>
+      <tr><td><code>solosquad migrate --apply</code></td><td>v0.2</td><td>실제 마이그레이션 수행</td></tr>
+      <tr><td><code>solosquad migrate --rollback</code></td><td>v0.2</td><td>직전 backup으로 복원</td></tr>
+      <tr><td><code>solosquad add org &lt;name&gt;</code></td><td>v0.2</td><td>워크스페이스에 새 조직 추가</td></tr>
+      <tr><td><code>solosquad add repo &lt;url|path&gt;</code></td><td>v0.2</td><td>리포 등록 (clone 또는 로컬 이동)</td></tr>
+      <tr><td><code>solosquad add repo --from-report &lt;file&gt; [--merge-policy append|override|replace]</code></td><td>v0.5</td><td>분석 보고서 기반 결정적 머지 (backup → apply → verify)</td></tr>
+      <tr><td><code>solosquad sync</code></td><td>v0.2</td><td>repositories/ 스캔 + .org.yaml 동기화 + legacy .git 정리 안내</td></tr>
+      <tr><td><code>solosquad pm status / reset / compact</code></td><td>v0.3</td><td>PM session 상태·재시작·compaction</td></tr>
+      <tr><td><code>solosquad workflow list / show &lt;id&gt;</code></td><td>v0.3</td><td>워크플로 목록·상세</td></tr>
+      <tr><td><code>solosquad workflow focus &lt;wf-id&gt; [--clear]</code></td><td>v0.3</td><td>(user, org) 활성 워크플로 설정</td></tr>
+      <tr><td><code>solosquad rollback --workflow &lt;id&gt; [--to &lt;sha&gt;] [--list]</code></td><td>v0.3</td><td>워크플로 직전 spawn 결과 revert (snapshot.git)</td></tr>
+      <tr><td><code>solosquad goal new / list / show / run / status / stop / verify</code></td><td>v0.4</td><td>자율 실행 goal 관리 + N시간 자율 실행 루프 (Codex <code>/goal</code> + <code>AGENTS.md</code> 2계층)</td></tr>
+      <tr><td><code>solosquad goal run &lt;goal-id&gt; [--hours N | --cycles N]</code></td><td>v0.4</td><td>background PM session 기동 → metric-driven keep/discard cycle</td></tr>
+      <tr><td><code>solosquad agent add --name X --team Y</code></td><td>v0.5</td><td>새 SKILL 스캐폴딩 (frontmatter 템플릿 + 빈 body)</td></tr>
+      <tr><td><code>solosquad agent list / info</code></td><td>v0.5</td><td>등록된 SKILL 인벤토리·상세</td></tr>
+      <tr><td><code>solosquad agent validate &lt;path&gt; [--all] [--corpus]</code></td><td>v0.5</td><td>SKILL.md 스키마 + 필수 섹션 검증. <code>--all</code>은 CI 게이트(<code>npm run validate-skills</code>)</td></tr>
+      <tr><td><code>solosquad analyze repo &lt;path&gt; [--force] [--prune-orphans]</code></td><td>v0.5</td><td>기존 리포 <code>.claude/skills/</code> 4-라벨 분류 보고서. ledger 기반 증분 처리</td></tr>
     </tbody>
   </table>
 
-  <h4>추후 추가 예정<span class="badge plan">v0.3+</span></h4>
+  <h4>추후 추가 예정<span class="badge plan">v0.6+</span></h4>
   <table>
     <thead><tr><th>명령어</th><th>버전</th><th>역할</th></tr></thead>
     <tbody>
-      <tr><td><code>solosquad pm status / reset / compact</code></td><td>v0.3</td><td>PM session 상태·재시작·compaction</td></tr>
-      <tr><td><code>solosquad workflow list / show &lt;id&gt;</code></td><td>v0.3</td><td>워크플로 목록·상세</td></tr>
-      <tr><td><code>solosquad rollback --workflow &lt;id&gt;</code></td><td>v0.3</td><td>특정 워크플로 직전 spawn 결과 revert</td></tr>
-      <tr><td><code>solosquad goal new / list / show / run / status / stop / verify</code></td><td>v0.4</td><td>자율 실행 goal 관리 + 밤새 실행 루프 (Codex <code>/goal</code> + <code>AGENTS.md</code> 2계층)</td></tr>
-      <tr><td><code>solosquad agent add / list / info / validate</code></td><td>v0.5</td><td>새 agent 스캐폴딩·관리</td></tr>
-      <tr><td><code>solosquad analyze repo &lt;path&gt;</code></td><td>v0.5</td><td>기존 리포 .claude/skills/ 4-라벨 분류 보고서</td></tr>
-      <tr><td><code>solosquad add repo --from-report &lt;file&gt;</code></td><td>v0.5</td><td>분석 보고서 기반 결정적 머지</td></tr>
       <tr><td><code>solosquad memory search &lt;query&gt;</code></td><td>v0.6</td><td>FTS5 archive 검색</td></tr>
       <tr><td><code>solosquad memory stats</code></td><td>v0.6</td><td>메모리 사용량·archive 통계</td></tr>
     </tbody>
@@ -1207,8 +1343,8 @@ solosquad bot --debug               # 자세한 로그</code></pre>
 
   <h3 id="s6-2">6.2 일상 운영</h3>
 
-  <h4>메신저에서 일 시키기 (v0.2.4)</h4>
-  <p>자연어로 보내면 60+ 키워드를 매칭해 25 specialist 중 자동 배정.</p>
+  <h4>메신저에서 일 시키기 (v0.5)<span class="badge now">v0.5</span></h4>
+  <p>PM 세션과의 멀티턴 대화가 기본 흐름입니다. PM이 의도를 분류해 specialist를 Task tool로 spawn합니다. 라우터는 4채널(slash/explicit/keyword/freq) 우선순위로 적절한 SKILL을 컨텍스트에 inject.</p>
   <table>
     <thead><tr><th>입력 예시</th><th>배정 에이전트</th></tr></thead>
     <tbody>
@@ -1221,10 +1357,9 @@ solosquad bot --debug               # 자세한 로그</code></pre>
       <tr><td>"이번 분기 GTM 계획 세워줘"</td><td>GTM Strategist (그로스)</td></tr>
     </tbody>
   </table>
-  <p>매칭 없으면 general 모드로 응답.</p>
+  <p>매칭 없으면 PM이 general 모드로 응답하거나 추가 명확화 질문.</p>
 
-  <h4>v0.3+ PM 모드<span class="badge plan">v0.3</span></h4>
-  <p>키워드 단발 호출이 PM과의 멀티턴 대화로 바뀝니다.</p>
+  <h4>PM 모드 멀티턴 대화<span class="badge now">v0.3</span></h4>
   <pre><code>사용자: "랜딩페이지 리디자인 진행해줘"
 PM:    기존 랜딩의 어떤 부분을 바꾸시려는가요?
         (1) 히어로 섹션  (2) 가격 섹션  (3) 전체 리뉴얼
@@ -1232,15 +1367,19 @@ PM:    기존 랜딩의 어떤 부분을 바꾸시려는가요?
 PM:    [PRD 작성 → desk-researcher spawn → ui-designer spawn → ...]
        완료. stage-1-research/와 stage-2-design/에 산출물.</code></pre>
 
-  <h4>슬래시 명령 (v0.3+)<span class="badge plan">v0.3</span></h4>
-  <p>의도를 명시하고 싶으면 자연어 대신 슬래시 사용 (gstack 패턴 차용).</p>
+  <h4>슬래시 명령<span class="badge now">v0.3</span></h4>
+  <p>의도를 명시하고 싶으면 자연어 대신 슬래시 사용 (gstack 패턴 차용). <code>[SLASH /xyz] &lt;args&gt;</code>로 PM 프롬프트에 래핑되어 안정 파싱.</p>
   <ul>
     <li><code>/think &lt;주제&gt;</code> — 가설·시장 신호 정리 (PRD 분해 전)</li>
     <li><code>/plan &lt;주제&gt;</code> — PRD 작성 + status.yaml 분해</li>
     <li><code>/build</code> — 직전 plan의 ready stage 실행</li>
     <li><code>/review</code> — 완료 stage 종합 + 차단 이슈 보고</li>
     <li><code>/ship</code> — release/배포 routine 트리거</li>
+    <li><code>/help</code> — 봇 측에서 short-circuit, 사용법 텍스트만 응답</li>
   </ul>
+
+  <h4>메신저에서 새 SKILL 만들기<span class="badge now">v0.5</span></h4>
+  <p>"이런 작업 자주 하니까 자동화하고 싶다" → PM이 의도를 분류해 <code>workflow-maker</code> 메타-skill을 explicit 호출 → 1-2턴 명확화 → SKILL.md draft → 사용자 승인 → atomic swap → 다음 호출부터 즉시 사용 가능. §3.5 참조.</p>
 
   <h3 id="s6-3">6.3 권장 첫 작업 (온보딩 직후)</h3>
   <ol>
@@ -1258,7 +1397,7 @@ PM:    [PRD 작성 → desk-researcher spawn → ui-designer spawn → ...]
   </ol>
 
   <h3 id="s6-4">6.4 자동 루틴</h3>
-  <p>v0.2.4 기준 5종이 매일/매주 자동 실행됩니다.</p>
+  <p>v0.5 기준 6종이 매일/매주 자동 실행됩니다.</p>
 
   <table>
     <thead><tr><th>기본 시각</th><th>이름</th><th>종류</th><th>출력 위치</th><th>메모리</th></tr></thead>
@@ -1268,6 +1407,7 @@ PM:    [PRD 작성 → desk-researcher spawn → ui-designer spawn → ...]
       <tr><td>16:00 매일</td><td>Experiment Check</td><td>background</td><td><code>#workflow</code> → <code>system-experiments</code></td><td><code>experiments.jsonl</code></td></tr>
       <tr><td>18:00 매일</td><td>Evening Brief</td><td>user-brief</td><td><code>#workflow</code> root</td><td><code>decisions.jsonl</code></td></tr>
       <tr><td>일요일 20:00</td><td>Weekly Review</td><td>background</td><td><code>#workflow</code> → <code>system-weekly-review</code></td><td><code>decisions.jsonl</code></td></tr>
+      <tr><td>23:00 매일 <span class="badge now">v0.3</span></td><td>PM Compaction</td><td>background</td><td><code>#workflow</code> → <code>system-pm-compaction</code></td><td><code>memory/pm-skills/</code></td></tr>
     </tbody>
   </table>
 
@@ -1352,10 +1492,28 @@ solosquad run-routine --all          # 전부</code></pre>
     <dd>진행 중인 가설/실험의 상태를 점검하는 routine. <code>experiments.jsonl</code>에 누적.</dd>
 
     <dt>Agent Router (에이전트 라우터)</dt>
-    <dd>사용자 메시지를 보고 어떤 specialist를 호출할지 결정하는 모듈. 현재(v0.2.4)는 키워드 매칭, v0.5+ 4채널 trigger로 확장.</dd>
+    <dd>사용자 메시지를 보고 어떤 specialist를 호출할지 결정하는 모듈. v0.5에서 4채널 trigger(slash &gt; explicit &gt; keyword &gt; freq) + 3-tier 검색 + atomic swap hot-reload로 진화. <code>AGENT_ROUTES</code> 하드코딩은 제거되고 각 SKILL.md의 <code>triggers</code> frontmatter에 분산.</dd>
 
     <dt>Spawn (스폰)</dt>
-    <dd>PM(또는 router)이 specialist agent를 새 fresh session으로 시작시키는 동작. 매번 독립 — state는 외부 파일에 보관.</dd>
+    <dd>PM(또는 router)이 specialist agent를 새 fresh session으로 시작시키는 동작. 매번 독립 — state는 외부 파일에 보관. v0.3+는 PM이 내장 Task tool로 spawn하며 <code>[stage:&lt;id&gt; wf:&lt;id&gt;]</code> 마커를 프롬프트에 부착.</dd>
+
+    <dt>4채널 라우팅 (v0.5)</dt>
+    <dd>SKILL 매칭 4채널 — <code>slash</code>(명시 의도) &gt; <code>explicit</code>(PM 직접 호출) &gt; <code>keyword</code>(1턴 매칭) &gt; <code>freq</code>(N턴 누적 빈도 임계). 각 SKILL.md frontmatter의 <code>triggers</code> 필드가 부트 시 라우터 인덱스로 수집됨.</dd>
+
+    <dt>Freq cooldown (v0.5)</dt>
+    <dd>한 번 freq 채널로 자동 로드된 SKILL은 <code>cooldown_turns</code> (기본 6) 동안 재발화 금지 (hysteresis). 같은 주제 장기 대화 시 잡음 회피. 상태는 <code>&lt;org&gt;/.solosquad/sessions/&lt;user&gt;.json</code>의 <code>freqCooldowns</code> 필드에 매 턴 decay.</dd>
+
+    <dt>Hot-reload / Atomic swap (v0.5)</dt>
+    <dd>새 SKILL.md 저장 시 라우터 인덱스를 background로 재빌드 → ref 교체. 빌드 중 도착한 메시지는 이전 인덱스로 처리. 봇 재시작 불필요.</dd>
+
+    <dt>Author 루프 (v0.5)</dt>
+    <dd>메신저에서 PM과 1-2턴 대화로 새 SKILL.md를 만드는 5단계 상태기 (CLARIFY → DRAFT → SANDBOX_PROMPT → AWAIT_CONFIRM → APPLIED). <code>assets/agents/_meta/workflow-maker/SKILL.md</code> 메타-skill이 시스템 프롬프트.</dd>
+
+    <dt>Spec-gate / Loop mode (v0.5)</dt>
+    <dd>SKILL.md <code>loop_mode.kind: spec-gate</code>면 Ralph 루프(stop_when 조건) 모드. author 루프가 자동으로 <code>&lt;org&gt;/goals/&lt;goal-id&gt;/goal.md</code>도 emit → v0.4 goal-runner에 자율 cycle로 등록.</dd>
+
+    <dt>3-tier SKILL 검색 (v0.5)</dt>
+    <dd>같은 이름 SKILL이 있을 때 우선순위: <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (번들). 상위 계층이 override.</dd>
 
     <dt>Stateless / Stateful (무상태/유상태)</dt>
     <dd>매 호출이 독립이면 stateless, 호출 간에 state를 들고 있으면 stateful. SoloSquad의 specialist는 stateless, PM session은 stateful.</dd>
@@ -1364,7 +1522,7 @@ solosquad run-routine --all          # 전부</code></pre>
     <dd>모든 컨텍스트를 미리 로드하지 않고 *그 호출에 필요한 것만* 그때그때 주입하는 원칙. 토큰 비용 폭증 방지.</dd>
 
     <dt>Memory (메모리)</dt>
-    <dd>routine·결정·신호 결과를 영속 저장하는 곳. 현재(v0.2.4)는 JSONL append-only, v0.6+ FTS5 archive 추가.</dd>
+    <dd>routine·결정·신호 결과를 영속 저장하는 곳. 현재(v0.5)는 JSONL append-only(signals/experiments/decisions/author-costs) + PM compaction 외부화(<code>memory/pm-skills/</code>) + per-org snapshot.git. v0.6+ FTS5 archive 추가 예정.</dd>
 
     <dt>P/E/T (Persistent / Episodic / Transient)</dt>
     <dd>메모리를 영속/에피소드/일시 3계층으로 분류하는 어휘. SoloSquad의 SKILL은 Persistent, workflows는 Episodic, Claude session prompt는 Transient.</dd>
@@ -1612,13 +1770,12 @@ solosquad run-routine --all          # 전부</code></pre>
   <h2><span class="num">8.</span>버전별 차이</h2>
   <p>현재 npm에서 받을 수 있는 기능과 향후 출시 예정 기능을 명확히 구분합니다.</p>
 
-  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.2.4)<span class="badge now">사용 가능</span></h3>
+  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.5.0)<span class="badge now">사용 가능</span></h3>
 
-  <h4>코어 기능</h4>
+  <h4>코어 기능 (v0.1~v0.2)</h4>
   <ul>
     <li><code>npm install -g solosquad</code> 한 줄 설치 (Mac/Windows/Linux)</li>
     <li>25 specialist agents (전략 7 / 그로스 4 / 경험 4 / 엔지니어링 10)</li>
-    <li>키워드 기반 agent-router (60+ 키워드 → 25 agent 매핑)</li>
     <li>2채널 메신저 (Discord / Slack — 워크스페이스당 1개)</li>
     <li>5종 자동 routine (Morning/Evening Brief, Signal Scan, Experiment Check, Weekly Review)</li>
     <li>3-Layer Context (workspace / organization / repository)</li>
@@ -1631,51 +1788,54 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>환경 진단 (<code>solosquad doctor</code>·<code>--messenger-check</code>)</li>
   </ul>
 
-  <h4>실험적 / 제한적</h4>
+  <h4>PM 모드 + 멀티 에이전트 오케스트레이션<span class="badge now">v0.3</span></h4>
   <ul>
-    <li>Orchestrator SKILL.md는 번들에 포함되어 있으나 bot이 아직 호출하지 않음 (v0.3에서 활성화)</li>
-    <li>워크플로 자동 진행 없음 — <code>_status.yaml</code>은 수동 관리</li>
+    <li>PM 에이전트가 사용자와의 모든 소통 전담 (영구 session, <code>claude --resume</code>)</li>
+    <li>specialist는 ephemeral subagent로 spawn via 내장 <code>Task</code> tool (depth=1)</li>
+    <li>슬래시 5종 (<code>/think /plan /build /review /ship</code>) + <code>/help</code></li>
+    <li><code>_events.jsonl</code> 표준 (PM session 이벤트 로그) + spawn 마커 <code>[stage:&lt;id&gt; wf:&lt;id&gt;]</code></li>
+    <li>focus 마커 <code>[focus:&lt;wf-id&gt;]</code> / <code>[focus:none]</code> 양방향</li>
+    <li>PM compaction routine (완료 워크플로 → <code>memory/pm-skills/</code> 외부화, 23:00 daily)</li>
+    <li>boot-time recovery (<code>workflow-reconciler.ts</code>) — orphaned <code>in_progress</code> → <code>needs_revision</code>, 누락 응답 재전송</li>
+    <li>per-org snapshot.git (<code>memory/</code> + <code>workflows/</code>만) + <code>solosquad rollback --workflow &lt;id&gt;</code> revert</li>
+    <li><code>solosquad pm</code> · <code>solosquad workflow</code> · <code>solosquad rollback</code> 전체 CLI</li>
+  </ul>
+
+  <h4>자율 실행 엔진 (Goal Runner)<span class="badge now">v0.4</span></h4>
+  <ul>
+    <li>2계층 구조: <code>goal.md</code> (1회 실행 의도) + <code>AGENTS.md</code> (영속 가이드, cross-tool 표준)</li>
+    <li>OpenAI Codex <code>/goal</code> 패턴 차용 — 사람만 수정, 모델은 시작·완료만</li>
+    <li>3단계 가드레일: preflight Input guard / runtime guard (timeout · discard streak · cost cap 90% 워닝) / Output guard (forbidden side-effects + HTTP whitelist)</li>
+    <li><code>AGENTS.md</code>에 immutable_paths · modifiable_paths · external_side_effects · 가드레일 임계치 박제</li>
+    <li>메트릭 측정 → keep/discard → git-snapshot per cycle. <code>CONFIRMING</code> 게이트(모든 메트릭 ≥ threshold) 통과 시에만 _best.json 갱신</li>
+    <li><code>solosquad goal run &lt;goal-id&gt; [--hours N | --cycles N]</code> — N시간 자율 반복 (background PM session <code>bg-&lt;goal-id&gt;-&lt;runId&gt;</code>)</li>
+    <li><code>solosquad goal verify</code> — 결정론 재계산 검증 (reconciliation)</li>
+    <li>전체 CLI: <code>goal new / list / show / run / status / stop / verify</code></li>
+  </ul>
+
+  <h4>워크플로 메이커 + SKILL 시스템 통합<span class="badge now">v0.5</span></h4>
+  <ul>
+    <li><code>SKILL.md</code> Anthropic Agent Skills 호환 frontmatter 파서 + validator (<code>src/bot/skill-parser.ts</code>)</li>
+    <li>SKILL 스키마 확장: <code>stateful</code>·<code>triggers</code>(4채널)·<code>loop_mode</code>(spec-gate)·<code>budget</code></li>
+    <li>4채널 라우터 (slash &gt; explicit &gt; keyword &gt; freq) + 3-tier 검색(org &gt; user &gt; bundle) + atomic swap hot-reload</li>
+    <li>Freq 채널: 빈도 카운팅 자동 로드 + <code>cooldown_turns</code> hysteresis + workspace당 20개 상한</li>
+    <li><code>AGENT_ROUTES</code> 하드코드 상수 제거 — 각 SKILL.md의 <code>triggers.keyword</code>에 분산. 25개 번들 SKILL frontmatter 백필 완료 (idempotent)</li>
+    <li>메신저 author 루프(CLARIFY → DRAFT → SANDBOX → AWAIT_CONFIRM → APPLIED) via <code>assets/agents/_meta/workflow-maker/SKILL.md</code></li>
+    <li>spec-gate SKILL은 <code>goal.md</code>도 자동 emit → v0.4 goal-runner에 자율 cycle로 등록</li>
+    <li>paperclip envelope 차용 author 일/주 budget cap + <code>&lt;org&gt;/memory/author-costs.jsonl</code></li>
+    <li>repo analyzer: 4-라벨 분류(role / workflow / codebase-fact / domain), 결정적 매칭, ledger 증분, applier backup/apply/verify/rollback</li>
+    <li><code>solosquad agent add / list / info / validate</code> + <code>analyze repo</code> + <code>add repo --from-report</code> CLI</li>
+    <li>CI 게이트: <code>npm run validate-skills</code> (= <code>solosquad agent validate --all --corpus</code>)</li>
   </ul>
 
   <h4>제거됨</h4>
   <ul>
     <li>Telegram 어댑터 — v0.2.4부터 미지원<span class="badge removed">v0.2.4 제거</span></li>
     <li>채널 자동 정리 안 됨 — 이전 daily-brief·signals·experiments·weekly-review·errors 5개 채널은 사용자가 메신저 UI에서 수동 archive</li>
+    <li><code>AGENT_ROUTES</code> 하드코드 상수<span class="badge removed">v0.5 제거</span> — 키워드 라우팅은 각 SKILL.md의 <code>triggers.keyword</code> frontmatter로 분산</li>
   </ul>
 
   <h3 id="s8-2">8.2 추후 업데이트<span class="badge plan">기획 단계</span></h3>
-
-  <h4>v0.3 — PM 모드 + 멀티 에이전트 오케스트레이션</h4>
-  <ul>
-    <li>PM 에이전트가 사용자와의 모든 소통 전담 (영구 session, <code>claude --resume</code>)</li>
-    <li>specialist는 ephemeral subagent로 spawn (depth=1)</li>
-    <li>슬래시 5종 (<code>/think /plan /build /review /ship</code>)</li>
-    <li><code>_events.jsonl</code> 표준 (PM session 이벤트 로그)</li>
-    <li>PM compaction routine (완료 워크플로 → memory/pm-skills 외부화)</li>
-    <li><code>solosquad rollback --workflow &lt;id&gt;</code> CLI (사후 게이트)</li>
-    <li>8-layer spawn assembly 인터페이스 (v0.6 자산 자동 활성)</li>
-  </ul>
-
-  <h4>v0.4 — 밤새 자율 작업 완료 엔진</h4>
-  <ul>
-    <li>2계층 구조: <code>goal.md</code> (1회 실행 의도) + <code>AGENTS.md</code> (영속 가이드, cross-tool 표준)</li>
-    <li>OpenAI Codex <code>/goal</code> 패턴 차용 — 사람만 수정, 모델은 시작·완료만</li>
-    <li>Data Reconciliation: <code>metric_provenance</code> 필드 의무화 (Goodhart 법칙 방지)</li>
-    <li>3단계 가드레일 goal.md 스키마 (Input/Runtime/Output) + AGENTS.md immutable_paths 박제</li>
-    <li>signal-scan active trigger (신호 발견 → follow-up routine 자동 큐잉)</li>
-    <li><code>solosquad goal run &lt;goal-id&gt; --hours 8</code> (전체 CLI: new/list/show/run/status/stop/verify)</li>
-  </ul>
-
-  <h4>v0.5 — 워크플로우 메이커 + 스킬 시스템 통합</h4>
-  <ul>
-    <li>메신저에서 PM과 대화하며 새 agent/workflow 생성</li>
-    <li>SKILL.md 스키마 확장: <code>stateful: bool</code>, <code>triggers</code> 4채널 (slash/keyword/freq/explicit)</li>
-    <li>빈도 카운팅 기반 auto-load (시맨틱 임베딩 없이)</li>
-    <li>3-tier 검색 (project local > user global > bundle)</li>
-    <li><code>solosquad analyze repo</code> — 기존 리포 .claude/skills/ 4-라벨 분류 보고서</li>
-    <li><code>solosquad add repo --from-report</code> — 결정적 머지</li>
-    <li>Hot-reload (봇 재시작 없이 새 SKILL 라우팅)</li>
-  </ul>
 
   <h4>v0.6 — 토폴로지 안정화 + 디폴트 워크플로우 튜닝 + 메모리 인프라</h4>
   <ul>
@@ -1723,7 +1883,7 @@ solosquad run-routine --all          # 전부</code></pre>
   </ul>
 
   <div class="footer-note">
-    이 문서는 SoloSquad <strong>v0.2.4 (npm 0.2.4)</strong> 기준이며, v0.3~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
+    이 문서는 SoloSquad <strong>v0.5.0 (npm 0.5.0)</strong> 기준이며, v0.6~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
   </div>
 </section>
 
@@ -1927,7 +2087,7 @@ stages:
     <li>없으면 <code>status: pending</code> 중 <code>depends_on</code>이 모두 completed인 첫 stage</li>
     <li>둘 다 없으면 role=main repo → org 루트 순 fallback</li>
   </ol>
-  <p>stage 상태 전환 (<code>pending → in_progress → completed</code>)은 현재 수동 편집. 자동화는 v0.3+ 로드맵 (PM이 진행).</p>
+  <p>stage 상태 전환 (<code>pending → in_progress → completed</code>)은 v0.3 PM 모드에서 자동화됩니다 — PM이 specialist를 spawn하기 전에 <code>in_progress</code>로 표시하고, Task tool 응답을 합치며 <code>completed</code>로 갱신.</p>
 
   <h3 id="s9-4">9.4 보안 체크리스트</h3>
   <p>이 시스템은 AI가 코드와 명령을 실행합니다. 다음을 꼭 확인.</p>
@@ -2038,7 +2198,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   A. <code>.env</code>의 <code>TZ=</code>를 변경 (예: <code>TZ=America/Los_Angeles</code>). Docker도 동일.</p>
 
   <p><strong>Q. AI가 틀린 답을 하면?</strong><br>
-  A. AI는 도구입니다. 중요한 결정은 반드시 본인이 직접 확인. <code>solosquad rollback</code> (v0.3+)으로 spawn 결과 revert 가능.</p>
+  A. AI는 도구입니다. 중요한 결정은 반드시 본인이 직접 확인. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+)로 spawn 결과 revert 가능. v0.4 자율 실행은 per-cycle git-snapshot keep/discard로 자동 보호.</p>
 
   <p><strong>Q. Mac Mini 대신 Raspberry Pi로 돌릴 수 있나요?</strong><br>
   A. Node.js 18+이 돌면 가능. 단, Claude Code CLI는 arm64 기반 리눅스를 공식 지원하는지 먼저 확인 필요.</p>
