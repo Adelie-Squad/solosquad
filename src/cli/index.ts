@@ -340,3 +340,18 @@ program
     const { migrateCommand } = await import("./migrate.js");
     await migrateCommand(opts);
   });
+
+const agentGroup = program
+  .command("agent")
+  .description("Manage SKILL.md agents (v0.5)");
+
+agentGroup
+  .command("validate")
+  .description("Validate a SKILL.md against the v0.5 schema")
+  .argument("[path]", "Path to a SKILL.md file (omit when using --all)")
+  .option("--all", "Validate every bundled + workspace SKILL.md")
+  .option("--corpus", "Also run the Anthropic skills corpus round-trip regression")
+  .action(async (filePath, opts) => {
+    const { agentValidateCommand } = await import("./agent.js");
+    await agentValidateCommand(filePath, opts);
+  });
