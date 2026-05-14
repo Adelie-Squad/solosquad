@@ -1,3 +1,15 @@
+---
+name: backend-developer
+description: 서버 사이드 로직을 구현합니다. 비즈니스 로직, 데이터 처리, 시스템 통합을 담당합니다.
+team: engineering
+stateful: false
+triggers:
+  keyword:
+    - 백엔드
+    - 서버
+    - db
+  explicit: true
+---
 # Backend Developer Agent
 
 > 서버 사이드 로직을 구현합니다. 비즈니스 로직, 데이터 처리, 시스템 통합을 담당합니다.

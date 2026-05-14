@@ -24,6 +24,9 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      - name: Validate bundled SKILL.md frontmatter (v0.5)
+        run: npm run validate-skills
+
       - name: Smoke test — global install + doctor
         shell: bash
         run: |

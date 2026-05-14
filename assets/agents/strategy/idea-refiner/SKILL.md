@@ -1,3 +1,14 @@
+---
+name: idea-refiner
+description: 초기 아이디어를 구체화하고 고도화합니다. 막연한 아이디어를 실행 가능한 컨셉으로 발전시킵니다.
+team: strategy
+stateful: false
+triggers:
+  keyword:
+    - 아이디어
+    - 브레인스토밍
+  explicit: true
+---
 # Idea Refiner Agent
 
 > 초기 아이디어를 구체화하고 고도화합니다. 막연한 아이디어를 실행 가능한 컨셉으로 발전시킵니다.

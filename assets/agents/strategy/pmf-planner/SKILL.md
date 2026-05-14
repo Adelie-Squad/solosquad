@@ -1,3 +1,15 @@
+---
+name: pmf-planner
+description: 0→1 단계에서 Product-Market Fit을 찾기 위한 가설 수립과 검증 계획을 설계합니다.
+team: strategy
+stateful: false
+triggers:
+  keyword:
+    - pmf
+    - 시장 적합
+    - 가설
+  explicit: true
+---
 # PMF Planner Agent
 
 > 0→1 단계에서 Product-Market Fit을 찾기 위한 가설 수립과 검증 계획을 설계합니다.

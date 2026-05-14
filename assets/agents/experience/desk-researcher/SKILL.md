@@ -1,3 +1,15 @@
+---
+name: desk-researcher
+description: 데스크 리서치를 통해 시장, 경쟁사, 트렌드를 분석합니다. 2차 자료를 체계적으로 수집하고 종합합니다.
+team: experience
+stateful: false
+triggers:
+  keyword:
+    - 시장 조사
+    - 경쟁사
+    - 벤치마크
+  explicit: true
+---
 # Desk Researcher Agent
 
 > 데스크 리서치를 통해 시장, 경쟁사, 트렌드를 분석합니다. 2차 자료를 체계적으로 수집하고 종합합니다.

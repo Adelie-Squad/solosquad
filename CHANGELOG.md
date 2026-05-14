@@ -4,6 +4,87 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-05-14
+
+**v0.5 — Workflow maker & SKILL.md frontmatter routing.** 메신저 author
+루프(`workspace-maker` 메타-skill) + 4채널 라우터(slash/explicit/keyword/freq)
++ 3-tier 검색 경로(org/user/bundle) + repo analyzer를 통합 출시. v0.4
+goal-runner와도 `loop_mode.kind: spec-gate`로 연결되어 author 루프
+산출이 자율 cycle로 등록 가능.
+
+### Added — frontmatter + routing
+- `src/bot/skill-parser.ts` — Anthropic Agent Skills 호환 SKILL.md
+  frontmatter 파서 + validator. 필수 필드 `name`·`description`, SoloSquad
+  확장(`team`/`stateful`/`triggers`/`loop_mode`/`budget` 등) 옵션.
+- `src/bot/agent-router.ts` — `buildRoutes()` 3-tier 스캔 + 4채널 resolver
+  (priority slash > explicit > keyword > freq). hot-reload atomic swap.
+- `src/bot/meta-skill-scanner.ts` — `_meta/*` 폴더 전용 scanner — explicit
+  채널만 등록.
+- `src/cli/agent.ts` — `solosquad agent validate / add / list / info` CLI 그룹.
+
+### Added — author loop
+- `assets/agents/_meta/workflow-maker/SKILL.md` + references — author 메타-skill.
+- `src/bot/skill-author.ts` — CLARIFY → DRAFT → SANDBOX_PROMPT → AWAIT_CONFIRM
+  → APPLIED 상태기. 5턴 이내 완결 목표. `loop_mode.kind: spec-gate` draft는
+  `<org>/goals/<goal-id>/goal.md`도 자동 생성(§3 분기).
+- `src/util/cost.ts` + `src/bot/author-budget.ts` — paperclip envelope 차용
+  일/주 budget cap + `<org>/memory/author-costs.jsonl`.
+
+### Added — repo analyzer
+- `src/analyze/scanner.ts` · `ledger.ts` · `classifier.ts` ·
+  `workflow-matcher.ts` · `report-writer.ts` · `applier.ts` — 4-label 분류,
+  결정적 매칭, ledger 증분 처리, applier backup/apply/verify/rollback.
+- `src/cli/analyze.ts` — `solosquad analyze repo` 진입점.
+
+### Added — migration 0.4.0 → 0.5.0
+- `src/migrations/scripts/0.4.0-to-0.5.0.ts` — 2-pass.
+  - Pass 1 (자동): SKILL.md frontmatter backfill (3-tier 검색 경로의 모든
+    SKILL.md), `~/.solosquad/agents/`·`<org>/.agents/`·`<org>/.solosquad/
+    analysis/` 디렉토리 + README, `workspace.yaml`에 `skill_loader` +
+    `author` 섹션, 버전 0.4.0 → 0.5.0.
+  - Pass 2 (CI 게이트): `solosquad agent validate --all` — `npm run
+    validate-skills` + `.github/workflows/ci.yml`에서 실행.
+- `src/migrations/skill-frontmatter-backfill.ts` — `CANONICAL_KEYWORDS` 상수
+  (구 `AGENT_ROUTES` 60+ 키워드 → 25 agent 매핑 복원) + `buildBackfillFrontmatter()`
+  공유. 번들 backfill 스크립트와 마이그레이션이 동일 로직 사용.
+- `scripts/backfill-bundled-frontmatter.ts` — 번들 25개 SKILL.md에
+  frontmatter 1회 주입(idempotent). 결과 파일 커밋 — 신규 `solosquad init`
+  사용자는 즉시 frontmatter-완전 상태.
+
+### Added — assets
+- `assets/agents/{team}/{agent}/SKILL.md` (25개) — frontmatter prepended
+  (canonical 키워드 매핑 그대로 보존).
+- `assets/templates/goal-from-skill.md` — spec-gate SKILL이 만드는 goal.md
+  베이스. 단일 `spec_gate_pass` 메트릭 + 단일 stage 파이프라인 시드.
+- `assets/templates/workflow.yaml` — 다단계 workflow chain 템플릿(§9 #15).
+
+### Added — tests
+- 15 new unit tests:
+  - `test/migration-v0.5.test.ts` (10) — mocked v0.4 workspace → 25 SKILL
+    backfill, workspace.yaml patch, 3-tier dirs, idempotency, verify.
+  - `test/skill-author-goal-gate.test.ts` (5) — spec-gate draft → goal.md
+    parseable by `src/engine/goal-parser.ts`.
+- Full suite **269 green** (이전 254 + 15).
+
+### Changed
+- `src/util/config.ts` — `SkillLoaderConfig` + `AuthorConfig` 인터페이스 추가,
+  `WorkspaceYaml`에 `skill_loader?`/`author?` 필드.
+- `src/bot/skill-author.ts` — `applyDraft`가 spec-gate draft에 대해
+  `<org>/goals/<goal-id>/goal.md` 자동 emit (caller-supplied `draft.goal_md`가
+  있으면 그것을 우선 사용).
+- `package.json` — version 0.4.0 → 0.5.0, `validate-skills` 스크립트 추가.
+- `.github/workflows/ci.yml` — `npm run validate-skills` 게이트 추가.
+
+### Removed
+- `AGENT_ROUTES` 하드코드 상수 (S2 commit b1651d9). 키워드 라우팅은 이제
+  각 SKILL.md의 `triggers.keyword` frontmatter에 분산 — `buildRoutes()`가
+  부트 시 수집.
+
+### Migration notes (사람 검토)
+- `AGENTS.md` L131 "Legacy keyword routing…" 단락은 v0.5 정책에 맞춰
+  사람이 직접 수정해야 함. 정확한 교체 문장은 `docs/plan/v0.5-agents-md-patch.md`
+  참조. AI 도구는 `AGENTS.md`를 수정하지 않음(immutable).
+
 ## [0.4.0] — 2026-05-13
 
 **v0.4 — Autonomous goal engine.** 사용자가 한 번 작성한 `goal.md`를

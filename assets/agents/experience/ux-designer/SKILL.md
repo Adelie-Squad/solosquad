@@ -1,3 +1,16 @@
+---
+name: ux-designer
+description: 사용자 경험을 설계합니다. 리서치 인사이트를 바탕으로 직관적이고 효과적인 사용자 플로우와 정보 구조를 만듭니다.
+team: experience
+stateful: false
+triggers:
+  keyword:
+    - ux
+    - 와이어프레임
+    - 사용성
+    - 플로우
+  explicit: true
+---
 # UX Designer Agent
 
 > 사용자 경험을 설계합니다. 리서치 인사이트를 바탕으로 직관적이고 효과적인 사용자 플로우와 정보 구조를 만듭니다.

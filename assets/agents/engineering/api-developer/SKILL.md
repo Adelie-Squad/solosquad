@@ -1,3 +1,14 @@
+---
+name: api-developer
+description: API를 설계하고 문서화합니다. 클라이언트와 서버 간의 명확한 계약을 정의합니다.
+team: engineering
+stateful: false
+triggers:
+  keyword:
+    - api
+    - 엔드포인트
+  explicit: true
+---
 # API Developer Agent
 
 > API를 설계하고 문서화합니다. 클라이언트와 서버 간의 명확한 계약을 정의합니다.

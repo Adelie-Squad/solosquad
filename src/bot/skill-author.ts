@@ -14,7 +14,7 @@ import {
   recordAuthorCost,
   type OnCapAction,
 } from "./author-budget.js";
-import { getOrgDir } from "../util/paths.js";
+import { getAssetsDir, getOrgDir } from "../util/paths.js";
 import { normalizeLine } from "../util/platform.js";
 import { usdFromUsage, type CostModel, type UsageBreakdown } from "../util/cost.js";
 
@@ -635,9 +635,18 @@ export function applyDraft(input: ApplyDraftInput): ApplyDraftResult {
     workflow_path = path.join(skillBase, "workflow.yaml");
     atomicWrite(workflow_path, draft.workflow_yaml);
   }
-  if (draft.spec_gate && draft.goal_md) {
-    goal_path = path.join(skillBase, "goal.md");
-    atomicWrite(goal_path, draft.goal_md);
+
+  // v0.5 §3 — spec-gate SKILLs also compile to a goal.md so v0.4's
+  // goal-runner can pick them up. Stored at `<org>/goals/<goal-id>/goal.md`
+  // (where v0.4's `solosquad goal run <id>` looks) — not co-located with
+  // the SKILL.
+  if (draft.spec_gate) {
+    const goalId = goalIdForDraft(draft);
+    const goalDir = path.join(getOrgDir(orgSlug, workspace), "goals", goalId);
+    fs.mkdirSync(goalDir, { recursive: true });
+    goal_path = path.join(goalDir, "goal.md");
+    const content = draft.goal_md ?? renderGoalFromSkill(draft, orgSlug);
+    atomicWrite(goal_path, content);
   }
 
   rebuildRoutes({ workspace_root: workspace, org: orgSlug });
@@ -657,6 +666,56 @@ function atomicWrite(target: string, content: string): void {
   const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
   fs.writeFileSync(tmp, content, "utf-8");
   fs.renameSync(tmp, target);
+}
+
+// ---------------------------------------------------------------------------
+// Goal.md compilation (spec-gate) — v0.5 §3
+// ---------------------------------------------------------------------------
+
+/**
+ * Stable goal-id derived from the SKILL slug. The author loop currently emits
+ * one goal.md per spec-gate SKILL, so we tie the id to the slug; a future
+ * extension may support multiple goals per SKILL via an explicit field.
+ */
+function goalIdForDraft(draft: AuthorDraft): string {
+  return draft.slug;
+}
+
+/**
+ * Render `<org>/goals/<goal-id>/goal.md` from the bundled template.
+ *
+ * Placeholders: `{goal_id}` `{org_slug}` `{title}` `{spec_path}` `{stop_when}`
+ * `{pipeline}` (single-step pipeline calling the new SKILL).
+ *
+ * The output must satisfy `src/engine/goal-parser.ts` so that
+ * `solosquad goal run <goal-id>` succeeds on a workspace where the new SKILL
+ * has been registered.
+ */
+function renderGoalFromSkill(draft: AuthorDraft, orgSlug: string): string {
+  if (!draft.spec_gate) {
+    throw new Error("renderGoalFromSkill called on a non-spec-gate draft");
+  }
+  const templatePath = path.join(getAssetsDir(), "templates", "goal-from-skill.md");
+  let template: string;
+  try {
+    template = fs.readFileSync(templatePath, "utf-8");
+  } catch (e) {
+    throw new Error(
+      `Cannot read goal-from-skill template at ${templatePath}: ${(e as Error).message}`,
+    );
+  }
+  const goalId = goalIdForDraft(draft);
+  // The pipeline reference must match goal-parser's `<team>/<agent>` form.
+  // `draft.team` and `draft.slug` are both kebab-case per slugify().
+  const pipeline = `${draft.team}/${draft.slug}: ${draft.intent.trim()}`;
+  const stopWhen = draft.spec_gate.stop_when || "spec_gate_pass reaches 1.0";
+  return template
+    .replace(/\{goal_id\}/g, goalId)
+    .replace(/\{org_slug\}/g, orgSlug)
+    .replace(/\{title\}/g, draft.display_name)
+    .replace(/\{spec_path\}/g, draft.spec_gate.spec_path)
+    .replace(/\{stop_when\}/g, stopWhen)
+    .replace(/\{pipeline\}/g, pipeline);
 }
 
 function buildSpec(draft: AuthorDraft): SkillSpec {
