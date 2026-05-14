@@ -15,11 +15,12 @@ import {
 /**
  * v0.6 S2 §2.4 — collab_pattern frontmatter coverage.
  *
- * Ensures that every bundled 25 agent SKILL.md exposes a valid
- * `collab_pattern` value, and that the v0.5 skill-parser absorbs it via the
- * forward-compat `extra` bag (no SkillSpec interface change in this sprint).
+ * Every bundled 25 agent SKILL.md must expose a valid `collab_pattern`.
  *
- * Also verifies the override map (3 non-hierarchical agents) is honored.
+ * v0.5 parser landed `collab_pattern` in the `extra` bag (forward-compat).
+ * v0.6 promotes it to a typed `SkillSpec.collab_pattern` field — so we now
+ * read the typed field directly and assert that `extra` no longer carries
+ * it (a regression in v0.5/v0.6 surface would land it in extra again).
  */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,13 +33,6 @@ const VALID_PATTERNS: ReadonlySet<CollabPattern> = new Set([
   "dynamic",
 ]);
 
-function frontmatterFor(skillPath: string): Record<string, unknown> {
-  const raw = fs.readFileSync(skillPath, "utf-8");
-  const spec = parseSkillMd(raw, skillPath);
-  // collab_pattern is unknown to v0.5 schema → lands in `extra`
-  return { ...spec.extra, _spec: spec };
-}
-
 test("all 25 bundled SKILL.md files declare a valid collab_pattern", () => {
   const sources = listSourceAgents(ASSETS_AGENTS_DIR);
   assert.equal(
@@ -48,8 +42,9 @@ test("all 25 bundled SKILL.md files declare a valid collab_pattern", () => {
   );
 
   for (const { team, agent, skillPath } of sources) {
-    const fm = frontmatterFor(skillPath);
-    const pattern = fm.collab_pattern;
+    const raw = fs.readFileSync(skillPath, "utf-8");
+    const spec = parseSkillMd(raw, skillPath);
+    const pattern = spec.collab_pattern;
     assert.ok(
       typeof pattern === "string" && VALID_PATTERNS.has(pattern as CollabPattern),
       `${team}/${agent}: collab_pattern is ${JSON.stringify(pattern)} (expected one of ${[...VALID_PATTERNS].join("|")})`
@@ -66,7 +61,7 @@ test("all 25 bundled SKILL.md files declare a valid collab_pattern", () => {
   }
 });
 
-test("v0.5 skill-parser ignores collab_pattern gracefully — validator still green", () => {
+test("v0.6 skill-parser surfaces collab_pattern as a typed field — validator still green + not in extra", () => {
   const sources = listSourceAgents(ASSETS_AGENTS_DIR);
   for (const { team, agent, skillPath } of sources) {
     const raw = fs.readFileSync(skillPath, "utf-8");
@@ -78,10 +73,14 @@ test("v0.5 skill-parser ignores collab_pattern gracefully — validator still gr
         .map((e) => `${e.code}:${e.message}`)
         .join("; ")}`
     );
-    // Verify field is in `extra` (forward-compat behavior, not a typed field).
+    // v0.6 — typed field is set, `extra` should NOT carry it.
     assert.ok(
-      Object.prototype.hasOwnProperty.call(spec.extra, "collab_pattern"),
-      `${team}/${agent}: collab_pattern should land in spec.extra (v0.5 parser is unchanged)`
+      spec.collab_pattern !== undefined,
+      `${team}/${agent}: collab_pattern should be typed-parsed`
+    );
+    assert.ok(
+      !Object.prototype.hasOwnProperty.call(spec.extra, "collab_pattern"),
+      `${team}/${agent}: collab_pattern should NOT remain in spec.extra after v0.6 promotion`
     );
   }
 });

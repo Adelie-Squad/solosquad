@@ -79,9 +79,56 @@ export interface WorkspaceYaml {
   spawn?: SpawnConfig;
   /** v0.6.0+: FTS5 cold archive retention + compression (§4.7). */
   archive?: ArchiveConfig;
+  /** v0.6.0+: fs.watch external-edit reload policy (§10.5). */
+  fs_watch?: FsWatchConfig;
+  /** v0.6.0+: migration budget cap (§2.2 P0 #2). */
+  migration?: MigrationBudgetConfig;
   created_at: string;
   last_migrated_to?: string;
 }
+
+/**
+ * v0.6 §10.5 — fs.watch reload policy. The watcher itself lives in v0.6 S6.A
+ * (`src/bot/fs-watcher.ts` / `reload-policy.ts`); the migration only ensures
+ * the workspace.yaml exposes the defaults so the watcher boots without
+ * extra prompts on first run.
+ */
+export interface FsWatchConfig {
+  mode?: "auto" | "prompt" | "manual";
+  git_only?: boolean;
+}
+
+export const DEFAULT_FS_WATCH_CONFIG: Required<FsWatchConfig> = {
+  mode: "prompt",
+  git_only: false,
+};
+
+/**
+ * Resolve fs-watch config — falls back to v0.6 defaults when workspace.yaml
+ * is absent or lacks an `fs_watch` section. The reload-policy module reads
+ * this to decide auto/prompt/manual behavior on each fs-watcher event.
+ */
+export function loadFsWatchConfig(workspace?: string): Required<FsWatchConfig> {
+  const ws = loadWorkspaceYaml(workspace);
+  const partial = ws?.fs_watch ?? {};
+  return {
+    mode: partial.mode ?? DEFAULT_FS_WATCH_CONFIG.mode,
+    git_only: partial.git_only ?? DEFAULT_FS_WATCH_CONFIG.git_only,
+  };
+}
+
+/**
+ * v0.6 §2.2 P0 #2 — migration budget cap. `budget_usd` is the hard ceiling
+ * for *one* `solosquad migrate --apply` invocation. The 0.5.0→0.6.0 step is
+ * the first migration to honor it; LLM fallback for ledger redestination
+ * checks `recordAuthorCost`-style cumulative spend against this cap and
+ * stops rather than ballooning past it.
+ */
+export interface MigrationBudgetConfig {
+  budget_usd?: number;
+}
+
+export const DEFAULT_MIGRATION_BUDGET_USD = 5;
 
 /**
  * v0.6 §2.2 P1 #4 — 8-layer spawn context cap.

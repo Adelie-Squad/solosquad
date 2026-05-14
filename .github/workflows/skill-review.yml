@@ -1,0 +1,105 @@
+name: SKILL PR Review
+
+# v0.6 S6.B §11 — PR review bot for SKILL/profile/core/domain changes.
+# This workflow is the *PR-scoped* complement to the v0.5 `validate-skills`
+# CI gate (which still blocks main on broken frontmatter). See
+# docs/plan/v0.6-default-workflow-tuning.md §11.
+
+on:
+  pull_request:
+    paths:
+      - "assets/agents/**/*.md"
+      - "**/.agents/**/*.md"
+      - "**/agent-profile.yaml"
+      - "**/core/*.md"
+      - "**/domain/*.md"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate changed SKILL.md
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Collect changed SKILL files
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only --diff-filter=AM "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '(^|/)SKILL\.md$' > changed-skills.txt || true
+          echo "count=$(wc -l < changed-skills.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate per-file
+        if: steps.changed.outputs.count != '0'
+        run: |
+          xargs -a changed-skills.txt -I {} node dist/bin/solosquad.js agent validate {}
+
+  corpus-regression:
+    name: External corpus round-trip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - run: npm run validate-skills
+
+  pr-review:
+    name: PR review comment
+    runs-on: ubuntu-latest
+    needs: [validate, corpus-regression]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Run PR review script
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: npx tsx scripts/skill-pr-review.ts
+
+      - name: Post / update PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ ! -f pr-review-body.md ]; then
+            echo "No PR review body produced — skipping comment"
+            exit 0
+          fi
+          MARKER="<!-- solosquad-skill-pr-review-v0.6 -->"
+          EXISTING=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -n 1)
+          if [ -n "$EXISTING" ]; then
+            gh api --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/issues/comments/${EXISTING}" \
+              -F body=@pr-review-body.md
+          else
+            gh pr comment "$PR_NUMBER" --body-file pr-review-body.md
+          fi

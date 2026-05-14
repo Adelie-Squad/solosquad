@@ -135,6 +135,13 @@ export interface ApplyDraftInput {
   draft: AuthorDraft;
   /** Override default destination (for tests / manual installs). */
   destination?: string;
+  /**
+   * v0.6 §3.4 — `frontmatter-only` mode patches an *existing* SKILL.md's
+   * frontmatter in place; body bytes are preserved. Used by the freq-keyword
+   * miner to add `triggers.keyword` entries without touching the body.
+   * Default `full` writes the SKILL from scratch (v0.5 author loop path).
+   */
+  mode?: "full" | "frontmatter-only";
 }
 
 export interface ApplyDraftResult {
@@ -606,6 +613,7 @@ async function advanceConfirm(
 
 export function applyDraft(input: ApplyDraftInput): ApplyDraftResult {
   const { workspace, orgSlug, draft } = input;
+  const mode = input.mode ?? "full";
 
   // v0.5 §12 — stateful: false is enforced. Build spec, then validate, then write.
   const spec = buildSpec(draft);
@@ -622,6 +630,23 @@ export function applyDraft(input: ApplyDraftInput): ApplyDraftResult {
     path.join(getOrgDir(orgSlug, workspace), ".agents", draft.team, draft.slug);
   fs.mkdirSync(skillBase, { recursive: true });
   const skillPath = path.join(skillBase, "SKILL.md");
+
+  if (mode === "frontmatter-only") {
+    // v0.6 §3.4 — patch the existing SKILL.md frontmatter, preserve body bytes.
+    if (!fs.existsSync(skillPath)) {
+      throw new Error(`frontmatter-only mode requires existing SKILL.md at ${skillPath}`);
+    }
+    const existing = parseSkillMd(fs.readFileSync(skillPath, "utf-8"), skillPath);
+    spec.body = existing.body;
+    const content = emitSkillMd(spec);
+    atomicWrite(skillPath, content);
+    rebuildRoutes({ workspace_root: workspace, org: orgSlug });
+    const reparsed = parseSkillMd(fs.readFileSync(skillPath, "utf-8"), skillPath);
+    if (reparsed.body !== existing.body) {
+      throw new Error("frontmatter-only mode body byte-identical invariant violated");
+    }
+    return { skill_path: skillPath, spec: reparsed };
+  }
 
   const body = ensureBodyTrailingNewline(spec.body || renderBody(draft, ""));
   spec.body = body;

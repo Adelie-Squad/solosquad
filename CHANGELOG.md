@@ -4,6 +4,124 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] — 2026-05-14
+
+**v0.6 — 디폴트 워크플로 튜닝 + 메모리 아카이브 + 패턴 자동 추출 + 조직 레이어.**
+v0.3~v0.5에서 누적된 실전 데이터를 회고할 인프라 + 누적 메모리의 FTS5 검색 +
+반복 패턴 자동 SKILL 추출 + org × agent 색채/budget 분리 + chokidar
+hot-reload + CI PR 봇 + 0.5→0.6 마이그레이션을 한 릴리스에 통합. v1.0
+정식 출시 전 마지막 안정화 슬롯.
+
+코드 분량: ~12,000 LOC (sprint S1·S2·S3·S4·S5·S6.A·S6.B·S6.C 합산).
+신규 테스트: 152 (총 회귀 421/421 그린).
+
+### Added — Org Layer Specialization (S3)
+- `<org>/core/{PRINCIPLES,VOICE}.md` — 조직 철학·톤 (workspace core override)
+- `<org>/agent-profile.yaml` — 25 agent 조직별 modifier. defaults + 좁힘만
+  허용 + `schema_version: 1` forward-compat
+- `<org>/domain/` — 조직 도메인 지식
+- `~/.solosquad/agent-profile-defaults.yaml` — user-global 상속 (P2 #11)
+- `assets/knowledge/` — bundled workspace knowledge 시작 가이드 (§2.3)
+- `src/bot/spawn-assembler.ts` — 8-layer JIT inject + token cap (기본
+  80,000) + 우선순위 drop 표
+- `src/bot/agent-budget.ts` — `<org>/memory/agent-costs.jsonl` 누적 +
+  daily/weekly cap + on_cap_action (P0 #1)
+- `src/util/agent-profile.ts` — 3-tier merge + budget narrowing invariant
+- `src/util/paths.ts` `getKnowledgeDir()` — `.solosquad/knowledge/` >
+  `assets/knowledge/`
+
+### Added — FTS5 cold archive (S4)
+- `src/memory/{archive-db,archive-rotate,archive-search,
+  route-event-sink}.ts` — FTS5 인덱스 + JSONL → SQLite 일일 이전 +
+  retention 정책 (기본 365일) + compress_before_delete 옵션
+- 4 event_type 인덱싱 — `route_hit / route_miss / author_turn /
+  spawn_decision` (§4.6)
+- `src/bot/agent-router.ts` archive_fallback — 라우터 미스 시 회상 + 1회
+  사용자 통지
+- `src/cli/memory.ts` — `solosquad memory search/stats [--disk]`
+- `assets/routines/archive-rotate.md` — 매일 00:00 야간 정리
+- `better-sqlite3 ^12.10.0` 의존성 추가
+
+### Added — Trajectory + Freq miner + Stop-hook (S5)
+- `src/scheduler/trajectory-extractor.ts` — pm-compaction 야간 실행. 같은
+  (agent sequence + workflow template) 30일 내 3회+ 패턴 추출. **v0.5
+  `applyDraft()` 직접 import 재사용** (P0 #3 — 별도 applier 0)
+- `src/scheduler/freq-keyword-miner.ts` — route_miss + author-draft N-gram.
+  30일 거절 cooldown. frontmatter-only `applyDraft({ mode })` 정식 옵션
+- `src/engine/stop-hook-adapter.ts` — v0.5 `loop_mode.spec-gate` 실 작동.
+  DSL 3형식 (`command / metric / natural` — P1 #5). 5초 timeout +
+  conservative continue
+- `assets/templates/hooks.json` — Anthropic 2025-12 stop-hook 플러그인
+  설정 예시
+
+### Added — 폴더 재편 + 핸드오프 3패턴 (S2)
+- `agents/_teams/*/TEAM_KNOWLEDGE.md` × 4 → `agents/{team}/KNOWLEDGE.md`
+  (§2.1 — `git mv` history 보존)
+- `src/bot/agents-builder.ts` `listTeamKnowledge()` 추가
+- `assets/templates/handoff-{hierarchical,graph,dynamic}.md` — §2.4 3변형
+- 25 SKILL.md `collab_pattern` frontmatter (22 hierarchical / 2 graph /
+  1 dynamic) — `scripts/inject-collab-pattern.ts` idempotent
+
+### Added — readiness check + ETL + onboarding (S1 부분)
+- `src/cli/readiness.ts` — `solosquad readiness check --target v0.6`.
+  v0.5 author 데이터·4종 워크플로 실행 카운트·author SKILL Y건·ledger
+  분석 — 통과/부족 판정 + exit code
+- `src/cli/detect-v05-usage.ts` — `detectV05Usage(workspace): boolean` —
+  §2.6 신규 vs 기존 v0.5 사용자 분기
+- `src/scheduler/v06-stats-extract.ts` — 5 v0.5 데이터원 ETL → Markdown
+  보고서 (회고 #1~#4 자료)
+- `assets/routines/v06-retrospective-stats.md`
+- `src/cli/init.ts` Step 6.5 onboarding 두 트랙 분기 (§2.6)
+
+### Added — Hot-reload + CI PR 봇 (S6.A + S6.B)
+- `src/bot/fs-watcher.ts` — chokidar 3-tier watch (Windows + WSL은
+  강제 polling) + debounce 300ms
+- `src/bot/reload-policy.ts` — auto/prompt/manual mode + `git_only` safe
+  mode (HEAD ≡ upstream + clean tree만 허용)
+- `solosquad agent reload` — manual mode 명시 호출
+- `.github/workflows/skill-review.yml` + `scripts/skill-pr-review/` 6
+  모듈 — PR diff frontmatter 표 + 키워드 충돌 경고 + agent-profile
+  스키마 검증 + core lint + domain term overlap
+- `chokidar ^4.0.3` 의존성 추가
+
+### Added — Migration 0.5.0 → 0.6.0 (S6.C)
+- `src/migrations/scripts/0.5.0-to-0.6.0.ts` — 2-pass dry-run + 사람
+  검수 게이트. v0.5 ledger의 `pending_v0.6_redestination: true` 항목
+  자동 재분류 (role → agent-profile.yaml H2/H3 휴리스틱 추출, domain →
+  `<org>/domain/`). fail-soft는 `human_review_required: true` 마킹 +
+  자동 적용 거부. migration budget cap (P0 #2) + `<org>/memory/
+  migration-costs.jsonl` 누적
+- `assets/templates/agent-profile.yaml` — minimal defaults + schema_version
+- `assets/templates/migration-redestination-report.md`
+
+### Changed
+- `src/bot/skill-parser.ts` — `collab_pattern` 정식 `SkillSpec` 필드로
+  격상 (v0.5에선 `extra` bag 처리). `serializeFrontmatter` 출력 순서에
+  추가
+- `src/bot/skill-author.ts` `applyDraft({ mode: "full" | "frontmatter-only" })`
+  정식 옵션. `frontmatter-only`는 body 보존 + 재파싱 byte-identical
+  invariant 검증
+- v0.6 §머리말 "확정 시점 4~6주 격차" — 회고 #1·#2·#3 본문 갱신은
+  데이터 누적 후 별도 작업. 코드는 모두 출시
+- `solosquad bot` 부팅 시 fs.watch + graceful shutdown 설치
+- `solosquad init` v0.6 신설 자산 자동 스텁(`<org>/core/`·
+  `agent-profile.yaml`·`domain/`)
+
+### Migration notes (0.5.x → 0.6.0)
+1. `npm install -g solosquad@0.6.0`
+2. `solosquad migrate --dry-run` — Pass 1 시뮬레이션 + 보고서
+   `<org>/memory/migration-2026-XX-dryrun.md`
+3. 보고서 검토 후 `solosquad migrate --apply --confirm`
+4. `human_review_required: true` 마킹된 항목은 사용자가 사후 수동 보강
+5. Pass 2 — `solosquad agent validate --all` 자동 실행 + 실패 항목
+   STDOUT 보고
+
+### Removed
+- `assets/agents/_teams/` 디렉토리 (KNOWLEDGE.md 4개 이동 후)
+- `dist/`에서 사용자 워크스페이스의 *.solosquad/agents/_teams/* 도 마이그레이션이 처리
+
+---
+
 ## [0.5.1] — 2026-05-14
 
 **문서 정확성 patch.** 코드 변경 0. `AGENTS.md`와 `README.md`가 v0.5.0

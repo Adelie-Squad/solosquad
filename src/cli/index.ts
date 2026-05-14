@@ -439,3 +439,12 @@ agentGroup
       // Error already printed by agentAddCommand; exit code set there.
     }
   });
+
+agentGroup
+  .command("reload")
+  .description("Manually rebuild the router (v0.6 §10.5 — manual fs_watch.mode)")
+  .option("--org <slug>", "Restrict reload to a specific org's .agents/ tier")
+  .action(async (opts) => {
+    const { agentReloadCommand } = await import("./agent.js");
+    await agentReloadCommand(opts);
+  });

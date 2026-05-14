@@ -70,6 +70,9 @@ export interface SkillBudget {
   daily_usd?: number;
 }
 
+/** v0.6 §2.4 — 핸드오프 협업 패턴. v0.5에서는 `extra` bag으로 forward-compat 처리됐고 v0.6 출시 시점에 정식 필드로 격상. */
+export type CollabPattern = "hierarchical" | "graph" | "dynamic";
+
 export interface SkillSpec {
   // ---- Anthropic required ----
   name: string;
@@ -87,6 +90,7 @@ export interface SkillSpec {
   source?: string;
   loop_mode?: SkillLoopMode;
   budget?: SkillBudget;
+  collab_pattern?: CollabPattern;
 
   // ---- Unknown frontmatter keys (forward compat) ----
   extra: Record<string, unknown>;
@@ -181,6 +185,7 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     "source",
     "loop_mode",
     "budget",
+    "collab_pattern",
   ]);
   const extra: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed)) {
@@ -199,6 +204,7 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     scope: parseScope(parsed.scope),
     confidence: typeof parsed.confidence === "number" ? parsed.confidence : undefined,
     source: typeof parsed.source === "string" ? parsed.source : undefined,
+    collab_pattern: parseCollabPattern(parsed.collab_pattern),
     loop_mode: parseLoopMode(parsed.loop_mode),
     budget: parseBudget(parsed.budget),
     extra,
@@ -278,6 +284,11 @@ function parseScope(raw: unknown): SkillScope | undefined {
   if (raw === "agent" || raw === "workspace" || raw === "org" || raw === "repo") {
     return raw;
   }
+  return undefined;
+}
+
+function parseCollabPattern(raw: unknown): CollabPattern | undefined {
+  if (raw === "hierarchical" || raw === "graph" || raw === "dynamic") return raw;
   return undefined;
 }
 
@@ -477,6 +488,7 @@ export function serializeFrontmatter(spec: SkillSpec): string {
   if (spec.scope !== undefined) obj.scope = spec.scope;
   if (spec.confidence !== undefined) obj.confidence = spec.confidence;
   if (spec.source !== undefined) obj.source = spec.source;
+  if (spec.collab_pattern !== undefined) obj.collab_pattern = spec.collab_pattern;
   if (spec.loop_mode !== undefined) obj.loop_mode = spec.loop_mode;
   if (spec.budget !== undefined) obj.budget = spec.budget;
   for (const [k, v] of Object.entries(spec.extra)) {
