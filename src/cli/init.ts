@@ -16,6 +16,7 @@ import {
 import { commandExists } from "../util/platform.js";
 import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
+import { detectV05Usage } from "./detect-v05-usage.js";
 
 const SOLOSQUAD_VERSION = "0.4.0";
 
@@ -132,6 +133,81 @@ function copyDirSync(src: string, dest: string): void {
     } else if (!fs.existsSync(destPath)) {
       fs.copyFileSync(srcPath, destPath);
     }
+  }
+}
+
+/**
+ * v0.6 §2.2 — Organization Layer Specialization stubs.
+ *
+ * Writes empty placeholders for `<org>/core/{PRINCIPLES.md, VOICE.md}`,
+ * `<org>/agent-profile.yaml`, and `<org>/domain/README.md`. Each file is
+ * only created when missing, so re-running `init` on an existing org is
+ * idempotent and never clobbers user edits.
+ */
+function scaffoldV06OrgLayer(orgDir: string, orgSlug: string): void {
+  const coreDir = path.join(orgDir, "core");
+  fs.mkdirSync(coreDir, { recursive: true });
+  const principles = path.join(coreDir, "PRINCIPLES.md");
+  if (!fs.existsSync(principles)) {
+    fs.writeFileSync(
+      principles,
+      `# ${orgSlug} — Principles\n\n<!-- v0.6 §2.2 — Document the principles every agent in this org follows. -->\n`,
+    );
+  }
+  const voice = path.join(coreDir, "VOICE.md");
+  if (!fs.existsSync(voice)) {
+    fs.writeFileSync(
+      voice,
+      `# ${orgSlug} — Voice & Tone\n\n<!-- v0.6 §2.2 — How this org speaks (formal, concise, conservative). -->\n`,
+    );
+  }
+
+  const profile = path.join(orgDir, "agent-profile.yaml");
+  if (!fs.existsSync(profile)) {
+    const minimal =
+      `# v0.6 §2.2 — Organization Layer Specialization.\n` +
+      `# Per-agent modifier (defaults + optional per-agent overrides).\n` +
+      `# See docs/plan/v0.6-default-workflow-tuning.md §2.2 for the schema.\n` +
+      `schema_version: 1\n` +
+      `defaults:\n` +
+      `  # tone: conservative\n` +
+      `  # priorities: []\n` +
+      `  # budget:\n` +
+      `  #   daily_usd: 5\n` +
+      `  #   weekly_usd: 25\n` +
+      `  #   on_cap_action: pause\n`;
+    fs.writeFileSync(profile, minimal);
+  }
+
+  const domainDir = path.join(orgDir, "domain");
+  fs.mkdirSync(domainDir, { recursive: true });
+  const domainReadme = path.join(domainDir, "README.md");
+  if (!fs.existsSync(domainReadme)) {
+    fs.writeFileSync(
+      domainReadme,
+      `# ${orgSlug} — Domain knowledge\n\n<!-- v0.6 §2.2 — Drop org-specific market/customer/product notes here. -->\n`,
+    );
+  }
+}
+
+/**
+ * v0.6 §2.3 — Workspace Knowledge Layer stub.
+ *
+ * Creates `<workspace>/.solosquad/knowledge/README.md` pointing at the
+ * bundled starter guide. Idempotent.
+ */
+function scaffoldV06WorkspaceKnowledge(workspace: string): void {
+  const dir = path.join(workspace, ".solosquad", "knowledge");
+  fs.mkdirSync(dir, { recursive: true });
+  const readme = path.join(dir, "README.md");
+  if (!fs.existsSync(readme)) {
+    fs.writeFileSync(
+      readme,
+      `# Workspace knowledge\n\n` +
+        `<!-- v0.6 §2.3 — User-accumulated craft, decision frameworks, glossary. -->\n` +
+        `<!-- Files here are keyword-selected at spawn time (8-layer JIT [1]). -->\n` +
+        `<!-- See assets/knowledge/README.md for the authoring guide. -->\n`,
+    );
   }
 }
 
@@ -378,6 +454,10 @@ export async function initCommand(): Promise<void> {
     orgSlug = path.basename(orgDir);
     console.log(chalk.green(`✓ ${orgSlug}/ organization created`));
 
+    // v0.6 §2.2 — Organization Layer Specialization stubs.
+    scaffoldV06OrgLayer(orgDir, orgSlug);
+    console.log(chalk.green(`✓ ${orgSlug}/core, agent-profile.yaml, domain/ scaffolded`));
+
     // Step 5.1: Register repositories (loop)
     console.log(chalk.bold("\n-- Step 5.1: Register Repositories (optional) --"));
     console.log(chalk.dim(
@@ -402,6 +482,10 @@ export async function initCommand(): Promise<void> {
     }
   }
 
+  // v0.6 §2.3 — Workspace Knowledge Layer stub (org-independent).
+  scaffoldV06WorkspaceKnowledge(workspace);
+  console.log(chalk.green("✓ .solosquad/knowledge/ scaffolded"));
+
   // Step 6: Security checklist
   console.log(chalk.bold("\n-- Step 6: Safety & Security --"));
   const gitignore = path.join(workspace, ".gitignore");
@@ -423,6 +507,40 @@ export async function initCommand(): Promise<void> {
   console.log("  3. Review AI outputs before deploying to production");
   console.log("  4. Keep bot scopes minimal");
   console.log("  5. Run `solosquad doctor` regularly");
+
+  // Step 6.5: Onboarding track (v0.6 §2.6)
+  //
+  // v0.6 §2.6 — 두 트랙 분기:
+  //   - 기존 v0.5 사용자 (analysis-ledger.yaml 존재) → templates/{workflow}/SKILL.md
+  //     를 *그대로 유지*. 회고 결과는 opt-in (`solosquad migrate --apply`).
+  //   - 신규 사용자 (ledger 없음) → templates/를 *회고 결과 버전*으로 init.
+  //
+  // v0.6 §2.6 — 회고 결과 templates 갱신은 별도 작업. 현재 시점은 *분기점*만
+  // 마련하고, 회고 결과가 누적되기 전까지는 양쪽 트랙 모두 v0.5 templates
+  // 그대로 사용한다. 사용자에게는 어떤 트랙인지만 알린다.
+  console.log(chalk.bold("\n-- Step 6.5: Onboarding Track (v0.6 §2.6) --"));
+  const isV05User = detectV05Usage(workspace);
+  if (isV05User) {
+    console.log(
+      ` ${chalk.cyan("•")} 기존 v0.5 사용자 트랙: v0.5 analysis-ledger 감지`
+    );
+    console.log(
+      chalk.dim(
+        "   templates/{workflow}/SKILL.md를 그대로 유지합니다. 회고 결과 적용은 " +
+          "`solosquad migrate --apply`로 opt-in."
+      )
+    );
+  } else {
+    console.log(
+      ` ${chalk.cyan("•")} 신규 사용자 트랙: v0.5 ledger 없음`
+    );
+    console.log(
+      chalk.dim(
+        "   templates/는 회고 결과 default를 받습니다 (v0.6 §2.6). 현재는 v0.6 " +
+          "회고 누적 전이라 v0.5 templates와 동일."
+      )
+    );
+  }
 
   // Step 7: Layout preview
   console.log(chalk.bold("\n-- Step 7: Layout --"));

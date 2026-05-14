@@ -74,6 +74,28 @@ export function getCoreDir(): string {
   return path.join(getAssetsDir(), "core");
 }
 
+/**
+ * v0.6 §2.3 — Workspace knowledge layer.
+ *
+ * User-accumulated craft, decision frameworks, and glossaries that are
+ * orthogonal to any single agent role. Resolution mirrors `getAgentsDir()`
+ * and `getCoreDir()`:
+ *   1. `<workspace>/.solosquad/knowledge/` (user-authored, top priority)
+ *   2. `<workspace>/knowledge/` (legacy out-of-config-dir layout, defensive)
+ *   3. `<assets>/knowledge/` (bundled starter guide)
+ *
+ * Always returns *some* path so callers can `fs.existsSync` without an extra
+ * undefined check — the bundled assets dir is the last-resort fallback.
+ */
+export function getKnowledgeDir(workspace?: string): string {
+  const root = workspace ?? getWorkspaceRoot();
+  const solosquad = path.join(root, ".solosquad", "knowledge");
+  if (fs.existsSync(solosquad)) return solosquad;
+  const legacy = path.join(root, "knowledge");
+  if (fs.existsSync(legacy)) return legacy;
+  return path.join(getAssetsDir(), "knowledge");
+}
+
 /** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */
 export function getProductsFile(): string {
   const root = getWorkspaceRoot();

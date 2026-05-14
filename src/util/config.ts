@@ -75,9 +75,27 @@ export interface WorkspaceYaml {
   skill_loader?: SkillLoaderConfig;
   /** v0.5.0+: author-loop budget envelope. */
   author?: AuthorConfig;
+  /** v0.6.0+: spawn-assembler token cap (§2.2 P1 #4). */
+  spawn?: SpawnConfig;
+  /** v0.6.0+: FTS5 cold archive retention + compression (§4.7). */
+  archive?: ArchiveConfig;
   created_at: string;
   last_migrated_to?: string;
 }
+
+/**
+ * v0.6 §2.2 P1 #4 — 8-layer spawn context cap.
+ *
+ * When the assembled context approaches the model token limit, the assembler
+ * drops lower-priority layers in the order documented in
+ * `src/bot/spawn-assembler.ts`. Default 80,000 tokens — leaves headroom
+ * inside Claude Sonnet/Opus 200k context for the actual conversation.
+ */
+export interface SpawnConfig {
+  max_context_tokens?: number;
+}
+
+export const DEFAULT_SPAWN_MAX_CONTEXT_TOKENS = 80_000;
 
 export interface SkillLoaderConfig {
   /** Tier ordering — higher index = higher priority. v0.5 default: [org, user, bundle]. */
@@ -92,6 +110,38 @@ export interface AuthorConfig {
   };
   /** What to do when a cap is hit. v0.5 default: "pause". */
   on_cap_action?: "pause" | "warn" | "block";
+}
+
+export interface ArchiveConfig {
+  /**
+   * v0.6 §4.7 — rows older than this in archive.sqlite are deleted by the
+   * nightly retention pass. Default 365.
+   */
+  retention_days?: number;
+  /**
+   * v0.6 §4.7 — when true, the retention pass writes
+   * `archive-<YYYY-MM>.zst` snapshots before DELETE; default false.
+   */
+  compress_before_delete?: boolean;
+}
+
+export const DEFAULT_ARCHIVE_CONFIG: Required<ArchiveConfig> = {
+  retention_days: 365,
+  compress_before_delete: false,
+};
+
+/**
+ * Resolve archive config — falls back to the v0.6 defaults when
+ * workspace.yaml is absent or lacks an `archive` section.
+ */
+export function loadArchiveConfig(workspace?: string): Required<ArchiveConfig> {
+  const ws = loadWorkspaceYaml(workspace);
+  const partial = ws?.archive ?? {};
+  return {
+    retention_days: partial.retention_days ?? DEFAULT_ARCHIVE_CONFIG.retention_days,
+    compress_before_delete:
+      partial.compress_before_delete ?? DEFAULT_ARCHIVE_CONFIG.compress_before_delete,
+  };
 }
 
 /** v0.2.4 defaults — used both at init and as fallbacks when fields are missing. */
