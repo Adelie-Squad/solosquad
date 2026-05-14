@@ -4,6 +4,45 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] — 2026-05-14
+
+**문서 정확성 patch.** 코드 변경 0. `AGENTS.md`와 `README.md`가 v0.5.0
+출시 후에도 v0.2.4 / v0.4 시점 표현을 유지하던 부분 일괄 정정. npm
+패키지에 포함되는 두 파일이라 *교차 도구 정확성* + *npm registry 페이지*
+신뢰성에 영향 — patch bump.
+
+### Changed
+- `AGENTS.md` (cross-tool guide) — L130-131 "Legacy keyword routing
+  (AGENT_ROUTES) is retained..." 단락을 v0.5 frontmatter 기반 4채널
+  라우팅 + 3-tier 검색 설명으로 교체. AGENT_ROUTES 상수가 v0.5에서
+  제거됐다는 사실 반영. scheduler routine은 agent name 직접 호출로
+  라우터 우회한다는 점 명시.
+- `README.md` — v0.2.4 baseline에서 v0.5.0 baseline으로 일괄 갱신:
+  - 헤더·CLI Reference 헤더 v0.2.4 → v0.5.0
+  - CLI 표 재구성: 7 그룹(workspace ops / PM v0.3 / 자율 v0.4 / agent
+    작성 v0.5 / repo analyzer v0.5 / migration / org·repo) + 18 신규
+    명령 추가 (pm/workflow/rollback/goal/agent/analyze 그룹)
+  - Architecture: keyword routing 설명 → PM session + 4채널 + native
+    Task tool. v0.5 author 루프 + v0.4 goal-runner 2 단락 추가
+  - "60+ keyword mappings" 단락 제거 → v0.5 4채널 frontmatter 라우팅
+  - Five → Six automated routines (v0.3 PM Compaction 23:00 추가)
+  - Versions 표 — v0.3/v0.4/v0.5 모두 released
+  - Repository Layout 갱신 — engine/, analyze/, AGENTS.md, <org>/.agents/,
+    _meta/workflow-maker/, goals/, analysis-ledger.yaml, freqCooldowns,
+    author-costs.jsonl, ~/.solosquad/agents/, docs/poc/ 모두 반영
+  - 깨진 링크 4건 수정 (concept-guide → master-guide, docs/product-roadmap
+    → docs/plan/product-roadmap)
+
+### Removed
+- `docs/plan/v0.5-agents-md-patch.md` — AGENTS.md 적용 완료 후 임시
+  문서 정리. git history(45ad153 이전 commits)에 보존.
+
+### Notes
+- `dist/`·`assets/`·코드 변경 0. 0.5.0 → 0.5.1 사용자 무위험 업데이트.
+- `solosquad@latest` = 0.5.1 (자동 갱신).
+
+---
+
 ## [0.5.0] — 2026-05-14
 
 **v0.5 — Workflow maker & SKILL.md frontmatter routing.** 메신저 author
