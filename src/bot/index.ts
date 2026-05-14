@@ -6,6 +6,7 @@ import { SessionStore } from "./session-store.js";
 import { FileEventSink, pmEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
 import { handleSlashIfAny } from "./slash-commands.js";
+import { rebuildRoutes } from "./agent-router.js";
 import { commitSnapshot } from "./git-snapshot.js";
 import { getReposBase, getWorkspaceDir } from "../util/paths.js";
 import { loadEnv, loadMessengerConfig, type Product } from "../util/config.js";
@@ -131,6 +132,18 @@ export async function startBot(): Promise<void> {
   const adapters = await createAdapters();
   const platforms = adapters.map((a) => a.platform);
   console.log(`[Bot] Starting with adapters: ${platforms.join(", ")}`);
+
+  // v0.5 §7 — seed the frontmatter-driven route index. S3 author loop will
+  // call rebuildRoutes() again after writing a new SKILL.md. Atomic swap
+  // means in-flight handlers keep serving from the previous index until
+  // the new one is fully built.
+  const initialRoutes = rebuildRoutes();
+  const routeCount =
+    Object.keys(initialRoutes.slash).length +
+    Object.keys(initialRoutes.keyword).length +
+    Object.keys(initialRoutes.explicit).length +
+    initialRoutes.freq.length;
+  console.log(`[Bot] Routes loaded: ${routeCount} triggers across SKILLs`);
 
   // v0.3.0: reconcile any in-flight stage / undelivered PM message left over
   // from a prior crash. Run before adapters start so the recovery deliveries
