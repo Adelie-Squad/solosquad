@@ -355,3 +355,19 @@ agentGroup
     const { agentValidateCommand } = await import("./agent.js");
     await agentValidateCommand(filePath, opts);
   });
+
+agentGroup
+  .command("add")
+  .description("Scaffold a new SKILL.md (no LLM) — fill in the body afterward")
+  .requiredOption("--name <name>", "Agent name (kebab-case slug)")
+  .requiredOption("--team <team>", "Team folder (strategy, growth, experience, engineering, …)")
+  .option("--org <org>", "Write under <org>/.agents/ instead of workspace agents dir")
+  .option("--description <text>", "Short description for frontmatter")
+  .action(async (opts) => {
+    const { agentAddCommand } = await import("./agent.js");
+    try {
+      await agentAddCommand(opts);
+    } catch {
+      // Error already printed by agentAddCommand; exit code set there.
+    }
+  });

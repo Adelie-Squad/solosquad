@@ -8,7 +8,7 @@ import {
   type SkillValidationError,
 } from "../bot/skill-parser.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
-import { getAgentsDir } from "../util/paths.js";
+import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 /**
  * v0.5 — `solosquad agent` CLI group.
@@ -143,4 +143,126 @@ function printIssue(issue: SkillValidationError, kind: "error" | "warn"): void {
   const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
   const field = issue.field ? chalk.dim(` (${issue.field})`) : "";
   console.log(`    ${tag} ${issue.code}${field}: ${issue.message}`);
+}
+
+// ---------------------------------------------------------------------------
+// `solosquad agent add` — scaffolding (no LLM)
+// ---------------------------------------------------------------------------
+
+export interface AddAgentOpts {
+  name: string;
+  team: string;
+  /** Override org slug — defaults to no org-local subfolder, writes under workspace agents dir. */
+  org?: string;
+  /** Override description (defaults to a placeholder). */
+  description?: string;
+  /** Override workspace root (mostly for tests). */
+  workspace?: string;
+  /** Skip rebuilding the route index (useful for tests). */
+  skipRouterReload?: boolean;
+}
+
+export interface AddAgentResult {
+  skillPath: string;
+}
+
+/**
+ * Scaffold a minimal SKILL.md for users who want to skip the messenger
+ * author loop. v0.5 §S3 line 6.
+ *
+ * Writes to `<workspace>/<org>/.agents/<team>/<name>/SKILL.md` when `org` is
+ * provided, otherwise to `<workspace agents dir>/<team>/<name>/SKILL.md`.
+ */
+export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResult> {
+  const team = opts.team.trim();
+  const name = opts.name.trim();
+
+  if (!name || !team) {
+    console.error(chalk.red("error: --name and --team are required"));
+    process.exitCode = 2;
+    throw new Error("missing --name or --team");
+  }
+
+  const baseDir = opts.org
+    ? path.join(getOrgDir(opts.org, opts.workspace ?? getWorkspaceRoot()), ".agents")
+    : getAgentsDir();
+  const agentDir = path.join(baseDir, team, name);
+  const skillPath = path.join(agentDir, "SKILL.md");
+
+  if (fs.existsSync(skillPath)) {
+    console.error(chalk.red(`error: ${skillPath} already exists — refusing to overwrite`));
+    process.exitCode = 2;
+    throw new Error(`refusing to overwrite existing SKILL.md at ${skillPath}`);
+  }
+
+  const description = (opts.description ?? `${name} — TODO: describe what this agent does`).trim();
+
+  const content = renderScaffold(name, team, description);
+  fs.mkdirSync(agentDir, { recursive: true });
+  fs.writeFileSync(skillPath, content, "utf-8");
+
+  console.log(chalk.green(`✓ scaffolded ${skillPath}`));
+  console.log(
+    chalk.dim(
+      "  Edit the SKILL.md to fill in triggers, inputs, outputs, and the process body.",
+    ),
+  );
+
+  if (!opts.skipRouterReload) {
+    try {
+      const { rebuildRoutes } = await import("../bot/agent-router.js");
+      rebuildRoutes(
+        opts.org
+          ? { org: opts.org, workspace_root: opts.workspace ?? getWorkspaceRoot() }
+          : {},
+      );
+    } catch (e) {
+      console.log(
+        chalk.yellow(
+          `△ router reload skipped: ${(e as Error).message}`,
+        ),
+      );
+    }
+  }
+
+  return { skillPath };
+}
+
+function renderScaffold(name: string, team: string, description: string): string {
+  const frontmatter = [
+    `name: "${name}"`,
+    `description: "${description}"`,
+    `team: ${team}`,
+    "stateful: false",
+    "triggers:",
+    "  explicit: true",
+    "  keyword: []",
+    "scope: agent",
+    "confidence: 1.0",
+    `source: cli-scaffold`,
+  ].join("\n");
+
+  const body = [
+    "",
+    `# ${name}`,
+    "",
+    `> ${description}`,
+    "",
+    "## Process",
+    "",
+    "1. Describe step one.",
+    "2. Describe step two.",
+    "3. Describe step three.",
+    "",
+    "## Inputs",
+    "",
+    "- TODO: list required inputs",
+    "",
+    "## Outputs",
+    "",
+    "- TODO: list outputs",
+    "",
+  ].join("\n");
+
+  return `---\n${frontmatter}\n---\n${body}`;
 }
