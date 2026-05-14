@@ -127,8 +127,13 @@ are auto-discovered from `<org>/.claude/agents/<name>.md` (synced from
 `assets/agents/{team}/{agent}/SKILL.md` by `agents-builder.ts`). Each user
 gets their own session-id stored in `<org>/.solosquad/sessions/<user>.json`.
 
-Legacy keyword routing (`src/bot/agent-router.ts`) is retained for the
-scheduler and as future fallback — 60+ keywords → 25 agent mappings.
+Keyword routing now lives in each SKILL.md's frontmatter (`triggers.keyword`),
+discovered at boot by `buildRoutes()` in `src/bot/agent-router.ts` (v0.5). The
+former hardcoded `AGENT_ROUTES` map is gone. The router scans the 3-tier
+search path (org-local · user-global · workspace-bundled) and resolves
+incoming messages via the 4-channel priority order: slash > explicit > keyword
+> freq. Scheduler routines reference agents by name in their prompts rather
+than going through router resolution.
 
 - v0.3.0 covers: workflow reconciler, slash commands (`/think /plan /build /review /ship`), `pm`/`workflow`/`rollback` CLIs, stage_id/focus markers
 - v0.4 (planned): autonomous goal runner with metric-driven keep/discard cycles
