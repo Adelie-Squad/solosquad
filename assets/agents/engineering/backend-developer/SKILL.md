@@ -9,6 +9,7 @@ triggers:
     - 서버
     - db
   explicit: true
+collab_pattern: hierarchical
 ---
 # Backend Developer Agent
 

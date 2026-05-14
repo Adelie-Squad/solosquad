@@ -10,6 +10,7 @@ triggers:
     - 도커
     - ci/cd
   explicit: true
+collab_pattern: hierarchical
 ---
 # Cloud Admin Agent
 

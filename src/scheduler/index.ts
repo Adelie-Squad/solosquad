@@ -20,6 +20,8 @@ import {
   type RoutineConfig,
 } from "./routines.js";
 import { saveRoutineMemory } from "./memory.js";
+import { rotateArchive } from "../memory/archive-rotate.js";
+import { loadArchiveConfig } from "../util/config.js";
 import type { MessengerAdapter } from "../messenger/base.js";
 
 let adapters: MessengerAdapter[] = [];
@@ -42,6 +44,21 @@ async function runRoutineForProduct(
   const { cwd, reason, repoSlug } = resolveOrgCwd(orgDir);
   const repoLabel = reason === "legacy-root" ? "(org root)" : `(repo: ${repoSlug})`;
   console.log(`[Scheduler] ${product.name} - ${routine.name} starting ${repoLabel}`);
+
+  // v0.6 — archive-rotate is deterministic (no LLM). Run inline + return.
+  if (routine.id === "archive-rotate") {
+    const archiveCfg = loadArchiveConfig();
+    const stats = rotateArchive({
+      workspace: getReposBase(),
+      orgSlug: product.slug,
+      retentionDays: archiveCfg.retention_days,
+      compressBeforeDelete: archiveCfg.compress_before_delete,
+    });
+    console.log(
+      `[Scheduler] ${product.name} - archive-rotate done: archived=${stats.archived_rows} deleted=${stats.deleted_by_retention}`
+    );
+    return;
+  }
 
   const prompt = loadRoutinePrompt(routine.id);
   const result = await runClaude(prompt, cwd, 180_000);
@@ -156,6 +173,14 @@ function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
           enabled: true,
         };
       }
+      case "archive-rotate":
+        // v0.6 §4 — fixed 00:00 nightly. Tuning lives in workspace.yaml.archive
+        // (retention_days, compress_before_delete), not the cron itself.
+        return {
+          routine,
+          cron: timeToDailyCron("00:00"),
+          enabled: true,
+        };
       default:
         // Unknown routine — disable rather than crash
         return { routine, cron: "0 0 1 1 *", enabled: false };

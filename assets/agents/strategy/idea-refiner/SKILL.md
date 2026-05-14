@@ -8,6 +8,7 @@ triggers:
     - 아이디어
     - 브레인스토밍
   explicit: true
+collab_pattern: hierarchical
 ---
 # Idea Refiner Agent
 

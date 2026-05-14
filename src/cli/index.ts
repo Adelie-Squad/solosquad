@@ -13,7 +13,13 @@ if (!fs.existsSync(pkgPath)) {
 }
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
 
-const LAYOUT_BANNER_SKIP = new Set(["migrate", "update", "doctor", "help"]);
+const LAYOUT_BANNER_SKIP = new Set([
+  "migrate",
+  "update",
+  "doctor",
+  "help",
+  "check",
+]);
 
 /**
  * Compare two version strings. Returns negative if a < b, 0 if equal, positive if a > b.
@@ -115,6 +121,19 @@ program
   .action(async (opts) => {
     const { doctorCommand } = await import("./doctor.js");
     await doctorCommand(opts.ci, opts.messengerCheck);
+  });
+
+const readinessGroup = program
+  .command("readiness")
+  .description("Readiness checks (v0.6+)");
+
+readinessGroup
+  .command("check")
+  .description("Check workspace data readiness for a target version (v0.6 §6)")
+  .option("--target <version>", "Target version to check readiness for", "v0.6")
+  .action(async (opts) => {
+    const { readinessCheckCommand } = await import("./readiness.js");
+    await readinessCheckCommand({ target: opts.target });
   });
 
 program
@@ -361,6 +380,35 @@ program
     await migrateCommand(opts);
   });
 
+const memoryGroup = program
+  .command("memory")
+  .description("Inspect the FTS5 cold archive (v0.6)");
+
+memoryGroup
+  .command("search")
+  .description("Full-text search across past routine logs + router/author/spawn events")
+  .argument("<query>", "Search query (whitespace-separated terms; quotes/specials stripped)")
+  .option("--limit <n>", "Maximum number of hits to print", "10")
+  .option(
+    "--event-type <type>",
+    "Restrict to one of: routine_log | route_hit | route_miss | author_turn | spawn_decision"
+  )
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (query, opts) => {
+    const { memorySearchCommand } = await import("./memory.js");
+    await memorySearchCommand(query, opts);
+  });
+
+memoryGroup
+  .command("stats")
+  .description("Show row counts, oldest/newest, per-event-type breakdown")
+  .option("--disk", "Include database file size on disk")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (opts) => {
+    const { memoryStatsCommand } = await import("./memory.js");
+    await memoryStatsCommand(opts);
+  });
+
 const agentGroup = program
   .command("agent")
   .description("Manage SKILL.md agents (v0.5)");
@@ -390,4 +438,13 @@ agentGroup
     } catch {
       // Error already printed by agentAddCommand; exit code set there.
     }
+  });
+
+agentGroup
+  .command("reload")
+  .description("Manually rebuild the router (v0.6 §10.5 — manual fs_watch.mode)")
+  .option("--org <slug>", "Restrict reload to a specific org's .agents/ tier")
+  .action(async (opts) => {
+    const { agentReloadCommand } = await import("./agent.js");
+    await agentReloadCommand(opts);
   });

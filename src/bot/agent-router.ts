@@ -8,6 +8,7 @@ import {
   type SkillSpec,
   type FreqTrigger,
 } from "./skill-parser.js";
+import { searchArchive, type SearchResult } from "../memory/archive-search.js";
 
 /**
  * v0.5 — frontmatter-driven agent router.
@@ -69,6 +70,12 @@ export interface BuildRoutesOpts {
   org?: string;
   /** Override workspace root — defaults to getWorkspaceRoot(). */
   workspace_root?: string;
+  /**
+   * v0.6 — when true, `resolveWithArchive()` falls back to FTS5 search on
+   * router miss. Off by default to preserve v0.5 behavior; the message
+   * dispatcher in `src/bot/index.ts` opts in.
+   */
+  archive_fallback?: boolean;
 }
 
 export function buildRoutes(opts: BuildRoutesOpts = {}): RouteIndex {
@@ -356,4 +363,80 @@ export function installRoutes(idx: RouteIndex): void {
  */
 export function getCurrentRoutes(): RouteIndex | null {
   return routeIndexRef;
+}
+
+// ---------------------------------------------------------------------------
+// v0.6 — FTS5 archive fallback (§4.3 + §4.4)
+// ---------------------------------------------------------------------------
+
+export interface ArchiveRecallNotice {
+  /** Short, prompt-cache-safe inline string for the user message. */
+  inline: string;
+  /** PM notification: "🧠 과거 N건 회상 (날짜: ...)" — printed once per miss. */
+  notice: string;
+  /** Raw FTS5 hits — for diagnostics / tests. */
+  hits: SearchResult[];
+}
+
+export interface ResolveWithArchiveOpts extends ResolveCtx {
+  workspace: string;
+  orgSlug: string;
+  /** Default 3 — matches §4.3 (`ORDER BY rank LIMIT 3`). */
+  recall_limit?: number;
+  /** Max characters in the inline recall payload. §4.4: ≤ 500. */
+  inline_char_cap?: number;
+}
+
+export interface ResolveWithArchiveResult {
+  /** Non-null when the 4-channel router matched. */
+  resolved: ResolveResult | null;
+  /** Set only on miss when `archive_fallback` recalled anything. */
+  recall: ArchiveRecallNotice | null;
+}
+
+/**
+ * v0.6 router fallback. The normal `resolve()` runs first; on miss the
+ * caller can opt into an FTS5 recall to surface past similar messages.
+ * Pure with respect to side effects — the caller decides what to do with
+ * the recall (inline into the next prompt + send notice).
+ */
+export function resolveWithArchive(
+  message: string,
+  idx: RouteIndex,
+  opts: ResolveWithArchiveOpts
+): ResolveWithArchiveResult {
+  const resolved = resolve(message, idx, opts);
+  if (resolved) {
+    return { resolved, recall: null };
+  }
+
+  const limit = opts.recall_limit ?? 3;
+  const cap = opts.inline_char_cap ?? 500;
+  const hits = searchArchive({
+    workspace: opts.workspace,
+    orgSlug: opts.orgSlug,
+    query: message,
+    limit,
+  });
+
+  if (!hits.length) {
+    return { resolved: null, recall: null };
+  }
+
+  return {
+    resolved: null,
+    recall: buildRecallNotice(hits, cap),
+  };
+}
+
+function buildRecallNotice(hits: SearchResult[], cap: number): ArchiveRecallNotice {
+  const dates = hits.map((h) => h.timestamp.slice(0, 10)).join(", ");
+  const notice = `🧠 과거 ${hits.length}건 회상 (날짜: ${dates})`;
+  let acc = "";
+  for (const h of hits) {
+    const piece = `- [${h.timestamp.slice(0, 10)}] ${h.snippet}`;
+    if (acc.length + piece.length + 1 > cap) break;
+    acc += (acc ? "\n" : "") + piece;
+  }
+  return { inline: acc, notice, hits };
 }

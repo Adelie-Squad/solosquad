@@ -228,6 +228,67 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
   return { skillPath };
 }
 
+// ---------------------------------------------------------------------------
+// `solosquad agent reload` — manual hot-reload (v0.6 §10.5 manual mode)
+// ---------------------------------------------------------------------------
+
+export interface AgentReloadOpts {
+  /** Restrict reload to a specific org's `.agents/` tier. */
+  org?: string;
+  /** Override workspace root (mostly for tests). */
+  workspace?: string;
+}
+
+export interface AgentReloadResult {
+  triggerCount: number;
+  slashCount: number;
+  keywordCount: number;
+  explicitCount: number;
+  freqCount: number;
+}
+
+/**
+ * Manually rebuild the router. In v0.6 the fs-watcher does this
+ * automatically for `auto` and (with confirmation) `prompt` modes; in
+ * `manual` mode the user runs this command after editing a SKILL.md.
+ *
+ * Implementation: a thin wrapper around `rebuildRoutes()` that prints a
+ * human-readable summary. Returns the per-channel counts so tests can
+ * assert against them.
+ */
+export async function agentReloadCommand(
+  opts: AgentReloadOpts = {},
+): Promise<AgentReloadResult> {
+  const { rebuildRoutes } = await import("../bot/agent-router.js");
+  const buildOpts = opts.org
+    ? { org: opts.org, workspace_root: opts.workspace ?? getWorkspaceRoot() }
+    : {};
+  const idx = rebuildRoutes(buildOpts);
+  const result: AgentReloadResult = {
+    slashCount: Object.keys(idx.slash).length,
+    keywordCount: Object.keys(idx.keyword).length,
+    explicitCount: Object.keys(idx.explicit).length,
+    freqCount: idx.freq.length,
+    triggerCount: 0,
+  };
+  result.triggerCount =
+    result.slashCount + result.keywordCount + result.explicitCount + result.freqCount;
+
+  console.log(
+    chalk.green(
+      `✓ SKILL routes reloaded — ${result.triggerCount} triggers`,
+    ),
+  );
+  console.log(
+    chalk.dim(
+      `  slash=${result.slashCount}  keyword=${result.keywordCount}  ` +
+        `explicit=${result.explicitCount}  freq=${result.freqCount}`,
+    ),
+  );
+
+  return result;
+}
+
 function renderScaffold(name: string, team: string, description: string): string {
   const frontmatter = [
     `name: "${name}"`,

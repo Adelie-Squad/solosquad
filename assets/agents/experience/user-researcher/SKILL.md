@@ -10,6 +10,7 @@ triggers:
     - 설문
     - 페르소나
   explicit: true
+collab_pattern: hierarchical
 ---
 # User Researcher Agent
 

@@ -9,6 +9,7 @@ triggers:
     - 수익 모델
     - 비즈니스
   explicit: true
+collab_pattern: hierarchical
 ---
 # Business Strategist Agent
 

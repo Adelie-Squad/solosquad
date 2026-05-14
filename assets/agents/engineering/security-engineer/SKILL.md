@@ -12,6 +12,7 @@ triggers:
     - security
     - 취약점
   explicit: true
+collab_pattern: hierarchical
 ---
 # Security Engineer Agent
 

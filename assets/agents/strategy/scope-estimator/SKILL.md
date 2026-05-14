@@ -9,6 +9,7 @@ triggers:
     - 견적
     - 스코프
   explicit: true
+collab_pattern: hierarchical
 ---
 # Scope Estimator Agent
 

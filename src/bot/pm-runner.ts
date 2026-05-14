@@ -13,6 +13,13 @@ import {
 } from "./events.js";
 import { parseSpawnMarkers } from "./spawn-prompt-markers.js";
 import { parseFocusMarker, stripFocusMarkers } from "./focus-markers.js";
+import {
+  assembleSpawnContext,
+  type AssembledContext,
+} from "./spawn-assembler.js";
+import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js";
+import { loadWorkspaceYaml } from "../util/config.js";
+import { loadAgentProfile } from "../util/agent-profile.js";
 
 /**
  * v0.3.0 — PM session driver.
@@ -404,4 +411,80 @@ export function ifEvent<K extends AnyEvent["kind"]>(
   kind: K
 ): Array<Extract<AnyEvent, { kind: K }>> {
   return events.filter((e): e is Extract<AnyEvent, { kind: K }> => e.kind === kind);
+}
+
+// ---------------------------------------------------------------------------
+// v0.6 §2.2 — spawn preflight helpers.
+//
+// The PM session itself runs inside Claude Code, and the `Task` tool that
+// launches specialists is internal to that process — pm-runner cannot
+// intercept individual Task calls from the host side. These helpers expose
+// the 8-layer assembly + agent-budget check as *pure functions* so:
+//   - bot-layer adapters can do budget gating before relaying a user message
+//     that would obviously trigger a spawn (e.g. routine-level pre-flight),
+//   - the messenger reply layer can append the assembled context to the
+//     PM's `--append-system-prompt`,
+//   - tests can verify the 8-layer + budget logic without an end-to-end
+//     Claude Code invocation.
+//
+// Aggregator returns Layer list only; Task-prompt concatenation is owned by
+// the caller because spawn injection surfaces differ (cwd-adjacent file,
+// `--append-system-prompt`, Task tool prompt body).
+// ---------------------------------------------------------------------------
+
+export interface SpawnPreflightInput {
+  workspace: string;
+  orgSlug: string;
+  agentRef: { team: string; name: string };
+  repoSlug?: string;
+  workflowId?: string;
+  /** User-facing text / task description — drives keyword selection. */
+  query?: string;
+}
+
+export interface SpawnPreflightResult {
+  budget: CheckAgentBudgetResult;
+  context: AssembledContext;
+  /** True when budget refuses the spawn (action=pause + exceeded). */
+  refused: boolean;
+  /** Korean-language user-facing message — empty when allowed. */
+  userMessage: string;
+}
+
+/**
+ * Pre-flight check: load the agent profile once, then return both the budget
+ * verdict and the assembled 8-layer context. Cheap to call (single yaml load
+ * + a directory walk).
+ */
+export function preflightSpawn(input: SpawnPreflightInput): SpawnPreflightResult {
+  const workspaceYaml = loadWorkspaceYaml(input.workspace);
+  const profile = loadAgentProfile({
+    workspace: input.workspace,
+    orgSlug: input.orgSlug,
+  });
+
+  const budget = checkAgentBudget({
+    workspace: input.workspace,
+    orgSlug: input.orgSlug,
+    agentName: input.agentRef.name,
+    agentProfile: profile,
+  });
+
+  const context = assembleSpawnContext({
+    workspace: input.workspace,
+    orgSlug: input.orgSlug,
+    agentRef: input.agentRef,
+    repoSlug: input.repoSlug,
+    workflowId: input.workflowId,
+    query: input.query,
+    workspaceYaml,
+    agentProfile: profile,
+  });
+
+  const refused = !budget.allowed;
+  const userMessage = refused
+    ? `${input.agentRef.name} 호출이 일시 차단되었습니다. ${budget.reason ?? "Daily budget 도달 — 내일 다시 시도해주세요."}`
+    : "";
+
+  return { budget, context, refused, userMessage };
 }

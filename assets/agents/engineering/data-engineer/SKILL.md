@@ -8,6 +8,7 @@ triggers:
     - 파이프라인
     - etl
   explicit: true
+collab_pattern: hierarchical
 ---
 # Data Engineer Agent
 

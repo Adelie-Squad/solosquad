@@ -8,8 +8,16 @@ import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.
 import { handleSlashIfAny } from "./slash-commands.js";
 import { rebuildRoutes } from "./agent-router.js";
 import { commitSnapshot } from "./git-snapshot.js";
+import { startSkillWatcher, type Unwatch } from "./fs-watcher.js";
+import { applyReloadPolicy } from "./reload-policy.js";
 import { getReposBase, getWorkspaceDir } from "../util/paths.js";
-import { loadEnv, loadMessengerConfig, type Product } from "../util/config.js";
+import {
+  loadEnv,
+  loadFsWatchConfig,
+  loadMessengerConfig,
+  listOrganizations,
+  type Product,
+} from "../util/config.js";
 import type { MessageContext, MessengerAdapter } from "../messenger/base.js";
 
 const MAX_MESSAGE_LENGTH = 4000;
@@ -161,6 +169,89 @@ export async function startBot(): Promise<void> {
   if (report.pendingDeliveries.length > 0) {
     await deliverRecoveredMessages(adapters, report.pendingDeliveries);
   }
+
+  // v0.6 §10 — start SKILL fs.watch hot-reload after adapters are live so
+  // policy notifications have somewhere to land. The reload-policy module
+  // decides what to do per `workspace.yaml.fs_watch.mode`.
+  const fsWatchCfg = loadFsWatchConfig(workspaceRoot);
+  const unwatch = startSkillWatcher({
+    workspace: workspaceRoot,
+    mode: fsWatchCfg.mode,
+    gitOnly: fsWatchCfg.git_only,
+    onReload: (changedPaths) => {
+      void onSkillChange(adapters, changedPaths, fsWatchCfg);
+    },
+  });
+  console.log(
+    `[Bot] SKILL fs.watch active (mode=${fsWatchCfg.mode}${fsWatchCfg.git_only ? ", git_only" : ""})`,
+  );
+
+  installGracefulShutdown(unwatch);
+}
+
+async function onSkillChange(
+  adapters: MessengerAdapter[],
+  changedPaths: string[],
+  cfg: { mode: "auto" | "prompt" | "manual"; git_only: boolean },
+): Promise<void> {
+  try {
+    const decision = await applyReloadPolicy({
+      mode: cfg.mode,
+      changes: changedPaths,
+      gitOnly: cfg.git_only,
+      gitRoot: workspaceRoot,
+    });
+    if (!decision.notice) return;
+    console.log(`[Bot] SKILL reload (${decision.outcome}) — ${decision.notice}`);
+    await broadcastToOwnerCommand(adapters, decision.notice);
+  } catch (err) {
+    console.log(
+      `[Bot] SKILL reload policy failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+async function broadcastToOwnerCommand(
+  adapters: MessengerAdapter[],
+  text: string,
+): Promise<void> {
+  const orgs = listOrganizations(workspaceRoot);
+  for (const org of orgs) {
+    const orgDir = path.join(getReposBase(), org.slug);
+    for (const adapter of adapters) {
+      try {
+        const cfg = loadMessengerConfig(orgDir, adapter.platform);
+        await adapter.sendToChannel(cfg, "owner-command", text);
+      } catch {
+        // Channel might not exist for every org/platform — fine to skip.
+      }
+    }
+  }
+}
+
+let shutdownInstalled = false;
+
+/**
+ * Graceful shutdown for the fs-watcher. Installed once per process — SIGINT
+ * (Ctrl-C in the terminal) and SIGTERM (orchestrator stop signal) both
+ * close the watcher before letting the default handler exit the process.
+ */
+function installGracefulShutdown(unwatch: Unwatch): void {
+  if (shutdownInstalled) return;
+  shutdownInstalled = true;
+  const stop = async (sig: NodeJS.Signals): Promise<void> => {
+    console.log(`[Bot] received ${sig} — closing SKILL watcher`);
+    try {
+      await unwatch();
+    } catch (err) {
+      console.log(
+        `[Bot] watcher close error (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    process.exit(0);
+  };
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
 }
 
 async function deliverRecoveredMessages(

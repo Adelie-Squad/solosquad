@@ -9,6 +9,7 @@ triggers:
     - 설계
     - 시스템 구조
   explicit: true
+collab_pattern: hierarchical
 ---
 # Architect Agent
 

@@ -9,6 +9,7 @@ triggers:
     - 시장 적합
     - 가설
   explicit: true
+collab_pattern: hierarchical
 ---
 # PMF Planner Agent
 

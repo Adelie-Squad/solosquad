@@ -9,6 +9,7 @@ triggers:
     - 지표
     - 매출
   explicit: true
+collab_pattern: graph
 ---
 # Data Analyst Agent
 

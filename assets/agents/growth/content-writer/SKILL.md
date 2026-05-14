@@ -10,6 +10,7 @@ triggers:
     - 글쓰기
     - 콘텐츠
   explicit: true
+collab_pattern: dynamic
 ---
 # Content Writer Agent
 

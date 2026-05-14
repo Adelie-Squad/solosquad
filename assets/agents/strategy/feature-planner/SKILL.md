@@ -9,6 +9,7 @@ triggers:
     - 기능 추가
     - 스펙
   explicit: true
+collab_pattern: graph
 ---
 # Feature Planner Agent
 

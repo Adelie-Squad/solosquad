@@ -8,6 +8,7 @@ triggers:
     - api
     - 엔드포인트
   explicit: true
+collab_pattern: hierarchical
 ---
 # API Developer Agent
 

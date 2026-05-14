@@ -8,6 +8,7 @@ triggers:
     - 정책
     - 약관
   explicit: true
+collab_pattern: hierarchical
 ---
 # Policy Architect Agent
 

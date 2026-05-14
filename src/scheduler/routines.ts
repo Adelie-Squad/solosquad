@@ -77,6 +77,28 @@ export const ROUTINES: RoutineConfig[] = [
     emoji: "🗂",
     memoryTargets: [],
   },
+  // v0.6 §2.5 — Retrospective stats ETL. Weekly (Sunday 22:00) — see
+  // assets/routines/v06-retrospective-stats.md. Deterministic ETL, no LLM.
+  {
+    id: "v06-retrospective-stats",
+    name: "v0.6 Retrospective Stats",
+    kind: "background",
+    channel: "workflow",
+    threadName: "system-v06-retrospective-stats",
+    emoji: "📐",
+    memoryTargets: [],
+  },
+  // v0.6 §4 — FTS5 cold archive rotation. Daily at 00:00; silent (no user
+  // notification — pure background maintenance). See archive-rotate.md.
+  {
+    id: "archive-rotate",
+    name: "Archive Rotate",
+    kind: "background",
+    channel: "workflow",
+    threadName: "system-archive-rotate",
+    emoji: "🗄",
+    memoryTargets: [],
+  },
 ];
 
 /** Load routine prompt from routines/{id}.md */

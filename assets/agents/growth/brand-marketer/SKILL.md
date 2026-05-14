@@ -9,6 +9,7 @@ triggers:
     - 브랜딩
     - 네이밍
   explicit: true
+collab_pattern: hierarchical
 ---
 # Brand Marketer Agent
 

@@ -9,6 +9,7 @@ triggers:
     - 퍼포먼스
     - cpa
   explicit: true
+collab_pattern: hierarchical
 ---
 # Paid Marketer Agent
 

@@ -9,6 +9,7 @@ triggers:
     - 수집
     - 스크래핑
   explicit: true
+collab_pattern: hierarchical
 ---
 # Data Collector Agent
 
