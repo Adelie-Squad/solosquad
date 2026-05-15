@@ -17,6 +17,70 @@ import {
 import { getWorkspaceRoot } from "../util/paths.js";
 import { listUserYamls, type UserYaml } from "../bot/user-registry.js";
 import { loadMessengerSection } from "../messenger/broadcast.js";
+import { detectWorkspaceVersion } from "../migrations/detect.js";
+import { fileURLToPath } from "url";
+
+const __dirname_doctor = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * v0.8.3 §7.3 — resolve the installed CLI version. Walks up from this
+ * compiled file (dist/src/cli/doctor.js or src/cli/doctor.ts during dev)
+ * to find package.json. Returns null only when invoked outside the npm
+ * package tree (should never happen in production).
+ */
+function resolveCliVersion(): string | null {
+  let candidate = path.resolve(__dirname_doctor, "..", "..", "package.json");
+  if (!fs.existsSync(candidate)) {
+    candidate = path.resolve(__dirname_doctor, "..", "..", "..", "package.json");
+  }
+  if (!fs.existsSync(candidate)) return null;
+  try {
+    const raw = fs.readFileSync(candidate, "utf-8");
+    const obj = JSON.parse(raw) as { version?: string };
+    return obj.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * v0.8.3 §7.3 — semver compare ignoring pre-release/build labels.
+ * Returns negative when a < b, 0 when equal, positive when a > b.
+ */
+export function compareSemver(a: string, b: string): number {
+  const parse = (s: string): number[] =>
+    s.split("-")[0].split(".").map((x) => parseInt(x, 10) || 0);
+  const pa = parse(a);
+  const pb = parse(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/**
+ * v0.8.3 §7.3 — given CLI + workspace version strings, decide which
+ * remedy to recommend. Exported for unit tests.
+ */
+export type VersionRecommendation =
+  | { kind: "ok" }
+  | { kind: "migrate"; cliVersion: string; workspaceVersion: string }
+  | { kind: "update"; cliVersion: string; workspaceVersion: string };
+
+export function recommendForVersionMismatch(
+  cliVersion: string,
+  workspaceVersion: string,
+): VersionRecommendation {
+  const cmp = compareSemver(cliVersion, workspaceVersion);
+  if (cmp === 0) return { kind: "ok" };
+  if (cmp > 0) {
+    // CLI newer than workspace → user upgraded CLI, needs to migrate workspace
+    return { kind: "migrate", cliVersion, workspaceVersion };
+  }
+  // CLI older than workspace → user has a newer workspace layout, needs to update CLI
+  return { kind: "update", cliVersion, workspaceVersion };
+}
 
 function check(label: string, ok: boolean, hint?: string): boolean {
   if (ok) {
@@ -102,6 +166,26 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     check(".solosquad/ present", true);
     const wsYaml = path.join(solosquadDir, "workspace.yaml");
     if (!check(".solosquad/workspace.yaml", fs.existsSync(wsYaml), "Run: solosquad init")) issues++;
+
+    // v0.8.3 §7.3 — CLI ↔ workspace version mismatch advisory.
+    const cliVersion = resolveCliVersion();
+    const wsVersion = fs.existsSync(wsYaml) ? detectWorkspaceVersion(workspace) : null;
+    if (cliVersion && wsVersion) {
+      const rec = recommendForVersionMismatch(cliVersion, wsVersion);
+      if (rec.kind === "ok") {
+        check(`CLI v${cliVersion} == workspace v${wsVersion}`, true);
+      } else if (rec.kind === "migrate") {
+        warn(
+          `CLI v${cliVersion} > workspace v${wsVersion}`,
+          "Run: solosquad migrate --apply  (upgrade workspace layout to match CLI)",
+        );
+      } else {
+        warn(
+          `CLI v${cliVersion} < workspace v${wsVersion}`,
+          "Run: npm install -g solosquad@latest  (or solosquad update — workspace was migrated by a newer CLI)",
+        );
+      }
+    }
   } else if (legacyMarkers) {
     warn(
       `Legacy v0.1.x layout at ${workspace}`,
@@ -210,7 +294,7 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
 async function runLifecycleChecks(workspace: string): Promise<number> {
   const failures = 0;
   const os = await import("os");
-  const { readLock, isStaleLock, uninstallLockPath, logoutLockPath } = await import(
+  const { readLock, isStaleLock, uninstallLockPath } = await import(
     "../lifecycle/lockfile.js"
   );
   const { _precheckInternals } = await import("../lifecycle/precheck.js");
@@ -236,13 +320,7 @@ async function runLifecycleChecks(workspace: string): Promise<number> {
     );
   }
 
-  // Logout lock?
-  if (fs.existsSync(logoutLockPath(workspace))) {
-    warn(
-      "logout.lock present",
-      "solosquad bot/schedule/pm will refuse to start until removed",
-    );
-  }
+  // v0.8.3 — `solosquad logout` removed (§6.1). logout.lock check eliminated.
 
   // Live PM/scheduler processes
   const livePids = _precheckInternals.detectLivePids();

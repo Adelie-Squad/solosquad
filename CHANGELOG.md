@@ -4,6 +4,113 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.3] — 2026-05-15
+
+**v0.8.3 — Onboarding UX + Observability.** v0.8.x 시리즈의 마지막 패치.
+사용자가 처음 SoloSquad를 만났을 때의 경험과 문제가 생겼을 때 디버깅하는
+경험을 동시에 잡는다. 5축: (a) 기존 리포 마이그레이션 UX (`add repo
+--dry-run`/`--inspect`/`--keep-original`), (b) logger 확장 + `solosquad
+logs` CLI + log-rotate routine, (c) `solosquad logout` 제거, (d) doctor
+CLI↔workspace version mismatch 감지, (e) trajectory 자동 등록 ROI 측정
+박제.
+
+자세히: `docs/plan/v0.8.3-onboarding-ux-observability.md`
+
+### Added — 기존 리포 마이그레이션 UX (§3)
+- `src/util/repo-inspect.ts` — 위험 시나리오 5종 감지 walker. 활성
+  프로세스(lsof/handle.exe), 외부에서 들어오는 심링크, repo 내부 절대경로
+  참조, slug 충돌, IDE workspace 파일 절대경로 설정. 각 detector는
+  best-effort — 도구 부재 시 throw 대신 `available: false` 반환
+- `solosquad add repo --dry-run` / `--inspect <path>` — 시뮬레이션
+  보고서, 디스크 변경 0건
+- `solosquad add repo --keep-original` — 이동 대신 복사
+
+### Added — Logger 확장 + `solosquad logs` CLI (§5)
+- `src/util/logger.ts` 확장 — `SOLOSQUAD_LOG_LEVEL`·`SOLOSQUAD_LOG_FORMAT=json`·
+  `SOLOSQUAD_LOG_FILE=1` (rolling 14일). 기존 API backward-compat
+- `src/cli/logs.ts` (신규) — `--level/--tail/--follow/--since/--type` (다중 type)
+- `assets/routines/log-rotate.md` — 매일 00:30 silent retention
+
+### Added — Doctor CLI ↔ workspace mismatch 감지 (§7.3)
+- `recommendForVersionMismatch()` + `compareSemver()` — CLI > workspace →
+  migrate 권고, CLI < workspace → update 권고
+
+### Added — Trajectory ROI 측정 스크립트 (§8)
+- `scripts/measure-trajectory-roi.ts` — v0.6 §3.X 4지표 측정. 측정값은 자체
+  사용 데이터 30일 누적 후 별도 commit으로 박제. 본 패치는 스크립트만 commit
+
+### Added — Migration 0.8.2 → 0.8.3
+- `src/migrations/scripts/0.8.2-to-0.8.3.ts` — version bump + trajectory
+  auto_register 기본값 + log-rotate routine 복사
+
+### Removed — `solosquad logout` (§6)
+- `src/cli/logout.ts` — deprecation stub만. v0.7 사용자 0명 전제로
+  backward-compat 없음. `src/lifecycle/lockfile.ts`의 `logoutLockPath()`
+  + `src/bot/index.ts`·`schedule`의 logout.lock 차단 제거
+
+### Changed — Master-guide 재정합
+- `docs/manual/master-guide.html` §3/§4/§6/§8/§9/§10 v0.7→v0.8 모델 흡수
+  (멀티 유저 채널·dev_capability·archive/import/add-repo dry-run·
+  update↔migrate 흐름도·관측성 절·6건 FAQ 추가)
+
+### Tests
+- 27 신규 (add-repo-dry-run·logger·logs-cli·doctor-version-mismatch)
+
+## [0.8.2] — 2026-05-15
+
+**v0.8.2 — Dev Capability.** 메신저로 코드 수정 + commit + push + PR 생성
+end-to-end. SKILL frontmatter `dev_capability`·`dev_permissions` 신설.
+**자동 머지 영구 거부**.
+
+자세히: `docs/plan/v0.8.2-dev-capability.md`
+
+### Added
+- SKILL frontmatter `dev_capability` + `dev_permissions` (bash allow/deny,
+  network, push_targets.requires_confirmation, merge.auto: false 영구 거부)
+- 25 SKILL 박제: engineering 5건(backend-developer / fde / api-developer /
+  creative-frontend / qa-engineer) `dev_capability: true` + 나머지 20건 false
+- `workspace.yaml.dev_capability.enabled` 마스터 토글
+- `src/bot/spawn-assembler.ts` `applyDevPermissions()` + read-only/dev-enabled
+  reason 트래킹
+- `src/bot/claude-process.ts` `--allowed-tools` + bashAllowlist pre-check
+- `src/bot/dev-confirm.ts` — git push/gh pr merge 감지 + 30분 timeout +
+  `<org>/memory/dev-confirmations.jsonl` audit
+- `assets/orchestrator/SKILL.md` Engineering Spawn Template 절
+- `src/cli/doctor.ts` `gh --version` + `gh auth status` 점검
+- `src/migrations/scripts/0.8.1-to-0.8.2.ts`
+
+### Tests
+- 25 신규 (dev-capability-spawn / confirm / master-toggle / denylist)
+
+## [0.8.1] — 2026-05-15
+
+**v0.8.1 — Security & Lifecycle Pair.** npm audit 7건 → 0, archive 페어
+완결(import + verify), API stability 문서 신설. v1.0 정식 출시 *전제* 항목 묶음.
+
+자세히: `docs/plan/v0.8.1-security-lifecycle-pair.md`
+
+### Added
+- `solosquad import <archive.zip>` — dry-run + --merge[default]/--replace +
+  journal idempotent (archive 페어 완결)
+- `solosquad archive verify/info/list` — yauzl 기반 reader + manifest SHA
+  대조 + schema 호환 확인
+- `src/lifecycle/{import,archive-reader,merge-strategy}.ts`
+- `docs/api-stability.md` — 6 schema_version의 bump 룰 + deprecation 기간
+- 25 SKILL.md `schema_version: 1` 백필 (`scripts/inject-skill-schema-version.ts`)
+- validator `SCHEMA_VERSION_MISSING` 경고 (v0.9 error로 promote)
+
+### Changed
+- discord.js `^14.16.0` → `^14.26.4` (undici 6.21.3 → 6.24.1)
+- `package.json` overrides — axios·lodash·path-to-regexp·follow-redirects
+- `.github/workflows/ci.yml` — `npm audit --audit-level=high` 게이트
+- `src/migrations/scripts/0.8.0-to-0.8.1.ts`
+
+### Security
+- **npm audit 7 vulnerabilities → 0** (3 moderate + 4 high 모두 해소)
+
+### Tests
+- 26 신규 (import / archive-verify / merge-strategy)
+
 ## [0.8.0] — 2026-05-15
 
 **v0.8 — Multi-User Messenger.** "1 워크스페이스 = 1 owner = 1 봇 = 2 채널"

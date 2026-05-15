@@ -14,6 +14,7 @@ import { scaffoldRepoYaml } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 import { applyReport, type MergePolicy } from "../analyze/applier.js";
 import { rebuildRoutes } from "../bot/agent-router.js";
+import { formatInspectionReport, inspectRepo } from "../util/repo-inspect.js";
 
 export interface AddRepoOpts {
   org?: string;
@@ -23,6 +24,12 @@ export interface AddRepoOpts {
   fromReport?: string;
   /** v0.5 §6.5 — merge strategy for role-label files landing in user agents. */
   mergePolicy?: MergePolicy;
+  /** v0.8.3 §3 — simulate the move; no disk writes. */
+  dryRun?: boolean;
+  /** v0.8.3 §3 — alias for --dry-run. */
+  inspect?: boolean;
+  /** v0.8.3 §3 — copy the repo instead of moving (preserves original on disk). */
+  keepOriginal?: boolean;
 }
 
 const MERGE_POLICIES: MergePolicy[] = ["append", "override", "replace"];
@@ -130,7 +137,45 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
   const orgSlug = await pickOrgSlug(workspace, opts.org);
   const orgDir = path.join(workspace, orgSlug);
   const reposDir = path.join(orgDir, "repositories");
-  fs.mkdirSync(reposDir, { recursive: true });
+  const dryRun = opts.dryRun || opts.inspect;
+  if (!dryRun) {
+    fs.mkdirSync(reposDir, { recursive: true });
+  }
+
+  // v0.8.3 §3 — dry-run / --inspect: for a local path, print the
+  // inspection report and exit *without* touching disk. For a git URL we
+  // can still describe the destination + run a slug-collision check, but
+  // not file stats (we'd need to clone first).
+  if (dryRun) {
+    const isUrl = looksLikeGitUrl(input);
+    const guessedSlug = opts.slug ?? (isUrl ? slugFromUrl(input) : path.basename(path.resolve(input)));
+    const destination = path.join(reposDir, guessedSlug);
+    if (isUrl) {
+      console.log(chalk.bold(`\n[dry-run] add repo (git URL)`));
+      console.log(`From: ${input}`);
+      console.log(`To:   ${destination}`);
+      const exists = fs.existsSync(destination);
+      console.log(`Slug collision: ${exists ? `${destination} already exists` : "none"}`);
+      console.log(chalk.dim(`(file stats unavailable for remote URLs — clone first to inspect contents)`));
+      console.log(chalk.bold(`\nNo files moved (dry-run).`));
+      return;
+    }
+    const src = path.resolve(input);
+    if (!fs.existsSync(src)) {
+      console.log(chalk.red(`✗ Path does not exist: ${src}`));
+      process.exit(1);
+    }
+    const report = inspectRepo(src, { reposDir, slug: guessedSlug });
+    console.log(chalk.bold(`\n[dry-run] add repo`));
+    console.log(
+      formatInspectionReport(report, {
+        destination,
+        addedFile: `<repo>/.solosquad/repo.yaml`,
+      }),
+    );
+    console.log(chalk.bold(`\nNo files moved (dry-run).`));
+    return;
+  }
 
   let repoDir: string;
   let slug: string;
@@ -159,11 +204,12 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
         console.log(chalk.red(`✗ Destination already exists: ${repoDir}. Move it manually or pick --slug.`));
         process.exit(1);
       } else {
+        const action = opts.keepOriginal ? "Copy" : "Move";
         const { confirm } = await inquirer.prompt([
           {
             name: "confirm",
             type: "confirm",
-            message: `Move ${src} → ${repoDir} ?`,
+            message: `${action} ${src} → ${repoDir} ?`,
             default: true,
           },
         ]);
@@ -171,7 +217,11 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
           console.log(chalk.yellow("Aborted."));
           return;
         }
-        fs.renameSync(src, repoDir);
+        if (opts.keepOriginal) {
+          copyDirRecursive(src, repoDir);
+        } else {
+          fs.renameSync(src, repoDir);
+        }
       }
     }
   } catch (err) {
@@ -234,5 +284,32 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
       )
     );
     console.log(chalk.dim(`  backup: ${result.backup_dir}`));
+  }
+}
+
+/**
+ * v0.8.3 §3 — recursive copy used by `--keep-original`. Preserves regular
+ * files + directories + symlinks; skips device nodes. Uses Node 16+
+ * `fs.cpSync` when available; falls back to a manual walker otherwise.
+ */
+function copyDirRecursive(src: string, dest: string): void {
+  type CpFn = (s: string, d: string, opts: Record<string, unknown>) => void;
+  const cpSync = (fs as unknown as { cpSync?: CpFn }).cpSync;
+  if (cpSync) {
+    cpSync(src, dest, { recursive: true, errorOnExist: false });
+    return;
+  }
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const sp = path.join(src, entry.name);
+    const dp = path.join(dest, entry.name);
+    if (entry.isSymbolicLink()) {
+      const target = fs.readlinkSync(sp);
+      fs.symlinkSync(target, dp);
+    } else if (entry.isDirectory()) {
+      copyDirRecursive(sp, dp);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(sp, dp);
+    }
   }
 }

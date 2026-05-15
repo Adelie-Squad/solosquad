@@ -22,6 +22,7 @@ import {
 import { saveRoutineMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
 import { loadArchiveConfig } from "../util/config.js";
+import { rotateLogs } from "../util/logger.js";
 import type { MessengerAdapter } from "../messenger/base.js";
 
 let adapters: MessengerAdapter[] = [];
@@ -56,6 +57,19 @@ async function runRoutineForProduct(
     });
     console.log(
       `[Scheduler] ${product.name} - archive-rotate done: archived=${stats.archived_rows} deleted=${stats.deleted_by_retention}`
+    );
+    return;
+  }
+
+  // v0.8.3 §5.3 — log-rotate is deterministic too. Workspace-scoped, but
+  // we run it via the per-product loop so the existing scheduler topology
+  // doesn't need a new "workspace-only" pathway. After the first product
+  // executes it the directory is already pruned, so subsequent products
+  // become no-ops (delete returns []).
+  if (routine.id === "log-rotate") {
+    const removed = rotateLogs({ retentionDays: 14 });
+    console.log(
+      `[Scheduler] ${product.name} - log-rotate done: removed=${removed.length}`
     );
     return;
   }
@@ -179,6 +193,14 @@ function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
         return {
           routine,
           cron: timeToDailyCron("00:00"),
+          enabled: true,
+        };
+      case "log-rotate":
+        // v0.8.3 §5.3 — fixed 00:30 nightly. Retention is hard-coded to 14
+        // days in `rotateLogs()`; no workspace.yaml knob in this patch.
+        return {
+          routine,
+          cron: timeToDailyCron("00:30"),
           enabled: true,
         };
       default:

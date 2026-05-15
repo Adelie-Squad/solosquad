@@ -99,6 +99,17 @@ export const ROUTINES: RoutineConfig[] = [
     emoji: "🗄",
     memoryTargets: [],
   },
+  // v0.8.3 §5.3 — daily log retention pass. 00:30 silent — purely deletes
+  // runtime log files older than 14 days. See log-rotate.md.
+  {
+    id: "log-rotate",
+    name: "Log Rotate",
+    kind: "background",
+    channel: "workflow",
+    threadName: "system-log-rotate",
+    emoji: "🪵",
+    memoryTargets: [],
+  },
 ];
 
 /** Load routine prompt from routines/{id}.md */
