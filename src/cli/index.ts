@@ -495,3 +495,53 @@ program
     const { logoutCommand } = await import("./logout.js");
     await logoutCommand(opts);
   });
+
+// v0.8.1 §4 — `solosquad import <archive.zip>`
+program
+  .command("import")
+  .description("Restore a v0.7+ farewell archive into a workspace (v0.8.1)")
+  .argument("<archive>", "Path to archive.zip (zip-v1 format)")
+  .option("--workspace <path>", "Target workspace path (defaults to CWD or new folder)")
+  .option("--into <org-slug>", "Map all archive orgs into this org slug")
+  .option("--dry-run", "Show what would happen without writing")
+  .option("--merge", "Merge with existing workspace (default)")
+  .option("--replace", "Overwrite conflicting workflows/goals/memory")
+  .option("-y, --yes", "Skip confirmation prompt (--replace only)")
+  .action(async (archive, opts) => {
+    const { importCommand } = await import("./import.js");
+    await importCommand(archive, opts);
+  });
+
+// v0.8.1 §5 — `solosquad archive verify|info|list`
+const archiveGroup = program
+  .command("archive")
+  .description("Inspect a v0.7+ farewell archive (v0.8.1)");
+
+archiveGroup
+  .command("verify")
+  .description("Verify archive integrity (manifest SHA × actual SHA + schema compat)")
+  .argument("<archive>", "Path to archive.zip")
+  .option("--json", "Emit a machine-readable verify report")
+  .action(async (archive, opts) => {
+    const { archiveVerifyCommand } = await import("./archive.js");
+    await archiveVerifyCommand(archive, opts);
+  });
+
+archiveGroup
+  .command("info")
+  .description("Show archive metadata + per-class entry counts")
+  .argument("<archive>", "Path to archive.zip")
+  .action(async (archive) => {
+    const { archiveInfoCommand } = await import("./archive.js");
+    await archiveInfoCommand(archive);
+  });
+
+archiveGroup
+  .command("list")
+  .description("List manifest entries (filter by --class)")
+  .argument("<archive>", "Path to archive.zip")
+  .option("--class <cls>", "Restrict to a single class (A, A*, B, C, D)")
+  .action(async (archive, opts) => {
+    const { archiveListCommand } = await import("./archive.js");
+    await archiveListCommand(archive, opts);
+  });
