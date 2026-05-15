@@ -20,6 +20,13 @@ import {
   type MessageContext,
   type CommandHandler,
 } from "./base.js";
+import { parseChannelName } from "../bot/user-registry.js";
+import {
+  isAuthorizedAuthor,
+  unauthorizedAuthorMessage,
+} from "../bot/author-guard.js";
+import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
+import { getWorkspaceRoot } from "../util/paths.js";
 
 class DiscordMessageContext implements MessageContext {
   _agentLabel = "";
@@ -54,6 +61,9 @@ export class DiscordAdapter implements MessengerAdapter {
   readonly platform = "discord";
   readonly channelNames = DEFAULT_CHANNELS;
   private client: Client | null = null;
+  /** v0.8 §3.5 — resolved bot user's handle. Null until `ready` fires. */
+  private ownHandle: string | null = null;
+  private ownOrgSlug: string | null = null;
 
   async startBot(onCommand: CommandHandler): Promise<void> {
     const token = process.env.DISCORD_TOKEN;
@@ -80,6 +90,32 @@ export class DiscordAdapter implements MessengerAdapter {
 
     client.on("ready", async () => {
       console.log(`[Discord Bot] Logged in: ${client.user?.tag}`);
+
+      // v0.8 §3.5 — match this gateway connection to a user yaml so we know
+      // which `command-<handle>` / `works-<handle>` pair to own. When no
+      // yaml matches, log and continue — adapter stays connected but the
+      // messageCreate listener will short-circuit (other-user channel).
+      const botUserId = client.user?.id ?? "";
+      if (botUserId) {
+        const identity = resolveBotIdentity({
+          workspace: getWorkspaceRoot(),
+          botUserId,
+        });
+        if (identity) {
+          this.ownHandle = identity.user.handle;
+          this.ownOrgSlug = identity.orgSlug;
+          console.log(
+            `[Discord Bot] Bound to handle=${identity.user.handle} org=${identity.orgSlug} ` +
+              `(channels: ${identity.channels.command} / ${identity.channels.works})`,
+          );
+        } else {
+          console.log(
+            `[Discord Bot] No user yaml matches bot_user_id=${botUserId}. ` +
+              `Run \`solosquad init\` or \`solosquad migrate --apply\` to register this bot.`,
+          );
+        }
+      }
+
       for (const guild of client.guilds.cache.values()) {
         await this.ensureChannels(guild);
       }
@@ -94,7 +130,33 @@ export class DiscordAdapter implements MessengerAdapter {
 
     client.on("messageCreate", async (message) => {
       if (message.author.bot) return;
-      if ((message.channel as TextChannel).name !== "owner-command") return;
+      const channelName = (message.channel as TextChannel).name ?? "";
+
+      // v0.8 §3.1 — Only `command-<handle>` channels accept commands. Other
+      // channels (works-<handle>, broadcast, system, legacy) are ignored at
+      // the listener boundary. The legacy `owner-command` is no longer
+      // recognized — operators are expected to migrate via §6.
+      const parsed = parseChannelName(channelName);
+      if (!parsed || parsed.kind !== "command") return;
+
+      // v0.8 §3.5 — Only act on channels belonging to *this* bot's user.
+      // Other users' command channels in the same guild are silently
+      // ignored (a different bot process owns them).
+      const ownHandle = this.ownHandle;
+      if (!ownHandle || ownHandle !== parsed.handle) return;
+
+      // v0.8 §3.4 — author-guard: defense in depth on top of ACL.
+      const authorHandle = (message.author.username ?? "").toLowerCase();
+      if (!isAuthorizedAuthor(channelName, authorHandle)) {
+        try {
+          await message.author
+            .send(unauthorizedAuthorMessage(channelName, authorHandle))
+            .catch(() => undefined);
+        } catch {
+          // DM may fail (privacy settings) — best effort.
+        }
+        return;
+      }
 
       const product = this.getProductByGuild(message.guild!.id);
       if (!product) {
@@ -191,7 +253,16 @@ export class DiscordAdapter implements MessengerAdapter {
     }
 
     const created: string[] = [];
-    for (const chName of this.channelNames) {
+
+    // v0.8 §3.5 — when this bot has been bound to a handle, create the per-user
+    // channel pair `command-<handle>` / `works-<handle>`. Otherwise fall back
+    // to the legacy DEFAULT_CHANNELS list (no-op once migrated workspaces
+    // never reach this branch).
+    const targets = this.ownHandle
+      ? [`command-${this.ownHandle}`, `works-${this.ownHandle}`]
+      : this.channelNames;
+
+    for (const chName of targets) {
       if (!existing.has(chName)) {
         await guild.channels.create({
           name: chName,
@@ -206,7 +277,9 @@ export class DiscordAdapter implements MessengerAdapter {
       console.log(`[Discord] ${guild.name}: channels created → ${created.join(", ")}`);
     }
 
-    // v0.2.4+: ensure system threads exist inside #workflow
+    // v0.2.4+: ensure system threads exist inside #workflow (only when the
+    // legacy `workflow` channel is present — kept for back-compat during the
+    // transition; new installs use per-user works-<handle> instead).
     await this.ensureSystemThreads(guild);
     return created;
   }

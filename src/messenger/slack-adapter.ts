@@ -11,8 +11,14 @@ import {
   type MessageContext,
   type CommandHandler,
 } from "./base.js";
+import { parseChannelName } from "../bot/user-registry.js";
+import {
+  isAuthorizedAuthor,
+  unauthorizedAuthorMessage,
+} from "../bot/author-guard.js";
+import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
+import { getWorkspaceRoot } from "../util/paths.js";
 
-const COMMAND_CHANNEL = process.env.SLACK_COMMAND_CHANNEL || "owner-command";
 const THREAD_STARTER_PREFIX = "🧵";
 
 class SlackMessageContext implements MessageContext {
@@ -43,6 +49,10 @@ export class SlackAdapter implements MessengerAdapter {
   private client: unknown = null;
   /** Cache of channelId:threadName → thread_ts (parent message timestamp). */
   private threadTsCache = new Map<string, string>();
+  /** v0.8 §3.5 — resolved bot user's handle. Null until auth.test succeeds. */
+  private ownHandle: string | null = null;
+  private ownOrgSlug: string | null = null;
+  private ownBotUserId: string | null = null;
 
   async startBot(onCommand: CommandHandler): Promise<void> {
     const botToken = process.env.SLACK_BOT_TOKEN;
@@ -83,14 +93,51 @@ export class SlackAdapter implements MessengerAdapter {
       const msg = message as unknown as Record<string, unknown>;
       if (msg.subtype) return; // skip edits, joins, etc.
 
-      // Check if message is in command channel
+      // v0.8 §3.1 — Resolve channel name and apply the `(command|works)-<handle>`
+      // gate. Only `command-<handle>` channels accept input; everything else
+      // (works, broadcast, system, legacy) is ignored at the listener boundary.
+      let channelName: string | undefined;
       try {
         const channelInfo = await app.client.conversations.info({
           channel: msg.channel as string,
         });
-        const channelName = (channelInfo.channel as unknown as Record<string, unknown>)?.name;
-        if (channelName !== COMMAND_CHANNEL) return;
+        channelName = (
+          channelInfo.channel as unknown as Record<string, unknown>
+        )?.name as string | undefined;
       } catch {
+        return;
+      }
+      if (!channelName) return;
+      const parsed = parseChannelName(channelName);
+      if (!parsed || parsed.kind !== "command") return;
+
+      // v0.8 §3.5 — only act on this bot's own command channel.
+      const ownHandle = this.ownHandle;
+      if (!ownHandle || ownHandle !== parsed.handle) return;
+
+      // v0.8 §3.4 — author-guard. Look up author handle from Slack profile.
+      let authorHandle = "";
+      try {
+        const userId = (msg.user as string) || "";
+        if (userId) {
+          const info = await app.client.users.info({ user: userId });
+          authorHandle = (
+            (info.user as unknown as Record<string, unknown>)?.name as string
+          )?.toLowerCase() ?? "";
+        }
+      } catch {
+        authorHandle = "";
+      }
+      if (authorHandle && !isAuthorizedAuthor(channelName, authorHandle)) {
+        try {
+          await app.client.chat.postEphemeral({
+            channel: msg.channel as string,
+            user: (msg.user as string) || "",
+            text: unauthorizedAuthorMessage(channelName, authorHandle),
+          });
+        } catch {
+          // ephemeral may fail — best effort.
+        }
         return;
       }
 
@@ -121,6 +168,35 @@ export class SlackAdapter implements MessengerAdapter {
 
     console.log("[Slack Bot] Starting Socket Mode...");
     await app.start();
+
+    // v0.8 §3.5 — bind this gateway connection to a user yaml via auth.test.
+    try {
+      const auth = await app.client.auth.test();
+      const botUserId = (auth.user_id as string) || "";
+      const botHandle = (auth.user as string) || "";
+      if (botUserId) {
+        this.ownBotUserId = botUserId;
+        const identity = resolveBotIdentity({
+          workspace: getWorkspaceRoot(),
+          botUserId,
+        });
+        if (identity) {
+          this.ownHandle = identity.user.handle;
+          this.ownOrgSlug = identity.orgSlug;
+          console.log(
+            `[Slack Bot] Bound to handle=${identity.user.handle} org=${identity.orgSlug} ` +
+              `(channels: ${identity.channels.command} / ${identity.channels.works})`,
+          );
+        } else {
+          console.log(
+            `[Slack Bot] No user yaml matches bot_user_id=${botUserId} (auth.user=${botHandle}). ` +
+              `Run \`solosquad init\` or \`solosquad migrate --apply\` to register this bot.`,
+          );
+        }
+      }
+    } catch (e) {
+      console.log(`[Slack Bot] auth.test failed: ${e}`);
+    }
 
     // v0.2.4+: ensure default channels and system threads exist (symmetry with Discord)
     await this.ensureChannelsForAllProducts();
@@ -184,11 +260,22 @@ export class SlackAdapter implements MessengerAdapter {
     const existing = await this.listChannels();
     const existingNames = new Set(existing.map((ch) => ch.name));
 
+    // v0.8 §3.5 — per-user channel pair when the bot is bound to a handle.
+    const targets = this.ownHandle
+      ? [`command-${this.ownHandle}`, `works-${this.ownHandle}`]
+      : this.channelNames;
+
     const created: string[] = [];
-    for (const chName of this.channelNames) {
+    for (const chName of targets) {
       if (!existingNames.has(chName)) {
         try {
-          await webClient.conversations.create({ name: chName });
+          // v0.8 §3.1 — private (is_private: true) channels for per-user pairs.
+          const isPerUser =
+            this.ownHandle !== null && parseChannelName(chName) !== null;
+          await webClient.conversations.create({
+            name: chName,
+            is_private: isPerUser,
+          });
           created.push(chName);
         } catch (e) {
           console.log(`[Slack] Failed to create #${chName}: ${e}`);
