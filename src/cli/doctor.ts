@@ -149,13 +149,19 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   const unitLabel = isNew ? "Organizations" : "Products";
   if (!check(`${unitLabel} registered (${products.length})`, products.length > 0, isNew ? "Run: solosquad add org <name>" : "Run: solosquad init")) issues++;
 
-  // 4. Live messenger API check (opt-in)
+  // 4. Lifecycle (v0.7)
+  if (isNew) {
+    console.log(chalk.dim("\nLifecycle (v0.7):"));
+    issues += await runLifecycleChecks(workspace);
+  }
+
+  // 5. Live messenger API check (opt-in)
   if (messengerCheck && messenger) {
     console.log(chalk.dim("\nMessenger API check:"));
     issues += await runMessengerChecks(messenger);
   }
 
-  // 5. Summary
+  // 6. Summary
   console.log();
   if (issues === 0) {
     console.log(chalk.green.bold("✓ All checks passed. System is ready.\n"));
@@ -166,6 +172,84 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   if (ci && issues > 0) {
     process.exit(1);
   }
+}
+
+// -- Lifecycle (v0.7) --
+
+async function runLifecycleChecks(workspace: string): Promise<number> {
+  const failures = 0;
+  const os = await import("os");
+  const { readLock, isStaleLock, uninstallLockPath, logoutLockPath } = await import(
+    "../lifecycle/lockfile.js"
+  );
+  const { _precheckInternals } = await import("../lifecycle/precheck.js");
+
+  // npm uninstall warning (informational)
+  warn(
+    "npm v7+ has no global uninstall hook (npm/cli#3042)",
+    "Run `solosquad uninstall` BEFORE `npm uninstall -g solosquad`",
+  );
+
+  // Stale uninstall.lock?
+  const ulock = uninstallLockPath(workspace);
+  const ulockInfo = readLock(ulock);
+  if (ulockInfo && isStaleLock(ulock)) {
+    warn(
+      "stale uninstall.lock detected",
+      `pid ${ulockInfo.pid} not alive — will be cleared on next acquire`,
+    );
+  } else if (ulockInfo) {
+    warn(
+      "uninstall.lock held",
+      `pid ${ulockInfo.pid}, started ${ulockInfo.startTs}`,
+    );
+  }
+
+  // Logout lock?
+  if (fs.existsSync(logoutLockPath(workspace))) {
+    warn(
+      "logout.lock present",
+      "solosquad bot/schedule/pm will refuse to start until removed",
+    );
+  }
+
+  // Live PM/scheduler processes
+  const livePids = _precheckInternals.detectLivePids();
+  if (livePids.length > 0) {
+    warn(
+      `solosquad bot/schedule processes alive (pid ${livePids.join(", ")})`,
+      "Stop these before `solosquad uninstall` to keep archive snapshot consistent",
+    );
+  }
+
+  // Archive home dir free space (informational)
+  const archiveHome = os.homedir();
+  type StatFs = { bsize: number; bavail: number };
+  const statFn = (fs as unknown as { statfsSync?: (p: string) => StatFs }).statfsSync;
+  if (statFn) {
+    try {
+      const s = statFn(archiveHome);
+      const freeBytes = s.bavail * s.bsize;
+      const freeMb = freeBytes / 1024 / 1024;
+      if (freeMb < 200) {
+        warn(
+          `low free space at ${archiveHome}: ${freeMb.toFixed(0)} MB`,
+          "Need workspace size × 1.5 for archive",
+        );
+      } else {
+        check(`archive destination free space: ${humanBytesDoctor(freeBytes)}`, true);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return failures;
+}
+
+function humanBytesDoctor(n: number): string {
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(0)} MB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
 // -- Live API probes --

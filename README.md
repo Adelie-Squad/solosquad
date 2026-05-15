@@ -31,11 +31,11 @@ It covers, in ten menu-divided sections:
 | 5 | Messenger Setup | Full 9-step Slack and 8-step Discord token walkthroughs |
 | 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
-| 8 | Version Differences | v0.6.0 (npm-published) vs v1.0+ (planned) |
+| 8 | Version Differences | v0.7.0 (npm-published) vs v1.0+ (planned) |
 | 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
 | 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
 
-Every feature is tagged with a version badge: 🟢 v0.6.0 (available now) · 🟡 v1.0+ (planned) · 🔴 removed (e.g. Telegram).
+Every feature is tagged with a version badge: 🟢 v0.7.0 (available now) · 🟡 v1.0+ (planned) · 🔴 removed (e.g. Telegram).
 
 For internal architecture, release planning, and decision history, see [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md).
 
@@ -134,7 +134,7 @@ Runs on your Mac Mini, PC, or VPS. Your data stays with you. Only outbound calls
 
 ---
 
-## CLI Reference (v0.6.0)
+## CLI Reference (v0.7.0)
 
 ```bash
 # Workspace ops (v0.1+)
@@ -230,7 +230,7 @@ Full details in master-guide §9.
 
 ## Versions
 
-Current npm release: **v0.6.0** (npm registry: `0.6.0`).
+Current npm release: **v0.7.0** (npm registry: `0.7.0`).
 
 The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stable API guarantees. Shipped + planned milestones:
 
@@ -240,6 +240,7 @@ The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stab
 | v0.4 (released) | Autonomous overnight engine | `goal.md` intent file + `solosquad goal run` background loop; metric-driven keep/discard with git-snapshot revert; `AGENTS.md` as the single immutable workspace guide (cross-tool); 3-tier guardrails (Input / Runtime / Output); `solosquad goal verify` for determinism checks |
 | v0.5 (released) | Workflow maker + frontmatter routing | Messenger-native author loop (`_meta/workflow-maker`); 4-channel router (`slash > explicit > keyword > freq`) with paperclip budget envelope; repo analyzer (4-label classification + incremental ledger); 25 SKILL.md with Anthropic-compatible frontmatter; spec-gate ↔ `goal.md` integration |
 | v0.6 (released) | Default workflow tuning + memory archive + pattern miner + Org Layer | Org Layer (`<org>/{core,domain,agent-profile.yaml}` + spawn-assembler 8-layer + budget generalization); FTS5 archive with 4-event-type indexing for cumulative memory recall; trajectory + freq miners that auto-extract repeated patterns into SKILL drafts (reuses v0.5 `applyDraft`); stop-hook DSL (`command / metric / natural`) making v0.5 spec-gate executable; chokidar hot-reload + CI PR review bot |
+| **v0.7 (released)** | **Uninstall & Lifecycle (Farewell Archive)** | `solosquad uninstall` + `solosquad logout`; data 5-classification (A/A*/B/C/D/E) with **user code untouchable** (class A); farewell archive with WAL-safe SQLite backup + streaming SHA256 manifest; concurrent-uninstall lockfile + stage progress journal (idempotent resume); REVOKE-CHECKLIST.md auto-generated (Discord app ID, Slack channels, ~/.claude/projects paths); PII-NOTICE.md auto-included; `--keep-workspace` class matrix; `solosquad reset`/`clean` permanently rejected (lifecycle is install ↔ uninstall) |
 | **v1.0** (planned) | **Formal launch** | Stable API · breaking-change policy starts |
 | v1.1 (planned) | Dashboard interaction | Companion web dashboard (separate repo) |
 | v1.2 (planned) | Knowledge ontology | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
@@ -266,7 +267,7 @@ Each has independent `.env`, tokens, memory, and messenger account. They run sid
 Source tree (this repo):
 
 ```
-package.json                      → npm package config (v0.6.0)
+package.json                      → npm package config (v0.7.0)
 tsconfig.json                     → TypeScript config
 bin/solosquad.ts                  → CLI entry point
 AGENTS.md                         → canonical workspace guide (v0.4 — immutable, cross-tool)

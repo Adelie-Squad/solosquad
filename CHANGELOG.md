@@ -4,6 +4,114 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] — 2026-05-15
+
+**v0.7 — Uninstall & Lifecycle (Farewell Archive).** install ↔ uninstall
+2단으로 라이프사이클을 닫는 인프라 릴리스. `solosquad reset`·`solosquad
+clean` 같은 "초기화" 명령은 영구히 추가하지 않음 — 재설치는 *uninstall +
+farewell archive + 새 워크스페이스 init*으로 자연 표현. v1.0 정식 출시
+직전의 라이프사이클 완성 슬롯.
+
+자세히: `docs/plan/v0.7-uninstall-lifecycle.md`
+
+### Added — Farewell archive infrastructure
+- `src/lifecycle/classify.ts` — 데이터 5분류 walker. A(사용자 코드)는 트리
+  enumerate 자체를 안 함, A*(repo.yaml)는 whitelist 길이 1로 surgical 추출,
+  B(누적 지식)·C(운영 메타)·D(시크릿)·E(외부 자원) 처리 정책 분리
+- `src/lifecycle/manifest.ts` — SHA256 + `manifest.tsv` (streaming writer
+  단계에서 동시 계산, zip 재오픈 비용 0). `createHashTap()` API
+- `src/lifecycle/sqlite-backup.ts` — v0.6 `<org>/memory/archive.sqlite`
+  WAL-safe 백업. `better-sqlite3 ^12.10.0` `backup()` API (Hermes 차용 패턴)
+- `src/lifecycle/lockfile.ts` — concurrent-uninstall 차단. `<workspace>/
+  .solosquad/uninstall.lock` 원자적 acquire (POSIX/Win32 `O_CREAT|O_EXCL`)
+  + stale PID 자동 정리 + `LockHeldError`
+- `src/lifecycle/journal.ts` — `uninstall.journal.jsonl` append-only +
+  idempotent 재개. cleanup 50% 중단 시 워크스페이스 partial 상태 차단
+- `src/lifecycle/precheck.ts` — 8개 점검: repositories git drift / PM·
+  scheduler PID / archive 경로 writable / 디스크 free × 1.5 / workspace
+  git tree / lockfile 상태 / journal 재개 / classification 요약
+- `src/lifecycle/repo-meta.ts` — class A* surgical 추출 (whitelist 길이 1)
+- `src/lifecycle/revoke-checklist.ts` — `REVOKE-CHECKLIST.md` 동적 생성.
+  Discord application ID (.env에서 추출 + base64-decoded token prefix),
+  Slack 채널(관례 + .env), ~/.claude/projects 추정 경로, pm2·systemctl·
+  crontab 점검 명령 동봉. archive 안 + workspace root에 동시 생성
+- `src/lifecycle/cleanup.ts` — 클래스별 삭제 + journal 통합 +
+  `--keep-workspace` 매트릭스. repositories/<repo>/는 `.solosquad/` 1개만
+  surgical 제거. 다른 모든 repo 경로 SHA1 대조 assertion
+- `src/lifecycle/archive.ts` — archiver streaming zip writer.
+  PII-NOTICE.md 자동 동봉 + `--scrub-content` opt-in regex 룰셋
+  (이메일·카드번호·SSN·주민번호·전화). adm-zip OOM 위험으로 제외하고
+  archiver 박제
+
+### Added — CLI commands
+- `solosquad uninstall [--dry-run --archive-only --keep-workspace
+  --also-purge-backups --scrub-content --force --archive-path <p>]` —
+  0-4 단계 오케스트레이션. 사용자 코드는 절대 미손상. archive 강제 selecting
+  (`--no-archive` 같은 플래그 없음)
+- `solosquad logout [--org <slug> --all --force]` — 가벼운 logout.
+  .env 마스킹 + sessions `_archived/`로 + REVOKE-CHECKLIST + `logout.lock`
+  드롭. archive 안 함. PM/scheduler PID 살아 있으면 `--force` 없이는 거부
+- `solosquad bot` / `schedule` — `logout.lock` 존재 시 진입 거부 (마스킹된
+  .env로 재시작 무한 retry 차단)
+
+### Added — doctor v0.7 점검 항목
+- npm v7+ 글로벌 훅 한계 경고 (`solosquad uninstall`을 `npm uninstall -g
+  solosquad` *전*에 실행 권고)
+- stale `uninstall.lock` 감지 (PID 사망)
+- `logout.lock` 존재 경고
+- PM/scheduler PID 점검
+- archive 기본 디렉토리(`~/`) free space 점검 (200MB 미만 시 경고)
+
+### Added — Migration
+- `src/migrations/scripts/0.6.0-to-0.7.0.ts` — 0.6.x → 0.7.0 버전 bump +
+  `workspace.yaml.uninstall` 기본값 추가 (`default_archive_dir: ~/`,
+  `scrub_content_default: false`). schema 변경 거의 없음 (uninstall
+  인프라 신설 위주)
+
+### Added — Dependencies
+- `archiver ^7.0.1` — streaming zip writer
+
+### Added — Documentation
+- `docs/plan/v0.7-uninstall-lifecycle.md` §10 17건 + P0/P1/P2 패치 흡수
+- `docs/plan/architecture.md` §13.5 v0.7 lifecycle 추가
+- `docs/plan/product-roadmap.md` v0.7.0 entry + 결정 로그
+- `docs/manual/master-guide.html` §6.1 CLI 표 + §8.1 v0.7 절 추가
+- `assets/.env.example` — 시크릿 키마다 "masked on uninstall — see v0.7
+  spec" 주석 추가
+
+### Tests
+- `test/lifecycle-secrets.test.ts` — 시크릿 키 패턴 매칭·.env 마스킹·dry-run
+  무변경·user-defined 패턴 확장
+- `test/lifecycle-classify.test.ts` — 5분류 + repositories/ 트리 enumerate
+  차단 + A* whitelist 길이 1 검증
+- `test/lifecycle-manifest.test.ts` — TSV 헤더·tab escape·sha256 일관성·
+  hash tap 등가성
+- `test/lifecycle-lockfile.test.ts` — 원자적 acquire + stale 자동 정리 +
+  cross-platform PID alive 검출
+- `test/lifecycle-journal.test.ts` — append + 재개 검출 + runId 스코프 +
+  malformed line skip
+- `test/lifecycle-archive-e2e.test.ts` — 시크릿 0건 + 사용자 코드 0건 +
+  필수 entry 포함 검증
+- `test/lifecycle-cleanup.test.ts` — dry-run zero-write + surgical 제거 +
+  `.solosquad/` 외 byte-identical 보장 + `--keep-workspace` 보존 +
+  repo.yaml 누락 시 cleanup 미진입
+
+회귀 그린: 452/452 (v0.6 421/421 + v0.7 신규 31).
+
+### Removed
+- "초기화" 명령 (`solosquad reset` / `solosquad clean`) 영구 거부 결정 —
+  install ↔ uninstall 2단으로 충분 (OpenClaw Issue #6289 안티패턴 회피)
+
+### Decision rationale (요약)
+- **Hermes** 차용: `--full` 분리, WAL-safe SQLite `backup()`, `import` 페어
+  (`solosquad import` 자체는 v1.0 슬롯)
+- **gstack** 차용: `--keep-state` 플래그 (본 릴리스의 `--keep-workspace`)
+- **gh CLI** 차용: logout/data-removal 분리, server-side revoke 한계 명시
+- **OpenClaw** 안티패턴 회피: 전체 삭제 디폴트 + opt-in 거부 → 비복구 데이터
+  손실 (Issue #6289 closed as not planned)
+- **npm v7+ 글로벌 훅 부재** (npm/cli#3042): user-invoked `solosquad
+  uninstall` 서브명령이 라이프사이클의 유일한 신뢰 진입점
+
 ## [0.6.0] — 2026-05-14
 
 **v0.6 — 디폴트 워크플로 튜닝 + 메모리 아카이브 + 패턴 자동 추출 + 조직 레이어.**
