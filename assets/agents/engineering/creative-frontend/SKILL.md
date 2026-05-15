@@ -1,6 +1,7 @@
 ---
 name: creative-frontend
 description: 창의적이고 인터랙티브한 프론트엔드를 구현합니다. 디자인을 아름답고 성능 좋은 코드로 변환합니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

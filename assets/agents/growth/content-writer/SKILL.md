@@ -1,6 +1,7 @@
 ---
 name: content-writer
 description: 마케팅 콘텐츠와 카피를 작성합니다. 채널별 특성에 맞는 효과적인 메시지를 전달합니다.
+schema_version: 1
 team: growth
 stateful: false
 triggers:

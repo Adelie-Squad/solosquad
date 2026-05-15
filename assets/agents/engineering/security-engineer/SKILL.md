@@ -1,6 +1,7 @@
 ---
 name: security-engineer
 description: 개발 산출물과 시스템 환경의 보안을 체계적으로 점검합니다. 취약점 평가부터 보안 등급 판정까지 보안 게이트를 담당합니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

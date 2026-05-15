@@ -1,6 +1,7 @@
 ---
 name: data-engineer
 description: 데이터를 정제, 변환, 가공합니다. 분석 가능한 형태로 데이터를 준비합니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

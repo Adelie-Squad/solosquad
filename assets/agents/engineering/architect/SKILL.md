@@ -1,6 +1,7 @@
 ---
 name: architect
 description: 시스템 아키텍처를 설계합니다. 확장 가능하고 유지보수 용이한 기술 구조를 만듭니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

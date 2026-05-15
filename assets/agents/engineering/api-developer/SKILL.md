@@ -1,6 +1,7 @@
 ---
 name: api-developer
 description: API를 설계하고 문서화합니다. 클라이언트와 서버 간의 명확한 계약을 정의합니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

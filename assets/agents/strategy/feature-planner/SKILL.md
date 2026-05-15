@@ -1,6 +1,7 @@
 ---
 name: feature-planner
 description: 기존 제품의 기능 추가, 개선, 확장을 기획합니다. 사용자 피드백과 데이터를 기반으로 제품을 진화시킵니다.
+schema_version: 1
 team: strategy
 stateful: false
 triggers:

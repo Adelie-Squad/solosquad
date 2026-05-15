@@ -24,6 +24,11 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      - name: npm audit (v0.8.1 — high-severity gate)
+        # v0.8.1 §3.3 — fail the build on any high CVE. Moderate stays as a
+        # warning so a new advisory doesn't block deploys before we triage it.
+        run: npm audit --audit-level=high
+
       - name: Validate bundled SKILL.md frontmatter (v0.5)
         run: npm run validate-skills
 

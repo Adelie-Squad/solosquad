@@ -131,3 +131,16 @@ export function isStageCompleted(entries: JournalEntry[], stage: string, runId?:
 export function journalPath(workspace: string): string {
   return path.join(workspace, ".solosquad", "uninstall.journal.jsonl");
 }
+
+/**
+ * v0.8.1 — `solosquad import` journal path. Reuses the same JSONL writer
+ * + readers as the uninstall journal so resume semantics are identical.
+ * Per docs/plan/v0.8.1-security-lifecycle-pair.md §4.4.
+ *
+ * Stages: `import.verify`, `import.unpack`, `import.merge-org`,
+ * `import.verify-post`. Each is idempotent — re-running over an already
+ * extracted file SHA-verifies and skips.
+ */
+export function importJournalPath(workspace: string): string {
+  return path.join(workspace, ".solosquad", "import.journal.jsonl");
+}

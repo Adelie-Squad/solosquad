@@ -1,6 +1,7 @@
 ---
 name: gtm-strategist
 description: Go-To-Market 전략을 수립하고 실행 계획을 설계합니다. 제품을 시장에 효과적으로 런칭합니다.
+schema_version: 1
 team: growth
 stateful: false
 triggers:
