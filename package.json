@@ -37,7 +37,7 @@
     "chalk": "^5.4.1",
     "chokidar": "^4.0.3",
     "commander": "^12.1.0",
-    "discord.js": "^14.16.0",
+    "discord.js": "^14.26.4",
     "dotenv": "^16.4.0",
     "inquirer": "^12.3.0",
     "js-yaml": "^4.1.0",
@@ -50,8 +50,10 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.0.0",
     "@types/node-cron": "^3.0.11",
+    "@types/yauzl": "^2.10.3",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "yauzl": "^3.3.0"
   },
   "engines": {
     "node": ">=18"
