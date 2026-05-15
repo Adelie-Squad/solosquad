@@ -10,9 +10,12 @@ import {
 import { normalizeLine } from "../util/platform.js";
 import {
   DEFAULT_SPAWN_MAX_CONTEXT_TOKENS,
+  resolveDevCapabilityConfig,
+  type DevCapabilityConfig,
   type WorkspaceYaml,
 } from "../util/config.js";
 import { loadAgentProfile, type AgentProfileMerged } from "../util/agent-profile.js";
+import type { SkillSpec } from "./skill-parser.js";
 
 /**
  * v0.6 §2.2 — Spawn-time 8-layer JIT context assembler.
@@ -528,5 +531,170 @@ export function assembleSpawnContext(
     truncated,
     totalTokens,
     maxTokens,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* v0.8.2 — Dev-capability permission resolution                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * v0.8.2 §4.1 — runtime tool / bash policy attached to a spawn.
+ *
+ * The factory contract in `claude-process.ts` is intentionally permissive:
+ * we resolve a policy here, the claude-process layer enforces it (allow-list
+ * for `--allowed-tools`, then a pre-check wrap around any Bash invocation).
+ *
+ * Fields:
+ *   - `allowedTools` / `disallowedTools` → fed to Claude Code's
+ *     `--allowed-tools` / `--disallowed-tools` flags.
+ *   - `bashAllowlist` — array of *leading-token* matches (e.g. `"git"`,
+ *     `"gh pr create"`, `"npm test"`). A bash command is permitted iff at
+ *     least one entry is a prefix of it.
+ *   - `bashDenylist` — workspace-strict denylist. Merged on top of the SKILL's
+ *     own denied list. A bash command is *always* rejected if any entry is a
+ *     substring of it.
+ *   - `requirePushConfirmation` — true means `git push` / `gh pr merge` /
+ *     `gh pr close` must funnel through `dev-confirm.ts`.
+ *   - `networkAllowed` — when false, the bash pre-check rejects `curl`/`wget`
+ *     unless the call is to an explicit MCP-server target. v0.8.2 1차에서는
+ *     단순히 `curl http*` / `wget http*` 패턴을 denylist에 추가하는 식으로 구현.
+ */
+export interface SpawnDevPolicy {
+  allowedTools: string[];
+  disallowedTools: string[];
+  bashAllowlist: string[];
+  bashDenylist: string[];
+  requirePushConfirmation: boolean;
+  networkAllowed: boolean;
+  /** Why the spawn ended up in this mode — useful for logging + tests. */
+  reason: "read-only" | "dev-enabled" | "workspace-disabled";
+}
+
+export const READ_ONLY_ALLOWED_TOOLS: readonly string[] = [
+  "Read",
+  "Grep",
+  "Glob",
+];
+export const READ_ONLY_DISALLOWED_TOOLS: readonly string[] = [
+  "Bash",
+  "Edit",
+  "Write",
+];
+export const DEV_ENABLED_ALLOWED_TOOLS: readonly string[] = [
+  "Read",
+  "Grep",
+  "Glob",
+  "Edit",
+  "Write",
+  "Bash",
+];
+
+/**
+ * Minimal subset of a SKILL.md frontmatter that this function needs. The full
+ * `SkillSpec` from `skill-parser.ts` is structurally compatible — pass it
+ * directly. (Tests can hand-roll the shape.)
+ */
+export interface DevCapabilitySkillView {
+  frontmatter?: Pick<SkillSpec, "dev_capability" | "dev_permissions">;
+  /** Backwards-compatible alternative — top-level fields if the caller has
+   *  already destructured a parsed SkillSpec. */
+  dev_capability?: SkillSpec["dev_capability"];
+  dev_permissions?: SkillSpec["dev_permissions"];
+}
+
+/**
+ * Resolve the SpawnDevPolicy for a SKILL given the workspace.yaml master
+ * toggle + the SKILL's own dev_capability declaration.
+ *
+ * Layer-5 (user yaml) override hook is intentionally not implemented here —
+ * v0.8.0 owns the per-user budget/identity injection, and this function only
+ * deals with global dev_capability gating. When v0.8.0 lands, the caller can
+ * post-process the returned policy.
+ */
+export function applyDevPermissions(
+  skill: DevCapabilitySkillView,
+  workspaceYaml: WorkspaceYaml | DevCapabilityConfig | null | undefined,
+): SpawnDevPolicy {
+  // Two acceptable input shapes for the workspace arg:
+  //   - WorkspaceYaml (we extract .dev_capability)
+  //   - DevCapabilityConfig already (or null)
+  let raw: DevCapabilityConfig | undefined;
+  if (workspaceYaml && typeof workspaceYaml === "object") {
+    if ("dev_capability" in workspaceYaml && (workspaceYaml as WorkspaceYaml).dev_capability) {
+      raw = (workspaceYaml as WorkspaceYaml).dev_capability;
+    } else if (
+      "enabled" in workspaceYaml ||
+      "bash_denylist" in workspaceYaml ||
+      "require_push_confirmation" in workspaceYaml
+    ) {
+      raw = workspaceYaml as DevCapabilityConfig;
+    }
+  }
+  const wsCfg = resolveDevCapabilityConfig(raw);
+
+  const skillCap =
+    skill.frontmatter?.dev_capability ?? skill.dev_capability ?? false;
+  const skillPerms = skill.frontmatter?.dev_permissions ?? skill.dev_permissions;
+
+  // Master toggle off — everyone read-only.
+  if (!wsCfg.enabled) {
+    return {
+      allowedTools: [...READ_ONLY_ALLOWED_TOOLS],
+      disallowedTools: [...READ_ONLY_DISALLOWED_TOOLS],
+      bashAllowlist: [],
+      bashDenylist: wsCfg.bash_denylist.slice(),
+      requirePushConfirmation: true,
+      networkAllowed: false,
+      reason: "workspace-disabled",
+    };
+  }
+
+  // SKILL didn't opt in — read-only.
+  if (skillCap !== true) {
+    return {
+      allowedTools: [...READ_ONLY_ALLOWED_TOOLS],
+      disallowedTools: [...READ_ONLY_DISALLOWED_TOOLS],
+      bashAllowlist: [],
+      bashDenylist: wsCfg.bash_denylist.slice(),
+      requirePushConfirmation: true,
+      networkAllowed: false,
+      reason: "read-only",
+    };
+  }
+
+  // dev_capability path — merge workspace denylist on top.
+  const skillAllowed = skillPerms?.bash?.allowed ?? [];
+  const skillDenied = skillPerms?.bash?.denied ?? [];
+  // Workspace denylist is the strict layer — duplicates are harmless but we
+  // keep a stable de-duped order (workspace first, then SKILL extras).
+  const seen = new Set<string>();
+  const denylist: string[] = [];
+  for (const item of wsCfg.bash_denylist) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      denylist.push(item);
+    }
+  }
+  for (const item of skillDenied) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      denylist.push(item);
+    }
+  }
+
+  return {
+    allowedTools: [...DEV_ENABLED_ALLOWED_TOOLS],
+    disallowedTools: [],
+    bashAllowlist: skillAllowed.slice(),
+    bashDenylist: denylist,
+    // wsCfg.require_push_confirmation is always true (loader normalizes), but
+    // a SKILL may set `requires_confirmation: false` only when the workspace
+    // *also* tolerates it. Our workspace loader pins true, so this is true.
+    requirePushConfirmation:
+      skillPerms?.push_targets?.requires_confirmation ??
+      wsCfg.require_push_confirmation,
+    networkAllowed: skillPerms?.network ?? false,
+    reason: "dev-enabled",
   };
 }
