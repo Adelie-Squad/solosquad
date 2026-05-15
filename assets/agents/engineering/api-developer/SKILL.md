@@ -9,6 +9,28 @@ triggers:
     - 엔드포인트
   explicit: true
 collab_pattern: hierarchical
+dev_capability: true
+dev_permissions:
+  bash:
+    allowed:
+      - git
+      - gh
+      - npm
+      - node
+      - npx
+      - tsc
+      - pytest
+      - go
+      - cargo
+    denied:
+      - "rm -rf /"
+      - "sudo"
+      - "chmod 777"
+  network: false
+  push_targets:
+    requires_confirmation: true
+  merge:
+    auto: false
 ---
 # API Developer Agent
 

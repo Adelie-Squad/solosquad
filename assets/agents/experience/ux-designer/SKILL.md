@@ -11,6 +11,7 @@ triggers:
     - 플로우
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # UX Designer Agent
 

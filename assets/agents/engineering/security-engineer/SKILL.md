@@ -13,6 +13,7 @@ triggers:
     - 취약점
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Security Engineer Agent
 

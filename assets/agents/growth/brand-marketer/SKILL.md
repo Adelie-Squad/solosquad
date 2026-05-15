@@ -10,6 +10,7 @@ triggers:
     - 네이밍
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Brand Marketer Agent
 

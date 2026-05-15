@@ -10,6 +10,7 @@ triggers:
     - 비즈니스
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Business Strategist Agent
 

@@ -10,6 +10,7 @@ triggers:
     - 벤치마크
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Desk Researcher Agent
 

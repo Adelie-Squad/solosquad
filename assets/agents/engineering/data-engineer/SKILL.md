@@ -9,6 +9,7 @@ triggers:
     - etl
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Data Engineer Agent
 

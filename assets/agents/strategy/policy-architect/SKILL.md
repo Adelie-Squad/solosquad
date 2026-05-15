@@ -9,6 +9,7 @@ triggers:
     - 약관
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Policy Architect Agent
 

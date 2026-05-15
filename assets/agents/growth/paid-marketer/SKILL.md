@@ -10,6 +10,7 @@ triggers:
     - cpa
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Paid Marketer Agent
 

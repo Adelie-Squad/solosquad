@@ -11,6 +11,7 @@ triggers:
     - 페르소나
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # User Researcher Agent
 

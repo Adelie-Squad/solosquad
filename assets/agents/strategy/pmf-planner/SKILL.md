@@ -10,6 +10,7 @@ triggers:
     - 가설
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # PMF Planner Agent
 

@@ -11,6 +11,7 @@ triggers:
     - 콘텐츠
   explicit: true
 collab_pattern: dynamic
+dev_capability: false
 ---
 # Content Writer Agent
 

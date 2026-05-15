@@ -83,8 +83,74 @@ export interface WorkspaceYaml {
   fs_watch?: FsWatchConfig;
   /** v0.6.0+: migration budget cap (§2.2 P0 #2). */
   migration?: MigrationBudgetConfig;
+  /** v0.8.2+: workspace-wide dev_capability master toggle + bash denylist. */
+  dev_capability?: DevCapabilityConfig;
   created_at: string;
   last_migrated_to?: string;
+}
+
+/**
+ * v0.8.2 §3.3 — workspace-level master toggle for engineering dev actions.
+ *
+ * - `enabled` (default `true`): when `false`, every SKILL is forced into
+ *   read-only mode regardless of its frontmatter `dev_capability: true`. Used
+ *   for sandbox / client-confidential repos / emergency-stop.
+ * - `require_push_confirmation` (default `true`, always `true` — the schema
+ *   accepts `false` but the loader rejects it): every `git push` / `gh pr
+ *   merge` / `gh pr close` waits for a user confirmation event before the
+ *   bash invocation runs.
+ * - `bash_denylist`: workspace-strict denylist. SKILLs cannot override it —
+ *   merged on top of any per-SKILL `dev_permissions.bash.denied`.
+ */
+export interface DevCapabilityConfig {
+  enabled?: boolean;
+  require_push_confirmation?: boolean;
+  bash_denylist?: string[];
+}
+
+export const DEFAULT_DEV_CAPABILITY_DENYLIST: readonly string[] = [
+  "rm -rf /",
+  "rm -rf /*",
+  "sudo",
+  "chmod 777",
+  "mkfs",
+  "dd if=",
+  ":(){:|:&};:",
+];
+
+export const DEFAULT_DEV_CAPABILITY_CONFIG: Required<DevCapabilityConfig> = {
+  enabled: true,
+  require_push_confirmation: true,
+  bash_denylist: [...DEFAULT_DEV_CAPABILITY_DENYLIST],
+};
+
+/**
+ * Resolve dev_capability config — applies v0.8.2 defaults when workspace.yaml
+ * is absent or lacks a `dev_capability` section. `require_push_confirmation`
+ * is normalized to `true` (false is rejected per §3.3 박제 정책 — always true).
+ */
+export function loadDevCapabilityConfig(
+  workspace?: string,
+): Required<DevCapabilityConfig> {
+  const ws = loadWorkspaceYaml(workspace);
+  return resolveDevCapabilityConfig(ws?.dev_capability);
+}
+
+/** Pure resolver — exposed for spawn-assembler hot-path (avoid re-reading yaml). */
+export function resolveDevCapabilityConfig(
+  partial: DevCapabilityConfig | undefined,
+): Required<DevCapabilityConfig> {
+  const p = partial ?? {};
+  const denylist =
+    Array.isArray(p.bash_denylist) && p.bash_denylist.length > 0
+      ? p.bash_denylist.slice()
+      : [...DEFAULT_DEV_CAPABILITY_DENYLIST];
+  return {
+    enabled: p.enabled ?? DEFAULT_DEV_CAPABILITY_CONFIG.enabled,
+    // §3.3 박제: require_push_confirmation: false 거부 — 항상 true.
+    require_push_confirmation: true,
+    bash_denylist: denylist,
+  };
 }
 
 /**
