@@ -35,3 +35,4 @@ venv/
 
 # Claude Code (local only — shared config is committed)
 .claude/settings.local.json
+.claude/worktrees/
