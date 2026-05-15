@@ -92,6 +92,14 @@ export interface SkillSpec {
   budget?: SkillBudget;
   collab_pattern?: CollabPattern;
 
+  /**
+   * v0.8.1 — explicit SKILL frontmatter schema version. Per
+   * docs/plan/v0.8.1-security-lifecycle-pair.md §6.1 / §6.3. When absent
+   * the validator emits a deprecation warning; bundled SKILL.md files were
+   * backfilled in v0.8.1 via `scripts/inject-skill-schema-version.ts`.
+   */
+  schema_version?: number;
+
   // ---- Unknown frontmatter keys (forward compat) ----
   extra: Record<string, unknown>;
 
@@ -186,6 +194,7 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     "loop_mode",
     "budget",
     "collab_pattern",
+    "schema_version",
   ]);
   const extra: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed)) {
@@ -207,6 +216,7 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     collab_pattern: parseCollabPattern(parsed.collab_pattern),
     loop_mode: parseLoopMode(parsed.loop_mode),
     budget: parseBudget(parsed.budget),
+    schema_version: typeof parsed.schema_version === "number" ? parsed.schema_version : undefined,
     extra,
     raw_frontmatter: fm.text,
     body: normalized.slice(fm.full_length),
@@ -453,6 +463,24 @@ export function validateSkill(
     });
   }
 
+  // v0.8.1 §6.3 — SKILL frontmatter schema_version. Treated as a warning
+  // for one minor (v0.8.x) and promoted to an error in v0.9. Run
+  // `scripts/inject-skill-schema-version.ts` to backfill.
+  if (spec.schema_version === undefined) {
+    warnings.push({
+      code: "SCHEMA_VERSION_MISSING",
+      field: "schema_version",
+      message:
+        "schema_version missing — add `schema_version: 1` per docs/api-stability.md (idempotent backfill: `scripts/inject-skill-schema-version.ts`)",
+    });
+  } else if (spec.schema_version < 1) {
+    errors.push({
+      code: "SCHEMA_VERSION_INVALID",
+      field: "schema_version",
+      message: `schema_version=${spec.schema_version} is invalid (must be ≥ 1)`,
+    });
+  }
+
   return { ok: errors.length === 0, errors, warnings };
 }
 
@@ -479,6 +507,7 @@ export function serializeFrontmatter(spec: SkillSpec): string {
     name: spec.name,
     description: spec.description,
   };
+  if (spec.schema_version !== undefined) obj.schema_version = spec.schema_version;
   if (spec.team !== undefined) obj.team = spec.team;
   if (spec.stateful !== undefined) obj.stateful = spec.stateful;
   if (spec.triggers !== undefined) obj.triggers = spec.triggers;

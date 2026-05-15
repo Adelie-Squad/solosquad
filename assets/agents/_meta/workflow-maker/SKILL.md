@@ -1,6 +1,7 @@
 ---
 name: "workflow-maker"
 description: "Author new SKILL.md / workflow.yaml / goal.md from a solo founder's messenger intent — runs the §5 author loop"
+schema_version: 1
 team: _meta
 stateful: false
 triggers:

@@ -1,6 +1,7 @@
 ---
 name: business-strategist
 description: 사업 전략, 비즈니스 모델, 수익화 전략을 수립합니다. 시장 기회를 포착하고 지속 가능한 성장 방향을 설계합니다.
+schema_version: 1
 team: strategy
 stateful: false
 triggers:

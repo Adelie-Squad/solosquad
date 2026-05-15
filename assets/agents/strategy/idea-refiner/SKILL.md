@@ -1,6 +1,7 @@
 ---
 name: idea-refiner
 description: 초기 아이디어를 구체화하고 고도화합니다. 막연한 아이디어를 실행 가능한 컨셉으로 발전시킵니다.
+schema_version: 1
 team: strategy
 stateful: false
 triggers:

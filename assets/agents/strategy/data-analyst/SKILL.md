@@ -1,6 +1,7 @@
 ---
 name: data-analyst
 description: 데이터를 분석하여 제품 인사이트를 도출합니다. GA, 도메인 데이터, 사용자 행동 데이터를 해석하고 의사결정을 지원합니다.
+schema_version: 1
 team: strategy
 stateful: false
 triggers:

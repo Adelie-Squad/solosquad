@@ -1,6 +1,7 @@
 ---
 name: cloud-admin
 description: 클라우드 인프라를 관리합니다. 배포, 모니터링, 보안, 비용 최적화를 담당합니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

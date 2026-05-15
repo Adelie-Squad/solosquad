@@ -1,6 +1,7 @@
 ---
 name: fde
 description: 고객 문제를 기술로 빠르게 해결합니다. 풀스택 능력으로 프로토타입부터 배포까지 End-to-End로 처리합니다.
+schema_version: 1
 team: engineering
 stateful: false
 triggers:

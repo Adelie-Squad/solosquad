@@ -1,6 +1,7 @@
 ---
 name: scope-estimator
 description: 개발 범위를 정의하고 일정을 추정합니다. 기획과 개발 사이의 다리 역할을 합니다.
+schema_version: 1
 team: strategy
 stateful: false
 triggers:

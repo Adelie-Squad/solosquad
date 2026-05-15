@@ -1,6 +1,7 @@
 ---
 name: policy-architect
 description: 서비스 정책, 규정, 시스템 구조를 설계합니다. 회원 정책, 권한 체계, 운영 규칙 등을 정의합니다.
+schema_version: 1
 team: strategy
 stateful: false
 triggers:
