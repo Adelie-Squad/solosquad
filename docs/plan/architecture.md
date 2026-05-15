@@ -581,7 +581,167 @@ src/migrations/scripts/0.6.0-to-0.7.0.ts → version bump + workspace.yaml.unins
 
 자세히: `docs/plan/v0.7-uninstall-lifecycle.md`
 
-### 13.6 기획 문서 목록 (v0.x → v1.x)
+### 13.6 v0.8 시리즈 — Multi-User + Security + Dev Capability + UX
+
+v0.8은 *4 patch 시리즈*로 분할 출시 (v0.8.0/0.8.1/0.8.2/0.8.3). 병렬 worktree agent 4개로 동시 구현 + 순차 머지.
+
+#### 13.6.1 v0.8.0 — Multi-User Messenger
+**모델 변경**: "1 워크스페이스 = 1 owner = 1 봇 = 2 채널" 가정 깸. 같은 Discord/Slack 서버에 N명 설치 가능.
+
+**신규 모듈**:
+```
+src/bot/
+├── user-registry.ts        → <org>/.solosquad/users/<handle>.yaml 파서 + bot_user_id 매칭
+├── author-guard.ts         → command-<handle>/works-<handle> owner 검증 + ephemeral DM
+├── channel-bootstrap.ts    → bot startup 자기 yaml 매칭 + 채널 페어 자동 생성
+src/messenger/
+└── broadcast.ts            → opt-in broadcast 채널 + designated 봇만 발송
+src/cli/
+├── init.ts                 → Step 5.2 handle 추출 + user yaml 작성
+├── messenger.ts            → broadcast-handover 명령
+└── doctor.ts               → runMultiUserChecks (yaml 매칭·채널 존재·designation)
+src/bot/
+└── spawn-assembler.ts      → Layer 5 user yaml 주입 (handle/display_name/channels)
+src/migrations/scripts/
+└── 0.7.0-to-0.8.0.ts       → workspace.yaml.messenger + 첫 user yaml 시드
+```
+
+**박제 결정**:
+- 봇 1명당 1 application (공유 token 거부 — rate-limit/duplicate reply)
+- Handle 충돌 명시적 거부 (silent suffix 안 함)
+- broadcast 기본 off (opt-in)
+- legacy `owner-command`/`workflow` 채널 alias 작업 0 (v0.7 사용자 base 0 전제)
+
+자세히: `docs/plan/v0.8-multiuser-messenger.md`
+
+#### 13.6.2 v0.8.1 — Security & Lifecycle Pair
+**라이프사이클 페어 완결 + 보안 SLA**:
+- npm audit 7 (3 moderate + 4 high) → 0 (discord.js 14.16→14.26 + undici 6.21→6.24 + overrides for axios/lodash/path-to-regexp/follow-redirects)
+- `.github/workflows/ci.yml`에 `npm audit --audit-level=high` 게이트
+
+**신규 모듈** (lifecycle pair 완결):
+```
+src/cli/
+├── import.ts               → solosquad import <archive.zip> (dry-run + --merge[default]/--replace)
+└── archive.ts              → solosquad archive verify/info/list
+src/lifecycle/
+├── import.ts               → unpack + journal idempotent + verify
+├── archive-reader.ts       → yauzl 기반 pure-JS zip reader (archiver는 writer-only)
+└── merge-strategy.ts       → jsonl dedup + workflows/goals id 충돌 거부 + AGENTS.imported.md
+src/migrations/scripts/
+└── 0.8.0-to-0.8.1.ts       → SKILL.md schema_version 1 백필
+scripts/
+└── inject-skill-schema-version.ts → idempotent backfill (CI 게이트 — SCHEMA_VERSION_MISSING 경고)
+docs/
+└── api-stability.md        → 6 schema_version의 bump 룰 + 1-minor deprecation 기간
+```
+
+**의존**: `yauzl ^3.3.0` (devDeps — archive verify/import reader)
+
+자세히: `docs/plan/v0.8.1-security-lifecycle-pair.md`
+
+#### 13.6.3 v0.8.2 — Dev Capability
+**24/7 자율 팀 코드 액션 능력**: SKILL frontmatter에 `dev_capability` + `dev_permissions` 신설. 메신저로 코드 수정 + commit + push + PR 생성 end-to-end. **자동 머지 영구 거부**.
+
+**신규/확장**:
+```
+src/bot/
+├── skill-parser.ts (확장)  → dev_capability + dev_permissions (bash allow/deny + merge.auto: true 영구 거부)
+├── spawn-assembler.ts (확장) → applyDevPermissions(): read-only/dev-enabled/workspace-disabled reason 트래킹
+├── claude-process.ts (확장) → --allowed-tools + bashAllowlist/Denylist pre-check
+└── dev-confirm.ts (신규)   → git push/gh pr merge 감지 + 30분 timeout + <org>/memory/dev-confirmations.jsonl
+src/util/
+└── config.ts (확장)        → DevCapabilityConfig + DEFAULT_DEV_CAPABILITY_DENYLIST (rm -rf /, sudo, chmod 777, ...)
+src/cli/
+└── doctor.ts (확장)        → gh --version + gh auth status
+assets/
+└── orchestrator/SKILL.md   → "Engineering Spawn Template (v0.8.2)" 7-단계 PR 흐름 절
+src/migrations/scripts/
+└── 0.8.1-to-0.8.2.ts       → workspace.yaml.dev_capability 기본값 + 5/20 SKILL frontmatter verify
+scripts/
+└── inject-dev-capability.ts → idempotent SKILL 박제 (25/25 idempotent)
+```
+
+**박제 (5 engineering SKILL true / 나머지 20 false)**:
+| 팀 | true | 비고 |
+|---|---|---|
+| engineering | backend-developer · fde · api-developer · creative-frontend · qa-engineer | 핵심 coding actor |
+| engineering | architect · cloud-admin · data-engineer · data-collector · security-engineer | advice/review only |
+| strategy / growth / experience / meta | (전부 false) | non-coding |
+
+**Workspace 마스터 토글**: `workspace.yaml.dev_capability.enabled` (기본 true). `false` 시 모든 SKILL dev 액션 0.
+
+자세히: `docs/plan/v0.8.2-dev-capability.md`
+
+#### 13.6.4 v0.8.3 — Onboarding UX + Observability
+**5 축**:
+
+**기존 리포 마이그레이션 UX**:
+- `solosquad add repo <path> --dry-run` / `--inspect` / `--keep-original`
+- `src/util/repo-inspect.ts` — 위험 시나리오 5종 (lsof / 심링크 / 절대경로 / slug 충돌 / IDE 활성)
+- 5단계 가이드 (commit → init → dry-run → 이동 → sync)
+
+**logger 확장 + observability**:
+```
+src/util/logger.ts (확장)   → SOLOSQUAD_LOG_LEVEL/FORMAT=json/FILE=1, 14일 rolling
+src/cli/logs.ts (신규)      → solosquad logs --level/--tail/--follow/--since/--type
+                              type: runtime/costs/spawn/stop-hook/dev-confirm/migration
+assets/routines/log-rotate.md → 매일 00:30 retention
+```
+
+**`solosquad logout` 제거**:
+- `src/cli/logout.ts` deprecation stub만. v0.7에서 추가됐던 명령 가치 < 복잡도
+- `src/lifecycle/lockfile.ts`에서 `logoutLockPath()` 제거 + `src/bot/index.ts`의 logout.lock 차단 제거
+- 대체: `Ctrl+C` (봇 정지) + .env 수동 마스킹 + messenger 콘솔 revoke (REVOKE-CHECKLIST 안내)
+
+**doctor 확장**:
+- `recommendForVersionMismatch()` + `compareSemver()` — CLI > workspace → migrate 권고, CLI < workspace → update 권고
+- master-guide §6에 update↔migrate 흐름도
+
+**Master-guide rebase**:
+- §3/§4/§6/§8/§9/§10 v0.7+v0.8 모델 흡수 (+182 lines)
+- v0.8.0/0.8.1/0.8.2/0.8.3 절 신설
+
+**Trajectory ROI 측정**:
+- `scripts/measure-trajectory-roi.ts` (일회성) — v0.6 §3.X 4지표 측정. 결과는 v0.9 자동 등록 활성화 게이트로
+
+**Migration 0.8.2 → 0.8.3**: trajectory.auto_register 키 + log-rotate routine 등록.
+
+자세히: `docs/plan/v0.8.3-onboarding-ux-observability.md`
+
+#### 13.6.5 v0.8 시리즈 통합 — 회귀 + 머지 결과
+- 병렬 4 agent worktree → 순차 머지 (v0.8.0 → 0.8.1 → 0.8.2 → 0.8.3)
+- 충돌 영역: `src/cli/index.ts` (명령 등록) · `src/cli/doctor.ts` (점검 추가) · `src/bot/spawn-assembler.ts` · `src/bot/skill-parser.ts` · `src/migrations/index.ts` · CHANGELOG.md
+- 최종 회귀: **556/556** 그린 (기존 452 + v0.7 신규 + v0.8 신규 ~104)
+- 사용자 코드 불가침 룰(v0.7 클래스 A) 계승: v0.8.3 `add repo --dry-run`도 byte-identical 보장
+
+#### 13.6.6 v0.8 후속 polish (단일 plan 통합 — 구 v0.8.4 흡수)
+v0.8.4 별도 plan은 폐기되고 `v0.8-multiuser-messenger.md` §3A로 흡수. 미구현 polish는 후속 patch에서:
+- `@bot help` 메신저 내부 매뉴얼 (`assets/messenger-manual/`)
+- `solosquad init --verify` e2e 셋업 검증
+- wizard 단계 6 → 4 축소 (handle/timezone 자동 추출)
+- sticky welcome message (pinned)
+- `solosquad messenger ensure-channels` 채널 부재 복구
+- broadcast §3.6 v2: cross-user 작업 공유 feed (모든 봇 status push + 다른 봇 PM context inject)
+
+### 13.7 v1.x 시리즈 (예고)
+
+**v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):
+- Q1 leading indicator (24/7 자율 팀 측정): morning brief에 4 지표 inline
+- Q2 암묵지 1차 source (사용자 명시): `/save-as-skill` + 자연어 인식
+- Q4 goal cycle 중간 통지/개입: works-<handle> 스레드에 실시간 상태 + 사용자 메시지 폴링
+- Q5 1 active goal per org: `<org>/goals/.active-goal` 세마포어 + `goal queue`
+- Q6 루틴 사용자별: 디폴트 3 routine을 user yaml routines 설정 기반 per-user cron
+- Q7 실험 인프라 (Amplitude 패턴 차용): `<org>/experiments/<id>/manifest.yaml` + 자동 query + significance check + 권고 변환
+
+**그 외 v1.x**:
+- v1.1: 대시보드 상호작용 (별도 리포)
+- v1.2: 지식 온톨로지 + MCP
+- v1.3: 일정 관리 + 메모
+
+자세히: `docs/plan/v1.x-workflow-goal-routine-evolution.md`, `docs/plan/v1.1-dashboard-interaction.md`, `docs/plan/v1.2-knowledge-ontology.md`
+
+### 13.8 기획 문서 목록 (v0.x → v1.x)
 
 **v0.x 프리-런치 (구현 완료):**
 - `docs/plan/v0.1-cross-platform.md` · `v0.1.1-qa-hardening.md` · `v0.1.2-npm-publish.md`
@@ -591,10 +751,16 @@ src/migrations/scripts/0.6.0-to-0.7.0.ts → version bump + workspace.yaml.unins
 - `docs/plan/v0.5-workflow-maker.md`
 - `docs/plan/v0.6-default-workflow-tuning.md`
 - `docs/plan/v0.7-uninstall-lifecycle.md`
+- `docs/plan/v0.8-multiuser-messenger.md` (구 v0.8.4 polish 흡수)
+- `docs/plan/v0.8.1-security-lifecycle-pair.md`
+- `docs/plan/v0.8.2-dev-capability.md`
+- `docs/plan/v0.8.3-onboarding-ux-observability.md`
 
 **v1.x 포스트-런치 (계획):**
+- `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)
 - `docs/plan/v1.1-dashboard-interaction.md` — 대시보드 상호작용 (대시보드 자체는 별도 리포)
 - `docs/plan/v1.2-knowledge-ontology.md` — 지식 온톨로지 + MCP 외부 연결
+- `docs/plan/v1.3-schedule-memo.md` (예정) — 일정 관리 + 메모 (지식 온톨로지와 같은 결)
 
 롤링 상태는 `docs/plan/product-roadmap.md`.
 

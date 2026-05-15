@@ -1,6 +1,8 @@
 # SoloSquad
 
-> A 24/7 AI assistant system for solo founders — Discord/Slack bot + scheduled routines + team-based agents, distributed as a single npm package.
+🇰🇷 **한국어 README: [README.kr.md](README.kr.md)**
+
+> A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord/Slack bot + scheduled routines + team-based agents, distributed as a single npm package.
 
 Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team of **25 specialist AI agents** across 4 disciplines (Strategy, Growth, Experience, Engineering), reachable from your messenger, with automated daily routines and per-product memory isolation.
 
@@ -31,11 +33,11 @@ It covers, in ten menu-divided sections:
 | 5 | Messenger Setup | Full 9-step Slack and 8-step Discord token walkthroughs |
 | 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
-| 8 | Version Differences | v0.7.0 (npm-published) vs v1.0+ (planned) |
+| 8 | Version Differences | v0.8.3 (npm-published) vs v1.0+ (planned) |
 | 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
 | 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
 
-Every feature is tagged with a version badge: 🟢 v0.7.0 (available now) · 🟡 v1.0+ (planned) · 🔴 removed (e.g. Telegram).
+Every feature is tagged with a version badge: 🟢 v0.8.3 (available now) · 🟡 v1.0+ (planned) · 🔴 removed (e.g. Telegram).
 
 For internal architecture, release planning, and decision history, see [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md).
 
@@ -134,7 +136,7 @@ Runs on your Mac Mini, PC, or VPS. Your data stays with you. Only outbound calls
 
 ---
 
-## CLI Reference (v0.7.0)
+## CLI Reference (v0.8.3)
 
 ```bash
 # Workspace ops (v0.1+)
@@ -178,9 +180,12 @@ solosquad memory search <query> [--limit N]       # FTS5 full-text search over a
                        [--event-type X]           #   routine_log | route_hit | route_miss | author_turn | spawn_decision
 solosquad memory stats [--disk]                   # indexed row counts + per-event-type breakdown (+ sqlite file size)
 
-# Repo analyzer (v0.5)
+# Repo analyzer (v0.5) + dry-run inspect (v0.8.3)
 solosquad analyze repo <path> [--force] [--prune-orphans]    # scan .claude/skills/, classify, write report
 solosquad add repo --from-report <report> --merge-policy <append|override|replace>
+solosquad add repo <path> --dry-run               # v0.8.3 — simulate, print 5-scenario risk report
+solosquad add repo <path> --inspect               # v0.8.3 — alias for --dry-run
+solosquad add repo <path> --keep-original         # v0.8.3 — copy instead of move (disk 2×)
 
 # Migration
 solosquad migrate                                 # upgrade workspace layout (dry-run by default)
@@ -191,9 +196,29 @@ solosquad migrate --rollback                      # restore from backup
 solosquad add org <name>                          # add an organization
 solosquad add repo <url|path>                     # clone or register a repository
 solosquad sync                                    # sync repositories/ with .org.yaml
+
+# Lifecycle (v0.7 + v0.8.1)
+solosquad uninstall [--dry-run] [--archive-only] [--keep-workspace]
+                    [--also-purge-backups] [--scrub-content] [--force]
+                                                  # farewell archive + cleanup, user code untouchable
+solosquad import <archive.zip> [--workspace <path>] [--into <org>]
+                               [--dry-run] [--merge | --replace]
+                                                  # v0.8.1 — restore farewell archive (paired with uninstall)
+solosquad archive verify <archive.zip>            # v0.8.1 — manifest SHA × actual SHA + schema compat
+solosquad archive info <archive.zip>              # v0.8.1 — metadata + per-class entry counts
+solosquad archive list <archive.zip> [--class X]  # v0.8.1 — manifest entries
+
+# Multi-user messenger (v0.8.0)
+solosquad messenger broadcast-handover --to <handle>   # reassign designated broadcaster bot
+                                                       # (broadcast cross-user feed §3.6 v2 — opt-in)
+
+# Observability (v0.8.3)
+solosquad logs [--level X] [--tail N] [--follow] [--since "1 hour ago"]
+               [--type runtime|costs|spawn|stop-hook|dev-confirm|migration]
+                                                  # structured logs + 4 ops jsonl unified view
 ```
 
-See master-guide §6 for the per-command walkthrough and v0.6+ planned commands.
+See master-guide §6 for the per-command walkthrough and v1.0+ planned commands.
 
 ---
 
@@ -230,7 +255,7 @@ Full details in master-guide §9.
 
 ## Versions
 
-Current npm release: **v0.7.0** (npm registry: `0.7.0`).
+Current npm release: **v0.8.3** (npm registry: `0.8.3`).
 
 The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stable API guarantees. Shipped + planned milestones:
 
@@ -240,12 +265,18 @@ The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stab
 | v0.4 (released) | Autonomous overnight engine | `goal.md` intent file + `solosquad goal run` background loop; metric-driven keep/discard with git-snapshot revert; `AGENTS.md` as the single immutable workspace guide (cross-tool); 3-tier guardrails (Input / Runtime / Output); `solosquad goal verify` for determinism checks |
 | v0.5 (released) | Workflow maker + frontmatter routing | Messenger-native author loop (`_meta/workflow-maker`); 4-channel router (`slash > explicit > keyword > freq`) with paperclip budget envelope; repo analyzer (4-label classification + incremental ledger); 25 SKILL.md with Anthropic-compatible frontmatter; spec-gate ↔ `goal.md` integration |
 | v0.6 (released) | Default workflow tuning + memory archive + pattern miner + Org Layer | Org Layer (`<org>/{core,domain,agent-profile.yaml}` + spawn-assembler 8-layer + budget generalization); FTS5 archive with 4-event-type indexing for cumulative memory recall; trajectory + freq miners that auto-extract repeated patterns into SKILL drafts (reuses v0.5 `applyDraft`); stop-hook DSL (`command / metric / natural`) making v0.5 spec-gate executable; chokidar hot-reload + CI PR review bot |
-| **v0.7 (released)** | **Uninstall & Lifecycle (Farewell Archive)** | `solosquad uninstall` + `solosquad logout`; data 5-classification (A/A*/B/C/D/E) with **user code untouchable** (class A); farewell archive with WAL-safe SQLite backup + streaming SHA256 manifest; concurrent-uninstall lockfile + stage progress journal (idempotent resume); REVOKE-CHECKLIST.md auto-generated (Discord app ID, Slack channels, ~/.claude/projects paths); PII-NOTICE.md auto-included; `--keep-workspace` class matrix; `solosquad reset`/`clean` permanently rejected (lifecycle is install ↔ uninstall) |
+| v0.7 (released) | Uninstall & Lifecycle (Farewell Archive) | `solosquad uninstall`; data 5-classification (A/A*/B/C/D/E) with **user code untouchable** (class A); farewell archive with WAL-safe SQLite backup + streaming SHA256 manifest; concurrent-uninstall lockfile + stage progress journal (idempotent resume); REVOKE-CHECKLIST.md auto-generated; `--keep-workspace` class matrix; `solosquad reset`/`clean` permanently rejected (lifecycle is install ↔ uninstall). `solosquad logout` was added then **removed in v0.8.3** |
+| **v0.8.0 (released)** | **Multi-User Messenger** | Same Discord server / Slack workspace with N members each running their own bot. `command-<handle>` + `works-<handle>` channel pairs per user; bot multiplicity (1 user = 1 bot application); `author-guard` defense-in-depth (channel owner enforcement); explicit handle-collision rejection; opt-in broadcast channel (cross-user work feed in v1.x). Solo user remains a first-class citizen |
+| **v0.8.1 (released)** | **Security & Lifecycle Pair** | `npm audit` 7 → 0 (discord.js 14.16 → 14.26 + undici 6.21 → 6.24 + overrides); `solosquad import <zip>` completes the v0.7 archive pair (dry-run + `--merge`/`--replace` + journal-idempotent resume); `solosquad archive verify/info/list` (yauzl-based); `docs/api-stability.md` 6 schema_version bump rules; SKILL.md `schema_version: 1` backfill |
+| **v0.8.2 (released)** | **Dev Capability** | SKILL frontmatter `dev_capability` + `dev_permissions` (Bash allow/deny, network, push confirmation, **`merge.auto: false` permanently forbidden**); engineering 5 SKILLs (`backend-developer / fde / api-developer / creative-frontend / qa-engineer`) baked in `true`, others `false`; workspace master toggle; `src/bot/dev-confirm.ts` 30-min timeout gate; `gh auth status` doctor check |
+| **v0.8.3 (released)** | **Onboarding UX + Observability** | `solosquad add repo --dry-run` + 5-scenario risk detection (lsof / symlinks / abs-paths / slug collision / IDE files); 5-step legacy repo migration guide; `solosquad logout` removed (replaced by `Ctrl+C` + `.env` mask + REVOKE-CHECKLIST); structured logger + `solosquad logs` CLI (level / JSON / file / 14-day rolling); master-guide §3/§6/§8/§9/§10 re-aligned for v0.7+v0.8; doctor CLI↔workspace version mismatch advisor; trajectory ROI gate measurement placeholder |
 | **v1.0** (planned) | **Formal launch** | Stable API · breaking-change policy starts |
+| v1.x (planned) | Workflow / Goal / Routine evolution | `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation: 24/7 자율 팀 leading indicator · `/save-as-skill` 명시 · goal cycle 중간 통지/개입 · 사용자별 루틴 · Amplitude-style 실험 인프라 |
 | v1.1 (planned) | Dashboard interaction | Companion web dashboard (separate repo) |
 | v1.2 (planned) | Knowledge ontology | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
+| v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes — aligned with knowledge ontology |
 
-Decision log: [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) §4.
+Decision log: [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) §6.
 
 ---
 
@@ -267,7 +298,7 @@ Each has independent `.env`, tokens, memory, and messenger account. They run sid
 Source tree (this repo):
 
 ```
-package.json                      → npm package config (v0.7.0)
+package.json                      → npm package config (v0.8.3)
 tsconfig.json                     → TypeScript config
 bin/solosquad.ts                  → CLI entry point
 AGENTS.md                         → canonical workspace guide (v0.4 — immutable, cross-tool)
