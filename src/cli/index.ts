@@ -72,6 +72,23 @@ export const program = new Command()
     printLayoutMismatchBanner(pkg.version);
   });
 
+/**
+ * v0.7 — refuse to start bot/schedule/pm if a logout.lock exists. Per
+ * docs/plan/v0.7-uninstall-lifecycle.md §5.6: post-logout, the messenger
+ * tokens in .env are masked, so re-starting would cause an auth-failure
+ * loop. The user must remove logout.lock + refresh .env before resuming.
+ */
+async function refuseIfLogoutLocked(cmd: string): Promise<void> {
+  const { logoutLockPath } = await import("../lifecycle/lockfile.js");
+  const lockPath = logoutLockPath(findWorkspaceRoot(process.cwd()) ?? process.cwd());
+  if (fs.existsSync(lockPath)) {
+    console.log(chalk.red(`\n✗ Cannot start \`solosquad ${cmd}\`: workspace is logged out.`));
+    console.log(chalk.dim(`  Found logout.lock at ${lockPath}`));
+    console.log(chalk.dim(`  Remove the lock file and restore .env values to resume.`));
+    process.exit(1);
+  }
+}
+
 program
   .command("init")
   .description("Initialize workspace (setup wizard)")
@@ -84,6 +101,7 @@ program
   .command("bot")
   .description("Start messenger bot")
   .action(async () => {
+    await refuseIfLogoutLocked("bot");
     const { startBot } = await import("../bot/index.js");
     await startBot();
   });
@@ -92,6 +110,7 @@ program
   .command("schedule")
   .description("Start automated scheduler")
   .action(async () => {
+    await refuseIfLogoutLocked("schedule");
     const { startScheduler } = await import("../scheduler/index.js");
     await startScheduler();
   });
@@ -447,4 +466,32 @@ agentGroup
   .action(async (opts) => {
     const { agentReloadCommand } = await import("./agent.js");
     await agentReloadCommand(opts);
+  });
+
+program
+  .command("uninstall")
+  .description("Archive accumulated knowledge then remove SoloSquad assets (v0.7)")
+  .option("--dry-run", "Preview without writing anything to disk")
+  .option("--archive-only", "Create the archive zip but skip cleanup")
+  .option("--keep-workspace", "Keep workflows/memory/knowledge on disk for re-install")
+  .option("--also-purge-backups", "Also remove ~/.solosquad-backups/ (off by default)")
+  .option("-y, --yes", "Skip confirmation prompt")
+  .option("--scrub-content", "Apply regex PII scrub to text content (opt-in, best-effort)")
+  .option("--force", "Bypass blockers (live processes, workspace-as-git-tree, etc.)")
+  .option("--archive-path <path>", "Override default archive zip path")
+  .action(async (opts) => {
+    const { uninstallCommand } = await import("./uninstall.js");
+    await uninstallCommand(opts);
+  });
+
+program
+  .command("logout")
+  .description("Mask .env, archive sessions, drop logout.lock (v0.7)")
+  .option("--org <slug>", "Restrict to one org's sessions (default: all)")
+  .option("--all", "Explicitly include every org (default behaviour)")
+  .option("-y, --yes", "Skip confirmation prompt")
+  .option("--force", "Bypass live-process check")
+  .action(async (opts) => {
+    const { logoutCommand } = await import("./logout.js");
+    await logoutCommand(opts);
   });

@@ -1,6 +1,6 @@
 {
   "name": "solosquad",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "24/7 AI assistant system for solo founders — Discord/Slack bot + scheduled routines + team-based agents",
   "author": "seungw1n",
   "type": "module",
@@ -32,6 +32,7 @@
   "dependencies": {
     "@slack/bolt": "^4.1.0",
     "@slack/web-api": "^7.8.0",
+    "archiver": "^7.0.1",
     "better-sqlite3": "^12.10.0",
     "chalk": "^5.4.1",
     "chokidar": "^4.0.3",
@@ -43,6 +44,7 @@
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/inquirer": "^9.0.7",
     "@types/js-yaml": "^4.0.9",

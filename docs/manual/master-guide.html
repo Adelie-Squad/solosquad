@@ -1450,7 +1450,7 @@ solosquad bot --debug               # 자세한 로그</code></pre>
 
   <h3 id="s6-1">6.1 명령어 레퍼런스</h3>
 
-  <h4>현재 사용 가능 (v0.6.0)<span class="badge now">v0.6</span></h4>
+  <h4>현재 사용 가능 (v0.7.0)<span class="badge now">v0.7</span></h4>
   <table>
     <thead><tr><th>명령어</th><th>도입</th><th>역할</th></tr></thead>
     <tbody>
@@ -1485,6 +1485,8 @@ solosquad bot --debug               # 자세한 로그</code></pre>
       <tr><td><code>solosquad memory search &lt;query&gt; [--limit N] [--event-type X] [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>FTS5 cold archive 전문 검색. <code>--event-type</code>로 routine_log / route_hit / route_miss / author_turn / spawn_decision 필터</td></tr>
       <tr><td><code>solosquad memory stats [--disk] [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>archive 행 수·oldest/newest·event_type 별 분포. <code>--disk</code>로 SQLite 파일 크기 보고</td></tr>
       <tr><td><code>solosquad agent reload [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>라우터 수동 재빌드 — <code>fs_watch.mode: manual</code> 환경에서 명시 호출 (§6.4)</td></tr>
+      <tr><td><code>solosquad uninstall [--dry-run] [--archive-only] [--keep-workspace] [--also-purge-backups] [--scrub-content] [--force] [--archive-path &lt;p&gt;]</code></td><td>v0.7</td><td>farewell archive 생성 후 SoloSquad 자산 정리. <code>--dry-run</code>으로 무엇이 archive로 가고 무엇이 삭제될지 미리 확인 권장. <code>repositories/</code> 사용자 코드는 어떤 플래그로도 변경/삭제 0건</td></tr>
+      <tr><td><code>solosquad logout [--org &lt;slug&gt;] [--all] [--force]</code></td><td>v0.7</td><td>가벼운 logout — .env 시크릿 마스킹, sessions <code>_archived/</code>로 이동, REVOKE-CHECKLIST 생성, <code>logout.lock</code> 드롭. archive 안 함. 데이터 삭제 0건</td></tr>
     </tbody>
   </table>
 
@@ -1991,7 +1993,7 @@ solosquad run-routine --all          # 전부</code></pre>
   <h2><span class="num">8.</span>버전별 차이</h2>
   <p>현재 npm에서 받을 수 있는 기능과 향후 출시 예정 기능을 명확히 구분합니다.</p>
 
-  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.6.0)<span class="badge now">사용 가능</span></h3>
+  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.7.0)<span class="badge now">사용 가능</span></h3>
 
   <h4>코어 기능 (v0.1~v0.2)</h4>
   <ul>
@@ -2063,12 +2065,34 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>CLI 신규: <code>readiness check</code>·<code>memory search/stats [--disk]</code>·<code>agent reload</code></li>
   </ul>
 
+  <h4>Uninstall &amp; Lifecycle (Farewell Archive)<span class="badge now">v0.7</span></h4>
+  <p>install ↔ uninstall 2단으로 라이프사이클을 닫는다. <code>solosquad reset</code>·<code>solosquad clean</code> 같은 "초기화" 명령은 영구히 추가하지 않음 (재설치 = uninstall + farewell + 새 워크스페이스 init).</p>
+  <ul>
+    <li><strong>사용자 코드 절대 불가침</strong> — <code>&lt;org&gt;/repositories/&lt;repo&gt;/</code> 트리는 어떤 플래그로도 변경/삭제 0건. 트리 enumerate조차 안 함</li>
+    <li><strong>Farewell archive 강제</strong> — uninstall은 항상 zip을 먼저 생성, <code>--no-archive</code> 같은 플래그 없음. 포맷: <code>archive.yaml</code>(schema_version=1) + <code>manifest.tsv</code>(streaming SHA256) + <code>workspace/</code> + <code>orgs/&lt;slug&gt;/{memory,workflows,goals,domain,core,repos}/</code> + <code>credentials/env.template</code>(마스킹) + <code>REVOKE-CHECKLIST.md</code> + <code>PII-NOTICE.md</code></li>
+    <li><strong>데이터 5분류 (A/A*/B/C/D/E)</strong> + <code>--keep-workspace</code> 매트릭스 — class B는 archive 후 디스크 보존, sessions는 <code>_archived/</code>로 이동, workspace.yaml은 새로 발급 위해 삭제</li>
+    <li><strong>WAL-safe SQLite backup</strong> (Hermes 차용) — v0.6 <code>memory/archive.sqlite</code>를 <code>better-sqlite3 backup()</code> API로 live write 중에도 일관 복사</li>
+    <li><strong>concurrent-uninstall lockfile</strong> — <code>&lt;workspace&gt;/.solosquad/uninstall.lock</code> 원자적 acquire + stale PID 자동 정리</li>
+    <li><strong>stage progress journal</strong> — <code>uninstall.journal.jsonl</code> append-only, cleanup 50% 중단 시 idempotent 재개</li>
+    <li><strong>PM/scheduler PID 거부</strong> — archive walking 중 jsonl grow → SHA 불일치 방지. <code>--force</code> 없이는 진입 거부</li>
+    <li><strong>워크스페이스 git tree 감지</strong> — <code>&lt;workspace&gt;/.git</code> 존재 시 명시적 사용자 동의 강제</li>
+    <li><strong>archive 경로 writable + 디스크 free × 1.5 검증</strong></li>
+    <li><strong>PII-NOTICE.md 자동 동봉</strong> + opt-in <code>--scrub-content</code> (regex 룰셋: 카드번호·이메일·전화·SSN/주민번호 — false-negative 가능성 명시, 자동 스크럽 확장은 v1.x)</li>
+    <li><strong>logout/uninstall 분리</strong> (gh CLI 차용) — <code>solosquad logout</code>는 .env 마스킹 + sessions <code>_archived/</code>로 + <code>logout.lock</code> 생성 (이후 <code>solosquad bot/schedule</code>은 진입 거부)</li>
+    <li><strong>REVOKE-CHECKLIST.md 동적 생성</strong> — Discord application ID, Slack workspace ID, ~/.claude/projects 추정 경로, pm2/systemctl/crontab 점검 명령 자동 추출</li>
+    <li><strong>doctor 확장</strong> — npm 글로벌 훅 한계 경고(<code>solosquad uninstall</code>을 <code>npm uninstall -g</code>보다 먼저), stale lockfile 감지, PM PID 점검, archive 디렉토리 free space</li>
+    <li>CLI: <code>solosquad uninstall [--dry-run --archive-only --keep-workspace --also-purge-backups --scrub-content --force]</code>, <code>solosquad logout [--org &lt;slug&gt; --all --force]</code></li>
+    <li>마이그레이션: <code>0.6.0-to-0.7.0.ts</code> — version bump + <code>workspace.yaml.uninstall</code> 기본값. schema 변경 거의 없음 (uninstall 인프라 신설 위주)</li>
+    <li>의존성: <code>archiver ^7.0.1</code> (streaming write — <code>adm-zip</code> OOM 회피로 선택)</li>
+  </ul>
+
   <h4>제거됨</h4>
   <ul>
     <li>Telegram 어댑터 — v0.2.4부터 미지원<span class="badge removed">v0.2.4 제거</span></li>
     <li>채널 자동 정리 안 됨 — 이전 daily-brief·signals·experiments·weekly-review·errors 5개 채널은 사용자가 메신저 UI에서 수동 archive</li>
     <li><code>AGENT_ROUTES</code> 하드코드 상수<span class="badge removed">v0.5 제거</span> — 키워드 라우팅은 각 SKILL.md의 <code>triggers.keyword</code> frontmatter로 분산</li>
     <li><code>assets/agents/_teams/</code> 디렉토리<span class="badge removed">v0.6 제거</span> — <code>agents/{team}/KNOWLEDGE.md</code> co-location 후 평행 hierarchy 폐지. 마이그레이션이 사용자 워크스페이스의 <code>.solosquad/agents/_teams/</code>도 자동 이동</li>
+    <li><code>solosquad reset</code>·<code>solosquad clean</code> 같은 "초기화" 명령<span class="badge removed">v0.7에서 영구 거부</span> — 라이프사이클은 install ↔ uninstall 2단으로 충분. 재설치는 uninstall + 새 워크스페이스 init으로 표현</li>
   </ul>
 
   <h3 id="s8-2">8.2 추후 업데이트<span class="badge plan">기획 단계</span></h3>
@@ -2108,7 +2132,7 @@ solosquad run-routine --all          # 전부</code></pre>
   </ul>
 
   <div class="footer-note">
-    이 문서는 SoloSquad <strong>v0.6.0 (npm 0.6.0)</strong> 기준이며, v1.0~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/product-roadmap.md</code>를 참조하세요.
+    이 문서는 SoloSquad <strong>v0.7.0 (npm 0.7.0)</strong> 기준이며, v1.0~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/plan/product-roadmap.md</code>를 참조하세요.
   </div>
 </section>
 

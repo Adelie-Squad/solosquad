@@ -2,7 +2,7 @@
 
 > 릴리스된 버전, 진행 중인 계획, 결정 로그, 외부 참고자료를 한 자리에 모은 롤링 문서.
 
-**최종 업데이트:** 2026-05-12
+**최종 업데이트:** 2026-05-15 (v0.7.0 릴리스)
 
 ---
 
@@ -12,18 +12,17 @@
 
 | 버전 | 날짜 | 주요 내용 | 문서 |
 |---|---|---|---|
-| `v0.0.0` | 초기 | 코어 구조 | — |
-| `v0.1.0` | — | 크로스 플랫폼 (Windows/macOS/Linux) | `v0.1-cross-platform.md` |
-| `v0.1.1` | — | QA 하드닝 | `v0.1.1-qa-hardening.md` |
-| `v0.1.2` | — | npm 퍼블리시 | `v0.1.2-npm-publish.md` |
-| `v0.1.3` | 2026-04-21 | **hotfix** — `dotenv/config` 로드 누락 수정 | `v0.2.1-messenger-debugging.md` |
-| `v0.1.4` | 2026-04-21 | **hotfix** — `solosquad update`의 `package.json` 경로 해석 오류 수정 | 동일 |
-| `v0.1.5` | 2026-04-21 | **hotfix** — Windows에서 `claude.cmd` 실행 시 ENOENT | 동일 |
-| `v0.2.0` | 2026-04-23 | GitHub-aligned 레이아웃 재편 + 마이그레이션 프레임워크 | `v0.2.2-terminology-layout.md`, `v0.2.3-migration-process.md` |
+| `v0.0.0` ~ `v0.1.5` | 초기 ~ 2026-04-21 | 코어 + 크로스 플랫폼 + hotfix 연쇄 | `v0.1-*.md` |
+| `v0.2.0` ~ `v0.2.4` | 2026-04-23 ~ | GitHub-aligned 레이아웃 + 마이그레이션 + 메신저 통합 | `v0.2.*-*.md` |
+| `v0.3.0` | 2026 Q2 | PM 모드 + 멀티 에이전트 오케스트레이션 + 슬래시 5종 | `v0.3-pm-mode-orchestration.md` |
+| `v0.4.0` | 2026 Q2 | 자율 goal-runner + Data Reconciliation + `solosquad goal` CLI 7종 | `v0.4-autonomous-engine.md` |
+| `v0.5.0` ~ `v0.5.1` | 2026 Q2 | 워크플로우 메이커 + 4채널 trigger + analyze 파이프라인 | `v0.5-workflow-maker.md` |
+| `v0.6.0` | 2026-05-14 | 디폴트 워크플로우 튜닝 + Team=Domain + Org Layer + FTS5 archive + hot-reload | `v0.6-default-workflow-tuning.md` |
+| **`v0.7.0`** | **2026-05-15** | **Uninstall & Lifecycle** — farewell archive(WAL-safe SQLite) + REVOKE-CHECKLIST + `solosquad uninstall`/`logout` + class A 불가침 + 마이그레이션 인프라 안정화 | `v0.7-uninstall-lifecycle.md` |
 
-### 현재 설치 가능 버전: npm `0.2.x` (문서 라벨 `v0.2.4`)
+### 현재 설치 가능 버전: npm `0.7.0`
 
-**다음 배포:** `v0.2.1` — v0.2.0 배포 직후 발견된 UX·구조 이슈 해결 + `add org/repo/sync` 명령 도입.
+**다음 마일스톤:** `v1.0.0` — 정식 출시. v0.7로 라이프사이클이 닫히고 install ↔ uninstall 2단으로 완결되었으므로, v1.0은 *공개 사용자 약속* (안정 API + breaking change 정책)을 시작하는 슬롯.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 
@@ -74,12 +73,13 @@
 
 ### 3.1 프리-런치 (v0.x)
 
-| 버전 | 주제 | 문서 |
-|---|---|---|
-| `v0.3.x` | PM 모드 + 멀티 에이전트 오케스트레이션 (계층적, depth=1) — 슬래시 5종, `solosquad rollback`, 8-layer spawn 인터페이스 | `docs/v0.3-pm-mode-orchestration.md` |
-| `v0.4.x` | 밤새 자율 작업 완료 엔진 (Codex `/goal` + `AGENTS.md` 2계층, Data Reconciliation, 3단계 가드레일, `solosquad goal <verb>` CLI) | `docs/plan/v0.4-autonomous-engine.md` |
-| `v0.5.x` | 워크플로우 메이커 (4채널 trigger, stateless/stateful 분리, 빈도 카운팅 auto-load) | `docs/v0.5-workflow-maker.md` |
-| `v0.6.x` | 디폴트 워크플로우 튜닝 + **토폴로지 재편**(Team=Domain, Org Layer specialization, Workspace Knowledge) + 메모리 아카이브(FTS5) | `docs/v0.6-default-workflow-tuning.md` |
+| 버전 | 주제 | 문서 | 상태 |
+|---|---|---|---|
+| `v0.3.x` | PM 모드 + 멀티 에이전트 오케스트레이션 (계층적, depth=1) — 슬래시 5종, `solosquad rollback`, 8-layer spawn 인터페이스 | `docs/plan/v0.3-pm-mode-orchestration.md` | ✓ 출시 |
+| `v0.4.x` | 밤새 자율 작업 완료 엔진 (Codex `/goal` + `AGENTS.md` 2계층, Data Reconciliation, 3단계 가드레일, `solosquad goal <verb>` CLI) | `docs/plan/v0.4-autonomous-engine.md` | ✓ 코드 흡수 (v0.5/v0.6 내) |
+| `v0.5.x` | 워크플로우 메이커 (4채널 trigger, stateless/stateful 분리, 빈도 카운팅 auto-load) | `docs/plan/v0.5-workflow-maker.md` | ✓ 출시 |
+| `v0.6.x` | 디폴트 워크플로우 튜닝 + **토폴로지 재편**(Team=Domain, Org Layer specialization, Workspace Knowledge) + 메모리 아카이브(FTS5) | `docs/plan/v0.6-default-workflow-tuning.md` | ✓ 출시 (2026-05-14) |
+| **`v0.7.x`** | **Uninstall & Lifecycle (Farewell Archive)** — `solosquad uninstall`/`logout`, 데이터 5분류(A/A*/B/C/D/E), 사용자 코드 불가침, WAL-safe SQLite backup, REVOKE-CHECKLIST 자동 생성, journal-기반 idempotent 재개, concurrent-uninstall lockfile, PII-NOTICE 동봉 | `docs/plan/v0.7-uninstall-lifecycle.md` | ✓ 출시 (2026-05-15) |
 
 ### 3.2 정식 출시 마일스톤
 
@@ -117,6 +117,7 @@
 
 ## 4. 결정 로그 (주요)
 
+- **2026-05-15 (v0.7.0 출시)** — **install ↔ uninstall 2단 라이프사이클로 완결**. 사유: v0.6까지 사용자 데이터가 누적되었지만 "도구를 제거하면서 데이터를 들고 떠나는" 경로 부재 → 사용자 코드 손상 위험·수동 정리 부담. 핵심 결정: (a) **`solosquad reset`·`solosquad clean` 같은 "초기화" 명령은 영구히 추가하지 않는다** — 재설치는 *uninstall + farewell archive + 새 워크스페이스 init*으로 자연 표현. (b) **사용자 코드(`<org>/repositories/<repo>/`) 절대 불가침** — uninstall의 어떤 플래그로도 변경/삭제 대상 아님. 옵션 자체를 두지 않음 (OpenClaw 안티패턴 회피, Issue #6289). (c) **archive 강제 sequencing** — uninstall은 항상 farewell archive를 먼저 생성. `--no-archive` 같은 플래그 없음. (d) **WAL-safe SQLite backup**(Hermes 차용) + **logout/uninstall 분리**(gh CLI 차용) + **`--keep-state` 매트릭스**(gstack 차용). (e) **PII-NOTICE.md 자동 동봉** + opt-in `--scrub-content` (자동 스크럽은 false-negative 위험으로 v1.x). (f) **journal-기반 idempotent 재개** + **concurrent-uninstall lockfile** + **PM/scheduler PID 거부** (`--force` 없이는). 영향 받는 코드: `src/lifecycle/{classify,manifest,sqlite-backup,lockfile,journal,precheck,repo-meta,revoke-checklist,cleanup,archive}.ts` (10 신규 모듈), `src/cli/{uninstall,logout}.ts` (2 신규 명령), `src/cli/doctor.ts`(v0.7 점검 항목 추가), `src/migrations/scripts/0.6.0-to-0.7.0.ts`(version bump + workspace.yaml.uninstall 기본값). 영향 받는 docs: 본 entry + architecture.md(§"v0.7 lifecycle" 절 추가) + master-guide.html("Uninstall" 절 추가) + AGENTS.md(향후 사용자 갱신).
 - **2026-05-13 (오후)** — **워크스페이스 영속 가이드를 AGENTS.md 단일 출처로 통일**. 직전 결정(AGENTS.md + CLAUDE.md 공존)을 폐기. 사유: (1) 같은 위계에 두 파일이 있으면 사용자가 "어디 적어야 하지" 혼란 + 두 출처 발산 위험. (2) AGENTS.md는 Codex·Aider·Cursor·최신 Claude Code 모두 fallback 인식하는 cross-tool de facto 표준. (3) 단일 출처는 v0.4 신뢰 앵커(human-only 편집) 정신과 정합. 변경 내용: v0.4 doc §4.2 — AGENTS.md가 워크스페이스 단일 영속 가이드. SoloSquad가 CLAUDE.md를 더 이상 생성·갱신하지 않음. 마이그레이션은 기존 CLAUDE.md 컨텐츠를 AGENTS.md로 1회 복사 후 CLAUDE.md 원본은 untouched(사용자가 수동 삭제 결정). `solosquad doctor`가 향후 CLAUDE.md 발견 시 "더 이상 사용되지 않음" 안내 출력. master-guide §3.4 + §3.5 Layer 0 표 동기 갱신. 영향 받는 파일: docs/plan/v0.4-autonomous-engine.md, docs/manual/master-guide.html, docs/plan/product-roadmap.md(본 entry).
 - **2026-05-13** — **v0.4 차용 구조를 Codex `/goal` + `AGENTS.md` 2계층으로 변경**. 종전 결정(Karpathy autoresearch의 `program.md`)을 폐기. 사유: "용어·개념을 새로 만들지 말고 최신 구조를 따르자" 원칙에 따른 에이전트 도구 용어 매핑 조사 결과 (1) "program"이 autoresearch 한정 어휘이고 (2) 2026-04 Codex CLI 0.128.0의 `/goal` + `AGENTS.md` 2계층이 더 모던하며 (3) `AGENTS.md`가 Aider·Codex·Cursor 진영의 cross-tool 표준이라 SoloSquad 사용자가 다른 도구 병용 시 호환을 자연스레 얻음. 주요 변경: `program.md` → `goal.md`, `<org>/programs/` → `<org>/goals/`, CLI `solosquad run --program <id>` → `solosquad goal <verb> <id>` 7개 서브커맨드(new/list/show/run/status/stop/verify), 워크스페이스 루트에 `AGENTS.md` 신설(CLAUDE.md와 공존, immutable_paths·modifiable_paths·Output 가드 디폴트 박제). autoresearch는 메트릭 게이팅·git rollback의 운영 패턴 원조로만 잔존 (어휘 미차용). 영향 받는 docs: v0.4 doc 전체 재작성, v0.5 doc의 v0.4 의존 표기, V0.3-INTEGRATION-TEST-PLAN.md의 out-of-scope 라인, architecture.md 레퍼런스 목록. 코드 변경은 별도 단계(현재 doc-first).
 - **2026-05-12 (오후 4th)** — **v0.1.x 레거시 폴더 정리** (커밋 `0c3bb18`). `33c30c3 Add npm bundled assets`(v0.2.0 refactor) 시점에 청소되어야 했지만 누락된 루트 레거시 5개 폴더(`agents/ core/ routines/ templates/ orchestrator/`) + 빈 `projects/` + v0.1.x bash 스크립트 2개를 제거. **dev 환경 path 해결 버그 동반 수정** — `src/util/paths.ts`가 레거시 루트를 먼저 찾아 `assets/`를 그림자 처리, 23개 미만 agent set + 옛 routines로 작동하던 문제 해소. `.gitignore`·`.npmignore`에서 사망 패턴 정리. **사용자 영향 0** — 해당 폴더들은 이미 `.npmignore` 제외 대상이라 npm 패키지에 포함된 적 없음.
