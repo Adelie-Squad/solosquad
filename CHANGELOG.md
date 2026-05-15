@@ -4,6 +4,106 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.3] — 2026-05-15
+
+**v0.8.3 — Onboarding UX + Observability.** v0.8.x 시리즈의 마지막 패치.
+사용자가 처음 SoloSquad를 만났을 때의 경험과 문제가 생겼을 때 디버깅하는
+경험을 동시에 잡는다. 5축: (a) 기존 리포 마이그레이션 UX (`add repo
+--dry-run`/`--inspect`/`--keep-original`), (b) logger 확장 + `solosquad
+logs` CLI + log-rotate routine, (c) `solosquad logout` 제거, (d) doctor
+CLI↔workspace version mismatch 감지, (e) trajectory 자동 등록 ROI 측정
+박제.
+
+자세히: `docs/plan/v0.8.3-onboarding-ux-observability.md`
+
+### Added — 기존 리포 마이그레이션 UX (§3)
+- `src/util/repo-inspect.ts` — 위험 시나리오 5종 감지 walker. 활성
+  프로세스(lsof/handle.exe), 외부에서 들어오는 심링크, repo 내부 절대경로
+  참조, slug 충돌, IDE workspace 파일 절대경로 설정. 각 detector는
+  best-effort — 도구 부재 시 throw 대신 `available: false` 반환
+- `solosquad add repo --dry-run` / `--inspect <path>` — 시뮬레이션
+  보고서, 디스크 변경 0건. 로컬 경로는 풀 inspect 리포트, git URL은
+  destination + slug 충돌만 (사이즈는 clone 후에야 측정 가능)
+- `solosquad add repo --keep-original` — 이동 대신 복사 (디스크 2×
+  사용, 원본 안전망). `fs.cpSync` 사용, 폴백으로 수동 walker
+
+### Added — Logger 확장 + `solosquad logs` CLI (§5)
+- `src/util/logger.ts` 확장 — `SOLOSQUAD_LOG_LEVEL`
+  (error/warn/info/debug, 기본 info), `SOLOSQUAD_LOG_FORMAT=json`,
+  `SOLOSQUAD_LOG_FILE=1` → `<workspace>/.solosquad/logs/solosquad-YYYY-
+  MM-DD.log` 일별 rolling. 기존 `logger.info/warn/error/success/dim`
+  API 100% backward-compat
+- `rotateLogs()` 함수 — 매일 00:30 log-rotate routine이 호출.
+  retention 14일 hard-coded (워크스페이스.yaml 노출은 v0.9+ 검토)
+- `src/cli/logs.ts` (신규) — `solosquad logs [--level X] [--tail N]
+  [--follow] [--since "1 hour ago"] [--type X] [--org <slug>]`.
+  `--type`은 반복 지정 가능 (다중 스트림 tail). chrono-like 시간 파서
+  ("1 hour ago" / "30 minutes ago" / ISO timestamp)
+- `assets/routines/log-rotate.md` (신규) — 매일 00:30 silent retention.
+  `src/scheduler/routines.ts`에 `log-rotate` 등록 + `src/scheduler/
+  index.ts` inline execution (LLM 호출 0건, 결정적)
+
+### Added — Doctor CLI ↔ workspace mismatch 감지 (§7.3)
+- `recommendForVersionMismatch()` + `compareSemver()` 도우미 export.
+  CLI > workspace → "solosquad migrate --apply" 권고, CLI < workspace
+  → "npm install -g solosquad@latest" 권고
+
+### Added — Trajectory ROI 측정 스크립트 (§8)
+- `scripts/measure-trajectory-roi.ts` (일회성) — v0.6 §3.X 4지표를
+  30일 데이터로 측정. 결과 출력 형식은 CHANGELOG 박제용 markdown +
+  `--json` 옵션 지원. 데이터 부족 시 "측정 시점에 채움" placeholder
+  (사실 fabrication 방지)
+- **측정값**: 측정 시점에 채움 — 본 패치는 측정 스크립트만 commit.
+  자체 사용 데이터 30일 누적 후 별도 commit으로 박제 예정. 4지표 모두
+  통과 시 v0.9에서 `workspace.yaml.trajectory.auto_register: true`
+  기본값, 1개라도 fail이면 "제안만 영구" 잠금
+
+### Added — Migration 0.8.2 → 0.8.3
+- `src/migrations/scripts/0.8.2-to-0.8.3.ts` — version bump +
+  `workspace.yaml.trajectory.auto_register` 키 추가 (기본값 false) +
+  `assets/routines/log-rotate.md` 복사 + `.solosquad/logs/` 디렉토리
+  생성. idempotent
+
+### Removed — `solosquad logout` (§6)
+- `src/cli/logout.ts` — 본문 제거, deprecation stub만 남김 (no
+  exports). v0.7 출시 후 사용자 base 0명 전제로 backward-compat layer
+  없음
+- `src/cli/index.ts` — `logout` 명령 등록 제거 + `refuseIfLogoutLocked()`
+  helper 제거 + `solosquad bot`·`schedule`의 logout.lock 차단 제거
+- `src/lifecycle/lockfile.ts` — `logoutLockPath()` 제거. 잔존 inert
+  `<workspace>/.solosquad/logout.lock` 파일은 수동 삭제 가능 (안내만)
+- `src/cli/doctor.ts` — `runLifecycleChecks()`에서 logout.lock 체크 제거
+
+### Changed
+- `docs/manual/master-guide.html` — §3에 v0.7 클래스 A/A*/B/C/D/E 표 +
+  v0.8 멀티유저 채널 + v0.8.2 dev_capability 추가. §4.5/4.6 기존 리포
+  가져오기 5단계 + 위험 시나리오 표. §6.1 CLI 표에 `logs`·`import`·
+  `archive verify`·`messenger add`·dry-run/inspect/keep-original 옵션
+  추가. §6.4에 update↔migrate 흐름도 + archive-rotate/log-rotate
+  routine 등록. §8.1 v0.8.0/0.8.1/0.8.2/0.8.3 절 신설. §9.5 백업 +
+  관측성 절. §10 FAQ에 v0.8.3 6건 추가
+
+### Tests
+- `test/add-repo-dry-run.test.ts` — inspectRepo 5가지 시나리오 + dry-run
+  zero-write 보장
+- `test/logger.test.ts` — 로그 레벨 / JSON 포맷 / 파일 출력 / rolling /
+  rotateLogs retention
+- `test/logs-cli.test.ts` — type 화이트리스트, parseSinceHuman 자연어,
+  빈 워크스페이스 fallback
+- `test/doctor-version-mismatch.test.ts` — compareSemver + 권고 분기 매핑
+
+### Not modified (불가침 — 다른 v0.8.x agent 영역)
+- `src/messenger/*`, `src/cli/init.ts`, `src/cli/messenger.ts` (v0.8.0)
+- `src/bot/user-registry.ts`, `author-guard.ts`, `channel-bootstrap.ts`,
+  `broadcast.ts` (v0.8.0)
+- `src/cli/import.ts`, `archive.ts` (v0.8.1)
+- `src/lifecycle/import.ts`, `archive-reader.ts`, `merge-strategy.ts`
+  (v0.8.1)
+- 25 SKILL.md frontmatter (v0.8.1·v0.8.2)
+- `src/bot/dev-confirm.ts`, `spawn-assembler.ts` (v0.8.2)
+- `src/migrations/scripts/0.7.0-to-0.8.0.ts` (v0.8.0 agent),
+  `0.8.0-to-0.8.1.ts`·`0.8.1-to-0.8.2.ts` (concurrent v0.8.x agents)
+
 ## [0.7.0] — 2026-05-15
 
 **v0.7 — Uninstall & Lifecycle (Farewell Archive).** install ↔ uninstall

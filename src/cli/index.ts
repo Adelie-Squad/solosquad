@@ -72,23 +72,6 @@ export const program = new Command()
     printLayoutMismatchBanner(pkg.version);
   });
 
-/**
- * v0.7 — refuse to start bot/schedule/pm if a logout.lock exists. Per
- * docs/plan/v0.7-uninstall-lifecycle.md §5.6: post-logout, the messenger
- * tokens in .env are masked, so re-starting would cause an auth-failure
- * loop. The user must remove logout.lock + refresh .env before resuming.
- */
-async function refuseIfLogoutLocked(cmd: string): Promise<void> {
-  const { logoutLockPath } = await import("../lifecycle/lockfile.js");
-  const lockPath = logoutLockPath(findWorkspaceRoot(process.cwd()) ?? process.cwd());
-  if (fs.existsSync(lockPath)) {
-    console.log(chalk.red(`\n✗ Cannot start \`solosquad ${cmd}\`: workspace is logged out.`));
-    console.log(chalk.dim(`  Found logout.lock at ${lockPath}`));
-    console.log(chalk.dim(`  Remove the lock file and restore .env values to resume.`));
-    process.exit(1);
-  }
-}
-
 program
   .command("init")
   .description("Initialize workspace (setup wizard)")
@@ -101,7 +84,6 @@ program
   .command("bot")
   .description("Start messenger bot")
   .action(async () => {
-    await refuseIfLogoutLocked("bot");
     const { startBot } = await import("../bot/index.js");
     await startBot();
   });
@@ -110,7 +92,6 @@ program
   .command("schedule")
   .description("Start automated scheduler")
   .action(async () => {
-    await refuseIfLogoutLocked("schedule");
     const { startScheduler } = await import("../scheduler/index.js");
     await startScheduler();
   });
@@ -195,6 +176,9 @@ addGroup
     "--merge-policy <policy>",
     "append | override | replace — role-label merge strategy (default append)"
   )
+  .option("--dry-run", "Simulate the move (v0.8.3) — print risk report, write nothing")
+  .option("--inspect", "Alias for --dry-run (v0.8.3)")
+  .option("--keep-original", "Copy the repo into the workspace instead of moving (v0.8.3)")
   .action(async (input, opts) => {
     const { addRepoCommand } = await import("./add-repo.js");
     await addRepoCommand(input, opts);
@@ -484,14 +468,25 @@ program
     await uninstallCommand(opts);
   });
 
+// `solosquad logout` removed in v0.8.3 (§6.1). Use Ctrl+C to stop the bot,
+// then `solosquad uninstall --archive-only` to clear credentials when you
+// actually want to wind a workspace down.
+
 program
-  .command("logout")
-  .description("Mask .env, archive sessions, drop logout.lock (v0.7)")
-  .option("--org <slug>", "Restrict to one org's sessions (default: all)")
-  .option("--all", "Explicitly include every org (default behaviour)")
-  .option("-y, --yes", "Skip confirmation prompt")
-  .option("--force", "Bypass live-process check")
+  .command("logs")
+  .description("Tail SoloSquad logs (runtime + operational jsonl) — v0.8.3")
+  .option("--level <level>", "error | warn | info | debug")
+  .option("--tail <n>", "Show the last N lines (default 50)", "50")
+  .option("--follow", "Stream new lines as they arrive (Ctrl+C to stop)")
+  .option("--since <when>", 'Only show lines since "1 hour ago" / ISO timestamp')
+  .option(
+    "--type <type>",
+    "runtime | costs | spawn | stop-hook | dev-confirm | migration (repeatable)",
+    (value: string, accum: string[] = []) => [...accum, value],
+    [] as string[],
+  )
+  .option("--org <slug>", "Restrict per-org streams to a specific organization")
   .action(async (opts) => {
-    const { logoutCommand } = await import("./logout.js");
-    await logoutCommand(opts);
+    const { logsCommand } = await import("./logs.js");
+    await logsCommand(opts);
   });

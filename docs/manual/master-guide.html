@@ -283,7 +283,7 @@
       <li>
         <a data-target="s8">8. 버전별 차이</a>
         <ul class="sub">
-          <li><a href="#s8-1">8.1 현재 npm (v0.6.0)</a></li>
+          <li><a href="#s8-1">8.1 현재 npm (v0.7~v0.8.3)</a></li>
           <li><a href="#s8-2">8.2 추후 업데이트</a></li>
         </ul>
       </li>
@@ -294,6 +294,7 @@
           <li><a href="#s9-2">9.2 멀티 워크스페이스</a></li>
           <li><a href="#s9-3">9.3 제품 여러 개 운영</a></li>
           <li><a href="#s9-4">9.4 보안 체크리스트</a></li>
+          <li><a href="#s9-5">9.5 백업 + 관측성</a></li>
         </ul>
       </li>
       <li>
@@ -913,6 +914,33 @@ loop_mode:
   stop_when:
     natural: "all tests pass and lint clean"</code></pre>
   <p>Hook timeout 5초, 실패 시 보수적으로 *계속* (false positive보다 false negative 안전). 결과는 <code>&lt;org&gt;/memory/stop-hook-events.jsonl</code>에 기록.</p>
+
+  <h3 id="s3-9">3.9 v0.7 farewell archive 포맷<span class="badge now">v0.7</span></h3>
+  <p>uninstall이 항상 zip을 먼저 생성하며 포맷은 다음과 같다: <code>archive.yaml</code> (schema_version=1) + <code>manifest.tsv</code> (streaming SHA256) + <code>workspace/</code> + <code>orgs/&lt;slug&gt;/{memory,workflows,goals,domain,core,repos}/</code> + <code>credentials/env.template</code> (masked) + <code>REVOKE-CHECKLIST.md</code> + <code>PII-NOTICE.md</code>. v0.8.1은 <code>solosquad import</code>·<code>solosquad archive verify</code>로 reverse path를 잠근다.</p>
+
+  <h4>클래스 A/A*/B/C/D/E (v0.7 데이터 분류)</h4>
+  <table>
+    <thead><tr><th>클래스</th><th>예</th><th>uninstall 시 동작</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A</strong></td><td><code>&lt;org&gt;/repositories/&lt;repo&gt;/</code> 사용자 코드 (.git 포함)</td><td>어떤 플래그로도 변경/삭제 0건. 트리 enumerate조차 안 함</td></tr>
+      <tr><td><strong>A*</strong></td><td><code>&lt;repo&gt;/.solosquad/repo.yaml</code> 1개 파일</td><td>SoloSquad가 repo 안에 만드는 유일한 파일. archive에 포함, 삭제 가능</td></tr>
+      <tr><td><strong>B</strong></td><td><code>&lt;org&gt;/memory/</code>·<code>workflows/</code>·<code>goals/</code></td><td>archive 후 디스크 보존(<code>--keep-workspace</code> 시) or 삭제</td></tr>
+      <tr><td><strong>C</strong></td><td>sessions·.org.yaml·workspace.yaml</td><td>archive 후 <code>_archived/</code>로 이동. workspace.yaml은 새로 발급 위해 삭제</td></tr>
+      <tr><td><strong>D</strong></td><td>.env (시크릿)</td><td>마스킹된 template만 archive. 원본은 사용자가 별도 관리</td></tr>
+      <tr><td><strong>E</strong></td><td>SoloSquad 자체 코드(npm 글로벌)</td><td>uninstall 대상 외. <code>npm uninstall -g solosquad</code>로 별도 정리</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>초기화 명령이 없는 이유</strong>
+    <code>solosquad reset</code>·<code>solosquad clean</code> 류는 v0.7에서 영구히 거부. 라이프사이클은 install ↔ uninstall 2단으로 충분 — 재설치는 uninstall + 새 워크스페이스 init으로 표현. 클래스 A(사용자 코드)는 어떤 명령으로도 변형되지 않으므로 reset/clean의 의미가 모호하다.
+  </div>
+
+  <h3 id="s3-10">3.10 멀티 유저 채널 모델<span class="badge now">v0.8</span></h3>
+  <p>v0.7까지의 1인 운영자 모델에서 다수 사용자 컨텍스트로 확장. 각 사용자는 <code>command-&lt;handle&gt;</code>(요청)·<code>works-&lt;handle&gt;</code>(작업 결과) 채널 쌍을 갖고, <code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code>에 메타가 저장됩니다. author-guard가 다른 사용자가 자기 채널에서 응답을 가로채는 것을 차단합니다. 등록은 <code>solosquad messenger add &lt;handle&gt;</code>로.</p>
+
+  <h3 id="s3-11">3.11 dev_capability (개발 권한)<span class="badge now">v0.8.2</span></h3>
+  <p>SKILL.md frontmatter의 <code>dev_capability</code> 필드로 에이전트가 target_repo에 어떤 권한을 갖는지 명시. 4단계: <code>read</code>(읽기만) / <code>propose</code>(파일 변경 제안만 출력) / <code>patch</code>(실제 변경 후 dev_confirm 요청) / <code>pr</code>(PR 생성까지). <code>patch</code>/<code>pr</code>은 30분 timeout dev-confirmation을 거쳐야 git tree에 손을 댑니다. 결과는 <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>에 기록.</p>
 </section>
 
 <!-- ========================== SECTION 4 ========================== -->
@@ -1048,6 +1076,46 @@ solosquad add repo /path/to/legacy-repo --from-report 2026-XX-XX-initial.md
 
 solosquad add repo &lt;path&gt; --merge-policy append|override|replace
 # → 머지 정책 명시 (기본 append)</code></pre>
+
+  <h4 id="s4-5">4.5 기존 리포 가져오기 — 권장 5단계<span class="badge now">v0.8.3</span></h4>
+  <p>사용자가 자기 product code를 SoloSquad 워크스페이스 안으로 옮기는 시점은 1회 — 실수의 비용이 크므로 <strong>dry-run을 default 권고</strong>로 합니다.</p>
+  <pre><code># [Step 1] 기존 작업 정리 + commit + push
+cd ~/projects/my-saas
+git status            # untracked·unstaged 0건 확인
+git push origin main  # 안전망
+
+# [Step 2] SoloSquad 초기화
+mkdir ~/solosquad &amp;&amp; cd ~/solosquad
+solosquad init        # 워크스페이스 + 첫 org 생성
+
+# [Step 3] dry-run 미리보기 (v0.8.3 신규)
+solosquad add repo ~/projects/my-saas --dry-run
+# 출력: From/To, 파일 수·사이즈, IDE 워크스페이스 감지, 심링크,
+#       활성 프로세스(lsof/handle.exe), slug 충돌, 위험 요약
+
+# [Step 4] 실제 이동
+solosquad add repo ~/projects/my-saas
+# 또는: --keep-original 으로 복사 모드 (디스크 2× 사용)
+
+# [Step 5] 검증
+solosquad sync                       # repositories/ ↔ .org.yaml 정합
+cd ~/solosquad/main/repositories/my-saas
+git status                           # working tree clean
+git log -1                           # 직전 commit 그대로</code></pre>
+
+  <h4>4.6 위험 시나리오 + dry-run 감지<span class="badge now">v0.8.3</span></h4>
+  <table>
+    <thead><tr><th>위험</th><th>dry-run 출력</th></tr></thead>
+    <tbody>
+      <tr><td>IDE/dev server가 파일 lock</td><td><code>lsof</code>/<code>handle.exe</code> 호출 → 활성 PID 보고</td></tr>
+      <tr><td>외부에서 절대경로 심볼릭 링크가 이 리포 가리킴</td><td>부모 디렉토리 1단계 + <code>~/</code>에서 readlink 스캔 → 발견 시 경고</td></tr>
+      <tr><td>repo 내부에서 상위 디렉토리로 가는 절대경로 (config·docs)</td><td>config/yaml/md grep — hit 파일 수·첫 매칭 표시</td></tr>
+      <tr><td>같은 org에 같은 slug 리포가 이미 존재</td><td>"Slug collision: ... already exists" 경고 (실제 이동은 거부)</td></tr>
+      <tr><td>IDE workspace 파일에 절대경로 설정</td><td><code>.vscode/settings.json</code> 등에서 절대경로 패턴 감지 → 수동 갱신 권고</td></tr>
+      <tr><td>외부 cron/스크립트가 옛 경로 가리킴</td><td>SoloSquad가 모르는 영역 — 안내 메시지로만</td></tr>
+    </tbody>
+  </table>
+  <p>위 위험은 <strong>warn 레벨</strong> — 사용자는 무시하고 진행 가능. dry-run 자체는 디스크 변경 0건.</p>
 
   <h3 id="s4-4">4.4 이전 버전 사용자 업데이트</h3>
 
@@ -1450,7 +1518,7 @@ solosquad bot --debug               # 자세한 로그</code></pre>
 
   <h3 id="s6-1">6.1 명령어 레퍼런스</h3>
 
-  <h4>현재 사용 가능 (v0.7.0)<span class="badge now">v0.7</span></h4>
+  <h4>현재 사용 가능 (v0.7.0 ~ v0.8.3)<span class="badge now">v0.7~v0.8.3</span></h4>
   <table>
     <thead><tr><th>명령어</th><th>도입</th><th>역할</th></tr></thead>
     <tbody>
@@ -1486,7 +1554,11 @@ solosquad bot --debug               # 자세한 로그</code></pre>
       <tr><td><code>solosquad memory stats [--disk] [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>archive 행 수·oldest/newest·event_type 별 분포. <code>--disk</code>로 SQLite 파일 크기 보고</td></tr>
       <tr><td><code>solosquad agent reload [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>라우터 수동 재빌드 — <code>fs_watch.mode: manual</code> 환경에서 명시 호출 (§6.4)</td></tr>
       <tr><td><code>solosquad uninstall [--dry-run] [--archive-only] [--keep-workspace] [--also-purge-backups] [--scrub-content] [--force] [--archive-path &lt;p&gt;]</code></td><td>v0.7</td><td>farewell archive 생성 후 SoloSquad 자산 정리. <code>--dry-run</code>으로 무엇이 archive로 가고 무엇이 삭제될지 미리 확인 권장. <code>repositories/</code> 사용자 코드는 어떤 플래그로도 변경/삭제 0건</td></tr>
-      <tr><td><code>solosquad logout [--org &lt;slug&gt;] [--all] [--force]</code></td><td>v0.7</td><td>가벼운 logout — .env 시크릿 마스킹, sessions <code>_archived/</code>로 이동, REVOKE-CHECKLIST 생성, <code>logout.lock</code> 드롭. archive 안 함. 데이터 삭제 0건</td></tr>
+      <tr><td><code>solosquad import &lt;archive.zip&gt; [--strategy merge|replace]</code></td><td>v0.8.1</td><td>farewell archive를 새 워크스페이스로 복원. manifest SHA 검증 후 merge/replace 전략 선택</td></tr>
+      <tr><td><code>solosquad archive verify &lt;archive.zip&gt;</code></td><td>v0.8.1</td><td>archive 무결성 검증 (manifest.tsv SHA + PII-NOTICE 스캔)</td></tr>
+      <tr><td><code>solosquad messenger add &lt;handle&gt; [--platform discord|slack]</code></td><td>v0.8</td><td>멀티유저 등록 — <code>command-&lt;handle&gt;</code>·<code>works-&lt;handle&gt;</code> 채널 자동 부트스트랩 + author-guard 활성</td></tr>
+      <tr><td><code>solosquad add repo &lt;path&gt; [--dry-run] [--inspect] [--keep-original]</code></td><td>v0.8.3</td><td><code>--dry-run/--inspect</code>로 위험 시나리오 5종 사전 점검 (디스크 0 write). <code>--keep-original</code>로 원본 보존 복사 모드</td></tr>
+      <tr><td><code>solosquad logs [--level X] [--tail N] [--follow] [--since "1 hour ago"] [--type X]</code></td><td>v0.8.3</td><td>runtime + 4 operational jsonl 한 곳에서 조회. <code>--type</code>: runtime/costs/spawn/stop-hook/dev-confirm/migration (반복 지정 가능)</td></tr>
     </tbody>
   </table>
 
@@ -1592,8 +1664,31 @@ PM:    [PRD 작성 → desk-researcher spawn → ui-designer spawn → ...]
       <tr><td>일요일 20:00</td><td>Weekly Review</td><td>background</td><td><code>#workflow</code> → <code>system-weekly-review</code></td><td><code>decisions.jsonl</code></td></tr>
       <tr><td>일요일 22:00 <span class="badge now">v0.6</span></td><td>v06 Retrospective Stats</td><td>background</td><td><code>&lt;org&gt;/memory/v0.6-retrospective-stats-&lt;date&gt;.md</code></td><td>5 v0.5 데이터원 ETL 보고서</td></tr>
       <tr><td>23:00 매일 <span class="badge now">v0.3</span></td><td>PM Compaction</td><td>background</td><td><code>#workflow</code> → <code>system-pm-compaction</code></td><td><code>memory/pm-skills/</code> + trajectory 추출 + freq miner</td></tr>
+      <tr><td>00:00 매일 <span class="badge now">v0.6</span></td><td>Archive Rotate</td><td>background (silent)</td><td>—</td><td>JSONL → <code>archive.sqlite</code> FTS5 인덱싱, retention pass</td></tr>
+      <tr><td>00:30 매일 <span class="badge now">v0.8.3</span></td><td>Log Rotate</td><td>background (silent)</td><td>—</td><td><code>.solosquad/logs/</code> 14일 이전 파일 삭제</td></tr>
     </tbody>
   </table>
+
+  <h4>업데이트 ↔ 마이그레이션 흐름<span class="badge now">v0.8.3</span></h4>
+  <p>두 명령은 별개입니다. <code>solosquad doctor</code>가 CLI ↔ workspace version mismatch 감지 시 어느 쪽이 필요한지 명시적으로 안내합니다 (§7.3).</p>
+  <pre><code># 1. 진단
+solosquad doctor
+# ├─ "CLI: v0.8.3,  workspace: v0.8.3" → OK
+# ├─ "CLI: v0.8.3,  workspace: v0.7.0" → solosquad migrate --apply 권고
+# └─ "CLI: v0.7.0,  workspace: v0.8.3" → npm install -g solosquad@latest 권고
+
+# 2. CLI 업그레이드 (npm 패키지 자체)
+solosquad update          # npm registry 확인 + 자동 self-install
+# 또는: npm install -g solosquad@latest
+
+# 3. (CLI 새 버전이 되면) 워크스페이스 정합
+solosquad migrate --dry-run    # 무엇이 바뀔지 미리보기
+solosquad migrate --apply      # 적용 (자동 backup → apply → verify)
+solosquad migrate --rollback   # 직전 backup으로 복원 (필요 시)</code></pre>
+  <ul>
+    <li><strong>update</strong> = CLI 바이너리(npm 패키지) 자체를 갱신</li>
+    <li><strong>migrate</strong> = 워크스페이스(.solosquad/·org/·workflows/·memory/) 스키마/레이아웃을 새 CLI 버전에 맞게 변환</li>
+  </ul>
 
   <h4>시간대·시각·활성화 변경</h4>
   <p><code>.solosquad/workspace.yaml</code>을 직접 편집:</p>
@@ -1993,7 +2088,7 @@ solosquad run-routine --all          # 전부</code></pre>
   <h2><span class="num">8.</span>버전별 차이</h2>
   <p>현재 npm에서 받을 수 있는 기능과 향후 출시 예정 기능을 명확히 구분합니다.</p>
 
-  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.7.0)<span class="badge now">사용 가능</span></h3>
+  <h3 id="s8-1">8.1 현재 npm 배포 가능 (v0.7.0 ~ v0.8.3)<span class="badge now">사용 가능</span></h3>
 
   <h4>코어 기능 (v0.1~v0.2)</h4>
   <ul>
@@ -2086,6 +2181,46 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>의존성: <code>archiver ^7.0.1</code> (streaming write — <code>adm-zip</code> OOM 회피로 선택)</li>
   </ul>
 
+  <h4>Multi-User Messenger<span class="badge now">v0.8.0</span></h4>
+  <p>워크스페이스가 1인 운영자 모델에서 다수 사용자 컨텍스트를 다룰 수 있는 구조로 확장. 모든 메시지 라우팅은 <code>command-&lt;handle&gt;</code>·<code>works-&lt;handle&gt;</code> 채널 쌍에 author-guard로 차단된다 (도용 방지). 상세는 <code>docs/plan/v0.8-multiuser-messenger.md</code>.</p>
+  <ul>
+    <li><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code> per-user 메타 — handle/platform/userId/channels/registered_at</li>
+    <li>채널 자동 부트스트랩 (<code>channel-bootstrap.ts</code>) + 멀티유저 broadcast (<code>messenger/broadcast.ts</code>)</li>
+    <li><code>solosquad messenger</code> CLI (사용자 등록·재발급·broadcast 토글)</li>
+    <li>doctor 확장: 사용자 등록 합산·채널 매핑 검증</li>
+    <li>마이그레이션 0.7→0.8: <code>workspace.yaml.messenger</code> 기본값 + 운영자 1명 자동 등록 (Discord/Slack 토큰으로 <code>/users/@me</code> 조회)</li>
+  </ul>
+
+  <h4>Security &amp; Lifecycle Pair<span class="badge now">v0.8.1</span></h4>
+  <p>v0.7 archive 포맷의 reverse path를 잠그고 secret/PII 처리를 강화. 상세는 <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code>.</p>
+  <ul>
+    <li><code>solosquad import &lt;archive.zip&gt;</code> — farewell archive를 새 워크스페이스로 복원 (manifest SHA 검증 + merge strategy)</li>
+    <li><code>solosquad archive verify &lt;archive.zip&gt;</code> — manifest.tsv 무결성 + PII-NOTICE 스캔</li>
+    <li>SKILL.md frontmatter <code>requires_secret</code> — 필요 시크릿 명세 (workflow-maker 게이트)</li>
+  </ul>
+
+  <h4>Dev Capability<span class="badge now">v0.8.2</span></h4>
+  <p>"PR까지 만들어줘" 패턴을 SKILL의 <code>dev_capability</code> frontmatter로 표준화. dev confirmation 흐름(30분 timeout)으로 봇이 직접 git 변경을 만들기 전 사용자 확인을 받는다. 상세는 <code>docs/plan/v0.8.2-dev-capability.md</code>.</p>
+  <ul>
+    <li>SKILL.md <code>dev_capability: read|propose|patch|pr</code> 4단계 권한</li>
+    <li><code>spawn-assembler</code>가 capability 검증 후 layer 8(target_repo)에 read/write 권한 분기</li>
+    <li><code>dev-confirm.ts</code> 30분 timeout — 미응답 시 자동 abort + <code>dev-confirmations.jsonl</code> 기록</li>
+  </ul>
+
+  <h4>Onboarding UX + Observability<span class="badge now">v0.8.3</span></h4>
+  <p>처음 SoloSquad를 만났을 때의 경험 + 문제가 생겼을 때 디버깅 경험을 동시에 잡는 마지막 v0.8.x 패치. 상세는 <code>docs/plan/v0.8.3-onboarding-ux-observability.md</code>.</p>
+  <ul>
+    <li><strong>add repo --dry-run / --inspect</strong> — 사용자가 자기 product code를 SoloSquad로 들여올 때 폴더 매핑·사이즈·위험 시나리오 5종(IDE lock·심링크·외부 절대경로·slug 충돌·활성 프로세스) 미리보기. 디스크 변경 0건</li>
+    <li><strong>--keep-original</strong> — 이동 대신 복사 (디스크 2× 사용, 원본 안전망)</li>
+    <li><strong>logger 확장</strong> — <code>SOLOSQUAD_LOG_LEVEL</code>·<code>SOLOSQUAD_LOG_FORMAT=json</code>·<code>SOLOSQUAD_LOG_FILE=1</code> → <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code> rolling 14일. 기존 <code>logger.info/warn/error</code> API 그대로</li>
+    <li><strong>solosquad logs CLI</strong> — <code>--level/--tail/--follow/--since/--type</code> 으로 runtime + costs/spawn/stop-hook/dev-confirm/migration jsonl 한 곳에서 조회</li>
+    <li><strong>log-rotate routine</strong> — 매일 00:30 보존 기간 초과 파일 삭제 (silent)</li>
+    <li><strong>solosquad logout 제거</strong> — v0.7 추가 후 가치 < 복잡도 판정. 대체 흐름: Ctrl+C로 봇 중지 / <code>solosquad uninstall --archive-only</code>로 토큰 정리</li>
+    <li><strong>doctor 보강</strong> — CLI ↔ workspace version mismatch 감지 + 어느 명령(<code>update</code> vs <code>migrate</code>)을 써야 할지 명시</li>
+    <li><strong>trajectory ROI 측정</strong> — v0.6 §3.X 4지표를 30일 데이터로 측정 후 CHANGELOG <code>[0.8.3]</code>에 박제. 통과 시 v0.9에서 auto_register 활성</li>
+    <li>마이그레이션 0.8.2→0.8.3: <code>workspace.yaml.trajectory.auto_register</code> 키 + log-rotate routine 복사</li>
+  </ul>
+
   <h4>제거됨</h4>
   <ul>
     <li>Telegram 어댑터 — v0.2.4부터 미지원<span class="badge removed">v0.2.4 제거</span></li>
@@ -2093,6 +2228,7 @@ solosquad run-routine --all          # 전부</code></pre>
     <li><code>AGENT_ROUTES</code> 하드코드 상수<span class="badge removed">v0.5 제거</span> — 키워드 라우팅은 각 SKILL.md의 <code>triggers.keyword</code> frontmatter로 분산</li>
     <li><code>assets/agents/_teams/</code> 디렉토리<span class="badge removed">v0.6 제거</span> — <code>agents/{team}/KNOWLEDGE.md</code> co-location 후 평행 hierarchy 폐지. 마이그레이션이 사용자 워크스페이스의 <code>.solosquad/agents/_teams/</code>도 자동 이동</li>
     <li><code>solosquad reset</code>·<code>solosquad clean</code> 같은 "초기화" 명령<span class="badge removed">v0.7에서 영구 거부</span> — 라이프사이클은 install ↔ uninstall 2단으로 충분. 재설치는 uninstall + 새 워크스페이스 init으로 표현</li>
+    <li><code>solosquad logout</code><span class="badge removed">v0.8.3 제거</span> — v0.7에서 gh CLI 차용으로 도입했으나 가치 < 복잡도. 봇 일시 정지는 Ctrl+C, 토큰 정리는 <code>solosquad uninstall --archive-only</code>로 대체. <code>logout.lock</code>·<code>logoutLockPath</code> 코드도 함께 제거</li>
   </ul>
 
   <h3 id="s8-2">8.2 추후 업데이트<span class="badge plan">기획 단계</span></h3>
@@ -2124,6 +2260,10 @@ solosquad run-routine --all          # 전부</code></pre>
     <li><code>docs/plan/v0.5-workflow-maker.md</code></li>
     <li><code>docs/plan/v0.6-default-workflow-tuning.md</code></li>
     <li><code>docs/plan/v0.7-uninstall-lifecycle.md</code></li>
+    <li><code>docs/plan/v0.8-multiuser-messenger.md</code></li>
+    <li><code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></li>
+    <li><code>docs/plan/v0.8.2-dev-capability.md</code></li>
+    <li><code>docs/plan/v0.8.3-onboarding-ux-observability.md</code></li>
     <li><code>docs/plan/v1.1-dashboard-interaction.md</code></li>
     <li><code>docs/plan/v1.2-knowledge-ontology.md</code></li>
     <li><code>docs/plan/product-roadmap.md</code> — 전체 결정 로그</li>
@@ -2132,7 +2272,7 @@ solosquad run-routine --all          # 전부</code></pre>
   </ul>
 
   <div class="footer-note">
-    이 문서는 SoloSquad <strong>v0.7.0 (npm 0.7.0)</strong> 기준이며, v1.0~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/plan/product-roadmap.md</code>를 참조하세요.
+    이 문서는 SoloSquad <strong>v0.7.0 ~ v0.8.3 (npm 0.7~0.8.x)</strong> 기준이며, v1.0~v1.2 기획은 향후 변경될 수 있습니다. 최신 결정 로그는 <code>docs/plan/product-roadmap.md</code>를 참조하세요.
   </div>
 </section>
 
@@ -2347,8 +2487,20 @@ stages:
     <li>메신저 봇 권한은 최소로 설정 — §5의 scope 리스트 이상 주지 않기</li>
     <li><code>solosquad doctor</code> 주기적 실행</li>
     <li>클라우드 운영 시: SSH 키 인증만 허용, 방화벽은 아웃바운드만 허용</li>
+    <li>v0.8.1+: <code>solosquad archive verify</code>를 외부 저장 전에 1회 실행 (PII-NOTICE 스캔 + manifest SHA 검증)</li>
+    <li>v0.8 멀티유저: 추가 사용자 등록 시 봇 multiplicity 안내 — 각 유저는 자기 채널 쌍(<code>command-&lt;handle&gt;</code>/<code>works-&lt;handle&gt;</code>)에서만 응답 (author-guard)</li>
   </ul>
-  <p>상세: <code>docs/plan/v0.2-safety-security.md</code></p>
+  <p>상세: <code>docs/plan/v0.2-safety-security.md</code>, <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></p>
+
+  <h3 id="s9-5">9.5 정기 백업 + 관측성<span class="badge now">v0.8.3</span></h3>
+  <p>운영 중 정기 백업 + 로그 관측을 위한 흐름.</p>
+  <ul>
+    <li><strong>정기 백업</strong>: 월 1회 권장. <code>solosquad uninstall --archive-only</code>로 farewell archive zip만 생성(워크스페이스는 그대로). archive는 manifest.tsv SHA로 무결성 보장. 외부 저장 전 <code>solosquad archive verify</code>로 PII-NOTICE 스캔 권장</li>
+    <li><strong>gh CLI 인증</strong>: dev_capability(<code>patch</code>/<code>pr</code>)가 PR을 만들려면 <code>gh auth login</code>이 호스트에 완료되어 있어야 함. <code>solosquad doctor</code>가 <code>gh</code> 존재만 체크 — 토큰 유효성은 <code>gh auth status</code>로 별도 확인</li>
+    <li><strong>로그 위치 + retention</strong>: <code>SOLOSQUAD_LOG_FILE=1</code> 활성 시 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code> 일별 rolling. 14일 보존(매일 00:30 log-rotate routine). <code>SOLOSQUAD_LOG_FORMAT=json</code>으로 구조화 출력 가능</li>
+    <li><strong>solosquad logs 명령</strong>: 4 operational jsonl(agent-costs / spawn-decisions / stop-hook-events / dev-confirmations / migration-costs)을 한 곳에서 tail/follow/필터 가능</li>
+    <li><strong>CLI ↔ workspace mismatch</strong>: <code>solosquad doctor</code>가 mismatch 감지 시 <code>migrate</code> vs <code>update</code> 어느 쪽이 필요한지 명시</li>
+  </ul>
 </section>
 
 <!-- ========================== SECTION 10 ========================== -->
@@ -2481,6 +2633,24 @@ docker compose restart    # Docker 사용 시</code></pre>
 
   <p><strong>Q. v0.6 자율 reload가 너무 적극적이에요. 직접 트리거하고 싶어요.</strong><br>
   A. <code>workspace.yaml.fs_watch.mode: manual</code>로 설정하면 자동 reload가 꺼집니다. SKILL 변경 후 <code>solosquad agent reload</code>로 명시 호출. <code>fs_watch.mode: prompt</code>(기본)는 PM이 메신저에서 적용 여부를 묻는 중간 모드입니다.</p>
+
+  <p><strong>Q. (v0.8.3) <code>solosquad update</code>와 <code>solosquad migrate</code>의 차이는?</strong><br>
+  A. <code>update</code>는 <strong>CLI 바이너리</strong>(npm 패키지) 자체를 갱신, <code>migrate</code>는 <strong>워크스페이스</strong> 스키마/레이아웃을 새 CLI 버전에 맞게 변환. 일반적인 흐름: ① <code>solosquad doctor</code>로 CLI ↔ workspace mismatch 확인 → ② <code>npm install -g solosquad@latest</code> 또는 <code>solosquad update</code>로 CLI 갱신 → ③ <code>solosquad migrate --dry-run</code> 미리보기 → ④ <code>solosquad migrate --apply</code>로 적용. doctor가 어느 명령이 필요한지 명시적으로 안내합니다 (v0.8.3 §7.3).</p>
+
+  <p><strong>Q. (v0.8.3) 기존 product code를 SoloSquad 워크스페이스 안으로 어떻게 옮기나요?</strong><br>
+  A. ① <code>cd ~/projects/my-saas &amp;&amp; git status</code>로 untracked 정리·<code>git push</code>로 안전망 확보 → ② <code>mkdir ~/solosquad &amp;&amp; cd ~/solosquad &amp;&amp; solosquad init</code> → ③ <strong><code>solosquad add repo ~/projects/my-saas --dry-run</code></strong>으로 폴더 매핑·사이즈·위험 5종(IDE lock·심링크·외부 절대경로·slug 충돌·활성 프로세스) 미리 확인 → ④ <code>solosquad add repo ~/projects/my-saas</code>로 실제 이동(또는 <code>--keep-original</code>로 복사). 원본 사용자 파일은 byte-identical (v0.7 클래스 A 룰). SoloSquad가 추가하는 건 <code>&lt;repo&gt;/.solosquad/repo.yaml</code> 1개뿐.</p>
+
+  <p><strong>Q. (v0.8.3) 기존 리포 이동 후 IDE 경로가 깨졌어요.</strong><br>
+  A. <code>.vscode/settings.json</code>·<code>.idea/workspace.xml</code> 같은 IDE 설정에 <strong>절대경로</strong>가 들어있는 경우 SoloSquad는 사용자 파일을 변형하지 않으므로 사용자가 수동으로 갱신해야 합니다. <code>solosquad add repo &lt;path&gt; --dry-run</code> 출력에 절대경로 설정이 감지된 IDE 파일 경고가 표시됩니다. cron 작업·alias·CI runner 경로도 동일 — 외부 시스템이 옛 경로를 가리키면 사용자가 갱신.</p>
+
+  <p><strong>Q. (v0.8.3) 봇이 무엇을 하고 있는지 보고 싶어요 — 로그가 어디 있나요?</strong><br>
+  A. 환경변수 <code>SOLOSQUAD_LOG_FILE=1</code>을 설정하면 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>에 일별 rolling. <code>solosquad logs --tail 200 --follow</code>로 실시간 tail. <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>로 4 operational jsonl 직접 조회. 보존은 14일(매일 00:30 log-rotate routine이 자동 정리).</p>
+
+  <p><strong>Q. (v0.8.3) <code>solosquad logout</code>은 어디로 갔나요?</strong><br>
+  A. v0.7에서 추가됐다가 v0.8.3에서 제거됐습니다. 사용 가치 < 구현 복잡도 판정. 대체 흐름: 봇 일시 중지는 <strong>Ctrl+C</strong>로 프로세스 종료(다시 시작은 <code>solosquad bot</code>), .env 시크릿 마스킹/REVOKE 체크리스트는 <code>solosquad uninstall --archive-only</code>가 동일하게 제공, sessions 보관은 <code>&lt;org&gt;/.solosquad/sessions/</code>에서 직접 이동 또는 <code>solosquad pm reset --user &lt;id&gt;</code>. 기존 <code>logout.lock</code> 파일은 v0.8.3에서 inert가 되었으므로 수동 삭제 가능.</p>
+
+  <p><strong>Q. (v0.8.3) trajectory 자동 등록은 언제 활성화되나요?</strong><br>
+  A. v0.6에서 정의한 ROI 4지표(① 30일 제안 ≥ 5건 ② 채택률 ≥ 60% ③ 채택 SKILL의 30일 사용률 ≥ 평균 ④ reject cooldown < 30%) 중 모두 통과 시 v0.9에서 <code>workspace.yaml.trajectory.auto_register: true</code>가 기본값이 됩니다. 1개라도 fail이면 "제안만 영구" 잠금. v0.8.3 패치는 측정값을 CHANGELOG에 박제만 합니다 (자동 등록 코드는 v0.9에서 추가).</p>
 </section>
 
 </main>

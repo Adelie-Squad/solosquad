@@ -164,6 +164,6 @@ export function uninstallLockPath(workspace: string): string {
   return path.join(workspace, ".solosquad", "uninstall.lock");
 }
 
-export function logoutLockPath(workspace: string): string {
-  return path.join(workspace, ".solosquad", "logout.lock");
-}
+// v0.8.3 §6.1 — `logoutLockPath` removed alongside the `solosquad logout`
+// CLI command. If any pre-v0.8.3 `<workspace>/.solosquad/logout.lock` is
+// found on disk it is now inert and may be deleted by the user.
