@@ -79,7 +79,12 @@
 | `v0.4.x` | 밤새 자율 작업 완료 엔진 (Codex `/goal` + `AGENTS.md` 2계층, Data Reconciliation, 3단계 가드레일, `solosquad goal <verb>` CLI) | `docs/plan/v0.4-autonomous-engine.md` | ✓ 코드 흡수 (v0.5/v0.6 내) |
 | `v0.5.x` | 워크플로우 메이커 (4채널 trigger, stateless/stateful 분리, 빈도 카운팅 auto-load) | `docs/plan/v0.5-workflow-maker.md` | ✓ 출시 |
 | `v0.6.x` | 디폴트 워크플로우 튜닝 + **토폴로지 재편**(Team=Domain, Org Layer specialization, Workspace Knowledge) + 메모리 아카이브(FTS5) | `docs/plan/v0.6-default-workflow-tuning.md` | ✓ 출시 (2026-05-14) |
-| **`v0.7.x`** | **Uninstall & Lifecycle (Farewell Archive)** — `solosquad uninstall`/`logout`, 데이터 5분류(A/A*/B/C/D/E), 사용자 코드 불가침, WAL-safe SQLite backup, REVOKE-CHECKLIST 자동 생성, journal-기반 idempotent 재개, concurrent-uninstall lockfile, PII-NOTICE 동봉 | `docs/plan/v0.7-uninstall-lifecycle.md` | ✓ 출시 (2026-05-15) |
+| `v0.7.x` | Uninstall & Lifecycle (Farewell Archive) — `solosquad uninstall`/`logout`, 데이터 5분류(A/A*/B/C/D/E), 사용자 코드 불가침, WAL-safe SQLite backup, REVOKE-CHECKLIST 자동 생성, journal-기반 idempotent 재개, concurrent-uninstall lockfile, PII-NOTICE 동봉 | `docs/plan/v0.7-uninstall-lifecycle.md` | ✓ 출시 (2026-05-15) |
+| **`v0.8.0`** | **Multi-User Messenger** — 같은 Discord 서버·Slack 워크스페이스에 N명 설치. `command-<handle>` / `works-<handle>` 채널 페어, 봇 multiplicity (1 user = 1 bot application), author-guard, broadcast 옵션 B (opt-in + designated 봇만 발송), handle 충돌 명시적 거부 | `docs/plan/v0.8-multiuser-messenger.md` | 기획 완료, 구현 대기 |
+| `v0.8.1` | Security & Lifecycle Pair — npm audit 7건 해소(undici/discord.js), `solosquad import <zip>` (archive 페어 완결), `solosquad archive verify/info/list`, API stability 정책 문서 신설, SKILL.md `schema_version: 1` 백필 | `docs/plan/v0.8.1-security-lifecycle-pair.md` | 기획 완료, 구현 대기 |
+| `v0.8.2` | Dev Capability — SKILL frontmatter `dev_capability`+`dev_permissions`, Bash allowlist/denylist, push/merge confirmation gate (자동 머지 영구 거부), engineering 5 SKILL 박제 활성, workspace 마스터 토글, gh CLI 인증 점검 | `docs/plan/v0.8.2-dev-capability.md` | 기획 완료, 구현 대기 |
+| `v0.8.3` | Onboarding UX + Observability — `solosquad add repo --dry-run` + 기존 리포 마이그레이션 5단계 가이드, master-guide §3/§6/§8/§9/§10 v0.7→v0.8 재정합, logger 확장(레벨·파일·rolling) + `solosquad logs` CLI, trajectory 자동 등록 ROI 게이트 결정 박제 | `docs/plan/v0.8.3-onboarding-ux-observability.md` | 기획 완료, 구현 대기 |
+| `v0.9.x` | 안정화 + 자체 사용 검증 — 1주~1개월 self-dogfood, i18n 정책, `.github/ISSUE_TEMPLATE/`, trajectory 자동 등록 활성화(v0.8.3 4지표 통과 시) | `docs/plan/v0.9-self-use-and-i18n.md` (예정) | 기획 미수 |
 
 ### 3.2 정식 출시 마일스톤
 
