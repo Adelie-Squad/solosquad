@@ -34,7 +34,7 @@ solosquad sync          # Sync org/repositories/ with .org.yaml
 solosquad pm status / reset / compact          # v0.3.0 — PM session ops
 solosquad workflow list / show / focus         # v0.3.0 — workflow inspect
 solosquad rollback --workflow <id>             # v0.3.0 — snapshot revert
-solosquad goal new / list / show / run / status / stop / verify   # v0.4 (planned)
+solosquad goal new / list / show / run / status / stop / verify   # v0.4
 ```
 
 ## Project Structure
@@ -162,7 +162,7 @@ incoming messages via the 4-channel priority order: slash > explicit > keyword
 than going through router resolution.
 
 - v0.3.0 covers: workflow reconciler, slash commands (`/think /plan /build /review /ship`), `pm`/`workflow`/`rollback` CLIs, stage_id/focus markers
-- v0.4 (planned): autonomous goal runner with metric-driven keep/discard cycles
+- v0.4: autonomous goal runner with metric-driven keep/discard cycles (`solosquad goal new/list/show/run/status/stop/verify`, engine in `src/engine/`)
 - v0.5 onward: 4-channel triggers (slash / keyword / freq auto-load / explicit PM call), see `docs/plan/v0.5-workflow-maker.md` §7
 - v0.6 onward: FTS5 archive fallback for past memory recall (`docs/plan/v0.6-default-workflow-tuning.md` §4)
 
