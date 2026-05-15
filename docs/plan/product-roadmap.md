@@ -28,44 +28,64 @@
 
 ---
 
-## 2. v0.2.1 블록 — 배포 대기 (2026-04-23)
+## 2. 제품 목표 (Product Goals) — 2026-05-15 박제
 
-**핵심 아이디어:** v0.2.0 에서 드러난 UX 버그 수정 + org/repo 관리 CLI 완성 + cross-repo 런타임 기반 + 회귀 테스트.
+SoloSquad의 **출시 시점 약속 (v1.0)**과 **포스트 출시 진화**를 끌고 갈 3축. 각 릴리스는 이 3축 중 어느 부분을 채우는지 명시.
 
-### 2.1 포함 변경 사항
+### 2.1 멀티 프로덕트 — 1인 / 소규모 창업자 / n잡 시나리오
 
-| 영역 | 내용 |
-|---|---|
-| **버그 수정** | `solosquad migrate --dry-run` unknown option 해소. 모든 CLI 명령 시작 시 layout 버전 배너(v0.1.x → v0.2.x 사용자도 감지) |
-| **구조 변경** | `<org>/repositories/` 중간 계층 도입. 시스템 폴더(`memory/`, `workflows/`, `slack/`)와 코드 저장소 분리. `repository/` 단수 대신 복수형 유지 |
-| **신규 CLI** | `solosquad add org <name>` — 워크스페이스에 조직 추가<br>`solosquad add repo <url\|path>` — clone 또는 등록(외부 경로 이동 지원, org 자동 판정)<br>`solosquad sync` — repositories/ 스캔 + `.org.yaml` 동기화 + legacy `.git` 감지 & 정리 안내 |
-| **런타임 (A2)** | `src/bot/workflow-resolver.ts` — `resolveOrgCwd()` — 활성 workflow stage 의 `target_repo` → main-role repo → 레거시 루트 순 fallback. 봇·스케줄러 모두 교체 |
-| **Init 개선** | Step 5.1 저장소 다중 등록 루프 — URL/경로 반복 입력 |
-| **마이그레이션** | `0.2.0 → 0.2.1` no-op 스크립트: 각 org 에 `repositories/` 폴더 자동 생성 + workspace.yaml 버전 갱신 (기존 v0.2.0 사용자 silent 업그레이드) |
-| **회귀 테스트 (A3)** | `test/migration-v0.1-to-v0.2.test.ts` — dry-run / apply / multi-messenger / rollback / idempotent / chain to 0.2.1 (6 케이스) |
+**대상 사용자**:
+- 1인 창업자 (1 product)
+- 소규모 팀 창업자 (1~5명, 같은 메신저 서버에 모임)
+- **n잡 사용자** — 직장 + 멀티 직장 + 사이드 프로젝트 + 부업 동시 운영
+- 다중 product를 한 머신·한 SoloSquad 워크스페이스에서 분리 관리
 
-### 2.2 설계 결정 (2026-04-23)
+**구현 매핑**:
+- v0.2.x: workspace + multi-org + multi-repo 토폴로지 (✓)
+- v0.6: Org Layer specialization (`<org>/core`·`agent-profile.yaml`·`domain/`) — org별 톤·정책·도메인 격리 (✓)
+- v0.8.0: 메신저 multi-user (같은 Discord/Slack에 N명) — n잡 멤버가 같은 메신저에 모일 때 (기획 완료, 구현 대기)
+- v1.3: **일정 관리 + 메모** — n잡 사용자의 시간·기억 관리. 별도 plan slot
 
-- **`repositories/` 중간 계층 도입** — OpenClaw / Ralph / Hermes 조사 결과 피어 프로젝트들은 시스템 폴더와 코드를 한 층에 섞지 않음. GitHub flat 관례에 집착할 이유가 약하다고 판단. 시스각적 분리 + 이름 충돌 방지.
-- **`add repo` org 자동 판정** — 단일 org 면 자동, 복수 org 면 cwd 기반 추론 or 질문. 반복 질문 피로 최소화 + 오인 가능성 0.
-- **Legacy `.git` 정리 타이밍** — 마이그레이션 스크립트가 아닌 `solosquad sync` 에서 처리. 이미 마이그레이션 끝낸 사용자가 자기 페이스로 정리 가능. Normalize / Keep legacy 양 옵션 제공.
-- **단수 vs 복수 폴더명** — `repositories/`, `workflows/` 복수 유지. 내용물(다수)과 이름이 일치하는 게 자연스럽고, 기존 yaml 필드(`products:`, `repos:`)와의 일관성 유지.
+**일정·메모는 v1.3에 박제**: v0.x~v1.2까지는 product/창업 워크플로우에 집중. 캘린더·todo·노트는 v1.3에서 별도 인프라.
 
-### 2.3 배포 절차
+### 2.2 24/7 멀티 에이전트 팀 — Conversation-only operation
 
-1. ✓ 코드 구현 (B1, B2, A1, A2, A3)
-2. ✓ `npx tsc --noEmit` — 컴파일 통과
-3. ✓ `node --test test/*.test.ts` — 8/8 통과
-4. ✓ 문서 반영 (v0.2.2 스펙, update-migration-guide, CLAUDE.md)
-5. ✓ `package.json` 0.2.0 → 0.2.1
-6. ⏳ `npm publish` (OTP 필요)
+**핵심 약속**: 사용자가 코드를 직접 보지 않고, 메신저 대화만으로 자동화된 멀티 에이전트 팀을 운영할 수 있다.
 
-### 2.4 미구현 (차기)
+**구현 매핑**:
+- v0.3: PM 모드 + 슬래시 5종 + 멀티 에이전트 오케스트레이션 (✓)
+- v0.4: 자율 goal-runner (밤새 자율 사이클) (✓)
+- v0.5: 워크플로우 메이커 (메신저-네이티브 SKILL 작성 + 4채널 trigger) (✓)
+- v0.6: 8-layer JIT spawn + Org Layer specialization (✓)
+- v0.7: 라이프사이클 완결 (uninstall/archive) (✓)
+- **v0.8.2: dev_capability** — 에이전트가 코드 수정 + PR까지 자율 수행 (대화만으로 dev 작업 완결, 기획 완료)
+- v1.x: 더 깊은 자율 사이클 (multi-product cross-goal, 인간 승인 지점 더 정교화)
 
-- Cross-repo workflow 조율(의존 repo 간 PR 타이밍 자동화) — 현재는 `target_repo` per stage 까지만
-- Monorepo 감지 (`apps/frontend`, `apps/backend` 분할)
-- 채널명 → org 라우팅 정교화 (현재는 기존 product 매핑 로직 재사용)
-- Orchestrator 가 workflow 상태를 바꾸는 자동화 ( stage `in_progress` 전환)
+**보안 원칙**: 사용자가 코드를 안 보더라도 *위험 작업은 명시 승인*. v0.8.2의 push/merge confirmation gate, v0.4의 modifiable_paths 화이트리스트, v0.8.0의 author-guard 모두 이 정합.
+
+### 2.3 애자일 / 실험 중심 기획
+
+**다루는 도메인** (specialist agent들이 1차 시민으로):
+- **PMF 검증** — `pmf-planner`, `data-analyst`, `user-researcher`
+- **GTM** — `gtm-strategist`, `paid-marketer`, `content-writer`, `brand-marketer`
+- **A/B 테스트** — `data-analyst`, `feature-planner` (실험 등록·결과 추적)
+- **비즈니스 모델 (가격·결제 연동)** — `business-strategist`, `policy-architect`, `api-developer` (Stripe·PayPal 등 통합)
+- **마케팅 / 홍보 / 브랜딩** — `growth` 팀 4건
+- **차별화 / 포지셔닝** — `brand-marketer`, `pmf-planner`, `business-strategist`
+
+**구현 매핑**:
+- v0.5: 4 디폴트 워크플로 (PMF Discovery / Feature Expansion / Rebranding / Rapid Prototype) (✓)
+- v0.5: 워크플로우 메이커 — 사용자 도메인의 *암묵지를 SKILL/워크플로우로* (✓ — 본인 입력 형태)
+- v0.6: trajectory miner — 반복 패턴 자동 SKILL 추출 (제안만, ROI 게이트 v0.8.3) (✓)
+- **v1.x: 워크플로우/goal/루틴 고도화** — 암묵지 → SKILL/워크플로우 자동화 강화. 별도 ideation 진행 중
+
+### 2.4 출시 시점 약속 vs 포스트 출시 진화
+
+| 축 | v1.0 약속 | v1.x 진화 |
+|---|---|---|
+| 멀티 프로덕트 | multi-org·multi-repo·multi-user (v0.2~v0.8.0 완결) | v1.3 일정·메모 |
+| 24/7 자율 팀 | dev_capability + 5종 specialist + 자율 goal (v0.4·v0.8.2) | 인간 승인 지점 정교화·multi-product cross-goal |
+| 실험 중심 기획 | 4 디폴트 워크플로 + 25 specialist + 워크플로우 메이커 | 워크플로우/goal/루틴 고도화 (별도 plan slot) |
 
 ---
 
@@ -96,8 +116,10 @@
 
 | 버전 | 주제 | 문서 |
 |---|---|---|
-| `v0.1.x` | 대시보드 상호작용 (대시보드 자체는 별도 리포 `solopreneur-dashboard` + `solopreneur-api`) | `docs/v1.1-dashboard-interaction.md` |
-| `v0.2.x` | 사용자 지식·암묵지 온톨로지 + MCP 외부 연결 (Notion·Obsidian·API·타 에이전트) | `docs/v1.2-knowledge-ontology.md` |
+| `v1.1.x` | 대시보드 상호작용 (대시보드 자체는 별도 리포 `solopreneur-dashboard` + `solopreneur-api`) | `docs/plan/v1.1-dashboard-interaction.md` |
+| `v1.2.x` | 사용자 지식·암묵지 온톨로지 + MCP 외부 연결 (Notion·Obsidian·API·타 에이전트) | `docs/plan/v1.2-knowledge-ontology.md` |
+| **`v1.3.x`** | **일정 관리 + 메모** — n잡 사용자 시간·기억 관리. 캘린더 통합·todo·노트 인프라. `docs/plan/v1.3-schedule-memo.md` 예정 | (기획 미수) |
+| `v1.x` (별도) | 워크플로우 / goal / 루틴 *고도화* — 암묵지→스킬 자동화 강화·워크플로우 메이커 보안 모델 (권한 관리·인간 승인 지점·goal 패턴 참고). 별도 ideation 진행 중 | (기획 미수) |
 
 ### 3.4 재배치 사유 (2026-05-12)
 
@@ -122,6 +144,7 @@
 
 ## 4. 결정 로그 (주요)
 
+- **2026-05-15 (제품 목표 박제 + 명령어 축소 결정)** — (a) **§2 제품 목표 3축** 박제: 멀티 프로덕트(1인/소규모/n잡) · 24/7 멀티 에이전트 팀(코드 안 보고 대화로 운영) · 애자일·실험 중심 기획(PMF·GTM·A/B·BM·마케팅·포지셔닝). (b) **일정 관리·메모는 v1.3 슬롯**에 박제 — v0.x~v1.2까지는 product/창업 워크플로우에 집중, 캘린더·todo·노트는 v1.3에서 별도 인프라(별도 plan). (c) **워크플로우/goal/루틴 고도화**는 별도 v1.x 슬롯 — ideation 진행 중(사용자에게 7건 질문 던짐: 우선순위 leading indicator·암묵지 source·권한 모델·인간 승인 지점·multi-product goal 모델·루틴 개인화·실험 인프라). (d) **`solosquad logout` 제거 결정** — v0.7에서 gh CLI 패턴 차용으로 추가했지만 실제 가치 < 복잡도: 봇 정지는 `Ctrl+C`, 시크릿 마스킹은 사용자 수동 또는 messenger 콘솔 revoke로 충분, `logout.lock`은 dev_capability(v0.8.2)·workspace 마스터 토글로 대체 가능. v0.8.3에서 제거 + master-guide에서 절차 안내. (e) **업데이트 ↔ 마이그레이션 구분** 명확화: `solosquad update`(npm latest 확인 + 자동 self-update) vs `solosquad migrate`(워크스페이스 schema 정합). v0.8.3에서 master-guide §6에 흐름도 추가 + doctor가 mismatch 감지 시 어느 쪽을 권고할지 명시. 영향 받는 docs: 본 entry + v0.8-multiuser-messenger.md(n잡 use case 언급) + v0.8.2-dev-capability.md(워크플로우 메이커 보안 노트) + v0.8.3-onboarding-ux-observability.md(logout 제거 + update/migrate 구분 절 추가).
 - **2026-05-15 (v0.7.0 출시)** — **install ↔ uninstall 2단 라이프사이클로 완결**. 사유: v0.6까지 사용자 데이터가 누적되었지만 "도구를 제거하면서 데이터를 들고 떠나는" 경로 부재 → 사용자 코드 손상 위험·수동 정리 부담. 핵심 결정: (a) **`solosquad reset`·`solosquad clean` 같은 "초기화" 명령은 영구히 추가하지 않는다** — 재설치는 *uninstall + farewell archive + 새 워크스페이스 init*으로 자연 표현. (b) **사용자 코드(`<org>/repositories/<repo>/`) 절대 불가침** — uninstall의 어떤 플래그로도 변경/삭제 대상 아님. 옵션 자체를 두지 않음 (OpenClaw 안티패턴 회피, Issue #6289). (c) **archive 강제 sequencing** — uninstall은 항상 farewell archive를 먼저 생성. `--no-archive` 같은 플래그 없음. (d) **WAL-safe SQLite backup**(Hermes 차용) + **logout/uninstall 분리**(gh CLI 차용) + **`--keep-state` 매트릭스**(gstack 차용). (e) **PII-NOTICE.md 자동 동봉** + opt-in `--scrub-content` (자동 스크럽은 false-negative 위험으로 v1.x). (f) **journal-기반 idempotent 재개** + **concurrent-uninstall lockfile** + **PM/scheduler PID 거부** (`--force` 없이는). 영향 받는 코드: `src/lifecycle/{classify,manifest,sqlite-backup,lockfile,journal,precheck,repo-meta,revoke-checklist,cleanup,archive}.ts` (10 신규 모듈), `src/cli/{uninstall,logout}.ts` (2 신규 명령), `src/cli/doctor.ts`(v0.7 점검 항목 추가), `src/migrations/scripts/0.6.0-to-0.7.0.ts`(version bump + workspace.yaml.uninstall 기본값). 영향 받는 docs: 본 entry + architecture.md(§"v0.7 lifecycle" 절 추가) + master-guide.html("Uninstall" 절 추가) + AGENTS.md(향후 사용자 갱신).
 - **2026-05-13 (오후)** — **워크스페이스 영속 가이드를 AGENTS.md 단일 출처로 통일**. 직전 결정(AGENTS.md + CLAUDE.md 공존)을 폐기. 사유: (1) 같은 위계에 두 파일이 있으면 사용자가 "어디 적어야 하지" 혼란 + 두 출처 발산 위험. (2) AGENTS.md는 Codex·Aider·Cursor·최신 Claude Code 모두 fallback 인식하는 cross-tool de facto 표준. (3) 단일 출처는 v0.4 신뢰 앵커(human-only 편집) 정신과 정합. 변경 내용: v0.4 doc §4.2 — AGENTS.md가 워크스페이스 단일 영속 가이드. SoloSquad가 CLAUDE.md를 더 이상 생성·갱신하지 않음. 마이그레이션은 기존 CLAUDE.md 컨텐츠를 AGENTS.md로 1회 복사 후 CLAUDE.md 원본은 untouched(사용자가 수동 삭제 결정). `solosquad doctor`가 향후 CLAUDE.md 발견 시 "더 이상 사용되지 않음" 안내 출력. master-guide §3.4 + §3.5 Layer 0 표 동기 갱신. 영향 받는 파일: docs/plan/v0.4-autonomous-engine.md, docs/manual/master-guide.html, docs/plan/product-roadmap.md(본 entry).
 - **2026-05-13** — **v0.4 차용 구조를 Codex `/goal` + `AGENTS.md` 2계층으로 변경**. 종전 결정(Karpathy autoresearch의 `program.md`)을 폐기. 사유: "용어·개념을 새로 만들지 말고 최신 구조를 따르자" 원칙에 따른 에이전트 도구 용어 매핑 조사 결과 (1) "program"이 autoresearch 한정 어휘이고 (2) 2026-04 Codex CLI 0.128.0의 `/goal` + `AGENTS.md` 2계층이 더 모던하며 (3) `AGENTS.md`가 Aider·Codex·Cursor 진영의 cross-tool 표준이라 SoloSquad 사용자가 다른 도구 병용 시 호환을 자연스레 얻음. 주요 변경: `program.md` → `goal.md`, `<org>/programs/` → `<org>/goals/`, CLI `solosquad run --program <id>` → `solosquad goal <verb> <id>` 7개 서브커맨드(new/list/show/run/status/stop/verify), 워크스페이스 루트에 `AGENTS.md` 신설(CLAUDE.md와 공존, immutable_paths·modifiable_paths·Output 가드 디폴트 박제). autoresearch는 메트릭 게이팅·git rollback의 운영 패턴 원조로만 잔존 (어휘 미차용). 영향 받는 docs: v0.4 doc 전체 재작성, v0.5 doc의 v0.4 의존 표기, V0.3-INTEGRATION-TEST-PLAN.md의 out-of-scope 라인, architecture.md 레퍼런스 목록. 코드 변경은 별도 단계(현재 doc-first).
