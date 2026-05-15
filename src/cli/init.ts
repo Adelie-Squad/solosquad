@@ -17,6 +17,14 @@ import { commandExists } from "../util/platform.js";
 import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
 import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 import { detectV05Usage } from "./detect-v05-usage.js";
+import {
+  deriveChannelNames,
+  isValidHandle,
+  normalizeHandle,
+  saveUserYaml,
+  userYamlExists,
+  type UserYaml,
+} from "../bot/user-registry.js";
 
 const SOLOSQUAD_VERSION = "0.4.0";
 
@@ -208,6 +216,158 @@ function scaffoldV06WorkspaceKnowledge(workspace: string): void {
         `<!-- Files here are keyword-selected at spawn time (8-layer JIT [1]). -->\n` +
         `<!-- See assets/knowledge/README.md for the authoring guide. -->\n`,
     );
+  }
+}
+
+/**
+ * v0.8 §3.3 — Step 6a/6b/6c. Call the messenger API with the just-entered
+ * token, extract the bot's handle, let the user confirm/edit, then write the
+ * `<org>/.solosquad/users/<handle>.yaml`. Returns the chosen handle on
+ * success, or null when the API was unreachable / token invalid (caller
+ * proceeds without per-user registration — bot startup will log the missing
+ * mapping later).
+ */
+async function registerUserIdentity(args: {
+  workspace: string;
+  orgSlug: string;
+  messenger: "discord" | "slack";
+  envUpdates: Record<string, string>;
+  ownerName: string;
+}): Promise<string | null> {
+  let extracted: {
+    handle: string;
+    botUserId: string;
+    appId?: string;
+  } | null = null;
+
+  try {
+    if (args.messenger === "discord") {
+      const token = args.envUpdates.DISCORD_TOKEN || process.env.DISCORD_TOKEN;
+      if (!token) return null;
+      const res = await fetch("https://discord.com/api/v10/users/@me", {
+        headers: { Authorization: `Bot ${token}` },
+      });
+      if (res.ok) {
+        const body = (await res.json()) as {
+          id?: string;
+          username?: string;
+          application_id?: string;
+        };
+        if (body.id && body.username) {
+          extracted = {
+            handle: normalizeHandle(body.username),
+            botUserId: body.id,
+            appId: body.application_id,
+          };
+        }
+      }
+    } else if (args.messenger === "slack") {
+      const token = args.envUpdates.SLACK_BOT_TOKEN || process.env.SLACK_BOT_TOKEN;
+      if (!token) return null;
+      const res = await fetch("https://slack.com/api/auth.test", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = (await res.json()) as {
+        ok?: boolean;
+        user?: string;
+        user_id?: string;
+        bot_id?: string;
+      };
+      if (body.ok && body.user_id && body.user) {
+        extracted = {
+          handle: normalizeHandle(body.user),
+          botUserId: body.user_id,
+          appId: body.bot_id,
+        };
+      }
+    }
+  } catch {
+    extracted = null;
+  }
+
+  if (!extracted) {
+    console.log(
+      chalk.yellow(
+        "  △ Could not reach messenger API to extract handle. Skipping per-user yaml.",
+      ),
+    );
+    console.log(
+      chalk.dim(
+        "    Run `solosquad migrate --apply` or re-run init after the token is valid.",
+      ),
+    );
+    return null;
+  }
+
+  // 6b — confirm handle with user.
+  console.log(
+    chalk.dim(
+      `  Detected ${args.messenger} handle: ${chalk.cyan(extracted.handle)}`,
+    ),
+  );
+  console.log(
+    chalk.dim(
+      `  Channels will be: command-${extracted.handle} / works-${extracted.handle}`,
+    ),
+  );
+
+  const { confirmHandle } = await inquirer.prompt([
+    {
+      name: "confirmHandle",
+      message: `Use this handle? (Enter to accept, or type a different handle)`,
+      type: "input",
+      default: extracted.handle,
+      validate: (v: string) => {
+        const normalized = normalizeHandle(v);
+        if (!isValidHandle(normalized)) {
+          return "Only lowercase a-z, 0-9, underscore allowed";
+        }
+        return true;
+      },
+    },
+  ]);
+  const handle = normalizeHandle(confirmHandle);
+
+  // 6c — refuse on collision (§3.5 박제 — explicit refusal).
+  if (userYamlExists(args.orgSlug, handle, args.workspace)) {
+    console.log(
+      chalk.red(
+        `  ✗ ${handle}은 이미 ${args.orgSlug}에 등록되어 있습니다.`,
+      ),
+    );
+    console.log(
+      chalk.dim(
+        "    다른 messenger handle 또는 별도 워크스페이스를 사용하세요.",
+      ),
+    );
+    return null;
+  }
+
+  const doc: UserYaml = {
+    schema_version: 1,
+    handle,
+    display_name: args.ownerName || undefined,
+    messenger: args.messenger,
+    bot_application_id: extracted.appId,
+    bot_user_id: extracted.botUserId,
+    joined_at: new Date().toISOString(),
+    workspace_path: args.workspace,
+    channels: deriveChannelNames(handle),
+  };
+  try {
+    saveUserYaml(args.orgSlug, doc, args.workspace, false);
+    console.log(
+      chalk.green(
+        `  ✓ user yaml saved: ${args.orgSlug}/.solosquad/users/${handle}.yaml`,
+      ),
+    );
+    return handle;
+  } catch (err) {
+    console.log(
+      chalk.red(`  ✗ Failed to save user yaml: ${(err as Error).message}`),
+    );
+    return null;
   }
 }
 
@@ -480,6 +640,25 @@ export async function initCommand(): Promise<void> {
         console.log(chalk.green(`✓ ${registered.slug} (${registered.role}) registered`));
       }
     }
+
+    // Step 5.2: User identification (v0.8 §3.3 — 6a/6b/6c).
+    console.log(chalk.bold("\n-- Step 5.2: User Identification (v0.8) --"));
+    console.log(
+      chalk.dim(
+        "  Calling messenger API to extract this bot's handle.\n" +
+          "  Channels will follow the pattern `command-<handle>` / `works-<handle>`.",
+      ),
+    );
+    const platform = (messenger === "slack" ? "slack" : "discord") as
+      | "discord"
+      | "slack";
+    await registerUserIdentity({
+      workspace,
+      orgSlug,
+      messenger: platform,
+      envUpdates,
+      ownerName,
+    });
   }
 
   // v0.6 §2.3 — Workspace Knowledge Layer stub (org-independent).

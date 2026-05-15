@@ -495,3 +495,18 @@ program
     const { logoutCommand } = await import("./logout.js");
     await logoutCommand(opts);
   });
+
+// v0.8 — Multi-user messenger ops.
+const messengerGroup = program
+  .command("messenger")
+  .description("Messenger model ops (v0.8 multi-user)");
+
+messengerGroup
+  .command("broadcast-handover")
+  .description("Reassign the designated broadcaster bot (workspace.yaml)")
+  .requiredOption("--to <handle>", "Target user handle (lowercase a-z, 0-9, _)")
+  .option("--enable", "Also set broadcast_enabled: true")
+  .action(async (opts) => {
+    const { broadcastHandoverCommand } = await import("./messenger.js");
+    await broadcastHandoverCommand({ to: opts.to, enable: opts.enable });
+  });

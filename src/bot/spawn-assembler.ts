@@ -13,6 +13,12 @@ import {
   type WorkspaceYaml,
 } from "../util/config.js";
 import { loadAgentProfile, type AgentProfileMerged } from "../util/agent-profile.js";
+import {
+  listUserYamls,
+  userYamlPath,
+  loadUserYaml,
+  type UserYaml,
+} from "./user-registry.js";
 
 /**
  * v0.6 §2.2 — Spawn-time 8-layer JIT context assembler.
@@ -89,6 +95,14 @@ export interface AssembleSpawnContextInput {
   workspaceYaml?: WorkspaceYaml | null;
   /** Pre-loaded agent-profile (already 3-tier merged). */
   agentProfile?: AgentProfileMerged;
+  /**
+   * v0.8 §3.3 — Owning user handle for this spawn. When set, the assembler
+   * injects the corresponding `<org>/.solosquad/users/<handle>.yaml` into
+   * Layer 5 so the specialist sees who issued the command. When omitted, the
+   * assembler falls back to the org's first user yaml (solo-mode default) —
+   * matches v0.6 behavior for callers that have not yet wired the user id.
+   */
+  userHandle?: string;
   /** Override max_context_tokens (for tests). */
   maxContextTokens?: number;
   /** Override the per-token char heuristic (for tests). */
@@ -194,6 +208,7 @@ function readDirWithKeywordScore(
 function summarizeAgentProfile(
   profile: AgentProfileMerged,
   agentName: string,
+  userYaml?: UserYaml | null,
 ): { content: string; sources: string[] } {
   const lines: string[] = [];
   const defaults = profile.defaults;
@@ -212,12 +227,53 @@ function summarizeAgentProfile(
     lines.push("```");
   }
 
+  // v0.8 §3.3 — Identity of the user who triggered this spawn. Trimmed to the
+  // fields a specialist actually needs (handle, display_name, messenger,
+  // channels). bot_user_id / tokens are intentionally omitted.
+  if (userYaml) {
+    lines.push("## user (v0.8 multi-user context)");
+    lines.push("```yaml");
+    lines.push(
+      yaml
+        .dump(
+          {
+            handle: userYaml.handle,
+            display_name: userYaml.display_name,
+            messenger: userYaml.messenger,
+            channels: userYaml.channels,
+          },
+          { lineWidth: 100 },
+        )
+        .trimEnd(),
+    );
+    lines.push("```");
+  }
+
   if (profile.warnings.length > 0) {
     lines.push("\n<!-- agent-profile warnings: -->");
     for (const w of profile.warnings) lines.push(`<!-- ${w} -->`);
   }
 
   return { content: lines.join("\n"), sources: [] };
+}
+
+/**
+ * v0.8 §3.3 — Pick the user yaml the specialist should know about. Strict
+ * match when `handle` is provided; otherwise return the first registered user
+ * (solo-mode default). Returns `null` when no yaml exists yet (fresh org).
+ */
+function resolveUserYamlForSpawn(
+  workspace: string,
+  orgSlug: string,
+  handle: string | undefined,
+): UserYaml | null {
+  if (handle) {
+    const doc = loadUserYaml(userYamlPath(orgSlug, handle, workspace));
+    if (doc) return doc;
+    // Fall through to "first user" — covers stale handles during transitions.
+  }
+  const all = listUserYamls(orgSlug, workspace);
+  return all[0] ?? null;
 }
 
 function readHandoffSlice(
@@ -445,17 +501,30 @@ export function assembleSpawnContext(
     tokens: estimateTokens(coreContent, charsPerToken),
   });
 
-  // [5] agent-profile.yaml — defaults + this agent's section.
+  // [5] agent-profile.yaml — defaults + this agent's section + (v0.8) the
+  // requesting user's yaml so specialists know whose command they're running.
   const profile =
     input.agentProfile ??
     loadAgentProfile({
       workspace: input.workspace,
       orgSlug: input.orgSlug,
     });
-  const profileSummary = summarizeAgentProfile(profile, input.agentRef.name);
+  const userYaml = resolveUserYamlForSpawn(
+    input.workspace,
+    input.orgSlug,
+    input.userHandle,
+  );
+  const profileSummary = summarizeAgentProfile(
+    profile,
+    input.agentRef.name,
+    userYaml,
+  );
   const profileSources: string[] = [];
   const profileFile = path.join(orgDir, "agent-profile.yaml");
   if (fs.existsSync(profileFile)) profileSources.push(profileFile);
+  if (userYaml) {
+    profileSources.push(userYamlPath(input.orgSlug, userYaml.handle, input.workspace));
+  }
   layers.push({
     index: 5,
     kind: "agent-profile",

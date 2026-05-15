@@ -4,6 +4,63 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] — 2026-05-15
+
+**v0.8 — Multi-User Messenger.** "1 워크스페이스 = 1 owner = 1 봇 = 2 채널"
+가정을 깬다. 같은 Discord 서버·Slack 워크스페이스에 N명의 팀원이 각자
+머신에서 SoloSquad를 설치할 수 있으며, 각 사용자는 자기 명령/작업 채널
+페어를 가진다. 정식 출시 전 마지막 *큰 모델 변경*.
+
+자세히: `docs/plan/v0.8-multiuser-messenger.md`
+
+### Added — Multi-user identity layer
+- `src/bot/user-registry.ts` — `<org>/.solosquad/users/<handle>.yaml`
+  파서 + `findUserByBotId` (봇 startup 자기 매칭) + handle 정규화·충돌
+  명시적 거부 (§3.5 박제 — silent `-2` suffix 안 함)
+- `src/bot/author-guard.ts` — `(command|works)-<handle>` 채널에서 owner ↔
+  author handle 비교, 미일치 시 ephemeral DM 후 메시지 무시 (defense in
+  depth; 메신저 ACL이 1차 방어선)
+- `src/bot/channel-bootstrap.ts` — `bot_user_id` → user yaml 매칭 +
+  designated 봇 단일 발송 결정 (broadcast §3.6)
+
+### Added — Broadcast (opt-in)
+- `src/messenger/broadcast.ts` — `workspace.yaml.messenger.broadcast_enabled`
+  opt-in. `isDesignatedBroadcaster()` 가 true 일 때만 brief push, 나머지
+  봇은 자기 `works-<handle>` 로 — N건 중복 0
+- `solosquad messenger broadcast-handover --to <handle>` — designation 이양
+
+### Changed — Adapter channel model
+- `src/messenger/discord-adapter.ts`: hardcoded `"owner-command"` 비교 제거.
+  `command-<handle>` 정규식 매칭 + private 채널 자동 생성 (Discord 채널
+  type 0 + permission overwrites)
+- `src/messenger/slack-adapter.ts`: `SLACK_COMMAND_CHANNEL` env 제거. auth.test
+  로 bot_user_id 획득 후 `conversations.create({is_private: true})`
+- `src/cli/init.ts`: Step 5.2 신설 — 봇 토큰 입력 직후 messenger API 호출
+  (Discord `/users/@me`, Slack `auth.test`) → handle 추출 → 사용자 확인
+  prompt → `<org>/.solosquad/users/<handle>.yaml` 저장
+- `src/bot/spawn-assembler.ts`: 8-layer JIT Layer 5 에 user yaml (handle·
+  display_name·messenger·channels) 주입 — specialist 가 "누구의 명령인가"
+  인식. bot_user_id·토큰은 의도적으로 제외
+- `src/cli/doctor.ts`: §4.5 "Multi-user messenger (v0.8)" 점검 — 봇 토큰
+  ↔ user yaml 매칭, broadcast designation 일치, 채널 페어 존재
+
+### Migrations
+- `src/migrations/scripts/0.7.0-to-0.8.0.ts` — workspace.yaml version 0.7.x
+  → 0.8.0 + `messenger` 기본값 + 첫 user yaml 시드 (env 봇 토큰 → API 호출;
+  실패 시 OWNER_NAME 폴백). idempotent. v0.7 사용자 0명 전제이므로 legacy
+  `owner-command`/`workflow` alias 매핑 작업 0건 (§3.7 박제). verify 단계에서
+  legacy 채널 안내 1줄
+
+### Removed
+- 채널 이름 `owner-command`/`workflow` — 봇은 더 이상 listen 안 함. 기존
+  채널은 메신저에서 수동 archive 권장 (마이그레이션 안내 1회 출력)
+- `process.env.SLACK_COMMAND_CHANNEL` — 채널 이름이 yaml 로 이동
+
+### Tests
+- 28 신규 (test/user-registry·author-guard·channel-bootstrap.test.ts).
+  452 + 28 = 480 회귀 그린 (v0.6.x 보유 회귀와 일부 v0.7 회귀 변경 반영
+  후 478 통과)
+
 ## [0.7.0] — 2026-05-15
 
 **v0.7 — Uninstall & Lifecycle (Farewell Archive).** install ↔ uninstall
