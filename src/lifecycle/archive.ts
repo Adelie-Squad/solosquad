@@ -45,8 +45,6 @@ export interface ArchiveOptions {
   manualRevokeFiles: Map<string, string>;
   /** Version string for `archive.yaml` (use package.json version). */
   solosquadVersion: string;
-  /** If true, apply simple PII scrub patterns to class-B text content. */
-  scrubContent: boolean;
   journal: JournalWriter;
   /** ISO timestamp for export_ts; defaults to now. */
   nowIso?: string;
@@ -57,22 +55,7 @@ export interface ArchiveResult {
   size: number;
   manifestRows: number;
   redactedSecretKeys: string[];
-  scrubReport: ScrubMatch[];
 }
-
-export interface ScrubMatch {
-  archivePath: string;
-  pattern: string;
-  count: number;
-}
-
-const PII_PATTERNS: { name: string; regex: RegExp }[] = [
-  { name: "email", regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g },
-  { name: "credit-card", regex: /\b(?:\d[ -]?){13,19}\b/g },
-  { name: "ssn-us", regex: /\b\d{3}-\d{2}-\d{4}\b/g },
-  { name: "krrnn", regex: /\b\d{6}-[1-4]\d{6}\b/g },
-  { name: "phone-international", regex: /\+?\d{1,3}[ -]?\d{2,4}[ -]?\d{3,4}[ -]?\d{3,4}/g },
-];
 
 export async function buildArchive(opts: ArchiveOptions): Promise<ArchiveResult> {
   fs.mkdirSync(path.dirname(opts.archivePath), { recursive: true });
@@ -83,7 +66,6 @@ export async function buildArchive(opts: ArchiveOptions): Promise<ArchiveResult>
   zip.pipe(out);
 
   const manifest = new ManifestBuilder();
-  const scrubReport: ScrubMatch[] = [];
   let redactedSecretKeys: string[] = [];
 
   const closed = new Promise<void>((resolve, reject) => {
@@ -109,7 +91,7 @@ export async function buildArchive(opts: ArchiveOptions): Promise<ArchiveResult>
 
     const archiveRel = mapAssetToArchivePath(entry);
     if (!archiveRel) continue;
-    addFile(entry.absPath, archiveRel, entry.cls, opts, zip, manifest, scrubReport);
+    addFile(entry.absPath, archiveRel, entry.cls, zip, manifest);
   }
 
   // --- 2) Class A* surgical extracts ---
@@ -144,22 +126,10 @@ export async function buildArchive(opts: ArchiveOptions): Promise<ArchiveResult>
   }
 
   // --- 5) PII-NOTICE.md ---
-  const piiNotice = renderPiiNotice(opts, scrubReport);
+  const piiNotice = renderPiiNotice();
   addBuffer(Buffer.from(piiNotice, "utf-8"), "PII-NOTICE.md", "C", zip, manifest);
 
-  // --- 6) Scrub report if --scrub-content ---
-  if (opts.scrubContent) {
-    addBuffer(
-      Buffer.from(renderScrubReport(scrubReport), "utf-8"),
-      "scrub-report.tsv",
-      "C",
-      zip,
-      manifest,
-      "scrub-content opt-in",
-    );
-  }
-
-  // --- 7) archive.yaml (depends on counts) ---
+  // --- 6) archive.yaml (depends on counts) ---
   const archiveYaml = renderArchiveYaml({
     schemaVersion: ARCHIVE_SCHEMA_VERSION,
     exportTs: nowIso,
@@ -171,7 +141,7 @@ export async function buildArchive(opts: ArchiveOptions): Promise<ArchiveResult>
   });
   addBuffer(Buffer.from(archiveYaml, "utf-8"), "archive.yaml", "C", zip, manifest);
 
-  // --- 8) manifest.tsv last (so it lists all entries) ---
+  // --- 7) manifest.tsv last (so it lists all entries) ---
   const manifestText = manifest.toTsv();
   // We cannot easily list manifest.tsv inside itself, so the manifest does
   // not contain a row for itself. That's per §6.2 — manifest tracks the
@@ -189,7 +159,6 @@ export async function buildArchive(opts: ArchiveOptions): Promise<ArchiveResult>
     size: stat.size,
     manifestRows: manifest.size(),
     redactedSecretKeys,
-    scrubReport,
   };
 }
 
@@ -201,17 +170,10 @@ function addFile(
   absPath: string,
   archiveRel: string,
   cls: string,
-  opts: ArchiveOptions,
   zip: archiver.Archiver,
   manifest: ManifestBuilder,
-  scrubReport: ScrubMatch[],
 ): void {
-  let buf = fs.readFileSync(absPath);
-  if (opts.scrubContent && isScrubbableTextPath(archiveRel)) {
-    const { scrubbed, hits } = scrubText(buf.toString("utf-8"), archiveRel);
-    buf = Buffer.from(scrubbed, "utf-8");
-    scrubReport.push(...hits);
-  }
+  const buf = fs.readFileSync(absPath);
   zip.append(buf, { name: archiveRel });
   manifest.add({
     path: archiveRel,
@@ -299,7 +261,7 @@ function renderArchiveYaml(d: ArchiveYamlDoc): string {
   return yaml.dump(doc, { lineWidth: 100 });
 }
 
-function renderPiiNotice(opts: ArchiveOptions, scrubReport: ScrubMatch[]): string {
+function renderPiiNotice(): string {
   const lines: string[] = [];
   lines.push("# PII Notice — Farewell Archive");
   lines.push("");
@@ -315,57 +277,13 @@ function renderPiiNotice(opts: ArchiveOptions, scrubReport: ScrubMatch[]): strin
   lines.push("(키 이름 기반 패턴 — `*TOKEN/*KEY/*SECRET/*PASSWORD/*CREDENTIAL`).");
   lines.push("그러나 **본문 텍스트 안에 흘러든 카드번호·고객명단·계약 내용 등은 마스킹되지 않습니다.**");
   lines.push("");
-  if (opts.scrubContent) {
-    lines.push("> `--scrub-content` opt-in이 활성화되어 정규식 기반 스크럽이 적용되었습니다.");
-    lines.push(`> `+`매칭 항목: ${scrubReport.reduce((s, m) => s + m.count, 0)}건 — 자세한 내역은 \`scrub-report.tsv\` 참조.`);
-    lines.push("> 스크럽은 best-effort이며 false-negative 가능성이 있습니다.");
-  } else {
-    lines.push("> 자동 스크럽이 적용되지 않았습니다. 본 archive를 외부 보관/공유 전 별도 스캔을 권고합니다.");
-    lines.push("> v1.x 슬롯에서 자동 스크럽 룰셋 확장 예정.");
-  }
+  lines.push("> 자동 스크럽은 적용되지 않습니다. 본 archive를 외부 보관/공유 전 별도 스캔을 권고합니다.");
+  lines.push("> v0.8.4에서 best-effort regex 스크럽(`--scrub-content`)은 제거되었습니다 — 신뢰도 낮음 + 시나리오 불명확.");
   lines.push("");
   return lines.join("\n");
-}
-
-function renderScrubReport(scrubReport: ScrubMatch[]): string {
-  const lines: string[] = [];
-  lines.push("# schema_version=1");
-  lines.push(["archive_path", "pattern", "count"].join("\t"));
-  for (const m of scrubReport) {
-    lines.push([m.archivePath, m.pattern, String(m.count)].join("\t"));
-  }
-  return lines.join("\n") + "\n";
-}
-
-function isScrubbableTextPath(archiveRel: string): boolean {
-  return (
-    archiveRel.endsWith(".md") ||
-    archiveRel.endsWith(".jsonl") ||
-    archiveRel.endsWith(".yaml") ||
-    archiveRel.endsWith(".yml") ||
-    archiveRel.endsWith(".txt") ||
-    archiveRel.endsWith(".tsv")
-  );
-}
-
-function scrubText(text: string, archiveRel: string): { scrubbed: string; hits: ScrubMatch[] } {
-  let scrubbed = text;
-  const hits: ScrubMatch[] = [];
-  for (const p of PII_PATTERNS) {
-    let count = 0;
-    scrubbed = scrubbed.replace(p.regex, () => {
-      count++;
-      return "***SCRUBBED***";
-    });
-    if (count > 0) hits.push({ archivePath: archiveRel, pattern: p.name, count });
-  }
-  return { scrubbed, hits };
 }
 
 export const _archiveInternals = {
   mapAssetToArchivePath,
   renderArchiveYaml,
-  PII_PATTERNS,
-  isScrubbableTextPath,
-  scrubText,
 };

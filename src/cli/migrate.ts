@@ -3,6 +3,7 @@ import inquirer from "inquirer";
 import { getWorkspaceRoot } from "../util/paths.js";
 import { runMigration } from "../migrations/runner.js";
 import { listBackups, restoreBackup, deleteBackup, getBackupRoot } from "../migrations/backup.js";
+import { warnDeprecated } from "../util/deprecation.js";
 
 const CLI_VERSION_TARGET = "0.4.0";
 
@@ -17,10 +18,12 @@ export interface MigrateCliOpts {
 
 export async function migrateCommand(opts: MigrateCliOpts): Promise<void> {
   if (opts.listBackups) {
+    warnDeprecated({ oldName: "--list-backups", newName: "solosquad backup list" });
     listBackupsCommand();
     return;
   }
   if (opts.deleteBackup) {
+    warnDeprecated({ oldName: "--delete-backup", newName: "solosquad backup delete <id>" });
     const ok = deleteBackup(opts.deleteBackup);
     console.log(ok ? chalk.green(`✓ Deleted ${opts.deleteBackup}`) : chalk.red(`✗ Not found: ${opts.deleteBackup}`));
     return;

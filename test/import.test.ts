@@ -86,7 +86,6 @@ async function makeArchive(): Promise<Fixture> {
     revokeChecklist: renderRevokeChecklist(revokeData),
     manualRevokeFiles: renderManualRevokeFiles(revokeData),
     solosquadVersion: "0.7.0",
-    scrubContent: false,
     journal,
   });
   return { source, archive };

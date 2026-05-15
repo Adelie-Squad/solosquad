@@ -18,6 +18,8 @@ import { buildArchive } from "../lifecycle/archive.js";
 import { backupSqlite, verifyBackup } from "../lifecycle/sqlite-backup.js";
 import { runCleanup } from "../lifecycle/cleanup.js";
 import { getWorkspaceRoot, getEnvPath } from "../util/paths.js";
+import { warnDeprecated } from "../util/deprecation.js";
+import { resolveUninstallMode, type UninstallMode } from "./uninstall-mode.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -32,12 +34,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  */
 
 export interface UninstallOpts {
+  /** v0.8.4 — preferred way to pick mode. */
+  mode?: UninstallMode;
   dryRun?: boolean;
+  /** @deprecated v0.8.4 — use `mode: "archive-only"` instead. Removed in v1.0. */
   archiveOnly?: boolean;
+  /** @deprecated v0.8.4 — use `mode: "keep"` instead. Removed in v1.0. */
   keepWorkspace?: boolean;
+  /** @deprecated v0.8.4 — use `solosquad backup purge`. Removed in v1.0. */
   alsoPurgeBackups?: boolean;
   yes?: boolean;
-  scrubContent?: boolean;
   force?: boolean;
   archivePath?: string;
 }
@@ -52,15 +58,32 @@ export async function uninstallCommand(opts: UninstallOpts): Promise<void> {
   const workspaceSlug = path.basename(workspace);
   const archivePath = opts.archivePath ?? defaultArchivePath(workspaceSlug);
   const dryRun = Boolean(opts.dryRun);
-  const archiveOnly = Boolean(opts.archiveOnly);
-  const keepWorkspace = Boolean(opts.keepWorkspace);
+  const mode = resolveUninstallMode(opts);
+  const archiveOnly = mode === "archive-only";
+  const keepWorkspace = mode === "keep";
   const alsoPurgeBackups = Boolean(opts.alsoPurgeBackups);
-  const scrubContent = Boolean(opts.scrubContent);
+  if (opts.alsoPurgeBackups) {
+    warnDeprecated({
+      oldName: "--also-purge-backups",
+      newName: "solosquad backup purge",
+      hint: "Run `solosquad backup purge` separately for clearer ownership.",
+    });
+  }
+  if (
+    (opts as { scrubContent?: unknown }).scrubContent !== undefined
+  ) {
+    // v0.8.4 — `--scrub-content` was removed (speculative + low-trust regex).
+    // commander still parses the flag if the user passes it; we surface a
+    // clear note rather than silently accept.
+    process.stderr.write(
+      "[removed] --scrub-content was removed in v0.8.4. Archives are no longer scrubbed by SoloSquad itself — sanitize externally before sharing.\n",
+    );
+  }
   const force = Boolean(opts.force);
 
   console.log(chalk.bold(`\nSoloSquad uninstall — workspace: ${workspace}`));
   console.log(chalk.dim(`  Archive destination : ${archivePath}`));
-  console.log(chalk.dim(`  Mode                : ${dryRun ? "DRY-RUN" : archiveOnly ? "ARCHIVE-ONLY" : keepWorkspace ? "ARCHIVE + KEEP-WORKSPACE" : "ARCHIVE + FULL CLEANUP"}`));
+  console.log(chalk.dim(`  Mode                : ${dryRun ? `DRY-RUN (${mode})` : mode === "archive-only" ? "ARCHIVE-ONLY" : mode === "keep" ? "ARCHIVE + KEEP-WORKSPACE" : "ARCHIVE + FULL CLEANUP"}`));
 
   // 0. Precheck
   const pre = await precheck({ workspace, archivePath, force });
@@ -90,6 +113,13 @@ export async function uninstallCommand(opts: UninstallOpts): Promise<void> {
 
   // Confirm prompt
   if (!opts.yes && !dryRun) {
+    if (keepWorkspace) {
+      console.log(
+        chalk.yellow(
+          "  ⚠ --mode keep leaves workflows/memory/knowledge on disk. Bot tokens (Discord/Slack) and OAuth credentials also remain — check REVOKE-CHECKLIST.md separately.",
+        ),
+      );
+    }
     const { proceed } = await inquirer.prompt([
       {
         type: "confirm",
@@ -190,16 +220,11 @@ export async function uninstallCommand(opts: UninstallOpts): Promise<void> {
         revokeChecklist,
         manualRevokeFiles,
         solosquadVersion,
-        scrubContent,
         journal,
       });
       console.log(chalk.green(`\n  ✓ Archive written: ${archivePath} (${humanBytes(archiveResult.size)}, ${archiveResult.manifestRows} entries)`));
       if (archiveResult.redactedSecretKeys.length > 0) {
         console.log(chalk.dim(`    Redacted secret keys: ${archiveResult.redactedSecretKeys.join(", ")}`));
-      }
-      if (scrubContent && archiveResult.scrubReport.length > 0) {
-        const total = archiveResult.scrubReport.reduce((s, m) => s + m.count, 0);
-        console.log(chalk.dim(`    PII scrub: ${total} match(es) across ${archiveResult.scrubReport.length} file(s)`));
       }
     } else {
       console.log(chalk.dim(`\n  (dry-run) Archive NOT written. Would have included ~${classification.entries.length} entries.`));

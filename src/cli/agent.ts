@@ -24,7 +24,6 @@ import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 interface ValidateOpts {
   all?: boolean;
-  corpus?: boolean;
 }
 
 export async function agentValidateCommand(
@@ -58,31 +57,12 @@ export async function agentValidateCommand(
     }
   }
 
-  if (opts.corpus) {
-    const { runCorpusRegression } = await import("../analyze/validator-corpus.js");
-    const corpusResult = await runCorpusRegression();
-    console.log();
-    if (corpusResult.ok) {
-      console.log(
-        chalk.green(
-          `✓ corpus round-trip: ${corpusResult.checked} files OK`
-        )
-      );
-    } else {
-      console.log(
-        chalk.red(
-          `✗ corpus round-trip: ${corpusResult.failures.length} failures (of ${corpusResult.checked})`
-        )
-      );
-      for (const f of corpusResult.failures.slice(0, 5)) {
-        console.log(chalk.dim(`    - ${f.path}: ${f.reason}`));
-      }
-      if (corpusResult.failures.length > 5) {
-        console.log(chalk.dim(`    ... and ${corpusResult.failures.length - 5} more`));
-      }
-      totalFailed += corpusResult.failures.length;
-      totalChecked += corpusResult.checked;
-    }
+  if ((opts as { corpus?: unknown }).corpus !== undefined) {
+    // v0.8.4 — `--corpus` was a dev-only regression test. Moved to
+    // `npm run test:corpus` so the user-visible surface stays clean.
+    process.stderr.write(
+      "[removed] --corpus was removed in v0.8.4. Run `npm run test:corpus` from the solosquad repo to run the Anthropic skills corpus round-trip regression.\n",
+    );
   }
 
   console.log();

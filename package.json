@@ -1,6 +1,6 @@
 {
   "name": "solosquad",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "24/7 AI assistant system for solo founders — Discord/Slack bot + scheduled routines + team-based agents",
   "author": "seungw1n",
   "type": "module",
@@ -26,7 +26,8 @@
     "build": "tsc",
     "dev": "tsx bin/solosquad.ts",
     "test": "node --test --import tsx test/*.test.ts",
-    "validate-skills": "node dist/bin/solosquad.js agent validate --all --corpus",
+    "test:corpus": "node --test --import tsx test/validator-corpus.test.ts",
+    "validate-skills": "node dist/bin/solosquad.js agent validate --all && npm run test:corpus",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

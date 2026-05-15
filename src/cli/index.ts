@@ -177,7 +177,7 @@ addGroup
     "append | override | replace — role-label merge strategy (default append)"
   )
   .option("--dry-run", "Simulate the move (v0.8.3) — print risk report, write nothing")
-  .option("--inspect", "Alias for --dry-run (v0.8.3)")
+  .option("--inspect", "[deprecated] use --dry-run")
   .option("--keep-original", "Copy the repo into the workspace instead of moving (v0.8.3)")
   .action(async (input, opts) => {
     const { addRepoCommand } = await import("./add-repo.js");
@@ -375,8 +375,8 @@ program
   .option("--dry-run", "Preview the migration without applying it (default)")
   .option("--apply", "Actually apply the migration")
   .option("--rollback", "Restore a workspace from a previous backup")
-  .option("--list-backups", "List available backups")
-  .option("--delete-backup <id>", "Delete a specific backup by id")
+  .option("--list-backups", "[deprecated] use `solosquad backup list`")
+  .option("--delete-backup <id>", "[deprecated] use `solosquad backup delete <id>`")
   .option("--to <version>", "Target version (default: current CLI version)")
   .action(async (opts) => {
     const { migrateCommand } = await import("./migrate.js");
@@ -421,7 +421,6 @@ agentGroup
   .description("Validate a SKILL.md against the v0.5 schema")
   .argument("[path]", "Path to a SKILL.md file (omit when using --all)")
   .option("--all", "Validate every bundled + workspace SKILL.md")
-  .option("--corpus", "Also run the Anthropic skills corpus round-trip regression")
   .action(async (filePath, opts) => {
     const { agentValidateCommand } = await import("./agent.js");
     await agentValidateCommand(filePath, opts);
@@ -455,14 +454,19 @@ agentGroup
 program
   .command("uninstall")
   .description("Archive accumulated knowledge then remove SoloSquad assets (v0.7)")
+  .option(
+    "--mode <mode>",
+    "full | keep | archive-only — what to do after archiving (default: full)",
+    "full",
+  )
   .option("--dry-run", "Preview without writing anything to disk")
-  .option("--archive-only", "Create the archive zip but skip cleanup")
-  .option("--keep-workspace", "Keep workflows/memory/knowledge on disk for re-install")
-  .option("--also-purge-backups", "Also remove ~/.solosquad-backups/ (off by default)")
   .option("-y, --yes", "Skip confirmation prompt")
-  .option("--scrub-content", "Apply regex PII scrub to text content (opt-in, best-effort)")
   .option("--force", "Bypass blockers (live processes, workspace-as-git-tree, etc.)")
   .option("--archive-path <path>", "Override default archive zip path")
+  // v0.8.4 — deprecated aliases. Removed in v1.0. See src/util/deprecation.ts.
+  .option("--archive-only", "[deprecated] use --mode archive-only")
+  .option("--keep-workspace", "[deprecated] use --mode keep")
+  .option("--also-purge-backups", "[deprecated] use `solosquad backup purge`")
   .action(async (opts) => {
     const { uninstallCommand } = await import("./uninstall.js");
     await uninstallCommand(opts);
@@ -514,9 +518,15 @@ program
   .option("--workspace <path>", "Target workspace path (defaults to CWD or new folder)")
   .option("--into <org-slug>", "Map all archive orgs into this org slug")
   .option("--dry-run", "Show what would happen without writing")
-  .option("--merge", "Merge with existing workspace (default)")
-  .option("--replace", "Overwrite conflicting workflows/goals/memory")
-  .option("-y, --yes", "Skip confirmation prompt (--replace only)")
+  .option(
+    "--mode <mode>",
+    "merge | replace — conflict policy (default: merge)",
+    "merge",
+  )
+  .option("-y, --yes", "Skip confirmation prompt (--mode replace only)")
+  // v0.8.4 — deprecated aliases. Removed in v1.0.
+  .option("--merge", "[deprecated] use --mode merge")
+  .option("--replace", "[deprecated] use --mode replace")
   .action(async (archive, opts) => {
     const { importCommand } = await import("./import.js");
     await importCommand(archive, opts);
@@ -554,4 +564,40 @@ archiveGroup
   .action(async (archive, opts) => {
     const { archiveListCommand } = await import("./archive.js");
     await archiveListCommand(archive, opts);
+  });
+
+// v0.8.4 §7 — `solosquad backup list|delete|purge`
+const backupGroup = program
+  .command("backup")
+  .description("Manage ~/.solosquad-backups/ (v0.8.4)");
+
+backupGroup
+  .command("list")
+  .description("List all migration backups stored on disk")
+  .action(async () => {
+    const { backupListCommand } = await import("./backup.js");
+    backupListCommand();
+  });
+
+backupGroup
+  .command("delete")
+  .description("Delete a specific backup by id")
+  .argument("<id>", "Backup id (e.g. 2026-05-15T03-22-00Z-pre-v0.5)")
+  .action(async (id: string) => {
+    const { backupDeleteCommand } = await import("./backup.js");
+    backupDeleteCommand(id);
+  });
+
+backupGroup
+  .command("purge")
+  .description("Remove backups in bulk (defaults to all unless --keep-recent N)")
+  .option(
+    "--keep-recent <n>",
+    "Keep the N most-recent backups instead of removing everything",
+  )
+  .option("--dry-run", "Show what would be removed, then exit")
+  .option("-y, --yes", "Skip confirmation prompt")
+  .action(async (opts) => {
+    const { backupPurgeCommand } = await import("./backup.js");
+    await backupPurgeCommand(opts);
   });

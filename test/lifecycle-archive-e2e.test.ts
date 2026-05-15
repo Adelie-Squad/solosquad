@@ -75,7 +75,6 @@ test("buildArchive — secret 0건, repo source 0건, archive.yaml + manifest + 
     revokeChecklist: renderRevokeChecklist(revokeData),
     manualRevokeFiles: renderManualRevokeFiles(revokeData),
     solosquadVersion: "0.7.0",
-    scrubContent: false,
     journal,
   });
 

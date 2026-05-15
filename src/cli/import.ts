@@ -4,6 +4,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { fileURLToPath } from "url";
 import { importArchive, type ImportReport } from "../lifecycle/import.js";
+import { resolveImportMode, type ImportMode } from "./import-mode.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,11 +18,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * reported to the user*.
  */
 
+export type { ImportMode };
+
 export interface ImportCliOpts {
   workspace?: string;
   into?: string;
   dryRun?: boolean;
+  /** v0.8.4 — preferred. */
+  mode?: ImportMode;
+  /** @deprecated v0.8.4 — use `mode: "merge"`. Removed in v1.0. */
   merge?: boolean;
+  /** @deprecated v0.8.4 — use `mode: "replace"`. Removed in v1.0. */
   replace?: boolean;
   yes?: boolean;
 }
@@ -32,7 +39,7 @@ export async function importCommand(
 ): Promise<void> {
   if (!archiveArg) {
     console.error(chalk.red("error: archive path is required"));
-    console.error("usage: solosquad import <archive.zip> [--workspace <path>] [--into <org>] [--dry-run] [--merge | --replace]");
+    console.error("usage: solosquad import <archive.zip> [--workspace <path>] [--into <org>] [--dry-run] [--mode merge|replace]");
     process.exitCode = 2;
     return;
   }
@@ -44,13 +51,11 @@ export async function importCommand(
     return;
   }
 
-  if (opts.merge && opts.replace) {
-    console.error(chalk.red("error: --merge and --replace are mutually exclusive"));
+  const mode = resolveImportMode(opts);
+  if (mode === null) {
     process.exitCode = 2;
     return;
   }
-
-  const mode: "merge" | "replace" = opts.replace ? "replace" : "merge";
   const dryRun = Boolean(opts.dryRun);
 
   // Workspace resolution: explicit --workspace > CWD if it already looks like

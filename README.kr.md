@@ -101,9 +101,9 @@ Pass 2 단계에서 `solosquad agent validate --all` 이 자동 실행됩니다.
 기존 리포를 워크스페이스로 가져오는 경우 v0.8.3에서 추가된 안전 옵션을 권장:
 
 ```bash
-solosquad add repo /path/to/repo --dry-run        # 디스크 변경 0건, 위험 시나리오 사전 진단
-solosquad add repo /path/to/repo --inspect        # 활성 프로세스·심링크·slug 충돌 walker
+solosquad add repo /path/to/repo --dry-run        # 디스크 변경 0건 + 활성 프로세스·심링크·slug 충돌 등 위험 시나리오 5종 사전 진단
 solosquad add repo /path/to/repo --keep-original  # 이동(rename) 대신 복사로 처리
+# v0.8.4: --inspect alias는 deprecated (v1.0 제거 예정) — --dry-run 사용
 ```
 
 ---
@@ -264,21 +264,30 @@ solosquad memory stats [--disk]                   # 인덱스 row 카운트 + ev
 # 리포 분석 (v0.5)
 solosquad analyze repo <path> [--force] [--prune-orphans]    # .claude/skills/ 스캔 + 분류 + 보고서
 solosquad add repo --from-report <report> --merge-policy <append|override|replace>
-solosquad add repo <path> --dry-run               # v0.8.3 — 디스크 변경 0건 시뮬레이션
-solosquad add repo <path> --inspect               # v0.8.3 — 위험 시나리오 5종 사전 진단
+solosquad add repo <path> --dry-run               # v0.8.3 — 디스크 변경 0건 시뮬레이션 + 위험 시나리오 5종 진단
 solosquad add repo <path> --keep-original         # v0.8.3 — 이동 대신 복사
+                                                  # (v0.8.4: --inspect 별칭 deprecated, v1.0 제거)
 
 # 마이그레이션
 solosquad migrate                                 # 워크스페이스 레이아웃 업그레이드 (기본 dry-run)
 solosquad migrate --apply                         # 실제 적용
 solosquad migrate --rollback                      # 백업으로 복원
 
-# 라이프사이클 (v0.7 + v0.8.1)
-solosquad uninstall [--dry-run --archive-only --keep-workspace --scrub-content]   # 0-4단계 farewell archive
-solosquad import <archive.zip> [--dry-run --merge | --replace]                    # v0.8.1 archive 페어 완결
+# 라이프사이클 (v0.7 + v0.8.1, v0.8.4에서 surface freeze)
+solosquad uninstall [--mode full|keep|archive-only] [--dry-run] [--force]
+                                                  # farewell archive + cleanup. 기본 full
+                                                  # keep = workflows/memory/knowledge 보존 (재설치용)
+                                                  # archive-only = zip만 생성, cleanup 스킵
+solosquad import <archive.zip> [--dry-run] [--mode merge|replace]                 # v0.8.1 archive 페어 완결
 solosquad archive verify <archive.zip>            # manifest SHA256 대조
 solosquad archive info <archive.zip>              # 메타 + 분류 요약
 solosquad archive list <archive.zip>              # 항목 트리
+
+# 백업 관리 (v0.8.4 — migrate/uninstall 백업 플래그 흡수)
+solosquad backup list                             # ~/.solosquad-backups/ 목록
+solosquad backup delete <id>                      # 단일 백업 삭제
+solosquad backup purge [--keep-recent N] [--dry-run] [-y]
+                                                  # 일괄 삭제(전체 또는 최근 N개 유지)
 
 # 관측성 (v0.8.3)
 solosquad logs [--level X] [--tail N] [--follow] [--since T] [--type X]   # logger 로그 조회

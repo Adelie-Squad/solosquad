@@ -15,6 +15,7 @@ import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.
 import { applyReport, type MergePolicy } from "../analyze/applier.js";
 import { rebuildRoutes } from "../bot/agent-router.js";
 import { formatInspectionReport, inspectRepo } from "../util/repo-inspect.js";
+import { warnDeprecated } from "../util/deprecation.js";
 
 export interface AddRepoOpts {
   org?: string;
@@ -137,6 +138,9 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
   const orgSlug = await pickOrgSlug(workspace, opts.org);
   const orgDir = path.join(workspace, orgSlug);
   const reposDir = path.join(orgDir, "repositories");
+  if (opts.inspect) {
+    warnDeprecated({ oldName: "--inspect", newName: "--dry-run" });
+  }
   const dryRun = opts.dryRun || opts.inspect;
   if (!dryRun) {
     fs.mkdirSync(reposDir, { recursive: true });

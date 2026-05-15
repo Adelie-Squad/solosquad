@@ -184,8 +184,8 @@ solosquad memory stats [--disk]                   # indexed row counts + per-eve
 solosquad analyze repo <path> [--force] [--prune-orphans]    # scan .claude/skills/, classify, write report
 solosquad add repo --from-report <report> --merge-policy <append|override|replace>
 solosquad add repo <path> --dry-run               # v0.8.3 — simulate, print 5-scenario risk report
-solosquad add repo <path> --inspect               # v0.8.3 — alias for --dry-run
 solosquad add repo <path> --keep-original         # v0.8.3 — copy instead of move (disk 2×)
+                                                  # (v0.8.4: --inspect alias deprecated, removed in v1.0)
 
 # Migration
 solosquad migrate                                 # upgrade workspace layout (dry-run by default)
@@ -197,16 +197,23 @@ solosquad add org <name>                          # add an organization
 solosquad add repo <url|path>                     # clone or register a repository
 solosquad sync                                    # sync repositories/ with .org.yaml
 
-# Lifecycle (v0.7 + v0.8.1)
-solosquad uninstall [--dry-run] [--archive-only] [--keep-workspace]
-                    [--also-purge-backups] [--scrub-content] [--force]
+# Lifecycle (v0.7 + v0.8.1, surface frozen by v0.8.4)
+solosquad uninstall [--mode full|keep|archive-only] [--dry-run] [--force]
                                                   # farewell archive + cleanup, user code untouchable
+                                                  # default: full. keep = retain workflows/memory/knowledge,
+                                                  # archive-only = zip only, no cleanup
 solosquad import <archive.zip> [--workspace <path>] [--into <org>]
-                               [--dry-run] [--merge | --replace]
+                               [--dry-run] [--mode merge|replace]
                                                   # v0.8.1 — restore farewell archive (paired with uninstall)
 solosquad archive verify <archive.zip>            # v0.8.1 — manifest SHA × actual SHA + schema compat
 solosquad archive info <archive.zip>              # v0.8.1 — metadata + per-class entry counts
 solosquad archive list <archive.zip> [--class X]  # v0.8.1 — manifest entries
+
+# Backup management (v0.8.4 — absorbs migrate/uninstall backup flags)
+solosquad backup list                             # list ~/.solosquad-backups/ entries
+solosquad backup delete <id>                      # remove a single backup
+solosquad backup purge [--keep-recent N] [--dry-run] [-y]
+                                                  # bulk delete (all, or keep N newest)
 
 # Multi-user messenger (v0.8.0)
 solosquad messenger broadcast-handover --to <handle>   # reassign designated broadcaster bot

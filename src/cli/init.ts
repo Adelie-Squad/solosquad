@@ -5,8 +5,8 @@ import inquirer from "inquirer";
 import {
   getAssetsDir,
   getSolosquadConfigDir,
-  getWorkspaceRoot,
 } from "../util/paths.js";
+import { findWorkspaceRoot } from "../migrations/detect.js";
 import {
   DEFAULT_WORKSPACE_SETTINGS,
   normalizeMessenger,
@@ -371,6 +371,74 @@ async function registerUserIdentity(args: {
   }
 }
 
+/**
+ * v0.8.4 §8 — Workspace path resolution for `init` only.
+ *
+ * Other commands rely on `getWorkspaceRoot()` which walks up from CWD to find
+ * an existing `.solosquad/`. That's the right call for `bot`, `status`, etc.
+ * — but for `init`, walk-up can quietly redirect a fresh init to a parent's
+ * workspace, contradicting user intent. Here we:
+ *   1. If CWD already has `.solosquad/` → reuse it (idempotent re-init).
+ *   2. If a parent has `.solosquad/` → prompt user: existing / cwd / custom.
+ *   3. Else → prompt to confirm CWD as the workspace path (default).
+ *
+ * Returns the absolute workspace path the rest of the wizard will use.
+ */
+async function resolveInitWorkspace(): Promise<string> {
+  const cwd = process.cwd();
+  const cwdHasWorkspace = fs.existsSync(path.join(cwd, ".solosquad"));
+  if (cwdHasWorkspace) return cwd;
+
+  const upstream = findWorkspaceRoot(cwd);
+
+  if (upstream && upstream !== cwd) {
+    console.log(
+      chalk.yellow(
+        `  ⚠ Existing SoloSquad workspace detected at a parent directory: ${upstream}`,
+      ),
+    );
+    const { choice } = await inquirer.prompt([
+      {
+        name: "choice",
+        type: "list",
+        message: "Where should the workspace be initialized?",
+        choices: [
+          {
+            name: `Create new workspace at current path: ${cwd}  (recommended)`,
+            value: "cwd",
+          },
+          { name: `Use existing workspace at: ${upstream}`, value: "existing" },
+          { name: "Specify a different path", value: "custom" },
+        ],
+        default: "cwd",
+      },
+    ]);
+    if (choice === "existing") return upstream;
+    if (choice === "cwd") return cwd;
+    const { customPath } = await inquirer.prompt([
+      {
+        name: "customPath",
+        type: "input",
+        message: "Workspace path:",
+        default: cwd,
+        validate: (v: string) => v.trim().length > 0 || "Path required",
+      },
+    ]);
+    return path.resolve(customPath);
+  }
+
+  const { confirmedPath } = await inquirer.prompt([
+    {
+      name: "confirmedPath",
+      type: "input",
+      message: "Initialize workspace at:",
+      default: cwd,
+      validate: (v: string) => v.trim().length > 0 || "Path required",
+    },
+  ]);
+  return path.resolve(confirmedPath);
+}
+
 export async function initCommand(): Promise<void> {
   console.log(
     chalk.cyan.bold("\n  SoloSquad") +
@@ -396,7 +464,9 @@ export async function initCommand(): Promise<void> {
 
   // Step 2: Workspace layout
   console.log(chalk.bold("\n-- Step 2: Initialize Workspace --"));
-  const workspace = getWorkspaceRoot();
+  const workspace = await resolveInitWorkspace();
+  fs.mkdirSync(workspace, { recursive: true });
+  console.log(chalk.dim(`  Workspace path: ${workspace}`));
   const solosquadDir = getSolosquadConfigDir(workspace);
 
   if (fs.existsSync(solosquadDir)) {

@@ -61,13 +61,31 @@ forcing immediate upgrades.
 This policy covers schema surfaces only. It is silent on:
 
 - **CLI command names + flags** — those follow SemVer at the *CLI* level
-  (workspace version). New flags are minor; removing a flag is major.
+  (workspace version). New flags are minor; removing a flag is major. The
+  v1.0 freeze inventory lives in
+  [`docs/plan/v0.8.4-cli-surface-reduction.md`](./plan/v0.8.4-cli-surface-reduction.md)
+  §11 — that document is the canonical surface enumeration when this
+  policy takes effect at v1.0.
 - **Messenger channel layout** — owned by `<org>/.org.yaml.messenger`,
   outside the schema_version system.
 - **Routine prompt bodies** — `assets/routines/*.md` are content, not
   schema; user edits are preserved across upgrades by the migration.
 - **Bundled SKILL.md *bodies*** — only the YAML frontmatter is schema'd.
   The body markdown is content and is replaceable on every release.
+
+### 4.1 Intentional convention exceptions
+
+A small number of CLI commands intentionally break the otherwise-consistent
+flag conventions for safety reasons. These exceptions are frozen alongside
+the surface — they are not bugs to be normalized in v1.0+:
+
+- **`solosquad migrate` is dry-run by default**, requiring `--apply` to
+  actually mutate workspace schema. Every other destructive command
+  (`uninstall`, `add repo`) is opt-in dry-run via `--dry-run`. Migrate is
+  inverted because it is hard to undo and the safety default is worth the
+  asymmetry. See
+  [`docs/plan/v0.8.4-cli-surface-reduction.md`](./plan/v0.8.4-cli-surface-reduction.md)
+  §9 for the decision rationale.
 
 ---
 

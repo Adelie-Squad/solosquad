@@ -4,6 +4,96 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.4] — 2026-05-16
+
+**v0.8.4 — CLI Surface Reduction.** v1.0 정식 출시 전 마지막 비파괴적 플래그
+정리. `docs/api-stability.md` §4가 "Removing a flag is major"라 박제 →
+v1.0 이후엔 플래그 제거 불가. 이 슬롯에서 6축 정리: (a) `uninstall` 플래그
+8→5 (`--mode <full|keep|archive-only>`), (b) `add repo --inspect` 별칭
+deprecated, (c) `import --mode <merge|replace>` 패턴 정합, (d) `agent
+validate --corpus` 내부 이동, (e) `solosquad backup list|delete|purge`
+subgroup 신설, (f) `solosquad init` 워크스페이스 경로 명시 확인 prompt.
+
+자세히: `docs/plan/v0.8.4-cli-surface-reduction.md`
+
+### Added — `solosquad backup` subgroup (§7)
+- `src/cli/backup.ts` 신규 — `~/.solosquad-backups/` 라이프사이클 단일 책임
+- `backup list` — 모든 마이그레이션 백업 조회
+- `backup delete <id>` — 단일 백업 삭제
+- `backup purge [--keep-recent N] [--dry-run] [-y]` — 일괄 삭제(전체 또는
+  최근 N개 유지)
+
+### Added — `solosquad uninstall --mode` (§3)
+- 3-state mode를 단일 플래그로 통합: `full`(기본·완전 정리) / `keep`
+  (workflows·memory·knowledge 보존) / `archive-only`(아카이브만)
+- `--mode keep` 선택 시 명시적 경고 — 봇 토큰/OAuth는 디스크에 남으므로
+  REVOKE-CHECKLIST 별도 확인 필요
+- `src/cli/uninstall-mode.ts` 신규 — 매트릭스 격리(테스트 가능)
+
+### Added — `solosquad import --mode <merge|replace>` (§5)
+- boolean `--merge`/`--replace` 두 플래그를 단일 `--mode`로 통합
+- `src/cli/import-mode.ts` 신규 — 매트릭스 격리
+
+### Added — `solosquad init` 워크스페이스 경로 확인 (§8)
+- 기존 walk-up 자동 감지가 신규 init 의도와 어긋날 수 있는 시나리오 대응.
+  CWD 기본 + 상위 워크스페이스 발견 시 3-way 선택지(현재 경로·기존 사용·
+  커스텀 경로) 명시 prompt
+- `src/cli/init.ts:resolveInitWorkspace()` 신규 함수 — `init` 한정 분기.
+  다른 명령(`bot`/`status`/`logs` 등)은 walk-up 그대로 유지
+
+### Added — Deprecation infrastructure (§10)
+- `src/util/deprecation.ts` 신규 — `warnDeprecated()`·`warnDeprecatedOnce()`
+- stderr 출력 + `SOLOSQUAD_NO_DEPRECATION_WARN=1` 환경변수로 silence 가능
+
+### Changed — Deprecated alias 처리 (§10.1)
+다음 플래그는 v0.8.4에서 동작 유지 + deprecation warning, **v1.0에서 제거**:
+
+| 기존 | 대체 |
+|---|---|
+| `uninstall --archive-only` | `uninstall --mode archive-only` |
+| `uninstall --keep-workspace` | `uninstall --mode keep` |
+| `uninstall --also-purge-backups` | `backup purge` |
+| `add repo --inspect` | `add repo --dry-run` |
+| `import --merge` | `import --mode merge` |
+| `import --replace` | `import --mode replace` |
+| `migrate --list-backups` | `backup list` |
+| `migrate --delete-backup <id>` | `backup delete <id>` |
+
+### Removed — 즉시 제거 (v1.0 약속 발효 전이라 SemVer 안전)
+- `uninstall --scrub-content` — speculative + best-effort regex 신뢰도 낮음.
+  `src/lifecycle/archive.ts`에서 `ScrubMatch`/`PII_PATTERNS`/`scrubText`/
+  `isScrubbableTextPath`/`renderScrubReport` 함수 + `scrub-report.tsv` 출력
+  삭제. PII-NOTICE는 "자동 스크럽 없음, 외부 보관 전 별도 스캔 권장" 명시로
+  단순화
+- `agent validate --corpus` — dev-only regression. `npm run test:corpus`로
+  이동(`package.json` scripts). CI 워크플로우는 `validate-skills` 한 줄로
+  자동 호출
+
+### Added — v1.0 Surface Freeze 체크리스트 (§11)
+- 12 top-level + 30 subcommands across 11 groups = **42 commands**
+- v1.0 진입 시 본 enumeration이 SemVer 약속 대상이 됨
+- `docs/api-stability.md` §4가 본 plan §11을 canonical reference로 link
+
+### Added — Tests
+- `test/cli-deprecation.test.ts` — 5 cases (helper unit)
+- `test/uninstall-mode-matrix.test.ts` — 6 cases (mode 매트릭스)
+- `test/import-mode-matrix.test.ts` — 5 cases (mode 매트릭스)
+
+### Changed — Documentation
+- `docs/api-stability.md` §4 — v0.8.4 surface freeze link + migrate
+  dry-run-by-default convention exception 명시
+- `docs/manual/master-guide.html` §6 — uninstall/import/backup 명령 표
+  갱신, init wizard에 `Initialize workspace at` step 안내 추가
+- `docs/plan/v0.8.4-cli-surface-reduction.md` 신규 — 14절 + 17 작업 분해
+- `docs/plan/product-roadmap.md` §5.1·§6 — v0.8.4 부활 entry 박제 (오늘
+  오후 박제된 "v0.8.4 plan 폐기"의 amendment — 그 폐기는 메신저 polish
+  한정이었음을 명시)
+
+### Migration
+- 별도 schema 마이그레이션 없음. CLI 표면 변경만이라 workspace.yaml 갱신
+  불필요. 사용자는 자동으로 v0.8.4 binary로 업그레이드되며, 기존 스크립트는
+  deprecation warning과 함께 동작 유지
+
 ## [0.8.3] — 2026-05-15
 
 **v0.8.3 — Onboarding UX + Observability.** v0.8.x 시리즈의 마지막 패치.

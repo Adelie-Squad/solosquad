@@ -69,7 +69,6 @@ function buildPristineArchive(workspace: string, dest: string, version = "0.7.0"
       revokeChecklist: renderRevokeChecklist(revokeData),
       manualRevokeFiles: renderManualRevokeFiles(revokeData),
       solosquadVersion: version,
-      scrubContent: false,
       journal,
     });
   })();
