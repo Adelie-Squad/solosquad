@@ -1,7 +1,12 @@
 import fs from "fs";
 import path from "path";
 import chalk from "chalk";
-import { loadEnv, loadProducts } from "../util/config.js";
+import {
+  loadEnv,
+  loadProducts,
+  loadWorkspaceYaml,
+  listOrganizations,
+} from "../util/config.js";
 import {
   commandExists,
   IS_WINDOWS,
@@ -9,6 +14,8 @@ import {
   shellName,
 } from "../util/platform.js";
 import { getWorkspaceRoot } from "../util/paths.js";
+import { listUserYamls, type UserYaml } from "../bot/user-registry.js";
+import { loadMessengerSection } from "../messenger/broadcast.js";
 
 function check(label: string, ok: boolean, hint?: string): boolean {
   if (ok) {
@@ -155,6 +162,12 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     issues += await runLifecycleChecks(workspace);
   }
 
+  // 4.5. Multi-user messenger (v0.8)
+  if (isNew) {
+    console.log(chalk.dim("\nMulti-user messenger (v0.8):"));
+    issues += await runMultiUserChecks(workspace, messenger, messengerCheck);
+  }
+
   // 5. Live messenger API check (opt-in)
   if (messengerCheck && messenger) {
     console.log(chalk.dim("\nMessenger API check:"));
@@ -252,6 +265,164 @@ function humanBytesDoctor(n: number): string {
   return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
+// -- Multi-user messenger (v0.8) --
+
+async function runMultiUserChecks(
+  workspace: string,
+  messenger: string,
+  messengerCheck: boolean | undefined,
+): Promise<number> {
+  let failures = 0;
+
+  // workspace.yaml must be 0.8.x for these checks to be authoritative.
+  const ws = loadWorkspaceYaml(workspace);
+  if (!ws) {
+    warn("workspace.yaml missing — skip v0.8 checks");
+    return 0;
+  }
+
+  const orgs = listOrganizations(workspace);
+  if (orgs.length === 0) {
+    warn("No organizations registered", "Run `solosquad add org <name>`");
+    return 0;
+  }
+
+  // Per-org user yaml presence.
+  let totalUsers = 0;
+  const allUsers: Array<{ orgSlug: string; user: UserYaml }> = [];
+  for (const org of orgs) {
+    const users = listUserYamls(org.slug, workspace);
+    if (users.length === 0) {
+      if (!check(
+        `${org.slug}: ≥1 user yaml`,
+        false,
+        "Run `solosquad init` or `solosquad migrate --apply` (0.7→0.8)",
+      )) {
+        failures++;
+      }
+      continue;
+    }
+    check(`${org.slug}: ${users.length} user yaml(s)`, true);
+    totalUsers += users.length;
+    for (const u of users) allUsers.push({ orgSlug: org.slug, user: u });
+  }
+
+  // Optional live messenger API match: bot_user_id from .env token must match
+  // exactly one yaml's bot_user_id.
+  if (messengerCheck && messenger && allUsers.length > 0) {
+    if (messenger.includes("discord")) {
+      const token = process.env.DISCORD_TOKEN;
+      if (!isPlaceholder(token)) {
+        try {
+          const res = await fetch("https://discord.com/api/v10/users/@me", {
+            headers: { Authorization: `Bot ${token}` },
+          });
+          if (res.ok) {
+            const body = (await res.json()) as { id?: string; username?: string };
+            const matched = allUsers.find(
+              ({ user }) => user.bot_user_id === body.id,
+            );
+            if (matched) {
+              check(
+                `Discord bot_user_id matches yaml (handle=${matched.user.handle}, org=${matched.orgSlug})`,
+                true,
+              );
+            } else {
+              if (
+                !check(
+                  "Discord bot_user_id ↔ user yaml",
+                  false,
+                  `id=${body.id ?? "?"} (${body.username ?? "?"}) does not match any registered user`,
+                )
+              ) {
+                failures++;
+              }
+            }
+          }
+        } catch {
+          // ignore — surface via primary messenger check
+        }
+      }
+    }
+    if (messenger.includes("slack")) {
+      const token = process.env.SLACK_BOT_TOKEN;
+      if (!isPlaceholder(token)) {
+        try {
+          const res = await fetch("https://slack.com/api/auth.test", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const body = (await res.json()) as {
+            ok?: boolean;
+            user?: string;
+            user_id?: string;
+          };
+          if (body.ok && body.user_id) {
+            const matched = allUsers.find(
+              ({ user }) => user.bot_user_id === body.user_id,
+            );
+            if (matched) {
+              check(
+                `Slack bot_user_id matches yaml (handle=${matched.user.handle}, org=${matched.orgSlug})`,
+                true,
+              );
+            } else {
+              if (
+                !check(
+                  "Slack bot_user_id ↔ user yaml",
+                  false,
+                  `id=${body.user_id} (${body.user ?? "?"}) does not match any registered user`,
+                )
+              ) {
+                failures++;
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+
+  // Broadcast designation consistency: handle must exist somewhere when set.
+  const section = loadMessengerSection(workspace);
+  if (section.broadcast_enabled === true) {
+    const owner = section.broadcast_owner_handle ?? null;
+    if (!owner) {
+      if (
+        !check(
+          "broadcast_enabled=true but broadcast_owner_handle is null",
+          false,
+          "Run `solosquad messenger broadcast-handover --to <handle>`",
+        )
+      ) {
+        failures++;
+      }
+    } else {
+      const found = allUsers.some(({ user }) => user.handle === owner);
+      if (!found) {
+        if (
+          !check(
+            `broadcast_owner_handle=${owner} not registered`,
+            false,
+            "Handover to a registered user",
+          )
+        ) {
+          failures++;
+        }
+      } else {
+        check(`broadcast designation: ${owner}`, true);
+      }
+    }
+  } else {
+    check("broadcast_enabled=false (opt-in)", true);
+  }
+
+  void totalUsers;
+  return failures;
+}
+
 // -- Live API probes --
 
 async function runMessengerChecks(messenger: string): Promise<number> {
@@ -311,4 +482,3 @@ async function checkSlack(): Promise<boolean> {
     return check("Slack auth.test", false, `${e}`);
   }
 }
-
