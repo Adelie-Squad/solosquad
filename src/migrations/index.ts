@@ -7,12 +7,18 @@ import { migration as v030ToV040 } from "./scripts/0.3.0-to-0.4.0.js";
 import { migration as v040ToV050 } from "./scripts/0.4.0-to-0.5.0.js";
 import { migration as v050ToV060 } from "./scripts/0.5.0-to-0.6.0.js";
 import { migration as v060ToV070 } from "./scripts/0.6.0-to-0.7.0.js";
+import { migration as v081ToV082 } from "./scripts/0.8.1-to-0.8.2.js";
 import { versionMatches } from "./detect.js";
 
 /**
  * Migration registry — ordered list. Runner picks scripts whose `from`
  * matches the current workspace version, then chains forward until the
  * target version is reached.
+ *
+ * v0.7.0 → v0.8.0 → v0.8.1 migrations live on sibling branches
+ * (`feat/v0.8.0-multiuser-messenger`, `feat/v0.8.1-security-lifecycle-pair`)
+ * and land here at merge time. The v0.8.2 step depends on v0.8.1 having
+ * already bumped `workspace.yaml.version` to `0.8.1`.
  */
 export const MIGRATIONS: Migration[] = [
   v01xToV020,
@@ -23,6 +29,7 @@ export const MIGRATIONS: Migration[] = [
   v040ToV050,
   v050ToV060,
   v060ToV070,
+  v081ToV082,
 ];
 
 /**
