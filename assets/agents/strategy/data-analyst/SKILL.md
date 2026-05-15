@@ -11,6 +11,7 @@ triggers:
     - 매출
   explicit: true
 collab_pattern: graph
+dev_capability: false
 ---
 # Data Analyst Agent
 

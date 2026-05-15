@@ -73,6 +73,35 @@ export interface SkillBudget {
 /** v0.6 §2.4 — 핸드오프 협업 패턴. v0.5에서는 `extra` bag으로 forward-compat 처리됐고 v0.6 출시 시점에 정식 필드로 격상. */
 export type CollabPattern = "hierarchical" | "graph" | "dynamic";
 
+/**
+ * v0.8.2 §3.1 — dev_permissions sub-tree. SKILLs with `dev_capability: true`
+ * declare what bash binaries they're allowed to invoke, whether outbound
+ * network is OK, and whether `git push` / `gh pr merge` require user
+ * confirmation. Workspace-level denylist (workspace.yaml.dev_capability.
+ * bash_denylist) is always merged on top — SKILLs cannot override it.
+ */
+export interface SkillDevBashPerms {
+  allowed?: string[];
+  denied?: string[];
+}
+
+export interface SkillDevPushTargets {
+  requires_confirmation?: boolean;
+}
+
+export interface SkillDevMergePolicy {
+  /** Auto-merge is permanently `false` per v0.8.2 §2 / §3.1. */
+  auto?: boolean;
+}
+
+export interface SkillDevPermissions {
+  bash?: SkillDevBashPerms;
+  /** Outbound HTTP via curl/wget/etc. MCP servers are unaffected. */
+  network?: boolean;
+  push_targets?: SkillDevPushTargets;
+  merge?: SkillDevMergePolicy;
+}
+
 export interface SkillSpec {
   // ---- Anthropic required ----
   name: string;
@@ -91,6 +120,10 @@ export interface SkillSpec {
   loop_mode?: SkillLoopMode;
   budget?: SkillBudget;
   collab_pattern?: CollabPattern;
+  /** v0.8.2 — SKILL declares it can perform code-modifying dev actions. */
+  dev_capability?: boolean;
+  /** v0.8.2 — per-SKILL bash allowlist / push-confirm / merge policy. */
+  dev_permissions?: SkillDevPermissions;
 
   /**
    * v0.8.1 — explicit SKILL frontmatter schema version. Per
@@ -195,6 +228,8 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     "budget",
     "collab_pattern",
     "schema_version",
+    "dev_capability",
+    "dev_permissions",
   ]);
   const extra: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed)) {
@@ -217,12 +252,57 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     loop_mode: parseLoopMode(parsed.loop_mode),
     budget: parseBudget(parsed.budget),
     schema_version: typeof parsed.schema_version === "number" ? parsed.schema_version : undefined,
+    dev_capability:
+      typeof parsed.dev_capability === "boolean" ? parsed.dev_capability : undefined,
+    dev_permissions: parseDevPermissions(parsed.dev_permissions),
     extra,
     raw_frontmatter: fm.text,
     body: normalized.slice(fm.full_length),
   };
 
   return spec;
+}
+
+function parseDevPermissions(raw: unknown): SkillDevPermissions | undefined {
+  if (raw == null || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: SkillDevPermissions = {};
+
+  if (r.bash && typeof r.bash === "object") {
+    const b = r.bash as Record<string, unknown>;
+    const bash: SkillDevBashPerms = {};
+    const allowed = parseStringArray(b.allowed);
+    const denied = parseStringArray(b.denied);
+    if (allowed) bash.allowed = allowed;
+    if (denied) bash.denied = denied;
+    if (bash.allowed !== undefined || bash.denied !== undefined) out.bash = bash;
+  }
+
+  if (typeof r.network === "boolean") out.network = r.network;
+
+  if (r.push_targets && typeof r.push_targets === "object") {
+    const pt = r.push_targets as Record<string, unknown>;
+    if (typeof pt.requires_confirmation === "boolean") {
+      out.push_targets = { requires_confirmation: pt.requires_confirmation };
+    }
+  }
+
+  if (r.merge && typeof r.merge === "object") {
+    const m = r.merge as Record<string, unknown>;
+    if (typeof m.auto === "boolean") {
+      out.merge = { auto: m.auto };
+    }
+  }
+
+  if (
+    out.bash === undefined &&
+    out.network === undefined &&
+    out.push_targets === undefined &&
+    out.merge === undefined
+  ) {
+    return undefined;
+  }
+  return out;
 }
 
 function matchFrontmatter(
@@ -481,6 +561,26 @@ export function validateSkill(
     });
   }
 
+  // v0.8.2 §2 — auto-merge is permanently rejected.
+  if (spec.dev_permissions?.merge?.auto === true) {
+    errors.push({
+      code: "MERGE_AUTO_FORBIDDEN",
+      field: "dev_permissions.merge.auto",
+      message:
+        "merge.auto: true is permanently forbidden — auto-merge of PRs is out of scope (v0.8.2 §2)",
+    });
+  }
+
+  // dev_permissions without dev_capability is meaningless — warn only.
+  if (spec.dev_permissions && spec.dev_capability !== true) {
+    warnings.push({
+      code: "DEV_PERMS_WITHOUT_CAPABILITY",
+      field: "dev_permissions",
+      message:
+        "dev_permissions declared but dev_capability is not true — permissions will be ignored at spawn time",
+    });
+  }
+
   return { ok: errors.length === 0, errors, warnings };
 }
 
@@ -520,6 +620,8 @@ export function serializeFrontmatter(spec: SkillSpec): string {
   if (spec.collab_pattern !== undefined) obj.collab_pattern = spec.collab_pattern;
   if (spec.loop_mode !== undefined) obj.loop_mode = spec.loop_mode;
   if (spec.budget !== undefined) obj.budget = spec.budget;
+  if (spec.dev_capability !== undefined) obj.dev_capability = spec.dev_capability;
+  if (spec.dev_permissions !== undefined) obj.dev_permissions = spec.dev_permissions;
   for (const [k, v] of Object.entries(spec.extra)) {
     obj[k] = v;
   }

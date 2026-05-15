@@ -11,6 +11,7 @@ triggers:
     - 런칭
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # GTM Strategist Agent
 

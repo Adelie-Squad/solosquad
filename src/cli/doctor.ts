@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { execFile } from "child_process";
 import chalk from "chalk";
 import {
   loadEnv,
@@ -68,6 +69,23 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
     if (!commandExists("pwsh")) {
       warn("PowerShell 7+", "winget install Microsoft.PowerShell");
     }
+  }
+
+  // v0.8.2 §5.3 — gh CLI (PR 흐름 전제). 설치 + auth status 둘 다 점검.
+  const ghCheck = await checkGhCli();
+  if (ghCheck.installed && ghCheck.authed) {
+    check(`gh CLI authenticated${ghCheck.host ? ` (${ghCheck.host})` : ""}`, true);
+    console.log(chalk.dim("    engineering 에이전트가 PR 생성 가능"));
+  } else if (ghCheck.installed) {
+    warn(
+      "gh CLI present but not authenticated",
+      "Run `gh auth login` — engineering 에이전트는 PR 단계 건너뜀 (commit만 수행)",
+    );
+  } else {
+    warn(
+      "gh CLI not found (v0.8.2)",
+      "Install: https://cli.github.com/ — engineering 에이전트는 PR 단계 건너뜀",
+    );
   }
 
   // 2. Workspace layout detection — v0.2.2 has .solosquad/, v0.1.x has flat config dirs
@@ -461,6 +479,33 @@ async function checkDiscord(): Promise<boolean> {
   } catch (e) {
     return check("Discord /users/@me", false, `${e}`);
   }
+}
+
+/** v0.8.2 §5.3 — gh CLI presence + auth probe. */
+interface GhProbe {
+  installed: boolean;
+  authed: boolean;
+  host?: string;
+}
+
+async function checkGhCli(): Promise<GhProbe> {
+  if (!commandExists("gh")) return { installed: false, authed: false };
+  return new Promise<GhProbe>((resolve) => {
+    // `gh auth status` exits non-zero (1) when not logged in, 0 when logged in.
+    // It writes status info to stderr, not stdout. Don't gate on stdout content.
+    execFile(
+      "gh",
+      ["auth", "status"],
+      { shell: IS_WINDOWS, maxBuffer: 1024 * 1024 },
+      (err, _stdout, stderr) => {
+        const text = stderr || "";
+        // Extract host like "github.com" from any "Logged in to <host>" line.
+        const m = text.match(/Logged in to ([^\s]+)/i);
+        const host = m ? m[1] : undefined;
+        resolve({ installed: true, authed: !err, host });
+      },
+    );
+  });
 }
 
 async function checkSlack(): Promise<boolean> {

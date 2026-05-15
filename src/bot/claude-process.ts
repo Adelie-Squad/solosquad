@@ -139,6 +139,22 @@ export interface ClaudeInvocation {
   appendSystemPrompt?: string;
   /** Hard timeout in ms (abort the child if exceeded). */
   timeoutMs?: number;
+  /**
+   * v0.8.2 §4.2 — Claude Code `--allowed-tools` / `--disallowed-tools`
+   * passthrough. When omitted, the CLI's defaults apply (broad permissions —
+   * legacy behavior). The PM-session caller (`pm-runner.ts`) keeps these
+   * unset; per-spawn engineering tasks set them via `applyDevPermissions()`.
+   */
+  allowedTools?: string[];
+  disallowedTools?: string[];
+  /**
+   * v0.8.2 §4.2 — pre-check bash allowlist / denylist. Used by the SoloSquad
+   * wrapper around Bash tool invocations to reject commands at the *bot* layer
+   * before they reach Claude Code (because Claude Code does not yet expose a
+   * native bash allowlist flag).
+   */
+  bashAllowlist?: string[];
+  bashDenylist?: string[];
 }
 
 export interface ClaudeInvocationResult {
@@ -222,7 +238,66 @@ function buildArgs(inv: ClaudeInvocation): string[] {
   if (inv.appendSystemPrompt) {
     args.push("--append-system-prompt", inv.appendSystemPrompt);
   }
+  if (inv.allowedTools && inv.allowedTools.length > 0) {
+    args.push("--allowed-tools", inv.allowedTools.join(","));
+  }
+  if (inv.disallowedTools && inv.disallowedTools.length > 0) {
+    args.push("--disallowed-tools", inv.disallowedTools.join(","));
+  }
   return args;
+}
+
+/**
+ * v0.8.2 §4.2 — Bash command pre-check. Returns null when the command is
+ * permitted; returns a rejection reason string otherwise. Exposed so the
+ * PM-runner / spawn caller can intercept Bash tool_use blocks emitted by
+ * the spawn and short-circuit them with a tool_result.
+ *
+ * Matching rules:
+ *   - DENY wins. Any substring match on `bashDenylist` rejects the command.
+ *   - If `bashAllowlist` is empty, no allow check happens (back-compat: PM
+ *     session retains full Bash). If non-empty, the command's *first
+ *     non-whitespace token sequence* must start with one of the entries (e.g.
+ *     entry `"gh pr create"` matches the command `gh pr create --title foo`).
+ *
+ * `cmd` should be the literal string the SKILL passed to the Bash tool.
+ */
+export function checkBashCommand(
+  cmd: string,
+  bashAllowlist: readonly string[] = [],
+  bashDenylist: readonly string[] = [],
+): { ok: true } | { ok: false; reason: string; matched: string } {
+  const trimmed = cmd.trim();
+  if (!trimmed) {
+    return { ok: false, reason: "empty command", matched: "" };
+  }
+
+  // Deny is strict — substring match on raw command (post-trim).
+  for (const denied of bashDenylist) {
+    if (!denied) continue;
+    if (trimmed.includes(denied)) {
+      return {
+        ok: false,
+        reason: `bash command rejected by workspace denylist: matched "${denied}"`,
+        matched: denied,
+      };
+    }
+  }
+
+  if (bashAllowlist.length === 0) return { ok: true };
+
+  for (const allow of bashAllowlist) {
+    if (!allow) continue;
+    if (trimmed === allow) return { ok: true };
+    if (trimmed.startsWith(`${allow} `)) return { ok: true };
+    if (trimmed.startsWith(`${allow}\t`)) return { ok: true };
+  }
+
+  return {
+    ok: false,
+    reason: `bash command rejected by SKILL allowlist (no entry is a leading-token match)`,
+    matched: "",
+  };
 }
 
 /** Parse a single stream-json line. Returns null on JSON parse failure. */

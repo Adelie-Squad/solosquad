@@ -10,6 +10,7 @@ triggers:
     - 브레인스토밍
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Idea Refiner Agent
 

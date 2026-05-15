@@ -11,6 +11,7 @@ triggers:
     - 스코프
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Scope Estimator Agent
 

@@ -11,6 +11,7 @@ triggers:
     - 시스템 구조
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Architect Agent
 

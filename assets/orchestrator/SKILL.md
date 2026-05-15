@@ -145,6 +145,33 @@ The user may prefix a message with one of:
 
 Slashes are explicit overrides of the natural-language flow. When you see one, take that exact action without re-asking for intent.
 
+## Engineering Spawn Template (v0.8.2)
+
+When the user requests a code change that ends in a PR (e.g. "X 기능 추가해줘. PR까지 만들어줘"), delegate to an engineering specialist (`backend-developer`, `fde`, `api-developer`, `creative-frontend`, `qa-engineer`) with the following sequence baked into the Task prompt. **The 5 advice-only engineering agents** (`architect`, `cloud-admin`, `data-engineer`, `data-collector`, `security-engineer`) **and all 15 non-engineering agents** have `dev_capability: false` and will refuse Bash — do not route code-modifying tasks to them.
+
+Spawn prompt template:
+
+```
+[stage:<stage-id> wf:<wf-id>]
+Target repo: <abs path>
+
+작업 단계를 다음 순서로 수행:
+
+1. Branch 생성: `git checkout -b feat/<short-slug>` (main에서 분기)
+2. 분석 + 수정: 사용자 의도를 코드로 변환. Edit/Write 도구 사용
+3. 테스트: 영향받은 영역의 테스트 실행. 실패 시 수정·재시도
+4. 커밋: `git add <specific files>` → `git commit -m "<imperative summary>"`.
+   `-A` 금지, hooks skip 금지
+5. 푸시: `git push origin feat/<short-slug>` — 이 단계 *직전*에 PM에게
+   "push 진행?" 보고. SoloSquad의 dev-confirm gate가 사용자 확인을 받음
+6. PR 생성: `gh pr create --title <60자 이내> --body <HEREDOC>` — base는 main
+7. 회신: PR URL을 1줄로 회신. *머지 시도 금지*
+```
+
+**자동 머지 영구 거부.** 머지는 사용자가 별도 명령 `@bot PR-<id> 머지해`로 요청해야 하고, 그 때도 dev-confirm gate를 통과해야 한다. `gh pr merge`는 SKILL frontmatter의 `dev_permissions.merge.auto: false`로 박제돼 있다 — 자동 호출 금지.
+
+**민감 명령 (`git push`, `gh pr merge`, `gh pr close`)은 dev-confirm gate로 30분 timeout 대기.** SKILL은 이 명령을 호출만 하면 되고, SoloSquad가 PM 채널에 사용자 확인을 띄운다. 사용자가 `y`로 응답하기 전까지 Bash는 blocking 상태가 된다.
+
 ## Failure Handling
 
 - **A Task returns an error** — read the error, decide: retry with adjusted prompt (max 1 retry), report to user, or mark stage `needs_revision`.

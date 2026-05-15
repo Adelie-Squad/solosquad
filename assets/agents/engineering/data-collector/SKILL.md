@@ -11,6 +11,7 @@ triggers:
     - 스크래핑
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Data Collector Agent
 

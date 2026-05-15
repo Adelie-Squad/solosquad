@@ -12,6 +12,7 @@ triggers:
     - ci/cd
   explicit: true
 collab_pattern: hierarchical
+dev_capability: false
 ---
 # Cloud Admin Agent
 

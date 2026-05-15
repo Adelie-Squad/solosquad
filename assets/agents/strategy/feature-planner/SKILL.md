@@ -11,6 +11,7 @@ triggers:
     - 스펙
   explicit: true
 collab_pattern: graph
+dev_capability: false
 ---
 # Feature Planner Agent
 
