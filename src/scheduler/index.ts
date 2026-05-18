@@ -16,7 +16,6 @@ import {
   ROUTINES,
   loadRoutinePrompt,
   timeToDailyCron,
-  weeklyToCron,
   type RoutineConfig,
 } from "./routines.js";
 import { saveRoutineMemory } from "./memory.js";
@@ -46,31 +45,39 @@ async function runRoutineForProduct(
   const repoLabel = reason === "legacy-root" ? "(org root)" : `(repo: ${repoSlug})`;
   console.log(`[Scheduler] ${product.name} - ${routine.name} starting ${repoLabel}`);
 
-  // v0.6 — archive-rotate is deterministic (no LLM). Run inline + return.
-  if (routine.id === "archive-rotate") {
-    const archiveCfg = loadArchiveConfig();
-    const stats = rotateArchive({
-      workspace: getReposBase(),
-      orgSlug: product.slug,
-      retentionDays: archiveCfg.retention_days,
-      compressBeforeDelete: archiveCfg.compress_before_delete,
-    });
-    console.log(
-      `[Scheduler] ${product.name} - archive-rotate done: archived=${stats.archived_rows} deleted=${stats.deleted_by_retention}`
-    );
-    return;
-  }
-
-  // v0.8.3 §5.3 — log-rotate is deterministic too. Workspace-scoped, but
-  // we run it via the per-product loop so the existing scheduler topology
-  // doesn't need a new "workspace-only" pathway. After the first product
-  // executes it the directory is already pruned, so subsequent products
-  // become no-ops (delete returns []).
-  if (routine.id === "log-rotate") {
-    const removed = rotateLogs({ retentionDays: 14 });
-    console.log(
-      `[Scheduler] ${product.name} - log-rotate done: removed=${removed.length}`
-    );
+  // v0.8.5 — Unified deterministic housekeeping (no LLM). Runs archive
+  // rotation + log retention sequentially, isolated so one failure can't
+  // block the other. Workspace-level log cleanup runs once and is a no-op
+  // for subsequent products in the same tick (directory already pruned).
+  if (routine.id === "system-housekeeping") {
+    try {
+      const archiveCfg = loadArchiveConfig();
+      const stats = rotateArchive({
+        workspace: getReposBase(),
+        orgSlug: product.slug,
+        retentionDays: archiveCfg.retention_days,
+        compressBeforeDelete: archiveCfg.compress_before_delete,
+      });
+      console.log(
+        `[Scheduler] ${product.name} - housekeeping[archive] archived=${stats.archived_rows} deleted=${stats.deleted_by_retention}`
+      );
+    } catch (err) {
+      console.error(
+        `[Scheduler] ${product.name} - housekeeping[archive] failed:`,
+        (err as Error).message
+      );
+    }
+    try {
+      const removed = rotateLogs({ retentionDays: 14 });
+      console.log(
+        `[Scheduler] ${product.name} - housekeeping[logs] removed=${removed.length}`
+      );
+    } catch (err) {
+      console.error(
+        `[Scheduler] ${product.name} - housekeeping[logs] failed:`,
+        (err as Error).message
+      );
+    }
     return;
   }
 
@@ -144,7 +151,6 @@ interface ResolvedSchedule {
 function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
   const merged = applyWorkspaceDefaults(ws);
   const b = merged.briefings!;
-  const r = merged.background_routines!;
 
   return ROUTINES.map((routine): ResolvedSchedule => {
     switch (routine.id) {
@@ -160,24 +166,6 @@ function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
           cron: timeToDailyCron(b.evening!.time),
           enabled: b.evening!.enabled !== false,
         };
-      case "signal-scan":
-        return {
-          routine,
-          cron: timeToDailyCron(r.signal_scan!.time),
-          enabled: r.signal_scan!.enabled !== false,
-        };
-      case "experiment-check":
-        return {
-          routine,
-          cron: timeToDailyCron(r.experiment_check!.time),
-          enabled: r.experiment_check!.enabled !== false,
-        };
-      case "weekly-review":
-        return {
-          routine,
-          cron: weeklyToCron(r.weekly_review!.day, r.weekly_review!.time),
-          enabled: r.weekly_review!.enabled !== false,
-        };
       case "pm-compaction": {
         const pmCfg = merged.pm ?? {};
         const time = pmCfg.compaction_time ?? "23:00";
@@ -187,20 +175,14 @@ function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
           enabled: true,
         };
       }
-      case "archive-rotate":
-        // v0.6 §4 — fixed 00:00 nightly. Tuning lives in workspace.yaml.archive
-        // (retention_days, compress_before_delete), not the cron itself.
+      case "system-housekeeping":
+        // v0.8.5 — fixed 00:00 nightly. Runs archive rotation + log retention
+        // pass back-to-back. Archive tuning lives in workspace.yaml.archive
+        // (retention_days, compress_before_delete); log retention is fixed at
+        // 14 days inside `rotateLogs()`.
         return {
           routine,
           cron: timeToDailyCron("00:00"),
-          enabled: true,
-        };
-      case "log-rotate":
-        // v0.8.3 §5.3 — fixed 00:30 nightly. Retention is hard-coded to 14
-        // days in `rotateLogs()`; no workspace.yaml knob in this patch.
-        return {
-          routine,
-          cron: timeToDailyCron("00:30"),
           enabled: true,
         };
       default:

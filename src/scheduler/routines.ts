@@ -17,12 +17,25 @@ export interface RoutineConfig {
 }
 
 /**
- * v0.2.4 routine layout — five entries total:
- *   - 2 user-facing briefs (morning, evening) post to #workflow root
- *   - 3 background routines post to system threads inside #workflow
+ * v0.8.5 routine layout — four entries total:
+ *   - 2 user-facing briefs (morning, evening) post to works-<handle>
+ *   - 1 PM-compaction (background, context management)
+ *   - 1 system-housekeeping (silent infra — archive rotation + log retention)
  *
- * Cron times are not stored here in v0.2.4+. Times are resolved at scheduler
- * startup from workspace.yaml (`briefings`, `background_routines`).
+ * Removed in v0.8.5 (was v0.2.4 background analysis layer): `signal-scan`,
+ * `experiment-check`, `weekly-review`, `v06-retrospective-stats`. They were
+ * speculative analysis routines that required the user to author a product
+ * brief / experiment ledger before producing useful output — friction without
+ * payoff. Domain-specific analysis should ship as user-authored workflows or
+ * goals, not as default-on cron jobs.
+ *
+ * Merged in v0.8.5: `archive-rotate` + `log-rotate` → `system-housekeeping`.
+ * Both are deterministic midnight cleanup jobs (no LLM, no user notification);
+ * a single cron + a single inline dispatch reduces UI clutter without losing
+ * isolation (the dispatch wraps each cleanup call in try/catch).
+ *
+ * Cron times are resolved at scheduler startup from workspace.yaml
+ * (`briefings` for morning/evening).
  */
 export const ROUTINES: RoutineConfig[] = [
   {
@@ -42,33 +55,6 @@ export const ROUTINES: RoutineConfig[] = [
     memoryTargets: ["decisions.jsonl"],
   },
   {
-    id: "signal-scan",
-    name: "Signal Scan",
-    kind: "background",
-    channel: "workflow",
-    threadName: "system-daily-signals",
-    emoji: "🔍",
-    memoryTargets: ["signals.jsonl"],
-  },
-  {
-    id: "experiment-check",
-    name: "Experiment Check",
-    kind: "background",
-    channel: "workflow",
-    threadName: "system-experiments",
-    emoji: "🧪",
-    memoryTargets: ["experiments.jsonl"],
-  },
-  {
-    id: "weekly-review",
-    name: "Weekly Review",
-    kind: "background",
-    channel: "workflow",
-    threadName: "system-weekly-review",
-    emoji: "📊",
-    memoryTargets: ["decisions.jsonl"],
-  },
-  {
     id: "pm-compaction",
     name: "PM Compaction",
     kind: "background",
@@ -77,37 +63,18 @@ export const ROUTINES: RoutineConfig[] = [
     emoji: "🗂",
     memoryTargets: [],
   },
-  // v0.6 §2.5 — Retrospective stats ETL. Weekly (Sunday 22:00) — see
-  // assets/routines/v06-retrospective-stats.md. Deterministic ETL, no LLM.
+  // v0.8.5 — Unified housekeeping. Daily at 00:00; silent (no user
+  // notification — pure background maintenance). Runs:
+  //   1. FTS5 cold archive rotation (`rotateArchive`, v0.6 §4)
+  //   2. Log retention pass (`rotateLogs`, v0.8.3 §5.3)
+  // Each step is try/catch-isolated so one failure doesn't block the other.
   {
-    id: "v06-retrospective-stats",
-    name: "v0.6 Retrospective Stats",
+    id: "system-housekeeping",
+    name: "System Housekeeping",
     kind: "background",
     channel: "workflow",
-    threadName: "system-v06-retrospective-stats",
-    emoji: "📐",
-    memoryTargets: [],
-  },
-  // v0.6 §4 — FTS5 cold archive rotation. Daily at 00:00; silent (no user
-  // notification — pure background maintenance). See archive-rotate.md.
-  {
-    id: "archive-rotate",
-    name: "Archive Rotate",
-    kind: "background",
-    channel: "workflow",
-    threadName: "system-archive-rotate",
-    emoji: "🗄",
-    memoryTargets: [],
-  },
-  // v0.8.3 §5.3 — daily log retention pass. 00:30 silent — purely deletes
-  // runtime log files older than 14 days. See log-rotate.md.
-  {
-    id: "log-rotate",
-    name: "Log Rotate",
-    kind: "background",
-    channel: "workflow",
-    threadName: "system-log-rotate",
-    emoji: "🪵",
+    threadName: "system-housekeeping",
+    emoji: "🧹",
     memoryTargets: [],
   },
 ];

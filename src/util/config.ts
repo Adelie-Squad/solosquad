@@ -264,6 +264,14 @@ export const DEFAULT_WORKSPACE_SETTINGS = {
     morning: { time: "08:00", enabled: true },
     evening: { time: "18:00", enabled: true },
   },
+  /**
+   * @deprecated v0.8.5 — `signal-scan`, `experiment-check`, `weekly-review`
+   * routines were removed from the live scheduler. This constant is preserved
+   * solely so the historical `0.2.1-to-0.2.4.ts` migration script (immutable
+   * per AGENTS.md) continues to compile and reproduce the schema state it was
+   * written for. `init.ts` no longer writes these defaults, and
+   * `applyWorkspaceDefaults` no longer injects them at load time.
+   */
   background_routines: {
     signal_scan: { time: "12:00", enabled: true },
     experiment_check: { time: "16:00", enabled: true },
@@ -289,11 +297,10 @@ export function applyWorkspaceDefaults(ws: WorkspaceYaml): WorkspaceYaml {
       morning: { ...DEFAULT_WORKSPACE_SETTINGS.briefings.morning, ...(ws.briefings?.morning ?? {}) },
       evening: { ...DEFAULT_WORKSPACE_SETTINGS.briefings.evening, ...(ws.briefings?.evening ?? {}) },
     },
-    background_routines: {
-      signal_scan: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.signal_scan, ...(ws.background_routines?.signal_scan ?? {}) },
-      experiment_check: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check, ...(ws.background_routines?.experiment_check ?? {}) },
-      weekly_review: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review, ...(ws.background_routines?.weekly_review ?? {}) },
-    },
+    // v0.8.5 — background_routines is no longer defaulted at load time.
+    // Pre-existing keys on the loaded yaml are passed through untouched (the
+    // scheduler ignores them), so older workspaces don't lose data.
+    background_routines: ws.background_routines,
     pm: { ...DEFAULT_WORKSPACE_SETTINGS.pm, ...(ws.pm ?? {}) },
   };
 }

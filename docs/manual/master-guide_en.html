@@ -1,0 +1,2738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoloSquad — Master Guide</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-side: #f7f8fa;
+    --bg-code: #1e2128;
+    --fg: #1f2328;
+    --fg-mute: #6e7681;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --green: #1a7f37;
+    --green-soft: #dafbe1;
+    --amber: #9a6700;
+    --amber-soft: #fff8c5;
+    --red: #cf222e;
+    --red-soft: #ffebe9;
+    --shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: var(--bg); color: var(--fg);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  body { display: flex; min-height: 100vh; }
+  /* Sidebar */
+  aside.sidebar {
+    width: 280px; min-width: 280px;
+    background: var(--bg-side);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    overflow-y: auto;
+    height: 100vh; position: sticky; top: 0;
+  }
+  aside h1 {
+    font-size: 17px; font-weight: 700;
+    margin: 0 0 4px 24px; color: var(--fg);
+  }
+  aside .tag {
+    font-size: 11px; color: var(--fg-mute);
+    margin: 0 0 20px 24px; display: block;
+  }
+  nav ul { list-style: none; margin: 0; padding: 0; }
+  nav > ul > li { margin: 2px 0; }
+  nav > ul > li > a {
+    display: block; padding: 8px 24px;
+    color: var(--fg); text-decoration: none;
+    font-weight: 600; font-size: 14px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+  }
+  nav > ul > li > a:hover { background: rgba(0,0,0,.03); }
+  nav > ul > li > a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  nav .sub { padding-left: 0; margin: 0; }
+  nav .sub li a {
+    display: block; padding: 4px 24px 4px 44px;
+    color: var(--fg-mute); text-decoration: none;
+    font-size: 13px; font-weight: 400;
+  }
+  nav .sub li a:hover { color: var(--accent); }
+  nav > ul > li > a.active + .sub { display: block; }
+  nav > ul > li > a:not(.active) + .sub { display: none; }
+  /* Content */
+  main.content {
+    flex: 1; padding: 40px 56px 80px;
+    max-width: 920px;
+  }
+  main section { display: none; }
+  main section.active { display: block; }
+  main h2 {
+    font-size: 28px; margin: 0 0 8px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  main h2 .num {
+    color: var(--fg-mute); font-weight: 400; margin-right: 8px;
+  }
+  main h3 {
+    font-size: 19px; margin: 32px 0 8px;
+    scroll-margin-top: 20px;
+  }
+  main h4 { font-size: 15px; margin: 20px 0 6px; }
+  main p { margin: 8px 0; }
+  main ul, main ol { padding-left: 24px; margin: 8px 0; }
+  main li { margin: 4px 0; }
+  main code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    font-size: 13px;
+    background: rgba(175,184,193,.2);
+    padding: 1px 5px; border-radius: 4px;
+  }
+  main pre {
+    background: var(--bg-code); color: #e4e8ee;
+    padding: 14px 16px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px;
+    line-height: 1.5;
+  }
+  main pre code {
+    background: transparent; padding: 0; color: inherit;
+  }
+  main table {
+    border-collapse: collapse; width: 100%;
+    margin: 14px 0; font-size: 13.5px;
+  }
+  main th, main td {
+    border: 1px solid var(--border);
+    padding: 8px 12px; text-align: left;
+    vertical-align: top;
+  }
+  main th { background: var(--bg-side); font-weight: 600; }
+  main blockquote {
+    margin: 12px 0; padding: 10px 16px;
+    background: var(--bg-side);
+    border-left: 4px solid var(--accent);
+    color: var(--fg);
+  }
+  main blockquote p:first-child { margin-top: 0; }
+  main blockquote p:last-child { margin-bottom: 0; }
+  /* Version badges */
+  .badge {
+    display: inline-block; font-size: 11px;
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; vertical-align: middle;
+    margin-left: 6px;
+  }
+  .badge.now {
+    background: var(--green-soft); color: var(--green);
+  }
+  .badge.plan {
+    background: var(--amber-soft); color: var(--amber);
+  }
+  .badge.removed {
+    background: var(--red-soft); color: var(--red);
+  }
+  /* Inline icons */
+  .ok { color: var(--green); }
+  .warn { color: var(--amber); }
+  .err { color: var(--red); }
+  /* Definition list */
+  dl.terms dt {
+    font-weight: 700; margin-top: 14px;
+    font-family: ui-monospace, monospace;
+    color: var(--accent);
+    font-size: 14px;
+  }
+  dl.terms dd { margin-left: 0; margin-top: 4px; color: var(--fg); }
+  /* Path tree */
+  .tree {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    background: var(--bg-side);
+    padding: 14px 16px;
+    border-radius: 8px;
+    white-space: pre;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  /* Footer in content */
+  .footer-note {
+    margin-top: 40px; padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 13px; color: var(--fg-mute);
+  }
+  /* Anchors */
+  a.anchor-link {
+    color: var(--accent); text-decoration: none;
+  }
+  a.anchor-link:hover { text-decoration: underline; }
+  /* Step blocks */
+  .step {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 12px 0;
+    background: var(--bg);
+  }
+  .step .step-head {
+    font-weight: 700; color: var(--accent);
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+  /* Callout */
+  .callout {
+    margin: 14px 0; padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid;
+  }
+  .callout.info { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); }
+  .callout.warn { background: var(--amber-soft); border-color: var(--amber); color: var(--fg); }
+  .callout.tip  { background: var(--green-soft); border-color: var(--green); color: var(--fg); }
+  .callout strong { display: block; margin-bottom: 4px; }
+  /* Responsive */
+  @media (max-width: 900px) {
+    body { flex-direction: column; }
+    aside.sidebar { width: 100%; height: auto; position: relative; }
+    main.content { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h1>SoloSquad</h1>
+  <span class="tag">Master Guide · v0.8.5</span>
+  <nav>
+    <ul>
+      <li>
+        <a data-target="s1" class="active">1. Getting Started</a>
+        <ul class="sub">
+          <li><a href="#s1-1">1.1 Project Overview</a></li>
+          <li><a href="#s1-2">1.2 Core Concepts</a></li>
+          <li><a href="#s1-3">1.3 Expected Value</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s2">2. How It Works</a>
+        <ul class="sub">
+          <li><a href="#s2-1">2.1 System Architecture</a></li>
+          <li><a href="#s2-2">2.2 Directory Hierarchy</a></li>
+          <li><a href="#s2-3">2.3 Context &amp; Memory</a></li>
+          <li><a href="#s2-4">2.4 Workflow Definitions</a></li>
+          <li><a href="#s2-5">2.5 Spawn Assembly (8-layer)</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s3">3. Core Concepts</a>
+        <ul class="sub">
+          <li><a href="#s3-1">3.1 SKILL.md</a></li>
+          <li><a href="#s3-2">3.2 KNOWLEDGE.md</a></li>
+          <li><a href="#s3-3">3.3 CLAUDE.md</a></li>
+          <li><a href="#s3-4">3.4 SKILL vs AGENTS.md</a></li>
+          <li><a href="#s3-5">3.5 Workflow Maker Meta-skill</a></li>
+          <li><a href="#s3-6">3.6 4-Channel Routing</a></li>
+          <li><a href="#s3-7">3.7 File Types per Hierarchy</a></li>
+          <li><a href="#s3-8">3.8 collab_pattern + Self-evolution</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s4">4. Onboarding</a>
+        <ul class="sub">
+          <li><a href="#s4-1">4.1 Identify User Type</a></li>
+          <li><a href="#s4-2">4.2 New User</a></li>
+          <li><a href="#s4-3">4.3 Existing Repo Migration</a></li>
+          <li><a href="#s4-4">4.4 Update from Older Version</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s5">5. Messenger Setup</a>
+        <ul class="sub">
+          <li><a href="#s5-1">5.1 Slack (9 steps)</a></li>
+          <li><a href="#s5-2">5.2 Discord (8 steps)</a></li>
+          <li><a href="#s5-3">5.3 Verification</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s6">6. Usage</a>
+        <ul class="sub">
+          <li><a href="#s6-1">6.1 Command Reference</a></li>
+          <li><a href="#s6-2">6.2 Daily Operation</a></li>
+          <li><a href="#s6-3">6.3 Recommended First Tasks</a></li>
+          <li><a href="#s6-4">6.4 Automated Routines</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s7">7. Glossary</a>
+        <ul class="sub">
+          <li><a href="#s7-1">7.1 Core Terms</a></li>
+          <li><a href="#s7-2">7.2 File Dictionary</a></li>
+          <li><a href="#s7-3">7.3 Abbreviations</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s8">8. Version Differences</a>
+        <ul class="sub">
+          <li><a href="#s8-1">8.1 Current npm (v0.7~v0.8.5)</a></li>
+          <li><a href="#s8-2">8.2 Planned Updates</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s9">9. Operations Guide</a>
+        <ul class="sub">
+          <li><a href="#s9-1">9.1 24/7 Operating Mode</a></li>
+          <li><a href="#s9-2">9.2 Multi-Workspace</a></li>
+          <li><a href="#s9-3">9.3 Multi-Product</a></li>
+          <li><a href="#s9-4">9.4 Security Checklist</a></li>
+          <li><a href="#s9-5">9.5 Backup &amp; Observability</a></li>
+        </ul>
+      </li>
+      <li>
+        <a data-target="s10">10. Troubleshooting &amp; FAQ</a>
+        <ul class="sub">
+          <li><a href="#s10-1">10.1 Install / Run</a></li>
+          <li><a href="#s10-2">10.2 Migration</a></li>
+          <li><a href="#s10-3">10.3 FAQ</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+</aside>
+
+<main class="content">
+
+<!-- ========================== SECTION 1 ========================== -->
+<section id="s1" class="active">
+  <h2><span class="num">1.</span>Getting Started</h2>
+
+  <h3 id="s1-1">1.1 Project Overview</h3>
+  <p><strong>SoloSquad</strong> is a 24/7 AI assistant system for solo founders. From a familiar messenger (Slack or Discord), you chat with 25 specialist AI teammates to build products, analyze markets, run marketing, and write code.</p>
+  <p>Installation is one npm line. Without a separate web dashboard or GUI tool, everything flows through the "messenger-native" interface.</p>
+
+  <pre><code>npm install -g solosquad
+solosquad init</code></pre>
+
+  <p>Four teams with 25 AI specialists are built in:</p>
+
+  <table>
+    <thead><tr><th>Team</th><th>Role</th><th>Key Agents</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Strategy</strong></td><td>Market analysis · business planning · hypothesis · scope estimation</td><td>PMF Planner, Feature Planner, Data Analyst, Business Strategist, Idea Refiner, Scope Estimator, Policy Architect</td></tr>
+      <tr><td><strong>Growth</strong></td><td>Marketing strategy · content · branding · paid ads</td><td>GTM Strategist, Content Writer, Brand Marketer, Paid Marketer</td></tr>
+      <tr><td><strong>Experience</strong></td><td>User research · market research · UX/UI design</td><td>User Researcher, Desk Researcher, UX Designer, UI Designer</td></tr>
+      <tr><td><strong>Engineering</strong></td><td>Frontend · backend · API · data · infra · QA · security</td><td>Creative Frontend, FDE, Architect, Backend Developer, API Developer, Data Collector, Data Engineer, Cloud Admin, QA Engineer, Security Engineer</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s1-2">1.2 Core Concepts</h3>
+
+  <h4>"Output ≠ Goal" Philosophy</h4>
+  <blockquote>Output is not the goal. Output is the means to achieve the goal.</blockquote>
+  <p>Well-crafted design, polished documents, clean code — none of these outputs by themselves guarantee business success. SoloSquad is a tool that produces outputs, but always prioritizes <em>how each output contributes to the solo founder's actual success</em>.</p>
+
+  <h4>Messenger-Native</h4>
+  <p>No web GUI or desktop app. The messenger you already keep open every day IS the interface. Issue natural-language commands in <code>#owner-command</code>, receive automated reports in <code>#workflow</code>.</p>
+
+  <h4>3-Layer Context (Isolation)</h4>
+  <p>Multiple businesses run in parallel without information bleed via three layers:</p>
+  <div class="tree">Layer 0: Workspace (universal)    shared by every session — owner profile, principles, 25 agent definitions
+   ↓
+Layer 1: Organization             per business/product — memory, workflows, channels, messenger
+   ↓
+Layer 2: Repository               code — per-repo code, repo-scoped skills</div>
+
+  <h4>Self-Hosted</h4>
+  <p>Runs directly on your PC / Mac Mini / VPS. SoloSquad never sends data to operator servers. Only the Claude API and your messenger server are external communication partners.</p>
+
+  <h3 id="s1-3">1.3 Expected Value</h3>
+
+  <ul>
+    <li><strong>Solo, but not alone</strong> — 4 teams, 25 specialist AI teammates always on standby</li>
+    <li><strong>Work while you sleep</strong> — automated routines run daily for market signal detection · experiment review · daily/weekly retro</li>
+    <li><strong>Multi-product isolation</strong> — day-job + side projects stay separate via per-org memory and channels</li>
+    <li><strong>Iterative evolution</strong> — v0.x is a fast iteration phase for the solo founder's own use. v1.0 begins formal API stability commitments</li>
+    <li><strong>Open-source npm package</strong> — no external SaaS dependency. You own the code and data</li>
+  </ul>
+
+  <div class="callout info">
+    <strong>Version note</strong>
+    In this document, <span class="badge now">v0.8.5</span> is what you can install from npm today (cumulative v0.3·v0.4·v0.5·v0.6·v0.7·v0.8.x), and <span class="badge plan">v1.0+</span> are planned future releases. Highlights added in v0.7~v0.8.5: <em>uninstall lifecycle</em> (v0.7) · <em>multi-user messenger</em> (v0.8.0) · <em>import + archive verify</em> (v0.8.1) · <em>dev_capability</em> (v0.8.2) · <em>observability + dry-run</em> (v0.8.3) · <em>CLI surface reduction + `backup` subgroup</em> (v0.8.4) · <em>init regression fix + 4-docs pre-publish gate</em> (v0.8.5). See §8 for details.
+  </div>
+</section>
+
+<!-- ========================== SECTION 2 ========================== -->
+<section id="s2">
+  <h2><span class="num">2.</span>How It Works</h2>
+
+  <h3 id="s2-1">2.1 System Architecture</h3>
+  <p>SoloSquad consists of 3 core processes and 1 persistent store.</p>
+
+  <table>
+    <thead><tr><th>Component</th><th>Role</th><th>Execution</th></tr></thead>
+    <tbody>
+      <tr><td><code>solosquad bot</code></td><td>Receives messenger messages → injects matching agent SKILL.md → runs Claude Code → sends response</td><td>Long-running process (24/7)</td></tr>
+      <tr><td><code>solosquad schedule</code></td><td>Runs scheduled routines (morning brief, signal scan, ...) via cron</td><td>Long-running process (24/7)</td></tr>
+      <tr><td>Messenger Adapter</td><td>Discord or Slack adapter. Shared interface for bot/scheduler</td><td>Module inside bot/scheduler</td></tr>
+      <tr><td>File-based Memory</td><td>JSONL append-only logs + Markdown workflow artifacts at <code>&lt;org&gt;/memory/</code>, <code>&lt;org&gt;/workflows/</code></td><td>Filesystem</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Message processing flow (v0.6+)<span class="badge now">v0.6</span></h4>
+  <p>Single-shot keyword routing evolved into the PM session model in v0.3, then to 4-channel routing + 3-tier search + atomic-swap hot-reload in v0.5. v0.6 added <strong>chokidar-based fs.watch hot-reload</strong> + <strong>8-layer JIT spawn assembly</strong> + <strong>per-org × agent budget envelopes</strong>. On router miss, the <strong>FTS5 cold archive</strong> fallback recalls past decisions.</p>
+
+  <pre><code>User → PM session (claude --resume &lt;session-id&gt;)
+         ↓
+         buildRoutes(): 3-tier scan
+           [1] &lt;org&gt;/.agents/                  (org-local override)
+           [2] ~/.solosquad/agents/             (user-global override)
+           [3] &lt;workspace&gt;/.solosquad/agents/   (25 bundled)
+         ↓
+         4-channel resolver (priority: slash > explicit > keyword > freq)
+           · slash    — "/think /plan /build /review /ship" etc.
+           · explicit — PM calls a SKILL via reasoning
+           · keyword  — single-turn message word match
+           · freq     — auto-load when accumulated count crosses threshold
+                        (cooldown_turns suppresses re-firing — hysteresis)
+         ↓
+         JIT inject matched SKILLs into context
+         ↓
+         Task: &lt;agent&gt; "..." (fresh subagent session, [stage:&lt;id&gt; wf:&lt;id&gt;] marker)
+         ↓
+         Merge result summary into PM context → next spawn or report to user
+         ↓
+         git-snapshot before-spawn / after-spawn auto-commits (&lt;org&gt;/.solosquad/snapshot.git)
+
+[Parallel] When a new SKILL.md is saved, the router does an atomic swap:
+            build new index → swap ref → messages in flight keep using the old index
+            (no bot restart required)</code></pre>
+
+  <p>For v0.4 autonomous execution, <code>solosquad goal run &lt;goal-id&gt;</code> spawns a background PM session (<code>bg-&lt;goal-id&gt;-&lt;runId&gt;</code>) that runs the same 4-channel routing inside each cycle. Metric-gated keep/discard, git-snapshot revert, and cumulative cost caps apply per cycle.</p>
+
+  <h3 id="s2-2">2.2 Directory Hierarchy</h3>
+
+  <h4>Current npm release (v0.8.5) structure</h4>
+  <div class="tree">~/solosquad-workspace/                 (user workspace root)
+├── AGENTS.md                         (v0.4 — single persistent guide, cross-tool standard)
+├── .solosquad/                       (system config)
+│   ├── workspace.yaml                (timezone, briefings, pm, skill_loader, author,
+│   │                                  spawn.max_context_tokens, fs_watch.mode,
+│   │                                  archive.retention_days)
+│   ├── .env                          (messenger tokens, MESSENGER, ...)
+│   ├── agents/                       (v0.5 — bundled init, 25 specialists + frontmatter)
+│   │   ├── {team}/{agent}/SKILL.md
+│   │   ├── {team}/KNOWLEDGE.md       (v0.6 — co-location, _teams/ removed)
+│   │   └── _meta/workflow-maker/SKILL.md     (v0.5 — author-loop meta-skill)
+│   ├── knowledge/                    (v0.6 — accumulated shared knowledge)
+│   ├── routines/                     (optional — user routine overrides)
+│   └── core/                         (optional — user owner/principles/voice override)
+├── .agents/                          (v0.5 — optional, org-local SKILL override, top priority)
+└── &lt;org-slug&gt;/                       (organization, 1+)
+    ├── .org.yaml                     (org metadata: name, messenger, schema_version: 1 — v0.6)
+    ├── .agents/                      (v0.5 — optional, this-org SKILL override)
+    ├── core/                         (v0.6 — org philosophy/tone, overrides workspace core)
+    │   ├── PRINCIPLES.md
+    │   └── VOICE.md
+    ├── agent-profile.yaml            (v0.6 — per-org modifiers + budget for 25 agents,
+    │                                  schema_version: 1)
+    ├── domain/                       (v0.6 — org domain knowledge: market, customers, product)
+    ├── memory/                       (JSONL memory)
+    │   ├── signals.jsonl
+    │   ├── experiments.jsonl
+    │   ├── decisions.jsonl
+    │   ├── author-costs.jsonl        (v0.5 — author-loop cost log)
+    │   ├── agent-costs.jsonl         (v0.6 — spawn budget accumulator)
+    │   ├── migration-costs.jsonl     (v0.6 — 0.5→0.6 migration's own budget)
+    │   ├── spawn-decisions.jsonl     (v0.6 — 8-layer drop log)
+    │   ├── stop-hook-events.jsonl    (v0.6 — spec-gate evaluation log)
+    │   ├── archive.sqlite            (v0.6 — FTS5 cold archive)
+    │   ├── pm-skills/                (v0.3 — PM compaction externalization)
+    │   └── routine-logs/
+    ├── workflows/&lt;wf-id&gt;/             (project workflows)
+    │   ├── _status.yaml
+    │   ├── _handoff.md
+    │   ├── _events.jsonl             (v0.3 — PM event log)
+    │   └── stage-N-{name}/
+    ├── goals/&lt;goal-id&gt;/               (v0.4 — autonomous-execution intent + cycle results)
+    │   ├── goal.md
+    │   ├── results.tsv
+    │   ├── _best.json
+    │   └── _last-run.md
+    ├── .solosquad/
+    │   ├── sessions/&lt;user&gt;.json       (v0.3 — PM session id + cost + activeWorkflowId,
+    │   │                               v0.5 — freqCooldowns per-turn decay)
+    │   ├── snapshot.git              (v0.3 — bare repo of memory/ + workflows/)
+    │   ├── analysis/                 (v0.5 — repo analysis reports in Markdown)
+    │   └── analysis-ledger.yaml      (v0.5 — analyze repo ledger: path + SHA256[:12])
+    ├── repositories/&lt;repo-slug&gt;/      (code repos)
+    │   └── (code + own .git/, .claude/, CLAUDE.md, ...)
+    ├── slack/  or  discord/          (channel mapping config)
+    └── product/                      (org-specific artifacts)
+
+~/.solosquad/agents/                   (v0.5 — user-global SKILL override, shared across workspaces)
+~/.solosquad/agent-profile-defaults.yaml  (v0.6 — N orgs inherit these user-global defaults)
+
+(installed by npm) assets/             (bundled defaults, no need to modify)
+├── agents/{team}/{agent}/SKILL.md    (25 — v0.6 added collab_pattern frontmatter)
+├── agents/{team}/KNOWLEDGE.md        (v0.6 — moved from _teams/ via co-location)
+├── agents/_meta/workflow-maker/       (v0.5 — author-loop meta-skill + references)
+├── knowledge/                         (v0.6 — bundled workspace knowledge starter guide)
+├── core/{OWNER,PRINCIPLES,VOICE}.md
+├── routines/                         (v0.8.5: morning-brief, evening-brief, pm-compaction,
+│                                      system-housekeeping)
+├── orchestrator/SKILL.md             (PM prompt, enabled in v0.3 / goal-md-spec appended in v0.4)
+├── templates/                        (PRD, handoff-{hierarchical,graph,dynamic} ×3,
+│                                      status, goal.md, AGENTS.md, workflow.yaml,
+│                                      agent-profile.yaml, hooks.json)
+├── deploy/docker/                    (container deployment — Dockerfile, docker-compose.yml, README)
+└── docs/poc/                         (v0.3 PoC integration script archive)</div>
+
+  <p><strong>3-tier search priority (v0.5):</strong> for a SKILL with the same name, override order is <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (bundled). The router scans all three at boot and merges them into a single index.</p>
+
+  <h4>v0.6 new assets<span class="badge now">v0.6</span></h4>
+  <p>The Org Layer (which absorbs each organization's tone/emphasis/budget for the 25 specialists) and the Workspace Knowledge Layer (which separates accumulated craft) are formally introduced as first-class assets in v0.6. <strong>Bundled SKILLs are not modified line-by-line</strong> — org flavor enters only through the assets below.</p>
+  <ul>
+    <li><code>assets/agents/{team}/KNOWLEDGE.md</code> — previously <code>_teams/*/TEAM_KNOWLEDGE.md</code>, now co-located (Team = Domain). Auto-injected when any same-team agent spawns.</li>
+    <li><code>&lt;org&gt;/core/{PRINCIPLES,VOICE}.md</code> — org philosophy / tone (overrides workspace <code>core/</code>). Spawn still works with empty files.</li>
+    <li><code>&lt;org&gt;/agent-profile.yaml</code> — per-org modifiers for 25 agents (defaults + per-agent section + budget + <code>schema_version: 1</code>). Per-agent budgets may only *narrow* the defaults.</li>
+    <li><code>&lt;org&gt;/domain/{market,customers,product}.md</code> — org domain knowledge (market, customers, product).</li>
+    <li><code>.solosquad/knowledge/</code> — accumulated shared user knowledge (decision frameworks, domain glossary). Selectively injected on keyword match.</li>
+    <li><code>~/.solosquad/agent-profile-defaults.yaml</code> — user-global inheritance. Shared budget/voice defaults across N orgs. Inheritance: workspace bundle defaults → user-global → org agent-profile.</li>
+    <li><code>&lt;org&gt;/memory/archive.sqlite</code> — FTS5 cold archive (JSONL older than 8 days moves to SQLite FTS5 virtual table, search fallback).</li>
+  </ul>
+
+  <h4>agent-profile.yaml example</h4>
+  <pre><code>schema_version: 1
+defaults:
+  tone: conservative
+  budget:
+    daily_usd: 5
+    weekly_usd: 25
+    on_cap_action: pause       # pause | warn
+
+business-strategist:
+  emphasis: "Prioritize the Korean SMB market context"
+  decision_frame: "Cash flow &gt; growth rate"
+
+content-writer:
+  voice: "professional, no hype"
+  ban_phrases: ["revolutionary", "groundbreaking"]
+
+paid-marketer:
+  budget:                       # may only narrow defaults
+    daily_usd: 2</code></pre>
+  <p>Agents not specified inherit only the <code>defaults</code> block. When the cap is hit at spawn time, the spawn is refused and the PM responds "Daily budget reached — please try again tomorrow." Accumulator: <code>&lt;org&gt;/memory/agent-costs.jsonl</code>.</p>
+
+  <h3 id="s2-3">2.3 Context &amp; Memory Management</h3>
+
+  <h4>Current memory structure (v0.2.4)</h4>
+  <p>Every routine result appends to a JSONL file. One JSON line = one event.</p>
+  <pre><code>&lt;org&gt;/memory/signals.jsonl example:
+{"ts":"2026-05-12T12:00:00Z","kind":"signal","source":"reddit/r/saas","content":"...","urgency":"med"}
+{"ts":"2026-05-12T12:00:15Z","kind":"signal","source":"twitter","content":"...","urgency":"high"}</code></pre>
+
+  <h4>3-layer context (P/E/T vocabulary)</h4>
+  <table>
+    <thead><tr><th>Layer</th><th>Location</th><th>Purpose</th><th>TTL</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Persistent</strong></td><td>Workspace + org SKILL.md, KNOWLEDGE.md, core/, principles</td><td>Role definitions · craft · policy</td><td>Forever</td></tr>
+      <tr><td><strong>Episodic</strong></td><td><code>&lt;org&gt;/workflows/&lt;id&gt;/</code>, JSONL memory</td><td>Per-workflow / per-period progress logs</td><td>Days~months</td></tr>
+      <tr><td><strong>Transient</strong></td><td>Claude session prompt context</td><td>Working memory just before the current call</td><td>5 minutes (Anthropic prompt cache TTL)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Just-in-Time injection principle<span class="badge now">v0.5</span></h4>
+  <p>Not every SKILL.md is added to context on every call. The 4-channel router (slash/explicit/keyword/freq) matches each turn and decides what to inject <em>that turn</em>, based on user keywords, slash commands, and frequency counts.</p>
+
+  <h4>v0.6 memory flow<span class="badge now">v0.6</span></h4>
+  <p>The v0.5 per-turn flow is preserved; v0.6 added spawn budget · 8-layer drop log · spec-gate evaluation · migration cost. During one PM turn, these files are updated:</p>
+  <ul>
+    <li><code>&lt;org&gt;/.solosquad/sessions/&lt;user&gt;.json</code> — last interaction, cumulative cost USD, activeWorkflowId, <code>freqCooldowns</code> (v0.5 — per-turn decay)</li>
+    <li><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/_events.jsonl</code> — PM messages · spawn · completion events</li>
+    <li><code>&lt;org&gt;/.solosquad/snapshot.git</code> — before/after-spawn commits (memory/ + workflows/)</li>
+    <li><code>&lt;org&gt;/memory/author-costs.jsonl</code> — author-loop cumulative USD per step (v0.5)</li>
+    <li><code>&lt;org&gt;/memory/agent-costs.jsonl</code> <span class="badge now">v0.6</span> — per-agent spawn cost accumulator for agent-profile budget cap</li>
+    <li><code>&lt;org&gt;/memory/spawn-decisions.jsonl</code> <span class="badge now">v0.6</span> — log of which layers were dropped when token cap was hit (FTS5-indexed §4.6)</li>
+    <li><code>&lt;org&gt;/memory/stop-hook-events.jsonl</code> <span class="badge now">v0.6</span> — spec-gate hook evaluation result at cycle end</li>
+    <li><code>&lt;org&gt;/memory/migration-costs.jsonl</code> <span class="badge now">v0.6</span> — 0.5→0.6 migration's own LLM fallback cost accumulator</li>
+    <li><code>&lt;org&gt;/memory/pm-skills/_recent.md</code> — one-line summaries of workflows externalized by pm-compaction (PM reads this on the next turn)</li>
+  </ul>
+
+  <h4>FTS5 cold archive<span class="badge now">v0.6</span></h4>
+  <p>As JSONL accumulates, search slows down. v0.6 moves entries older than 8 days to the SQLite FTS5 virtual table <code>&lt;org&gt;/memory/archive.sqlite</code>, keeping them searchable via token matching. The nightly <code>archive-rotate</code> routine (00:00; merged into <code>system-housekeeping</code> in v0.8.5) does this automatically. Search recall without a semantic-embedding infrastructure.</p>
+
+  <h4>4 event_type indexing<span class="badge now">v0.6</span></h4>
+  <p>v0.6 indexes 3 new event sources (router · author · spawn) alongside existing <code>routine-logs/*.jsonl</code> into the same archive. Data sources for §3 trajectory extraction and §3.4 freq auto-suggestion:</p>
+  <table>
+    <thead><tr><th>event_type</th><th>Source</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td><code>route_hit</code></td><td>agent-router <code>resolve()</code> non-null</td><td>Keyword → SKILL hit frequency</td></tr>
+      <tr><td><code>route_miss</code></td><td>agent-router <code>resolve()</code> null</td><td>Input for freq auto-suggestion (inferred missing SKILLs)</td></tr>
+      <tr><td><code>author_turn</code></td><td>Author-loop turn log</td><td>Avg clarification turns, refusal rate</td></tr>
+      <tr><td><code>spawn_decision</code></td><td>PM Task tool calls + 8-layer drops</td><td>Reveals divergence between PM free routing vs deterministic router</td></tr>
+      <tr><td><code>routine_log</code></td><td>Existing <code>routine-logs/*.jsonl</code></td><td>Legacy auto-load</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Retention policy<span class="badge now">v0.6</span></h4>
+  <p>The archive retains 365 days by default (<code>workspace.yaml.archive.retention_days: 365</code>). The <code>archive-rotate</code> routine performs the *delete old entries* step. Optional <code>archive.compress_before_delete: true</code> keeps an <code>archive-&lt;year-month&gt;.zst</code> for quarterly retention. Disk usage: <code>solosquad memory stats --disk</code>.</p>
+
+  <h3 id="s2-4">2.4 Workflow Definitions</h3>
+
+  <h4>4 default workflows</h4>
+  <table>
+    <thead><tr><th>Type</th><th>Purpose</th><th>Stages</th></tr></thead>
+    <tbody>
+      <tr><td>PMF Discovery</td><td>New product-market fit exploration</td><td>Research → Planning → Design → Build → Launch</td></tr>
+      <tr><td>Feature Expansion</td><td>Add features to existing product</td><td>Analysis → Planning → Design → Build</td></tr>
+      <tr><td>Rebranding</td><td>Brand repositioning</td><td>Research → Branding → Design → Marketing</td></tr>
+      <tr><td>Rapid Prototype</td><td>Minimum viable validation</td><td>Refine → Build → Launch</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Key files: <code>_status.yaml</code> + <code>_handoff.md</code></h4>
+  <p><code>_status.yaml</code> tracks per-stage progress (<code>pending → in_progress → completed</code>). <code>_handoff.md</code> is the context slice each stage hands off to the next agent.</p>
+
+  <pre><code>_handoff.md standard sections:
+- Summary: 3-line summary
+- Artifacts: list of outputs
+- Key Decisions: decisions + rationale
+- Context for Next Agent: what the next agent should know
+- Open Questions: unresolved questions</code></pre>
+
+  <h4>v0.6 handoff variants (3 types)<span class="badge now">v0.6</span></h4>
+  <p>Different stages need different collaboration patterns; one template doesn't fit all. The 25 agent SKILL.md files now carry <code>collab_pattern</code> as a formal frontmatter field, and spawn applies the matching variant template automatically.</p>
+  <ul>
+    <li><strong>hierarchical</strong> (22 agents) — Standard PM → specialist flow. Keep 4 sections (<code>templates/handoff-hierarchical.md</code>)</li>
+    <li><strong>graph</strong> (data-analyst, feature-planner) — Bidirectional convergence loop (e.g. research ↔ data-analyst). Adds <code>state_object_diff</code>, <code>loop_count</code> (<code>templates/handoff-graph.md</code>)</li>
+    <li><strong>dynamic</strong> (content-writer) — Next agent branches by result content. Adds <code>routing_signal</code> (<code>templates/handoff-dynamic.md</code>)</li>
+  </ul>
+
+  <h3 id="s2-5">2.5 Spawn assembly (8-layer JIT inject)<span class="badge now">v0.6</span></h3>
+  <p>When a specialist spawns, context is assembled from the 8 layers below in priority order. When <code>workspace.yaml.spawn.max_context_tokens</code> (default 80,000) is hit, lower-priority layers are dropped, and the decision log is written to <code>&lt;org&gt;/memory/spawn-decisions.jsonl</code> (FTS5-indexed per §2.3):</p>
+
+  <pre><code>spawn(business-strategist, org=Acme, repo?)
+  └─ assemble:
+       [1] .solosquad/knowledge/ + assets/knowledge/  (workspace shared, keyword-selective)
+       [2] agents/strategy/KNOWLEDGE.md               (team(=domain) shared knowledge, same team only)
+       [3] agents/strategy/business-strategist/SKILL.md  (agent identity, workspace-immutable)
+       [4] &lt;org&gt;/core/                                (org philosophy/tone)
+       [5] &lt;org&gt;/agent-profile.yaml defaults + business-strategist section (org modifier)
+       [6] &lt;org&gt;/domain/                              (org domain knowledge)
+       [7] &lt;org&gt;/workflows/&lt;id&gt;/_handoff.md + &lt;org&gt;/memory/ (recent + FTS5 recall)
+       [8] target_repo context (only when target_repo field is set)</code></pre>
+
+  <h4>Drop-priority table</h4>
+  <table>
+    <thead><tr><th>Priority</th><th>Layer</th><th>Drop policy</th></tr></thead>
+    <tbody>
+      <tr><td>1 (required)</td><td>[3] agent SKILL.md</td><td>Never drop — agent identity</td></tr>
+      <tr><td>2</td><td>[4] org core, [5] agent-profile</td><td>Never drop — org flavor</td></tr>
+      <tr><td>3</td><td>[7] handoff slice</td><td>Drop oldest handoffs first</td></tr>
+      <tr><td>4</td><td>[2] team KNOWLEDGE</td><td>Drop if keyword match is low</td></tr>
+      <tr><td>5</td><td>[6] org domain</td><td>Drop if keyword match is low</td></tr>
+      <tr><td>6</td><td>[1] workspace knowledge</td><td>Drop if no matches</td></tr>
+      <tr><td>7</td><td>[8] target repo context</td><td>Drop large files first</td></tr>
+    </tbody>
+  </table>
+  <p>When drops occur, <code>&lt;org&gt;/memory/spawn-decisions.jsonl</code> records which layer was truncated — that line is indexed in the §2.3 FTS5 archive with <code>event_type: spawn_decision</code>.</p>
+</section>
+
+<!-- ========================== SECTION 3 ========================== -->
+<section id="s3">
+  <h2><span class="num">3.</span>Core Concepts</h2>
+
+  <h3 id="s3-1">3.1 SKILL.md — Agent Identity Definition</h3>
+  <p><code>SKILL.md</code> is the manual describing "how this role works" for a single agent. It follows Anthropic's official Agent Skills format, with SoloSquad extensions for routing, loop_mode, budget, etc.</p>
+
+  <pre><code>---
+name: "Business Strategist"
+description: "Business strategy · market analysis · competitive positioning"
+team: strategy
+stateful: false                    # v0.5 — all specialists are stateless
+triggers:                          # v0.5 — 4-channel entry points
+  slash: ["/strategize"]
+  keyword: ["business strategy", "business model"]
+  freq:                            # auto-load when cumulative count crosses threshold
+    keywords: ["strategy", "positioning", "competition"]
+    window_turns: 10
+    threshold: 3
+    cooldown_turns: 6
+  explicit: true                   # PM can call directly via reasoning
+inputs:
+  required: [market_context, hypothesis]
+  optional: [time_range]
+outputs:
+  - strategy.md
+handoff_to:
+  - feature-planner
+  - pmf-planner
+loop_mode:                         # v0.5 — spec-gate (Ralph loop) mode. null | spec-gate
+  kind: spec-gate
+  stop_when: "all tests pass"
+budget:                            # v0.5 — paperclip envelope. Forwarded to author loop / explicit
+  per_call_usd: 1.5
+  daily_usd: 10
+---
+
+# Business Strategist Agent
+
+You are a business strategy specialist helping a solo founder.
+
+## Process
+1. Understand the market context
+2. Competitive analysis
+3. Frame hypotheses + propose validation methods
+...</code></pre>
+
+  <ul>
+    <li><strong>Location (3-tier search):</strong> <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (25 bundled)</li>
+    <li><strong>Load timing:</strong> Router picks via 4-channel matching → PM injects into system prompt when spawning via Task tool</li>
+    <li><strong>Property:</strong> <strong>Stateless</strong> (v0.5 enforced) — every call is a fresh session; state lives outside (workflows / handoff / memory). <code>stateful: true</code> is used only by PM and v0.4 goal-runner background sessions</li>
+    <li><strong>Required fields:</strong> <code>name</code>, <code>description</code> (Anthropic spec). The rest are SoloSquad extensions with router fallbacks if missing</li>
+    <li><strong>loop_mode = spec-gate:</strong> the author loop auto-emits <code>&lt;org&gt;/goals/&lt;goal-id&gt;/goal.md</code> as well → registers an autonomous cycle in the v0.4 goal-runner</li>
+  </ul>
+
+  <h3 id="s3-2">3.2 KNOWLEDGE.md — Team (= Domain) Shared Knowledge<span class="badge now">v0.6</span></h3>
+  <p>All agents in the same team share craft / definitions / anti-patterns through this file. v0.6 co-located it as <code>agents/{team}/KNOWLEDGE.md</code>, auto-injected when any same-team agent spawns (layer [2] of the 8-layer assembly).</p>
+
+  <table>
+    <thead><tr><th></th><th>SKILL.md</th><th>KNOWLEDGE.md</th></tr></thead>
+    <tbody>
+      <tr><td>Scope</td><td>A single agent</td><td>An entire team (e.g. strategy team of 7)</td></tr>
+      <tr><td>Content</td><td>Role identity / how to work</td><td>Team craft / vocabulary / anti-patterns</td></tr>
+      <tr><td>Load condition</td><td>When that specific agent spawns</td><td>When any agent from the same team spawns</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <strong>v0.6 co-location complete</strong>
+    The earlier parallel hierarchy at <code>assets/agents/_teams/{team}/TEAM_KNOWLEDGE.md</code> was co-located to <code>assets/agents/{team}/KNOWLEDGE.md</code>. The <code>_teams/</code> directory was fully removed. Migration 0.5→0.6 auto-moves the user workspace's <code>.solosquad/agents/_teams/</code> as well.
+  </div>
+
+  <h3 id="s3-3">3.3 CLAUDE.md — Project / Repo Guide</h3>
+  <p><code>CLAUDE.md</code> is the project-guide file that Claude Code (the general-purpose coding CLI) auto-loads at every session start. It is <strong>Claude Code's official convention</strong>, not a SoloSquad invention.</p>
+
+  <ul>
+    <li><strong>Location:</strong> project root (or inside <code>.claude/</code>)</li>
+    <li><strong>Purpose:</strong> convey codebase structure, tech stack, user instructions to the model</li>
+    <li><strong>Load timing:</strong> Claude Code reads it automatically — no explicit user instruction needed</li>
+  </ul>
+
+  <p>SoloSquad's own root <code>CLAUDE.md</code> targets <em>developers of SoloSquad itself</em>. When you work in your own product repo, that <em>repo's</em> CLAUDE.md applies.</p>
+
+  <pre><code>Example: a user's SaaS repo CLAUDE.md
+# My SaaS
+
+TypeScript + Next.js. Deployed on Vercel.
+
+## Conventions
+- Components live in src/components/ as PascalCase
+- API routes in src/pages/api/
+...</code></pre>
+
+  <h3 id="s3-4">3.4 SKILL.md vs AGENTS.md — Different Layers, Different Roles</h3>
+  <p>SoloSquad <strong>uses both files but with clearly different responsibilities</strong>. A workspace has many SKILL.md files but exactly one AGENTS.md.</p>
+
+  <table>
+    <thead><tr><th></th><th>SKILL.md (Anthropic official)</th><th>AGENTS.md (cross-tool standard) <span class="badge now">v0.4</span></th></tr></thead>
+    <tbody>
+      <tr><td>Role</td><td>Individual <strong>agent's identity &amp; operating manual</strong></td><td>Workspace's <strong>single persistent guide</strong> (project conventions, forbidden paths, tool usage rules)</td></tr>
+      <tr><td>Location · count</td><td>3-tier search: <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (25 bundled)<br><code>.claude/skills/{name}/SKILL.md</code> (Claude Code marketplace compatible)</td><td><code>&lt;workspace&gt;/AGENTS.md</code> — <strong>exactly one</strong></td></tr>
+      <tr><td>Frontmatter</td><td>YAML, <code>name</code> · <code>description</code> required + SoloSquad extensions (<code>team</code> · <code>stateful</code> · <code>triggers</code> · <code>loop_mode</code> · <code>budget</code> etc.)</td><td>None — free markdown</td></tr>
+      <tr><td>Authored by</td><td>v0.5 analyzer auto-classifies + merges. v0.5 messenger author loop generates via 1-2 turn dialog. Humans may also edit.</td><td><strong>Humans only.</strong> No AI agent may modify this file (same trust-anchor spirit as Codex <code>/goal</code>).</td></tr>
+      <tr><td>Other tool compat</td><td>Direct integration with Claude Code Plugin marketplace.</td><td>Recognized as a <strong>cross-tool standard</strong> by Codex, Aider, Cursor, modern Claude Code (<a href="https://developers.openai.com/codex/agents-md/">Codex AGENTS.md spec</a>).</td></tr>
+      <tr><td>In v0.4 autonomous execution</td><td>Spawned specialists receive their own SKILL.md as context.</td><td><code>immutable_paths</code> · <code>modifiable_paths</code> · external-call allowlists are pinned — every <code>goal.md</code> execution inherits them.</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Bottom line:</strong> SKILL.md says "who this agent is, what they're good at"; AGENTS.md says "rules every AI tool touching this workspace must follow." They aren't rivals — they're different layers.</p>
+
+  <p><strong>CLAUDE.md is no longer used <span class="badge now">v0.4</span>.</strong> Previously both CLAUDE.md and AGENTS.md sat at the workspace root, but having two files at the same level created "where should I write this?" confusion and risked divergence. From v0.4, SoloSquad consolidates the workspace persistent guide into <code>AGENTS.md</code> alone. Migration leaves existing CLAUDE.md untouched; content is copied once into AGENTS.md — users may delete CLAUDE.md manually if no longer needed. Modern Claude Code also recognizes AGENTS.md as a fallback, so no compat loss.</p>
+
+  <h3 id="s3-5">3.5 Workflow Maker Meta-Skill<span class="badge now">v0.5</span></h3>
+  <p>An author-loop system letting users, <em>without touching code</em>, register a new SKILL.md (or workflow chain) via 1-2 messenger turns. <code>assets/agents/_meta/workflow-maker/SKILL.md</code> acts as the author-loop system prompt; when PM classifies the intent as "I want to automate this task," it enters via explicit <code>[META workflow-maker]</code> invocation.</p>
+
+  <h4>5-stage state machine</h4>
+  <ol>
+    <li><strong>CLARIFY</strong> — Clarify inputs / outputs / cadence in 1-2 turns (if user can't answer, default is taken with a "you can modify later" note)</li>
+    <li><strong>DRAFT</strong> — Preview SKILL.md + (optional) workflow.yaml + (optional) routine cron entry</li>
+    <li><strong>SANDBOX_PROMPT</strong> — Run once in dry-run sandbox → request user confirmation</li>
+    <li><strong>AWAIT_CONFIRM</strong> — User approval gate ("Confirm?")</li>
+    <li><strong>APPLIED</strong> — Deterministic merge: <code>solosquad agent validate &lt;path&gt;</code> → router atomic swap → usable from next call. <code>loop_mode.kind: spec-gate</code> drafts also auto-emit <code>&lt;org&gt;/goals/&lt;goal-id&gt;/goal.md</code></li>
+  </ol>
+
+  <h4>CLI integration</h4>
+  <ul>
+    <li><code>solosquad agent add --name X --team Y</code> — scaffold (frontmatter template + empty body)</li>
+    <li><code>solosquad agent validate &lt;path&gt;</code> — schema + required-section check. Author-loop auto-runs this after save</li>
+    <li><code>solosquad agent validate --all [--corpus]</code> — entire workspace + bundle + corpus regression. Runs in CI gate (<code>.github/workflows/ci.yml</code>)</li>
+    <li><code>solosquad agent list / info</code> — inventory and details of registered SKILLs</li>
+  </ul>
+
+  <h4>Cost cap (paperclip envelope)</h4>
+  <p>LLM calls during clarification + draft + validate + sandbox accumulate in <code>&lt;org&gt;/memory/author-costs.jsonl</code> (<code>ts, skill_draft_id, step, usd</code>). When the <code>workspace.yaml.author</code> <code>per_call_usd</code> / <code>daily_usd</code> / <code>weekly_usd</code> cap is hit, PM replies "Daily budget reached — please try again tomorrow."</p>
+
+  <h4>Analysis track</h4>
+  <p>Existing <code>.claude/skills/</code> assets in legacy repos are absorbed via <code>solosquad analyze repo &lt;path&gt;</code>. A 4-label classification report (<code>role / workflow / codebase-fact / domain</code>) is stored under <code>&lt;org&gt;/.solosquad/analysis/</code>, and after human review, <code>solosquad add repo --from-report &lt;report&gt;</code> performs a deterministic merge (backup → apply → verify). The second run uses <code>analysis-ledger.yaml</code> hashes so only new/changed parts incur LLM calls.</p>
+
+  <h3 id="s3-6">3.6 4-Channel Routing + Freq Cooldown<span class="badge now">v0.5</span></h3>
+  <p>The hardcoded 60+ keyword <code>AGENT_ROUTES</code> constant from v0.2.4 was removed in v0.5. Each SKILL.md's <code>triggers</code> frontmatter is collected at boot into a router index, matched in 4-channel priority order:</p>
+
+  <table>
+    <thead><tr><th>Channel</th><th>Meaning</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td><code>slash</code></td><td>Explicit intent — load immediately (no ambiguity)</td><td><code>/think /plan /build /review /ship</code></td></tr>
+      <tr><td><code>explicit</code></td><td>PM calls directly via reasoning</td><td><code>[META workflow-maker]</code> — PM-only channel</td></tr>
+      <tr><td><code>keyword</code></td><td>Single-turn message word match</td><td><code>"business strategy"</code> → business-strategist</td></tr>
+      <tr><td><code>freq</code></td><td>Auto-load when accumulated count across recent N turns crosses threshold (equivalent effect to semantic embedding via counting)</td><td>"land registry", "signal", "real estate" across last 10 turns sum ≥ 3</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>Priority:</strong> <code>slash &gt; explicit &gt; keyword &gt; freq</code>. Within each channel, the 3-tier search path (org &gt; user &gt; bundle) handles overrides.</p>
+
+  <h4>Freq channel hysteresis (cooldown)</h4>
+  <p>Once a SKILL is auto-loaded via freq, its freq-match scoring is skipped for <code>triggers.freq.cooldown_turns</code> (default 6). Prevents re-firing the same SKILL every turn when the conversation lingers on one topic. Router memory: the <code>freqCooldowns: { skill_name: until_turn }</code> field in <code>&lt;org&gt;/.solosquad/sessions/&lt;user&gt;.json</code> decays per turn.</p>
+
+  <h4>Freq SKILL ceiling</h4>
+  <p>Up to <strong>20</strong> SKILLs may register on the freq channel per workspace. Validator refuses the 21st (to bound per-message regex matching cost — p95 &lt; 10 ms target). Keyword tokens are hashmap-counted (O(|tokens|)), with regex as fallback.</p>
+
+  <h4>Auto-load notification (UX)</h4>
+  <p>When a SKILL is loaded via the <code>freq</code> channel, the user gets one notification: <code>🧠 {agent} context auto-loaded (recent keywords: ...)</code>. The user can immediately reject an unintended routing.</p>
+
+  <h4>Hot-reload (atomic swap)</h4>
+  <p>When the author loop saves a new SKILL.md, <code>src/bot/index.ts</code> rebuilds the router. Messages arriving during the build are handled by the <em>previous index</em>, and after build the ref is swapped (<code>routeIndexRef = newIndex</code>) — so in-flight messages never see a partial index. No bot restart needed. If the build fails, the previous index is retained and the PM is warned.</p>
+
+  <h4>Meta-skill scanner isolation</h4>
+  <p>The <code>_meta/</code> folder is still skipped by the general scanner. A separate <code>listMetaSkills()</code> scans <code>assets/agents/_meta/*/SKILL.md</code> only and accepts only <code>triggers.explicit: true</code>. The <code>workflow-maker</code> meta-skill is enterable only through PM's explicit call — slash/keyword/freq registrations are refused.</p>
+
+  <h3 id="s3-7">3.7 Master Table — File Types per Hierarchy</h3>
+
+  <h4>Workspace layer (Layer 0)</h4>
+  <table>
+    <thead><tr><th>Path</th><th>File</th><th>Meaning</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td><code>&lt;workspace&gt;/.solosquad/agents/{team}/{agent}/</code> <span class="badge now">v0.5</span></td><td><code>SKILL.md</code></td><td>25 specialist identity manuals (bundled, frontmatter prepended)</td><td>When that agent spawns</td></tr>
+      <tr><td><code>~/.solosquad/agents/</code> <span class="badge now">v0.5</span></td><td><code>{team}/{agent}/SKILL.md</code></td><td>User-global SKILL override (shared across all workspaces)</td><td>Overrides same-named bundled SKILL</td></tr>
+      <tr><td><code>&lt;workspace&gt;/.agents/</code> <span class="badge now">v0.5</span></td><td><code>{team}/{agent}/SKILL.md</code></td><td>Org-local SKILL override (highest priority)</td><td>1st in 3-tier search</td></tr>
+      <tr><td><code>assets/agents/_meta/workflow-maker/</code> <span class="badge now">v0.5</span></td><td><code>SKILL.md</code> + <code>references/*.md</code></td><td>Author-loop meta-skill (PM-only via explicit)</td><td>When PM classifies "create new SKILL/workflow" intent</td></tr>
+      <tr><td><code>assets/agents/{team}/</code> <span class="badge now">v0.6</span></td><td><code>KNOWLEDGE.md</code></td><td>Team (= domain) shared craft. <code>_teams/</code> parallel hierarchy abolished, co-located</td><td>Auto-injected when same-team agent spawns (8-layer [2])</td></tr>
+      <tr><td><code>assets/core/</code></td><td><code>OWNER.md</code> / <code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>User profile / behavioral principles / writing tone</td><td>Default context for every session</td></tr>
+      <tr><td><code>assets/orchestrator/</code></td><td><code>SKILL.md</code></td><td>PM (orchestrator) role definition <span class="badge now">v0.3</span> + v0.4 goal-md-spec append</td><td>PM session</td></tr>
+      <tr><td><code>assets/routines/</code></td><td><code>morning-brief.md</code><br><code>evening-brief.md</code><br><code>pm-compaction.md</code> <span class="badge now">v0.3</span><br><code>system-housekeeping.md</code> <span class="badge now">v0.8.5</span></td><td>Automated routine prompts (4 in v0.8.5 — see §6.4)</td><td>Scheduler at cron time</td></tr>
+      <tr><td><code>assets/templates/</code></td><td><code>handoff.md</code> / <code>prd-{type}.md</code> / <code>status.yaml</code> / <code>goal.md</code> <span class="badge now">v0.4</span> / <code>AGENTS.md</code> <span class="badge now">v0.4</span> / <code>workflow.yaml</code> <span class="badge now">v0.5</span> / <code>goal-from-skill.md</code> <span class="badge now">v0.5</span></td><td>Workflow · autonomous-execution · workflow-chain scaffolding</td><td>When creating a new workflow / goal / skill</td></tr>
+      <tr><td><code>.solosquad/knowledge/</code> <span class="badge now">v0.6</span></td><td>(user-authored)</td><td>Accumulated shared knowledge (decision frameworks, domain glossary)</td><td>Selective load on keyword match (8-layer [1])</td></tr>
+      <tr><td><code>assets/knowledge/</code> <span class="badge now">v0.6</span></td><td>Bundled workspace-knowledge starter guide</td><td>npm bundle — falls back from <code>.solosquad/knowledge/</code></td><td>Selective load on keyword match</td></tr>
+      <tr><td><code>~/.solosquad/agent-profile-defaults.yaml</code> <span class="badge now">v0.6</span></td><td>(YAML)</td><td>User-global agent-profile defaults inherited by N orgs (budget, voice)</td><td>Inheritance: workspace bundle → user-global → org agent-profile</td></tr>
+      <tr><td><code>&lt;workspace&gt;/</code> <span class="badge now">v0.4</span></td><td><code>AGENTS.md</code></td><td>Workspace's <strong>single persistent guide</strong> (<code>immutable_paths</code>, <code>modifiable_paths</code>, Output guard pinned). Same file recognized by Codex, Aider, Cursor, modern Claude Code as a cross-tool standard. Edited by humans only.</td><td>Auto-inherited by every autonomous execution (<code>solosquad goal run</code>) and PM session. (CLAUDE.md is no longer used as of v0.4 — see §3.4)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Organization layer (Layer 1)</h4>
+  <table>
+    <thead><tr><th>Path</th><th>File</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>&lt;org&gt;/</code></td><td><code>.org.yaml</code></td><td>Org metadata (name, messenger, active repos)</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/</code></td><td><code>signals.jsonl</code><br><code>experiments.jsonl</code><br><code>decisions.jsonl</code><br><code>routine-logs/*.jsonl</code><br><code>pm-skills/*.md</code> <span class="badge now">v0.3</span><br><code>author-costs.jsonl</code> <span class="badge now">v0.5</span></td><td>Routine results · decision events · PM compaction externalization · author-loop cost accumulator</td></tr>
+      <tr><td><code>&lt;org&gt;/workflows/&lt;wf-id&gt;/</code></td><td><code>_status.yaml</code><br><code>_handoff.md</code><br><code>_events.jsonl</code> <span class="badge now">v0.3</span><br><code>stage-N-{name}/</code></td><td>Active workflow state · handoff · artifacts</td></tr>
+      <tr><td><code>&lt;org&gt;/goals/&lt;goal-id&gt;/</code> <span class="badge now">v0.4</span></td><td><code>goal.md</code><br><code>results.tsv</code><br><code>_best.json</code><br><code>_last-run.md</code></td><td>Autonomous-execution intent (per-run) + cumulative cycle results + ship-candidate commit + last-run summary. Updated by <code>solosquad goal run</code>.</td></tr>
+      <tr><td><code>&lt;org&gt;/slack/</code> or <code>discord/</code></td><td>Channel mapping YAML</td><td>Messenger channel ↔ org mapping</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/sessions/</code> <span class="badge now">v0.3</span></td><td><code>{user-id}.json</code> — session id, cumulative cost, activeWorkflowId, <code>freqCooldowns</code> <span class="badge now">v0.5</span></td><td>PM session id + 4-channel freq hysteresis state</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/snapshot.git</code> <span class="badge now">v0.3</span></td><td>(bare repo)</td><td>Bare repo of memory/ + workflows/. PM commits before/after each spawn. Target of <code>rollback --workflow &lt;id&gt;</code> revert.</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/analysis/</code> <span class="badge now">v0.5</span></td><td><code>YYYY-MM-DD-*.md</code></td><td><code>solosquad analyze repo</code> Markdown reports (4-label classification). Merged via <code>--from-report</code> after human review.</td></tr>
+      <tr><td><code>&lt;org&gt;/.solosquad/analysis-ledger.yaml</code> <span class="badge now">v0.5</span></td><td>(YAML)</td><td>Repo-analysis ledger (<code>path + SHA256[:12]</code>). Second run only LLM-processes new/changed entries.</td></tr>
+      <tr><td><code>&lt;org&gt;/.agents/</code> <span class="badge now">v0.5</span></td><td><code>{team}/{agent}/SKILL.md</code></td><td>Org-local SKILL override (top of 3-tier search). Overrides same-named user-global / bundled SKILLs.</td></tr>
+      <tr><td><code>&lt;org&gt;/core/</code> <span class="badge now">v0.6</span></td><td><code>PRINCIPLES.md</code> / <code>VOICE.md</code></td><td>Org philosophy/tone (overrides workspace core). 8-layer [4]</td></tr>
+      <tr><td><code>&lt;org&gt;/agent-profile.yaml</code> <span class="badge now">v0.6</span></td><td>(YAML)</td><td>Org-specific modifiers + budget for 25 agents, <code>schema_version: 1</code>. 8-layer [5]</td></tr>
+      <tr><td><code>&lt;org&gt;/domain/</code> <span class="badge now">v0.6</span></td><td><code>market.md</code> / <code>customers.md</code> / <code>product.md</code></td><td>Org domain knowledge. 8-layer [6]</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/archive.sqlite</code> <span class="badge now">v0.6</span></td><td>(SQLite + FTS5)</td><td>Cold archive — JSONL entries older than 8 days. 4 event_type indexing. Router-miss fallback.</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/agent-costs.jsonl</code> <span class="badge now">v0.6</span></td><td>(JSONL)</td><td>Spawn budget accumulator — for agent-profile cap</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/spawn-decisions.jsonl</code> <span class="badge now">v0.6</span></td><td>(JSONL)</td><td>8-layer drop log — FTS5-indexed</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/stop-hook-events.jsonl</code> <span class="badge now">v0.6</span></td><td>(JSONL)</td><td>spec-gate cycle evaluation result</td></tr>
+      <tr><td><code>&lt;org&gt;/memory/migration-costs.jsonl</code> <span class="badge now">v0.6</span></td><td>(JSONL)</td><td>0.5→0.6 migration's own LLM-fallback cost accumulator</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Repository layer (Layer 2)</h4>
+  <table>
+    <thead><tr><th>Path</th><th>File</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>&lt;org&gt;/repositories/&lt;repo&gt;/</code></td><td>(code + own <code>.git/</code>)</td><td>User's product code</td></tr>
+      <tr><td>Above</td><td><code>.solosquad/repo.yaml</code></td><td>Repo metadata (slug, role, target_org)</td></tr>
+      <tr><td>Above</td><td><code>CLAUDE.md</code></td><td>Repo guide auto-loaded by Claude Code</td></tr>
+      <tr><td>Above</td><td><code>.claude/skills/</code></td><td>Repo-scoped skills (Claude Code Plugin compatible)</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s3-8">3.8 collab_pattern + Self-Evolution Infrastructure<span class="badge now">v0.6</span></h3>
+  <p><code>collab_pattern</code>, which v0.5 carried as an <code>extra</code> bag, was promoted to a formal <code>SkillSpec</code> field in v0.6. Declaring <code>collab_pattern: hierarchical | graph | dynamic</code> in SKILL.md frontmatter makes the matching handoff variant template apply automatically at spawn time.</p>
+
+  <table>
+    <thead><tr><th>collab_pattern</th><th>v0.6 distribution (25 agents)</th><th>Handoff slice</th></tr></thead>
+    <tbody>
+      <tr><td><code>hierarchical</code></td><td>22 agents (majority)</td><td>Summary / Artifacts / Decisions / Open Questions (4 sections)</td></tr>
+      <tr><td><code>graph</code></td><td>2 (data-analyst, feature-planner)</td><td>Above 4 + <code>state_object_diff</code> + <code>loop_count</code></td></tr>
+      <tr><td><code>dynamic</code></td><td>1 (content-writer)</td><td>Above 4 + <code>routing_signal</code></td></tr>
+    </tbody>
+  </table>
+
+  <h4>Trajectory extraction — auto-extract recurring patterns into SKILLs<span class="badge now">v0.6</span></h4>
+  <p>When the same <code>(agent sequence + workflow template)</code> combination occurs 3+ times in the last 30 days, the nightly <code>pm-compaction</code> routine generates a draft SKILL.md at <code>&lt;org&gt;/memory/pm-skills/_suggestions/</code>. Next morning brief shows: "You ran the X pattern 3 times in the past 30 days. Register as a SKILL?" If confirmed, <strong>the v0.5 S3 <code>applyDraft()</code> is called directly</strong> — no separate applier code (avoiding duplication).</p>
+  <p>30-day rolling window — archive-rotate decays counts alongside. Auto-registration disabled (human gate retained).</p>
+
+  <h4>Freq keyword miner — auto-suggest keywords<span class="badge now">v0.6</span></h4>
+  <p>Analyzes <code>route_miss</code> events in the FTS5 archive + N-grams from author-draft clarification questions to suggest <em>additions to the <code>triggers.keyword</code> array of existing SKILL frontmatters</em>. Not new SKILL creation — partial application. On user confirmation, <code>applyDraft({ mode: "frontmatter-only" })</code> is the formal v0.5 option reused — body untouched, frontmatter patched. Rejected (keyword, skill) pairs are blocked from re-suggestion for 30 days.</p>
+
+  <h4>Stop-hook DSL (v0.5 spec-gate actually operates)<span class="badge now">v0.6</span></h4>
+  <p>The <code>loop_mode.kind: spec-gate</code> specced in v0.5 actually operates in v0.6 via the Anthropic 2025-12 stop-hook plugin adapter (<code>src/engine/stop-hook-adapter.ts</code>). Three forms of <code>stop_when</code>:</p>
+  <pre><code># (1) command — exit-code based (most deterministic)
+loop_mode:
+  kind: spec-gate
+  stop_when:
+    command: "npm test"           # exit 0 = satisfied, != 0 = continue
+
+# (2) metric — results.tsv threshold (compatible with v0.4 autonomous execution)
+loop_mode:
+  kind: spec-gate
+  stop_when:
+    metric:
+      name: "cvr_7day"
+      threshold: 0.10
+      direction: "≥"
+
+# (3) natural — LLM fallback (budget cap applies)
+loop_mode:
+  kind: spec-gate
+  stop_when:
+    natural: "all tests pass and lint clean"</code></pre>
+  <p>Hook timeout 5 seconds; on failure, conservatively <em>continue</em> (false negatives are safer than false positives). Results: <code>&lt;org&gt;/memory/stop-hook-events.jsonl</code>.</p>
+
+  <h3 id="s3-9">3.9 v0.7 Farewell Archive Format<span class="badge now">v0.7</span></h3>
+  <p>Uninstall always generates a zip first. Format: <code>archive.yaml</code> (schema_version=1) + <code>manifest.tsv</code> (streaming SHA256) + <code>workspace/</code> + <code>orgs/&lt;slug&gt;/{memory,workflows,goals,domain,core,repos}/</code> + <code>credentials/env.template</code> (masked) + <code>REVOKE-CHECKLIST.md</code> + <code>PII-NOTICE.md</code>. v0.8.1 closes the reverse path with <code>solosquad import</code> · <code>solosquad archive verify</code>.</p>
+
+  <h4>Classes A/A*/B/C/D/E (v0.7 data classification)</h4>
+  <table>
+    <thead><tr><th>Class</th><th>Example</th><th>Uninstall behavior</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A</strong></td><td><code>&lt;org&gt;/repositories/&lt;repo&gt;/</code> user code (incl. .git)</td><td>Zero modification/deletion under any flag. Tree not even enumerated.</td></tr>
+      <tr><td><strong>A*</strong></td><td><code>&lt;repo&gt;/.solosquad/repo.yaml</code> single file</td><td>The only file SoloSquad creates inside a repo. Included in archive, deletable.</td></tr>
+      <tr><td><strong>B</strong></td><td><code>&lt;org&gt;/memory/</code> · <code>workflows/</code> · <code>goals/</code></td><td>Archived, then on-disk preserved (<code>--mode keep</code>) or deleted</td></tr>
+      <tr><td><strong>C</strong></td><td>sessions · .org.yaml · workspace.yaml</td><td>Archived, then moved to <code>_archived/</code>. workspace.yaml deleted to issue a fresh one.</td></tr>
+      <tr><td><strong>D</strong></td><td>.env (secrets)</td><td>Only a masked template is archived. Original is managed separately by the user.</td></tr>
+      <tr><td><strong>E</strong></td><td>SoloSquad's own code (npm global)</td><td>Out of uninstall scope. Use <code>npm uninstall -g solosquad</code> separately.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Why no reset/clean command</strong>
+    <code>solosquad reset</code> · <code>solosquad clean</code> are permanently rejected in v0.7. Lifecycle is just install ↔ uninstall — reinstall = uninstall + fresh workspace init. Class A (user code) is untouchable by any command, so the semantics of reset/clean would be ambiguous.
+  </div>
+
+  <h3 id="s3-10">3.10 Multi-User Channel Model<span class="badge now">v0.8</span></h3>
+  <p>The single-operator model from v0.7 was extended to a multi-user context. Each user has a <code>command-&lt;handle&gt;</code> (requests) and <code>works-&lt;handle&gt;</code> (work output) channel pair, with metadata at <code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code>. An author-guard prevents another user from intercepting responses in their channel. Register via <code>solosquad messenger add &lt;handle&gt;</code>.</p>
+
+  <h3 id="s3-11">3.11 dev_capability (development permissions)<span class="badge now">v0.8.2</span></h3>
+  <p>The <code>dev_capability</code> field in a SKILL.md frontmatter declares what permission an agent has in <code>target_repo</code>. Four levels: <code>read</code> (read-only) / <code>propose</code> (output proposed changes only) / <code>patch</code> (real changes, then ask for dev_confirm) / <code>pr</code> (up to PR creation). <code>patch</code> and <code>pr</code> levels touch the git tree only after a 30-minute timeout dev-confirmation. Results: <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>.</p>
+
+  <h3 id="s3-12">3.12 The <code>.solosquad/</code> Hierarchy — why a folder per level<span class="badge now">v0.8.5</span></h3>
+  <p>On first glance, a workspace shows three locations with a <code>.solosquad/</code> folder, which can be confusing. Each contains <strong>system metadata at a different scope</strong>, and the dotfile convention <em>visually separates them from user content</em> on disk.</p>
+
+  <div class="tree">&lt;workspace&gt;/                       (directory the user created with mkdir)
+├── .solosquad/                    (A) workspace-wide system config
+│   ├── workspace.yaml             ─ metadata + timezone + brief schedule
+│   ├── .env                       ─ tokens · OWNER_NAME · OWNER_ROLE (gitignored)
+│   ├── agents/                    ─ 25 specialist SKILLs (bundled at init)
+│   ├── routines/                  ─ cron routine definitions
+│   ├── core/                      ─ system core config
+│   ├── templates/                 ─ workflow templates
+│   ├── orchestrator/              ─ PM session config
+│   └── knowledge/                 ─ user-accumulated craft + domain notes
+├── docker-compose.yml             (exposed at workspace root — user edits directly)
+├── Dockerfile
+└── &lt;org&gt;/                         (user content — org = business/product unit)
+    ├── .org.yaml                  ─ org metadata (provider, remote_url, products)
+    ├── .solosquad/                (B) org-level multi-user identification
+    │   └── users/&lt;handle&gt;.yaml    ─ messenger handle → bot_user_id mapping
+    ├── core/                      ─ org-level PRINCIPLES.md, VOICE.md
+    ├── agent-profile.yaml         ─ org-specific modifiers for 25 agents
+    ├── domain/                    ─ org domain knowledge
+    ├── memory/                    ─ JSONL memory (signals · experiments · decisions)
+    ├── workflows/                 ─ org workflow instances
+    ├── repositories/&lt;repo&gt;/       ─ user code (class A, untouchable)
+    │   └── .solosquad/            (C) repo ↔ org metadata
+    │       └── repo.yaml          ─ which org it belongs to + role
+    └── &lt;messenger&gt;/               ─ messenger-adapter assets</div>
+
+  <h4>Why one at each level</h4>
+  <ul>
+    <li><strong>All are system metadata</strong> — managed by SoloSquad. <em>Visually separated</em> from user content (<code>memory/</code> · <code>workflows/</code> · <code>repositories/&lt;repo&gt;/</code> body)</li>
+    <li><strong>Dotfile convention</strong> — invisible to default <code>ls</code> output. A single <code>.solosquad/</code> line in <code>.gitignore</code> excludes system assets at every level</li>
+    <li><strong>Why different contents at different levels — scopes differ</strong>:
+      <ul>
+        <li>(A) workspace = <em>global</em> (agent SKILLs · envs · timezone shared across all orgs)</li>
+        <li>(B) org = <em>one-time identification per org</em> (multi-user handle → bot_user_id mapping)</li>
+        <li>(C) repo = <em>which org a repo belongs to and what role it plays</em> (a repo never appears in multiple orgs simultaneously)</li>
+      </ul>
+    </li>
+    <li><strong>User content stays in non-hidden directories</strong> (<code>memory/</code>, <code>workflows/</code>, <code>repositories/</code>) — the user must be able to see and edit them with <code>ls</code> / git immediately</li>
+  </ul>
+</section>
+
+<!-- ========================== SECTION 4 ========================== -->
+<section id="s4">
+  <h2><span class="num">4.</span>Onboarding</h2>
+
+  <h3 id="s4-1">4.1 Identify Your User Type</h3>
+  <p>Check which type you are first. The steps differ by type.</p>
+
+  <table>
+    <thead><tr><th>Situation</th><th>Type</th><th>Go to</th></tr></thead>
+    <tbody>
+      <tr><td>First-time install. Empty PC/Mac, want to create a workspace</td><td><strong>A. New user</strong></td><td>§4.2</td></tr>
+      <tr><td>Already running a product repo, want to attach an AI team</td><td><strong>B. Existing repo migration</strong></td><td>§4.3</td></tr>
+      <tr><td>Already on an older version (v0.1.x etc.). Need to update</td><td><strong>C. Version update</strong></td><td>§4.4</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s4-2">4.2 New User — Create Your First Workspace</h3>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Install prerequisites</div>
+    <p>You need Node.js 18+, git, Claude Code CLI.</p>
+    <p><strong>macOS:</strong></p>
+    <pre><code>brew install node git
+npm install -g @anthropic-ai/claude-code</code></pre>
+    <p><strong>Windows (PowerShell):</strong></p>
+    <pre><code>winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+npm install -g @anthropic-ai/claude-code</code></pre>
+    <p><strong>Linux (Ubuntu):</strong></p>
+    <pre><code>curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs git
+npm install -g @anthropic-ai/claude-code</code></pre>
+    <p>Verify:</p>
+    <pre><code>node --version    # v18 or newer
+git --version
+claude --version</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — Subscribe to Claude Code Max</div>
+    <p>Visit https://claude.ai → Settings → Claude Code → Subscribe to Max plan.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — Prepare your messenger bot token</div>
+    <p>Pick Slack or Discord. §5 covers token issuance. <strong>Finish §5 first, then come back here.</strong></p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — Install SoloSquad</div>
+    <pre><code>npm install -g solosquad
+solosquad --version</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — Create the workspace</div>
+    <p>A <strong>workspace</strong> is the directory holding all SoloSquad data (memory, workflows, messenger config, org metadata). Create a directory with <em>any name you like</em>, and running <code>solosquad init</code> from inside it makes that directory the workspace.</p>
+    <pre><code># Example: name it whatever you like — here we use "my-saas"
+mkdir my-saas
+cd my-saas
+solosquad init</code></pre>
+    <p>You can operate multiple workspaces (n-job scenario). Each directory is an independent workspace = independent bot, memory, orgs. To create one elsewhere, <code>cd</code> there first and then run the wizard.</p>
+
+    <h4 id="s4-2-1">4.2.1 Wizard prompts — why asked + constraints + storage location<span class="badge now">v0.8.5</span></h4>
+    <p>The wizard asks the following in order. Each prompt now has a 1-2 line help message above it (v0.8.5 new).</p>
+    <table>
+      <thead><tr><th>Prompt</th><th>Default</th><th>Constraint</th><th>Why asked</th><th>Stored at</th></tr></thead>
+      <tbody>
+        <tr><td>Where should the workspace be created? <em>(only when a parent already has an existing workspace — v0.8.5)</em></td><td>cwd</td><td>cwd / existing / custom 3-way</td><td>Explicitly separate a new workspace when a parent has another <code>.solosquad/</code></td><td>—</td></tr>
+        <tr><td>Workspace display name</td><td>Directory basename</td><td>Free</td><td>Name shown in dashboards / briefs</td><td><code>workspace.yaml.display_name</code></td></tr>
+        <tr><td>Your name</td><td>None</td><td>Free</td><td>Used by PM and specialist agents to address you + decide response salutation</td><td><code>.solosquad/.env</code> <code>OWNER_NAME</code></td></tr>
+        <tr><td>Your role</td><td><code>founder</code></td><td>founder / developer / designer etc. (free)</td><td>Agents infer your expertise / interests to tune response depth and tone. Default is <code>founder</code> because SoloSquad's primary user is a solo founder.</td><td><code>.solosquad/.env</code> <code>OWNER_ROLE</code></td></tr>
+        <tr><td>Messenger platform</td><td>None</td><td><code>discord</code> / <code>slack</code></td><td>One workspace = one messenger. n-job: separate workspaces. Decides channel pair / broadcast behavior.</td><td><code>.solosquad/.env</code> <code>MESSENGER</code></td></tr>
+        <tr><td>Discord/Slack token</td><td>None</td><td>Token string</td><td>Bot API credential. Auto-channel creation, message I/O.</td><td><code>.solosquad/.env</code> (gitignored)</td></tr>
+        <tr><td>Timezone</td><td><code>Asia/Seoul</code></td><td>IANA tz</td><td>Morning/evening brief times + all routine crons</td><td><code>workspace.yaml.timezone</code></td></tr>
+        <tr><td>Morning / Evening brief time</td><td>08:00 / 18:00</td><td>HH:MM</td><td>Cron for the two default user briefs</td><td><code>workspace.yaml.briefings</code></td></tr>
+        <tr><td>Organization name</td><td>None</td><td>Free</td><td><strong>Org = business/product unit</strong>. Multiple orgs per workspace possible (e.g. tesla + spacex). Memory / workflows / repos isolated per org.</td><td><code>&lt;workspace&gt;/&lt;slug&gt;/.org.yaml</code></td></tr>
+        <tr><td>Provider</td><td><code>github</code></td><td>local / github / gitlab / gitea</td><td>Org's code hosting location metadata. <code>add repo</code> uses this to infer git URL host. Pick <code>local</code> if no remote.</td><td><code>.org.yaml.provider</code></td></tr>
+        <tr><td>Org homepage URL</td><td>Empty</td><td>URL or empty</td><td>Optional org homepage (e.g. github.com/tesla). Used by analysis / linker. Press Enter to skip.</td><td><code>.org.yaml.remote_url</code></td></tr>
+        <tr><td>Handle (auto-extracted from bot username, with confirmation)</td><td>Bot username</td><td><code>[a-z0-9_]+</code> only (other chars auto-replaced with <code>_</code>)</td><td>Names the messenger channel pair <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> + identifies you across multi-user setups</td><td><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code></td></tr>
+      </tbody>
+    </table>
+    <p class="callout warn"><strong>v0.8.5 change</strong> — If no existing workspace is detected in a parent directory, the wizard no longer asks "Initialize workspace at: ..." — it uses the cwd silently (the directory you already chose with <code>mkdir</code> is not asked again). To create it elsewhere, <code>cd</code> there first.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — Claude Code login</div>
+    <pre><code>claude login</code></pre>
+    <p>A browser opens — log in with your Claude account. The credential is bound to this OS user account.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — Environment check</div>
+    <pre><code>solosquad doctor                    # basic diagnosis
+solosquad doctor --messenger-check  # actually verify tokens</code></pre>
+    <p>All <span class="ok">✓</span> means pass.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — Start the bot + scheduler</div>
+    <p>Run each in a separate terminal or via Docker.</p>
+    <pre><code># Option A — two terminals
+solosquad bot          # messenger bot
+solosquad schedule     # automated routines
+
+# Option B — Docker (v0.5+ — inside deploy/docker/)
+cd deploy/docker && docker compose up -d --build
+# See deploy/docker/README.md for options/env vars</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 9 — First message</div>
+    <p>Send <code>hi</code> to <code>#owner-command</code> on Slack or Discord. If the bot responds, you're done.</p>
+  </div>
+
+  <h3 id="s4-3">4.3 Existing Repo Migration</h3>
+  <p>When you already have a code repo and want to attach an AI team.</p>
+
+  <h4>Current method (v0.2.4)<span class="badge now">v0.2.4</span></h4>
+  <ol>
+    <li>First create a workspace via §4.2 Steps 1~7 (with at least one org).</li>
+    <li>Register the repo:
+      <pre><code>cd ~/solosquad-workspace
+solosquad add repo /path/to/existing-repo      # local path
+solosquad add repo https://github.com/me/x.git # or git URL (clone)</code></pre>
+    </li>
+    <li>With multiple orgs, you'll be asked which one. Auto-assigned for single org.</li>
+    <li>The repo ends up at <code>&lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;/</code>.</li>
+    <li>If that repo has its own <code>.claude/skills/</code> or <code>CLAUDE.md</code>, they remain — Claude Code auto-loads them when working on that repo.</li>
+  </ol>
+
+  <h4>v0.5 analyzer flow<span class="badge now">v0.5</span></h4>
+  <p>A separate analyzer absorbs existing <code>.claude/skills/</code> from legacy repos as SoloSquad assets.</p>
+  <pre><code>solosquad analyze repo /path/to/legacy-repo
+# → 4-label classification (role / workflow / codebase-fact / domain)
+# → &lt;org&gt;/.solosquad/analysis/YYYY-MM-DD-*.md report
+# → analysis-ledger.yaml records path + SHA256[:12] (second run only LLM-processes new/changed)
+
+solosquad analyze repo &lt;path&gt; --force            # full re-analysis when upgrading models
+solosquad analyze repo &lt;path&gt; --prune-orphans    # clean ledger entries whose files are gone
+
+solosquad add repo /path/to/legacy-repo --from-report 2026-XX-XX-initial.md
+# → backup → deterministic merge → verify
+
+solosquad add repo &lt;path&gt; --merge-policy append|override|replace
+# → explicit merge policy (default: append)</code></pre>
+
+  <h4 id="s4-5">4.5 Recommended 5-Step Repo Import<span class="badge now">v0.8.3</span></h4>
+  <p>Moving your own product code into a SoloSquad workspace happens once — the cost of mistakes is high, so <strong>dry-run is the default recommendation</strong>.</p>
+  <pre><code># [Step 1] Clean working tree + commit + push
+cd ~/projects/my-saas
+git status            # 0 untracked / unstaged
+git push origin main  # safety net
+
+# [Step 2] Initialize SoloSquad
+mkdir ~/solosquad &amp;&amp; cd ~/solosquad
+solosquad init        # creates workspace + first org
+
+# [Step 3] dry-run preview (v0.8.3 new)
+solosquad add repo ~/projects/my-saas --dry-run
+# Output: From/To, file count/size, IDE workspace detection, symlinks,
+#         active processes (lsof/handle.exe), slug collisions, risk summary
+
+# [Step 4] Actual move
+solosquad add repo ~/projects/my-saas
+# Or: --keep-original for copy mode (2× disk usage)
+
+# [Step 5] Verify
+solosquad sync                       # repositories/ ↔ .org.yaml sync
+cd ~/solosquad/main/repositories/my-saas
+git status                           # working tree clean
+git log -1                           # same commit as before</code></pre>
+
+  <h4>4.6 Risk scenarios + dry-run detection<span class="badge now">v0.8.3</span></h4>
+  <table>
+    <thead><tr><th>Risk</th><th>dry-run output</th></tr></thead>
+    <tbody>
+      <tr><td>IDE / dev server holds a file lock</td><td><code>lsof</code> / <code>handle.exe</code> call → reports active PIDs</td></tr>
+      <tr><td>Absolute-path symlinks from outside point at this repo</td><td>Scans parent dir + <code>~/</code> with readlink → warns on hit</td></tr>
+      <tr><td>Absolute paths inside repo pointing to parent dirs (configs, docs)</td><td>greps configs/yaml/md — shows hit-file count + first match</td></tr>
+      <tr><td>Same slug already exists in the org</td><td>"Slug collision: ... already exists" warning (refuses the move)</td></tr>
+      <tr><td>IDE workspace file has absolute paths</td><td>Detects absolute-path patterns in <code>.vscode/settings.json</code> etc. → suggests manual update</td></tr>
+      <tr><td>External cron / scripts point at old path</td><td>Outside SoloSquad's awareness — message-only notification</td></tr>
+    </tbody>
+  </table>
+  <p>The risks above are <strong>warn-level</strong> — users can ignore and proceed. dry-run itself writes 0 bytes to disk.</p>
+
+  <h3 id="s4-4">4.4 Updating from an Older Version</h3>
+
+  <h4>Version rules (semver)</h4>
+  <ul>
+    <li><code>vN.N.N</code> 3-segment (e.g. <code>v0.1.5</code>, <code>v0.2.0</code>)</li>
+    <li><strong>patch</strong> (3rd): bug fix / small improvement — rarely needs migration</li>
+    <li><strong>minor</strong> (2nd): new features / structural change — may need migration</li>
+    <li><strong>major</strong> (1st): fundamental rework — migration required</li>
+  </ul>
+  <p>npm published version numbers are on a separate semver track. Document labels <code>v0.x</code> ≠ 1:1 with npm versions — policy in <code>docs/product-roadmap.md</code> §3.5.</p>
+
+  <h4>Check current version</h4>
+  <pre><code>solosquad --version           # installed CLI
+solosquad update              # compare with registry (announces only, no install)</code></pre>
+
+  <h4>Regular update (no migration)</h4>
+  <p>Most patch updates: one line.</p>
+  <pre><code>solosquad update              # "New version available" → y → installs
+# Or manual:
+npm install -g solosquad@latest
+solosquad --version
+solosquad doctor              # all 5 lines must be ✓</code></pre>
+
+  <h4>Structural update (migration required)</h4>
+  <p>If <code>solosquad update</code> shows a warning like:</p>
+  <pre><code>⚠ This update includes breaking changes to the workspace layout.
+  A workspace migration is required. After updating the CLI, run:
+    solosquad migrate --dry-run   (preview)
+    solosquad migrate --apply     (perform)</code></pre>
+
+  <div class="callout warn">
+    <strong>Pre-apply checklist (required)</strong>
+    <ul>
+      <li>Fully stop <code>solosquad bot</code> / <code>solosquad schedule</code> — running processes may hold file locks (<code>Ctrl+C</code> or <code>docker compose down</code>)</li>
+      <li>Close the workspace / repo in VSCode / JetBrains IDE (Windows file-handle locks)</li>
+      <li>Audit hardcoded paths in external systems — e.g. <code>C:\...\Documents\solosquad-repos\&lt;slug&gt;</code> must be updated to <code>&lt;workspace&gt;\&lt;slug&gt;</code> after migration</li>
+      <li>Always run dry-run first — <code>solosquad migrate</code> (no flag) or <code>--dry-run</code></li>
+      <li>Commit / stash any in-progress code first</li>
+    </ul>
+  </div>
+
+  <p><strong>Execution order:</strong></p>
+  <ol>
+    <li><code>npm install -g solosquad@latest</code> — CLI first</li>
+    <li><code>cd</code> into the workspace</li>
+    <li><code>solosquad migrate --dry-run</code> — preview</li>
+    <li>Review output, then <code>solosquad migrate --apply</code></li>
+    <li>Verify with <code>solosquad doctor</code></li>
+    <li>Restart <code>solosquad bot</code></li>
+  </ol>
+
+  <h4>Dry-run output example</h4>
+  <pre><code>$ solosquad migrate --dry-run
+Workspace: /Users/you/solosquad-workspace
+Detected structure: v0.1.x  (source)
+Target version:     v0.2.0  (installed CLI)
+
+Migration plan (0.1.x → 0.2.0):
+
+  ✓ Move workspace config to .solosquad/
+  ✓ Convert each product → organization directory
+  ✓ Rename projects/ → workflows/
+  ✓ Remove obsolete env vars (REPOS_BASE_PATH)
+
+Estimated disk usage: +0 MB (moves only, no copies)
+Backup location:      /Users/you/.solosquad-backups/2026-...
+
+Nothing written yet. Re-run with `--apply` to perform the migration.</code></pre>
+  <p><strong>Dry-run changes nothing.</strong> Don't like it? Just ignore.</p>
+
+  <h4>What apply does automatically</h4>
+  <ul>
+    <li>Snapshot backup of the entire workspace before any action (<code>~/.solosquad-backups/&lt;timestamp&gt;/</code>)</li>
+    <li>File / folder moves and renames</li>
+    <li>Creates new config files (<code>.solosquad/workspace.yaml</code>, <code>.org.yaml</code>, etc.)</li>
+    <li>Auto-runs <code>doctor</code> after migration for verification</li>
+  </ul>
+
+  <h4>Skipping multiple versions (chain migration)</h4>
+  <p>When jumping from v0.1.2 directly to v0.3.0, migrations <strong>run in sequence</strong>:</p>
+  <pre><code>Chaining migrations:
+  0.1.x → 0.2.0  (layout restructure)
+  0.2.0 → 0.4.0  (cross-repo enhancements)</code></pre>
+  <p>Each step is dry-run before apply. If a mid-step fails, rollback stops there.</p>
+
+  <h4>v0.2.4 update specifics</h4>
+  <p>v0.2.4 changes messenger channel structure / routine model and <strong>removes Telegram support</strong>.</p>
+
+  <p><strong>All users:</strong></p>
+  <ul>
+    <li><code>migrate --apply</code> injects <code>timezone</code>, <code>briefings</code>, <code>background_routines</code> (default Asia/Seoul, 08:00 / 18:00) into <code>.solosquad/workspace.yaml</code></li>
+    <li>Messenger channels don't auto-shrink. The bot no longer broadcasts to <code>daily-brief</code> / <code>signals</code> / <code>experiments</code> / <code>weekly-review</code> / <code>errors</code> — you may archive them in the messenger UI manually</li>
+    <li>JSONL memory / workflows directories are untouched</li>
+  </ul>
+
+  <p><strong>Discord users:</strong></p>
+  <ul>
+    <li>Add <strong>Create Public Threads</strong> bot permission → re-invite (overwrites, no data effect). Required for auto-creation of system threads (<code>system-daily-signals</code> etc.).</li>
+  </ul>
+
+  <p><strong>Slack users:</strong></p>
+  <ul>
+    <li>Add <strong><code>channels:manage</code></strong> to Bot Token Scopes → "Reinstall to Workspace". Without it, <code>#workflow</code> channel creation fails.</li>
+  </ul>
+
+  <p><strong>Telegram users (support removed)<span class="badge removed">v0.2.4 removed</span></strong></p>
+  <ul>
+    <li><code>MESSENGER=telegram</code> no longer works since v0.2.4. The bot exits with a clear error message on startup.</li>
+    <li>Transition:
+      <ol>
+        <li>Run <code>solosquad migrate --apply</code> first (workspace.yaml field injection is messenger-agnostic)</li>
+        <li>Set up Discord or Slack bot (§5.1 or §5.2)</li>
+        <li>Change <code>MESSENGER=telegram</code> to <code>discord</code> or <code>slack</code> in <code>.solosquad/.env</code></li>
+        <li>Delete <code>TELEGRAM_BOT_TOKEN</code> / <code>TELEGRAM_CHAT_ID</code> lines (ignored if left, but cleanup recommended)</li>
+        <li>Restart <code>solosquad bot</code> → new platform's <code>#owner-command</code> + <code>#workflow</code> auto-created</li>
+      </ol>
+    </li>
+    <li>JSONL memory is preserved — past signals / experiments / decisions all survive after switching messengers</li>
+  </ul>
+
+  <h4>Known issues (v0.1.x → v0.2.0 jump)</h4>
+  <ul>
+    <li><strong><code>solosquad update</code> may not show the migration warning</strong> — migration detection code was added in v0.2.0. Users upgrading from v0.1.x should run <code>solosquad migrate</code> manually once.</li>
+    <li><strong><code>--dry-run</code> flag unregistered</strong> in the v0.2.0 initial build. v0.2.1+ registered it formally. Even without the flag, <code>solosquad migrate</code> is dry-run by default.</li>
+  </ul>
+
+  <h4>First task after migration — <code>solosquad sync</code></h4>
+  <p>The v0.1.x → v0.2.0 migration converts each product to an org but leaves <code>.git</code> at the org root (relic of v0.1.x's product = repo). First <code>sync</code> offers two choices:</p>
+  <pre><code>⚠ bv-ai-native-po/ has a .git folder at the organization root (v0.1.x legacy layout).
+  How would you like to handle this?
+  ❯ Normalize — move code into repositories/&lt;org-slug&gt;/ (recommended)
+    Keep legacy — register repo.yaml at org root, skip restructure</code></pre>
+  <ul>
+    <li><strong>Normalize (recommended)</strong> — code and <code>.git</code> move to <code>&lt;org&gt;/repositories/&lt;org-slug&gt;/</code>. System folders stay at org root. Required for future multi-repo.</li>
+    <li><strong>Keep legacy</strong> — as-is. <code>&lt;org&gt;/.solosquad/repo.yaml</code> created at org root. OK for single-repo setups.</li>
+  </ul>
+
+  <h4>Docker user update flow</h4>
+  <pre><code># All commands in deploy/docker/ (v0.5+)
+cd deploy/docker
+
+# 1. Stop containers
+docker compose down
+
+# 2. Update CLI on host (for migration detection + execution)
+npm install -g solosquad@latest
+
+# 3. If migration needed (from workspace root)
+cd ../..
+solosquad migrate --dry-run
+solosquad migrate --apply
+
+# 4. Rebuild Docker image
+cd deploy/docker
+docker compose up -d --build</code></pre>
+  <p><strong>Migration must run on the host.</strong> Running it inside a container risks volume-mapping confusion. v0.5+ containers also mount <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> so user-global SKILL overrides and backups work normally.</p>
+
+  <h4>Multi-workspace update</h4>
+  <p>When using multiple workspaces per persona, the CLI update is one-shot but <strong>migration runs per workspace</strong>:</p>
+  <pre><code>npm install -g solosquad@latest
+
+cd ~/solopreneur
+solosquad migrate --dry-run
+solosquad migrate --apply
+
+cd ~/elon-24-7
+solosquad migrate --dry-run
+solosquad migrate --apply</code></pre>
+  <p>Each workspace has an independent backup — one failure doesn't affect others.</p>
+
+  <h4>Rollback</h4>
+  <pre><code>solosquad migrate --rollback   # restore from the most recent backup</code></pre>
+  <p><strong>Warning:</strong> after rollback, use the CLI version matching the restored workspace. If you migrated to v0.2.0 and rolled back to v0.1.5:</p>
+  <pre><code>npm install -g solosquad@0.1.5</code></pre>
+  <p><code>doctor</code> warns on CLI ↔ workspace version mismatch.</p>
+
+  <h4>Backup management</h4>
+  <p>Default backup location: <code>~/.solosquad-backups/&lt;ISO-timestamp&gt;-v&lt;source-version&gt;/</code></p>
+  <pre><code>solosquad migrate --list-backups        # list
+solosquad migrate --delete-backup &lt;id&gt;  # manual delete</code></pre>
+  <p>Auto-retention: <strong>keeps the most recent 5</strong>. The 6th migration deletes the oldest. Preserve critical backups separately on an external drive or cloud.</p>
+
+  <h4>Upgrade failure troubleshooting</h4>
+  <p><strong>"Cannot find package.json" type errors:</strong></p>
+  <pre><code>npm cache clean --force
+npm uninstall -g solosquad
+npm install -g solosquad@latest</code></pre>
+
+  <p><strong>Migration aborted:</strong></p>
+  <pre><code>solosquad migrate --rollback   # restore most recent backup</code></pre>
+  <p>Then report to GitHub Issues with logs.</p>
+
+  <p><strong>Claude Code auth lost</strong> — v0.2.0+ Docker images mount <code>${HOME}/.claude</code>, so host's <code>claude login</code> state is shared into the container:</p>
+  <pre><code>claude login
+docker compose restart</code></pre>
+
+  <h4>Beta / dev channels</h4>
+  <pre><code>solosquad update --channel dev     # beta (no stability guarantee)
+solosquad update --channel stable  # default</code></pre>
+</section>
+
+<!-- ========================== SECTION 5 ========================== -->
+<section id="s5">
+  <h2><span class="num">5.</span>Messenger Setup</h2>
+  <p>For an AI to send / receive messages on a messenger, you need a <strong>bot account</strong>. SoloSquad supports <strong>Slack and Discord</strong> — pick one per workspace.</p>
+
+  <table>
+    <thead><tr><th>Platform</th><th>Best for</th><th>Pros</th><th>Cons</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Slack</strong></td><td>Workspace-centric collab, calm UI</td><td>Clean channel structure, strong search</td><td>Most setup steps</td></tr>
+      <tr><td><strong>Discord</strong></td><td>Solo use with a friendly UI</td><td>Bot auto-creates channels, simple setup</td><td>Server name must include product slug</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s5-1">5.1 Slack Bot Setup (9 steps)</h3>
+  <p><strong>End result:</strong> <code>.env</code> has <code>SLACK_BOT_TOKEN=xoxb-...</code> and <code>SLACK_APP_TOKEN=xapp-...</code>, and the bot responds in <code>#owner-command</code> of your Slack workspace.</p>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Create Slack app</div>
+    <ol>
+      <li>Visit https://api.slack.com/apps (logged in with your Slack account)</li>
+      <li>Top right <strong>Create New App</strong> → <strong>From scratch</strong></li>
+      <li>Enter App Name (e.g. <code>My AI Team</code>) + select workspace → <strong>Create App</strong></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — OAuth &amp; Permissions (bot scopes)</div>
+    <p>Left sidebar <strong>Features → OAuth &amp; Permissions</strong> → in <strong>Bot Token Scopes</strong> add these 6:</p>
+    <table>
+      <thead><tr><th>Scope</th><th>Why needed</th></tr></thead>
+      <tbody>
+        <tr><td><code>channels:read</code></td><td>Bot checks which channels it's in</td></tr>
+        <tr><td><code>channels:history</code></td><td>Read messages in public channels</td></tr>
+        <tr><td><code>chat:write</code></td><td>Send response messages</td></tr>
+        <tr><td><code>app_mentions:read</code></td><td>Detect <code>@botname</code> invocations</td></tr>
+        <tr><td><code>groups:read</code></td><td>Needed if bot operates in private channels</td></tr>
+        <tr><td><code>channels:manage</code></td><td>When routines auto-create or modify channels</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn"><strong>Caution</strong>Add scopes to <strong>Bot Token Scopes</strong> (NOT User Token Scopes).</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — Initial workspace install</div>
+    <p><strong>OAuth Tokens for Your Workspace</strong> → <strong>Install to Workspace</strong> → Allow → copy <strong>Bot User OAuth Token</strong> (<code>xoxb-...</code>) → save to a note. This is <code>SLACK_BOT_TOKEN</code>.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — Socket Mode</div>
+    <ol>
+      <li>Left sidebar <strong>Settings → Socket Mode</strong></li>
+      <li><strong>Enable Socket Mode</strong> ON</li>
+      <li>In the App-Level Token popup, name it + add scope <code>connections:write</code> → Generate</li>
+      <li>Copy the generated <code>xapp-1-...</code> immediately (won't be shown again). This is <code>SLACK_APP_TOKEN</code>.</li>
+    </ol>
+    <div class="callout warn"><strong>Common mistake</strong>Putting the Signing Secret into App Token. App Token starts with <code>xapp-</code>.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — Event Subscriptions</div>
+    <p>Left sidebar <strong>Features → Event Subscriptions</strong></p>
+    <ol>
+      <li><strong>Enable Events</strong> ON</li>
+      <li>Expand <strong>Subscribe to bot events</strong> → Add Bot User Event:
+        <ul>
+          <li><code>message.channels</code> (public channels)</li>
+          <li><code>message.groups</code> (private channels — required if <code>#owner-command</code> is 🔒)</li>
+          <li><code>app_mention</code> (<code>@bot</code> invocations)</li>
+        </ul>
+      </li>
+      <li><strong>Save Changes</strong></li>
+    </ol>
+    <div class="callout warn"><strong>If skipped</strong>Bot starts fine but no message reaches it.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — Reinstall to workspace (required)</div>
+    <p>After scope / event changes, the yellow banner → click <strong>reinstall your app</strong>. Bot Token may be re-issued — update your note and <code>.env</code> with the new value.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — #owner-command channel</div>
+    <ol>
+      <li>Create a channel: <code>owner-command</code> (exact name)</li>
+      <li>Pick public or private (private requires Step 5's <code>message.groups</code>)</li>
+      <li>Channel header → Integrations → Add apps → your bot → Add. Or <code>/invite @botname</code></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — Write .env</div>
+    <pre><code>MESSENGER=slack
+SLACK_BOT_TOKEN=xoxb-1234567890-...
+SLACK_APP_TOKEN=xapp-1-...
+SLACK_COMMAND_CHANNEL=owner-command</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 9 — Verify</div>
+    <pre><code>solosquad doctor --messenger-check
+solosquad bot</code></pre>
+    <p>If <code>Slack auth.test → &lt;bot-username&gt;</code> is ✓ and <code>#owner-command</code> echoes "hi", you're good.</p>
+  </div>
+
+  <h3 id="s5-2">5.2 Discord Bot Setup (8 steps)</h3>
+  <p><strong>End result:</strong> <code>.env</code> has <code>DISCORD_TOKEN=...</code>, and the bot responds in <code>#owner-command</code> of your Discord server.</p>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Create Application</div>
+    <ol>
+      <li>Visit https://discord.com/developers/applications</li>
+      <li>Top right <strong>New Application</strong></li>
+      <li>Enter name → <strong>Create</strong></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — Issue Bot token</div>
+    <ol>
+      <li>Click left <strong>Bot</strong></li>
+      <li><strong>Reset Token</strong> → Yes</li>
+      <li>Copy the token immediately (shown once). This is <code>DISCORD_TOKEN</code>.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — Privileged Gateway Intents</div>
+    <p>Scroll down on the same Bot page → <strong>Privileged Gateway Intents</strong>:</p>
+    <ul>
+      <li><strong>Message Content Intent</strong> — <strong class="err">REQUIRED</strong> (without it, message bodies arrive as empty strings and the bot can't respond)</li>
+    </ul>
+    <p>Save Changes.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — OAuth2 URL Generator</div>
+    <p>Left sidebar <strong>OAuth2 → URL Generator</strong></p>
+    <ul>
+      <li><strong>Scopes</strong>: <code>bot</code>, <code>applications.commands</code></li>
+      <li><strong>Bot Permissions</strong>: View Channels, Send Messages, Read Message History, Manage Channels, Create Public Threads (v0.2.4+)</li>
+    </ul>
+    <p>Copy the generated URL → open in browser → select server → Authorize.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — Server name rule</div>
+    <p>To map the server to a product, <strong>the server name must contain the product slug</strong>.</p>
+    <ul>
+      <li>Registered product: <code>My Startup</code> (slug: <code>my-startup</code>)</li>
+      <li>Discord server name <code>My Startup</code> · <code>My Startup Workspace</code> · <code>my-startup-dev</code> → auto-maps</li>
+      <li>Name like <code>Awesome Team</code> → mapping fails. Server settings → Overview → change Server Name</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — Verify auto-created channels</div>
+    <p>After bot invite and <code>solosquad bot</code>, these auto-create:</p>
+    <div class="tree">📁 AI Team Reports
+  #daily-brief
+  #signals
+  #experiments
+  #weekly-review
+  #owner-command       ← issue commands here</div>
+    <p>If a channel with the same name exists, creation is skipped.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — Write .env</div>
+    <pre><code>MESSENGER=discord
+DISCORD_TOKEN=MTIzNDU2...</code></pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — Verify</div>
+    <pre><code>solosquad doctor --messenger-check
+solosquad bot</code></pre>
+    <p>If <code>Discord /users/@me → &lt;bot-username&gt;</code> is ✓ and <code>#owner-command</code> echoes "hi", you're good.</p>
+  </div>
+
+  <h3 id="s5-3">5.3 Operation Verification</h3>
+  <p>Common to both platforms:</p>
+  <pre><code>solosquad doctor                    # base environment check
+solosquad doctor --messenger-check  # verify tokens via live messenger API
+solosquad bot                       # start bot, logs to console
+solosquad bot --debug               # verbose logs</code></pre>
+
+  <p>Send <code>hi</code> in <code>#owner-command</code> → if the bot responds in the form <code>[product-name (agent-name)] ...</code>, the whole pipeline is fine.</p>
+
+  <div class="callout info">
+    <strong>What about Telegram?</strong>
+    Telegram support was removed in v0.2.4. Reasons: missing native threads (UX gap), single chat_id structure clashing with multi-workflow, maintenance cost vs user share. Existing users — see §4.4 for switching to Discord or Slack.
+  </div>
+</section>
+
+<!-- ========================== SECTION 6 ========================== -->
+<section id="s6">
+  <h2><span class="num">6.</span>Usage</h2>
+
+  <h3 id="s6-1">6.1 Command Reference</h3>
+
+  <h4>Currently available (v0.7.0 ~ v0.8.5)<span class="badge now">v0.7~v0.8.5</span></h4>
+  <table>
+    <thead><tr><th>Command</th><th>Since</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>solosquad init</code></td><td>v0.1</td><td>Workspace init wizard — copies agents/routines, takes messenger token, registers product</td></tr>
+      <tr><td><code>solosquad bot</code></td><td>v0.1</td><td>Start messenger bot. v0.3 PM mode + v0.5 4-channel router + atomic-swap hot-reload</td></tr>
+      <tr><td><code>solosquad schedule</code></td><td>v0.1</td><td>Start automated routine scheduler (cron)</td></tr>
+      <tr><td><code>solosquad status</code></td><td>v0.1</td><td>Dashboard: registered products, workflows, recent activity</td></tr>
+      <tr><td><code>solosquad doctor</code></td><td>v0.1</td><td>Environment check (Node, git, claude, tokens, paths)</td></tr>
+      <tr><td><code>solosquad doctor --messenger-check</code></td><td>v0.2</td><td>Verify messenger tokens via live API</td></tr>
+      <tr><td><code>solosquad update</code></td><td>v0.1</td><td>Compare with npm latest + install prompt</td></tr>
+      <tr><td><code>solosquad run-routine</code></td><td>v0.1</td><td>Interactive routine runner</td></tr>
+      <tr><td><code>solosquad run-routine &lt;name&gt;</code></td><td>v0.1</td><td>Run a specific routine (morning-brief, pm-compaction, ...)</td></tr>
+      <tr><td><code>solosquad run-routine --all</code></td><td>v0.1</td><td>Run all routines sequentially</td></tr>
+      <tr><td><code>solosquad migrate</code></td><td>v0.2</td><td>Convert workspace between versions (dry-run by default)</td></tr>
+      <tr><td><code>solosquad migrate --apply</code></td><td>v0.2</td><td>Perform the migration</td></tr>
+      <tr><td><code>solosquad migrate --rollback</code></td><td>v0.2</td><td>Restore from most recent backup</td></tr>
+      <tr><td><code>solosquad add org &lt;name&gt;</code></td><td>v0.2</td><td>Add a new organization to the workspace</td></tr>
+      <tr><td><code>solosquad add repo &lt;url|path&gt;</code></td><td>v0.2</td><td>Register a repo (clone or local move)</td></tr>
+      <tr><td><code>solosquad add repo --from-report &lt;file&gt; [--merge-policy append|override|replace]</code></td><td>v0.5</td><td>Deterministic merge from analysis report (backup → apply → verify)</td></tr>
+      <tr><td><code>solosquad sync</code></td><td>v0.2</td><td>Scan repositories/ + sync .org.yaml + legacy .git cleanup prompt</td></tr>
+      <tr><td><code>solosquad pm status / reset / compact</code></td><td>v0.3</td><td>PM session status / restart / compaction</td></tr>
+      <tr><td><code>solosquad workflow list / show &lt;id&gt;</code></td><td>v0.3</td><td>Workflow list / details</td></tr>
+      <tr><td><code>solosquad workflow focus &lt;wf-id&gt; [--clear]</code></td><td>v0.3</td><td>Set active workflow for (user, org)</td></tr>
+      <tr><td><code>solosquad rollback --workflow &lt;id&gt; [--to &lt;sha&gt;] [--list]</code></td><td>v0.3</td><td>Revert the workflow's last spawn (snapshot.git)</td></tr>
+      <tr><td><code>solosquad goal new / list / show / run / status / stop / verify</code></td><td>v0.4</td><td>Manage autonomous-execution goals + N-hour autonomous loops (Codex <code>/goal</code> + <code>AGENTS.md</code> 2-layer)</td></tr>
+      <tr><td><code>solosquad goal run &lt;goal-id&gt; [--hours N | --cycles N]</code></td><td>v0.4</td><td>Spawn background PM session → metric-driven keep/discard cycle</td></tr>
+      <tr><td><code>solosquad agent add --name X --team Y</code></td><td>v0.5</td><td>Scaffold a new SKILL (frontmatter template + empty body)</td></tr>
+      <tr><td><code>solosquad agent list / info</code></td><td>v0.5</td><td>Inventory / details of registered SKILLs</td></tr>
+      <tr><td><code>solosquad agent validate &lt;path&gt; [--all] [--corpus]</code></td><td>v0.5</td><td>SKILL.md schema + required-section check. <code>--all</code> is the CI gate (<code>npm run validate-skills</code>)</td></tr>
+      <tr><td><code>solosquad analyze repo &lt;path&gt; [--force] [--prune-orphans]</code></td><td>v0.5</td><td>4-label classification report from existing repo's <code>.claude/skills/</code>. Ledger-based incremental</td></tr>
+      <tr><td><code>solosquad readiness check [--target v0.6]</code></td><td>v0.6</td><td>Scan workspace — v0.5 data N rows, 4-workflow run count, author SKILL Y count, ledger analysis. Auto-runs before retro start. Pass/fail decision + exit code</td></tr>
+      <tr><td><code>solosquad memory search &lt;query&gt; [--limit N] [--event-type X] [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>Full-text search of FTS5 cold archive. Filter by routine_log / route_hit / route_miss / author_turn / spawn_decision</td></tr>
+      <tr><td><code>solosquad memory stats [--disk] [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>Archive row count / oldest / newest / per-event_type distribution. <code>--disk</code> reports SQLite file size</td></tr>
+      <tr><td><code>solosquad agent reload [--org &lt;slug&gt;]</code></td><td>v0.6</td><td>Manually rebuild router — explicit call needed under <code>fs_watch.mode: manual</code> (§6.4)</td></tr>
+      <tr><td><code>solosquad uninstall [--mode full|keep|archive-only] [--dry-run] [--force] [--archive-path &lt;p&gt;]</code></td><td>v0.7 (v0.8.4 surface)</td><td>Create farewell archive, then clean up SoloSquad assets. <code>--mode</code>: <strong>full</strong> (default — full clean) / <strong>keep</strong> (preserves workflows · memory · knowledge for reinstall) / <strong>archive-only</strong> (archive only, skip cleanup). <code>--dry-run</code> recommended. User code under <code>repositories/</code> is never modified/deleted under any flag. v0.8.4 deprecates <code>--archive-only</code> / <code>--keep-workspace</code> / <code>--also-purge-backups</code> (removed in v1.0); <code>--scrub-content</code> removed immediately</td></tr>
+      <tr><td><code>solosquad import &lt;archive.zip&gt; [--mode merge|replace]</code></td><td>v0.8.1 (v0.8.4 surface)</td><td>Restore farewell archive into a new workspace. Verifies manifest SHA then <code>--mode merge</code> (default) or <code>--mode replace</code>. v0.8.4 deprecates boolean <code>--merge</code> / <code>--replace</code> aliases</td></tr>
+      <tr><td><code>solosquad archive verify &lt;archive.zip&gt;</code></td><td>v0.8.1</td><td>Archive integrity check (manifest.tsv SHA + PII-NOTICE scan)</td></tr>
+      <tr><td><code>solosquad backup list | delete &lt;id&gt; | purge [--keep-recent N] [--dry-run]</code></td><td>v0.8.4</td><td>Lifecycle management for <code>~/.solosquad-backups/</code>. Absorbs <code>migrate --list-backups</code> · <code>migrate --delete-backup</code> · <code>uninstall --also-purge-backups</code> (one minor of deprecation, removed in v1.0)</td></tr>
+      <tr><td><code>solosquad messenger add &lt;handle&gt; [--platform discord|slack]</code></td><td>v0.8</td><td>Multi-user registration — auto-bootstrap <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> channels + activate author-guard</td></tr>
+      <tr><td><code>solosquad add repo &lt;path&gt; [--dry-run] [--keep-original]</code></td><td>v0.8.3 (v0.8.4 surface)</td><td><code>--dry-run</code> pre-checks 5 risk scenarios (0 disk writes). <code>--keep-original</code> for copy mode. v0.8.4 deprecates <code>--inspect</code> alias (removed in v1.0)</td></tr>
+      <tr><td><code>solosquad logs [--level X] [--tail N] [--follow] [--since "1 hour ago"] [--type X]</code></td><td>v0.8.3</td><td>Unified view of runtime + 4 operational jsonl. <code>--type</code>: runtime/costs/spawn/stop-hook/dev-confirm/migration (repeatable)</td></tr>
+    </tbody>
+  </table>
+
+  <h4>Planned<span class="badge plan">v1.1+</span></h4>
+  <table>
+    <thead><tr><th>Command</th><th>Version</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Web dashboard interaction client</td><td>v1.1</td><td>Read-only visualization / inbox (separate repo)</td></tr>
+      <tr><td>Knowledge ontology MCP connectors</td><td>v1.2</td><td>Notion / Obsidian / external APIs / cross-agent graph indexing</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="s6-2">6.2 Daily Operation</h3>
+
+  <h4>Get work done on the messenger (v0.6)<span class="badge now">v0.6</span></h4>
+  <p>The main flow is multi-turn dialog with the PM session. PM classifies intent and spawns specialists via Task tool. The router injects appropriate SKILLs through the 4-channel priority (slash / explicit / keyword / freq).</p>
+  <table>
+    <thead><tr><th>Example input</th><th>Assigned agent</th></tr></thead>
+    <tbody>
+      <tr><td>"Write landing-page copy"</td><td>Content Writer (Growth)</td></tr>
+      <tr><td>"Analyze our competitors"</td><td>Desk Researcher (Experience)</td></tr>
+      <tr><td>"Summarize this week's experiments"</td><td>Data Analyst (Strategy)</td></tr>
+      <tr><td>"Design the signup API"</td><td>API Developer (Engineering)</td></tr>
+      <tr><td>"Make the login screen UI"</td><td>UI Designer (Experience)</td></tr>
+      <tr><td>"Set up pricing policy"</td><td>Business Strategist (Strategy)</td></tr>
+      <tr><td>"Plan this quarter's GTM"</td><td>GTM Strategist (Growth)</td></tr>
+    </tbody>
+  </table>
+  <p>If nothing matches, the PM falls back to general mode or asks clarifying questions.</p>
+
+  <h4>PM-mode multi-turn dialog<span class="badge now">v0.3</span></h4>
+  <pre><code>User: "Redesign the landing page"
+PM:   Which section do you want to change?
+       (1) Hero  (2) Pricing  (3) Full redesign
+User: 1
+PM:   [PRD drafted → spawn desk-researcher → spawn ui-designer → ...]
+      Done. Artifacts in stage-1-research/ and stage-2-design/.</code></pre>
+
+  <h4>Slash commands<span class="badge now">v0.3</span></h4>
+  <p>When you want to be explicit, use slash instead of natural language (gstack-style pattern). Wrapped in PM prompt as <code>[SLASH /xyz] &lt;args&gt;</code> for stable parsing.</p>
+  <ul>
+    <li><code>/think &lt;topic&gt;</code> — organize hypotheses / market signals (before PRD)</li>
+    <li><code>/plan &lt;topic&gt;</code> — author PRD + decompose status.yaml</li>
+    <li><code>/build</code> — execute the ready stage from the latest plan</li>
+    <li><code>/review</code> — summarize completed stages + report blocking issues</li>
+    <li><code>/ship</code> — trigger release / deployment routine</li>
+    <li><code>/help</code> — short-circuit on bot side, returns usage text only</li>
+  </ul>
+
+  <h4>Create a new SKILL from the messenger<span class="badge now">v0.5</span></h4>
+  <p>"I do this often, I want to automate it" → PM classifies intent → explicit call to <code>workflow-maker</code> meta-skill → 1-2 clarification turns → SKILL.md draft → user approval → atomic swap → usable from next call. See §3.5.</p>
+
+  <h4>0.5 → 0.6 migration<span class="badge now">v0.6</span></h4>
+  <p>For users upgrading from v0.5:</p>
+  <ol>
+    <li><code>npm install -g solosquad@latest</code> — CLI first</li>
+    <li><code>solosquad migrate --dry-run</code> — Pass 1 simulation + report at <code>&lt;org&gt;/memory/migration-2026-XX-dryrun.md</code>. 0 filesystem changes</li>
+    <li>Review report — N moves / M items requiring human review / K items unchanged (already final)</li>
+    <li><code>solosquad migrate --apply --confirm</code> — refused without <code>--confirm</code> flag (mistake prevention)</li>
+    <li><code>human_review_required: true</code> items must be manually augmented by the user, then re-run</li>
+    <li>Pass 2 — <code>solosquad agent validate --all</code> auto-runs + failures reported to STDOUT</li>
+  </ol>
+  <p>The migration itself has a budget cap (<code>workspace.yaml.migration.budget_usd</code>, default 5 USD). When the heuristic fail-soft path falls to LLM fallback, this prevents token-spike runaway. On cap hit, <em>remaining items are marked human_review_required</em> and the migration exits safely. Accumulator: <code>&lt;org&gt;/memory/migration-costs.jsonl</code>.</p>
+
+  <h4>readiness check<span class="badge now">v0.6</span></h4>
+  <p>Automatic measurement before v0.6 retro starts. <code>solosquad readiness check --target v0.6</code> scans workspace → v0.5 data (<code>author-costs.jsonl</code> row count) / 4-workflow run count X/4 / author SKILL Y count (<code>&lt;org&gt;/.agents/</code> + <code>~/.solosquad/agents/</code>) / ledger analysis → deterministic output of "S1 can start ✓" or "Insufficient data — wait N weeks". Exit codes for automation.</p>
+
+  <h4>fs.watch mode selection<span class="badge now">v0.6</span></h4>
+  <p>v0.6 auto-reflects external edits (direct VSCode edits · <code>git pull</code> · separate CLI ops) into the router — <code>chokidar</code>-based 3-tier watch + 300ms debounce. <code>workspace.yaml.fs_watch.mode</code> chooses 3 modes:</p>
+  <ul>
+    <li><strong>auto</strong> — v0.5 atomic swap as-is. All external changes reflected immediately</li>
+    <li><strong>prompt</strong> (default) — PM gets <code>🔄 N SKILL changes detected — apply? [y/N]</code> per turn. User y/n</li>
+    <li><strong>manual</strong> — no auto-reload. <code>solosquad agent reload</code> must be called explicitly</li>
+  </ul>
+  <p>Additionally, <code>fs_watch.git_only: true</code> only reflects <em>when HEAD ≡ upstream + clean tree</em> — blocking the risk of unreviewed SKILLs from <code>git pull</code> reaching a running bot.</p>
+
+  <h3 id="s6-3">6.3 Recommended First Tasks (right after onboarding)</h3>
+  <ol>
+    <li>Confirm <code>solosquad doctor</code> shows all ✓.</li>
+    <li>Send <code>hi</code> in <code>#owner-command</code> → confirm response.</li>
+    <li>Run the first routine manually:
+      <pre><code>solosquad run-routine morning-brief</code></pre>
+      Confirm output appears in <code>works-&lt;handle&gt;</code> channel.
+    </li>
+    <li><strong>Edit user profile</strong> — Update <code>assets/core/OWNER.md</code> (or <code>.solosquad/core/OWNER.md</code>) with your name / role / interests. Every agent reads this each session.</li>
+    <li><strong>Behavioral principles</strong> — Write your decision criteria in <code>core/PRINCIPLES.md</code> (e.g. "cash flow first", "no VC funding", "≤50 hours/week").</li>
+    <li><strong>Writing tone</strong> — Write content tone in <code>core/VOICE.md</code> (e.g. "professional but warm, no hyperbole").</li>
+    <li>Decide product name + create a workflow folder (<code>~/solosquad-workspace/&lt;org&gt;/workflows/wf-2026-XX-XX-test/</code>).</li>
+    <li>Adjust brief times — edit <code>briefings.morning.time</code> etc. in <code>.solosquad/workspace.yaml</code> to match your daily rhythm.</li>
+  </ol>
+
+  <h3 id="s6-4">6.4 Automated Routines<span class="badge now">v0.8.5</span></h3>
+  <p>Total <strong>4</strong>. Three user-facing briefs + one infrastructure routine. v0.8.5 permanently removed 4 analysis routines (signal-scan / experiment-check / weekly-review / v06-retrospective-stats) and unified the 2 infrastructure routines (archive-rotate + log-rotate) into a single <code>system-housekeeping</code>.</p>
+
+  <h4>User-facing briefs (3)</h4>
+  <table>
+    <thead><tr><th>Default time</th><th>Name</th><th>Output location</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>08:00 daily</td><td>Morning Brief</td><td><code>works-&lt;handle&gt;</code></td><td>Overnight summary (active goals · in-progress workflows · decisions)</td></tr>
+      <tr><td>18:00 daily</td><td>Evening Brief</td><td><code>works-&lt;handle&gt;</code></td><td>Today's decisions / completions + tomorrow's priorities (appends to <code>decisions.jsonl</code>)</td></tr>
+      <tr><td>23:00 daily <span class="badge now">v0.3</span></td><td>PM Compaction</td><td><code>works-&lt;handle&gt;</code> → <code>system-pm-compaction</code></td><td>Externalizes completed workflows (<code>memory/pm-skills/</code>) — PM context management</td></tr>
+    </tbody>
+  </table>
+
+  <h4>System infrastructure (user-invisible, always on, silent)</h4>
+  <table>
+    <thead><tr><th>Default time</th><th>Name</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>00:00 daily <span class="badge now">v0.8.5</span></td><td>System Housekeeping</td><td>Two deterministic steps run back-to-back (try/catch isolated): ① JSONL → <code>archive.sqlite</code> FTS5 indexing + retention pass · ② delete <code>.solosquad/logs/</code> files older than 14 days</td></tr>
+    </tbody>
+  </table>
+
+  <p class="callout info"><strong>v0.8.5 change — routines 9 → 4</strong>:</p>
+  <ul>
+    <li><strong>Removed (permanent)</strong>: <code>signal-scan</code> · <code>experiment-check</code> · <code>weekly-review</code> · <code>v06-retrospective-stats</code>. Analysis routines meaningless without user-authored domain prompts. Domain analysis goes into workflows / goals instead</li>
+    <li><strong>Merged</strong>: <code>archive-rotate</code> + <code>log-rotate</code> → <code>system-housekeeping</code> (single 00:00 cron, try/catch isolated)</li>
+    <li><strong>Backward-compat</strong>: <code>workspace.yaml.background_routines</code> keys are read-ignored (no error)</li>
+  </ul>
+
+  <h4>Update ↔ migration flow<span class="badge now">v0.8.3</span></h4>
+  <p>These two commands are separate. <code>solosquad doctor</code> explicitly tells you which one is needed on CLI ↔ workspace version mismatch (§7.3).</p>
+  <pre><code># 1. Diagnose
+solosquad doctor
+# ├─ "CLI: v0.8.5,  workspace: v0.8.5" → OK
+# ├─ "CLI: v0.8.5,  workspace: v0.7.0" → recommends `solosquad migrate --apply`
+# └─ "CLI: v0.7.0,  workspace: v0.8.5" → recommends `npm install -g solosquad@latest`
+
+# 2. CLI upgrade (npm package itself)
+solosquad update          # checks npm registry + self-install
+# or: npm install -g solosquad@latest
+
+# 3. (After CLI is new version) align workspace
+solosquad migrate --dry-run    # preview changes
+solosquad migrate --apply      # apply (auto backup → apply → verify)
+solosquad migrate --rollback   # restore from last backup (if needed)</code></pre>
+  <ul>
+    <li><strong>update</strong> = updates the CLI binary (npm package) itself</li>
+    <li><strong>migrate</strong> = converts the workspace (.solosquad/ · org/ · workflows/ · memory/) schema/layout to match new CLI</li>
+  </ul>
+
+  <h4>Edit timezone / times / activation</h4>
+  <p>Edit <code>.solosquad/workspace.yaml</code> directly:</p>
+  <pre><code>timezone: Asia/Seoul        # any IANA tz
+briefings:
+  morning:
+    time: "08:00"
+    enabled: true
+  evening:
+    time: "18:00"
+    enabled: true</code></pre>
+
+  <h4>Manual execution</h4>
+  <pre><code>solosquad run-routine                   # interactive menu
+solosquad run-routine morning-brief     # specific routine
+solosquad run-routine --all             # all</code></pre>
+</section>
+
+<!-- ========================== SECTION 7 ========================== -->
+<section id="s7">
+  <h2><span class="num">7.</span>Glossary</h2>
+  <p>This section explains every term and filename a newcomer to AI / dev might hit while reading these docs or the code.</p>
+
+  <h3 id="s7-1">7.1 Core Terms</h3>
+  <dl class="terms">
+    <dt>Workspace</dt>
+    <dd>SoloSquad user's top-level folder, typically <code>~/solosquad-workspace</code>. Holds 1+ organizations. A workspace is one user's "AI assistant HQ."</dd>
+
+    <dt>Organization (org)</dt>
+    <dd>A business / product unit inside the workspace. e.g. day-job, side project. Each has isolated memory / workflows / messenger channels. The folder name is <code>&lt;slug&gt;</code> (e.g. <code>my-startup</code>).</dd>
+
+    <dt>Repository (repo)</dt>
+    <dd>Actual code in a git repo. One org may hold multiple repos. Location: <code>&lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;/</code>.</dd>
+
+    <dt>Agent</dt>
+    <dd>An AI worker performing one role (e.g. Business Strategist). SoloSquad has 25 specialists + 1 PM (v0.3+).</dd>
+
+    <dt>Specialist</dt>
+    <dd>Domain-specific expert agent. 25 of them. Distinct from PM (orchestrator).</dd>
+
+    <dt>PM / Orchestrator</dt>
+    <dd>The persistent agent talking directly with the user. Introduced in v0.3. Spawns specialists to drive multi-stage workflows.</dd>
+
+    <dt>SKILL.md</dt>
+    <dd>Manual file describing one agent's identity and operation. Anthropic Agent Skills official format.</dd>
+
+    <dt>KNOWLEDGE.md (v0.6)</dt>
+    <dd>Per-team (= domain) shared craft / definitions / anti-patterns. Located at <code>agents/{team}/KNOWLEDGE.md</code> (v0.6 co-location). Auto-injected as 8-layer assemble [2] when any agent in the team spawns.</dd>
+
+    <dt>Org Layer (v0.6)</dt>
+    <dd>Three new assets absorbing org-specific flavor: <code>&lt;org&gt;/core/{PRINCIPLES,VOICE}.md</code> (org philosophy/tone) + <code>&lt;org&gt;/agent-profile.yaml</code> (25-agent modifier + budget) + <code>&lt;org&gt;/domain/</code> (org domain knowledge). Workspace SKILLs stay unchanged; org color comes solely from these 3 assets.</dd>
+
+    <dt>Workspace Knowledge (v0.6)</dt>
+    <dd><code>.solosquad/knowledge/</code> — accumulated shared user knowledge (decision frameworks, domain glossary). Keeps agent SKILL.md short by separating craft / domain. Selective inject on keyword match.</dd>
+
+    <dt>8-layer JIT inject (v0.6)</dt>
+    <dd>At spawn time, context is assembled in order: workspace knowledge → team KNOWLEDGE → agent SKILL → org core → agent-profile → org domain → memory/handoff → repo. When <code>max_context_tokens</code> is hit, lower-priority layers drop first. See §2.5.</dd>
+
+    <dt>Budget envelope (v0.5 author + v0.6 agent)</dt>
+    <dd>Paperclip-style LLM call cap. v0.5 applied it to author loop only; v0.6 generalizes per (org × agent). Configured via <code>agent-profile.yaml</code>'s <code>budget.daily_usd / weekly_usd / on_cap_action</code>. On cap → spawn refused + PM response. Accumulator: <code>&lt;org&gt;/memory/agent-costs.jsonl</code>.</dd>
+
+    <dt>FTS5 cold archive (v0.6)</dt>
+    <dd><code>&lt;org&gt;/memory/archive.sqlite</code> — JSONL older than 8 days moved into a SQLite FTS5 virtual table, kept searchable. Nightly <code>archive-rotate</code> at 00:00 (v0.8.5: merged into <code>system-housekeeping</code>). 4 event_types indexed (<code>route_hit / route_miss / author_turn / spawn_decision</code>) + existing <code>routine_log</code>. Fallback recall on router miss.</dd>
+
+    <dt>Trajectory extraction (v0.6)</dt>
+    <dd>Same (agent sequence + workflow template) occurring 3+ times in 30 days → auto SKILL draft suggestion. Nighttime <code>pm-compaction</code> step. Reuses v0.5 <code>applyDraft()</code> directly (0 code duplication). No auto-registration — human gate retained.</dd>
+
+    <dt>Freq miner (v0.6)</dt>
+    <dd>Analyzes FTS5 <code>route_miss</code> + author-draft clarification N-grams → suggests additions to existing SKILL's <code>triggers.keyword</code>. Body untouched + frontmatter patched via <code>applyDraft({ mode: "frontmatter-only" })</code>.</dd>
+
+    <dt>Stop-hook DSL (v0.6)</dt>
+    <dd>v0.5's <code>loop_mode.spec-gate</code> actually runs via Anthropic 2025-12 stop-hook plugin. 3 forms: <code>command</code> (exit 0) · <code>metric</code> (results.tsv threshold) · <code>natural</code> (LLM fallback + budget cap). 5-second timeout; on failure, conservatively continue.</dd>
+
+    <dt>collab_pattern (v0.6)</dt>
+    <dd>Formal frontmatter field in SKILL.md (was <code>extra</code> bag in v0.5). <code>hierarchical | graph | dynamic</code>. 25-agent split: 22 hierarchical · 2 graph (data-analyst, feature-planner) · 1 dynamic (content-writer). Spawn auto-applies the matching handoff variant template.</dd>
+
+    <dt>Hot-reload (chokidar, v0.6)</dt>
+    <dd><code>fs.watch</code>-based router auto-rebuild. 3-tier watch (workspace · org · user-global) + 300ms debounce + atomic swap. <code>workspace.yaml.fs_watch.mode</code>: auto / prompt (default) / manual. <code>git_only</code> safety mode allows only HEAD ≡ upstream + clean tree.</dd>
+
+    <dt>schema_version: 1 (v0.6)</dt>
+    <dd>Forward-compat flag on v0.6 new assets (<code>.org.yaml</code> · <code>agent-profile.yaml</code> · v0.6 ledger). v0.7 migration branches by version check.</dd>
+
+    <dt>Routine</dt>
+    <dd>Task that runs automatically at scheduled times. SoloSquad ships 4 (v0.8.5): Morning Brief, Evening Brief, PM Compaction, System Housekeeping.</dd>
+
+    <dt>Workflow</dt>
+    <dd>A multi-stage project. 4 defaults: PMF Discovery, Feature Expansion, Rebranding, Rapid Prototype. Each workflow lives at <code>&lt;org&gt;/workflows/&lt;id&gt;/</code>.</dd>
+
+    <dt>Stage</dt>
+    <dd>One step inside a workflow. Stored in folders like <code>stage-1-research/</code>.</dd>
+
+    <dt>Handoff</dt>
+    <dd>Artifact passed from one stage to the next agent at stage end. <code>_handoff.md</code> with standard sections: Summary, Artifacts, Decisions, etc.</dd>
+
+    <dt>Brief</dt>
+    <dd>Morning/evening summary from the bot. Morning = overnight events + today's plan. Evening = today's events + tonight's plan.</dd>
+
+    <dt>Agent Router</dt>
+    <dd>Module that decides which specialist to invoke based on user message. v0.5 evolved to 4-channel triggers (slash &gt; explicit &gt; keyword &gt; freq) + 3-tier search + atomic-swap hot-reload. <code>AGENT_ROUTES</code> hardcode removed; trigger info now lives in each SKILL.md's <code>triggers</code> frontmatter.</dd>
+
+    <dt>Spawn</dt>
+    <dd>Action of PM (or router) starting a specialist agent in a fresh session. Each spawn is independent; state lives in external files. v0.3+ uses the PM's built-in Task tool with <code>[stage:&lt;id&gt; wf:&lt;id&gt;]</code> markers in the prompt.</dd>
+
+    <dt>4-channel routing (v0.5)</dt>
+    <dd>SKILL match channels: <code>slash</code> (explicit intent) &gt; <code>explicit</code> (PM direct call) &gt; <code>keyword</code> (single-turn match) &gt; <code>freq</code> (accumulated frequency over N turns). Each SKILL.md frontmatter's <code>triggers</code> collected as router index at boot.</dd>
+
+    <dt>Freq cooldown (v0.5)</dt>
+    <dd>Once a SKILL auto-loads via freq, it's blocked from re-firing for <code>cooldown_turns</code> (default 6) (hysteresis). Prevents noise when conversations linger on one topic. State stored in <code>&lt;org&gt;/.solosquad/sessions/&lt;user&gt;.json</code> <code>freqCooldowns</code> field, decayed per turn.</dd>
+
+    <dt>Hot-reload / Atomic swap (v0.5)</dt>
+    <dd>On new SKILL.md save, the router index is rebuilt in background → ref swapped. Messages in flight see the old index. No bot restart needed.</dd>
+
+    <dt>Author loop (v0.5)</dt>
+    <dd>5-stage state machine for creating a new SKILL.md via 1-2 PM messenger turns (CLARIFY → DRAFT → SANDBOX_PROMPT → AWAIT_CONFIRM → APPLIED). <code>assets/agents/_meta/workflow-maker/SKILL.md</code> meta-skill serves as the system prompt.</dd>
+
+    <dt>Spec-gate / Loop mode (v0.5)</dt>
+    <dd>SKILL.md <code>loop_mode.kind: spec-gate</code> means Ralph-loop mode (stop_when condition). Author loop auto-emits <code>&lt;org&gt;/goals/&lt;goal-id&gt;/goal.md</code> as well → registers an autonomous cycle in v0.4 goal-runner.</dd>
+
+    <dt>3-tier SKILL search (v0.5)</dt>
+    <dd>Same-name SKILL priority: <code>&lt;org&gt;/.agents/</code> &gt; <code>~/.solosquad/agents/</code> &gt; <code>&lt;workspace&gt;/.solosquad/agents/</code> (bundled). Higher tier overrides.</dd>
+
+    <dt>Stateless / Stateful</dt>
+    <dd>Stateless = each call independent; Stateful = retains state across calls. SoloSquad specialists are stateless; the PM session is stateful.</dd>
+
+    <dt>JIT (Just-in-Time) Injection</dt>
+    <dd>Principle of not pre-loading all context but injecting <em>only what this call needs</em> at the moment. Prevents token-cost blowup.</dd>
+
+    <dt>Memory</dt>
+    <dd>Persistent store for routine / decision / signal results. v0.6 layout: JSONL append-only (signals / experiments / decisions / author-costs / agent-costs / spawn-decisions / stop-hook-events / migration-costs) + PM compaction externalization (<code>memory/pm-skills/</code>) + per-org snapshot.git + FTS5 cold archive (<code>archive.sqlite</code> — 8d+ auto-move, 4 event_type indexing).</dd>
+
+    <dt>P/E/T (Persistent / Episodic / Transient)</dt>
+    <dd>Vocabulary classifying memory into 3 layers. SoloSquad's SKILL = Persistent, workflows = Episodic, Claude session prompt = Transient.</dd>
+
+    <dt>3-Layer Context</dt>
+    <dd>Workspace (Layer 0) / Organization (Layer 1) / Repository (Layer 2). Basic data-isolation units.</dd>
+
+    <dt>PRD (Product Requirements Document)</dt>
+    <dd>Product spec doc. Authored by PM, handed to specialists.</dd>
+
+    <dt>PMF (Product-Market Fit)</dt>
+    <dd>Whether the market truly needs this product.</dd>
+
+    <dt>GTM (Go-To-Market)</dt>
+    <dd>Strategy for entering the market — channels, message, pricing, first users.</dd>
+
+    <dt>Anthropic / Claude</dt>
+    <dd>Anthropic is the company behind Claude AI. Claude Code is Anthropic's coding CLI. SoloSquad uses Claude Code as its backend engine.</dd>
+
+    <dt>Claude Code</dt>
+    <dd>Anthropic's general-purpose coding CLI tool. SoloSquad calls <code>claude</code> to get AI responses. Separate install: <code>npm install -g @anthropic-ai/claude-code</code>.</dd>
+
+    <dt>npm (Node Package Manager)</dt>
+    <dd>Node.js package installer. <code>npm install -g solosquad</code> installs SoloSquad.</dd>
+
+    <dt>CLI (Command Line Interface)</dt>
+    <dd>Terminal-driven program. <code>solosquad</code> is a CLI.</dd>
+
+    <dt>cron</dt>
+    <dd>Standard schedule format for repeated tasks. SoloSquad routines are cron-based.</dd>
+
+    <dt>JSONL (JSON Lines)</dt>
+    <dd>Text format where one line = one JSON object. Useful for append-only event logs. SoloSquad memory's default format.</dd>
+
+    <dt>FTS5 (Full-Text Search v5)</dt>
+    <dd>SQLite's built-in full-text search extension. Fast keyword search. Adopted in v0.6 as the memory archive index (depends on <code>better-sqlite3</code> ^12.10.0).</dd>
+
+    <dt>MCP (Model Context Protocol)</dt>
+    <dd>Standard protocol connecting AI agents to external tools / data. Announced by Anthropic in 2024. SoloSquad can use MCP for external integrations (Notion, Figma, etc.).</dd>
+
+    <dt>IANA tz (Timezone Database)</dt>
+    <dd>International standard timezone names (e.g. <code>Asia/Seoul</code>, <code>America/Los_Angeles</code>). Used in <code>workspace.yaml.timezone</code>.</dd>
+
+    <dt>YAML</dt>
+    <dd>Human-readable config file format. SoloSquad uses YAML in <code>workspace.yaml</code>, <code>.org.yaml</code>, <code>_status.yaml</code>, etc. Structure via indentation.</dd>
+
+    <dt>Frontmatter</dt>
+    <dd>YAML metadata block at top of a Markdown file, wrapped in <code>---</code>. SKILL.md's <code>name</code> / <code>description</code> / <code>triggers</code> etc. are frontmatter.</dd>
+
+    <dt>Docker / docker-compose</dt>
+    <dd>Container virtualization tool. Useful when you want SoloSquad bot/scheduler running in background with auto-restart. Optional.</dd>
+
+    <dt>VPS (Virtual Private Server)</dt>
+    <dd>Cloud virtual server. For 24/7 ops when you can't keep a PC on. ~$4-6/month.</dd>
+
+    <dt>Slug</dt>
+    <dd>URL/folder-friendly name. Lowercase + hyphens. e.g. "My Startup" → <code>my-startup</code>.</dd>
+  </dl>
+
+  <h3 id="s7-2">7.2 File Dictionary</h3>
+  <p>Meaning of every file you'll encounter in a workspace or the code.</p>
+
+  <dl class="terms">
+    <dt>.env</dt>
+    <dd>File holding secrets (API tokens, etc.) such as <code>SLACK_BOT_TOKEN</code> / <code>DISCORD_TOKEN</code>. <strong>Never commit to git.</strong></dd>
+
+    <dt>.env.example</dt>
+    <dd>Template for <code>.env</code>, with empty values to show what to fill in. OK to commit.</dd>
+
+    <dt>.gitignore</dt>
+    <dd>Patterns git ignores. SoloSquad ignores .env, node_modules, dist, repos, etc.</dd>
+
+    <dt>.npmignore</dt>
+    <dd>Patterns excluded from npm package publish (dev-only files).</dd>
+
+    <dt>package.json</dt>
+    <dd>npm package manifest. Name, version, dependencies, scripts. SoloSquad's <code>solosquad</code> CLI entry point declared here.</dd>
+
+    <dt>package-lock.json</dt>
+    <dd>Auto-generated file pinning exact dependency versions. Do not edit by hand.</dd>
+
+    <dt>tsconfig.json</dt>
+    <dd>TypeScript compile config. ES2022 / strict, etc.</dd>
+
+    <dt>workspace.yaml</dt>
+    <dd>Workspace-wide config at <code>.solosquad/workspace.yaml</code>. timezone / briefings / background_routines schedule, messenger type, etc.</dd>
+
+    <dt>.org.yaml</dt>
+    <dd>Per-org config at <code>&lt;org&gt;/.org.yaml</code>. Org name / messenger / registered repos.</dd>
+
+    <dt>repo.yaml</dt>
+    <dd>Per-repo config at <code>&lt;repo&gt;/.solosquad/repo.yaml</code>. Repo slug / role (main/sub) / target_org.</dd>
+
+    <dt>SKILL.md</dt>
+    <dd>Agent identity manual in Anthropic Agent Skills format. See §3.1.</dd>
+
+    <dt>KNOWLEDGE.md (v0.6)</dt>
+    <dd>Team (= domain) shared knowledge at <code>agents/{team}/KNOWLEDGE.md</code>. See §3.2.</dd>
+
+    <dt>TEAM_KNOWLEDGE.md (v0.2.4, removed in v0.6)</dt>
+    <dd>Renamed &amp; relocated to <code>agents/{team}/KNOWLEDGE.md</code> in v0.6. <code>_teams/</code> parallel hierarchy fully removed.</dd>
+
+    <dt>agent-profile.yaml (v0.6)</dt>
+    <dd>At <code>&lt;org&gt;/agent-profile.yaml</code>. Org-specific modifiers for 25 agents (tone, emphasis, voice, ban_phrases, budget). defaults + per-agent + <code>schema_version: 1</code>.</dd>
+
+    <dt>archive.sqlite (v0.6)</dt>
+    <dd>At <code>&lt;org&gt;/memory/archive.sqlite</code>. FTS5 cold archive. JSONL ≥8d → moved here + 4 event_type indexing + 365d retention.</dd>
+
+    <dt>CLAUDE.md</dt>
+    <dd>Project guide auto-loaded by Claude Code each session. See §3.3.</dd>
+
+    <dt>OWNER.md</dt>
+    <dd>Your profile / interests / work pattern. Every agent reads it each session. <code>assets/core/OWNER.md</code>.</dd>
+
+    <dt>PRINCIPLES.md</dt>
+    <dd>Your decision-making principles. Guide every agent should follow. <code>assets/core/PRINCIPLES.md</code>.</dd>
+
+    <dt>VOICE.md</dt>
+    <dd>Your writing tone / voice. Guides agents that produce text (Content Writer, etc.). <code>assets/core/VOICE.md</code>.</dd>
+
+    <dt>_status.yaml</dt>
+    <dd>Workflow progress. State per stage: <code>pending → in_progress → completed</code>.</dd>
+
+    <dt>_handoff.md</dt>
+    <dd>Context passed to the next agent when a stage completes. Standard sections: Summary, Artifacts, Decisions, Open Questions.</dd>
+
+    <dt>_events.jsonl (v0.3+)</dt>
+    <dd>All PM session event logs. PM messages, spawns, subagent completions.</dd>
+
+    <dt>signals.jsonl</dt>
+    <dd>Results from Signal Scan routine (deprecated default in v0.8.5).</dd>
+
+    <dt>experiments.jsonl</dt>
+    <dd>Results from Experiment Check routine (deprecated default in v0.8.5).</dd>
+
+    <dt>decisions.jsonl</dt>
+    <dd>Decisions accumulated from Evening Brief / Weekly Review.</dd>
+
+    <dt>routine-logs/*.jsonl</dt>
+    <dd>Full execution logs for routines. Used for debugging / retro.</dd>
+
+    <dt>Dockerfile (deploy/docker/Dockerfile)</dt>
+    <dd>Docker image build recipe. For containerizing SoloSquad bot/scheduler. Moved to <code>deploy/docker/</code> in v0.5.</dd>
+
+    <dt>docker-compose.yml (deploy/docker/docker-compose.yml)</dt>
+    <dd>Settings for running multiple containers (bot + scheduler) together. v0.5+ also mounts <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> — user-global SKILL override and backups compatible.</dd>
+
+    <dt>README.md</dt>
+    <dd>First-impression document. Shown on npm/GitHub. SoloSquad's README covers install + quick start.</dd>
+
+    <dt>LICENSE</dt>
+    <dd>License file. SoloSquad is MIT.</dd>
+
+    <dt>CONTRIBUTING.md</dt>
+    <dd>Guide for contributing (developer-facing).</dd>
+  </dl>
+
+  <h3 id="s7-3">7.3 Abbreviation Dictionary</h3>
+  <dl class="terms">
+    <dt>API</dt>
+    <dd>Application Programming Interface. Inter-software protocol. Slack API, Claude API, etc.</dd>
+    <dt>CAC</dt>
+    <dd>Customer Acquisition Cost. Marketing metric.</dd>
+    <dt>CLI</dt>
+    <dd>Command Line Interface.</dd>
+    <dt>CRUD</dt>
+    <dd>Create / Read / Update / Delete. The 4 basic data ops.</dd>
+    <dt>DAG</dt>
+    <dd>Directed Acyclic Graph. Used to express workflow stage dependencies.</dd>
+    <dt>E2E</dt>
+    <dd>End-to-End. Full user-flow testing.</dd>
+    <dt>ESM</dt>
+    <dd>ECMAScript Module. JS module standard (Node16+).</dd>
+    <dt>FDE</dt>
+    <dd>Forward Deployed Engineer. Customer-on-site engineer. One agent in SoloSquad engineering team.</dd>
+    <dt>FTS5</dt>
+    <dd>Full-Text Search v5. SQLite built-in full-text search.</dd>
+    <dt>GTM</dt>
+    <dd>Go-To-Market.</dd>
+    <dt>IANA</dt>
+    <dd>Internet Assigned Numbers Authority. SoloSquad uses IANA timezone names (<code>Asia/Seoul</code> etc.).</dd>
+    <dt>JIT</dt>
+    <dd>Just-in-Time. Load/run only when needed. Context-management principle.</dd>
+    <dt>LTV</dt>
+    <dd>Lifetime Value. Total revenue from one customer. LTV:CAC ≥ 3:1 is the typical SaaS health metric.</dd>
+    <dt>MCP</dt>
+    <dd>Model Context Protocol. AI ↔ external tools standard.</dd>
+    <dt>npm</dt>
+    <dd>Node Package Manager.</dd>
+    <dt>PaaS</dt>
+    <dd>Platform-as-a-Service. Cloud without server management. Railway, Fly.io.</dd>
+    <dt>PMF</dt>
+    <dd>Product-Market Fit.</dd>
+    <dt>PRD</dt>
+    <dd>Product Requirements Document.</dd>
+    <dt>QA</dt>
+    <dd>Quality Assurance.</dd>
+    <dt>SaaS</dt>
+    <dd>Software-as-a-Service.</dd>
+    <dt>SDK</dt>
+    <dd>Software Development Kit.</dd>
+    <dt>SQL</dt>
+    <dd>Structured Query Language.</dd>
+    <dt>SSH</dt>
+    <dd>Secure Shell. Remote-server access protocol. Used for VPS ops.</dd>
+    <dt>TS</dt>
+    <dd>TypeScript. JavaScript with static types. SoloSquad's implementation language.</dd>
+    <dt>TTL</dt>
+    <dd>Time-To-Live.</dd>
+    <dt>tz</dt>
+    <dd>timezone (abbreviation).</dd>
+    <dt>UI / UX</dt>
+    <dd>User Interface / User Experience.</dd>
+    <dt>VPS</dt>
+    <dd>Virtual Private Server.</dd>
+    <dt>YAML</dt>
+    <dd>YAML Ain't Markup Language.</dd>
+  </dl>
+</section>
+
+<!-- ========================== SECTION 8 ========================== -->
+<section id="s8">
+  <h2><span class="num">8.</span>Version Differences</h2>
+  <p>Clear distinction between what you can install from npm today and what's planned.</p>
+
+  <h3 id="s8-1">8.1 Currently Available on npm (v0.7.0 ~ v0.8.5)<span class="badge now">Available</span></h3>
+
+  <h4>Core features (v0.1~v0.2)</h4>
+  <ul>
+    <li>One-line npm install on Mac / Windows / Linux</li>
+    <li>25 specialist agents (Strategy 7 / Growth 4 / Experience 4 / Engineering 10)</li>
+    <li>2 messengers (Discord / Slack — one per workspace)</li>
+    <li>Automated routines (4 in v0.8.5: Morning/Evening Brief, PM Compaction, System Housekeeping)</li>
+    <li>3-Layer Context (workspace / organization / repository)</li>
+    <li>JSONL append-only memory (signals, experiments, decisions, routine-logs)</li>
+    <li>workspace.yaml config (timezone, briefing schedule, routine activation)</li>
+    <li>Migration framework (v0.1.x → v0.2.x backup → apply → verify → rollback)</li>
+    <li>Docker compose option (background + auto-restart)</li>
+    <li>VPS systemd service registration guide (docs/cloud-deployment.md)</li>
+    <li>Multi-org / multi-repo support (<code>solosquad add org/repo/sync</code>)</li>
+    <li>Environment diagnostics (<code>solosquad doctor</code> / <code>--messenger-check</code>)</li>
+  </ul>
+
+  <h4>PM mode + multi-agent orchestration<span class="badge now">v0.3</span></h4>
+  <ul>
+    <li>PM agent owns all user communication (persistent session, <code>claude --resume</code>)</li>
+    <li>Specialists spawn as ephemeral subagents via built-in <code>Task</code> tool (depth=1)</li>
+    <li>5 slash commands (<code>/think /plan /build /review /ship</code>) + <code>/help</code></li>
+    <li><code>_events.jsonl</code> standard (PM session event log) + spawn marker <code>[stage:&lt;id&gt; wf:&lt;id&gt;]</code></li>
+    <li>Focus marker <code>[focus:&lt;wf-id&gt;]</code> / <code>[focus:none]</code> bidirectional</li>
+    <li>PM compaction routine (completed workflow → <code>memory/pm-skills/</code> externalization, 23:00 daily)</li>
+    <li>Boot-time recovery (<code>workflow-reconciler.ts</code>) — orphaned <code>in_progress</code> → <code>needs_revision</code>, missed responses retransmitted</li>
+    <li>Per-org snapshot.git (<code>memory/</code> + <code>workflows/</code> only) + <code>solosquad rollback --workflow &lt;id&gt;</code> revert</li>
+    <li>Full CLI: <code>solosquad pm</code> · <code>solosquad workflow</code> · <code>solosquad rollback</code></li>
+  </ul>
+
+  <h4>Autonomous engine — Goal Runner<span class="badge now">v0.4</span></h4>
+  <ul>
+    <li>2-layer structure: <code>goal.md</code> (per-run intent) + <code>AGENTS.md</code> (persistent guide, cross-tool standard)</li>
+    <li>Adopts OpenAI Codex <code>/goal</code> pattern — humans modify, models only start/finish</li>
+    <li>3-tier guardrails: preflight Input guard / runtime guard (timeout · discard streak · cost cap 90% warning) / Output guard (forbidden side effects + HTTP allowlist)</li>
+    <li><code>AGENTS.md</code> pins immutable_paths · modifiable_paths · external_side_effects · guardrail thresholds</li>
+    <li>Metric measurement → keep/discard → git-snapshot per cycle. <code>CONFIRMING</code> gate (all metrics ≥ threshold) advances _best.json</li>
+    <li><code>solosquad goal run &lt;goal-id&gt; [--hours N | --cycles N]</code> — N-hour autonomous loop (background PM session <code>bg-&lt;goal-id&gt;-&lt;runId&gt;</code>)</li>
+    <li><code>solosquad goal verify</code> — deterministic recompute (reconciliation)</li>
+    <li>Full CLI: <code>goal new / list / show / run / status / stop / verify</code></li>
+  </ul>
+
+  <h4>Workflow maker + SKILL system integration<span class="badge now">v0.5</span></h4>
+  <ul>
+    <li><code>SKILL.md</code> Anthropic Agent Skills compatible frontmatter parser + validator (<code>src/bot/skill-parser.ts</code>)</li>
+    <li>SKILL schema extensions: <code>stateful</code> · <code>triggers</code> (4-channel) · <code>loop_mode</code> (spec-gate) · <code>budget</code></li>
+    <li>4-channel router (slash &gt; explicit &gt; keyword &gt; freq) + 3-tier search (org &gt; user &gt; bundle) + atomic-swap hot-reload</li>
+    <li>Freq channel: frequency-counted auto-load + <code>cooldown_turns</code> hysteresis + per-workspace 20-SKILL ceiling</li>
+    <li><code>AGENT_ROUTES</code> hardcode constant removed — distributed across each SKILL.md's <code>triggers.keyword</code>. 25 bundled SKILL frontmatters backfilled (idempotent)</li>
+    <li>Messenger author loop (CLARIFY → DRAFT → SANDBOX → AWAIT_CONFIRM → APPLIED) via <code>assets/agents/_meta/workflow-maker/SKILL.md</code></li>
+    <li>spec-gate SKILLs auto-emit <code>goal.md</code> → autonomous cycle in v0.4 goal-runner</li>
+    <li>Paperclip-envelope author daily/weekly budget cap + <code>&lt;org&gt;/memory/author-costs.jsonl</code></li>
+    <li>Repo analyzer: 4-label classification (role / workflow / codebase-fact / domain), deterministic matching, ledger incremental, applier backup/apply/verify/rollback</li>
+    <li><code>solosquad agent add / list / info / validate</code> + <code>analyze repo</code> + <code>add repo --from-report</code> CLI</li>
+    <li>CI gate: <code>npm run validate-skills</code> (= <code>solosquad agent validate --all --corpus</code>)</li>
+  </ul>
+
+  <h4>Default workflow tuning + memory infra + self-evolution<span class="badge now">v0.6</span></h4>
+  <p>Integrates retro on accumulated v0.3~v0.5 data + FTS5 search of cumulative memory + auto-extract recurring patterns into SKILLs + org × agent flavor/budget separation + chokidar hot-reload + CI PR bot + 0.5→0.6 migration into one release. ~12,000 new LOC, 152 new tests (total 421/421 green).</p>
+  <ul>
+    <li><strong>S1 — readiness + ETL + onboarding two tracks</strong>: <code>solosquad readiness check --target v0.6</code> CLI + ETL of 5 v0.5 data sources → nightly <code>v06-retrospective-stats</code> routine + <code>init</code> branches for new vs existing v0.5 users</li>
+    <li><strong>S2 — folder restructure + 3 handoff variants</strong>: <code>agents/_teams/</code> → <code>agents/{team}/KNOWLEDGE.md</code> co-location + <code>handoff-{hierarchical,graph,dynamic}.md</code> + 25 SKILL.md <code>collab_pattern</code> frontmatter formalized (22 hierarchical / 2 graph / 1 dynamic)</li>
+    <li><strong>S3 — Org Layer + budget + spawn-assembler</strong>: <code>&lt;org&gt;/core/</code> · <code>agent-profile.yaml</code> · <code>domain/</code> introduced + 8-layer JIT inject + <code>max_context_tokens</code> drop policy + <code>~/.solosquad/agent-profile-defaults.yaml</code> user-global inheritance + <code>schema_version: 1</code> forward-compat</li>
+    <li><strong>S4 — FTS5 archive + 4 event_type + retention</strong>: <code>archive.sqlite</code> + daily 00:00 <code>archive-rotate</code> + route_hit/route_miss/author_turn/spawn_decision indexing + <code>retention_days: 365</code> + <code>compress_before_delete</code> option</li>
+    <li><strong>S5 — Trajectory + Freq miner + Stop-hook DSL</strong>: nightly pattern extraction (reuses v0.5 <code>applyDraft()</code> directly) + keyword auto-suggest (<code>frontmatter-only</code> mode) + stop_when 3 forms (command/metric/natural) DSL + 5s timeout</li>
+    <li><strong>S6.A — fs.watch + 3 modes + git_only</strong>: chokidar 3-tier watch + 300ms debounce + <code>fs_watch.mode: auto/prompt/manual</code> + <code>git_only</code> safety mode + <code>solosquad agent reload</code></li>
+    <li><strong>S6.B — CI PR auto-review bot</strong>: <code>.github/workflows/skill-review.yml</code> + frontmatter diff comments + keyword collision warnings + 6 validators (agent-profile / core / domain / .org.yaml)</li>
+    <li><strong>S6.C — Migration 0.5→0.6</strong>: 2-pass dry-run + human-review gate + v0.5 ledger <code>pending_v0.6_redestination</code> auto-reclassification + heuristic fail-soft marks <code>human_review_required: true</code> + self budget cap</li>
+    <li>New CLI: <code>readiness check</code> · <code>memory search/stats [--disk]</code> · <code>agent reload</code></li>
+  </ul>
+
+  <h4>Uninstall &amp; Lifecycle — Farewell Archive<span class="badge now">v0.7</span></h4>
+  <p>Closes the lifecycle as install ↔ uninstall. "Init/reset/clean" commands are permanently off the table (reinstall = uninstall + farewell + new workspace init).</p>
+  <ul>
+    <li><strong>User code is untouchable</strong> — <code>&lt;org&gt;/repositories/&lt;repo&gt;/</code> tree never modified/deleted under any flag. Tree not even enumerated</li>
+    <li><strong>Farewell archive mandatory</strong> — uninstall always generates a zip first, no <code>--no-archive</code> flag. Format: <code>archive.yaml</code> (schema_version=1) + <code>manifest.tsv</code> (streaming SHA256) + <code>workspace/</code> + <code>orgs/&lt;slug&gt;/{memory,workflows,goals,domain,core,repos}/</code> + <code>credentials/env.template</code> (masked) + <code>REVOKE-CHECKLIST.md</code> + <code>PII-NOTICE.md</code></li>
+    <li><strong>5 data classes (A/A*/B/C/D/E)</strong> + <code>--keep-workspace</code> matrix — class B archived then preserved on disk, sessions moved to <code>_archived/</code>, workspace.yaml deleted to issue a fresh one</li>
+    <li><strong>WAL-safe SQLite backup</strong> (borrowed from Hermes) — v0.6 <code>memory/archive.sqlite</code> copied consistently via <code>better-sqlite3 backup()</code> API even during live writes</li>
+    <li><strong>Concurrent-uninstall lockfile</strong> — <code>&lt;workspace&gt;/.solosquad/uninstall.lock</code> atomic acquire + stale PID auto-cleanup</li>
+    <li><strong>Stage progress journal</strong> — <code>uninstall.journal.jsonl</code> append-only, resumable when cleanup interrupted mid-flight</li>
+    <li><strong>PM/scheduler PID refusal</strong> — prevents jsonl grow during archive walking → SHA mismatch. Entry refused without <code>--force</code></li>
+    <li><strong>Workspace git tree detection</strong> — explicit user consent required if <code>&lt;workspace&gt;/.git</code> exists</li>
+    <li><strong>Archive path writable + disk free × 1.5 check</strong></li>
+    <li><strong>PII-NOTICE.md auto-attached</strong> + opt-in <code>--scrub-content</code> (regex ruleset: card numbers · emails · phones · SSN — false-negative possibility documented; auto-scrub expansion in v1.x)</li>
+    <li><strong>logout/uninstall split</strong> (borrowed from gh CLI) — <code>solosquad logout</code> masks .env + sessions to <code>_archived/</code> + creates <code>logout.lock</code> (later <code>solosquad bot/schedule</code> refuses entry)</li>
+    <li><strong>REVOKE-CHECKLIST.md dynamically generated</strong> — Discord application ID, Slack workspace ID, estimated ~/.claude/projects paths, pm2/systemctl/crontab inspection commands auto-extracted</li>
+    <li><strong>doctor expansion</strong> — npm global hook limit warning (run <code>solosquad uninstall</code> before <code>npm uninstall -g</code>), stale lockfile detection, PM PID check, archive directory free space</li>
+    <li>CLI: <code>solosquad uninstall [--dry-run --archive-only --keep-workspace --also-purge-backups --scrub-content --force]</code>, <code>solosquad logout [--org &lt;slug&gt; --all --force]</code></li>
+    <li>Migration: <code>0.6.0-to-0.7.0.ts</code> — version bump + <code>workspace.yaml.uninstall</code> defaults. Almost no schema change (uninstall infra introduction mostly)</li>
+    <li>Dependency: <code>archiver ^7.0.1</code> (streaming write — chosen over <code>adm-zip</code> to avoid OOM)</li>
+  </ul>
+
+  <h4>Multi-User Messenger<span class="badge now">v0.8.0</span></h4>
+  <p>Workspace extended from single-operator to multi-user context. All message routing flows through <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> channel pairs guarded by author-guard (anti-spoofing). Details: <code>docs/plan/v0.8-multiuser-messenger.md</code>.</p>
+  <ul>
+    <li><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code> per-user metadata — handle / platform / userId / channels / registered_at</li>
+    <li>Channel auto-bootstrap (<code>channel-bootstrap.ts</code>) + multi-user broadcast (<code>messenger/broadcast.ts</code>)</li>
+    <li><code>solosquad messenger</code> CLI (user registration, re-issuance, broadcast toggle)</li>
+    <li>doctor expansion: user-registration totals, channel-mapping verification</li>
+    <li>Migration 0.7→0.8: <code>workspace.yaml.messenger</code> defaults + auto-register the single operator (Discord/Slack token <code>/users/@me</code> lookup)</li>
+  </ul>
+
+  <h4>Security &amp; Lifecycle Pair<span class="badge now">v0.8.1</span></h4>
+  <p>Closes the reverse path of v0.7 archive format + strengthens secret/PII handling. Details: <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code>.</p>
+  <ul>
+    <li><code>solosquad import &lt;archive.zip&gt;</code> — restore farewell archive into a new workspace (manifest SHA verify + merge strategy)</li>
+    <li><code>solosquad archive verify &lt;archive.zip&gt;</code> — manifest.tsv integrity + PII-NOTICE scan</li>
+    <li>SKILL.md frontmatter <code>requires_secret</code> — required-secret declaration (workflow-maker gate)</li>
+  </ul>
+
+  <h4>Dev Capability<span class="badge now">v0.8.2</span></h4>
+  <p>Standardizes the "create a PR" pattern via SKILL <code>dev_capability</code> frontmatter. The dev-confirmation flow (30-min timeout) gets user approval before the bot makes git changes. Details: <code>docs/plan/v0.8.2-dev-capability.md</code>.</p>
+  <ul>
+    <li>SKILL.md <code>dev_capability: read|propose|patch|pr</code> 4-level permissions</li>
+    <li><code>spawn-assembler</code> validates capability, branches layer 8 (target_repo) into read/write</li>
+    <li><code>dev-confirm.ts</code> 30-min timeout — auto-abort on no response + log to <code>dev-confirmations.jsonl</code></li>
+  </ul>
+
+  <h4>Onboarding UX + Observability<span class="badge now">v0.8.3</span></h4>
+  <p>Last v0.8.x patch covering both first-encounter UX and the debugging experience. Details: <code>docs/plan/v0.8.3-onboarding-ux-observability.md</code>.</p>
+  <ul>
+    <li><strong>add repo --dry-run / --inspect</strong> — preview folder mapping / size / 5 risk scenarios (IDE lock · symlinks · external abs paths · slug collision · active processes) when importing product code. 0 disk changes</li>
+    <li><strong>--keep-original</strong> — copy instead of move (2× disk usage, original safety net)</li>
+    <li><strong>logger expansion</strong> — <code>SOLOSQUAD_LOG_LEVEL</code> · <code>SOLOSQUAD_LOG_FORMAT=json</code> · <code>SOLOSQUAD_LOG_FILE=1</code> → <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code> rolling 14 days. Existing <code>logger.info/warn/error</code> API unchanged</li>
+    <li><strong>solosquad logs CLI</strong> — unified view of runtime + costs/spawn/stop-hook/dev-confirm/migration jsonl via <code>--level/--tail/--follow/--since/--type</code></li>
+    <li><strong>log-rotate routine</strong> — daily 00:30 deletes files past retention (silent). In v0.8.5 merged into system-housekeeping</li>
+    <li><strong>solosquad logout removed</strong> — added in v0.7, judged value &lt; complexity. Alternative flow: Ctrl+C to stop bot / <code>solosquad uninstall --archive-only</code> to clean tokens</li>
+    <li><strong>doctor enhancement</strong> — CLI ↔ workspace version mismatch detection + which command (<code>update</code> vs <code>migrate</code>) to run</li>
+    <li><strong>trajectory ROI measurement</strong> — 4 metrics from v0.6 §3.X measured over 30 days, pinned in CHANGELOG <code>[0.8.3]</code>. On pass, v0.9 enables auto_register</li>
+    <li>Migration 0.8.2→0.8.3: <code>workspace.yaml.trajectory.auto_register</code> key + log-rotate routine copy</li>
+  </ul>
+
+  <h4>CLI Surface Reduction<span class="badge now">v0.8.4</span></h4>
+  <p>Last non-breaking flag cleanup before v1.0 formal launch. <code>docs/api-stability.md</code> §4 pins "Removing a flag is major" → flags become un-removable post-v1.0. This slot consolidates 6 axes: (a) <code>uninstall</code> flags 8→5 (<code>--mode &lt;full|keep|archive-only&gt;</code>), (b) <code>add repo --inspect</code> alias deprecated, (c) <code>import --mode &lt;merge|replace&gt;</code> pattern consistency, (d) <code>agent validate --corpus</code> moved internal, (e) <code>solosquad backup list|delete|purge</code> subgroup added, (f) <code>solosquad init</code> workspace path explicit-confirm prompt. Details: <code>docs/plan/v0.8.4-cli-surface-reduction.md</code>.</p>
+
+  <h4>Onboarding QA &amp; Release-Gate<span class="badge now">v0.8.5</span></h4>
+  <p>Pinned QA results from running fresh init right after v0.8.4. Critical regression: <code>src/cli/init.ts:29</code>'s hardcoded <code>SOLOSQUAD_VERSION = "0.4.0"</code> made every new user see a migration warning immediately after init. Side: master-guide had frozen at v0.6.0 — backfilled to v0.8.5, and 4-docs (product-roadmap · architecture · master-guide ko+en) pre-publish gate enforced via <code>prepublishOnly</code>. Wizard prompts each got a 1-line help (handle / name / role / messenger / provider). Details: <code>docs/plan/v0.8.5-onboarding-qa.md</code>.</p>
+  <ul>
+    <li><strong>Bug fix:</strong> <code>src/util/version.ts</code> reads version dynamically from <code>package.json</code> (fresh init no longer triggers spurious migration warning)</li>
+    <li><strong>4-docs pre-publish gate:</strong> <code>scripts/check-docs-freshness.ts</code> + <code>npm run docs-check</code> + <code>prepublishOnly</code> enforce</li>
+    <li><strong>Wizard text:</strong> Step 2 "Initialize" → "Create Workspace", redundant CWD prompt removed, per-prompt help lines, Slack <code>channels:manage</code> warning emphasized</li>
+    <li><strong>master-guide §3.12</strong> new section explaining <code>.solosquad/</code> hierarchy</li>
+    <li><strong>§4.2.1</strong> wizard prompt table (12 rows × why-asked × constraint × storage location)</li>
+    <li><strong>§6.4 routine table:</strong> 4 default routines (3 user briefs + 1 infrastructure). 4 analysis routines permanently removed. archive-rotate + log-rotate merged into <code>system-housekeeping</code></li>
+    <li>Migration: <code>0.8.4-to-0.8.5.ts</code> (version bump only, no schema change)</li>
+  </ul>
+
+  <h4>Removed</h4>
+  <ul>
+    <li>Telegram adapter — unsupported since v0.2.4<span class="badge removed">v0.2.4 removed</span></li>
+    <li>Auto-cleanup of channels not provided — old <code>daily-brief</code> / <code>signals</code> / <code>experiments</code> / <code>weekly-review</code> / <code>errors</code> channels need manual archive in messenger UI</li>
+    <li><code>AGENT_ROUTES</code> hardcode constant<span class="badge removed">v0.5 removed</span> — keyword routing distributed across each SKILL.md's <code>triggers.keyword</code> frontmatter</li>
+    <li><code>assets/agents/_teams/</code> directory<span class="badge removed">v0.6 removed</span> — <code>agents/{team}/KNOWLEDGE.md</code> co-location, parallel hierarchy abolished. Migration auto-moves user workspaces' <code>.solosquad/agents/_teams/</code> too</li>
+    <li><code>solosquad reset</code> · <code>solosquad clean</code> commands<span class="badge removed">permanently rejected since v0.7</span> — install ↔ uninstall covers the lifecycle. Reinstall = uninstall + new workspace init</li>
+    <li><code>solosquad logout</code><span class="badge removed">v0.8.3 removed</span> — introduced in v0.7 by borrowing from gh CLI but value &lt; complexity. Bot pause via Ctrl+C; token cleanup via <code>solosquad uninstall --archive-only</code>. <code>logout.lock</code> / <code>logoutLockPath</code> code also removed</li>
+    <li>Analysis routines <code>signal-scan</code> / <code>experiment-check</code> / <code>weekly-review</code> / <code>v06-retrospective-stats</code><span class="badge removed">v0.8.5 removed</span> — meaningless without user-authored domain prompts. Express domain analysis via workflows / goals</li>
+    <li><code>archive-rotate</code> and <code>log-rotate</code> routines<span class="badge removed">v0.8.5 merged</span> — unified into <code>system-housekeeping</code> (single 00:00 cron, try/catch isolated)</li>
+  </ul>
+
+  <h3 id="s8-2">8.2 Planned Updates<span class="badge plan">Planning</span></h3>
+
+  <h4>v1.0 — Formal Launch</h4>
+  <ul>
+    <li>Stabilization through v0.6 + solo-founder self-use validation complete</li>
+    <li>Begin stable API commitments</li>
+    <li>Introduce breaking-change policy</li>
+    <li>Consider auto-registration gate if v0.6 trajectory auto-extract ROI metrics pass</li>
+  </ul>
+
+  <h4>v1.1 — Dashboard Interaction</h4>
+  <ul>
+    <li>Web dashboard itself developed in a separate repo (<code>solopreneur-dashboard</code> / <code>solopreneur-api</code>)</li>
+    <li>This repo provides only the interaction client / inbox</li>
+  </ul>
+
+  <h4>v1.2 — User Knowledge &amp; Tacit-Knowledge Ontology</h4>
+  <ul>
+    <li>Index accumulated memory / event data into a graph backend</li>
+    <li>MCP external connections (Notion / Obsidian / external APIs / cross-agent)</li>
+  </ul>
+
+  <h4>Reference docs</h4>
+  <ul>
+    <li><code>docs/plan/v0.3-pm-mode-orchestration.md</code></li>
+    <li><code>docs/plan/v0.4-autonomous-engine.md</code></li>
+    <li><code>docs/plan/v0.5-workflow-maker.md</code></li>
+    <li><code>docs/plan/v0.6-default-workflow-tuning.md</code></li>
+    <li><code>docs/plan/v0.7-uninstall-lifecycle.md</code></li>
+    <li><code>docs/plan/v0.8-multiuser-messenger.md</code></li>
+    <li><code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></li>
+    <li><code>docs/plan/v0.8.2-dev-capability.md</code></li>
+    <li><code>docs/plan/v0.8.3-onboarding-ux-observability.md</code></li>
+    <li><code>docs/plan/v0.8.4-cli-surface-reduction.md</code></li>
+    <li><code>docs/plan/v0.8.5-onboarding-qa.md</code></li>
+    <li><code>docs/plan/v1.1-dashboard-interaction.md</code></li>
+    <li><code>docs/plan/v1.2-knowledge-ontology.md</code></li>
+    <li><code>docs/plan/product-roadmap.md</code> — full decision log</li>
+    <li><code>docs/reference/AI_Agent_Harness_Report.md</code> — design vocabulary source</li>
+    <li><code>docs/trend-record/2026-05-11-baseline-survey.md</code> — peer-project comparison</li>
+  </ul>
+
+  <div class="footer-note">
+    This document is based on SoloSquad <strong>v0.8.5 (npm 0.7~0.8.x)</strong>. v1.0~v1.2 plans may change. Latest decision log: <code>docs/plan/product-roadmap.md</code>.
+  </div>
+</section>
+
+<!-- ========================== SECTION 9 ========================== -->
+<section id="s9">
+  <h2><span class="num">9.</span>Operations Guide</h2>
+
+  <h3 id="s9-1">9.1 Choose a 24/7 Operating Mode</h3>
+  <p>The bot needs <code>solosquad bot</code> running continuously to maintain its messenger connection. Comparison:</p>
+  <table>
+    <thead><tr><th>Mode</th><th>Target</th><th>Difficulty</th><th>Cost</th><th>PC power</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. Local desktop</strong></td><td>A PC kept always on (Mac Mini, etc.)</td><td>Low</td><td>Electricity only</td><td>Must stay on</td></tr>
+      <tr><td><strong>B. Cloud VPS</strong></td><td>No home server, fully 24/7</td><td>Medium</td><td>$4-6+/month</td><td>PC can be off</td></tr>
+    </tbody>
+  </table>
+
+  <h4>A-1. Keep terminal open (simplest)</h4>
+  <pre><code>solosquad bot</code></pre>
+  <p>Runs only while the terminal is open. Stops on <code>Ctrl+C</code> or window close. PC sleep breaks the connection.</p>
+
+  <p><strong>macOS sleep prevention (especially useful on Mac Mini):</strong></p>
+  <pre><code>caffeinate -dims</code></pre>
+  <p>Or System Settings → Energy Saver → "Prevent display sleep" + disable Power Nap.</p>
+
+  <p><strong>Windows sleep prevention:</strong> Settings → System → Power → "Never go to sleep."</p>
+
+  <p>For the scheduler in parallel, separate terminal:</p>
+  <pre><code>solosquad schedule</code></pre>
+
+  <h4>A-2. Docker Compose (background + auto-restart, recommended)</h4>
+  <p>Prerequisite: Docker Desktop installed (https://docs.docker.com/desktop/). Works on macOS Apple Silicon / Intel. Verify <code>solosquad init</code> copied <code>Dockerfile</code> and <code>docker-compose.yml</code> to the workspace.</p>
+  <pre><code>cd ~/solosquad-workspace
+docker compose up -d --build      # initial build + background start
+docker compose logs -f bot        # bot logs
+docker compose logs -f scheduler  # scheduler logs
+docker compose ps                 # service status
+docker compose restart            # restart
+docker compose down               # stop</code></pre>
+
+  <p><strong>Sharing Claude Code authentication:</strong> the in-container <code>claude</code> CLI also needs auth. <code>docker-compose.yml</code> mounts host's <code>${HOME}/.claude</code> to container's <code>/root/.claude</code> → host login session is shared.</p>
+  <ol>
+    <li><code>claude login</code> on host</li>
+    <li><code>docker compose up -d --build</code></li>
+    <li>In-container <code>claude</code> reads host credentials, operates under the same account</li>
+  </ol>
+  <p>For a different path, set in <code>.env</code>:</p>
+  <pre><code>CLAUDE_AUTH_DIR=/Users/youruser/.claude</code></pre>
+
+  <p><strong>After PC reboot:</strong> with Docker Desktop set to auto-start (Docker Desktop settings → "Start Docker Desktop when you log in"), containers auto-recover via <code>restart: unless-stopped</code>.</p>
+
+  <div class="callout warn">
+    <strong>Windows Docker caveat</strong>
+    The <code>${HOME}/.claude</code> volume mount is macOS/Linux. On Windows Docker, set <code>CLAUDE_AUTH_DIR</code> to an absolute path like <code>C:/Users/yourname/.claude</code>, or use A-1 / A-3.
+  </div>
+
+  <h4>A-3. macOS launchd / Windows NSSM (service-ify)</h4>
+  <p>For native process auto-start on login without Docker.</p>
+
+  <p><strong>macOS — launchd.</strong> Create <code>~/Library/LaunchAgents/com.solosquad.bot.plist</code>:</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.solosquad.bot&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;
+    &lt;string&gt;/usr/local/bin/solosquad&lt;/string&gt;
+    &lt;string&gt;bot&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/YOURNAME/solosquad-workspace&lt;/string&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.log&lt;/string&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.err&lt;/string&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+  <p>Verify the path (<code>/usr/local/bin/solosquad</code>) with <code>which solosquad</code>. Register / start:</p>
+  <pre><code>launchctl load ~/Library/LaunchAgents/com.solosquad.bot.plist
+launchctl start com.solosquad.bot
+tail -f /tmp/solosquad-bot.log</code></pre>
+  <p>Add <code>com.solosquad.scheduler.plist</code> similarly for the scheduler.</p>
+
+  <p><strong>Windows — NSSM:</strong></p>
+  <ol>
+    <li>Download NSSM from https://nssm.cc → add <code>nssm.exe</code> to PATH</li>
+    <li>Admin PowerShell:
+      <pre><code>nssm install SolosquadBot "C:\Users\YOU\AppData\Roaming\npm\solosquad.cmd" bot
+nssm set SolosquadBot AppDirectory "C:\Users\YOU\solosquad-workspace"
+nssm start SolosquadBot</code></pre>
+    </li>
+  </ol>
+
+  <h4>B. Cloud VPS (advanced)</h4>
+  <p>When you have no plan to keep a home server on, or "bot must live even when PC is off."</p>
+
+  <p><strong>Worth considering when:</strong></p>
+  <ul>
+    <li>No 24/7 PC at home</li>
+    <li>Traveling / laptop-only lifestyle</li>
+    <li>Multiple team members co-operate the bot</li>
+    <li>Stability ties directly to business (auto-alert / routine failures cause losses)</li>
+  </ul>
+
+  <table>
+    <thead><tr><th>Provider</th><th>Monthly</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Hetzner</td><td>~$4</td><td>EU-based, best price/perf</td></tr>
+      <tr><td>Vultr</td><td>$5</td><td>Seoul region available</td></tr>
+      <tr><td>Linode</td><td>$5</td><td>Stable</td></tr>
+      <tr><td>DigitalOcean</td><td>$6</td><td>Rich community resources</td></tr>
+      <tr><td>Railway (PaaS)</td><td>$5+</td><td>GitHub integration auto-deploy, no server management</td></tr>
+      <tr><td>Fly.io (Docker PaaS)</td><td>$5+</td><td>Tokyo region, global deploy</td></tr>
+      <tr><td>AWS ECS Fargate</td><td>$10-15</td><td>Enterprise-grade</td></tr>
+    </tbody>
+  </table>
+
+  <p>Quick summary (VPS + systemd):</p>
+  <pre><code># SSH into VPS
+sudo apt update &amp;&amp; sudo apt install -y nodejs npm git
+npm install -g @anthropic-ai/claude-code solosquad
+mkdir ~/solosquad &amp;&amp; cd ~/solosquad
+solosquad init
+claude login
+# Register systemd service — see docs/cloud-deployment.md</code></pre>
+
+  <div class="callout info">
+    <strong>Detailed guide</strong>
+    <code>docs/cloud-deployment.md</code> covers VPS initial setup, Node.js install, global solosquad install, systemd service registration, log management, updates, backups.
+  </div>
+
+  <h3 id="s9-2">9.2 Multi-Workspace (persona separation)</h3>
+  <p>When you want Slack and Discord simultaneously, or day-job / side-project persona separation, run multiple workspaces.</p>
+  <pre><code>~/solopreneur/      # Slack bot, day-job persona
+~/personal-lab/     # Discord bot, side persona</code></pre>
+  <p>Each gets independent <code>.env</code> / tokens / bot accounts. Operate in parallel without interference. This constraint exists from v0.2.0+ — v0.1.x's <code>MESSENGER=discord,slack</code> (multi-set) is no longer supported.</p>
+
+  <p><strong>Updating:</strong> CLI update is one-shot but <strong>migration runs per workspace</strong> (see §4.4).</p>
+
+  <h3 id="s9-3">9.3 Multi-Product Operation (organizations &amp; repos)</h3>
+  <p>A workspace can hold multiple organizations (= product/business). Each has fully isolated memory / workflows / messenger channels.</p>
+
+  <h4>Add organization</h4>
+  <pre><code>solosquad add org &lt;name&gt;                        # interactive (asks for provider/remote_url)
+solosquad add org my-side --provider github --remote-url https://github.com/my-side</code></pre>
+  <p>Creates <code>&lt;workspace&gt;/&lt;name&gt;/</code> folder + <code>.org.yaml</code> + <code>memory/</code> (routine-logs/ + 4 JSONL schemas) + <code>workflows/</code> + <code>repositories/</code> + messenger folder automatically.</p>
+
+  <h4>Add repository</h4>
+  <p>URL → clone, path → register (move if needed).</p>
+  <pre><code>solosquad add repo https://github.com/foo/bar.git                       # clone + register
+solosquad add repo ./existing-local-repo                                # move (after confirm) + register
+solosquad add repo https://github.com/foo/bar.git --org tesla --role frontend
+solosquad add repo &lt;url|path&gt; --slug my-custom-slug                     # folder name override</code></pre>
+
+  <p><strong>Org auto-decision order:</strong></p>
+  <ol>
+    <li><code>--org &lt;slug&gt;</code> explicit → use immediately</li>
+    <li>Workspace has exactly one org → auto-pick (don't ask)</li>
+    <li>Current cwd is inside a specific org folder → auto-use that org</li>
+    <li>Multiple orgs + above all fail → interactive prompt</li>
+  </ol>
+
+  <p><strong>Auto-extraction:</strong></p>
+  <ul>
+    <li><code>remote_url</code> — read from git remote, recorded in <code>repo.yaml</code></li>
+    <li><code>language</code> — detected from <code>package.json</code> (TypeScript auto-detected) / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code></li>
+    <li><code>role</code> default — <code>main</code> if <code>.git</code> exists, else <code>unknown</code></li>
+  </ul>
+
+  <h4>Bulk sync</h4>
+  <p>If repos are already cloned in <code>repositories/</code>, register them all at once:</p>
+  <pre><code>solosquad sync                # scan all orgs
+solosquad sync --org tesla    # specific org
+solosquad sync --dry-run      # preview (writes nothing)</code></pre>
+  <p><strong>Behavior:</strong></p>
+  <ul>
+    <li>Folders under <code>&lt;org&gt;/repositories/&lt;folder&gt;</code> with <code>.git</code> but no <code>repo.yaml</code> → auto-register</li>
+    <li>Already-registered repos → skipped with <code>=</code> marker</li>
+    <li>Folders without <code>.git</code> → <code>?</code> warning, skipped</li>
+    <li><code>.org.yaml.products[].repos</code> updated to actually-existing repos</li>
+    <li>Repos listed in <code>.org.yaml</code> but no longer existing → <code>-</code> red warning</li>
+  </ul>
+
+  <h4>Cross-repo workflow (v0.2.1+)</h4>
+  <p>The v0.2.1 runtime, when a stage in <code>_status.yaml</code> has a <code>target_repo</code> field, uses that repo as cwd when executing the stage. Workflows spanning multiple repos can be coordinated as one workflow:</p>
+  <pre><code># &lt;org&gt;/workflows/model-y-refresh/_status.yaml
+stages:
+  - id: stage-1-vision
+    target_repo: autopilot-vision       # Claude uses this repo as cwd
+    status: in_progress
+    depends_on: []
+
+  - id: stage-2-planner
+    target_repo: autopilot-planner      # different repo
+    status: pending
+    depends_on: [stage-1-vision]</code></pre>
+  <p><strong>Active stage decision:</strong></p>
+  <ol>
+    <li>A stage with <code>status: in_progress</code> → that one</li>
+    <li>Otherwise, the first <code>status: pending</code> whose <code>depends_on</code> are all completed</li>
+    <li>If neither, fall back to role=main repo → org root</li>
+  </ol>
+  <p>Stage transitions (<code>pending → in_progress → completed</code>) are automated by v0.3 PM mode — PM marks <code>in_progress</code> before spawning a specialist, merges the Task tool response, then advances to <code>completed</code>.</p>
+
+  <h3 id="s9-4">9.4 Security Checklist</h3>
+  <p>This system has AI executing code and commands. Confirm the following:</p>
+  <ul>
+    <li><code>.env</code> is in <code>.gitignore</code></li>
+    <li>Rotate bot tokens periodically (90 days recommended)</li>
+    <li>Always review AI output before deploying to production</li>
+    <li>Keep messenger bot permissions minimal — don't grant beyond §5's scope list</li>
+    <li>Run <code>solosquad doctor</code> periodically</li>
+    <li>Cloud ops: SSH key auth only, firewall outbound-only</li>
+    <li>v0.8.1+: run <code>solosquad archive verify</code> once before externally storing an archive (PII-NOTICE scan + manifest SHA verify)</li>
+    <li>v0.8 multi-user: when adding another user, explain bot multiplicity — each user only responds in their own channel pair (<code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code>) per author-guard</li>
+  </ul>
+  <p>Details: <code>docs/plan/v0.2-safety-security.md</code>, <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></p>
+
+  <h3 id="s9-5">9.5 Periodic Backup + Observability<span class="badge now">v0.8.3</span></h3>
+  <p>Backup + log observability flow during operation.</p>
+  <ul>
+    <li><strong>Periodic backup</strong>: monthly recommended. <code>solosquad uninstall --mode archive-only</code> creates just the farewell archive zip (workspace stays). Archive integrity ensured via manifest.tsv SHA. <code>solosquad archive verify</code> recommended before external storage. Migration backups (<code>~/.solosquad-backups/</code>) listed via <code>solosquad backup list</code>; old backups cleaned via <code>solosquad backup purge --keep-recent 3</code></li>
+    <li><strong>gh CLI authentication</strong>: for dev_capability (<code>patch</code> / <code>pr</code>) to create PRs, <code>gh auth login</code> must be complete on the host. <code>solosquad doctor</code> only checks <code>gh</code> existence — token validity is verified separately via <code>gh auth status</code></li>
+    <li><strong>Log location + retention</strong>: with <code>SOLOSQUAD_LOG_FILE=1</code> enabled, daily rolling at <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>. Retained 14 days (daily 00:00 system-housekeeping). <code>SOLOSQUAD_LOG_FORMAT=json</code> for structured output</li>
+    <li><strong>solosquad logs command</strong>: tail/follow/filter 4 operational jsonl (agent-costs / spawn-decisions / stop-hook-events / dev-confirmations / migration-costs) in one place</li>
+    <li><strong>CLI ↔ workspace mismatch</strong>: <code>solosquad doctor</code> explicitly indicates whether <code>migrate</code> or <code>update</code> is needed</li>
+  </ul>
+</section>
+
+<!-- ========================== SECTION 10 ========================== -->
+<section id="s10">
+  <h2><span class="num">10.</span>Troubleshooting &amp; FAQ</h2>
+
+  <h3 id="s10-1">10.1 Install / Run Issues</h3>
+
+  <h4>"solosquad: command not found"</h4>
+  <ul>
+    <li>Verify install: <code>npm install -g solosquad</code></li>
+    <li>Verify Node.js 18+: <code>node --version</code></li>
+    <li>On Linux permission errors: <code>sudo npm install -g solosquad</code> or set up <code>~/.npm-global</code></li>
+  </ul>
+
+  <h4>"claude: command not found"</h4>
+  <pre><code>npm install -g @anthropic-ai/claude-code
+claude login
+solosquad doctor       # final check</code></pre>
+
+  <h4>Bot doesn't respond on messenger</h4>
+  <p>First check for environment mismatch:</p>
+  <pre><code>solosquad doctor                    # base diagnosis
+solosquad doctor --messenger-check  # live API token verification</code></pre>
+  <p>If you see <code>.env vs process.env mismatch</code>, update to latest solosquad (the .env-load bug was fixed in v0.1.3).</p>
+
+  <p><strong>Slack checklist</strong> (re-verify §5.1 Step 9):</p>
+  <ul>
+    <li>Event Subscriptions enabled + <code>message.channels</code> subscribed</li>
+    <li>After scope changes, performed Reinstall to Workspace</li>
+    <li>Bot invited to <code>#owner-command</code></li>
+  </ul>
+
+  <p><strong>Discord checklist</strong> (final list in §5.2):</p>
+  <ul>
+    <li><strong>Message Content Intent</strong> ON</li>
+    <li>Bot has <strong>Create Public Threads</strong> permission (v0.2.4+, for system thread creation)</li>
+    <li>Server name contains product slug</li>
+  </ul>
+
+  <p><strong>Existing Telegram users</strong>: removed in v0.2.4. Change <code>MESSENGER=telegram</code> to <code>discord</code> or <code>slack</code> in <code>.solosquad/.env</code> and complete fresh setup (see §4.4).</p>
+
+  <h4>Routines don't run</h4>
+  <ul>
+    <li>Verify <code>solosquad schedule</code> is running (<code>ps</code> or <code>docker compose ps</code>)</li>
+    <li>Manual test: <code>solosquad run-routine morning-brief</code></li>
+  </ul>
+
+  <h4>Docker: <code>claude: command not found</code> inside container</h4>
+  <ul>
+    <li>Verify <code>CLAUDE_AUTH_DIR</code> volume mount</li>
+    <li>Auth directly inside container: <code>docker exec -it solosquad-bot claude login</code></li>
+  </ul>
+
+  <h4>Strange behavior after update</h4>
+  <pre><code>solosquad doctor
+solosquad update                    # if already latest, only announces
+docker compose up -d --build        # if Docker, rebuild image</code></pre>
+
+  <h3 id="s10-2">10.2 Migration Troubleshooting</h3>
+
+  <h4>"Cannot find package.json" type errors</h4>
+  <pre><code>npm cache clean --force
+npm uninstall -g solosquad
+npm install -g solosquad@latest</code></pre>
+
+  <h4>Migration aborted</h4>
+  <pre><code>solosquad migrate --rollback   # restore most recent backup</code></pre>
+  <p>Then report to GitHub Issues with logs.</p>
+
+  <h4>Bot doesn't start after migration</h4>
+  <pre><code>solosquad doctor</code></pre>
+  <p>Check output. Missing tokens / wrong <code>.env</code> location are common causes.</p>
+
+  <h4>Claude Code auth lost</h4>
+  <pre><code>claude login
+docker compose restart    # if Docker</code></pre>
+
+  <h4>Not sure which version to upgrade to</h4>
+  <p>Check release notes first:</p>
+  <ul>
+    <li>GitHub Releases: https://github.com/Adelie-Squad/solosquad/releases</li>
+    <li><code>docs/product-roadmap.md</code></li>
+  </ul>
+  <p>For minor updates containing breaking changes in important projects, <strong>observing for about a week</strong> before upgrading is reasonable.</p>
+
+  <h3 id="s10-3">10.3 FAQ</h3>
+
+  <p><strong>Q. How much does it cost?</strong><br>
+  A. With a Claude Code Max subscription, you can start. Cloud ops add ~$4-6/month for VPS.</p>
+
+  <p><strong>Q. Can I use Discord and Slack simultaneously?</strong><br>
+  A. Not in one workspace. <strong>Run two workspaces</strong> — e.g. <code>~/solopreneur/</code> (Slack bot) + <code>~/elon-24-7/</code> (Discord bot). Each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — older <code>MESSENGER=discord,slack</code> multi-set is no longer supported.</p>
+
+  <p><strong>Q. What if my timezone isn't Korea?</strong><br>
+  A. Change <code>TZ=</code> in <code>.env</code> (e.g. <code>TZ=America/Los_Angeles</code>). Same in Docker.</p>
+
+  <p><strong>Q. What if the AI gives a wrong answer?</strong><br>
+  A. AI is a tool. Always verify important decisions yourself. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+) can revert spawn results. v0.4 autonomous execution auto-protects via per-cycle git-snapshot keep/discard.</p>
+
+  <p><strong>Q. Can I run it on a Raspberry Pi instead of Mac Mini?</strong><br>
+  A. Possible if Node.js 18+ runs. But verify whether Claude Code CLI officially supports arm64 Linux first.</p>
+
+  <p><strong>Q. Can I use it fully offline?</strong><br>
+  A. No. Claude API and Slack/Discord server communication are required.</p>
+
+  <p><strong>Q. Anything I must do before updating?</strong><br>
+  A. If <code>solosquad bot</code> / <code>schedule</code> is running, stop it first. <code>docker compose down</code> or <code>Ctrl+C</code> in terminal.</p>
+
+  <p><strong>Q. Do I have to update every time?</strong><br>
+  A. No. If you're using it stably, there's no rush. But <strong>security hotfixes</strong> (e.g. v0.1.3 dotenv miss) should be applied quickly.</p>
+
+  <p><strong>Q. Can I automate updates?</strong><br>
+  A. With Docker, scheduling <code>docker compose up -d --build</code> in cron will refresh the image. But <strong>automation isn't possible when migration is required</strong> — human confirmation is the principle.</p>
+
+  <p><strong>Q. I want to pin an older version.</strong><br>
+  A. Install explicitly: <code>npm install -g solosquad@0.1.5</code>. Decline <code>solosquad update</code>'s upgrade prompts.</p>
+
+  <p><strong>Q. Multiple people use one machine.</strong><br>
+  A. Use different OS accounts. Each account's home directory holds an independent workspace. Run migration per account.</p>
+
+  <p><strong>Q. Are there beta / dev channels?</strong><br>
+  A. <code>solosquad update --channel dev</code> switches to beta (no stability guarantee). <code>--channel stable</code> is default.</p>
+
+  <p><strong>Q. How do I upgrade from v0.5 to v0.6?</strong><br>
+  A. <code>npm install -g solosquad@latest</code>, then from workspace root run <code>solosquad migrate --dry-run</code> → review report (<code>&lt;org&gt;/memory/migration-2026-XX-dryrun.md</code>) → if OK, <code>solosquad migrate --apply --confirm</code>. The <code>--confirm</code> flag is required (mistake prevention). After migration, <code>solosquad agent validate --all</code> auto-runs and reports failures to STDOUT.</p>
+
+  <p><strong>Q. Migration reported "human_review_required" items — now what?</strong><br>
+  A. Some v0.5 ledger assets use heuristic re-placement that can't be 100% accurate — e.g. "org flavor" extraction from a SKILL body with 0 matches. These items are marked <code>human_review_required: true</code> and refused for auto-application. Review the report, manually augment the relevant agent section in <code>&lt;org&gt;/agent-profile.yaml</code>, then re-run migration. Originals are never touched (non-destructive principle).</p>
+
+  <p><strong>Q. (v0.6) Auto-reload feels too aggressive — I want to trigger it manually.</strong><br>
+  A. Set <code>workspace.yaml.fs_watch.mode: manual</code> to disable auto-reload. After SKILL changes, call <code>solosquad agent reload</code> explicitly. <code>fs_watch.mode: prompt</code> (default) is an intermediate mode where the PM asks in messenger whether to apply.</p>
+
+  <p><strong>Q. (v0.8.3) What's the difference between <code>solosquad update</code> and <code>solosquad migrate</code>?</strong><br>
+  A. <code>update</code> refreshes the <strong>CLI binary</strong> (npm package). <code>migrate</code> converts the <strong>workspace</strong> schema / layout to match the new CLI. Typical flow: ① <code>solosquad doctor</code> to check CLI ↔ workspace mismatch → ② <code>npm install -g solosquad@latest</code> or <code>solosquad update</code> to refresh CLI → ③ <code>solosquad migrate --dry-run</code> preview → ④ <code>solosquad migrate --apply</code>. doctor explicitly tells you which command is needed (v0.8.3 §7.3).</p>
+
+  <p><strong>Q. (v0.8.3) How do I bring existing product code into a SoloSquad workspace?</strong><br>
+  A. ① <code>cd ~/projects/my-saas &amp;&amp; git status</code> to clean untracked + <code>git push</code> for safety → ② <code>mkdir ~/solosquad &amp;&amp; cd ~/solosquad &amp;&amp; solosquad init</code> → ③ <strong><code>solosquad add repo ~/projects/my-saas --dry-run</code></strong> to pre-check folder mapping / size / 5 risks (IDE lock · symlinks · external abs paths · slug collision · active processes) → ④ <code>solosquad add repo ~/projects/my-saas</code> to actually move (or <code>--keep-original</code> to copy). Your original files remain byte-identical (v0.7 class A rule). The only thing SoloSquad adds is one <code>&lt;repo&gt;/.solosquad/repo.yaml</code>.</p>
+
+  <p><strong>Q. (v0.8.3) After moving an existing repo, IDE paths broke.</strong><br>
+  A. If IDE configs like <code>.vscode/settings.json</code> / <code>.idea/workspace.xml</code> contain <strong>absolute paths</strong>, SoloSquad doesn't modify user files — you have to update them manually. The dry-run output flags IDE files with absolute-path settings. Same for cron jobs / aliases / CI runner paths — external systems pointing at old paths must be updated by the user.</p>
+
+  <p><strong>Q. (v0.8.3) I want to see what the bot is doing — where are the logs?</strong><br>
+  A. Set <code>SOLOSQUAD_LOG_FILE=1</code> for daily rolling at <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>. Tail in real-time with <code>solosquad logs --tail 200 --follow</code>. Directly query 4 operational jsonl with <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>. 14-day retention (system-housekeeping at 00:00 auto-cleans).</p>
+
+  <p><strong>Q. (v0.8.3) Where did <code>solosquad logout</code> go?</strong><br>
+  A. Added in v0.7, removed in v0.8.3. Judged value &lt; complexity. Replacement flow: pause bot via <strong>Ctrl+C</strong> to kill the process (restart with <code>solosquad bot</code>); .env secret masking / REVOKE checklist is provided by <code>solosquad uninstall --archive-only</code>; sessions preservation via direct file move under <code>&lt;org&gt;/.solosquad/sessions/</code> or <code>solosquad pm reset --user &lt;id&gt;</code>. Existing <code>logout.lock</code> files are inert as of v0.8.3 and can be deleted manually.</p>
+
+  <p><strong>Q. (v0.8.3) When does trajectory auto-registration activate?</strong><br>
+  A. When all 4 ROI metrics defined in v0.6 pass (① 30-day suggestions ≥ 5 ② adoption rate ≥ 60% ③ adopted SKILLs' 30-day usage rate ≥ average ④ reject cooldown &lt; 30%), <code>workspace.yaml.trajectory.auto_register: true</code> becomes default in v0.9. If any one fails, "suggestion-only forever" is locked. The v0.8.3 patch only pins the measured values in CHANGELOG; auto-registration code lands in v0.9.</p>
+</section>
+
+</main>
+
+<script>
+  // Top-level menu switching (show/hide section)
+  const menuLinks = document.querySelectorAll('nav > ul > li > a[data-target]');
+  const sections = document.querySelectorAll('main section');
+
+  function activate(target) {
+    menuLinks.forEach(a => {
+      a.classList.toggle('active', a.dataset.target === target);
+    });
+    sections.forEach(s => {
+      s.classList.toggle('active', s.id === target);
+    });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  menuLinks.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      activate(a.dataset.target);
+    });
+  });
+
+  document.querySelectorAll('nav .sub li a').forEach(sublink => {
+    sublink.addEventListener('click', e => {
+      e.preventDefault();
+      const hash = sublink.getAttribute('href');
+      const sectionId = hash.replace('#', '').split('-')[0];
+      activate(sectionId);
+      requestAnimationFrame(() => {
+        const target = document.querySelector(hash);
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  });
+
+  activate('s1');
+</script>
+
+</body>
+</html>

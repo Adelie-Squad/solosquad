@@ -4,6 +4,77 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.5] — 2026-05-18
+
+**v0.8.5 — Onboarding QA & Release-Gate.** v0.8.4 출시 직후 fresh init을
+실제로 돌려본 결과 박제 patch. 핵심 회귀: `src/cli/init.ts:29`의
+`SOLOSQUAD_VERSION = "0.4.0"` 하드코딩으로 신규 사용자가 init 직후 항상
+migration 경고를 받던 문제 종료. 부수: master-guide가 v0.6.0 기준으로
+정지된 것을 v0.8.5까지 backfill하고, 3-docs(product-roadmap·architecture·
+master-guide) pre-publish gate를 `prepublishOnly`에서 자동 강제. wizard
+prompt마다 *왜 묻는지* 헬프 1줄 추가 (handle/name/role/messenger/provider).
+
+자세히: `docs/plan/v0.8.5-onboarding-qa.md`
+
+### Fixed — init.ts hardcoded version 회귀 (§1)
+- `src/util/version.ts` 신설 — `package.json`에서 동적 참조
+- `src/cli/init.ts:29` `SOLOSQUAD_VERSION = "0.4.0"` 제거 → version.ts import
+- 효과: fresh `solosquad init` 직후 `solosquad bot`이 CLI↔workspace mismatch
+  경고 없이 정상 기동
+
+### Added — 3-docs pre-publish gate (§2)
+- `scripts/check-docs-freshness.ts` 신설 — `package.json.version`이
+  product-roadmap · architecture · master-guide 3건에서 발견되지 않으면
+  exit 1
+- `npm run docs-check` script + `prepublishOnly`에 자동 게이트
+- `.claude/rules/git-workflow.md`에 3-docs 룰 박제 (기존 stale 항목 정정)
+
+### Changed — wizard 문구 정합 (§3, §4)
+- Step 2 heading: "Initialize Workspace" → "Create Workspace"
+- 부모에 `.solosquad/` 없을 때 redundant CWD prompt 제거 (mkdir로 이미 결정한
+  디렉터리를 또 묻지 않음)
+- 각 prompt 위에 헬프 1줄 추가 — name/role(PM·agent 톤), messenger(1 워크
+  스페이스 = 1 메신저), org(사업 단위), provider(host 추정), handle(`[a-z0-9_]+`만)
+- Slack scope 안내: `channels:manage` 굵게 + "Reinstall to Workspace"
+  경고 강조 (`missing_scope` 마찰 해소)
+
+### Added — master-guide §3.12 `.solosquad/` 위계 설명
+- workspace/org/repo 3 단계 각각의 *시스템 메타 vs 사용자 콘텐츠* 분리 의도
+- §4.2 Step 5: "초기화" → "생성" + mkdir 예시를 자유 이름 placeholder로
+- §4.2.1 마법사 q&a 표 신설 (12 prompt × 왜 묻는가 × 입력 제약 × 저장 위치)
+- §6.4 자동 루틴 표 갱신 — 디폴트 3건(Morning/Evening Brief + PM Compaction)
+  + 인프라 2건 + 비-디폴트 4건으로 재정렬 (roadmap §3.2.8 정합)
+- 버전 헤더 v0.6.0 → v0.8.5
+
+### Removed — 분석 routine 4건 영구 제거 (roadmap §3.2.8)
+- `assets/routines/signal-scan.md` · `experiment-check.md` · `weekly-review.md` ·
+  `v06-retrospective-stats.md` 삭제
+- `src/scheduler/routines.ts` ROUTINES 배열에서 4건 제거
+- `src/scheduler/index.ts` `resolveSchedules` switch에서 3 case 제거
+- `src/scheduler/v06-stats-extract.ts` + `test/v06-stats-extract.test.ts` 삭제
+- `src/messenger/base.ts` SYSTEM_THREADS에서 분석 routine threads 3건 제거
+- `assets/templates/goal.md` `## Signal Trigger` 절 제거 (parser는 optional이라 호환)
+- `src/util/config.ts` `applyWorkspaceDefaults`가 `background_routines` 기본값을
+  더 이상 주입하지 않음 (기존 키는 untouched pass-through)
+- 사유: 분석 routine은 사용자 도메인 prompt가 있어야 의미. cron 슬롯/UI 자리
+  차지할 가치 없음. 도메인 분석은 워크플로우/goal로 표현하는 게 맞음
+- backward-compat: `workspace.yaml.background_routines` 키 read-ignore (에러 X)
+
+### Changed — 인프라 routine 2건 통합 → `system-housekeeping`
+- `assets/routines/archive-rotate.md` + `log-rotate.md` 삭제 →
+  `assets/routines/system-housekeeping.md` 1건 신설
+- `src/scheduler/routines.ts` ROUTINES: 2건 → 1건 (총 9→4)
+- `src/scheduler/index.ts` inline dispatch에서 `rotateArchive()` + `rotateLogs()`
+  를 try/catch로 각각 격리 후 순차 실행
+- cron: 00:00 단일 슬롯 (이전 00:00 archive + 00:30 log 분리)
+- 결정적 함수(`rotateArchive`, `rotateLogs`)는 변경 없이 그대로 호출
+- 사유: 둘 다 silent · 결정적 · 멱등인 자정 housekeeping. 분리 cron 둘 이유
+  없음. UI 1행 · cron 1슬롯 절약 + 사용자 인지 마찰 감소
+
+### Migration
+- `src/migrations/scripts/0.8.4-to-0.8.5.ts` — schema 변경 없음, version bump
+- 기존 워크스페이스의 `background_routines` 키는 그대로 두되 schedule 등록 X
+
 ## [0.8.4] — 2026-05-16
 
 **v0.8.4 — CLI Surface Reduction.** v1.0 정식 출시 전 마지막 비파괴적 플래그

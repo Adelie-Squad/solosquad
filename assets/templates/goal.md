@@ -53,15 +53,6 @@ cost:
 - Time / cost budget exhausted
 - 5 consecutive discards (deadlock break)
 
-## Signal Trigger
-# Optional — let signal-scan routine trigger this goal automatically.
-# auto: false (default) — alert only, never auto-execute
-# auto: prompt          — ask user yes/no in messenger
-# auto: true            — fire without asking (requires user pre-approval)
-
-auto: false
-match_keywords: []
-
 ## Modifiable Paths Override
 # Optional — narrow AGENTS.md's modifiable_paths for THIS goal only.
 # Leave the section absent to inherit AGENTS.md defaults.

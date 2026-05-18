@@ -25,8 +25,7 @@ import {
   userYamlExists,
   type UserYaml,
 } from "../bot/user-registry.js";
-
-const SOLOSQUAD_VERSION = "0.4.0";
+import { SOLOSQUAD_VERSION } from "../util/version.js";
 
 const TIMEZONE_PRESETS = [
   { name: "Asia/Seoul (UTC+09) — recommended", value: "Asia/Seoul" },
@@ -311,6 +310,13 @@ async function registerUserIdentity(args: {
       `  Channels will be: command-${extracted.handle} / works-${extracted.handle}`,
     ),
   );
+  console.log(
+    chalk.dim(
+      "  (Handle = your messenger identity. Only a-z, 0-9, _ are allowed; other\n" +
+        "  characters are auto-replaced with _. Used to name the channel pair and\n" +
+        "  to identify you across multi-user setups.)",
+    ),
+  );
 
   const { confirmHandle } = await inquirer.prompt([
     {
@@ -372,7 +378,7 @@ async function registerUserIdentity(args: {
 }
 
 /**
- * v0.8.4 §8 — Workspace path resolution for `init` only.
+ * v0.8.5 §4.1 — Workspace path resolution for `init`.
  *
  * Other commands rely on `getWorkspaceRoot()` which walks up from CWD to find
  * an existing `.solosquad/`. That's the right call for `bot`, `status`, etc.
@@ -380,7 +386,8 @@ async function registerUserIdentity(args: {
  * workspace, contradicting user intent. Here we:
  *   1. If CWD already has `.solosquad/` → reuse it (idempotent re-init).
  *   2. If a parent has `.solosquad/` → prompt user: existing / cwd / custom.
- *   3. Else → prompt to confirm CWD as the workspace path (default).
+ *   3. Else → use CWD silently (the user has already chosen the directory
+ *      via `mkdir <name> && cd <name>`; re-asking is redundant friction).
  *
  * Returns the absolute workspace path the rest of the wizard will use.
  */
@@ -401,7 +408,7 @@ async function resolveInitWorkspace(): Promise<string> {
       {
         name: "choice",
         type: "list",
-        message: "Where should the workspace be initialized?",
+        message: "Where should the workspace be created?",
         choices: [
           {
             name: `Create new workspace at current path: ${cwd}  (recommended)`,
@@ -427,16 +434,13 @@ async function resolveInitWorkspace(): Promise<string> {
     return path.resolve(customPath);
   }
 
-  const { confirmedPath } = await inquirer.prompt([
-    {
-      name: "confirmedPath",
-      type: "input",
-      message: "Initialize workspace at:",
-      default: cwd,
-      validate: (v: string) => v.trim().length > 0 || "Path required",
-    },
-  ]);
-  return path.resolve(confirmedPath);
+  console.log(chalk.dim(`  Workspace will be created at: ${cwd}`));
+  console.log(
+    chalk.dim(
+      "  (To use a different path, exit with Ctrl-C and re-run from there.)",
+    ),
+  );
+  return cwd;
 }
 
 export async function initCommand(): Promise<void> {
@@ -463,10 +467,16 @@ export async function initCommand(): Promise<void> {
   }
 
   // Step 2: Workspace layout
-  console.log(chalk.bold("\n-- Step 2: Initialize Workspace --"));
+  console.log(chalk.bold("\n-- Step 2: Create Workspace --"));
+  console.log(
+    chalk.dim(
+      "  The workspace is the directory holding all SoloSquad data\n" +
+        "  (.env, memory, workflows, org metadata). The directory you ran\n" +
+        "  `solosquad init` from will become the workspace.",
+    ),
+  );
   const workspace = await resolveInitWorkspace();
   fs.mkdirSync(workspace, { recursive: true });
-  console.log(chalk.dim(`  Workspace path: ${workspace}`));
   const solosquadDir = getSolosquadConfigDir(workspace);
 
   if (fs.existsSync(solosquadDir)) {
@@ -506,6 +516,12 @@ export async function initCommand(): Promise<void> {
 
   // Step 3: Configuration
   console.log(chalk.bold("\n-- Step 3: Configuration --"));
+  console.log(
+    chalk.dim(
+      "  Your name + role are used by the PM and specialist agents to address\n" +
+        "  you and tune the depth/tone of their replies (saved to .solosquad/.env).",
+    ),
+  );
   const { workspaceName, ownerName, ownerRole } = await inquirer.prompt([
     {
       name: "workspaceName",
@@ -518,13 +534,20 @@ export async function initCommand(): Promise<void> {
       name: "ownerRole",
       message: "Your role (e.g. developer, designer, founder):",
       type: "input",
+      default: "founder",
     },
   ]);
 
+  console.log(
+    chalk.dim(
+      "\n  One workspace = one messenger. For multi-workspace (n-job) setups,\n" +
+        "  create a separate workspace directory per messenger.",
+    ),
+  );
   const { messenger } = await inquirer.prompt([
     {
       name: "messenger",
-      message: "Messenger platform (one per workspace):",
+      message: "Messenger platform:",
       type: "list",
       choices: [
         { name: "Discord — Best for team channels", value: "discord" },
@@ -555,7 +578,14 @@ export async function initCommand(): Promise<void> {
     console.log("  1. https://api.slack.com/apps → Create New App");
     console.log("  2. OAuth & Permissions → Bot Token (xoxb-...)");
     console.log("  3. Socket Mode → Enable → App-Level Token (xapp-...)");
-    console.log("  4. Bot Token scopes: channels:read, channels:manage, chat:write, app_mentions:read, channels:history");
+    console.log("  4. Bot Token scopes (ALL FIVE required):");
+    console.log("       channels:read       — list channels");
+    console.log(chalk.bold("       channels:manage     — auto-create command-<handle>/works-<handle>"));
+    console.log("       chat:write          — send messages");
+    console.log("       app_mentions:read   — receive @mentions");
+    console.log("       channels:history    — read thread context");
+    console.log(chalk.yellow("     ⚠ After adding scopes, click 'Reinstall to Workspace' or"));
+    console.log(chalk.yellow("       new tokens won't include the added scopes (missing_scope error)."));
     console.log("  5. Event Subscriptions → subscribe to message.channels\n");
     const { botToken, appToken } = await inquirer.prompt([
       { name: "botToken", message: "Slack Bot Token (xoxb-...):", type: "password" },
@@ -572,9 +602,9 @@ export async function initCommand(): Promise<void> {
   console.log(chalk.bold("\n-- Step 3.5: Timezone & Daily Briefs --"));
   console.log(
     chalk.dim(
-      "  SoloSquad posts two daily briefs (morning/evening) in the #workflow channel.\n" +
-        "  All routine schedules use this timezone."
-    )
+      "  Default routines: Morning Brief (08:00) · Evening Brief (18:00) ·\n" +
+        "  PM Compaction (23:00). The timezone applies to all routine schedules.",
+    ),
   );
 
   let { timezone } = await inquirer.prompt([
@@ -615,16 +645,11 @@ export async function initCommand(): Promise<void> {
       validate: (v: string) => isValidHHMM(v) || "HH:MM (00:00–23:59)",
     },
   ]);
-  console.log(
-    chalk.dim(
-      `  Background routines (signal-scan ${DEFAULT_WORKSPACE_SETTINGS.background_routines.signal_scan.time}, ` +
-        `experiment-check ${DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check.time}, ` +
-        `weekly-review ${DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review.day} ${DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review.time}) ` +
-        `feed into the briefs. Edit workspace.yaml later to change.`
-    )
-  );
-
   // Step 4: workspace.yaml
+  // v0.8.5 — `background_routines` block intentionally omitted. The 4 analysis
+  // routines (signal-scan / experiment-check / weekly-review / v06-retrospective-stats)
+  // were removed; the live scheduler now ships only morning/evening brief +
+  // PM compaction + infrastructure (archive-rotate / log-rotate).
   saveWorkspaceYaml(
     {
       version: SOLOSQUAD_VERSION,
@@ -635,11 +660,6 @@ export async function initCommand(): Promise<void> {
         morning: { time: morningTime, enabled: true },
         evening: { time: eveningTime, enabled: true },
       },
-      background_routines: {
-        signal_scan: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.signal_scan },
-        experiment_check: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.experiment_check },
-        weekly_review: { ...DEFAULT_WORKSPACE_SETTINGS.background_routines.weekly_review },
-      },
       created_at: new Date().toISOString(),
       last_migrated_to: SOLOSQUAD_VERSION,
     },
@@ -649,6 +669,13 @@ export async function initCommand(): Promise<void> {
 
   // Step 5: First organization
   console.log(chalk.bold("\n-- Step 5: First Organization --"));
+  console.log(
+    chalk.dim(
+      "  An organization (org) = a business/product unit. One workspace can hold\n" +
+        "  multiple orgs (e.g. `tesla` + `spacex`); each isolates memory, workflows,\n" +
+        "  and repositories.",
+    ),
+  );
   console.log(chalk.dim(ORG_EXAMPLES));
 
   const { orgName } = await inquirer.prompt([
@@ -658,6 +685,13 @@ export async function initCommand(): Promise<void> {
   if (!orgName) {
     console.log(chalk.yellow("  No organization provided — skipping. Run `solosquad add org <name>` later."));
   } else {
+    console.log(
+      chalk.dim(
+        "  Provider = where this org's code is hosted. `solosquad add repo` uses\n" +
+          "  this to infer the host when you paste a git URL later. Pick `local` if\n" +
+          "  the org has no remote.",
+      ),
+    );
     const { provider, remoteUrl } = await inquirer.prompt([
       {
         name: "provider",
@@ -668,7 +702,7 @@ export async function initCommand(): Promise<void> {
       },
       {
         name: "remoteUrl",
-        message: "Remote URL (Enter to skip):",
+        message: "Org homepage URL (e.g. https://github.com/tesla — Enter to skip):",
         type: "input",
         default: "",
       },

@@ -716,13 +716,48 @@ assets/routines/log-rotate.md → 매일 00:30 retention
 - 사용자 코드 불가침 룰(v0.7 클래스 A) 계승: v0.8.3 `add repo --dry-run`도 byte-identical 보장
 
 #### 13.6.6 v0.8 후속 polish (단일 plan 통합 — 구 v0.8.4 흡수)
-v0.8.4 별도 plan은 폐기되고 `v0.8-multiuser-messenger.md` §3A로 흡수. 미구현 polish는 후속 patch에서:
-- `@bot help` 메신저 내부 매뉴얼 (`assets/messenger-manual/`)
-- `solosquad init --verify` e2e 셋업 검증
-- wizard 단계 6 → 4 축소 (handle/timezone 자동 추출)
-- sticky welcome message (pinned)
-- `solosquad messenger ensure-channels` 채널 부재 복구
-- broadcast §3.6 v2: cross-user 작업 공유 feed (모든 봇 status push + 다른 봇 PM context inject)
+v0.8.4 별도 plan은 *메신저 polish 한정*으로 폐기되고 `v0.8-multiuser-messenger.md` §3A로 흡수. *CLI surface reduction* 스코프는 v0.8.4가 별도 plan으로 부활(`v0.8.4-cli-surface-reduction.md`):
+- uninstall 플래그 8 → 5 (`--mode <full|keep|archive-only>` 일원화) + `--scrub-content` 제거
+- `import --merge`/`--replace` → `--mode <merge|replace>`
+- `add repo --inspect` deprecation
+- `agent validate --corpus` dev-only로 이동 (`npm run test:corpus`)
+- `backup list|delete|purge` subgroup 신설 (migrate·uninstall의 백업 플래그 흡수)
+- `solosquad init` walk-up 시 3-way prompt (cwd default + 기존 워크스페이스 / custom)
+- v1.0 surface freeze 체크리스트 박제
+
+#### 13.6.7 v0.8.5 — Onboarding QA & Release-Gate
+v0.8.4 출시 직후 fresh init을 실제로 돌려본 결과 박제 patch (`docs/plan/v0.8.5-onboarding-qa.md`):
+
+**핵심 회귀 fix**:
+- `src/cli/init.ts:29`의 `SOLOSQUAD_VERSION = "0.4.0"` 하드코딩 → `src/util/version.ts`로 분리, `package.json` 동적 참조. v0.4 이후 모든 신규 사용자가 fresh init 직후 migration 경고를 받던 회귀 종료
+
+**3-docs pre-publish gate**:
+- master-guide.html이 v0.6.0 기준으로 정지 → v0.8.5까지 backfill
+- `scripts/check-docs-freshness.ts` + `npm run docs-check` 신설 — `prepublishOnly`에서 `package.json.version`이 product-roadmap·architecture·master-guide 3건에서 발견되지 않으면 publish 차단
+- `.claude/rules/git-workflow.md`에 게이트 룰 박제
+
+**wizard 문구 정합**:
+- Step 2 "Initialize Workspace" → "Create Workspace" (생성 의도 명확화)
+- 부모에 `.solosquad/` 없을 때 redundant CWD prompt 제거 (mkdir로 이미 결정한 디렉터리를 또 묻지 않음)
+- 각 prompt 위에 *왜 묻는지* 헬프 1줄: name/role(PM·agent 톤), messenger(1 워크스페이스 1 메신저), handle(`[a-z0-9_]+`만, 채널 페어 명명), org(사업 단위), provider(host 추정)
+- Slack scope 안내에서 `channels:manage` 굵게 + "Reinstall to Workspace" 경고 강조 (`missing_scope` 마찰 해소)
+
+**master-guide §4 보강**:
+- 버전 헤더 v0.6.0 → v0.8.5 + 누적 변경 흡수 (v0.7 uninstall, v0.8.0~v0.8.4 시리즈)
+- §4.2 Step 5 워크스페이스 *생성* 문구 + mkdir 예시를 placeholder(`my-saas` 같은 자유 이름)로
+- §4.2.1 마법사 q&a 표 신설 (prompt × 왜 묻는가 × 입력 제약 × 저장 위치)
+- §3.12 `.solosquad/` 위계 설명 절 (workspace/org/repo 3 단계 각각의 *시스템 메타 vs 사용자 콘텐츠* 분리 의도)
+- §6.4 routine 표 5건으로 정리 (사용자 brief 3 + 인프라 2)
+
+**routine 정리 9건 → 4건**:
+- *분석 4건 영구 제거*: `signal-scan` · `experiment-check` · `weekly-review` · `v06-retrospective-stats`. product-roadmap §3.2.8(2026-05-15)의 "비-디폴트 유지" 결정을 v0.8.5에서 *영구 제거*로 escalate. 사유: 비-디폴트로 둬도 사용자 도메인 prompt가 있어야 의미, cron 슬롯·UI 자리 차지할 가치 없음
+- *인프라 2건 통합*: `archive-rotate` + `log-rotate` → `system-housekeeping` (단일 cron 00:00). 둘 다 silent 결정적 housekeeping이라 분리 cron 둘 이유 없음. `rotateArchive()` + `rotateLogs()` 각각 try/catch 격리로 한쪽 실패가 다른 쪽 안 막음
+- 코드: `assets/routines/*.md` 6건 삭제 + `system-housekeeping.md` 1건 신설, `ROUTINES` 9→4, `resolveSchedules` switch 정리, `v06-stats-extract.ts` + test 삭제, `SYSTEM_THREADS` 정리, `goal.md` Signal Trigger 절 제거
+- backward-compat: `workspace.yaml.background_routines` 키 read-ignore. `applyWorkspaceDefaults`가 default 주입 중단
+
+**migration 0.8.4 → 0.8.5**: schema 변경 없음, version bump only. 기존 워크스페이스의 `background_routines` 키는 untouched pass-through.
+
+자세히: `docs/plan/v0.8.5-onboarding-qa.md`
 
 ### 13.7 v1.x 시리즈 (예고)
 
@@ -755,6 +790,8 @@ v0.8.4 별도 plan은 폐기되고 `v0.8-multiuser-messenger.md` §3A로 흡수.
 - `docs/plan/v0.8.1-security-lifecycle-pair.md`
 - `docs/plan/v0.8.2-dev-capability.md`
 - `docs/plan/v0.8.3-onboarding-ux-observability.md`
+- `docs/plan/v0.8.4-cli-surface-reduction.md`
+- `docs/plan/v0.8.5-onboarding-qa.md`
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)

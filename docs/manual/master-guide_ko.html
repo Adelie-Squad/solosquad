@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v0.6.0 기준</span>
+  <span class="tag">종합 개념서 · v0.8.5 기준</span>
   <nav>
     <ul>
       <li>
@@ -366,7 +366,7 @@ Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 sk
 
   <div class="callout info">
     <strong>버전 표기 안내</strong>
-    문서 안에서 <span class="badge now">v0.6.0</span>은 npm에서 지금 받을 수 있는 기능 (v0.3·v0.4·v0.5·v0.6 누적), <span class="badge plan">v1.0+</span>는 기획 중인 향후 업데이트입니다. 자세한 차이는 8장 참조.
+    문서 안에서 <span class="badge now">v0.8.5</span>는 npm에서 지금 받을 수 있는 기능 (v0.3·v0.4·v0.5·v0.6·v0.7·v0.8.x 누적), <span class="badge plan">v1.0+</span>는 기획 중인 향후 업데이트입니다. v0.7~v0.8.5에서 추가된 핵심: <em>uninstall 라이프사이클</em>(v0.7) · <em>멀티 유저 메신저</em>(v0.8.0) · <em>import + archive verify</em>(v0.8.1) · <em>dev_capability</em>(v0.8.2) · <em>observability·dry-run</em>(v0.8.3) · <em>CLI surface reduction + `backup` subgroup</em>(v0.8.4) · <em>init 회귀 fix + 3-docs pre-publish gate</em>(v0.8.5). 자세한 차이는 8장 참조.
   </div>
 </section>
 
@@ -419,7 +419,7 @@ Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 sk
 
   <h3 id="s2-2">2.2 폴더 위계 구조</h3>
 
-  <h4>현재 npm 배포 (v0.6.0) 구조</h4>
+  <h4>현재 npm 배포 (v0.8.5) 구조</h4>
   <div class="tree">~/solosquad-workspace/                 (사용자 워크스페이스 루트)
 ├── AGENTS.md                         (v0.4 — 단일 영속 가이드, cross-tool 표준)
 ├── .solosquad/                       (시스템 설정)
@@ -941,6 +941,49 @@ loop_mode:
 
   <h3 id="s3-11">3.11 dev_capability (개발 권한)<span class="badge now">v0.8.2</span></h3>
   <p>SKILL.md frontmatter의 <code>dev_capability</code> 필드로 에이전트가 target_repo에 어떤 권한을 갖는지 명시. 4단계: <code>read</code>(읽기만) / <code>propose</code>(파일 변경 제안만 출력) / <code>patch</code>(실제 변경 후 dev_confirm 요청) / <code>pr</code>(PR 생성까지). <code>patch</code>/<code>pr</code>은 30분 timeout dev-confirmation을 거쳐야 git tree에 손을 댑니다. 결과는 <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>에 기록.</p>
+
+  <h3 id="s3-12">3.12 <code>.solosquad/</code> 폴더 위계 — 왜 디렉터리마다 하나씩 있는가<span class="badge now">v0.8.5</span></h3>
+  <p>워크스페이스를 처음 보면 세 위치에 <code>.solosquad/</code> 폴더가 나타나서 헷갈리기 쉽습니다. 각각 <strong>다른 scope의 시스템 메타데이터</strong>를 담고, *사용자 콘텐츠*와 *디스크에서 시각적으로 분리*하기 위한 dotfile 컨벤션입니다.</p>
+
+  <div class="tree">&lt;workspace&gt;/                       (사용자가 mkdir로 만든 디렉터리)
+├── .solosquad/                    (A) 워크스페이스 전역 시스템 설정
+│   ├── workspace.yaml             ─ 메타 + timezone + brief 시간
+│   ├── .env                       ─ 토큰·OWNER_NAME·OWNER_ROLE (gitignored)
+│   ├── agents/                    ─ 25 specialist SKILL (번들 init)
+│   ├── routines/                  ─ cron routine 정의
+│   ├── core/                      ─ 시스템 코어 설정
+│   ├── templates/                 ─ 워크플로우 템플릿
+│   ├── orchestrator/              ─ PM session 설정
+│   └── knowledge/                 ─ 사용자 누적 craft + 도메인 노트
+├── docker-compose.yml             (워크스페이스 root에 노출 — 사용자가 직접 편집)
+├── Dockerfile
+└── &lt;org&gt;/                         (사용자 콘텐츠 — org = 사업/제품 단위)
+    ├── .org.yaml                  ─ org 메타 (provider, remote_url, products)
+    ├── .solosquad/                (B) org 단위 멀티유저 식별
+    │   └── users/&lt;handle&gt;.yaml    ─ 메신저 handle → bot_user_id 매핑
+    ├── core/                      ─ org 단위 PRINCIPLES.md, VOICE.md
+    ├── agent-profile.yaml         ─ 25 agent의 org별 modifier
+    ├── domain/                    ─ org 도메인 지식
+    ├── memory/                    ─ JSONL 메모리 (signals·experiments·decisions)
+    ├── workflows/                 ─ org 워크플로우 인스턴스
+    ├── repositories/&lt;repo&gt;/       ─ 사용자 코드 (클래스 A, 불가침)
+    │   └── .solosquad/            (C) repo ↔ org 메타
+    │       └── repo.yaml          ─ 어느 org 소속인지 + role
+    └── &lt;messenger&gt;/               ─ 메신저별 어댑터 자산</div>
+
+  <h4>왜 위계마다 따로 있는가</h4>
+  <ul>
+    <li><strong>모두 시스템 메타데이터</strong> — SoloSquad가 관리. 사용자 콘텐츠(<code>memory/</code> · <code>workflows/</code> · <code>repositories/&lt;repo&gt;/</code> 본체)와 *시각적으로 분리*</li>
+    <li><strong>dotfile 컨벤션</strong> — <code>ls</code> 기본 출력에 안 보임. <code>.gitignore</code>에 <code>.solosquad/</code> 한 줄로 모든 위계의 시스템 자산 제외 가능</li>
+    <li><strong>위계마다 담는 내용이 다른 이유 — scope가 다름</strong>:
+      <ul>
+        <li>(A) 워크스페이스 = <em>전역</em> (모든 org가 공유하는 agent SKILL · envs · timezone)</li>
+        <li>(B) org = <em>org당 1회 박혀야 하는 식별</em> (멀티유저 handle → bot_user_id 매핑)</li>
+        <li>(C) repo = <em>repo가 어느 org 소속이고 role이 뭔지</em> (한 repo가 여러 org에 동시 등장 X)</li>
+      </ul>
+    </li>
+    <li><strong>사용자 콘텐츠는 hidden이 아닌 일반 디렉터리</strong> (<code>memory/</code>·<code>workflows/</code>·<code>repositories/</code>) — 사용자가 ls·git에서 즉시 보고 편집할 수 있어야 하므로</li>
+  </ul>
 </section>
 
 <!-- ========================== SECTION 4 ========================== -->
@@ -998,21 +1041,34 @@ solosquad --version</code></pre>
   </div>
 
   <div class="step">
-    <div class="step-head">Step 5 — 워크스페이스 초기화</div>
-    <pre><code>mkdir ~/solosquad-workspace
-cd ~/solosquad-workspace
+    <div class="step-head">Step 5 — 워크스페이스 생성</div>
+    <p><strong>워크스페이스</strong>는 SoloSquad가 모든 데이터(메모리·워크플로우·메신저 설정·org 메타)를 보관하는 디렉터리입니다. <em>원하는 이름</em>의 디렉터리를 직접 하나 만들고, 그 안에서 <code>solosquad init</code>을 실행하면 그 디렉터리가 워크스페이스가 됩니다.</p>
+    <pre><code># 예시: 이름은 자유롭게 — 아래는 "my-saas"
+mkdir my-saas
+cd my-saas
 solosquad init</code></pre>
-    <p>마법사가 차례로 묻습니다. 입력 가이드:</p>
-    <ul>
-      <li><strong>Initialize workspace at</strong> (v0.8.4 신규): 현재 디렉터리(<code>process.cwd()</code>)가 기본값. Enter로 그대로 사용하거나 다른 경로 입력 가능. 만약 상위 디렉터리에 기존 SoloSquad 워크스페이스가 있으면, "현재 경로에 새로 생성 / 기존 워크스페이스 사용 / 직접 경로 입력" 3-way 선택지가 명시적으로 표시됩니다 (기본 = 현재 경로에 새로 생성)</li>
-      <li><strong>Your name</strong>: 본인 이름</li>
-      <li><strong>Your role</strong>: founder / developer / designer 등</li>
-      <li><strong>Messenger platform</strong>: <code>discord</code> 또는 <code>slack</code></li>
-      <li><strong>Timezone</strong>: 기본 <code>Asia/Seoul</code> (IANA tz 자유 입력 가능)</li>
-      <li><strong>Morning/Evening brief time</strong>: HH:MM 형식. 기본 08:00 / 18:00</li>
-      <li><strong>메신저 토큰</strong>: §5에서 받은 값 붙여넣기</li>
-      <li><strong>Product/Organization name</strong>: 사업/제품 이름 (여러 개 가능)</li>
-    </ul>
+    <p>워크스페이스는 여러 개 운영 가능 (n잡 시나리오). 각 디렉터리가 독립 워크스페이스 = 독립 봇·메모리·org. 다른 위치에 만들고 싶으면 <code>cd</code>를 먼저 한 다음 마법사를 실행하세요.</p>
+
+    <h4 id="s4-2-1">4.2.1 마법사 prompt — 왜 묻는가 + 입력 제약 + 저장 위치<span class="badge now">v0.8.5</span></h4>
+    <p>마법사가 차례로 묻는 항목은 다음과 같습니다. 각 prompt 위에 CLI가 1-2줄 헬프 텍스트를 표시합니다 (v0.8.5 신규).</p>
+    <table>
+      <thead><tr><th>Prompt</th><th>기본값</th><th>입력 제약</th><th>왜 묻는가</th><th>저장 위치</th></tr></thead>
+      <tbody>
+        <tr><td>Where should the workspace be created? <em>(부모에 기존 워크스페이스가 있을 때만 — v0.8.5)</em></td><td>현재 경로(cwd)</td><td>cwd / existing / custom 3-way</td><td>부모에 다른 <code>.solosquad/</code>가 있어도 새 워크스페이스를 명시적으로 분리하기 위해</td><td>—</td></tr>
+        <tr><td>Workspace display name</td><td>디렉터리 basename</td><td>자유</td><td>대시보드·brief에서 표시될 이름</td><td><code>workspace.yaml.display_name</code></td></tr>
+        <tr><td>Your name</td><td>없음</td><td>자유</td><td>PM·specialist agent가 사용자를 부를 때 + 응답 호칭 결정</td><td><code>.solosquad/.env</code> <code>OWNER_NAME</code></td></tr>
+        <tr><td>Your role</td><td><code>founder</code></td><td>founder / developer / designer 등 자유</td><td>agent들이 사용자의 전문성·관심사를 추정해 응답의 기술 깊이·톤 조정. SoloSquad의 1차 사용자가 솔로 창업자라 default가 <code>founder</code></td><td><code>.solosquad/.env</code> <code>OWNER_ROLE</code></td></tr>
+        <tr><td>Messenger platform</td><td>없음</td><td><code>discord</code> / <code>slack</code></td><td>1 워크스페이스 = 1 메신저. n잡은 별도 워크스페이스로 분리. 채널 페어·broadcast 동작 결정</td><td><code>.solosquad/.env</code> <code>MESSENGER</code></td></tr>
+        <tr><td>Discord/Slack token</td><td>없음</td><td>토큰 문자열</td><td>봇 API 자격증명. 채널 자동 생성·메시지 송수신</td><td><code>.solosquad/.env</code> (gitignored)</td></tr>
+        <tr><td>Timezone</td><td><code>Asia/Seoul</code></td><td>IANA tz</td><td>morning/evening brief 시간 + 모든 routine cron의 기준</td><td><code>workspace.yaml.timezone</code></td></tr>
+        <tr><td>Morning / Evening brief time</td><td>08:00 / 18:00</td><td>HH:MM</td><td>디폴트 routine 2건의 cron</td><td><code>workspace.yaml.briefings</code></td></tr>
+        <tr><td>Organization name</td><td>없음</td><td>자유</td><td><strong>org = 사업/제품 단위</strong>. 1 워크스페이스에 여러 org 가능 (예: tesla + spacex). 메모리·워크플로우·repo가 org 단위 격리</td><td><code>&lt;workspace&gt;/&lt;slug&gt;/.org.yaml</code></td></tr>
+        <tr><td>Provider</td><td><code>github</code></td><td>local / github / gitlab / gitea</td><td>org의 코드 호스팅 위치 메타데이터. <code>add repo</code>에서 git URL host 추정에 사용. 없으면 <code>local</code></td><td><code>.org.yaml.provider</code></td></tr>
+        <tr><td>Org homepage URL</td><td>빈 값</td><td>URL 또는 빈 값</td><td>org 홈페이지(예: github.com/tesla)가 있으면 입력. 분석·linker가 활용. 없으면 Enter</td><td><code>.org.yaml.remote_url</code></td></tr>
+        <tr><td>Handle (봇 username 자동 추출 후 확인)</td><td>봇 username</td><td><code>[a-z0-9_]+</code>만 (그 외 문자는 <code>_</code>로 자동 변환)</td><td>메신저 채널 페어 <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 명명 + 멀티유저 식별자</td><td><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code></td></tr>
+      </tbody>
+    </table>
+    <p class="callout warn"><strong>v0.8.5 변경</strong> — 부모 디렉터리에 기존 워크스페이스가 없으면, 마법사가 "Initialize workspace at: ..." prompt를 묻지 않고 <code>cwd</code>를 자동으로 사용합니다 (mkdir로 이미 결정한 디렉터리를 또 묻지 않음). 다른 경로에 만들려면 <code>cd</code>를 먼저 하세요.</p>
   </div>
 
   <div class="step">
@@ -1651,24 +1707,33 @@ PM:    [PRD 작성 → desk-researcher spawn → ui-designer spawn → ...]
     <li>brief 시각 조정 — <code>.solosquad/workspace.yaml</code>의 <code>briefings.morning.time</code> 등 본인 생활 패턴에 맞춰 수정.</li>
   </ol>
 
-  <h3 id="s6-4">6.4 자동 루틴</h3>
-  <p>v0.6 기준 8종이 매일/매주 자동 실행됩니다.</p>
+  <h3 id="s6-4">6.4 자동 루틴<span class="badge now">v0.8.5</span></h3>
+  <p>총 <strong>4건</strong>. 사용자가 보는 brief 3건 + 시스템 인프라 1건. v0.8.5에서 분석 routine 4건(signal-scan / experiment-check / weekly-review / v06-retrospective-stats)을 영구히 제거하고, 인프라 2건(archive-rotate + log-rotate)을 단일 <code>system-housekeeping</code>으로 통합.</p>
 
+  <h4>사용자가 보는 brief (3건)</h4>
   <table>
-    <thead><tr><th>기본 시각</th><th>이름</th><th>종류</th><th>출력 위치</th><th>메모리</th></tr></thead>
+    <thead><tr><th>기본 시각</th><th>이름</th><th>출력 위치</th><th>역할</th></tr></thead>
     <tbody>
-      <tr><td>00:00 매일 <span class="badge now">v0.6</span></td><td>Archive Rotate</td><td>background</td><td>(silent)</td><td><code>memory/archive.sqlite</code> (FTS5) + retention 삭제</td></tr>
-      <tr><td>08:00 매일</td><td>Morning Brief</td><td>user-brief</td><td><code>#workflow</code> root</td><td>—</td></tr>
-      <tr><td>12:00 매일</td><td>Signal Scan</td><td>background</td><td><code>#workflow</code> → <code>system-daily-signals</code></td><td><code>signals.jsonl</code></td></tr>
-      <tr><td>16:00 매일</td><td>Experiment Check</td><td>background</td><td><code>#workflow</code> → <code>system-experiments</code></td><td><code>experiments.jsonl</code></td></tr>
-      <tr><td>18:00 매일</td><td>Evening Brief</td><td>user-brief</td><td><code>#workflow</code> root</td><td><code>decisions.jsonl</code></td></tr>
-      <tr><td>일요일 20:00</td><td>Weekly Review</td><td>background</td><td><code>#workflow</code> → <code>system-weekly-review</code></td><td><code>decisions.jsonl</code></td></tr>
-      <tr><td>일요일 22:00 <span class="badge now">v0.6</span></td><td>v06 Retrospective Stats</td><td>background</td><td><code>&lt;org&gt;/memory/v0.6-retrospective-stats-&lt;date&gt;.md</code></td><td>5 v0.5 데이터원 ETL 보고서</td></tr>
-      <tr><td>23:00 매일 <span class="badge now">v0.3</span></td><td>PM Compaction</td><td>background</td><td><code>#workflow</code> → <code>system-pm-compaction</code></td><td><code>memory/pm-skills/</code> + trajectory 추출 + freq miner</td></tr>
-      <tr><td>00:00 매일 <span class="badge now">v0.6</span></td><td>Archive Rotate</td><td>background (silent)</td><td>—</td><td>JSONL → <code>archive.sqlite</code> FTS5 인덱싱, retention pass</td></tr>
-      <tr><td>00:30 매일 <span class="badge now">v0.8.3</span></td><td>Log Rotate</td><td>background (silent)</td><td>—</td><td><code>.solosquad/logs/</code> 14일 이전 파일 삭제</td></tr>
+      <tr><td>08:00 매일</td><td>Morning Brief</td><td><code>works-&lt;handle&gt;</code></td><td>야간 일과 요약 (활성 goal·진행 워크플로우·결정)</td></tr>
+      <tr><td>18:00 매일</td><td>Evening Brief</td><td><code>works-&lt;handle&gt;</code></td><td>오늘 결정·완료 + 내일 우선순위 (<code>decisions.jsonl</code> append)</td></tr>
+      <tr><td>23:00 매일 <span class="badge now">v0.3</span></td><td>PM Compaction</td><td><code>works-&lt;handle&gt;</code> → <code>system-pm-compaction</code></td><td>완료 워크플로우 외부화 (<code>memory/pm-skills/</code>) — PM 컨텍스트 관리</td></tr>
     </tbody>
   </table>
+
+  <h4>시스템 인프라 (사용자 의식 X, 항상 활성, silent)</h4>
+  <table>
+    <thead><tr><th>기본 시각</th><th>이름</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td>00:00 매일 <span class="badge now">v0.8.5</span></td><td>System Housekeeping</td><td>두 결정적 작업 순차 (try/catch 격리): ① JSONL → <code>archive.sqlite</code> FTS5 인덱싱 + retention pass · ② <code>.solosquad/logs/</code> 14일 이전 파일 삭제</td></tr>
+    </tbody>
+  </table>
+
+  <p class="callout info"><strong>v0.8.5 변경 — routine 9건 → 4건</strong>:</p>
+  <ul>
+    <li><strong>제거 (영구)</strong>: <code>signal-scan</code> · <code>experiment-check</code> · <code>weekly-review</code> · <code>v06-retrospective-stats</code>. 사용자 도메인 prompt 없이는 무의미한 분석 routine. 도메인 분석은 워크플로우/goal로 표현</li>
+    <li><strong>통합</strong>: <code>archive-rotate</code> + <code>log-rotate</code> → <code>system-housekeeping</code> (단일 cron 00:00, try/catch 격리)</li>
+    <li><strong>backward-compat</strong>: <code>workspace.yaml.background_routines</code> 키는 read-ignore (에러 X)</li>
+  </ul>
 
   <h4>업데이트 ↔ 마이그레이션 흐름<span class="badge now">v0.8.3</span></h4>
   <p>두 명령은 별개입니다. <code>solosquad doctor</code>가 CLI ↔ workspace version mismatch 감지 시 어느 쪽이 필요한지 명시적으로 안내합니다 (§7.3).</p>

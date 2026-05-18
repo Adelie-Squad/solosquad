@@ -47,10 +47,14 @@ export const DEFAULT_CHANNELS = [
   "workflow",
 ];
 
-/** System threads created inside #workflow. Background routines post here. */
+/**
+ * System threads created inside #workflow. Background routines post here.
+ *
+ * v0.8.5 — Removed `system-daily-signals`, `system-experiments`,
+ * `system-weekly-review` along with their parent analysis routines
+ * (signal-scan / experiment-check / weekly-review). `system-errors` retained
+ * as a generic error sink — independent of any specific routine.
+ */
 export const SYSTEM_THREADS = [
-  "system-daily-signals",
-  "system-experiments",
-  "system-weekly-review",
   "system-errors",
 ];
