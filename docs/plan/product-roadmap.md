@@ -25,7 +25,7 @@
 | `v0.8.3` | 2026 Q2 | Onboarding UX + Observability — logger 확장 + `solosquad logs` CLI + `add repo --dry-run` byte-identical 보장 | `v0.8.3-onboarding-ux-observability.md` |
 | `v0.8.4` | 2026 Q2 | CLI Surface Reduction — `--mode` 패턴 통일(uninstall·import) + `backup` subgroup + deprecation alias + init walk-up 분기 | `v0.8.4-cli-surface-reduction.md` |
 | `v0.8.5` | 2026-05-18 | Onboarding QA & Release-Gate — init.ts hardcoded version 회귀 fix + wizard 문구 정합(handle/name/role/provider 헬프) + master-guide v0.6→v0.8.5 backfill + 3-docs pre-publish gate(`prepublishOnly` 강제) | `v0.8.5-onboarding-qa.md` |
-| **`v0.8.6`** | **2026-05-20** | **migrate Hotfix + Agent PR Workflow Doc** — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix (v0.4 이후 1년 잔존, no-op 종료) + master-guide §10.4 uninstall safe sequence + §10.5 봇·스케줄러·dev_capability 운영 + 자동 다중-에이전트 PR 토론·머지 v1.x 설계 박제 (`git_workflow` + `reviewers` + `can_review_pr` 스키마 후보) | `v0.8.6-migrate-hotfix-pr-workflow.md` |
+| **`v0.8.6`** | **2026-05-20** | **migrate Hotfix + Agent push 범위 박제** — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix (v0.4 이후 1년 잔존, no-op 종료) + master-guide §4.2 Step 1 git 인증 안내 + §10.4 uninstall safe sequence + §10.5 *에이전트는 push까지·PR은 사용자 웹 UI* 범위 명시 + §10.5.1 git 인증 셋업 (SoloSquad 외부 영역) + PR API 자동화·다중-에이전트 토론 v1.x 슬롯 박제 (gh / MCP / REST 트랙 후보) | `v0.8.6-migrate-hotfix-pr-workflow.md` |
 
 ### 현재 설치 가능 버전: npm `0.8.6`
 

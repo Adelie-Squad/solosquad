@@ -35,18 +35,30 @@ master-guide §10.4 (Uninstall 안전 순서 + 재설치로 migration 우회) +
 - 새 init 후 doctor 경고 7종 분류 표 (항상 표시 vs 조치 필요 vs 선택)
 - "uninstall 직전 PID 정지 필수" warn callout — archive snapshot SHA 일치
 
-### Changed — master-guide §10.5 신설 (봇·스케줄러·dev_capability 운영)
+### Changed — master-guide §10.5 신설 (봇·스케줄러·에이전트 git 작업)
+- **v0.8.6 에이전트 책임 경계 = git push까지로 명시**. PR 생성·리뷰·머지는
+  사용자가 GitHub 웹 UI에서 직접 진행 (gh CLI 셋업 불필요)
 - 스케줄러는 디폴트 실행되지 않음 명시 — daemon / 자동 시작 0건
 - `detectLivePids()` PowerShell 매칭 로직 공개
-- PR 워크플로 전제 조건 3건 (gh CLI install + auth, repo Write 권한,
-  workspace.yaml dev_capability 활성)
-- 단일 에이전트 PR 생성 흐름 (PM 분류 → BD spawn → dev-confirm gate
-  → push → gh pr create → works-handle URL 회신)
-- 다중-에이전트 PR 리뷰·토론 현재 상태 표 — v0.8.6은 *반자동*
-  (사용자가 spawn 명시 트리거), v1.x에서 자동
-- 온보딩 추가 항목 5건 — Step 3.5/7.5/7.7/8.5/8.7 (gh auth / repo 검증 /
-  dev_capability 활성 / 메신저 dry test / branch protection)
+- push 전제 3건 — git push 인증 / repo 등록 / workspace.yaml dev_capability
+  (gh CLI 제거)
+- 에이전트 push 흐름 (PM 분류 → BD spawn → dev-confirm gate → push →
+  "compare URL" 회신 → 사용자가 웹 UI에서 PR 생성·머지)
+- 온보딩 추가 항목 5건 — Step 1.5 git push 인증 확인 / Step 7.5 repo +
+  push 검증 / Step 7.7 dev_capability 활성 / Step 8.5 메신저 dry test /
+  Step 8.7 branch protection (gh CLI 단계 제거)
 - 자동 머지 영구 거부 정책 재명시 (v0.8.2 박제)
+
+### Added — master-guide §10.5.1 신설 (git 인증 셋업 — SoloSquad 외부 영역)
+- SoloSquad가 자동화하지 않는 사용자 책임 영역 명시
+- macOS/Windows에서 Git Credential Manager 자동 포함 — 대부분 셋업 0건
+- 3가지 셋업 방법 비교 표: Git Credential Manager / SSH key / PAT
+- 검증 명령 한 줄: `git push --dry-run`
+- 향후 doctor 자동 검증 안내 (v0.9+ 슬롯)
+
+### Changed — master-guide §4.2 Step 1에 git 인증 안내 callout
+- 첫 dev 사용자에게 git 바이너리 설치 외 *push 인증 별도 셋업 필요* 명시
+- §10.5.1로 cross-reference
 
 ### Added — v1.x agent PR workflow 설계 박제 (코드 없음, plan only)
 - workflow.yaml schema v2: `git_workflow` (branch_pattern, auto_pr,

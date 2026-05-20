@@ -1025,6 +1025,17 @@ npm install -g @anthropic-ai/claude-code</code></pre>
     <pre><code>node --version    # v18 or newer
 git --version
 claude --version</code></pre>
+
+    <div class="callout warn">
+      <strong>First-time dev users — git auth requires separate setup</strong>
+      The commands above only install the git <em>binary</em>. For SoloSquad agents to commit and push code through messenger conversations, <strong>GitHub push authentication must be set up separately</strong> — a user-responsibility area not automated by SoloSquad.
+      <ul>
+        <li><strong>If you've ever successfully <code>git push</code>ed to GitHub from this machine</strong> → no additional setup needed. macOS/Windows auto-includes Git Credential Manager via Git for Mac/Windows, which permanently stores credentials after a one-time OAuth on first push</li>
+        <li><strong>First-time git users</strong> → see §10.5.1 "git auth setup" (one-time, ~5 min). Pick one of 3 methods (Git Credential Manager / SSH key / PAT)</li>
+        <li><strong>One-line verification</strong>: in any of your GitHub repos run <code>git push --dry-run</code> → ✓ or ✗ resolves immediately</li>
+      </ul>
+      This setup is needed when you *actually use* SoloSquad's dev_capability feature. If you'll only use memory/workflow operations (chat, signal scan without code work), it can be skipped.
+    </div>
   </div>
 
   <div class="step">
@@ -2779,7 +2790,7 @@ solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
     <code>solosquad uninstall</code> writes the manifest with streaming SHA256 over the jsonl files. If the bot is appending jsonl concurrently, the manifest SHA will mismatch → archive verification fails. <code>--force</code> bypasses, but you lose archive integrity.
   </div>
 
-  <h3 id="s10-5">10.5 Bot · Scheduler · dev_capability Operations<span class="badge now">v0.8.2~v0.8.5</span></h3>
+  <h3 id="s10-5">10.5 Bot · Scheduler · Agent git Operations<span class="badge now">v0.8.2~v0.8.6</span></h3>
 
   <h4>Scheduler does not auto-start</h4>
   <p>SoloSquad has no daemon / background auto-start. <code>solosquad init</code> does not register cron, and there is no OS-boot auto-start. You must <em>explicitly</em> start with:</p>
@@ -2787,39 +2798,50 @@ solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
 solosquad schedule    # cron routine runner (morning/evening brief, system-housekeeping)</code></pre>
   <p>These two are separate processes. For both to run 24/7, use two terminals or two Docker compose services. <code>solosquad doctor</code>'s <code>△ solosquad bot/schedule processes alive (pid ...)</code> warning shows whenever *either one* is alive — on Windows it uses <code>Get-CimInstance Win32_Process</code> to find node.exe processes whose commandLine matches <code>solosquad</code> + <code>(bot|schedule|run-routine)</code>.</p>
 
-  <h4>Setting up agents to create / review / merge PRs</h4>
-  <p>With v0.8.2's <code>dev_capability</code>, agents can — through messenger conversation alone — *modify the git tree and create PRs themselves*. Setup for the multi-agent PR review · merge flow:</p>
+  <h4>Agent dev_capability — *up to git push* (v0.8.6 current scope)</h4>
+  <p>With v0.8.2's <code>dev_capability</code>, agents — through messenger conversation alone — *write code → commit → push*. <strong>PR creation, review, discussion, and merge happen in the GitHub web UI by the user</strong>. v0.8.6 scope statement:</p>
 
-  <h5>Prerequisites (required)</h5>
+  <table>
+    <thead><tr><th>Step</th><th>Owner</th><th>v0.8.6 support</th></tr></thead>
+    <tbody>
+      <tr><td>Code authoring · analysis</td><td>spawned agent</td><td>✓</td></tr>
+      <tr><td><code>git checkout -b &lt;branch&gt;</code></td><td>agent</td><td>✓</td></tr>
+      <tr><td><code>git add / commit</code></td><td>agent</td><td>✓</td></tr>
+      <tr><td><code>git push origin &lt;branch&gt;</code></td><td>agent (dev-confirm gate)</td><td>✓ 30-min timeout</td></tr>
+      <tr><td>"compare URL" reply (PR creation guidance)</td><td>agent posts to messenger</td><td>✓</td></tr>
+      <tr><td>PR creation</td><td><strong>user in GitHub web UI</strong></td><td>— (user responsibility)</td></tr>
+      <tr><td>PR review · comments</td><td><strong>user in GitHub web UI</strong></td><td>— (user responsibility)</td></tr>
+      <tr><td>Merge</td><td><strong>user in GitHub web UI</strong></td><td>— (user responsibility)</td></tr>
+    </tbody>
+  </table>
+
+  <h5>Prerequisites — all *user pre-setup* (not automated by SoloSquad)</h5>
+
   <ol>
-    <li><strong>gh CLI + authentication</strong>
-      <pre><code>winget install GitHub.cli            # Windows (or brew install gh / apt install gh)
-gh auth login                        # host OAuth flow (browser)
-gh auth status                       # ✓ Logged in to github.com
-solosquad doctor                     # "gh CLI authenticated (github.com)" ✓ verify</code></pre>
+    <li><strong>git installed + push auth working</strong> — beyond §4.2 Step 1 prerequisites, *nothing additional needed*. First-time dev users (very first time using git) see §10.5.1 for git auth setup. Verify:
+      <pre><code>cd &lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;
+git push --dry-run
+# "Everything up-to-date" or "To &lt;url&gt;..." → ✓
+# "Authentication failed" / "Permission denied" → ✗ §10.5.1 setup needed</code></pre>
     </li>
-    <li><strong>Register repo + verify push permissions</strong>
-      <pre><code>solosquad add repo https://github.com/me/my-saas.git --org my-saas
-cd ~/solosquad/my-saas/repositories/my-saas
-git remote -v                        # origin: https://github.com/me/my-saas.git
-gh repo view                         # check permissions (Admin / Maintain / Write needed)</code></pre>
-      Personal repo is fine. For org repos, you may need <code>gh auth refresh -s repo</code> to expand the scope.
+    <li><strong>Register repo</strong>
+      <pre><code>solosquad add repo https://github.com/me/my-saas.git --org my-saas</code></pre>
     </li>
     <li><strong>Enable workspace.yaml dev_capability</strong>
       <pre><code># &lt;workspace&gt;/.solosquad/workspace.yaml
 dev_capability:
   enabled: true                      # master toggle (default true)
-  require_push_confirmation: true    # user confirmation on git push / gh pr merge (permanently true)
+  require_push_confirmation: true    # user confirmation on git push (permanently true, immutable)
   bash_denylist:                     # workspace-strict blocked commands (optional)
     - "rm -rf /"
     - "shutdown"</code></pre>
     </li>
   </ol>
 
-  <h5>Single-agent PR-creation flow</h5>
-  <pre><code>User (command-&lt;handle&gt;): "Integrate Stripe payment module + create PR"
+  <h5>Agent push flow</h5>
+  <pre><code>User (command-&lt;handle&gt;): "Integrate Stripe payment module"
                 ↓
-PM classifies intent → spawn Backend Developer SKILL (dev_capability: pr)
+PM classifies intent → spawn Backend Developer SKILL (dev_capability: true)
                 ↓
 BD enters repo cwd → analyzes code → adds src/payments/ → writes tests
                 ↓
@@ -2832,37 +2854,26 @@ git commit -m "feat: Stripe payment integration"
                 ↓
 User "y"  → push executed
                 ↓
-gh pr create --title "Stripe payment" --body "..."
+BD's final reply (works-&lt;handle&gt;):
+   "✓ Branch pushed.
+    Open this URL to create the PR:
+    https://github.com/me/my-saas/compare/main...feat/stripe-payment"
                 ↓
-PR URL returned to works-&lt;handle&gt;: "PR #42 https://github.com/.../pull/42"</code></pre>
-  <p>All sensitive commands (<code>git push</code>, <code>gh pr merge</code>, <code>gh pr close</code>) are pinned in <code>SENSITIVE_BASH_PREFIXES</code> and must pass a 30-min dev-confirmation gate (<code>src/bot/dev-confirm.ts</code>). Auto-merge is <strong>permanently refused</strong>.</p>
+[From here, user responsibility]
+User clicks URL → GitHub web UI to create PR → review code → merge</code></pre>
+  <p><code>git push</code> is pinned in <code>SENSITIVE_BASH_PREFIXES</code> and must pass a 30-min dev-confirmation gate (<code>src/bot/dev-confirm.ts</code>). If user doesn't respond within timeout, push auto-aborts + logged to <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>.</p>
 
-  <h5>Multi-agent PR review · discussion (current state)</h5>
-  <p>As of v0.8.5, *partial support*. What works vs what's pending:</p>
-  <table>
-    <thead><tr><th>Flow</th><th>v0.8.5 status</th><th>How</th></tr></thead>
-    <tbody>
-      <tr><td>One agent creates a PR</td><td>✓ Supported</td><td>Single-agent flow above</td></tr>
-      <tr><td>Another agent comments on the same PR</td><td>△ Manual trigger</td><td>User says "Have QA Engineer review #42" → spawned QA runs <code>gh pr view 42</code> → <code>gh pr review 42 --comment --body "..."</code></td></tr>
-      <tr><td>Agents discussing PRs autonomously</td><td>○ v1.x slot</td><td>Currently PM spawns each agent sequentially with human in the middle. Automated round-trip is in v1.x autonomous engine expansion (Q4 cycle mid-notification consistency)</td></tr>
-      <tr><td>Merge (gh pr merge)</td><td>✓ Supported (30-min dev-confirm)</td><td>After review passes, user says "merge #42" → engineering agent runs <code>gh pr merge 42 --squash</code> → gate → user y</td></tr>
-      <tr><td>Auto-merge (on CI pass)</td><td>✗ Permanently refused</td><td>Pinned in v0.8.2 — auto-merge policy permanently not added</td></tr>
-    </tbody>
-  </table>
-
-  <h5>Onboarding additions (for PR-workflow users)</h5>
-  <p>In addition to the standard §4.2 9-step, dev_capability users need:</p>
+  <h5>Onboarding additions (for dev_capability users)</h5>
+  <p>Beyond the §4.2 9-step, additional setup for dev_capability users — *gh CLI install unnecessary in v0.8.6 scope*:</p>
   <ul>
-    <li><strong>Step 3.5 (alongside messenger token) — gh CLI install + auth</strong>
-      <pre><code>winget install GitHub.cli   # or brew/apt
-gh auth login               # browser OAuth — repo scope needed
-gh auth status              # ✓ verify</code></pre>
+    <li><strong>Step 1.5 — verify git push auth</strong> (first-time dev users only)
+      <pre><code>git push --dry-run    # in any of your own repos
+# If failing: follow §10.5.1 to set up cred helper or SSH key (one-time, 5 min)</code></pre>
     </li>
-    <li><strong>Step 7.5 (right after doctor) — register repo + verify push permissions</strong>
+    <li><strong>Step 7.5 (right after doctor) — register repo + verify push</strong>
       <pre><code>solosquad add repo &lt;url&gt; --org &lt;org&gt;
 cd &lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;
-gh repo view                # confirm Write or higher
-git push --dry-run          # confirm auth works</code></pre>
+git push --dry-run        # confirm auth works inside the workspace too</code></pre>
     </li>
     <li><strong>Step 7.7 — set workspace.yaml dev_capability explicitly</strong>
       <pre><code>dev_capability:
@@ -2872,22 +2883,63 @@ git push --dry-run          # confirm auth works</code></pre>
     </li>
     <li><strong>Step 8.5 (right after starting bot) — messenger first dry test</strong>
       <pre><code>In command-&lt;handle&gt; channel:
-"Fix one typo in &lt;repo-name&gt;'s README and create a PR"
-→ Small change verifies the full flow (spawn → diff → commit → dev-confirm → push → PR)</code></pre>
+"Fix one typo in &lt;repo-name&gt;'s README and push it"
+→ Small change verifies the full flow (spawn → diff → commit → dev-confirm → push → compare URL)</code></pre>
     </li>
-    <li><strong>(Optional) Step 8.7 — branch protection rules</strong> — to block auto-merge at the GitHub level, in repo settings:
-      <ul>
-        <li>Enable <code>Require pull request before merging</code> on main branch</li>
-        <li><code>Require approvals: 1</code> (force your own approval)</li>
-        <li>(Optional) <code>Require status checks to pass</code> — if CI is enabled</li>
-      </ul>
-      This way, <em>even if SoloSquad's auto-merge refusal rule were ever broken</em>, GitHub-side protection provides another safety net.
-    </li>
+    <li><strong>(Optional) Step 8.7 — branch protection rules</strong> — In GitHub repo settings, enable <code>Require pull request before merging</code> + <code>Require approvals: 1</code> on the main branch. Forces explicit user approval for PR merges as a safety net.</li>
   </ul>
 
+  <h4 id="s10-5-1">10.5.1 git auth setup (first-time dev users) — *outside SoloSquad's scope*</h4>
+  <p>This section is a <strong>user-responsibility area not automated by SoloSquad</strong>. <code>git push</code> credentials live in the OS credential store or ~/.ssh/ key files and are accessed by the git binary directly — SoloSquad only invokes git commands on top.</p>
+
+  <p><strong>How it works</strong>: GitHub allows anonymous *read* (clone, fetch, pull of public repos). *Write* (push) always requires verification that "this person actually owns the repo." Credential setup for this verification is a one-time requirement for <em>first-time git users</em>.</p>
+
+  <p><strong>Probability it's already set up</strong>: very high. macOS / Windows installations include <em>Git Credential Manager automatically</em> via Git for Mac / Git for Windows, so the first push only requires a one-time browser OAuth, then credentials are permanently stored. If you've ever pushed to GitHub from this machine, no additional setup is needed.</p>
+
+  <h5>3 setup methods (pick one)</h5>
+  <table>
+    <thead><tr><th>Method</th><th>OS</th><th>Steps</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>① Git Credential Manager</strong><br>(easiest, recommended)</td>
+        <td>macOS / Windows</td>
+        <td>Auto-included with Git for Mac / Git for Windows install. First <code>git push</code> auto-opens browser → GitHub login → grant permission → permanently stored in system vault (Keychain / Credential Manager). Subsequent pushes are automatic.</td>
+      </tr>
+      <tr>
+        <td>② SSH key</td>
+        <td>All platforms</td>
+        <td><pre><code>ssh-keygen -t ed25519 -C "your@email"
+cat ~/.ssh/id_ed25519.pub
+# Paste output to GitHub Settings → SSH and GPG keys → New SSH key
+# Use repo URL in git@github.com:me/repo.git format</code></pre></td>
+      </tr>
+      <tr>
+        <td>③ PAT + credential.helper store</td>
+        <td>Linux (or when ①/② unavailable)</td>
+        <td><pre><code># GitHub Settings → Developer settings → PAT → Generate (scope: repo)
+git config --global credential.helper store
+git push   # first time: username + PAT → stored plaintext in ~/.git-credentials
+# Security: chmod 600 ~/.git-credentials recommended</code></pre></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h5>One-line verification</h5>
+  <pre><code>cd &lt;your repo&gt;
+git push --dry-run
+# ✓ Everything up-to-date  or  To &lt;url&gt;... = auth OK
+# ✗ fatal: Authentication failed / Permission denied (publickey) = setup ①~③ needed</code></pre>
+  <p><strong>This verification must pass for SoloSquad's dev_capability flow to work at the push step.</strong> SoloSquad doctor will include this check automatically in a future release (v0.9+); currently users must verify themselves.</p>
+
   <div class="callout info">
-    <strong>v1.x followup</strong>
-    Fully autonomous multi-agent PR discussion (one agent creates PR → another agent reviews → comment round-trip → merge decision) is a v1.x autonomous engine expansion slot. As of v0.8.5, it's semi-automatic with the user explicitly triggering each spawn in between.
+    <strong>v1.x followup — PR API automation + multi-agent discussion</strong>
+    v0.8.6 limits agent responsibility to <em>git push</em>. Subsequent automation of PR creation, review, and merge belongs to the v1.x autonomous engine expansion slot:
+    <ul>
+      <li><strong>gh CLI track</strong> — <code>gh pr create</code> / <code>gh pr review</code> / <code>gh pr merge</code> called via bash. dev-confirm gate already matches <code>gh pr merge</code>. Requires <code>gh auth login</code> one-time + workflow definition with <code>auto_pr: true</code></li>
+      <li><strong>MCP track</strong> — Anthropic's official <code>@modelcontextprotocol/server-github</code> connected via Claude Code MCP config. PR lifecycle via native tool calls. Structured I/O is advantageous for multi-agent discussion</li>
+      <li><strong>Multi-agent PR discussion</strong> — workflow.yaml schema v2's <code>reviewers</code> section auto-spawns reviewers (QA · Security · BusinessStrategist) + PM aggregation. <code>discussion_rounds</code> cap + <code>auto_merge: false</code> permanently pinned</li>
+    </ul>
+    Design details: <code>docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md</code> §3, <code>docs/plan/v1.x-workflow-goal-routine-evolution.md</code> (PR workflow §additions slot)
   </div>
 </section>
 
