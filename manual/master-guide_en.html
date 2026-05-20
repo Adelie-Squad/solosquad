@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v0.10.0</span>
+  <span class="tag">Master Guide · v0.9.0</span>
   <nav>
     <ul>
       <li>
@@ -1040,27 +1040,8 @@ claude --version</code></pre>
   </div>
 
   <div class="step">
-    <div class="step-head">Step 2 — Pick an AI backend + subscribe<span class="badge now">v0.10</span></div>
-    <p>From v0.10 SoloSquad abstracts over OAuth-based AI CLIs. Working today: <strong>Claude Code Max (default)</strong>. Planned: <em>Codex backend</em> pinned as a v1.x slot (10 implementation blockers documented in <code>docs/plan/v0.10-llm-backend-abstraction.md</code> §2).</p>
-
-    <h4>Default — Claude Code Max</h4>
-    <ol>
-      <li>Visit https://claude.ai → Settings → Claude Code → Subscribe to Max plan</li>
-      <li>Install: <code>npm install -g @anthropic-ai/claude-code</code></li>
-      <li><code>claude login</code> — browser OAuth flow → credentials stored on this machine</li>
-    </ol>
-
-    <h4>Future — Codex (v1.x slot)</h4>
-    <p>Real Codex backend support lands in v1.x. In v0.10 the <code>solosquad init</code> wizard <em>shows the Codex choice but throws at spawn time</em> (stub). The design pins this as an honest current-state signal to the user.</p>
-
-    <p>Implementation blockers (why Codex backend doesn't run in v0.10):</p>
-    <ul>
-      <li>No PM session model (Claude <code>--session-id + --resume</code> ↔ Codex is stateless)</li>
-      <li>No Task tool (Claude's built-in spawn tool ↔ Codex has no equivalent)</li>
-      <li>SKILL.md format is Anthropic Agent Skills specific</li>
-      <li>Plus stream format / auth probe / system-prompt injection / cost tracking / dev-confirm hook / context window / pricing model</li>
-    </ul>
-    <p>Full analysis: <code>docs/plan/v0.10-llm-backend-abstraction.md</code> §2.</p>
+    <div class="step-head">Step 2 — Subscribe to Claude Code Max</div>
+    <p>Visit https://claude.ai → Settings → Claude Code → Subscribe to Max plan.</p>
   </div>
 
   <div class="step">
@@ -2675,7 +2656,7 @@ docker compose restart    # if Docker</code></pre>
   <h3 id="s10-3">10.3 FAQ</h3>
 
   <p><strong>Q. How much does it cost?</strong><br>
-  A. As of v0.10, a Claude Code Max subscription is all you need to start (default backend). Codex backend is a v1.x slot and does not run in v0.10. Cloud ops add ~$4-6/month for VPS. When Codex lands, expect *unpredictable token billing risk* — paperclip envelope caps will be enforced (plan §2.10).</p>
+  A. With a Claude Code Max subscription, you can start. Cloud ops add ~$4-6/month for VPS.</p>
 
   <p><strong>Q. Can I use Discord and Slack simultaneously?</strong><br>
   A. Not in one workspace. <strong>Run two workspaces</strong> — e.g. <code>~/solopreneur/</code> (Slack bot) + <code>~/elon-24-7/</code> (Discord bot). Each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — older <code>MESSENGER=discord,slack</code> multi-set is no longer supported.</p>

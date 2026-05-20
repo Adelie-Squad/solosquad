@@ -64,7 +64,7 @@ npm install -g @anthropic-ai/claude-code
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
 solosquad init                                    # wizard가 메신저 토큰을 물어봄
-claude login                                      # v0.10 기본 backend (Claude Code Max). Codex backend는 v1.x 슬롯 (docs/plan/v0.10-llm-backend-abstraction.md 참조)
+claude login                                      # 브라우저로 Claude Max 계정 로그인
 solosquad doctor                                  # 환경 점검
 
 # 3. 봇 기동

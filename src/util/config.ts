@@ -85,15 +85,6 @@ export interface WorkspaceYaml {
   migration?: MigrationBudgetConfig;
   /** v0.8.2+: workspace-wide dev_capability master toggle + bash denylist. */
   dev_capability?: DevCapabilityConfig;
-  /**
-   * v0.10.0 — AI backend selection.
-   * - `"claude"` (default): Claude Code Max — fully supported.
-   * - `"codex"`: OpenAI Codex — v0.10 stub, throws at invoke time.
-   * See `docs/plan/v0.10-llm-backend-abstraction.md` §2 for the 10
-   * implementation blockers preventing actual Codex support in v0.10.
-   * Existing v0.9.x workspaces (field absent) default to "claude" at load.
-   */
-  llm_backend?: "claude" | "codex";
   created_at: string;
   last_migrated_to?: string;
 }

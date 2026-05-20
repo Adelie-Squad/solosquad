@@ -706,54 +706,6 @@ export async function initCommand(): Promise<void> {
       validate: (v: string) => isValidHHMM(v) || "HH:MM (00:00–23:59)",
     },
   ]);
-
-  // Step 3.7 — AI backend selection (v0.10.0)
-  console.log(chalk.bold("\n-- Step 3.7: AI Backend --"));
-  console.log(
-    chalk.dim(
-      "  Which AI CLI should agents use? Both are OAuth-based (no API key in .env).\n" +
-        "  v0.10 currently supports Claude Code only. Codex backend is a stub —\n" +
-        "  selecting it records the choice but spawns will fail until v1.x lands.",
-    ),
-  );
-  const { llmBackend } = await inquirer.prompt([
-    {
-      name: "llmBackend",
-      type: "list",
-      message: "AI backend:",
-      choices: [
-        { name: "Claude Code (recommended — fully supported in v0.10)", value: "claude" },
-        { name: "Codex (v1.x slot — STUB, will not actually invoke Codex)", value: "codex" },
-      ],
-      default: "claude",
-    },
-  ]);
-  if (llmBackend === "codex") {
-    console.log(
-      chalk.yellow(
-        "\n  ⚠ Codex backend is a stub in v0.10. Actual Codex invocation requires\n" +
-          "    architectural refactor (10 blockers per\n" +
-          "    docs/plan/v0.10-llm-backend-abstraction.md §2). Selecting Codex now:\n" +
-          "    workspace.yaml will record the choice, but agent spawns will fail\n" +
-          "    until v1.x implementation lands.",
-      ),
-    );
-    const { proceed } = await inquirer.prompt([
-      {
-        name: "proceed",
-        type: "confirm",
-        message: "Proceed anyway?",
-        default: false,
-      },
-    ]);
-    if (!proceed) {
-      console.log(chalk.dim("  Falling back to Claude Code."));
-    }
-    // If user declines, fall through with claude default below.
-  }
-  const selectedBackend: "claude" | "codex" =
-    llmBackend === "codex" ? "codex" : "claude";
-
   // Step 4: workspace.yaml
   // v0.8.5 — `background_routines` block intentionally omitted. The 4 analysis
   // routines (signal-scan / experiment-check / weekly-review / v06-retrospective-stats)
@@ -769,7 +721,6 @@ export async function initCommand(): Promise<void> {
         morning: { time: morningTime, enabled: true },
         evening: { time: eveningTime, enabled: true },
       },
-      llm_backend: selectedBackend,
       created_at: new Date().toISOString(),
       last_migrated_to: SOLOSQUAD_VERSION,
     },
