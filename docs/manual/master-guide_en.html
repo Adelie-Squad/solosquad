@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v0.8.5</span>
+  <span class="tag">Master Guide · v0.8.6</span>
   <nav>
     <ul>
       <li>
@@ -303,6 +303,8 @@
           <li><a href="#s10-1">10.1 Install / Run</a></li>
           <li><a href="#s10-2">10.2 Migration</a></li>
           <li><a href="#s10-3">10.3 FAQ</a></li>
+          <li><a href="#s10-4">10.4 Uninstall · Reinstall</a></li>
+          <li><a href="#s10-5">10.5 Bot / Scheduler / dev_capability</a></li>
         </ul>
       </li>
     </ul>
@@ -2692,6 +2694,201 @@ docker compose restart    # if Docker</code></pre>
 
   <p><strong>Q. (v0.8.3) When does trajectory auto-registration activate?</strong><br>
   A. When all 4 ROI metrics defined in v0.6 pass (① 30-day suggestions ≥ 5 ② adoption rate ≥ 60% ③ adopted SKILLs' 30-day usage rate ≥ average ④ reject cooldown &lt; 30%), <code>workspace.yaml.trajectory.auto_register: true</code> becomes default in v0.9. If any one fails, "suggestion-only forever" is locked. The v0.8.3 patch only pins the measured values in CHANGELOG; auto-registration code lands in v0.9.</p>
+
+  <h3 id="s10-4">10.4 Uninstall · Reinstall · Migration Workaround<span class="badge now">v0.8.5</span></h3>
+
+  <h4>Safe uninstall sequence</h4>
+  <p>Because npm v7+ does not invoke the <code>preuninstall</code> hook on global packages (<a href="https://github.com/npm/cli/issues/3042">npm/cli#3042</a>), <strong>you must follow the order yourself</strong> for the farewell archive and REVOKE-CHECKLIST to be generated.</p>
+  <ol>
+    <li><strong>Stop bot · scheduler (required)</strong> — if still running, the archive snapshot SHA will mismatch.
+      <pre><code># macOS / Linux
+docker compose down              # if using Docker
+# or Ctrl+C in bot/scheduler terminals
+
+# Windows (PowerShell)
+docker compose down
+# or Ctrl+C in terminals
+# or force-stop by PID:
+Stop-Process -Id &lt;pid1&gt;,&lt;pid2&gt; -Force</code></pre>
+      <code>solosquad doctor</code>'s "solosquad bot/schedule processes alive (pid ...)" warning shows remaining PIDs. The <code>solosquad uninstall</code> precheck also refuses entry without <code>--force</code> when live PIDs are detected.
+    </li>
+    <li><strong>Preview with uninstall dry-run</strong>
+      <pre><code>solosquad uninstall --dry-run
+# Output: archive zip path, what gets archived / deleted / preserved,
+#         REVOKE targets (Discord/Slack/Anthropic tokens), disk free space</code></pre>
+    </li>
+    <li><strong>Execute uninstall — 3 modes</strong>
+      <pre><code>solosquad uninstall                          # default --mode full (complete cleanup)
+solosquad uninstall --mode keep              # preserve workflows/memory/knowledge (for reinstall)
+solosquad uninstall --mode archive-only      # archive zip only, skip cleanup</code></pre>
+      <strong>User code at <code>repositories/&lt;repo&gt;/</code> is never modified or deleted under any mode/flag</strong> (v0.7 class A inviolability).
+    </li>
+    <li><strong>Store archive zip safely</strong> — <code>~/solosquad-archive-&lt;workspace&gt;-&lt;ts&gt;.zip</code> auto-created. Recommended: copy to external disk / cloud drive. Verify:
+      <pre><code>solosquad archive verify ~/solosquad-archive-...zip
+# manifest.tsv SHA256 + PII-NOTICE scan</code></pre>
+    </li>
+    <li><strong>Clean up external resources — REVOKE-CHECKLIST.md</strong> — copy in both workspace root and archive zip. Guides you through:
+      <ul>
+        <li>Discord Application ID — delete bot or reset token in Developer Portal</li>
+        <li>Slack workspace ID — remove bot or revoke OAuth in App management</li>
+        <li>Anthropic Claude — estimated <code>~/.claude/projects/&lt;path-hash&gt;/</code> path (manual cleanup at user discretion)</li>
+        <li>pm2 / systemctl / crontab — if external automation is registered, unregister commands auto-extracted</li>
+      </ul>
+    </li>
+    <li><strong>Remove npm package (optional)</strong>
+      <pre><code>npm uninstall -g solosquad</code></pre>
+      Skip this if reinstalling — <code>npm install -g solosquad@latest</code> overwrites.
+    </li>
+  </ol>
+
+  <h4>uninstall + reinstall to bypass migration</h4>
+  <p>When you want to start the workspace fresh, or skip a large migration chain:</p>
+  <pre><code># 1. Uninstall via safe sequence (can use --mode archive-only to only create a data backup zip)
+solosquad uninstall --mode archive-only
+
+# 2. Update CLI (skip if already latest)
+npm install -g solosquad@latest
+
+# 3. New workspace init (v0.8.5 wizard — workspace.yaml.version is 0.8.5 from start)
+mkdir new-workspace
+cd new-workspace
+solosquad init
+
+# 4. (Optional) Import previous data — restore workflows/memory/knowledge
+solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
+# or --mode replace (workspace must be empty)</code></pre>
+  <p>This is the <strong>shortcut path that skips the migration chain in one go</strong>. Instead of running 9 migrations from v0.4 → v0.8.5, archive → re-init → import jumps straight to the new format. Caveat: archive zip uses v0.7 format, so some pre-v0.6 raw assets are preserved but may not be re-placed into v0.8 multi-user structure (user verification needed).</p>
+
+  <h4>Getting to 0 doctor warnings after fresh install</h4>
+  <p>Right after a new init, <code>solosquad doctor</code> warnings split into *always-shown info* vs *action-required*:</p>
+  <table>
+    <thead><tr><th>Warning</th><th>Category</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td><code>△ PowerShell 7+</code> (Windows only)</td><td>Recommended</td><td><code>winget install Microsoft.PowerShell</code> — works on 5.1 too, but 7+ has better UTF-8 / Get-CimInstance stability</td></tr>
+      <tr><td><code>△ gh CLI not found</code></td><td>Required only for dev_capability</td><td>Install from https://cli.github.com/ + <code>gh auth login</code></td></tr>
+      <tr><td><code>△ Docker (optional)</code></td><td>Optional</td><td>Recommended for 24/7 ops. Terminal-only <code>solosquad bot</code> also works without it</td></tr>
+      <tr><td><code>△ npm v7+ has no global uninstall hook</code></td><td>Always shown (informational)</td><td>Ignore. Purpose is to guide ordering at uninstall time</td></tr>
+      <tr><td><code>△ CLI vX.Y.Z &gt; workspace vA.B.C</code></td><td>Action required</td><td><code>solosquad migrate --apply</code> (v0.8.5 fresh init doesn't trigger this)</td></tr>
+      <tr><td><code>△ solosquad bot/schedule processes alive (pid ...)</code></td><td>Shown when bot is running</td><td>Only needs stopping right before uninstall. Normal signal during regular operation</td></tr>
+      <tr><td><code>△ stale uninstall.lock</code></td><td>Previous uninstall ended abnormally</td><td>Manual delete: <code>rm &lt;workspace&gt;/.solosquad/uninstall.lock</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <strong>Caution — stop PIDs right before uninstall</strong>
+    <code>solosquad uninstall</code> writes the manifest with streaming SHA256 over the jsonl files. If the bot is appending jsonl concurrently, the manifest SHA will mismatch → archive verification fails. <code>--force</code> bypasses, but you lose archive integrity.
+  </div>
+
+  <h3 id="s10-5">10.5 Bot · Scheduler · dev_capability Operations<span class="badge now">v0.8.2~v0.8.5</span></h3>
+
+  <h4>Scheduler does not auto-start</h4>
+  <p>SoloSquad has no daemon / background auto-start. <code>solosquad init</code> does not register cron, and there is no OS-boot auto-start. You must <em>explicitly</em> start with:</p>
+  <pre><code>solosquad bot         # messenger bot (Socket Mode + fs.watch)
+solosquad schedule    # cron routine runner (morning/evening brief, system-housekeeping)</code></pre>
+  <p>These two are separate processes. For both to run 24/7, use two terminals or two Docker compose services. <code>solosquad doctor</code>'s <code>△ solosquad bot/schedule processes alive (pid ...)</code> warning shows whenever *either one* is alive — on Windows it uses <code>Get-CimInstance Win32_Process</code> to find node.exe processes whose commandLine matches <code>solosquad</code> + <code>(bot|schedule|run-routine)</code>.</p>
+
+  <h4>Setting up agents to create / review / merge PRs</h4>
+  <p>With v0.8.2's <code>dev_capability</code>, agents can — through messenger conversation alone — *modify the git tree and create PRs themselves*. Setup for the multi-agent PR review · merge flow:</p>
+
+  <h5>Prerequisites (required)</h5>
+  <ol>
+    <li><strong>gh CLI + authentication</strong>
+      <pre><code>winget install GitHub.cli            # Windows (or brew install gh / apt install gh)
+gh auth login                        # host OAuth flow (browser)
+gh auth status                       # ✓ Logged in to github.com
+solosquad doctor                     # "gh CLI authenticated (github.com)" ✓ verify</code></pre>
+    </li>
+    <li><strong>Register repo + verify push permissions</strong>
+      <pre><code>solosquad add repo https://github.com/me/my-saas.git --org my-saas
+cd ~/solosquad/my-saas/repositories/my-saas
+git remote -v                        # origin: https://github.com/me/my-saas.git
+gh repo view                         # check permissions (Admin / Maintain / Write needed)</code></pre>
+      Personal repo is fine. For org repos, you may need <code>gh auth refresh -s repo</code> to expand the scope.
+    </li>
+    <li><strong>Enable workspace.yaml dev_capability</strong>
+      <pre><code># &lt;workspace&gt;/.solosquad/workspace.yaml
+dev_capability:
+  enabled: true                      # master toggle (default true)
+  require_push_confirmation: true    # user confirmation on git push / gh pr merge (permanently true)
+  bash_denylist:                     # workspace-strict blocked commands (optional)
+    - "rm -rf /"
+    - "shutdown"</code></pre>
+    </li>
+  </ol>
+
+  <h5>Single-agent PR-creation flow</h5>
+  <pre><code>User (command-&lt;handle&gt;): "Integrate Stripe payment module + create PR"
+                ↓
+PM classifies intent → spawn Backend Developer SKILL (dev_capability: pr)
+                ↓
+BD enters repo cwd → analyzes code → adds src/payments/ → writes tests
+                ↓
+git checkout -b feat/stripe-payment
+git add src/payments/
+git commit -m "feat: Stripe payment integration"
+                ↓
+🛑 [dev-confirm gate] PM notifies user via messenger:
+   "git push origin feat/stripe-payment? (30-min timeout) [y/N]"
+                ↓
+User "y"  → push executed
+                ↓
+gh pr create --title "Stripe payment" --body "..."
+                ↓
+PR URL returned to works-&lt;handle&gt;: "PR #42 https://github.com/.../pull/42"</code></pre>
+  <p>All sensitive commands (<code>git push</code>, <code>gh pr merge</code>, <code>gh pr close</code>) are pinned in <code>SENSITIVE_BASH_PREFIXES</code> and must pass a 30-min dev-confirmation gate (<code>src/bot/dev-confirm.ts</code>). Auto-merge is <strong>permanently refused</strong>.</p>
+
+  <h5>Multi-agent PR review · discussion (current state)</h5>
+  <p>As of v0.8.5, *partial support*. What works vs what's pending:</p>
+  <table>
+    <thead><tr><th>Flow</th><th>v0.8.5 status</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>One agent creates a PR</td><td>✓ Supported</td><td>Single-agent flow above</td></tr>
+      <tr><td>Another agent comments on the same PR</td><td>△ Manual trigger</td><td>User says "Have QA Engineer review #42" → spawned QA runs <code>gh pr view 42</code> → <code>gh pr review 42 --comment --body "..."</code></td></tr>
+      <tr><td>Agents discussing PRs autonomously</td><td>○ v1.x slot</td><td>Currently PM spawns each agent sequentially with human in the middle. Automated round-trip is in v1.x autonomous engine expansion (Q4 cycle mid-notification consistency)</td></tr>
+      <tr><td>Merge (gh pr merge)</td><td>✓ Supported (30-min dev-confirm)</td><td>After review passes, user says "merge #42" → engineering agent runs <code>gh pr merge 42 --squash</code> → gate → user y</td></tr>
+      <tr><td>Auto-merge (on CI pass)</td><td>✗ Permanently refused</td><td>Pinned in v0.8.2 — auto-merge policy permanently not added</td></tr>
+    </tbody>
+  </table>
+
+  <h5>Onboarding additions (for PR-workflow users)</h5>
+  <p>In addition to the standard §4.2 9-step, dev_capability users need:</p>
+  <ul>
+    <li><strong>Step 3.5 (alongside messenger token) — gh CLI install + auth</strong>
+      <pre><code>winget install GitHub.cli   # or brew/apt
+gh auth login               # browser OAuth — repo scope needed
+gh auth status              # ✓ verify</code></pre>
+    </li>
+    <li><strong>Step 7.5 (right after doctor) — register repo + verify push permissions</strong>
+      <pre><code>solosquad add repo &lt;url&gt; --org &lt;org&gt;
+cd &lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;
+gh repo view                # confirm Write or higher
+git push --dry-run          # confirm auth works</code></pre>
+    </li>
+    <li><strong>Step 7.7 — set workspace.yaml dev_capability explicitly</strong>
+      <pre><code>dev_capability:
+  enabled: true
+  require_push_confirmation: true  # immutable, pinned
+  bash_denylist: []</code></pre>
+    </li>
+    <li><strong>Step 8.5 (right after starting bot) — messenger first dry test</strong>
+      <pre><code>In command-&lt;handle&gt; channel:
+"Fix one typo in &lt;repo-name&gt;'s README and create a PR"
+→ Small change verifies the full flow (spawn → diff → commit → dev-confirm → push → PR)</code></pre>
+    </li>
+    <li><strong>(Optional) Step 8.7 — branch protection rules</strong> — to block auto-merge at the GitHub level, in repo settings:
+      <ul>
+        <li>Enable <code>Require pull request before merging</code> on main branch</li>
+        <li><code>Require approvals: 1</code> (force your own approval)</li>
+        <li>(Optional) <code>Require status checks to pass</code> — if CI is enabled</li>
+      </ul>
+      This way, <em>even if SoloSquad's auto-merge refusal rule were ever broken</em>, GitHub-side protection provides another safety net.
+    </li>
+  </ul>
+
+  <div class="callout info">
+    <strong>v1.x followup</strong>
+    Fully autonomous multi-agent PR discussion (one agent creates PR → another agent reviews → comment round-trip → merge decision) is a v1.x autonomous engine expansion slot. As of v0.8.5, it's semi-automatic with the user explicitly triggering each spawn in between.
+  </div>
 </section>
 
 </main>

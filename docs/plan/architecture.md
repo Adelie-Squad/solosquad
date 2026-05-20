@@ -757,6 +757,30 @@ v0.8.4 출시 직후 fresh init을 실제로 돌려본 결과 박제 patch (`doc
 
 **migration 0.8.4 → 0.8.5**: schema 변경 없음, version bump only. 기존 워크스페이스의 `background_routines` 키는 untouched pass-through.
 
+#### 13.6.8 v0.8.6 — migrate Hotfix + Agent PR Workflow Doc
+v0.8.5 release 직후 사용자 테스트에서 발견된 회귀 hotfix (`docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`):
+
+**핵심 회귀 fix**:
+- `src/cli/migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 하드코딩 → `SOLOSQUAD_VERSION` 동적 참조 (v0.8.5 `init.ts` 패턴 grep 누락)
+- 영향: v0.4 이후 *1년 가까이* `solosquad migrate` (옵션 없이)가 `"Nothing to migrate."`로 silent no-op. doctor는 mismatch 잘 감지, 안내 따라가도 결과 없음 → workaround로 `--to 0.X.Y --apply` 명시 필요했음
+- 동일 패턴 회귀 방지: grep 결과 src/cli 디렉터리 stale 버전 상수 추가 0건 확인. 향후 모든 버전 default는 `src/util/version.ts`의 `SOLOSQUAD_VERSION` import 강제
+
+**master-guide §10 보강** (KO + EN 동일 박제):
+- §10.4 Uninstall · 재설치 · 마이그레이션 회피 — npm v7+ 글로벌 hook 한계 대응, 안전한 uninstall 6단계, uninstall + reinstall로 migration chain 우회 흐름, 새 init 후 doctor 경고 7종 분류 표
+- §10.5 봇·스케줄러·dev_capability 운영 — *스케줄러 디폴트 비실행* 명시, PR 워크플로 전제 4건(gh CLI auth, repo permission, workspace.yaml dev_capability), 단일 에이전트 PR 흐름, 다중-에이전트 현재 상태 표(✓/△/○/✗), 온보딩 추가 5건(Step 3.5/7.5/7.7/8.5/8.7), v1.x followup callout
+
+**v1.x 슬롯 설계 박제** — 자동 다중-에이전트 PR 토론 → 머지:
+- workflow.yaml schema v2: `git_workflow` 섹션 (`branch_pattern`, `auto_pr`, `pr_title_pattern`) + `reviewers` 리스트 (agent + focus + timing)
+- SKILL frontmatter 확장: `can_review_pr: true` + `review_focus: [...]` + `review_comment_template`
+- 자동 흐름: stage 종료 → branch push → dev-confirm → PR → reviewers spawn round → PM aggregation → works-handle post → discussion round 2 (사용자 트리거) → merge gate (사용자 y)
+- 영구 박제: `auto_merge: false` + `discussion_rounds` cap + 자동 머지 영구 거부
+- `<org>/memory/pr-discussions.jsonl` audit log + FTS5 인덱싱
+- 코드: `src/engine/git-workflow.ts` + `src/engine/pr-reviewer.ts` 신설 슬롯. v1.x-workflow-goal-routine-evolution.md에 §추가
+
+**migration 0.8.5 → 0.8.6**: schema 변경 없음, version bump only.
+
+자세히: `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
+
 자세히: `docs/plan/v0.8.5-onboarding-qa.md`
 
 ### 13.7 v1.x 시리즈 (예고)
@@ -792,6 +816,7 @@ v0.8.4 출시 직후 fresh init을 실제로 돌려본 결과 박제 patch (`doc
 - `docs/plan/v0.8.3-onboarding-ux-observability.md`
 - `docs/plan/v0.8.4-cli-surface-reduction.md`
 - `docs/plan/v0.8.5-onboarding-qa.md`
+- `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)

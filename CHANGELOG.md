@@ -4,6 +4,62 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.6] — 2026-05-20
+
+**v0.8.6 — migrate Hotfix + Agent PR Workflow Doc.** v0.8.5 release 직후
+사용자 테스트에서 발견된 회귀 hotfix. v0.8.5에서 `init.ts`의 stale 버전
+상수를 동적 참조로 고쳤는데, *같은 패턴*이 `migrate.ts`에도 있었던 것을
+grep 누락했었음. 결과: v0.4 이후 모든 minor/patch 버전에서
+`solosquad migrate` (옵션 없이)가 `"Nothing to migrate."`로 silent no-op
+되어 있었음. doctor는 mismatch 잘 감지했지만 안내 따라가도 결과 없음 →
+workaround로 `--to 0.X.Y --apply` 명시해야 했던 잠재 회귀. 부수:
+master-guide §10.4 (Uninstall 안전 순서 + 재설치로 migration 우회) +
+§10.5 (봇·스케줄러·dev_capability 운영 + 다중-에이전트 PR 워크플로 setup)
+박제. v1.x 자동 다중-에이전트 PR 토론 → 머지 설계 슬롯 박제.
+
+자세히: `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
+
+### Fixed — migrate.ts 회귀 (v0.4 이후 1년 잔존)
+- `src/cli/migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 하드코딩 제거
+- `src/util/version.ts`의 `SOLOSQUAD_VERSION` import로 동적 참조
+- 효과: `solosquad migrate` (옵션 없이) → 현재 CLI 버전을 target으로 사용,
+  워크스페이스가 구버전이면 정상적으로 chain 따라 migration
+- 동일 패턴 회귀 방지: grep 결과 src/cli 디렉터리에서 stale 버전 상수
+  추가 0건 확인
+
+### Changed — master-guide §10.4 신설 (uninstall · 재설치 · migration 회피)
+- 안전한 uninstall 6단계 (봇·스케줄러 정지 → dry-run → mode 선택 → archive
+  보관 → REVOKE-CHECKLIST 외부 자원 정리 → npm 제거)
+- uninstall + reinstall로 큰 migration chain 우회 흐름
+  (`--mode archive-only` → re-init → `solosquad import`)
+- 새 init 후 doctor 경고 7종 분류 표 (항상 표시 vs 조치 필요 vs 선택)
+- "uninstall 직전 PID 정지 필수" warn callout — archive snapshot SHA 일치
+
+### Changed — master-guide §10.5 신설 (봇·스케줄러·dev_capability 운영)
+- 스케줄러는 디폴트 실행되지 않음 명시 — daemon / 자동 시작 0건
+- `detectLivePids()` PowerShell 매칭 로직 공개
+- PR 워크플로 전제 조건 3건 (gh CLI install + auth, repo Write 권한,
+  workspace.yaml dev_capability 활성)
+- 단일 에이전트 PR 생성 흐름 (PM 분류 → BD spawn → dev-confirm gate
+  → push → gh pr create → works-handle URL 회신)
+- 다중-에이전트 PR 리뷰·토론 현재 상태 표 — v0.8.6은 *반자동*
+  (사용자가 spawn 명시 트리거), v1.x에서 자동
+- 온보딩 추가 항목 5건 — Step 3.5/7.5/7.7/8.5/8.7 (gh auth / repo 검증 /
+  dev_capability 활성 / 메신저 dry test / branch protection)
+- 자동 머지 영구 거부 정책 재명시 (v0.8.2 박제)
+
+### Added — v1.x agent PR workflow 설계 박제 (코드 없음, plan only)
+- workflow.yaml schema v2: `git_workflow` (branch_pattern, auto_pr,
+  pr_title_pattern) + `reviewers` 리스트 (agent, focus, timing) + cap
+  (`discussion_rounds`, `auto_merge: false`)
+- SKILL frontmatter 확장: `can_review_pr` + `review_focus` +
+  `review_comment_template`
+- `<org>/memory/pr-discussions.jsonl` audit log (FTS5 인덱싱)
+- v1.x-workflow-goal-routine-evolution.md에 §추가 슬롯
+
+### Migration
+- `src/migrations/scripts/0.8.5-to-0.8.6.ts` — schema 변경 없음, version bump
+
 ## [0.8.5] — 2026-05-18
 
 **v0.8.5 — Onboarding QA & Release-Gate.** v0.8.4 출시 직후 fresh init을

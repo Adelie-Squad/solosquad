@@ -2,7 +2,7 @@
 
 > 릴리스된 버전, 진행 중인 계획, 결정 로그, 외부 참고자료를 한 자리에 모은 롤링 문서.
 
-**최종 업데이트:** 2026-05-18 (v0.8.5 릴리스)
+**최종 업데이트:** 2026-05-20 (v0.8.6 릴리스)
 
 ---
 
@@ -24,9 +24,10 @@
 | `v0.8.2` | 2026 Q2 | Dev Capability — SKILL `dev_capability: true` + dev_permissions + PR flow + push/merge confirmation gate | `v0.8.2-dev-capability.md` |
 | `v0.8.3` | 2026 Q2 | Onboarding UX + Observability — logger 확장 + `solosquad logs` CLI + `add repo --dry-run` byte-identical 보장 | `v0.8.3-onboarding-ux-observability.md` |
 | `v0.8.4` | 2026 Q2 | CLI Surface Reduction — `--mode` 패턴 통일(uninstall·import) + `backup` subgroup + deprecation alias + init walk-up 분기 | `v0.8.4-cli-surface-reduction.md` |
-| **`v0.8.5`** | **2026-05-18** | **Onboarding QA & Release-Gate** — init.ts hardcoded version 회귀 fix + wizard 문구 정합(handle/name/role/provider 헬프) + master-guide v0.6→v0.8.5 backfill + 3-docs pre-publish gate(`prepublishOnly` 강제) | `v0.8.5-onboarding-qa.md` |
+| `v0.8.5` | 2026-05-18 | Onboarding QA & Release-Gate — init.ts hardcoded version 회귀 fix + wizard 문구 정합(handle/name/role/provider 헬프) + master-guide v0.6→v0.8.5 backfill + 3-docs pre-publish gate(`prepublishOnly` 강제) | `v0.8.5-onboarding-qa.md` |
+| **`v0.8.6`** | **2026-05-20** | **migrate Hotfix + Agent PR Workflow Doc** — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix (v0.4 이후 1년 잔존, no-op 종료) + master-guide §10.4 uninstall safe sequence + §10.5 봇·스케줄러·dev_capability 운영 + 자동 다중-에이전트 PR 토론·머지 v1.x 설계 박제 (`git_workflow` + `reviewers` + `can_review_pr` 스키마 후보) | `v0.8.6-migrate-hotfix-pr-workflow.md` |
 
-### 현재 설치 가능 버전: npm `0.8.5`
+### 현재 설치 가능 버전: npm `0.8.6`
 
 **다음 마일스톤:** `v0.9` 안정화 → `v1.0.0` 정식 출시. v0.7~v0.8.5로 라이프사이클·멀티유저·dev capability·onboarding UX가 모두 닫혔으므로, v0.9는 *공개 약속 직전 안정화* 슬롯, v1.0은 *공개 사용자 약속* (안정 API + breaking change 정책) 시작.
 
