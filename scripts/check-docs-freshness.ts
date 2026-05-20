@@ -2,11 +2,16 @@
 /**
  * v0.8.5 §2.3 — Pre-publish documentation freshness gate.
  *
- * Reads the current `package.json` version and verifies that all three
+ * Reads the current `package.json` version and verifies that all four
  * release-critical docs mention it:
  *   - docs/plan/product-roadmap.md  (synergy/role/vision)
  *   - docs/plan/architecture.md     (§13.x version section)
- *   - docs/manual/master-guide.html (user-facing manual)
+ *   - manual/master-guide_ko.html   (user-facing manual, Korean)
+ *   - manual/master-guide_en.html   (user-facing manual, English)
+ *
+ * v0.9.0: master-guide moved from docs/manual/ to top-level manual/ so that
+ * npm-published package includes it (docs/ stays dev-only per package.json
+ * `files` field).
  *
  * Wired into `npm run prepublishOnly` so a stale doc blocks `npm publish`.
  * Matches the user memory rule `feedback_three_docs_pre_publish.md`.
@@ -30,8 +35,8 @@ const version = pkg.version;
 const targets = [
   "docs/plan/product-roadmap.md",
   "docs/plan/architecture.md",
-  "docs/manual/master-guide_ko.html",
-  "docs/manual/master-guide_en.html",
+  "manual/master-guide_ko.html",
+  "manual/master-guide_en.html",
 ];
 
 let failed = 0;

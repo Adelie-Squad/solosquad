@@ -4,6 +4,50 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] — 2026-05-20
+
+**v0.9.0 — Workspace ↔ Repository 관계 재설계 Model B 구현.** v0.9 plan
+(§13.6.10)에서 박제한 *path-reference* 모델 코드 구현. 부수로 master-guide
+를 npm 패키지에 포함시켜 사용자가 `npm install` 후 *로컬에서 매뉴얼
+접근 가능*. backward-compat 100% — 기존 `<workspace>/<org>/repositories/<slug>/`
+트리 영구 동작.
+
+자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
+
+### Added — Model B (path reference)
+- `src/util/config.ts:RepoYaml`에 `path?: string` 필드 — 외부 경로 참조
+- `src/util/paths.ts:resolveRepoCwd` 우선순위:
+  1. path-reference yaml의 path 가리키는 외부 경로 (존재 검증)
+  2. legacy `<workspace>/<org>/repositories/<slug>/` 트리
+  3. legacy 루트 (org=repo, .git at org root)
+- `src/cli/add-repo.ts` 확장:
+  - `--path <external>` flag — 명시적 path-reference 등록
+  - cwd 자동 인식 — 인자 없이 호출 시 cwd가 git repo면 path-reference 제안
+  - `registerPathReference()` — workspace yaml + 외부 repo `.solosquad/repo.yaml` 작성
+- `src/cli/init.ts:registerRepoInline()` — 외부 path 입력 시 path-reference / move 2-way prompt (default = path-reference)
+- `src/cli/doctor.ts:runPathReferenceChecks()` — 외부 path 존재 + `.git/` 검증 (warn-only)
+- `test/repo-path-reference.test.ts` (4 tests) — 회귀 catcher
+
+### Changed — docs/manual/ → top-level manual/
+- master-guide HTML을 npm 패키지에 포함시키기 위한 폴더 이동
+- `docs/manual/master-guide_{ko,en}.html` → `manual/master-guide_{ko,en}.html`
+- `package.json` `files`에 `manual/` 추가 (docs/는 dev-only 유지)
+- 영향: `npm install -g solosquad` 후 사용자가 `<npm-prefix>/lib/node_modules/solosquad/manual/master-guide_ko.html` 같은 경로로 *로컬 매뉴얼 접근*
+- 모든 plan/README/AGENTS.md 등 14개 파일에서 `docs/manual/` 참조를 `manual/`로 일괄 갱신
+- `scripts/check-docs-freshness.ts` targets 갱신
+
+### Compatibility
+- 기존 `<workspace>/<org>/repositories/<slug>/` 트리 사용자 영구 동작
+- `resolveRepoCwd`가 yaml 없거나 외부 path 사라진 경우 legacy 트리로 자동 폴백
+- 새 RepoYaml.path는 optional이라 기존 yaml 파일 untouched
+- v0.9.2+ slot: `solosquad migrate --externalize-repos` (현재 트리 → 외부 path-reference, opt-in)
+
+### Migration
+- `src/migrations/scripts/0.8.7-to-0.9.0.ts` — schema 변경 없음, version bump only
+
+### Tests
+- 571/571 green (567 + 4 path-reference)
+
 ## [0.9 plan] — 2026-05-20 (plan only, 구현 X)
 
 **v0.9 — Workspace ↔ Repository 관계 재설계.** 본 entry는 *plan 박제용*.
@@ -306,7 +350,7 @@ subgroup 신설, (f) `solosquad init` 워크스페이스 경로 명시 확인 pr
 ### Changed — Documentation
 - `docs/api-stability.md` §4 — v0.8.4 surface freeze link + migrate
   dry-run-by-default convention exception 명시
-- `docs/manual/master-guide.html` §6 — uninstall/import/backup 명령 표
+- `manual/master-guide.html` §6 — uninstall/import/backup 명령 표
   갱신, init wizard에 `Initialize workspace at` step 안내 추가
 - `docs/plan/v0.8.4-cli-surface-reduction.md` 신규 — 14절 + 17 작업 분해
 - `docs/plan/product-roadmap.md` §5.1·§6 — v0.8.4 부활 entry 박제 (오늘
@@ -363,7 +407,7 @@ CLI↔workspace version mismatch 감지, (e) trajectory 자동 등록 ROI 측정
   + `src/bot/index.ts`·`schedule`의 logout.lock 차단 제거
 
 ### Changed — Master-guide 재정합
-- `docs/manual/master-guide.html` §3/§4/§6/§8/§9/§10 v0.7→v0.8 모델 흡수
+- `manual/master-guide.html` §3/§4/§6/§8/§9/§10 v0.7→v0.8 모델 흡수
   (멀티 유저 채널·dev_capability·archive/import/add-repo dry-run·
   update↔migrate 흐름도·관측성 절·6건 FAQ 추가)
 
@@ -553,7 +597,7 @@ farewell archive + 새 워크스페이스 init*으로 자연 표현. v1.0 정식
 - `docs/plan/v0.7-uninstall-lifecycle.md` §10 17건 + P0/P1/P2 패치 흡수
 - `docs/plan/architecture.md` §13.5 v0.7 lifecycle 추가
 - `docs/plan/product-roadmap.md` v0.7.0 entry + 결정 로그
-- `docs/manual/master-guide.html` §6.1 CLI 표 + §8.1 v0.7 절 추가
+- `manual/master-guide.html` §6.1 CLI 표 + §8.1 v0.7 절 추가
 - `assets/.env.example` — 시크릿 키마다 "masked on uninstall — see v0.7
   spec" 주석 추가
 

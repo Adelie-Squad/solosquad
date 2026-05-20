@@ -2,7 +2,19 @@ import { fileURLToPath } from "url";
 import path from "path";
 import os from "os";
 import fs from "fs";
+import { createRequire } from "module";
 import { findWorkspaceRoot } from "../migrations/detect.js";
+
+// v0.9.0 — js-yaml accessed lazily via createRequire because resolveRepoCwd
+// is in a hot path (called on every spawn) and we want to avoid a top-level
+// ESM import of js-yaml (which would bloat startup). The require ref is
+// cached after first call.
+const _requireFromPaths = createRequire(import.meta.url);
+let _yamlLib: typeof import("js-yaml") | undefined;
+function loadYamlLib(): typeof import("js-yaml") {
+  if (!_yamlLib) _yamlLib = _requireFromPaths("js-yaml") as typeof import("js-yaml");
+  return _yamlLib;
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -142,10 +154,18 @@ export function getRepoDir(orgSlug: string, repoSlug: string, workspace?: string
 /**
  * Resolve the runtime cwd for a given org/repo.
  *
- * Normal case (post-sync): `<workspace>/<org>/repositories/<repo>` exists — return it.
+ * Priority (v0.9.0+):
+ * 1. **path-reference (model B)**: `<workspace>/<org>/repositories/<repo>.yaml`
+ *    (file, not directory) has a `path:` field → resolve to that absolute
+ *    external path (validated to exist).
+ * 2. **legacy tree (model A)**: `<workspace>/<org>/repositories/<repo>/`
+ *    directory exists → use it (v0.8.x and earlier default).
+ * 3. **legacy root (org=repo, pre-sync)**: `<org>/.git` exists → org root.
+ * 4. Fallback: org root.
  *
- * Legacy case (org = repo, .git at org root, pre-sync): fall back to the org
- * root so the bot/scheduler keep working for single-repo migrated orgs.
+ * See `docs/plan/v0.9-workspace-repo-relationship.md` §7 for the design
+ * rationale (path-reference becomes the v0.9+ default; the legacy tree stays
+ * permanently supported for backward-compat).
  */
 export function resolveRepoCwd(
   orgSlug: string,
@@ -154,12 +174,30 @@ export function resolveRepoCwd(
 ): string {
   const root = workspace ?? getWorkspaceRoot();
   if (repoSlug) {
+    // (1) path-reference mode (v0.9.0+) — repo.yaml file at repositories/<slug>.yaml
+    const yamlPath = path.join(root, orgSlug, "repositories", `${repoSlug}.yaml`);
+    if (fs.existsSync(yamlPath)) {
+      try {
+        const yamlLib = loadYamlLib();
+        const doc = yamlLib.load(fs.readFileSync(yamlPath, "utf-8")) as { path?: string } | null;
+        if (doc && typeof doc.path === "string" && doc.path.trim().length > 0) {
+          const resolved = path.resolve(doc.path);
+          if (fs.existsSync(resolved)) return resolved;
+          // path-reference exists but target missing — fall through to legacy
+        }
+      } catch {
+        // malformed yaml — fall through to legacy
+      }
+    }
+    // (2) legacy tree — repositories/<slug>/ directory
     const canonical = path.join(root, orgSlug, "repositories", repoSlug);
     if (fs.existsSync(canonical)) return canonical;
   }
   const orgDir = path.join(root, orgSlug);
+  // (3) legacy root (org=repo)
   const legacyGit = path.join(orgDir, ".git");
   if (fs.existsSync(legacyGit)) return orgDir;
+  // (4) fallback
   return orgDir;
 }
 

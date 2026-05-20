@@ -88,6 +88,67 @@ async function registerRepoInline(
         return null;
       }
       const slug = path.basename(src);
+
+      // v0.9.0 — for external paths that look like a git repo, default to
+      // path-reference (no move, no copy). User can opt into legacy move
+      // via prompt.
+      if (isGitRepo(src)) {
+        const { mode } = await inquirer.prompt([
+          {
+            name: "mode",
+            type: "list",
+            message: `Register ${src}:`,
+            choices: [
+              {
+                name: "Path reference (recommended — no move, no copy)",
+                value: "reference",
+              },
+              { name: "Move into workspace (legacy)", value: "move" },
+            ],
+            default: "reference",
+          },
+        ]);
+        if (mode === "reference") {
+          const { role } = await inquirer.prompt([
+            {
+              name: "role",
+              type: "list",
+              message: "Role:",
+              choices: ["main", "frontend", "backend", "data", "infra", "docs", "unknown"],
+              default: "main",
+            },
+          ]);
+          const yaml = await import("js-yaml");
+          const { detectLanguage, getRemoteUrl } = await import("../util/git.js");
+          const doc = {
+            slug,
+            name: slug,
+            role,
+            language: detectLanguage(src) ?? undefined,
+            linked_org: orgSlug,
+            remote_url: getRemoteUrl(src),
+            products: [],
+            registered_at: new Date().toISOString(),
+            path: src,
+          };
+          fs.writeFileSync(
+            path.join(reposDir, `${slug}.yaml`),
+            yaml.dump(doc, { lineWidth: 100 }),
+            "utf-8",
+          );
+          // mirror inside external repo (class A* — single file)
+          const externalDotDir = path.join(src, ".solosquad");
+          fs.mkdirSync(externalDotDir, { recursive: true });
+          const externalYaml = path.join(externalDotDir, "repo.yaml");
+          if (!fs.existsSync(externalYaml)) {
+            fs.writeFileSync(externalYaml, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
+          }
+          console.log(chalk.green(`  ✓ ${slug} registered as path-reference → ${src}`));
+          return { slug, role };
+        }
+        // mode === "move" — fall through to legacy flow
+      }
+
       repoDir = path.join(reposDir, slug);
       if (path.resolve(repoDir) === path.resolve(src)) {
         // In-place register

@@ -262,7 +262,7 @@ metric-game / guardrail integrity collapses (Goodhart's Law).
 - `assets/agents/{team}/{agent}/SKILL.md` (with care — agent identity is
   load-bearing)
 - `assets/routines/`, `assets/templates/`
-- `docs/plan/`, `docs/manual/`
+- `docs/plan/`, `manual/`
 - `test/`
 - New migration files in `src/migrations/scripts/` for the *current* in-flight
   version

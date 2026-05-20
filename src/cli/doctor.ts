@@ -107,6 +107,60 @@ function tokenKeysForMessenger(messenger: string): string[] {
   return keys;
 }
 
+/**
+ * v0.9.0 — path-reference repo health check.
+ *
+ * Each `<workspace>/<org>/repositories/<slug>.yaml` (file) is a path-reference
+ * to an external repo. Verify:
+ *   - The external path still exists on disk
+ *   - It still has a `.git/` (could have been deleted by user)
+ * Warn — never fail — because users may legitimately be on a different
+ * machine or have intentionally moved a repo.
+ */
+function runPathReferenceChecks(
+  workspace: string,
+  _products: Array<{ slug: string }>,
+): number {
+  let warnings = 0;
+  type LoadedYaml = { slug?: string; path?: string };
+  const { createRequire } = require("module") as typeof import("module");
+  const yaml = createRequire(import.meta.url)("js-yaml") as typeof import("js-yaml");
+  for (const org of listOrganizations(workspace)) {
+    const reposDir = path.join(org.path, "repositories");
+    if (!fs.existsSync(reposDir)) continue;
+    for (const entry of fs.readdirSync(reposDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith(".yaml")) continue;
+      const yamlPath = path.join(reposDir, entry.name);
+      let doc: LoadedYaml | null = null;
+      try {
+        doc = yaml.load(fs.readFileSync(yamlPath, "utf-8")) as LoadedYaml;
+      } catch {
+        warn(`${org.slug}/${entry.name}: malformed YAML`);
+        warnings++;
+        continue;
+      }
+      if (!doc?.path) continue; // legacy yaml without path-reference — skip
+      const resolved = path.resolve(doc.path);
+      if (!fs.existsSync(resolved)) {
+        warn(
+          `${org.slug}/${doc.slug ?? entry.name}: external path missing`,
+          `path: ${resolved}`,
+        );
+        warnings++;
+      } else if (!fs.existsSync(path.join(resolved, ".git"))) {
+        warn(
+          `${org.slug}/${doc.slug ?? entry.name}: external path is not a git repo (no .git/)`,
+          `path: ${resolved}`,
+        );
+        warnings++;
+      } else {
+        check(`${org.slug}/${doc.slug ?? entry.name} → ${resolved}`, true);
+      }
+    }
+  }
+  return warnings;
+}
+
 export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Promise<void> {
   console.log(chalk.bold("\nSoloSquad — Doctor\n"));
   console.log(chalk.dim(`Platform: ${platformInfo()}`));
@@ -257,6 +311,11 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   const products = loadProducts();
   const unitLabel = isNew ? "Organizations" : "Products";
   if (!check(`${unitLabel} registered (${products.length})`, products.length > 0, isNew ? "Run: solosquad add org <name>" : "Run: solosquad init")) issues++;
+
+  // v0.9.0 — path-reference repos: external path existence + .git/ sanity
+  if (isNew) {
+    issues += runPathReferenceChecks(workspace, products);
+  }
 
   // 4. Lifecycle (v0.7)
   if (isNew) {
