@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v0.9.0 기준</span>
+  <span class="tag">종합 개념서 · v0.10.0 기준</span>
   <nav>
     <ul>
       <li>
@@ -1039,8 +1039,27 @@ claude --version</code></pre>
   </div>
 
   <div class="step">
-    <div class="step-head">Step 2 — Claude Code Max 구독</div>
-    <p>https://claude.ai 접속 → 설정 → Claude Code → Max 플랜 구독.</p>
+    <div class="step-head">Step 2 — AI 백엔드 선택 + 구독<span class="badge now">v0.10</span></div>
+    <p>v0.10부터 SoloSquad는 OAuth 기반 AI CLI를 backend로 추상화합니다. 현재 작동: <strong>Claude Code Max (default)</strong>. 계획: <em>Codex backend</em>는 v1.x 슬롯 박제 (구현 차단점 10건, <code>docs/plan/v0.10-llm-backend-abstraction.md</code> §2 참조).</p>
+
+    <h4>Default — Claude Code Max</h4>
+    <ol>
+      <li>https://claude.ai 접속 → 설정 → Claude Code → Max 플랜 구독</li>
+      <li>설치: <code>npm install -g @anthropic-ai/claude-code</code></li>
+      <li><code>claude login</code> — 브라우저 OAuth flow → 본 머신에 자격증명 영구 저장</li>
+    </ol>
+
+    <h4>Future — Codex (v1.x 슬롯)</h4>
+    <p>OpenAI Codex CLI를 backend로 쓰는 흐름은 v1.x에서 실제 구현 예정. v0.10에서는 <code>solosquad init</code> 마법사가 *Codex 선택지를 보여주지만 spawn 시점에 명시 에러 throw* (stub). 사용자가 *정직한 현재 상태*를 인지하도록 한 설계 결정.</p>
+
+    <p>구현 차단점 (Codex 백엔드가 v0.10에서 *실행 안 되는* 이유):</p>
+    <ul>
+      <li>PM session 모델 부재 (Claude <code>--session-id + --resume</code> ↔ Codex stateless)</li>
+      <li>Task tool 부재 (Claude 내장 spawn tool ↔ Codex 동등 없음)</li>
+      <li>SKILL.md format vendor 종속 (Anthropic Agent Skills 형식)</li>
+      <li>그 외 stream format / auth probe / system prompt 주입 / 비용 추적 / dev-confirm hook / context window / 과금 모델</li>
+    </ul>
+    <p>전체 분석: <code>docs/plan/v0.10-llm-backend-abstraction.md</code> §2.</p>
   </div>
 
   <div class="step">
@@ -2681,7 +2700,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   <h3 id="s10-3">10.3 자주 묻는 질문 (FAQ)</h3>
 
   <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
-  A. Claude Code Max 구독료만 있으면 시작 가능. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
+  A. v0.10 기준 Claude Code Max 구독료만 있으면 시작 가능 (default backend). Codex backend는 v1.x 슬롯이라 v0.10에서 *실행 안 됨*. 클라우드 운영 시 VPS 월 $4~6 추가. Codex backend 도입 시 *예측 불가 토큰 청구 가능성* 박제 (paperclip envelope cap 강제 — plan §2.10).</p>
 
   <p><strong>Q. Discord와 Slack을 동시에 쓸 수 있나요?</strong><br>
   A. 한 워크스페이스에서는 불가능. <strong>워크스페이스를 두 개</strong> 만들면 됩니다 — 예: <code>~/solopreneur/</code>(Slack 봇) + <code>~/elon-24-7/</code>(Discord 봇). 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 미지원.</p>
