@@ -4,6 +4,50 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.7] — 2026-05-20
+
+**v0.8.7 — Tiny Stabilization.** v0.8.5 + v0.8.6의 *stale 버전 상수 회귀*
+패턴 회고 결과 *꼭 필요한 것 2건만* patch. v0.9 안정화 6축 권장안은
+오버스펙으로 판정해 *영구 skip*. 인프라 신설 0, 발견된 문제 직접 수정.
+
+자세히: `docs/plan/v0.8.7-tiny-stabilization.md`
+
+### Fixed — master-guide §3.11 dev_capability docs drift
+- v0.8.2 plan 초기 design intent의 "4-level enum (read/propose/patch/pr)"
+  표현이 master-guide §3.11에 박혀 있었으나, *실제 코드는 boolean +
+  dev_permissions sub-tree로 분리*된 상태였음 (1년 가까이 drift)
+- KO + EN 양쪽 §3.11 한 문단 직접 edit으로 코드 reality 반영
+  - `dev_capability: true` (boolean) 명시
+  - 세부 권한은 `dev_permissions` sub-tree (bash.allowed/denied,
+    network, push_targets.requires_confirmation, merge.auto=영구 false)
+- v0.8.6 작업 중 grep으로 식별된 단일 drift. 인프라 sweep X, 직접 수정
+
+### Added — test/migrate-default-target.test.ts (회귀 catcher)
+- v0.8.6 hotfix 클래스 (`CLI_VERSION_TARGET = "0.4.0"` 같은 stale literal
+  default가 1년 잠복) 재발 방지
+- source inspection 기반 3 assertion:
+  1. `CLI_VERSION_TARGET = "X.Y.Z"` 하드코딩 *부재*
+  2. `SOLOSQUAD_VERSION` import from `../util/version.js` *존재*
+  3. 동적 값이 semver 패턴
+- narrow scope: `migrate.ts` 한정. 같은 패턴이 다른 파일에 또 생기면
+  *그때 sibling test 추가*. lint rule 일반화는 영구 skip
+
+### Skipped (영구) — v0.9 안정화 6축 권장안
+초기에 그렸던 6축 모두 오버스펙으로 판정. 박제만:
+- stale constant lint 스크립트 — grep 한 줄 수동 체크가 더 가벼움
+- migration chain E2E — v0.8.6 회귀 잡았을 거 주장 *틀림*
+- doctor 확장 (push precheck) — 현재 사용자 1명, 시나리오 1회로 충분
+- archive round-trip — uninstall/import은 일생 1~2회. 회귀 비용 < 유지 비용
+- CLI surface drift 자동 검증 — v1.0 publish 직전 manual 확인이면 충분
+- master-guide ↔ 코드 drift sweep 인프라 — 인프라 X, 발견된 drift 직접 수정
+
+→ v0.9 plan doc 작성 안 함. *문제 발견 → patch* 패턴 유지.
+v1.0 publish 형식: 코드 변경 없이 5분 manual sweep + tag + api-stability
+§4 발효일 박제.
+
+### Migration
+- `src/migrations/scripts/0.8.6-to-0.8.7.ts` — schema 변경 없음, version bump
+
 ## [0.8.6] — 2026-05-20
 
 **v0.8.6 — migrate Hotfix + Agent PR Workflow Doc.** v0.8.5 release 직후
