@@ -766,10 +766,10 @@ v0.8.5 release 직후 사용자 테스트에서 발견된 회귀 hotfix (`docs/p
 - 동일 패턴 회귀 방지: grep 결과 src/cli 디렉터리 stale 버전 상수 추가 0건 확인. 향후 모든 버전 default는 `src/util/version.ts`의 `SOLOSQUAD_VERSION` import 강제
 
 **master-guide 보강** (KO + EN 동일 박제):
-- §4.2 Step 1에 git 인증 안내 callout — 첫 dev 사용자가 별도 셋업 필요함 명시
+- §4.2 Step 1에 *짧은* git 인증 callout — git 표준 흐름에 위임, SoloSquad 별도 절차 X 명시 (Windows GCM 자동 / macOS osxkeychain / Linux 별도 셋업)
 - §10.4 Uninstall · 재설치 · 마이그레이션 회피 — npm v7+ 글로벌 hook 한계 대응, 안전한 uninstall 6단계, uninstall + reinstall로 migration chain 우회 흐름, 새 init 후 doctor 경고 7종 분류 표
 - §10.5 봇·스케줄러·**에이전트 git 작업** — *v0.8.6 범위 = push까지* 명시 (PR 라이프사이클은 사용자 책임). 스케줄러 비자동 실행, push 전제 3건(git 인증·repo 등록·dev_capability), 에이전트 push 흐름 (compare URL 회신), 온보딩 추가 5건 (Step 1.5/7.5/7.7/8.5/8.7 — gh CLI 단계 제거)
-- §10.5.1 git 인증 셋업 (SoloSquad 외부 영역) — 3가지 방법(Cred Manager / SSH key / PAT) + 검증 명령
+- §10.1 트러블슈팅에 git push 인증 실패 항목 (OS별 3줄 안내 + GitHub 공식 docs 링크)
 - v1.x followup callout — gh CLI 트랙 / MCP 트랙 / 다중-에이전트 토론 모두 v1.x 슬롯으로 분리
 
 **v1.x 슬롯 설계 박제** — PR API 자동화 + 다중-에이전트 토론 (v0.8.6에서 *코드 0건*):

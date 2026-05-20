@@ -1026,15 +1026,9 @@ npm install -g @anthropic-ai/claude-code</code></pre>
 git --version
 claude --version</code></pre>
 
-    <div class="callout warn">
-      <strong>First-time dev users — git auth requires separate setup</strong>
-      The commands above only install the git <em>binary</em>. For SoloSquad agents to commit and push code through messenger conversations, <strong>GitHub push authentication must be set up separately</strong> — a user-responsibility area not automated by SoloSquad.
-      <ul>
-        <li><strong>If you've ever successfully <code>git push</code>ed to GitHub from this machine</strong> → no additional setup needed. macOS/Windows auto-includes Git Credential Manager via Git for Mac/Windows, which permanently stores credentials after a one-time OAuth on first push</li>
-        <li><strong>First-time git users</strong> → see §10.5.1 "git auth setup" (one-time, ~5 min). Pick one of 3 methods (Git Credential Manager / SSH key / PAT)</li>
-        <li><strong>One-line verification</strong>: in any of your GitHub repos run <code>git push --dry-run</code> → ✓ or ✗ resolves immediately</li>
-      </ul>
-      This setup is needed when you *actually use* SoloSquad's dev_capability feature. If you'll only use memory/workflow operations (chat, signal scan without code work), it can be skipped.
+    <div class="callout info">
+      <strong>Note — git itself handles push authentication</strong>
+      Once git is installed via the commands above, the OS handles auth at the first <code>git push</code> (Windows: Git Credential Manager auto-invokes browser OAuth; macOS: osxkeychain stores PAT after one-time entry). <strong>SoloSquad does not interfere with this process and does not provide a separate setup procedure</strong> — standard git flow. Linux users may need to set up an SSH key or PAT separately (see git/GitHub official docs).
     </div>
   </div>
 
@@ -2614,6 +2608,17 @@ solosquad doctor --messenger-check  # live API token verification</code></pre>
 solosquad update                    # if already latest, only announces
 docker compose up -d --build        # if Docker, rebuild image</code></pre>
 
+  <h4>git push authentication failed (when using agent dev_capability)</h4>
+  <p>If the agent committed but failed at push with <code>fatal: Authentication failed</code> or <code>Permission denied (publickey)</code>:</p>
+  <pre><code>cd &lt;repo&gt;
+git push --dry-run    # reproduce the same error directly</code></pre>
+  <ul>
+    <li><strong>Windows</strong>: Git for Windows installer auto-enables Git Credential Manager. Reinstall (<code>winget install Git.Git</code>), then verify first push opens browser OAuth</li>
+    <li><strong>macOS</strong>: Set <code>git config --global credential.helper osxkeychain</code>, then first push prompts for GitHub PAT → permanently stored in Keychain</li>
+    <li><strong>Linux</strong>: Set up SSH key (<code>ssh-keygen</code> + register public key in GitHub) or PAT + <code>credential.helper store</code> manually</li>
+  </ul>
+  <p>Authentication itself is outside SoloSquad's scope. For detailed procedures, see the <a href="https://docs.github.com/authentication/keeping-your-account-and-data-secure/about-authentication-to-github">GitHub official docs</a>.</p>
+
   <h3 id="s10-2">10.2 Migration Troubleshooting</h3>
 
   <h4>"Cannot find package.json" type errors</h4>
@@ -2818,11 +2823,11 @@ solosquad schedule    # cron routine runner (morning/evening brief, system-house
   <h5>Prerequisites — all *user pre-setup* (not automated by SoloSquad)</h5>
 
   <ol>
-    <li><strong>git installed + push auth working</strong> — beyond §4.2 Step 1 prerequisites, *nothing additional needed*. First-time dev users (very first time using git) see §10.5.1 for git auth setup. Verify:
+    <li><strong>git installed + push auth working</strong> — §4.2 Step 1 prerequisites are enough. Windows/macOS handle this automatically on first push. Linux may need SSH key or PAT setup separately (git/GitHub docs). Verify:
       <pre><code>cd &lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;
 git push --dry-run
-# "Everything up-to-date" or "To &lt;url&gt;..." → ✓
-# "Authentication failed" / "Permission denied" → ✗ §10.5.1 setup needed</code></pre>
+# "Everything up-to-date" or "To &lt;url&gt;..." → ✓ pass
+# "Authentication failed" → see troubleshooting §10.1</code></pre>
     </li>
     <li><strong>Register repo</strong>
       <pre><code>solosquad add repo https://github.com/me/my-saas.git --org my-saas</code></pre>
@@ -2866,9 +2871,9 @@ User clicks URL → GitHub web UI to create PR → review code → merge</code><
   <h5>Onboarding additions (for dev_capability users)</h5>
   <p>Beyond the §4.2 9-step, additional setup for dev_capability users — *gh CLI install unnecessary in v0.8.6 scope*:</p>
   <ul>
-    <li><strong>Step 1.5 — verify git push auth</strong> (first-time dev users only)
+    <li><strong>Step 1.5 — verify git push auth</strong> (optional, only if failing)
       <pre><code>git push --dry-run    # in any of your own repos
-# If failing: follow §10.5.1 to set up cred helper or SSH key (one-time, 5 min)</code></pre>
+# If failing: see troubleshooting §10.1</code></pre>
     </li>
     <li><strong>Step 7.5 (right after doctor) — register repo + verify push</strong>
       <pre><code>solosquad add repo &lt;url&gt; --org &lt;org&gt;
@@ -2888,48 +2893,6 @@ git push --dry-run        # confirm auth works inside the workspace too</code></
     </li>
     <li><strong>(Optional) Step 8.7 — branch protection rules</strong> — In GitHub repo settings, enable <code>Require pull request before merging</code> + <code>Require approvals: 1</code> on the main branch. Forces explicit user approval for PR merges as a safety net.</li>
   </ul>
-
-  <h4 id="s10-5-1">10.5.1 git auth setup (first-time dev users) — *outside SoloSquad's scope*</h4>
-  <p>This section is a <strong>user-responsibility area not automated by SoloSquad</strong>. <code>git push</code> credentials live in the OS credential store or ~/.ssh/ key files and are accessed by the git binary directly — SoloSquad only invokes git commands on top.</p>
-
-  <p><strong>How it works</strong>: GitHub allows anonymous *read* (clone, fetch, pull of public repos). *Write* (push) always requires verification that "this person actually owns the repo." Credential setup for this verification is a one-time requirement for <em>first-time git users</em>.</p>
-
-  <p><strong>Probability it's already set up</strong>: very high. macOS / Windows installations include <em>Git Credential Manager automatically</em> via Git for Mac / Git for Windows, so the first push only requires a one-time browser OAuth, then credentials are permanently stored. If you've ever pushed to GitHub from this machine, no additional setup is needed.</p>
-
-  <h5>3 setup methods (pick one)</h5>
-  <table>
-    <thead><tr><th>Method</th><th>OS</th><th>Steps</th></tr></thead>
-    <tbody>
-      <tr>
-        <td><strong>① Git Credential Manager</strong><br>(easiest, recommended)</td>
-        <td>macOS / Windows</td>
-        <td>Auto-included with Git for Mac / Git for Windows install. First <code>git push</code> auto-opens browser → GitHub login → grant permission → permanently stored in system vault (Keychain / Credential Manager). Subsequent pushes are automatic.</td>
-      </tr>
-      <tr>
-        <td>② SSH key</td>
-        <td>All platforms</td>
-        <td><pre><code>ssh-keygen -t ed25519 -C "your@email"
-cat ~/.ssh/id_ed25519.pub
-# Paste output to GitHub Settings → SSH and GPG keys → New SSH key
-# Use repo URL in git@github.com:me/repo.git format</code></pre></td>
-      </tr>
-      <tr>
-        <td>③ PAT + credential.helper store</td>
-        <td>Linux (or when ①/② unavailable)</td>
-        <td><pre><code># GitHub Settings → Developer settings → PAT → Generate (scope: repo)
-git config --global credential.helper store
-git push   # first time: username + PAT → stored plaintext in ~/.git-credentials
-# Security: chmod 600 ~/.git-credentials recommended</code></pre></td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h5>One-line verification</h5>
-  <pre><code>cd &lt;your repo&gt;
-git push --dry-run
-# ✓ Everything up-to-date  or  To &lt;url&gt;... = auth OK
-# ✗ fatal: Authentication failed / Permission denied (publickey) = setup ①~③ needed</code></pre>
-  <p><strong>This verification must pass for SoloSquad's dev_capability flow to work at the push step.</strong> SoloSquad doctor will include this check automatically in a future release (v0.9+); currently users must verify themselves.</p>
 
   <div class="callout info">
     <strong>v1.x followup — PR API automation + multi-agent discussion</strong>

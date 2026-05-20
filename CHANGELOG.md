@@ -49,16 +49,14 @@ master-guide §10.4 (Uninstall 안전 순서 + 재설치로 migration 우회) +
   Step 8.7 branch protection (gh CLI 단계 제거)
 - 자동 머지 영구 거부 정책 재명시 (v0.8.2 박제)
 
-### Added — master-guide §10.5.1 신설 (git 인증 셋업 — SoloSquad 외부 영역)
-- SoloSquad가 자동화하지 않는 사용자 책임 영역 명시
-- macOS/Windows에서 Git Credential Manager 자동 포함 — 대부분 셋업 0건
-- 3가지 셋업 방법 비교 표: Git Credential Manager / SSH key / PAT
-- 검증 명령 한 줄: `git push --dry-run`
-- 향후 doctor 자동 검증 안내 (v0.9+ 슬롯)
+### Changed — master-guide §4.2 Step 1에 git 인증 안내 callout (간단)
+- *별도 인증 절차 X* — git 표준 흐름에 위임 명시
+- Windows: Git Credential Manager 자동 / macOS: osxkeychain 자동 / Linux: 사용자 별도 셋업
+- 자세한 절차는 GitHub 공식 docs 링크로 위임
 
-### Changed — master-guide §4.2 Step 1에 git 인증 안내 callout
-- 첫 dev 사용자에게 git 바이너리 설치 외 *push 인증 별도 셋업 필요* 명시
-- §10.5.1로 cross-reference
+### Added — §10.1 트러블슈팅에 git push 인증 실패 항목
+- 에이전트 dev_capability 사용 시 push 실패 케이스 OS별 3줄 안내
+- GitHub 공식 docs 링크 — SoloSquad 외부 영역 명시
 
 ### Added — v1.x agent PR workflow 설계 박제 (코드 없음, plan only)
 - workflow.yaml schema v2: `git_workflow` (branch_pattern, auto_pr,
