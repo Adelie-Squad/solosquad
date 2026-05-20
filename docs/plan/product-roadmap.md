@@ -26,11 +26,12 @@
 | `v0.8.4` | 2026 Q2 | CLI Surface Reduction — `--mode` 패턴 통일(uninstall·import) + `backup` subgroup + deprecation alias + init walk-up 분기 | `v0.8.4-cli-surface-reduction.md` |
 | `v0.8.5` | 2026-05-18 | Onboarding QA & Release-Gate — init.ts hardcoded version 회귀 fix + wizard 문구 정합(handle/name/role/provider 헬프) + master-guide v0.6→v0.8.5 backfill + 3-docs pre-publish gate(`prepublishOnly` 강제) | `v0.8.5-onboarding-qa.md` |
 | `v0.8.6` | 2026-05-20 | migrate Hotfix + Agent push 범위 박제 — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix + master-guide §10.4 uninstall safe sequence + §10.5 *에이전트는 push까지·PR은 사용자 웹 UI* + PR API 자동화 v1.x 슬롯 박제 | `v0.8.6-migrate-hotfix-pr-workflow.md` |
-| **`v0.8.7`** | **2026-05-20** | **Tiny Stabilization** — master-guide §3.11 `dev_capability` 4-level enum → boolean+dev_permissions sub-tree 정합 (v0.8.2 design intent 잔존이었던 docs drift fix) + `test/migrate-default-target.test.ts` 회귀 catcher (v0.8.6 hotfix 클래스 1년 잔존 방지). v0.9 안정화 6축 권장안은 *오버스펙*으로 판정해 영구 skip — *문제 발견 → patch* 패턴 유지. v1.0 publish 형식은 *코드 변경 없이 5분 manual sweep + tag + api-stability §4 발효일 박제* | `v0.8.7-tiny-stabilization.md` |
+| `v0.8.7` | 2026-05-20 | Tiny Stabilization — master-guide §3.11 `dev_capability` 4-level enum → boolean+dev_permissions 정합 (docs drift fix) + `test/migrate-default-target.test.ts` 회귀 catcher. v0.9 안정화 6축 권장안은 오버스펙으로 영구 skip | `v0.8.7-tiny-stabilization.md` |
+| **`v0.9`** | **2026-05-20** | **Workspace ↔ Repository 관계 재설계 (plan only, 코드 0건)** — 현재 *repos-inside-workspace-tree* 강제가 솔로 사용자 4 시나리오 (이미 dev tree 보유 / 드라이브 경계 / 멀티 워크스페이스 repo 공유 / SoloSquad 자체 코드 작업) 모두 미해결임을 박제. Hermes·Codex·Copilot Workspace 비교 후 *모델 B (path reference)* default 선택 — workspace에는 *주소 메모*만, 에이전트는 원본 자리에서 직접 작업. 워크스페이스 ~ 50 MB로 축소되어 1 user = 1 workspace + N orgs + N path-referenced repos 가정. 자동화 UX (cwd 인식 / `--path` flag / init Step 5.1 확장 / `--discover`) + 14.2 워크스페이스 위치 권장(~/solosquad/) 박제. **구현은 v0.9.1+에서** | `v0.9-workspace-repo-relationship.md` |
 
 ### 현재 설치 가능 버전: npm `0.8.7`
 
-**다음 마일스톤:** v0.9 plan은 *유보* (v0.8.7 §0 결정). 필요 시 hot patch (v0.8.8, v0.8.9...). `v1.0.0` 정식 출시는 *publish 직전 5분 sweep + tag* 형식으로 진행 — 별도 plan doc 작성 없이.
+**다음 마일스톤:** v0.9.1 — 모델 B 구현 (`repo.yaml.path` 필드, `resolveRepoCwd` 외부 경로 분기, `add repo` cwd 인식, init Step 5.1 확장). 이후 v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 

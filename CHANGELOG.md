@@ -4,6 +4,49 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9 plan] — 2026-05-20 (plan only, 구현 X)
+
+**v0.9 — Workspace ↔ Repository 관계 재설계.** 본 entry는 *plan 박제용*.
+코드 변경 0건. 구현은 v0.9.1+ patches에서.
+
+v0.8.5~v0.8.6 사용자 테스트에서 *repos-inside-workspace-tree* 강제가
+솔로 사용자 4 시나리오 모두 미해결임을 확인. peer agent 모델 (Hermes /
+Codex / Copilot Workspace) 비교 후 **모델 B (path reference) default 채택**.
+
+자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
+
+### Planned — 모델 B (path reference)
+- `repo.yaml.path: <absolute-path>` 필드 — 외부 경로 참조
+- `<workspace>/<org>/repositories/<repo>.yaml` (파일, 디렉터리 아님)
+- `resolveRepoCwd` 외부 경로 분기 — 원본 사용자 dev tree 무변형
+- 사용자 working tree 직접 작업 (Codex 패턴 + dev-confirm gate)
+- 워크스페이스 ~ 50 MB config 폴더로 축소
+
+### Planned — 자동화 UX 4종
+- cwd 인식 (default): `cd <repo> && solosquad add repo`
+- 명시적 flag: `solosquad add repo --path <ext>`
+- `solosquad init` Step 5.1 path 입력 허용
+- bulk: `solosquad add repo --discover <dir>` (명시 호출만)
+
+### Planned — 워크스페이스 위치 멘탈 모델
+- *1 user = 1 workspace + N orgs + N path-referenced repos* default
+- 권장 위치: `~/solosquad/` 또는 짧은 이름
+- 멀티 워크스페이스는 *멀티 메신저 페르소나 advanced option*
+
+### Skipped (영구 박제) — 모델 C (Hermes sandbox)
+- 솔로 founder teammate 시나리오엔 오버스펙 (multi-user / cloud 진화 시 v2.x slot)
+- 사용자가 IDE 옆에서 에이전트 commit 실시간 보는 *direct working-tree*가
+  솔로에 자연스러움
+
+### Backward-compat
+- 현재 `<workspace>/<org>/repositories/<repo>/` 트리 사용자 영구 동작
+- 마이그레이션 opt-in only (`solosquad migrate --externalize-repos`, v0.9.2+)
+
+### 구현 슬롯 (별도 patch)
+- v0.9.1: 모델 B 핵심 구현 (9-step 작업 분해, plan §8 참조)
+- v0.9.2+: backward-compat 마이그레이션 명령
+- v1.x slot: gh CLI 연동 (`--discover-github`), 모델 C sandbox
+
 ## [0.8.7] — 2026-05-20
 
 **v0.8.7 — Tiny Stabilization.** v0.8.5 + v0.8.6의 *stale 버전 상수 회귀*
