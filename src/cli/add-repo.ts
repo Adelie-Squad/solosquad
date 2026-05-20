@@ -31,6 +31,16 @@ export interface AddRepoOpts {
   inspect?: boolean;
   /** v0.8.3 §3 — copy the repo instead of moving (preserves original on disk). */
   keepOriginal?: boolean;
+  /**
+   * v0.9.0 — register an external path as a path-reference. No move, no copy.
+   * Workspace stores only a `<workspace>/<org>/repositories/<slug>.yaml` file
+   * (not a directory) with the absolute `path` field. The agent's spawn cwd
+   * resolves to this external path via `resolveRepoCwd` (paths.ts).
+   *
+   * When this option is set (or when cwd is a git repo and [input] is
+   * omitted), the legacy move/copy flow is skipped.
+   */
+  path?: string;
 }
 
 const MERGE_POLICIES: MergePolicy[] = ["append", "override", "replace"];
@@ -118,6 +128,15 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
   if (!ws) {
     console.log(chalk.red("✗ Not inside a SoloSquad workspace. Run `solosquad init` first."));
     process.exit(1);
+  }
+
+  // v0.9.0 — path-reference auto-detection.
+  // If --path is set, OR if [input] is omitted and cwd happens to be a git
+  // repo, take the path-reference flow (no move, no copy).
+  const cwdIsRepo = !input && !opts.path && isGitRepo(process.cwd());
+  if (opts.path || cwdIsRepo) {
+    const externalPath = path.resolve(opts.path ?? process.cwd());
+    return registerPathReference(workspace, externalPath, opts);
   }
 
   if (!input) {
@@ -289,6 +308,120 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
     );
     console.log(chalk.dim(`  backup: ${result.backup_dir}`));
   }
+}
+
+/**
+ * v0.9.0 — register an external path as a path-reference. No move, no copy.
+ *
+ * Disk effects (all class A* per v0.7 inviolability — only files SoloSquad
+ * creates on disk inside the external repo are these two):
+ * 1. `<workspace>/<org>/repositories/<slug>.yaml` — workspace-side metadata
+ *    (slug, role, language, remote_url, registered_at, **path: <external>**).
+ *    *File* (not a directory).
+ * 2. `<external>/.solosquad/repo.yaml` — repo-side metadata (same fields).
+ *    Lets the external repo "know" it's linked to a SoloSquad org.
+ *
+ * Spawn cwd resolution: `resolveRepoCwd` reads (1) and returns the external
+ * path. See `src/util/paths.ts:resolveRepoCwd`.
+ *
+ * Plan: `docs/plan/v0.9-workspace-repo-relationship.md` §7 + §13.
+ */
+async function registerPathReference(
+  workspace: string,
+  externalPath: string,
+  opts: AddRepoOpts,
+): Promise<void> {
+  if (!fs.existsSync(externalPath)) {
+    console.log(chalk.red(`✗ External path does not exist: ${externalPath}`));
+    process.exit(1);
+  }
+  if (!isGitRepo(externalPath)) {
+    console.log(chalk.red(`✗ Not a git repo (no .git/): ${externalPath}`));
+    console.log(
+      chalk.dim(
+        "  path-reference requires a git repo at the external path. " +
+          "Either initialize one (`git init`), or use legacy mode (move/clone).",
+      ),
+    );
+    process.exit(1);
+  }
+
+  const orgSlug = await pickOrgSlug(workspace, opts.org);
+  const orgDir = path.join(workspace, orgSlug);
+  const reposDir = path.join(orgDir, "repositories");
+
+  const slug = opts.slug ?? path.basename(externalPath);
+  const yamlPath = path.join(reposDir, `${slug}.yaml`);
+
+  if (opts.dryRun || opts.inspect) {
+    if (opts.inspect) warnDeprecated({ oldName: "--inspect", newName: "--dry-run" });
+    console.log(chalk.bold(`\n[dry-run] register path-reference`));
+    console.log(`  external path: ${externalPath}`);
+    console.log(`  org:           ${orgSlug}`);
+    console.log(`  slug:          ${slug}`);
+    console.log(`  workspace ref: ${yamlPath}`);
+    console.log(`  repo metadata: ${path.join(externalPath, ".solosquad", "repo.yaml")}`);
+    console.log(chalk.bold(`\nNo files written (dry-run).`));
+    return;
+  }
+
+  // Refuse overwriting existing legacy tree at same slug.
+  const legacyDir = path.join(reposDir, slug);
+  if (fs.existsSync(legacyDir)) {
+    console.log(
+      chalk.red(
+        `✗ A legacy repositories/${slug}/ directory already exists. ` +
+          `Pick a different --slug, or remove the legacy tree first.`,
+      ),
+    );
+    process.exit(1);
+  }
+  if (fs.existsSync(yamlPath)) {
+    console.log(
+      chalk.red(
+        `✗ Already registered: ${yamlPath}. Use a different --slug or delete the existing yaml.`,
+      ),
+    );
+    process.exit(1);
+  }
+
+  const defaultRole: RepoYaml["role"] = "main";
+  const role = await confirmRole(defaultRole, opts.role);
+
+  // Write the two yamls — one in workspace, one in the external repo.
+  fs.mkdirSync(reposDir, { recursive: true });
+  const yaml = await import("js-yaml");
+  const { detectLanguage, getRemoteUrl } = await import("../util/git.js");
+  const remoteUrl = getRemoteUrl(externalPath);
+  const language = detectLanguage(externalPath);
+  const doc: RepoYaml = {
+    slug,
+    name: slug,
+    role,
+    language: language ?? undefined,
+    linked_org: orgSlug,
+    remote_url: remoteUrl,
+    products: [],
+    registered_at: new Date().toISOString(),
+    path: externalPath,
+  };
+  fs.writeFileSync(yamlPath, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
+
+  // Write a mirror at the external repo (class A* — single file inside user code).
+  const repoSolosquadDir = path.join(externalPath, ".solosquad");
+  fs.mkdirSync(repoSolosquadDir, { recursive: true });
+  const externalYamlPath = path.join(repoSolosquadDir, "repo.yaml");
+  if (!fs.existsSync(externalYamlPath)) {
+    fs.writeFileSync(externalYamlPath, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
+  }
+
+  linkRepoToOrg(orgDir, slug);
+
+  console.log(chalk.green(`✓ ${orgSlug}/${slug} registered as path-reference`));
+  console.log(chalk.dim(`  external path: ${externalPath}`));
+  console.log(chalk.dim(`  workspace ref: ${path.relative(workspace, yamlPath)}`));
+  if (remoteUrl) console.log(chalk.dim(`  remote:        ${remoteUrl}`));
+  if (language) console.log(chalk.dim(`  language:      ${language}`));
 }
 
 /**

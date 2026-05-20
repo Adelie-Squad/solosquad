@@ -13,6 +13,6 @@ paths:
   release-critical docs must mention the new `package.json.version`:
   - `docs/plan/product-roadmap.md` — synergy / role / vision (new release row)
   - `docs/plan/architecture.md` — §13.x version section
-  - `docs/manual/master-guide_ko.html` — Korean manual: version header + notes
-  - `docs/manual/master-guide_en.html` — English manual: version header + notes
+  - `manual/master-guide_ko.html` — Korean manual: version header + notes
+  - `manual/master-guide_en.html` — English manual: version header + notes
   Enforced by `npm run docs-check` (runs inside `prepublishOnly`).

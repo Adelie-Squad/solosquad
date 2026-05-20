@@ -823,6 +823,34 @@ v0.8.5~v0.8.6 사용자 테스트에서 *repos-inside-workspace-tree* 강제가 
 
 자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
 
+#### 13.6.11 v0.9.0 — Model B 구현 + master-guide npm 포함
+v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visibility fix.
+
+**Model B 구현**:
+- `src/util/config.ts:RepoYaml`에 `path?: string` 필드 추가
+- `src/util/paths.ts:resolveRepoCwd` 우선순위 재정의: (1) path-reference `<workspace>/<org>/repositories/<slug>.yaml` 파일이 있고 `path:` 가리키는 외부 디렉터리 존재 → 외부 경로 / (2) legacy `<workspace>/<org>/repositories/<slug>/` 트리 / (3) legacy 루트
+- `src/cli/add-repo.ts`: `--path <external>` flag + cwd 자동 인식 (인자 없이 호출 시 cwd가 git repo면 path-reference 등록 제안) + `registerPathReference()` 신설 — workspace yaml + 외부 repo의 `.solosquad/repo.yaml` 두 파일 작성
+- `src/cli/init.ts:registerRepoInline()`: 외부 path 입력 시 *path-reference / move 2-way prompt* (default = path-reference)
+- `src/cli/doctor.ts:runPathReferenceChecks()`: 등록된 path-reference 각각의 외부 경로 존재 + `.git/` 검증 (warn-only)
+
+**docs visibility fix (부수)**:
+- `docs/manual/` → top-level `manual/`로 이동 (npm `files` 필드에 `manual/` 추가)
+- `docs/`는 사용자 비노출 유지 (개발자 plan·architecture 등 dev-only)
+- 사용자가 `npm install -g solosquad` 후 *로컬에서 master-guide HTML 접근 가능*
+- 향후 `solosquad docs` CLI 명령 슬롯 (v0.9.x or v1.x)
+
+**회귀 catcher**: `test/repo-path-reference.test.ts` (4 tests) — yaml의 path field가 외부 경로로 resolve / 외부 경로 없으면 legacy 폴백 / yaml 없이 legacy만 있어도 동작 / `RepoYaml.path` interface 필드 source-inspection
+
+**backward-compat 보존**:
+- 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작
+- v0.9.2+ slot: `solosquad migrate --externalize-repos` (현재 트리 → 외부 path-reference, opt-in)
+
+**migration 0.8.7 → 0.9.0**: schema 변경 없음, version bump only. RepoYaml.path는 *옵셔널 추가*라 기존 yaml에 손 안 댐.
+
+571/571 tests green (567 + 4 path-reference).
+
+자세히: `docs/plan/v0.9-workspace-repo-relationship.md` (plan), code in `src/util/paths.ts` + `src/cli/add-repo.ts`
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):

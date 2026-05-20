@@ -20,7 +20,7 @@ Output ≠ Goal. Output = Means to achieve the goal.
 
 📖 **The canonical user guide is the menu-divided HTML manual:**
 
-> **[`docs/manual/master-guide.html`](docs/manual/master-guide.html)** — open it in a browser.
+> **[`manual/master-guide.html`](manual/master-guide.html)** — open it in a browser.
 
 It covers, in ten menu-divided sections:
 
@@ -65,7 +65,7 @@ cd deploy/docker && docker compose up -d --build  # background + auto-restart
 
 Then send `안녕` or `hello` to `#owner-command` in your Slack/Discord channel — a specialist agent responds.
 
-**Messenger token setup** takes 5–10 minutes (Slack) or 3–5 minutes (Discord). Follow [master-guide.html §5](docs/manual/master-guide.html) step-by-step.
+**Messenger token setup** takes 5–10 minutes (Slack) or 3–5 minutes (Discord). Follow [master-guide.html §5](manual/master-guide.html) step-by-step.
 
 ### Upgrading from v0.5.x
 

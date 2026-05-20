@@ -30,7 +30,7 @@ SoloSquad의 핵심 약속은 **"사용자가 코드를 직접 보지 않고도,
 
 가장 정합한 사용자 가이드는 메뉴 분할 HTML 매뉴얼입니다.
 
-> **[`docs/manual/master-guide.html`](docs/manual/master-guide.html)** — 브라우저에서 열어주세요.
+> **[`manual/master-guide.html`](manual/master-guide.html)** — 브라우저에서 열어주세요.
 
 10개 메뉴 섹션 구성:
 
@@ -75,7 +75,7 @@ cd deploy/docker && docker compose up -d --build  # 백그라운드 + 자동 재
 
 봇이 켜진 뒤, 메신저의 `#command-<handle>` 채널 (예: `#command-alice`)에 "안녕"이라고 보내면 전문 에이전트가 응답합니다.
 
-**메신저 토큰 셋업**은 Slack 기준 5~10분, Discord 기준 3~5분 정도 걸립니다. [`master-guide.html` §5](docs/manual/master-guide.html)의 단계 절차를 따라가세요.
+**메신저 토큰 셋업**은 Slack 기준 5~10분, Discord 기준 3~5분 정도 걸립니다. [`master-guide.html` §5](manual/master-guide.html)의 단계 절차를 따라가세요.
 
 ### 메신저 셋업이 핵심인 이유
 
