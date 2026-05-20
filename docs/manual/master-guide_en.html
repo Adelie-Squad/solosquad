@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v0.8.6</span>
+  <span class="tag">Master Guide · v0.8.7</span>
   <nav>
     <ul>
       <li>
@@ -943,7 +943,14 @@ loop_mode:
   <p>The single-operator model from v0.7 was extended to a multi-user context. Each user has a <code>command-&lt;handle&gt;</code> (requests) and <code>works-&lt;handle&gt;</code> (work output) channel pair, with metadata at <code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code>. An author-guard prevents another user from intercepting responses in their channel. Register via <code>solosquad messenger add &lt;handle&gt;</code>.</p>
 
   <h3 id="s3-11">3.11 dev_capability (development permissions)<span class="badge now">v0.8.2</span></h3>
-  <p>The <code>dev_capability</code> field in a SKILL.md frontmatter declares what permission an agent has in <code>target_repo</code>. Four levels: <code>read</code> (read-only) / <code>propose</code> (output proposed changes only) / <code>patch</code> (real changes, then ask for dev_confirm) / <code>pr</code> (up to PR creation). <code>patch</code> and <code>pr</code> levels touch the git tree only after a 30-minute timeout dev-confirmation. Results: <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>.</p>
+  <p>The <code>dev_capability: true</code> field in a SKILL.md frontmatter declares that the agent can perform code-modifying dev actions (file changes, git commit, push). <strong>boolean</strong> — on/off. Granular permissions are split into the separate <code>dev_permissions</code> sub-tree:</p>
+  <ul>
+    <li><code>bash.allowed</code> / <code>bash.denied</code> — allowed/blocked bash command lists. The workspace-level denylist (<code>workspace.yaml.dev_capability.bash_denylist</code>) always merges on top — SKILLs cannot override</li>
+    <li><code>network</code> — whether outbound HTTP calls (curl/wget etc.) are permitted. MCP servers are a separate channel</li>
+    <li><code>push_targets.requires_confirmation</code> — user confirmation gate on <code>git push</code> (default true)</li>
+    <li><code>merge.auto</code> — <em>permanently false, pinned</em> (v0.8.2 §2 / §3.1) — auto-merge policy never added</li>
+  </ul>
+  <p>All sensitive commands (<code>git push</code>, <code>gh pr merge</code>, <code>gh pr close</code>) are pinned in <code>SENSITIVE_BASH_PREFIXES</code> and must pass a 30-min dev-confirmation gate to execute. Results: append-only log at <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>.</p>
 
   <h3 id="s3-12">3.12 The <code>.solosquad/</code> Hierarchy — why a folder per level<span class="badge now">v0.8.5</span></h3>
   <p>On first glance, a workspace shows three locations with a <code>.solosquad/</code> folder, which can be confusing. Each contains <strong>system metadata at a different scope</strong>, and the dotfile convention <em>visually separates them from user content</em> on disk.</p>

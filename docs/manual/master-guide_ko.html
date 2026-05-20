@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v0.8.6 기준</span>
+  <span class="tag">종합 개념서 · v0.8.7 기준</span>
   <nav>
     <ul>
       <li>
@@ -942,7 +942,14 @@ loop_mode:
   <p>v0.7까지의 1인 운영자 모델에서 다수 사용자 컨텍스트로 확장. 각 사용자는 <code>command-&lt;handle&gt;</code>(요청)·<code>works-&lt;handle&gt;</code>(작업 결과) 채널 쌍을 갖고, <code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code>에 메타가 저장됩니다. author-guard가 다른 사용자가 자기 채널에서 응답을 가로채는 것을 차단합니다. 등록은 <code>solosquad messenger add &lt;handle&gt;</code>로.</p>
 
   <h3 id="s3-11">3.11 dev_capability (개발 권한)<span class="badge now">v0.8.2</span></h3>
-  <p>SKILL.md frontmatter의 <code>dev_capability</code> 필드로 에이전트가 target_repo에 어떤 권한을 갖는지 명시. 4단계: <code>read</code>(읽기만) / <code>propose</code>(파일 변경 제안만 출력) / <code>patch</code>(실제 변경 후 dev_confirm 요청) / <code>pr</code>(PR 생성까지). <code>patch</code>/<code>pr</code>은 30분 timeout dev-confirmation을 거쳐야 git tree에 손을 댑니다. 결과는 <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>에 기록.</p>
+  <p>SKILL.md frontmatter의 <code>dev_capability: true</code> 필드로 에이전트가 코드 수정 dev action(파일 변경·git commit·push)을 수행할 수 있음을 선언. <strong>boolean</strong> — 켜기/끄기. 세부 권한은 별도 <code>dev_permissions</code> sub-tree로 분리:</p>
+  <ul>
+    <li><code>bash.allowed</code> / <code>bash.denied</code> — 호출 가능·차단 bash 명령 리스트. workspace-level denylist(<code>workspace.yaml.dev_capability.bash_denylist</code>)가 항상 위에 merge되어 SKILL이 override 불가</li>
+    <li><code>network</code> — 외부 HTTP 호출 (curl/wget 등) 허용 여부. MCP server는 별도 채널</li>
+    <li><code>push_targets.requires_confirmation</code> — <code>git push</code> 시 사용자 확인 게이트 (기본 true)</li>
+    <li><code>merge.auto</code> — <em>영구 false 박제</em> (v0.8.2 §2 / §3.1) — 자동 머지 정책 영구 추가 안 함</li>
+  </ul>
+  <p>모든 sensitive 명령 (<code>git push</code>, <code>gh pr merge</code>, <code>gh pr close</code>)은 <code>SENSITIVE_BASH_PREFIXES</code>에 박혀 있고 30분 timeout dev-confirmation 게이트를 통과해야 실행됩니다. 결과는 <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>에 append-only 기록.</p>
 
   <h3 id="s3-12">3.12 <code>.solosquad/</code> 폴더 위계 — 왜 디렉터리마다 하나씩 있는가<span class="badge now">v0.8.5</span></h3>
   <p>워크스페이스를 처음 보면 세 위치에 <code>.solosquad/</code> 폴더가 나타나서 헷갈리기 쉽습니다. 각각 <strong>다른 scope의 시스템 메타데이터</strong>를 담고, *사용자 콘텐츠*와 *디스크에서 시각적으로 분리*하기 위한 dotfile 컨벤션입니다.</p>

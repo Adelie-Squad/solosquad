@@ -2,7 +2,7 @@
 
 > 릴리스된 버전, 진행 중인 계획, 결정 로그, 외부 참고자료를 한 자리에 모은 롤링 문서.
 
-**최종 업데이트:** 2026-05-20 (v0.8.6 릴리스)
+**최종 업데이트:** 2026-05-20 (v0.8.7 릴리스)
 
 ---
 
@@ -25,11 +25,12 @@
 | `v0.8.3` | 2026 Q2 | Onboarding UX + Observability — logger 확장 + `solosquad logs` CLI + `add repo --dry-run` byte-identical 보장 | `v0.8.3-onboarding-ux-observability.md` |
 | `v0.8.4` | 2026 Q2 | CLI Surface Reduction — `--mode` 패턴 통일(uninstall·import) + `backup` subgroup + deprecation alias + init walk-up 분기 | `v0.8.4-cli-surface-reduction.md` |
 | `v0.8.5` | 2026-05-18 | Onboarding QA & Release-Gate — init.ts hardcoded version 회귀 fix + wizard 문구 정합(handle/name/role/provider 헬프) + master-guide v0.6→v0.8.5 backfill + 3-docs pre-publish gate(`prepublishOnly` 강제) | `v0.8.5-onboarding-qa.md` |
-| **`v0.8.6`** | **2026-05-20** | **migrate Hotfix + Agent push 범위 박제** — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix (v0.4 이후 1년 잔존, no-op 종료) + master-guide §4.2 Step 1에 *짧은* git 인증 안내 (별도 절차 X — git 표준 흐름에 위임) + §10.4 uninstall safe sequence + §10.5 *에이전트는 push까지·PR은 사용자 웹 UI* 범위 명시 + §10.1 트러블슈팅에 push 인증 실패 항목 + PR API 자동화·다중-에이전트 토론 v1.x 슬롯 박제 (gh / MCP / REST 트랙 후보) | `v0.8.6-migrate-hotfix-pr-workflow.md` |
+| `v0.8.6` | 2026-05-20 | migrate Hotfix + Agent push 범위 박제 — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix + master-guide §10.4 uninstall safe sequence + §10.5 *에이전트는 push까지·PR은 사용자 웹 UI* + PR API 자동화 v1.x 슬롯 박제 | `v0.8.6-migrate-hotfix-pr-workflow.md` |
+| **`v0.8.7`** | **2026-05-20** | **Tiny Stabilization** — master-guide §3.11 `dev_capability` 4-level enum → boolean+dev_permissions sub-tree 정합 (v0.8.2 design intent 잔존이었던 docs drift fix) + `test/migrate-default-target.test.ts` 회귀 catcher (v0.8.6 hotfix 클래스 1년 잔존 방지). v0.9 안정화 6축 권장안은 *오버스펙*으로 판정해 영구 skip — *문제 발견 → patch* 패턴 유지. v1.0 publish 형식은 *코드 변경 없이 5분 manual sweep + tag + api-stability §4 발효일 박제* | `v0.8.7-tiny-stabilization.md` |
 
-### 현재 설치 가능 버전: npm `0.8.6`
+### 현재 설치 가능 버전: npm `0.8.7`
 
-**다음 마일스톤:** `v0.9` 안정화 → `v1.0.0` 정식 출시. v0.7~v0.8.5로 라이프사이클·멀티유저·dev capability·onboarding UX가 모두 닫혔으므로, v0.9는 *공개 약속 직전 안정화* 슬롯, v1.0은 *공개 사용자 약속* (안정 API + breaking change 정책) 시작.
+**다음 마일스톤:** v0.9 plan은 *유보* (v0.8.7 §0 결정). 필요 시 hot patch (v0.8.8, v0.8.9...). `v1.0.0` 정식 출시는 *publish 직전 5분 sweep + tag* 형식으로 진행 — 별도 plan doc 작성 없이.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 

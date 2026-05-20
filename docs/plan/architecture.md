@@ -785,7 +785,24 @@ v0.8.5 release 직후 사용자 테스트에서 발견된 회귀 hotfix (`docs/p
 
 자세히: `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
 
-자세히: `docs/plan/v0.8.5-onboarding-qa.md`
+#### 13.6.9 v0.8.7 — Tiny Stabilization
+v0.8.5 + v0.8.6의 *stale 버전 상수 회귀* 패턴 회고 결과 *꼭 필요한 것 2건만* patch (`docs/plan/v0.8.7-tiny-stabilization.md`):
+
+**발견된 drift 직접 수정**:
+- master-guide §3.11 `dev_capability` 표현이 v0.8.2 design intent의 "4-level enum (read/propose/patch/pr)"을 따랐으나 *실제 코드는 boolean + dev_permissions sub-tree로 분리됨*. KO + EN 양쪽 §3.11 한 문단 직접 edit으로 코드 reality 반영
+
+**회귀 catcher 1건**:
+- `test/migrate-default-target.test.ts` (~30 lines) — v0.8.6 hotfix 클래스 (`CLI_VERSION_TARGET = "0.4.0"` 같은 stale literal default) 재발 방지. source inspection 기반 3 assertion (hardcoded literal 부재 / SOLOSQUAD_VERSION import 존재 / 동적 값이 semver)
+- *narrow scope*: `migrate.ts` 한정. 같은 패턴이 다른 파일에 또 생기면 *그때 sibling test 추가*. lint rule 일반화는 *영구 skip*
+
+**v0.9 안정화 6축 권장안 — 영구 skip 결정**: stale constant lint / migration chain E2E / doctor 확장 / archive round-trip / CLI surface drift 자동 검증 / docs-code drift sweep 인프라 모두 *오버스펙*으로 판정해 영구 skip. *문제 발견 → patch* 패턴 유지. v0.9 plan doc 작성 안 함.
+
+**v1.0 publish 형식**: 코드 변경 없이 *5분 manual sweep + tag + api-stability §4 발효일 박제*. v1.0 plan doc도 그 시점에 작성.
+
+**migration 0.8.6 → 0.8.7**: schema 변경 없음, version bump only.
+
+자세히 (v0.8.5): `docs/plan/v0.8.5-onboarding-qa.md`
+자세히 (v0.8.7): `docs/plan/v0.8.7-tiny-stabilization.md`
 
 ### 13.7 v1.x 시리즈 (예고)
 
@@ -821,6 +838,7 @@ v0.8.5 release 직후 사용자 테스트에서 발견된 회귀 hotfix (`docs/p
 - `docs/plan/v0.8.4-cli-surface-reduction.md`
 - `docs/plan/v0.8.5-onboarding-qa.md`
 - `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
+- `docs/plan/v0.8.7-tiny-stabilization.md`
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)
