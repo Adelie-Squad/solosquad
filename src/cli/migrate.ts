@@ -4,8 +4,16 @@ import { getWorkspaceRoot } from "../util/paths.js";
 import { runMigration } from "../migrations/runner.js";
 import { listBackups, restoreBackup, deleteBackup, getBackupRoot } from "../migrations/backup.js";
 import { warnDeprecated } from "../util/deprecation.js";
+import { SOLOSQUAD_VERSION } from "../util/version.js";
 
-const CLI_VERSION_TARGET = "0.4.0";
+/**
+ * v0.8.6 — Migration target is the CLI version, read dynamically from
+ * package.json via `src/util/version.ts`. Prior to v0.8.6 this was hardcoded
+ * to "0.4.0", silently no-op'ing `solosquad migrate` for every release after
+ * v0.4 unless the user passed `--to` explicitly. Same regression class as the
+ * v0.8.5 init.ts SOLOSQUAD_VERSION fix.
+ */
+const CLI_VERSION_TARGET = SOLOSQUAD_VERSION;
 
 export interface MigrateCliOpts {
   dryRun?: boolean;
