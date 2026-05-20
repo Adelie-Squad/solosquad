@@ -804,6 +804,25 @@ v0.8.5 + v0.8.6의 *stale 버전 상수 회귀* 패턴 회고 결과 *꼭 필요
 자세히 (v0.8.5): `docs/plan/v0.8.5-onboarding-qa.md`
 자세히 (v0.8.7): `docs/plan/v0.8.7-tiny-stabilization.md`
 
+#### 13.6.10 v0.9 — Workspace ↔ Repository 관계 재설계 (plan only)
+v0.8.5~v0.8.6 사용자 테스트에서 *repos-inside-workspace-tree* 강제가 솔로 사용자 4 시나리오 (이미 dev tree 보유 / 드라이브 경계 / 멀티 워크스페이스 repo 공유 / SoloSquad 자체 코드 작업) 모두 미해결임을 확인. **plan 박제 patch — 코드 변경 0건**. 구현은 v0.9.1+에서.
+
+**peer agent 모델 비교**: Hermes (sandbox clone) vs Codex `/goal` (cwd direct) vs Copilot Workspace (cloud auto-fetch) vs SoloSquad (현재 트리 강제). 4 후보 (A move / B path-reference / C sandbox / D hybrid) 비교 후 **모델 B (path reference)** default 채택:
+- `repo.yaml.path: <absolute-path>` 필드 신설
+- `<workspace>/<org>/repositories/<repo>.yaml` 파일 (디렉터리 아님)
+- `resolveRepoCwd`가 path 읽어 외부 경로로 cwd 결정 — 원본 사용자 dev tree 무변형
+- 사용자 working tree 직접 작업 (Hermes 모델 C는 솔로 founder 1인에 오버스펙, v2.x slot 박제)
+
+**워크스페이스 위치 멘탈 모델**: 모델 B 도입으로 워크스페이스가 ~ 50 MB config 폴더로 축소 → **1 user = 1 workspace + N orgs + N path-referenced repos**. 권장 위치 `~/solosquad/` (또는 짧은 이름). 멀티 워크스페이스는 *멀티 메신저 페르소나가 필요할 때만* advanced option (master-guide §9.2 유지).
+
+**자동화 UX 4종**: ① cwd 인식 (default) — `cd <repo> && solosquad add repo` / ② `--path <ext>` 명시 flag / ③ `solosquad init` Step 5.1 확장 — path 입력 받기 / ④ `--discover <dir>` bulk 스캔 (사용자 명시 호출만). gh CLI 연동 (`--discover-github`)은 v1.x slot.
+
+**backward-compat**: 현재 `<workspace>/<org>/repositories/<repo>/` 트리 사용자는 *영구 동작* — `resolveRepoCwd` legacy 분기 유지. 마이그레이션은 opt-in (`solosquad migrate --externalize-repos`, v0.9.2+).
+
+**모델 C (sandbox) v2.x slot 박제 사유**: SoloSquad는 *솔로 founder teammate* 시나리오 — 사용자가 IDE 옆에서 에이전트 commit을 실시간 봄. Hermes의 multi-user / cloud platform 시나리오와 다른 결.
+
+자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):
@@ -839,6 +858,7 @@ v0.8.5 + v0.8.6의 *stale 버전 상수 회귀* 패턴 회고 결과 *꼭 필요
 - `docs/plan/v0.8.5-onboarding-qa.md`
 - `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
 - `docs/plan/v0.8.7-tiny-stabilization.md`
+- `docs/plan/v0.9-workspace-repo-relationship.md` (plan only, 구현은 v0.9.1+)
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)
