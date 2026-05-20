@@ -851,6 +851,42 @@ v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visib
 
 자세히: `docs/plan/v0.9-workspace-repo-relationship.md` (plan), code in `src/util/paths.ts` + `src/cli/add-repo.ts`
 
+#### 13.6.12 v0.10.0 — LLM Backend Abstraction (Claude Code + Codex stub)
+v0.x 전체 기간 동안 SoloSquad가 *Claude Code Max 단일 가정*으로 만들어진 사실을 박제 + 미래 Codex 백엔드를 위한 추상 layer 골격 도입 (`docs/plan/v0.10-llm-backend-abstraction.md`):
+
+**핵심 변경**:
+- `src/llm/adapter.ts` 신설 — `LlmAdapter` 인터페이스 + `ClaudeAdapter` (기존 `runClaude` wrap) + `CodexAdapter` (*명시 throw stub*)
+- `workspace.yaml.llm_backend?: "claude" | "codex"` 필드 — default `"claude"` (v0.9.x 워크스페이스 fallback)
+- `solosquad init` Step 3.7 — backend 선택 prompt + Codex 선택 시 *명시 경고 + confirm 강제*
+
+**구현 차단점 10건 박제 (v1.x slots)**:
+v0.10에서 *실제 Codex 백엔드 실행*을 가능하게 하려면 해결해야 할 architectural refactor:
+1. PM session 모델 부재 (Claude `--session-id + --resume` ↔ Codex stateless) — `v1.x-codex-session-shim.md` slot
+2. Task tool 부재 (Claude 내장 spawn ↔ Codex 동등 없음)
+3. Stream JSON 포맷 다름
+4. SKILL.md format vendor 종속 (Anthropic Agent Skills) — `v1.x-skill-format-vendor-neutral.md` slot
+5. Auth probe 다름
+6. `--append-system-prompt` 부재
+7. 비용 추적 형식 (Claude stream-json cost event ↔ Codex token usage)
+8. dev-confirm gate hook 위치 (Claude bash tool call vs Codex tool 형식)
+9. Context window 차이 (Claude 200k+ ↔ Codex 128k+α)
+10. 과금 모델 (Claude Max 정액 ↔ Codex 토큰 과금, 사용자 청구 예측 불가)
+
+→ v0.10은 *인터페이스 골격 + 정직한 stub*만. 실 Codex 실행은 v1.x slot.
+
+**정직성 약속**: marketing-only feature 아님. wizard에서 Codex 선택 시 *명시 경고*, spawn 시점에 *plan 문서 link 동봉 에러*. 사용자가 *현재 상태*를 정확히 인지.
+
+**docs 정정**:
+- README / README.kr.md: "Claude Code Max only" 가정 해소, v1.x Codex slot 명시
+- manual/master-guide §4.2 Step 2: "Claude Code Max 구독" → "AI 백엔드 선택 + 구독" (Default = Claude Code Max, Future = Codex v1.x)
+- FAQ: Codex 백엔드 도입 시 *예측 불가 토큰 청구 가능성* 박제 (paperclip envelope cap 강제)
+
+**migration 0.9.0 → 0.10.0**: schema 변경 없음, version bump only. `llm_backend`는 optional이라 기존 yaml untouched.
+
+**회귀 catcher**: `test/llm-adapter-stub.test.ts` (4 tests) — CodexAdapter.invoke()가 명시 throw + plan link 포함 + 사용자 복구 가이드 포함 검증.
+
+자세히: `docs/plan/v0.10-llm-backend-abstraction.md`
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):
@@ -886,7 +922,8 @@ v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visib
 - `docs/plan/v0.8.5-onboarding-qa.md`
 - `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
 - `docs/plan/v0.8.7-tiny-stabilization.md`
-- `docs/plan/v0.9-workspace-repo-relationship.md` (plan only, 구현은 v0.9.1+)
+- `docs/plan/v0.9-workspace-repo-relationship.md`
+- `docs/plan/v0.10-llm-backend-abstraction.md`
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)

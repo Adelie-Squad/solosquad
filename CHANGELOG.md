@@ -4,6 +4,59 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] — 2026-05-20
+
+**v0.10.0 — LLM Backend Abstraction (Claude Code + Codex stub).** v0.x
+전체 기간 동안 *Claude Code Max 단일 가정*으로 만들어진 사실 박제 +
+미래 Codex 백엔드를 위한 추상 layer 골격 도입. 실 Codex 실행은 *구현
+차단점 10건* 박제 후 v1.x slot으로 deferred. 사용자 노출 변화: README/
+master-guide 문구 정정 + `solosquad init` Step 3.7 backend 선택 prompt.
+
+자세히: `docs/plan/v0.10-llm-backend-abstraction.md`
+
+### Added — LLM adapter 추상 layer
+- `src/llm/adapter.ts` 신설 — `LlmAdapter` 인터페이스, `ClaudeAdapter`
+  (기존 `runClaude` wrap), `CodexAdapter` (*명시 throw stub*)
+- `workspace.yaml.llm_backend?: "claude" | "codex"` 필드 (optional)
+- v0.9.x 워크스페이스: 필드 부재 → load 시 `claude` fallback (backward-compat)
+
+### Added — `solosquad init` Step 3.7 backend 선택
+- AI backend prompt: Claude Code (recommended) / Codex (v1.x stub)
+- Codex 선택 시 *명시 경고* + confirm 강제 (정직한 stub 정책)
+- 선택 결과 `workspace.yaml.llm_backend` 저장
+
+### Changed — README / master-guide 문구
+- README.md / README.kr.md: "Claude Max" → "default Claude Max, Codex v1.x slot"
+- master-guide_{ko,en}.html §4.2 Step 2: "Claude Code Max 구독" → "AI 백엔드 선택 + 구독" (Default = Claude Code Max, Future = Codex v1.x)
+- FAQ: Codex 백엔드 도입 시 *예측 불가 토큰 청구 가능성* 박제 (paperclip envelope cap)
+
+### Deferred (v1.x slots) — 구현 차단점 10건
+실 Codex 백엔드 실행을 v0.10에서 *skip한 사유* 박제:
+1. PM session 모델 부재 (Claude `--session-id + --resume` ↔ Codex stateless) — `v1.x-codex-session-shim.md` slot
+2. Task tool 부재 (Claude 내장 spawn tool ↔ Codex 동등 없음)
+3. Stream JSON 포맷 다름
+4. SKILL.md format vendor 종속 (Anthropic Agent Skills) — `v1.x-skill-format-vendor-neutral.md` slot
+5. Auth probe 다름
+6. `--append-system-prompt` 부재
+7. 비용 추적 형식 (Claude stream-json cost ↔ Codex token usage)
+8. dev-confirm gate hook 위치
+9. Context window 차이 (Claude 200k+ ↔ Codex 128k+α)
+10. 과금 모델 (Claude Max 정액 ↔ Codex 토큰 과금)
+
+### Tests
+- `test/llm-adapter-stub.test.ts` (4 tests) — CodexAdapter stub contract
+  검증: `invoke()` throws + plan link 포함 + 사용자 복구 가이드 (`llm_backend: claude` 안내)
+
+### Migration
+- `src/migrations/scripts/0.9.0-to-0.10.0.ts` — schema 변경 없음, version bump only
+- 기존 `runClaude` 콜사이트 (claude-runner.ts, scheduler/index.ts, run-routine.ts)
+  *유지* — v0.10.x patches에서 점진적 LlmAdapter 마이그레이션
+
+### Backward-compat
+- v0.9.x 워크스페이스: `llm_backend` 필드 부재 → 자동 "claude" fallback
+- Claude Code 사용자: 100% 동일 동작 (변경 없음)
+- runClaude/PM session/Task tool 등 기존 코드 경로 보존
+
 ## [0.9.0] — 2026-05-20
 
 **v0.9.0 — Workspace ↔ Repository 관계 재설계 Model B 구현.** v0.9 plan

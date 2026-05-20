@@ -28,11 +28,12 @@
 | `v0.8.6` | 2026-05-20 | migrate Hotfix + Agent push 범위 박제 — `migrate.ts:8` `CLI_VERSION_TARGET = "0.4.0"` 회귀 fix + master-guide §10.4 uninstall safe sequence + §10.5 *에이전트는 push까지·PR은 사용자 웹 UI* + PR API 자동화 v1.x 슬롯 박제 | `v0.8.6-migrate-hotfix-pr-workflow.md` |
 | `v0.8.7` | 2026-05-20 | Tiny Stabilization — master-guide §3.11 `dev_capability` 4-level enum → boolean+dev_permissions 정합 (docs drift fix) + `test/migrate-default-target.test.ts` 회귀 catcher. v0.9 안정화 6축 권장안은 오버스펙으로 영구 skip | `v0.8.7-tiny-stabilization.md` |
 | `v0.9 plan` | 2026-05-20 | Workspace ↔ Repository 관계 재설계 plan only (코드 0건). Hermes·Codex 비교 + 모델 B (path reference) default 선택 + 자동화 UX 4종 + 워크스페이스 위치 가이드 박제 | `v0.9-workspace-repo-relationship.md` |
-| **`v0.9.0`** | **2026-05-20** | **Model B 구현 + npm 패키지에 master-guide 포함** — `repo.yaml.path` 필드 신설 / `resolveRepoCwd` 외부 경로 분기 / `solosquad add repo --path <ext>` flag + cwd 인식 자동 / `solosquad init` Step 5.1 path-reference 분기 prompt / `solosquad doctor` 외부 path 존재 검증. `docs/manual/` → top-level `manual/`로 이동해 npm 패키지에 포함 (사용자가 `npm install` 후 master-guide HTML 로컬 접근 가능). backward-compat: 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작 | `v0.9-workspace-repo-relationship.md` |
+| `v0.9.0` | 2026-05-20 | Model B 구현 + npm 패키지에 master-guide 포함 — repo.yaml.path / resolveRepoCwd 외부 경로 / `add repo --path` + cwd 인식 / `init` Step 5.1 path-reference prompt / `doctor` 외부 path 검증. `docs/manual/` → `manual/` 이동해 npm 포함 | `v0.9-workspace-repo-relationship.md` |
+| **`v0.10.0`** | **2026-05-20** | **LLM Backend Abstraction (Claude Code + Codex stub)** — README/master-guide의 *Claude Code Max only* 가정 해소. `src/llm/adapter.ts` 추상 layer 도입 (LlmAdapter 인터페이스 + ClaudeAdapter wrap + CodexAdapter *명시 throw stub*). `workspace.yaml.llm_backend?: "claude"|"codex"` 필드. `solosquad init` Step 3.7 backend 선택 prompt + Codex 선택 시 *명시 경고 + confirm 강제* (정직한 stub). 실 Codex 백엔드 실행은 구현 차단점 10건 박제 후 v1.x slot으로 deferred (PM session / Task tool / SKILL format / stream / auth / system prompt / cost / dev-confirm / context window / 과금 모델) | `v0.10-llm-backend-abstraction.md` |
 
-### 현재 설치 가능 버전: npm `0.9.0` (publish 직전 단계)
+### 현재 설치 가능 버전: npm `0.10.0` (publish 직전 단계)
 
-**다음 마일스톤:** v0.9.1 — backward-compat 마이그레이션 명령 (`solosquad migrate --externalize-repos`, opt-in). 이후 v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
+**다음 마일스톤:** v0.10.x — `runClaude` 콜사이트 점진적 `LlmAdapter` 마이그레이션. 이후 v1.x: Codex 백엔드 실 구현 (별도 plan slots — `v1.x-codex-session-shim.md` 등). v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 
