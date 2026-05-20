@@ -1040,8 +1040,15 @@ claude --version</code></pre>
   </div>
 
   <div class="step">
-    <div class="step-head">Step 2 — Subscribe to Claude Code Max</div>
-    <p>Visit https://claude.ai → Settings → Claude Code → Subscribe to Max plan.</p>
+    <div class="step-head">Step 2 — Subscribe to Claude Code + OAuth login</div>
+    <p>As of v0.9, SoloSquad uses <strong>Claude Code via OAuth</strong> as its single backend. No other AI CLI is supported at this time.</p>
+    <ol>
+      <li>Visit https://claude.ai → Settings → Subscribe to a Claude Code-capable plan (Max plan recommended for usage headroom)</li>
+      <li>Install the CLI: <code>npm install -g @anthropic-ai/claude-code</code></li>
+      <li><code>claude login</code> — browser OAuth flow → credentials stored permanently on this machine (SoloSquad does not manage credentials itself; defers entirely to Claude Code's standard login flow)</li>
+      <li>Verify with <code>claude auth status --json</code> → expect <code>loggedIn: true</code></li>
+    </ol>
+    <p class="callout info"><strong>Why OAuth-only</strong>: SoloSquad does not provide an "API key in .env" mode because it would expose the key on disk and add a credential-management burden. Claude Code's OAuth stores tokens in the OS credential store — SoloSquad's code never sees the key (the <code>claude</code> CLI uses it at invocation time).</p>
   </div>
 
   <div class="step">
@@ -2656,7 +2663,7 @@ docker compose restart    # if Docker</code></pre>
   <h3 id="s10-3">10.3 FAQ</h3>
 
   <p><strong>Q. How much does it cost?</strong><br>
-  A. With a Claude Code Max subscription, you can start. Cloud ops add ~$4-6/month for VPS.</p>
+  A. Any Claude Code-capable subscription works (Max recommended). As of v0.9, SoloSquad uses *Claude Code via OAuth* as its single backend. Cloud ops add ~$4-6/month for VPS.</p>
 
   <p><strong>Q. Can I use Discord and Slack simultaneously?</strong><br>
   A. Not in one workspace. <strong>Run two workspaces</strong> — e.g. <code>~/solopreneur/</code> (Slack bot) + <code>~/elon-24-7/</code> (Discord bot). Each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — older <code>MESSENGER=discord,slack</code> multi-set is no longer supported.</p>

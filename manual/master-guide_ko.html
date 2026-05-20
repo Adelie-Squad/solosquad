@@ -1039,8 +1039,15 @@ claude --version</code></pre>
   </div>
 
   <div class="step">
-    <div class="step-head">Step 2 — Claude Code Max 구독</div>
-    <p>https://claude.ai 접속 → 설정 → Claude Code → Max 플랜 구독.</p>
+    <div class="step-head">Step 2 — Claude Code 구독 + OAuth 로그인</div>
+    <p>SoloSquad는 v0.9 기준 <strong>Claude Code를 OAuth 인증으로</strong> 단일 백엔드 사용합니다. 다른 AI CLI는 현재 지원하지 않습니다.</p>
+    <ol>
+      <li>https://claude.ai 접속 → 설정 → Claude Code 사용 가능한 플랜 구독 (Max 플랜 권장 — 사용량 여유)</li>
+      <li>Claude Code CLI 설치: <code>npm install -g @anthropic-ai/claude-code</code></li>
+      <li><code>claude login</code> — 브라우저 OAuth flow → 본 머신에 자격증명 영구 저장 (SoloSquad는 자격증명 직접 관리 안 함, Claude Code의 표준 로그인 흐름에 위임)</li>
+      <li><code>claude auth status --json</code>로 <code>loggedIn: true</code> 확인</li>
+    </ol>
+    <p class="callout info"><strong>왜 OAuth만</strong>: API key 직접 입력 모드는 *키 노출 위험* + *.env 파일 관리 부담*이 있어 SoloSquad가 옵션으로 제공하지 않음. Claude Code의 OAuth는 토큰을 OS의 credential store에 저장 → SoloSquad 코드는 키를 *볼 일 없음* (`claude` CLI가 호출 시점에 알아서 사용).</p>
   </div>
 
   <div class="step">
@@ -2681,7 +2688,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   <h3 id="s10-3">10.3 자주 묻는 질문 (FAQ)</h3>
 
   <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
-  A. Claude Code Max 구독료만 있으면 시작 가능. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
+  A. Claude Code 사용 가능한 플랜 구독료만 있으면 시작 가능 (Max 권장). SoloSquad는 v0.9 기준 *Claude Code via OAuth* 단일 백엔드. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
 
   <p><strong>Q. Discord와 Slack을 동시에 쓸 수 있나요?</strong><br>
   A. 한 워크스페이스에서는 불가능. <strong>워크스페이스를 두 개</strong> 만들면 됩니다 — 예: <code>~/solopreneur/</code>(Slack 봇) + <code>~/elon-24-7/</code>(Discord 봇). 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 미지원.</p>

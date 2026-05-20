@@ -54,7 +54,7 @@ npm install -g @anthropic-ai/claude-code
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
 solosquad init                                    # wizard asks for messenger token
-claude login                                      # browser opens for Claude Max account
+claude login                                      # browser OAuth — Claude Code on any compatible plan (Max recommended)
 solosquad doctor                                  # verify environment
 
 # 3. Start the bot
