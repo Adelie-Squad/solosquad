@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v0.9.1 기준</span>
+  <span class="tag">종합 개념서 · v0.9.2 기준</span>
   <nav>
     <ul>
       <li>
@@ -2812,6 +2812,7 @@ docker compose down
 # 또는 PID 강제 종료:
 Stop-Process -Id &lt;pid1&gt;,&lt;pid2&gt; -Force</code></pre>
       <code>solosquad doctor</code>의 "solosquad bot/schedule processes alive (pid ...)" 경고로 잔존 PID 확인 가능. <code>solosquad uninstall</code> 자체 precheck도 live PID 감지 시 <code>--force</code> 없이는 진입을 거부합니다.
+      <div class="callout" style="margin-top:8px"><strong>v0.9.2 hotfix</strong> — v0.9.1 이하 Windows 사용자는 봇이 안 도는데도 precheck가 <em>phantom PID</em>로 차단하던 버그가 있었습니다 (WMI 쿼리가 자기 자신을 매칭). 회피책은 <code>--force</code>였고, v0.9.2부터는 <code>$_.Name -eq 'node.exe'</code> 가드로 정상 동작합니다. 자세히 <code>CHANGELOG.md</code> §[0.9.2].</div>
     </li>
     <li><strong>uninstall dry-run으로 미리보기</strong>
       <pre><code>solosquad uninstall --dry-run

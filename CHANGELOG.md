@@ -4,6 +4,27 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.2] — 2026-05-21
+
+**v0.9.2 — Uninstall precheck self-match hotfix (Windows).** 빠른 hotfix.
+`solosquad uninstall`이 봇·스케줄러가 실제로 돌고 있지 않은데도
+`bot/schedule appears to be running (pid X, Y)` 라며 차단하던 Windows 한정 버그 수정.
+PID가 매 호출마다 바뀌어서 사용자가 `--force` 외엔 우회 수단이 없었음.
+
+### Fixed
+- `src/lifecycle/precheck.ts:detectLivePids` — Windows WMI 쿼리에 `$_.Name -eq 'node.exe'` 필터 추가.
+  - **원인**: `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'solosquad' -and $_.CommandLine -match '(bot|schedule|run-routine)' }` 의 `-Command` 인자 문자열이 *그 자체로* 두 정규식 리터럴을 포함. 쿼리를 실행하는 powershell.exe의 CommandLine이 두 조건 모두 통과 → **자기 자신 매칭**. 매 호출마다 새 powershell.exe가 떠서 PID가 바뀌는 증상.
+  - **수정**: Where-Object 절 앞에 `$_.Name -eq 'node.exe'` 추가. powershell.exe는 첫 술어에서 제외되므로 regex match가 돌지 않음.
+- POSIX 경로(`pgrep -f`)는 영향 없음 — `pgrep` 패턴 `solosquad (bot|schedule|run-routine)`은 alternation 문자열이 들어간 자기 자신 command line에서 실제 `solosquad bot` 등으로 매칭되지 않음.
+
+### Added
+- `test/lifecycle-precheck.test.ts` — `detectLivePids` 3회 호출이 동일한 PID 셋을 반환하는지 회귀 catcher. 버그 존재 시 매 호출마다 새 powershell.exe PID가 추가되어 결과가 갈라짐.
+- `src/migrations/scripts/0.9.1-to-0.9.2.ts` — `workspace.yaml.version` 0.9.1 → 0.9.2 bump only (스키마 변경 X).
+
+### Compatibility
+- 기존 0.9.1 워크스페이스: 자동 마이그레이션. 코드/스키마 변경 X.
+- 0.9.1로 우회 사용 중이던 `--force`는 계속 동작 (정직성 차단만 다시 활성).
+
 ## [0.9.1] — 2026-05-21
 
 **v0.9.1 — Workspace ↔ Repository 관계 재설계 Model B 구현 + master-guide §4.2 Step 1 prerequisites 보강.** v0.9 plan
