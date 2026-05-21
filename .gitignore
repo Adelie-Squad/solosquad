@@ -2,6 +2,9 @@
 .env
 repos/
 
+# SoloSquad workspace / path-reference mirror (dogfood case — local-only)
+.solosquad/
+
 # OS files
 .DS_Store
 Thumbs.db
