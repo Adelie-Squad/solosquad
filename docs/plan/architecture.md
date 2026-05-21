@@ -886,6 +886,34 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/plan/v0.9.2-precheck-self-match-hotfix.md` (plan), `CHANGELOG.md` §[0.9.2]
 
+#### 13.6.13 v1.0.0 — Formal launch (2026-05-21)
+
+**공개 사용자 약속이 시작되는 마일스톤.** `docs/api-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze. 진입 흐름 정합 *2 항목* 흡수 + 메신저 단일화 결정 박제.
+
+**Activated**:
+- `api-stability.md` "Effective as of v1.0.0 (2026-05-21)" 발효. 6개 `schema_version` 표면의 deprecation 정책이 v1.x.x bullet로 활성화.
+- `workspace.yaml.version` ↔ SoloSquad CLI SemVer 1:1 추적. v0.x 자유 bump 종료.
+- 42 CLI 명령 freeze — 명령 추가 = minor / 명령·플래그 제거 또는 rename = major (v2.0+).
+
+**Changed — onboarding 정합 2건** (v1.0 plan §1.3):
+1. `solosquad init` Step 1.5 신설 — Claude Code 인증 흡수. `commandExists("claude")` + `claude auth status --json` 점검 → 미로그인 시 `claude login` spawn (inherit stdio). 이미 인증된 사용자는 1초 스킵. 종전 *2-step* 마찰 제거.
+2. repo 등록 *path-reference 단일화*. `solosquad init` Step 5.1 / `solosquad add repo` 의 URL clone + Move/Copy 분기 제거. 모든 입력이 `registerPathReference`로 funnel. git URL은 `clone first, then re-add` 거부 + 비-git 폴더는 `git init first` 거부. SoloSquad는 git clone semantics를 *책임지지 않음*.
+
+**Scoped — Slack to post-v1.0**:
+- README × 2 + master-guide × 2의 *Discord-first* 재정렬 + §5.1 Slack walkthrough *post-v1.0 슬롯* 배지.
+- `src/messenger/slack-adapter.ts` 코드 보존 (v0.9.x 사용자 회귀 0) — SemVer 약속 외.
+- 사유: invite gap (사용자 자동 invite 누락) + 6+ OAuth scope 요구 + workspace admin 게이팅 + v0.x dogfood가 Discord 중심 누적.
+
+**Compatibility**:
+- migration 0.9.2 → 1.0.0: workspace.yaml.version bump only, idempotent.
+- legacy `<workspace>/<org>/repositories/<slug>/` 트리: `resolveRepoCwd` legacy 분기로 영구 동작.
+- v0.9.1+ path-reference yaml: 그대로 동작.
+- breaking change 0건 (사용자 데이터 면), 코드 surface 명령 추가/제거 0건.
+
+572 → **573 tests green** (572 baseline + `test/v1.0-path-ref-only.test.ts` 3건).
+
+자세히: `docs/plan/v1.0-formal-launch.md`, `docs/api-stability.md` (발효 본문), `CHANGELOG.md` §[1.0.0]
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):

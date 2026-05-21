@@ -53,6 +53,7 @@ export function slugFromUrl(url: string): string {
 export function looksLikeGitUrl(s: string): boolean {
   return (
     /^https?:\/\//i.test(s) ||
+    /^git\+https?:\/\//i.test(s) ||
     /^git@/i.test(s) ||
     /^ssh:\/\//i.test(s) ||
     /^git:\/\//i.test(s)

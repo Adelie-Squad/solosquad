@@ -63,8 +63,7 @@ npm install -g @anthropic-ai/claude-code
 # 2. SoloSquad 설치
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
-solosquad init                                    # wizard가 메신저 토큰을 물어봄
-claude login                                      # 브라우저 OAuth — Claude Code 호환 플랜 (Max 권장)
+solosquad init                                    # wizard가 Claude OAuth(Step 1.5) + 메신저 토큰 + repo path-reference 자동 처리
 solosquad doctor                                  # 환경 점검
 
 # 3. 봇 기동

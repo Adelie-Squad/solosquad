@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import inquirer from "inquirer";
+import { execFile, spawn } from "child_process";
 import {
   getAssetsDir,
   getSolosquadConfigDir,
@@ -13,9 +14,9 @@ import {
   saveEnv,
   saveWorkspaceYaml,
 } from "../util/config.js";
-import { commandExists } from "../util/platform.js";
-import { scaffoldOrg, scaffoldRepoYaml, slugify } from "../util/scaffold.js";
-import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
+import { commandExists, IS_WINDOWS } from "../util/platform.js";
+import { scaffoldOrg, slugify } from "../util/scaffold.js";
+import { isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 import { detectV05Usage } from "./detect-v05-usage.js";
 import {
   deriveChannelNames,
@@ -50,6 +51,121 @@ function isValidIanaTimezone(tz: string): boolean {
   }
 }
 
+interface ClaudeAuthStatus {
+  loggedIn: boolean;
+  subscriptionType?: string;
+}
+
+/**
+ * v1.0 — query `claude auth status --json`. Returns `{ loggedIn: false }` if
+ * the binary is missing or stdout cannot be parsed.
+ */
+function getClaudeAuthStatus(): Promise<ClaudeAuthStatus> {
+  return new Promise((resolve) => {
+    const useShell = IS_WINDOWS;
+    const cmd = useShell ? "claude auth status --json" : "claude";
+    const args = useShell ? [] : ["auth", "status", "--json"];
+    execFile(
+      cmd,
+      args,
+      { shell: useShell, maxBuffer: 1024 * 1024 },
+      (_err, stdout) => {
+        try {
+          const parsed = JSON.parse(stdout) as ClaudeAuthStatus;
+          resolve(parsed);
+        } catch {
+          resolve({ loggedIn: false });
+        }
+      },
+    );
+  });
+}
+
+/**
+ * v1.0 — spawn `claude login` with inherited stdio so the user sees the
+ * OAuth flow (browser opens, user pastes the redirect code if applicable).
+ * Resolves when the child exits with code 0; rejects otherwise.
+ */
+function runClaudeLogin(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const useShell = IS_WINDOWS;
+    const child = useShell
+      ? spawn("claude login", [], { shell: true, stdio: "inherit" })
+      : spawn("claude", ["login"], { stdio: "inherit" });
+    child.on("exit", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`claude login exited with code ${code}`));
+    });
+    child.on("error", reject);
+  });
+}
+
+/**
+ * v1.0 — Step 1.5 Claude Code Authentication. Detects current auth state and
+ * runs `claude login` if needed. Aborts init when auth cannot be established —
+ * downstream wizard steps assume a working Claude backend.
+ */
+async function ensureClaudeAuth(): Promise<void> {
+  console.log(chalk.bold("\n-- Step 1.5: Claude Code Authentication --"));
+  console.log(
+    chalk.dim(
+      "  SoloSquad invokes Claude Code via OAuth. v1.0 supports Claude Code as the single backend.",
+    ),
+  );
+
+  if (!commandExists("claude")) {
+    console.log(chalk.red("  ✗ `claude` CLI not found in PATH."));
+    console.log(chalk.dim("    Install: npm install -g @anthropic-ai/claude-code"));
+    console.log(chalk.dim("    Then re-run `solosquad init`."));
+    process.exit(1);
+  }
+
+  const status = await getClaudeAuthStatus();
+  if (status.loggedIn) {
+    const subtype = status.subscriptionType ?? "active";
+    console.log(chalk.green(`  ✓ Claude Code already authenticated (subscription: ${subtype})`));
+    return;
+  }
+
+  console.log(chalk.yellow("  Not logged in. Launching `claude login` to open your browser."));
+  console.log(chalk.dim("  Complete the OAuth flow, then return here."));
+  const { proceed } = await inquirer.prompt([
+    {
+      name: "proceed",
+      type: "confirm",
+      message: "Open `claude login` now?",
+      default: true,
+    },
+  ]);
+  if (!proceed) {
+    console.log(
+      chalk.red(
+        "  ✗ Claude Code authentication is required for SoloSquad bot/scheduler to work. Aborting init.",
+      ),
+    );
+    process.exit(1);
+  }
+
+  try {
+    await runClaudeLogin();
+  } catch (err) {
+    console.log(chalk.red(`  ✗ \`claude login\` failed: ${(err as Error).message}`));
+    process.exit(1);
+  }
+
+  const after = await getClaudeAuthStatus();
+  if (!after.loggedIn) {
+    console.log(
+      chalk.red(
+        "  ✗ Authentication did not complete. Re-run `solosquad init` after `claude login` succeeds.",
+      ),
+    );
+    process.exit(1);
+  }
+  const subtype = after.subscriptionType ?? "active";
+  console.log(chalk.green(`  ✓ Claude Code authenticated (subscription: ${subtype})`));
+}
+
 const ORG_EXAMPLES = `
   Examples (Elon Musk's portfolio, for illustration):
     tesla           — EVs, energy, autopilot (github.com/teslamotors)
@@ -62,113 +178,67 @@ const ORG_EXAMPLES = `
   slug. Otherwise, pick a short name (lowercase, hyphen-separated).
 `;
 
+/**
+ * v1.0 — path-reference only. URL clone + Move-into-workspace removed.
+ *
+ * The wizard accepts a local path that is *already* a git repo and registers
+ * it as a path-reference (no move, no copy). SoloSquad does not own git
+ * clone semantics (auth / branch / depth / submodules / LFS); use your own
+ * git toolchain to clone first, then re-add the local path.
+ *
+ * Legacy v0.9.x workspaces with repos already inside the workspace tree keep
+ * working via `resolveRepoCwd` (`src/util/paths.ts`).
+ */
 async function registerRepoInline(
   input: string,
   orgDir: string,
   orgSlug: string
 ): Promise<{ slug: string; role: string } | null> {
+  if (looksLikeGitUrl(input)) {
+    const suggestedSlug = slugFromUrl(input);
+    console.log(chalk.red(`  ✗ Git URL is not accepted in v1.0 path-reference mode.`));
+    console.log(
+      chalk.dim(
+        `    Clone the repo locally first with your own git toolchain, then re-add the path.\n` +
+          `    Example:  git clone ${input} ~/code/${suggestedSlug}\n` +
+          `    Then re-run this prompt with the local path.`,
+      ),
+    );
+    return null;
+  }
+
+  const src = path.resolve(input);
+  if (!fs.existsSync(src)) {
+    console.log(chalk.red(`  ✗ Path does not exist: ${src}`));
+    return null;
+  }
+  if (!isGitRepo(src)) {
+    console.log(chalk.red(`  ✗ Not a git repo (no .git/): ${src}`));
+    console.log(
+      chalk.dim(
+        `    v1.0 registers repos by path-reference and requires a git repo at the path.\n` +
+          `    Run \`git init\` (or \`git clone <url> ${src}\`) first, then re-add.`,
+      ),
+    );
+    return null;
+  }
+
   const reposDir = path.join(orgDir, "repositories");
   fs.mkdirSync(reposDir, { recursive: true });
-
-  let repoDir: string;
-  try {
-    if (looksLikeGitUrl(input)) {
-      const slug = slugFromUrl(input);
-      repoDir = path.join(reposDir, slug);
-      if (fs.existsSync(repoDir)) {
-        console.log(chalk.yellow(`  ! ${slug} already exists — skipping clone.`));
-      } else {
-        console.log(chalk.dim(`  Cloning ${input} → ${path.relative(process.cwd(), repoDir)}...`));
-        cloneRepo(input, repoDir);
-      }
-    } else {
-      const src = path.resolve(input);
-      if (!fs.existsSync(src)) {
-        console.log(chalk.red(`  ✗ Path does not exist: ${src}`));
-        return null;
-      }
-      const slug = path.basename(src);
-
-      // v0.9.1 — for external paths that look like a git repo, default to
-      // path-reference (no move, no copy). User can opt into legacy move
-      // via prompt.
-      if (isGitRepo(src)) {
-        const { mode } = await inquirer.prompt([
-          {
-            name: "mode",
-            type: "list",
-            message: `Register ${src}:`,
-            choices: [
-              {
-                name: "Path reference (recommended — no move, no copy)",
-                value: "reference",
-              },
-              { name: "Move into workspace (legacy)", value: "move" },
-            ],
-            default: "reference",
-          },
-        ]);
-        if (mode === "reference") {
-          const { role } = await inquirer.prompt([
-            {
-              name: "role",
-              type: "list",
-              message: "Role:",
-              choices: ["main", "frontend", "backend", "data", "infra", "docs", "unknown"],
-              default: "main",
-            },
-          ]);
-          const yaml = await import("js-yaml");
-          const { detectLanguage, getRemoteUrl } = await import("../util/git.js");
-          const doc = {
-            slug,
-            name: slug,
-            role,
-            language: detectLanguage(src) ?? undefined,
-            linked_org: orgSlug,
-            remote_url: getRemoteUrl(src),
-            products: [],
-            registered_at: new Date().toISOString(),
-            path: src,
-          };
-          fs.writeFileSync(
-            path.join(reposDir, `${slug}.yaml`),
-            yaml.dump(doc, { lineWidth: 100 }),
-            "utf-8",
-          );
-          // mirror inside external repo (class A* — single file)
-          const externalDotDir = path.join(src, ".solosquad");
-          fs.mkdirSync(externalDotDir, { recursive: true });
-          const externalYaml = path.join(externalDotDir, "repo.yaml");
-          if (!fs.existsSync(externalYaml)) {
-            fs.writeFileSync(externalYaml, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
-          }
-          console.log(chalk.green(`  ✓ ${slug} registered as path-reference → ${src}`));
-          return { slug, role };
-        }
-        // mode === "move" — fall through to legacy flow
-      }
-
-      repoDir = path.join(reposDir, slug);
-      if (path.resolve(repoDir) === path.resolve(src)) {
-        // In-place register
-      } else if (fs.existsSync(repoDir)) {
-        console.log(chalk.yellow(`  ! ${slug} already exists at destination — skipping move.`));
-      } else {
-        const { confirm } = await inquirer.prompt([
-          {
-            name: "confirm",
-            type: "confirm",
-            message: `Move ${src} → ${repoDir} ?`,
-            default: true,
-          },
-        ]);
-        if (!confirm) return null;
-        fs.renameSync(src, repoDir);
-      }
-    }
-  } catch (err) {
-    console.log(chalk.red(`  ✗ ${(err as Error).message}`));
+  const slug = path.basename(src);
+  const yamlPath = path.join(reposDir, `${slug}.yaml`);
+  if (fs.existsSync(yamlPath)) {
+    console.log(chalk.yellow(`  ! ${slug} already registered. Skipping.`));
+    return null;
+  }
+  const legacyDir = path.join(reposDir, slug);
+  if (fs.existsSync(legacyDir)) {
+    console.log(
+      chalk.yellow(
+        `  ! A legacy repositories/${slug}/ directory already exists in the workspace.\n` +
+          `    Pick a different folder name or move the legacy tree before re-adding.`,
+      ),
+    );
     return null;
   }
 
@@ -178,17 +248,34 @@ async function registerRepoInline(
       type: "list",
       message: "Role:",
       choices: ["main", "frontend", "backend", "data", "infra", "docs", "unknown"],
-      default: isGitRepo(repoDir) ? "main" : "unknown",
+      default: "main",
     },
   ]);
 
-  const doc = scaffoldRepoYaml({
-    orgDir,
-    orgSlug,
-    repoDir,
+  const yaml = await import("js-yaml");
+  const { detectLanguage, getRemoteUrl } = await import("../util/git.js");
+  const doc = {
+    slug,
+    name: slug,
     role,
-  });
-  return { slug: doc.slug, role: doc.role };
+    language: detectLanguage(src) ?? undefined,
+    linked_org: orgSlug,
+    remote_url: getRemoteUrl(src),
+    products: [],
+    registered_at: new Date().toISOString(),
+    path: src,
+  };
+  fs.writeFileSync(yamlPath, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
+
+  // Mirror inside external repo (class A* — single file)
+  const externalDotDir = path.join(src, ".solosquad");
+  fs.mkdirSync(externalDotDir, { recursive: true });
+  const externalYaml = path.join(externalDotDir, "repo.yaml");
+  if (!fs.existsSync(externalYaml)) {
+    fs.writeFileSync(externalYaml, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
+  }
+  console.log(chalk.green(`  ✓ ${slug} registered as path-reference → ${src}`));
+  return { slug, role };
 }
 
 function copyDirSync(src: string, dest: string): void {
@@ -527,6 +614,9 @@ export async function initCommand(): Promise<void> {
     console.log(chalk.yellow("\n  Docker not found (optional). See docs/setup-guide.md Option A-2."));
   }
 
+  // Step 1.5: Claude Code authentication (v1.0 — wizard handles the OAuth flow)
+  await ensureClaudeAuth();
+
   // Step 2: Workspace layout
   console.log(chalk.bold("\n-- Step 2: Create Workspace --"));
   console.log(
@@ -783,18 +873,20 @@ export async function initCommand(): Promise<void> {
     scaffoldV06OrgLayer(orgDir, orgSlug);
     console.log(chalk.green(`✓ ${orgSlug}/core, agent-profile.yaml, domain/ scaffolded`));
 
-    // Step 5.1: Register repositories (loop)
+    // Step 5.1: Register repositories (loop) — v1.0 path-reference only
     console.log(chalk.bold("\n-- Step 5.1: Register Repositories (optional) --"));
     console.log(chalk.dim(
-      "  You can paste a git URL to clone, or a local path to register.\n" +
-      "  Leave empty to skip. Repeat to add more."
+      "  Paste a local path that is already a git repo.\n" +
+      "  SoloSquad registers the path (no move, no copy) — your existing dev tree stays in place.\n" +
+      "  Leave empty to skip. Repeat to add more.\n" +
+      "  Need to clone? Run `git clone <url> <path>` first, then re-add the path here."
     ));
 
     while (true) {
       const { repoInput } = await inquirer.prompt([
         {
           name: "repoInput",
-          message: `Add repo to ${orgSlug} (git URL or local path, blank to finish):`,
+          message: `Add repo to ${orgSlug} (local path to an existing git repo, blank to finish):`,
           type: "input",
         },
       ]);
