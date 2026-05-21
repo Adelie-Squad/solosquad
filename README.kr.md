@@ -1,6 +1,6 @@
 # SoloSquad
 
-> 솔로 파운더 · 1인 창업자 · n잡 사용자를 위한 24/7 AI 어시스턴트 시스템 — Discord/Slack 봇 + 자동 루틴 + 팀 단위 에이전트, npm 패키지 하나로 배포.
+> 솔로 파운더 · 1인 창업자 · n잡 사용자를 위한 24/7 AI 어시스턴트 시스템 — Discord 봇 + 자동 루틴 + 팀 단위 에이전트, npm 패키지 하나로 배포.
 
 > 영문 버전: [README.md](README.md)
 
@@ -11,7 +11,7 @@
 ```
 
 **플랫폼:** Windows · macOS · Linux (크로스 플랫폼 CLI, CI 검증 완료)
-**메신저:** Discord 또는 Slack — 워크스페이스당 하나 (Telegram은 v0.2.4부터 미지원)
+**메신저:** Discord — 워크스페이스당 하나. Slack 어댑터 코드는 동봉되지만 **v1.0 SemVer 약속 대상이 아닙니다** (post-v1.0 슬롯). Telegram은 v0.2.4부터 미지원.
 **스택:** TypeScript + Node.js 18+ · AI 엔진은 Claude Code · 파일 기반 메모리(JSONL + FTS5)
 
 ---
@@ -40,7 +40,7 @@ SoloSquad의 핵심 약속은 **"사용자가 코드를 직접 보지 않고도,
 | 2 | How It Works | 시스템 아키텍처 · 폴더 위계 · 메모리 모델 · 워크플로우 정의 |
 | 3 | Concept Glossary | `SKILL.md` · `KNOWLEDGE.md` · `CLAUDE.md` · `AGENTS.md` 비교 · 레이어별 파일 인벤토리 · 4채널 라우팅 |
 | 4 | Onboarding | 신규 사용자 / 기존 리포 마이그레이션 / 버전 업그레이드 3 갈래 |
-| 5 | Messenger Setup | Slack 9단계 · Discord 8단계 토큰 워크스루 |
+| 5 | Messenger Setup | Discord 8단계 토큰 워크스루 (Slack 절은 post-v1.0 참고용으로 유지) |
 | 6 | Usage | CLI 레퍼런스 · 일일 운영 · 첫 실행 체크리스트 · 자동 루틴 |
 | 7 | Glossary | 60+ 핵심 용어 사전 · 파일명 사전 · 약어 사전 (초심자 친화) |
 | 8 | Version Differences | v0.8.x (npm 배포) vs v1.0+ (예정) |
@@ -75,7 +75,7 @@ cd deploy/docker && docker compose up -d --build  # 백그라운드 + 자동 재
 
 봇이 켜진 뒤, 메신저의 `#command-<handle>` 채널 (예: `#command-alice`)에 "안녕"이라고 보내면 전문 에이전트가 응답합니다.
 
-**메신저 토큰 셋업**은 Slack 기준 5~10분, Discord 기준 3~5분 정도 걸립니다. [`master-guide.html` §5](manual/master-guide.html)의 단계 절차를 따라가세요.
+**메신저 토큰 셋업**은 Discord 기준 3~5분 정도 걸립니다. [`master-guide.html` §5](manual/master-guide.html)의 단계 절차를 따라가세요.
 
 ### 메신저 셋업이 핵심인 이유
 
@@ -198,9 +198,9 @@ Mac Mini · PC · VPS 어디서든 동작. 데이터는 사용자 머신에. 외
 
 ### 멀티 유저 메신저 (v0.8.0)
 
-같은 Discord 서버 또는 Slack 워크스페이스에 N명이 각자 SoloSquad를 설치할 수 있습니다. 각 사용자는 자기 `command-<handle>` + `works-<handle>` 페어를 가지며, 다른 사용자 채널은 봇이 *listen 안 함*. 채널은 메신저 ACL로 private (초대만) + 코드 레벨 `author-guard` 가 defense in depth.
+같은 Discord 서버에 N명이 각자 SoloSquad를 설치할 수 있습니다. 각 사용자는 자기 `command-<handle>` + `works-<handle>` 페어를 가지며, 다른 사용자 채널은 봇이 *listen 안 함*. 채널은 메신저 ACL로 private (초대만) + 코드 레벨 `author-guard` 가 defense in depth. *(Slack 어댑터도 동일 채널 페어 컨벤션을 따르지만 v1.0 SemVer 약속 외 — post-v1.0 슬롯.)*
 
-옵션 broadcast 채널 (`#solosquad-broadcast`) 은 opt-in — `workspace.yaml.messenger.broadcast_enabled: true` 일 때만 designated 봇 1개가 morning/evening brief 를 push. 같은 토큰을 두 머신이 동시 사용하면 Discord/Slack 이 disconnect 시키므로 *1 토큰 = 1 머신* 원칙 준수.
+옵션 broadcast 채널 (`#solosquad-broadcast`) 은 opt-in — `workspace.yaml.messenger.broadcast_enabled: true` 일 때만 designated 봇 1개가 morning/evening brief 를 push. 같은 토큰을 두 머신이 동시 사용하면 Discord가 disconnect 시키므로 *1 토큰 = 1 머신* 원칙 준수.
 
 ### Dev Capability (v0.8.2)
 
@@ -374,14 +374,14 @@ v0.7 + v0.8 패치 시리즈가 위에 얹은 라이프사이클 + 멀티 유저
 
 ## 멀티 워크스페이스
 
-Slack과 Discord 둘 다 쓰고 싶거나, 페르소나를 분리하고 싶다면 워크스페이스를 여러 개 만들면 됩니다:
+Discord 페르소나(예: 비즈니스 / 개인)를 분리하고 싶다면 워크스페이스를 여러 개 만들면 됩니다:
 
 ```
-~/solopreneur/      # Slack 봇, 비즈니스 페르소나
+~/solopreneur/      # Discord 봇, 비즈니스 페르소나
 ~/personal-lab/     # Discord 봇, 취미 페르소나
 ```
 
-각각 독립된 `.env`, 토큰, 메모리, 메신저 계정. 서로 간섭 없이 병렬 실행. (단, 1 워크스페이스 = 1 메신저 — v0.1.x 의 `MESSENGER=discord,slack` 문법은 더 이상 지원 안 함.)
+각각 독립된 `.env`, 토큰, 메모리, 메신저 계정. 서로 간섭 없이 병렬 실행. (단, 1 워크스페이스 = 1 메신저 — v0.1.x 의 `MESSENGER=discord,slack` multi-target 문법은 더 이상 지원 안 함. v1.0은 Discord 어댑터만 SemVer 약속에 포함; Slack 어댑터는 코드는 남지만 post-v1.0 슬롯.)
 
 n잡 사용자라면 이 패턴이 핵심입니다:
 
@@ -428,7 +428,7 @@ src/
                                      revoke-checklist; v0.8.1 import + archive-reader
   analyze/                        → v0.5 리포 분석기 — scanner, classifier, ledger,
                                      workflow-matcher, report-writer, applier
-  messenger/                      → Discord / Slack 어댑터 + broadcast (v0.8.0)
+  messenger/                      → Discord 어댑터 (v1.0). Slack 어댑터 동봉되나 post-v1.0 슬롯. broadcast (v0.8.0)
   scheduler/                      → cron 루틴 + 메모리 append;
                                      trajectory-extractor + freq-keyword-miner (v0.6)
   util/                           → config, paths, logger (v0.8.3 확장), platform, cost,
@@ -510,7 +510,7 @@ scripts/                          → backfill-bundled-frontmatter,
     ├── workflows/<wf-id>/               (v0.3 — _status.yaml, _events.jsonl, stages)
     ├── goals/<goal-id>/                 (v0.4 — goal.md, results.tsv, _best.json)
     ├── repositories/<repo>/             (Layer 2 — 사용자 프로덕트 코드, 클래스 A 불가침)
-    ├── slack/  or  discord/             (채널 설정)
+    ├── discord/                          (채널 설정 — v1.0 기본). slack/ 동봉되나 post-v1.0 슬롯
     └── product/                         (org별 산출물)
 
 ~/.solosquad/
