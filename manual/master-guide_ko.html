@@ -1036,6 +1036,52 @@ claude --version</code></pre>
       <strong>참고 — git push 인증은 git 자체가 처리합니다</strong>
       위 명령으로 git을 설치하면, 첫 <code>git push</code> 시점에 OS가 알아서 인증을 처리합니다 (Windows는 Git Credential Manager가 브라우저 OAuth 자동 호출, macOS는 osxkeychain 통해 PAT 1회 입력 후 영구 저장). <strong>SoloSquad가 이 과정에 개입하지 않으며, 별도 셋업 절차도 제공하지 않습니다</strong> — git 표준 흐름 그대로. Linux 사용자는 SSH key 또는 PAT를 별도 셋업해야 할 수 있습니다 (git/GitHub 공식 docs 참조).
     </div>
+
+    <h4>의존성 종합 — <code>solosquad doctor</code>가 실제로 점검하는 항목</h4>
+    <p>위 OS별 명령은 *최소 묶음* (node·git·claude)입니다. <code>solosquad doctor</code>는 그 외에도 다음을 점검합니다. <strong>필수 항목이 빠지면 boot 거부</strong>, 권장 항목은 warning + 일부 기능 skip.</p>
+    <table>
+      <thead><tr><th>도구</th><th>최소 버전</th><th>필수 여부</th><th>용도</th><th>누락 시</th></tr></thead>
+      <tbody>
+        <tr><td><code>node</code></td><td>v18 (LTS 22.x 권장)</td><td>필수</td><td>CLI 런타임</td><td>doctor 1차 실패, 실행 불가</td></tr>
+        <tr><td><code>npm</code></td><td>v9 (Node 18+에 동봉)</td><td>필수</td><td>패키지 설치·업데이트</td><td><code>npm install -g solosquad</code> 불가</td></tr>
+        <tr><td><code>git</code></td><td>2.30+</td><td>필수</td><td>워크스페이스 변경 추적 · engineering 에이전트 commit/PR</td><td>bot·스케줄러 boot 거부</td></tr>
+        <tr><td><code>claude</code> (Claude Code CLI)</td><td>최신</td><td>필수</td><td>모든 에이전트 spawn 실행기 (Step 2 OAuth 로그인 전제)</td><td>PM·specialist 동작 불가</td></tr>
+        <tr><td><code>gh</code> (GitHub CLI)</td><td>2.20+</td><td>권장</td><td>engineering 에이전트 PR 흐름 (<code>gh auth status</code> 통과 필요)</td><td>PR 단계 skip, commit만 동작 (doctor warning)</td></tr>
+        <tr><td><code>pwsh</code> (PowerShell 7+)</td><td>7.x</td><td>Windows 권장</td><td>일부 install hook · 크로스플랫폼 스크립트</td><td>doctor warning (<code>winget install Microsoft.PowerShell</code>)</td></tr>
+        <tr><td><code>docker</code></td><td>24+</td><td>선택</td><td>isolated execution (격리 실행)</td><td>doctor warning만, 동작 영향 없음</td></tr>
+      </tbody>
+    </table>
+
+    <h4>환경 변수 종합 — <code>&lt;workspace&gt;/.solosquad/.env</code></h4>
+    <p>대부분은 Step 5 마법사가 자동 세팅합니다. 사용자가 직접 손댈 일은 <strong>토큰 갱신</strong>·<strong>로그 위치 변경</strong>·<strong>v0.9 path-reference 기본 경로 지정</strong> 정도입니다.</p>
+    <table>
+      <thead><tr><th>변수</th><th>필수 여부</th><th>값 형식</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td><code>MESSENGER</code></td><td>필수</td><td><code>discord</code> 또는 <code>slack</code></td><td>1 워크스페이스 = 1 메신저. 마법사가 자동 세팅</td></tr>
+        <tr><td><code>DISCORD_TOKEN</code></td><td>Discord 사용 시 필수</td><td><code>MTxxxx.xxxx.xxxx</code> (Bot Token, Client Secret 아님)</td><td>§5에서 발급</td></tr>
+        <tr><td><code>SLACK_BOT_TOKEN</code></td><td>Slack 사용 시 필수</td><td><code>xoxb-...</code></td><td>§5에서 발급</td></tr>
+        <tr><td><code>SLACK_APP_TOKEN</code></td><td>Slack 사용 시 필수</td><td><code>xapp-...</code></td><td>Socket Mode</td></tr>
+        <tr><td><code>OWNER_NAME</code> / <code>OWNER_ROLE</code></td><td>필수</td><td>자유 문자열</td><td>마법사가 자동 세팅. agent가 사용자 호칭·전문성 추정에 사용</td></tr>
+        <tr><td><code>REPOS_BASE_PATH</code></td><td>선택</td><td>절대 경로</td><td>v0.9 path-reference 기본 위치 (예: <code>~/code</code>)</td></tr>
+        <tr><td><code>SOLOSQUAD_LOG_LEVEL</code></td><td>선택</td><td><code>debug</code>·<code>info</code>·<code>warn</code>·<code>error</code></td><td>default <code>info</code></td></tr>
+        <tr><td><code>SOLOSQUAD_LOG_DIR</code>·<code>_FILE</code>·<code>_FORMAT</code></td><td>선택</td><td>경로·파일명·<code>json</code>/<code>text</code></td><td>default: 워크스페이스 내 표준 위치 + text</td></tr>
+        <tr><td><code>SOLOSQUAD_NO_DEPRECATION_WARN</code></td><td>선택</td><td><code>1</code></td><td>deprecated CLI 사용 시 경고 숨김</td></tr>
+        <tr><td><code>ANTHROPIC_API_KEY</code></td><td>사용 안 함</td><td>—</td><td>Claude Code OAuth(Step 2)에 위임 → SoloSquad 코드는 키를 직접 읽지 않음. <code>revoke-checklist</code> 출력 시 prefix 인식 용도로만 참조</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <strong>새 기기 기준 자원·네트워크 하한</strong>
+      <ul>
+        <li><strong>디스크</strong>: npm global 설치 ~500MB (deps + <code>better-sqlite3</code> prebuild + 번들 master-guide HTML) + 워크스페이스 누적 (<code>memory/archive.sqlite</code>·routine-logs — 사용량에 따라 10MB~수 GB)</li>
+        <li><strong>메모리</strong>: 2GB+ (PM 세션 + 봇 + 스케줄러 + better-sqlite3 캐시가 동시 상주)</li>
+        <li><strong>OS × arch</strong>: macOS arm64/x64, Linux x64/arm64, Windows x64 — <code>better-sqlite3</code> prebuilt 매트릭스. 그 외(FreeBSD, 32-bit, Alpine musl)는 <code>node-gyp</code> 환경(Python 3 + C++ toolchain) 필요</li>
+        <li><strong>네트워크 outbound</strong>: <code>api.anthropic.com</code> (Claude), <code>discord.com</code> 또는 <code>wss://...slack.com</code> (메신저 gateway), <code>registry.npmjs.org</code> (install/update), <code>raw.githubusercontent.com</code> (Claude Code 자산)</li>
+        <li><strong>Shell</strong>: bash·zsh 정식 지원. fish 사용자는 npm global bin PATH 수동 설정 필요할 수 있음 (<code>fish_add_path (npm prefix -g)/bin</code>)</li>
+        <li><strong>타임존</strong>: 시스템 TZ가 아니라 <code>workspace.yaml.timezone</code> (default <code>Asia/Seoul</code>)을 모든 cron이 사용. 마법사에서 변경</li>
+        <li><strong>npm 권한</strong>: <code>sudo npm install -g</code>는 비권장. macOS/Linux는 <code>npm config set prefix ~/.npm-global</code> 후 <code>$PATH</code>에 <code>~/.npm-global/bin</code> 추가. Windows winget 설치는 자동 처리</li>
+      </ul>
+    </div>
   </div>
 
   <div class="step">

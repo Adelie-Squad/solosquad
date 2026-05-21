@@ -1037,6 +1037,52 @@ claude --version</code></pre>
       <strong>Note — git itself handles push authentication</strong>
       Once git is installed via the commands above, the OS handles auth at the first <code>git push</code> (Windows: Git Credential Manager auto-invokes browser OAuth; macOS: osxkeychain stores PAT after one-time entry). <strong>SoloSquad does not interfere with this process and does not provide a separate setup procedure</strong> — standard git flow. Linux users may need to set up an SSH key or PAT separately (see git/GitHub official docs).
     </div>
+
+    <h4>Full prerequisite checklist — what <code>solosquad doctor</code> actually verifies</h4>
+    <p>The OS commands above cover the *minimal set* (node, git, claude). <code>solosquad doctor</code> additionally checks the following. <strong>Required tools missing = boot refused</strong>; recommended tools missing = warning + some features skipped.</p>
+    <table>
+      <thead><tr><th>Tool</th><th>Minimum</th><th>Required</th><th>Used for</th><th>If missing</th></tr></thead>
+      <tbody>
+        <tr><td><code>node</code></td><td>v18 (LTS 22.x recommended)</td><td>Required</td><td>CLI runtime</td><td>Doctor fails immediately, cannot run</td></tr>
+        <tr><td><code>npm</code></td><td>v9 (bundled with Node 18+)</td><td>Required</td><td>Package install / update</td><td><code>npm install -g solosquad</code> impossible</td></tr>
+        <tr><td><code>git</code></td><td>2.30+</td><td>Required</td><td>Workspace change tracking · engineering agent commit/PR</td><td>Bot / scheduler refuse to boot</td></tr>
+        <tr><td><code>claude</code> (Claude Code CLI)</td><td>latest</td><td>Required</td><td>Spawn runner for every agent (Step 2 OAuth login required)</td><td>PM / specialists won't run</td></tr>
+        <tr><td><code>gh</code> (GitHub CLI)</td><td>2.20+</td><td>Recommended</td><td>Engineering agent's PR flow (<code>gh auth status</code> must pass)</td><td>PR step skipped, commit-only mode (doctor warning)</td></tr>
+        <tr><td><code>pwsh</code> (PowerShell 7+)</td><td>7.x</td><td>Windows recommended</td><td>Some install hooks · cross-platform scripts</td><td>Doctor warning (<code>winget install Microsoft.PowerShell</code>)</td></tr>
+        <tr><td><code>docker</code></td><td>24+</td><td>Optional</td><td>Isolated execution</td><td>Doctor warning only, no functional impact</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Environment variables — stored in <code>&lt;workspace&gt;/.solosquad/.env</code></h4>
+    <p>Most are auto-set by the Step 5 wizard. You normally only touch them for <strong>token rotation</strong>, <strong>log path overrides</strong>, or <strong>v0.9 path-reference default location</strong>.</p>
+    <table>
+      <thead><tr><th>Variable</th><th>Required</th><th>Format</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>MESSENGER</code></td><td>Required</td><td><code>discord</code> or <code>slack</code></td><td>One workspace = one messenger. Auto-set by the wizard.</td></tr>
+        <tr><td><code>DISCORD_TOKEN</code></td><td>Required if using Discord</td><td><code>MTxxxx.xxxx.xxxx</code> (Bot Token, not Client Secret)</td><td>Obtained in §5</td></tr>
+        <tr><td><code>SLACK_BOT_TOKEN</code></td><td>Required if using Slack</td><td><code>xoxb-...</code></td><td>Obtained in §5</td></tr>
+        <tr><td><code>SLACK_APP_TOKEN</code></td><td>Required if using Slack</td><td><code>xapp-...</code></td><td>Socket Mode</td></tr>
+        <tr><td><code>OWNER_NAME</code> / <code>OWNER_ROLE</code></td><td>Required</td><td>Free string</td><td>Auto-set by the wizard. Agents use these to address you and infer expertise.</td></tr>
+        <tr><td><code>REPOS_BASE_PATH</code></td><td>Optional</td><td>Absolute path</td><td>v0.9 path-reference default location (e.g. <code>~/code</code>)</td></tr>
+        <tr><td><code>SOLOSQUAD_LOG_LEVEL</code></td><td>Optional</td><td><code>debug</code> · <code>info</code> · <code>warn</code> · <code>error</code></td><td>Default <code>info</code></td></tr>
+        <tr><td><code>SOLOSQUAD_LOG_DIR</code> · <code>_FILE</code> · <code>_FORMAT</code></td><td>Optional</td><td>Path · filename · <code>json</code>/<code>text</code></td><td>Default: in-workspace standard location + text</td></tr>
+        <tr><td><code>SOLOSQUAD_NO_DEPRECATION_WARN</code></td><td>Optional</td><td><code>1</code></td><td>Suppresses the deprecated-CLI warning</td></tr>
+        <tr><td><code>ANTHROPIC_API_KEY</code></td><td>Not used</td><td>—</td><td>Delegated to Claude Code OAuth (Step 2) — SoloSquad never reads the key directly. Only referenced for prefix recognition in <code>revoke-checklist</code> output.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <strong>Resource / network minimums (fresh machine)</strong>
+      <ul>
+        <li><strong>Disk</strong>: ~500MB for the npm global install (deps + <code>better-sqlite3</code> prebuild + bundled master-guide HTML) + workspace growth (<code>memory/archive.sqlite</code> · routine-logs — 10MB to several GB depending on use)</li>
+        <li><strong>Memory</strong>: 2GB+ (PM session + bot + scheduler + better-sqlite3 cache running concurrently)</li>
+        <li><strong>OS × arch</strong>: macOS arm64/x64, Linux x64/arm64, Windows x64 — the <code>better-sqlite3</code> prebuilt matrix. Anything else (FreeBSD, 32-bit, Alpine musl) requires a <code>node-gyp</code> toolchain (Python 3 + C++ compiler).</li>
+        <li><strong>Network outbound</strong>: <code>api.anthropic.com</code> (Claude), <code>discord.com</code> or <code>wss://...slack.com</code> (messenger gateway), <code>registry.npmjs.org</code> (install / update), <code>raw.githubusercontent.com</code> (Claude Code assets)</li>
+        <li><strong>Shell</strong>: bash and zsh officially supported. fish users may need to add npm's global bin to PATH manually (<code>fish_add_path (npm prefix -g)/bin</code>).</li>
+        <li><strong>Timezone</strong>: Every cron uses <code>workspace.yaml.timezone</code> (default <code>Asia/Seoul</code>), not the system TZ. Changeable in the wizard.</li>
+        <li><strong>npm permissions</strong>: Avoid <code>sudo npm install -g</code>. On macOS/Linux, run <code>npm config set prefix ~/.npm-global</code> and add <code>~/.npm-global/bin</code> to <code>$PATH</code>. Windows winget handles this automatically.</li>
+      </ul>
+    </div>
   </div>
 
   <div class="step">
