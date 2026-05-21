@@ -108,7 +108,7 @@ function tokenKeysForMessenger(messenger: string): string[] {
 }
 
 /**
- * v0.9.0 — path-reference repo health check.
+ * v0.9.1 — path-reference repo health check.
  *
  * Each `<workspace>/<org>/repositories/<slug>.yaml` (file) is a path-reference
  * to an external repo. Verify:
@@ -312,7 +312,7 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   const unitLabel = isNew ? "Organizations" : "Products";
   if (!check(`${unitLabel} registered (${products.length})`, products.length > 0, isNew ? "Run: solosquad add org <name>" : "Run: solosquad init")) issues++;
 
-  // v0.9.0 — path-reference repos: external path existence + .git/ sanity
+  // v0.9.1 — path-reference repos: external path existence + .git/ sanity
   if (isNew) {
     issues += runPathReferenceChecks(workspace, products);
   }

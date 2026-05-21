@@ -9,7 +9,7 @@
  *   - manual/master-guide_ko.html   (user-facing manual, Korean)
  *   - manual/master-guide_en.html   (user-facing manual, English)
  *
- * v0.9.0: master-guide moved from docs/manual/ to top-level manual/ so that
+ * v0.9.1: master-guide moved from docs/manual/ to top-level manual/ so that
  * npm-published package includes it (docs/ stays dev-only per package.json
  * `files` field).
  *

@@ -179,7 +179,7 @@ addGroup
   .option("--dry-run", "Simulate the move (v0.8.3) — print risk report, write nothing")
   .option("--inspect", "[deprecated] use --dry-run")
   .option("--keep-original", "Copy the repo into the workspace instead of moving (v0.8.3)")
-  .option("--path <external>", "v0.9.0 — register external repo as path-reference (no move, no copy). Default mode when cwd is a git repo and [input] is omitted.")
+  .option("--path <external>", "v0.9.1 — register external repo as path-reference (no move, no copy). Default mode when cwd is a git repo and [input] is omitted.")
   .action(async (input, opts) => {
     const { addRepoCommand } = await import("./add-repo.js");
     await addRepoCommand(input, opts);

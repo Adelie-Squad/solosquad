@@ -6,13 +6,13 @@ import os from "node:os";
 import { resolveRepoCwd } from "../src/util/paths.js";
 
 /**
- * v0.9.0 §13 — regression catcher for the model-B (path-reference) flow.
+ * v0.9.1 §13 — regression catcher for the model-B (path-reference) flow.
  *
  * Verifies that `resolveRepoCwd` correctly resolves to the external path
  * declared in `<workspace>/<org>/repositories/<slug>.yaml`, and falls back
  * to legacy behavior when the file is missing or malformed.
  *
- * Per `docs/plan/v0.9-workspace-repo-relationship.md` §7/§13 — path-reference
+ * Per `docs/plan/v0.9.1-workspace-repo-relationship.md` §7/§13 — path-reference
  * is the v0.9+ default, legacy tree stays permanently supported.
  */
 
@@ -95,7 +95,7 @@ test("path-reference: no yaml + legacy tree → legacy tree (backward-compat)", 
   );
 });
 
-test("RepoYaml interface declares optional path field (v0.9.0)", async () => {
+test("RepoYaml interface declares optional path field (v0.9.1)", async () => {
   // Source inspection: util/config.ts must declare path?: string in RepoYaml.
   const __filename = new URL(import.meta.url).pathname;
   const __dirname = path.dirname(__filename.replace(/^\/([A-Z]:)/, "$1"));
@@ -104,6 +104,6 @@ test("RepoYaml interface declares optional path field (v0.9.0)", async () => {
   assert.match(
     configTs,
     /interface RepoYaml\s*\{[\s\S]*?path\?\s*:\s*string/,
-    "RepoYaml must declare optional `path?: string` field (v0.9.0 model B)",
+    "RepoYaml must declare optional `path?: string` field (v0.9.1 model B)",
   );
 });
