@@ -858,6 +858,34 @@ v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visib
 
 자세히: `docs/plan/v0.9.1-workspace-repo-relationship.md` (plan), code in `src/util/paths.ts` + `src/cli/add-repo.ts`
 
+#### 13.6.12 v0.9.2 — Uninstall precheck self-match hotfix (Windows)
+
+**`src/lifecycle/precheck.ts:detectLivePids` 한 줄 fix.** `solosquad uninstall`이 봇·스케줄러가 실제로 안 돌고 있는 환경에서도 `bot/schedule appears to be running (pid X, Y)`로 차단하던 Windows 한정 버그.
+
+**원인**: WMI 쿼리
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -match 'solosquad' -and
+                 $_.CommandLine -match '(bot|schedule|run-routine)' } |
+  Select-Object -ExpandProperty ProcessId
+```
+
+의 `-Command` 인자 문자열이 그 자체로 `'solosquad'`와 `'(bot|schedule|run-routine)'` 두 정규식 리터럴을 포함. 쿼리를 실행하는 powershell.exe의 CommandLine은 둘 다 매칭되므로 **자기 자신이 결과에 포함**. execSync마다 새 powershell.exe가 떠서 PID가 매 호출 바뀌는 증상. `process.pid` 필터는 node 프로세스만 제외하므로 무력.
+
+**수정**: Where-Object 절 앞에 `$_.Name -eq 'node.exe'` 가드 추가. powershell.exe는 첫 술어에서 탈락 → regex match에 도달하지 않음.
+
+**영향**:
+- POSIX 경로(`pgrep -f`)는 영향 없음 — pgrep의 자기 자신 command line은 `solosquad (bot|schedule|run-routine)` 리터럴을 포함하지만 alternation 문자열이라 실제 `solosquad bot` 등으로 매칭되지 않음.
+- 스키마 변경 0건. migration 0.9.1 → 0.9.2는 `workspace.yaml.version` bump only.
+- `--force` 우회 사용자에게도 무해 (정직성 차단만 다시 활성).
+
+**회귀 catcher**: `test/lifecycle-precheck.test.ts` — `detectLivePids` 3회 호출 결과의 동일성을 assert. 버그 존재 시 매 호출마다 새 phantom PID가 추가되어 deepEqual 실패.
+
+572/572 tests green (571 + 1 v0.9.2 regression test).
+
+자세히: `CHANGELOG.md` §[0.9.2]
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):

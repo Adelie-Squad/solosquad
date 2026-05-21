@@ -180,11 +180,13 @@ export async function precheck(opts: PrecheckOptions): Promise<PrecheckResult> {
 function detectLivePids(): number[] {
   try {
     if (IS_WINDOWS) {
-      // tasklist outputs CSV; we look for node.exe processes whose command
-      // line includes "solosquad". `wmic` is deprecated but `Get-CimInstance`
-      // via powershell is reliable.
+      // v0.9.2 hotfix: the Where-Object clause must include `Name -eq 'node.exe'`
+      // because the powershell.exe process running this very query has both
+      // 'solosquad' and '(bot|schedule|run-routine)' as literals in its own
+      // CommandLine (the -Command argument). Without the Name guard, the query
+      // matches itself and returns phantom PIDs that change every invocation.
       const out = execSync(
-        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'solosquad' -and $_.CommandLine -match '(bot|schedule|run-routine)' } | Select-Object -ExpandProperty ProcessId"`,
+        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -match 'solosquad' -and $_.CommandLine -match '(bot|schedule|run-routine)' } | Select-Object -ExpandProperty ProcessId"`,
         { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
       );
       return out

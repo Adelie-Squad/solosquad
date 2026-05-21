@@ -29,11 +29,12 @@
 | `v0.8.7` | 2026-05-20 | Tiny Stabilization — master-guide §3.11 `dev_capability` 4-level enum → boolean+dev_permissions 정합 (docs drift fix) + `test/migrate-default-target.test.ts` 회귀 catcher. v0.9 안정화 6축 권장안은 오버스펙으로 영구 skip | `v0.8.7-tiny-stabilization.md` |
 | `v0.9 plan` | 2026-05-20 | Workspace ↔ Repository 관계 재설계 plan only (코드 0건). Hermes·Codex 비교 + 모델 B (path reference) default 선택 + 자동화 UX 4종 + 워크스페이스 위치 가이드 박제 | `v0.9.1-workspace-repo-relationship.md` |
 | ~~`v0.9.0`~~ | ~~2026-05-20~~ | ~~burn~~ — publish 직후 unpublish, npm time 객체에 영구 기록. 코드 자체는 v0.9.1과 동일. 사용 가능한 버전은 v0.9.1부터 | — |
-| **`v0.9.1`** | **2026-05-21** | **Model B 구현 + npm 패키지에 master-guide 포함 + Step 1 prerequisites 보강** — `repo.yaml.path` 필드 신설 / `resolveRepoCwd` 외부 경로 분기 / `solosquad add repo --path <ext>` flag + cwd 인식 자동 / `solosquad init` Step 5.1 path-reference 분기 prompt / `solosquad doctor` 외부 path 존재 검증. `docs/manual/` → top-level `manual/`로 이동해 npm 패키지에 포함. master-guide §4.2 Step 1에 *의존성 종합 표* + *환경변수 종합 표* + *자원·네트워크 하한* 박스 3개 추가 (KO/EN). backward-compat: 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작 | `v0.9.1-workspace-repo-relationship.md` |
+| `v0.9.1` | 2026-05-21 | Model B 구현 + npm 패키지에 master-guide 포함 + Step 1 prerequisites 보강 — `repo.yaml.path` 필드 신설 / `resolveRepoCwd` 외부 경로 분기 / `solosquad add repo --path <ext>` flag + cwd 인식 자동 / `solosquad init` Step 5.1 path-reference 분기 prompt / `solosquad doctor` 외부 path 존재 검증. `docs/manual/` → top-level `manual/`로 이동해 npm 패키지에 포함. master-guide §4.2 Step 1에 *의존성 종합 표* + *환경변수 종합 표* + *자원·네트워크 하한* 박스 3개 추가 (KO/EN). backward-compat: 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작 | `v0.9.1-workspace-repo-relationship.md` |
+| **`v0.9.2`** | **2026-05-21** | **Uninstall precheck self-match hotfix (Windows)** — `solosquad uninstall`이 봇이 안 도는데도 `bot/schedule appears to be running (pid X, Y)`로 차단하던 Windows 한정 버그 수정. WMI 쿼리 `Get-CimInstance Win32_Process \| Where-Object { $_.CommandLine -match 'solosquad' -and ... }` 의 `-Command` 인자가 자기 자신의 CommandLine에 두 정규식 리터럴을 포함해 *powershell.exe가 스스로를 매칭*. `$_.Name -eq 'node.exe'` 가드 추가로 해결. `test/lifecycle-precheck.test.ts` 회귀 catcher (3회 호출 결과 동일성). 스키마 변경 0건, `--force` 우회 사용자에게도 무해 | `CHANGELOG.md` §[0.9.2] |
 
-### 현재 설치 가능 버전: npm `0.9.1` (publish 직전 단계; 0.9.0은 npm burn)
+### 현재 설치 가능 버전: npm `0.9.2` (publish 직전 단계; 0.9.0은 npm burn)
 
-**다음 마일스톤:** v0.9.2 — backward-compat 마이그레이션 명령 (`solosquad migrate --externalize-repos`, opt-in). 이후 v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
+**다음 마일스톤:** v0.9.3+ — backward-compat 마이그레이션 명령 (`solosquad migrate --externalize-repos`, opt-in). 이후 v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 
