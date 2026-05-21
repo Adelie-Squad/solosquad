@@ -4,6 +4,44 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] — 2026-05-21
+
+**v1.0.0 — Formal launch.** v0.x 전체는 *솔로 파운더 자기 사용*을 위한 빠른 반복 구간이었습니다. v1.0부터는 **공개 사용자 약속이 시작**됩니다 — `docs/api-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze됩니다.
+
+본 plan 초기 draft는 "코드 변경 0건"을 약속했으나, v0.9.2 사용자 검증 회고 결과 *진입 흐름 마찰 2건*을 v1.0에 직접 흡수했습니다. 신규 기능은 추가되지 않으며, 명령 surface는 변하지 않습니다. 자세한 박제는 `docs/plan/v1.0-formal-launch.md`.
+
+### Activated — public API stability promise
+- `docs/api-stability.md` — "Effective as of v1.0.0 (2026-05-21)" 발효. 6개 `schema_version` 표면 (workspace · org metadata · agent profile · SKILL frontmatter · archive metadata · archive manifest) deprecation 정책이 *v1.x.x bullet*로 활성화.
+- `workspace.yaml.version`이 SoloSquad CLI SemVer를 1:1 추적. v0.x 자유 bump 윈도우 종료.
+- CLI surface 42 명령 freeze — 명령 추가 = minor / 명령·플래그 제거 또는 rename = major (v2.0+). 의도된 컨벤션 예외(`migrate dry-run default`)는 freeze에 포함.
+
+### Changed — onboarding 정합 2건 (v1.0 plan §1.3)
+- `solosquad init` Step 1.5 신설 — **Claude Code 인증을 wizard가 흡수**.
+  - `commandExists("claude")` 점검 + `claude auth status --json` 호출로 현재 인증 상태 확인.
+  - 미로그인 시 `claude login` spawn (inherit stdio) → 브라우저 OAuth 완료까지 대기.
+  - 이미 로그인된 사용자는 1초 스킵.
+  - 종전 *"`solosquad init` + 별도로 `claude login`"* 2단계 마찰 제거.
+- repo 등록 *path-reference 단일화* — URL clone + Move/Copy into workspace 제거.
+  - `solosquad init` Step 5.1: 로컬 경로 + git repo만 허용. git URL 입력 시 `clone first, then re-add` 메시지로 거부. 비-git 폴더 시 `git init first` 메시지로 거부.
+  - `solosquad add repo`: 동일. 모든 입력이 `registerPathReference`로 funnel. `--keep-original` 은 deprecated no-op (warn → v2.0 제거 예정).
+  - **사유**: SoloSquad가 git clone semantics(auth·branch·depth·submodules·LFS)를 *책임지지 않음*. 사용자의 git toolchain을 신뢰하고 경로만 참조.
+
+### Scoped — Slack messenger to post-v1.0 slot (v1.0 plan §5.3)
+- README / README.kr / master-guide §5는 *Discord-first* 로 재정렬. §5.1 Slack 9-step walkthrough는 *post-v1.0 슬롯* 배지로 강등.
+- `src/messenger/slack-adapter.ts` 코드는 *그대로 보존* — v0.9.x에서 Slack을 운영 중이던 사용자는 *계속 동작*하지만 v1.0 SemVer 약속 / 회귀 보장 대상이 아님.
+- 사유: v0.9.1+에서 발견된 Slack `conversations.create` 사용자 invite 자동화 누락 / 6+ OAuth scope 요구 / workspace admin 권한 게이팅 / v0.x dogfood가 Discord 중심 누적 / invite gap이 v1.0 freeze 시점 미해결.
+
+### Compatibility — v0.9.x 사용자
+- workspace.yaml.version 자동 마이그레이션 (0.9.2 → 1.0.0, `src/migrations/scripts/0.9.2-to-1.0.0.ts`, bump-only, idempotent).
+- legacy `<workspace>/<org>/repositories/<slug>/` 트리(Model A): `resolveRepoCwd` legacy 분기로 *영구 동작*. 코드 제거 0건.
+- v0.9.1+에서 발급된 `<slug>.yaml` path-reference: 그대로 동작.
+- Slack 토큰을 이미 `.solosquad/.env`에 박은 사용자: 봇 계속 동작 (SemVer 약속만 외).
+- 데이터 손실 0건. breaking change 0건 (사용자 데이터 면).
+
+### Added — regression catcher
+- `test/v1.0-path-ref-only.test.ts` — 3 tests. `looksLikeGitUrl` 분류 정확성 + non-git 거부 trip-wire 보장. v1.0 진입 흐름이 회귀하면 잡음.
+- 총 테스트: 572 → 573 green.
+
 ## [0.9.2] — 2026-05-21
 
 **v0.9.2 — Uninstall precheck self-match hotfix (Windows).** 빠른 hotfix.

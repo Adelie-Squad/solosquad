@@ -17,6 +17,7 @@ import { migration as v085ToV086 } from "./scripts/0.8.5-to-0.8.6.js";
 import { migration as v086ToV087 } from "./scripts/0.8.6-to-0.8.7.js";
 import { migration as v087ToV091 } from "./scripts/0.8.7-to-0.9.1.js";
 import { migration as v091ToV092 } from "./scripts/0.9.1-to-0.9.2.js";
+import { migration as v092ToV100 } from "./scripts/0.9.2-to-1.0.0.js";
 import { versionMatches } from "./detect.js";
 
 /**
@@ -48,6 +49,7 @@ export const MIGRATIONS: Migration[] = [
   v086ToV087,
   v087ToV091,
   v091ToV092,
+  v092ToV100,
 ];
 
 /**

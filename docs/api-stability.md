@@ -1,10 +1,11 @@
 # SoloSquad API Stability Policy
 
-> **Status:** Documented in v0.8.1, promise effective at v1.0.
+> **Status:** **Effective as of v1.0.0 (2026-05-21).**
 >
-> Until v1.0, SoloSquad reserves the right to bump any `schema_version`
-> field without a deprecation period. **CHANGELOG.md** records every bump.
-> From v1.0 onward, the rules in this document are a public promise.
+> The rules below are now a public promise. Until v1.0 SoloSquad reserved
+> the right to bump any `schema_version` field without a deprecation
+> period; that period ended when v1.0.0 was published.
+> **CHANGELOG.md** records every bump, including the v0.x history.
 
 This document defines the on-disk schema surface SoloSquad guarantees to
 external users — workspace authors, archive tooling vendors, and other AI
@@ -22,7 +23,7 @@ oblige the others to bump.
 
 | Schema | Path / field | Current | Bump rule |
 |---|---|---|---|
-| Workspace version | `<workspace>/.solosquad/workspace.yaml` → `version` | 0.8.x | Tracks the SoloSquad CLI SemVer. 0.x = free-form. v1.0+ = breaking changes require a major bump. |
+| Workspace version | `<workspace>/.solosquad/workspace.yaml` → `version` | 1.0.0 | Tracks the SoloSquad CLI SemVer. v1.0+ = breaking changes require a major bump. v0.x free-form bump window is closed. |
 | Org metadata | `<workspace>/<org>/.org.yaml` → `schema_version` | 1 | Field *addition* is a minor SoloSquad release and reuses the same `schema_version`. Field *removal* or type change bumps `schema_version`. |
 | Org agent profile | `<workspace>/<org>/agent-profile.yaml` → `schema_version` | 1 | Same as org metadata. The narrowing-only invariant is enforced by the profile validator and is **orthogonal** to schema_version — narrowing rules don't change with a schema bump. |
 | SKILL frontmatter | `assets/agents/<team>/<name>/SKILL.md` → `schema_version` | 1 (introduced v0.8.1) | Same as org metadata. v0.8.1 backfilled this field across 26 bundled SKILL.md files. |

@@ -10,11 +10,10 @@ import {
   saveOrgYaml,
   type RepoYaml,
 } from "../util/config.js";
-import { scaffoldRepoYaml } from "../util/scaffold.js";
-import { cloneRepo, isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
+import { isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 import { applyReport, type MergePolicy } from "../analyze/applier.js";
 import { rebuildRoutes } from "../bot/agent-router.js";
-import { formatInspectionReport, inspectRepo } from "../util/repo-inspect.js";
+import { inspectRepo, formatInspectionReport } from "../util/repo-inspect.js";
 import { warnDeprecated } from "../util/deprecation.js";
 
 export interface AddRepoOpts {
@@ -130,139 +129,63 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
     process.exit(1);
   }
 
-  // v0.9.1 — path-reference auto-detection.
-  // If --path is set, OR if [input] is omitted and cwd happens to be a git
-  // repo, take the path-reference flow (no move, no copy).
-  const cwdIsRepo = !input && !opts.path && isGitRepo(process.cwd());
-  if (opts.path || cwdIsRepo) {
-    const externalPath = path.resolve(opts.path ?? process.cwd());
-    return registerPathReference(workspace, externalPath, opts);
+  // v1.0 — path-reference is the only registration mode. URL clone + Move/Copy
+  // into the workspace tree were removed; SoloSquad does not own git clone
+  // semantics (auth / branch / depth / submodules / LFS). Use your own git
+  // toolchain to clone, then re-run with the local path.
+  if (input && looksLikeGitUrl(input)) {
+    const suggestedSlug = opts.slug ?? slugFromUrl(input);
+    console.log(chalk.red(`✗ Git URL is not accepted in v1.0 path-reference mode.`));
+    console.log(
+      chalk.dim(
+        `  Clone the repo locally first with your own git toolchain, then re-add the path.\n` +
+          `  Example:  git clone ${input} ~/code/${suggestedSlug}\n` +
+          `            solosquad add repo ~/code/${suggestedSlug}`,
+      ),
+    );
+    process.exit(1);
   }
 
-  if (!input) {
+  // Resolve the external path: explicit --path > positional [input] > cwd (if
+  // it's a git repo). Everything funnels into the path-reference flow.
+  let externalPath: string | undefined;
+  if (opts.path) {
+    externalPath = path.resolve(opts.path);
+  } else if (input) {
+    externalPath = path.resolve(input);
+  } else if (isGitRepo(process.cwd())) {
+    externalPath = path.resolve(process.cwd());
+  } else {
     const a = await inquirer.prompt([
       {
         name: "input",
         type: "input",
-        message: "Git URL or local path to the repo:",
+        message: "Local path to an existing git repo:",
       },
     ]);
-    input = a.input;
-  }
-  if (!input) {
-    console.log(chalk.red("✗ URL or path required."));
-    process.exit(1);
+    if (!a.input) {
+      console.log(chalk.red("✗ Local path is required."));
+      process.exit(1);
+    }
+    externalPath = path.resolve(a.input);
   }
 
-  const orgSlug = await pickOrgSlug(workspace, opts.org);
-  const orgDir = path.join(workspace, orgSlug);
-  const reposDir = path.join(orgDir, "repositories");
   if (opts.inspect) {
     warnDeprecated({ oldName: "--inspect", newName: "--dry-run" });
   }
-  const dryRun = opts.dryRun || opts.inspect;
-  if (!dryRun) {
-    fs.mkdirSync(reposDir, { recursive: true });
+  if (opts.keepOriginal) {
+    warnDeprecated({
+      oldName: "--keep-original",
+      newName: "(no-op — v1.0 always uses path-reference, original is never moved)",
+    });
   }
 
-  // v0.8.3 §3 — dry-run / --inspect: for a local path, print the
-  // inspection report and exit *without* touching disk. For a git URL we
-  // can still describe the destination + run a slug-collision check, but
-  // not file stats (we'd need to clone first).
-  if (dryRun) {
-    const isUrl = looksLikeGitUrl(input);
-    const guessedSlug = opts.slug ?? (isUrl ? slugFromUrl(input) : path.basename(path.resolve(input)));
-    const destination = path.join(reposDir, guessedSlug);
-    if (isUrl) {
-      console.log(chalk.bold(`\n[dry-run] add repo (git URL)`));
-      console.log(`From: ${input}`);
-      console.log(`To:   ${destination}`);
-      const exists = fs.existsSync(destination);
-      console.log(`Slug collision: ${exists ? `${destination} already exists` : "none"}`);
-      console.log(chalk.dim(`(file stats unavailable for remote URLs — clone first to inspect contents)`));
-      console.log(chalk.bold(`\nNo files moved (dry-run).`));
-      return;
-    }
-    const src = path.resolve(input);
-    if (!fs.existsSync(src)) {
-      console.log(chalk.red(`✗ Path does not exist: ${src}`));
-      process.exit(1);
-    }
-    const report = inspectRepo(src, { reposDir, slug: guessedSlug });
-    console.log(chalk.bold(`\n[dry-run] add repo`));
-    console.log(
-      formatInspectionReport(report, {
-        destination,
-        addedFile: `<repo>/.solosquad/repo.yaml`,
-      }),
-    );
-    console.log(chalk.bold(`\nNo files moved (dry-run).`));
-    return;
-  }
-
-  let repoDir: string;
-  let slug: string;
-  try {
-    if (looksLikeGitUrl(input)) {
-      slug = opts.slug ?? slugFromUrl(input);
-      repoDir = path.join(reposDir, slug);
-      if (fs.existsSync(repoDir)) {
-        console.log(chalk.yellow(`! ${slug} already exists at destination. Skipping clone, proceeding to register.`));
-      } else {
-        console.log(chalk.dim(`Cloning ${input} → ${path.relative(process.cwd(), repoDir)}...`));
-        cloneRepo(input, repoDir);
-      }
-    } else {
-      const src = path.resolve(input);
-      if (!fs.existsSync(src)) {
-        console.log(chalk.red(`✗ Path does not exist: ${src}`));
-        process.exit(1);
-      }
-      slug = opts.slug ?? path.basename(src);
-      repoDir = path.join(reposDir, slug);
-
-      if (path.resolve(repoDir) === src) {
-        // Already at the canonical location — just register.
-      } else if (fs.existsSync(repoDir)) {
-        console.log(chalk.red(`✗ Destination already exists: ${repoDir}. Move it manually or pick --slug.`));
-        process.exit(1);
-      } else {
-        const action = opts.keepOriginal ? "Copy" : "Move";
-        const { confirm } = await inquirer.prompt([
-          {
-            name: "confirm",
-            type: "confirm",
-            message: `${action} ${src} → ${repoDir} ?`,
-            default: true,
-          },
-        ]);
-        if (!confirm) {
-          console.log(chalk.yellow("Aborted."));
-          return;
-        }
-        if (opts.keepOriginal) {
-          copyDirRecursive(src, repoDir);
-        } else {
-          fs.renameSync(src, repoDir);
-        }
-      }
-    }
-  } catch (err) {
-    console.log(chalk.red(`✗ ${(err as Error).message}`));
-    process.exit(1);
-  }
-
-  const defaultRole: RepoYaml["role"] = isGitRepo(repoDir) ? "main" : "unknown";
-  const role = await confirmRole(defaultRole, opts.role);
-
-  const doc = scaffoldRepoYaml({ orgDir, orgSlug, repoDir, role, slug });
-  linkRepoToOrg(orgDir, doc.slug);
-
-  console.log(chalk.green(`✓ ${orgSlug}/repositories/${doc.slug} registered (role: ${doc.role})`));
-  if (doc.remote_url) console.log(chalk.dim(`  remote: ${doc.remote_url}`));
-  if (doc.language) console.log(chalk.dim(`  language: ${doc.language}`));
+  await registerPathReference(workspace, externalPath, opts);
 
   if (opts.fromReport) {
+    const orgSlug = await pickOrgSlug(workspace, opts.org);
+    const orgDir = path.join(workspace, orgSlug);
+    const repoDir = externalPath;
     if (opts.mergePolicy && !MERGE_POLICIES.includes(opts.mergePolicy)) {
       console.log(
         chalk.red(
@@ -361,6 +284,14 @@ async function registerPathReference(
     console.log(`  slug:          ${slug}`);
     console.log(`  workspace ref: ${yamlPath}`);
     console.log(`  repo metadata: ${path.join(externalPath, ".solosquad", "repo.yaml")}`);
+    const report = inspectRepo(externalPath, { reposDir, slug });
+    console.log(
+      "\n" +
+        formatInspectionReport(report, {
+          destination: externalPath,
+          addedFile: `<repo>/.solosquad/repo.yaml`,
+        }),
+    );
     console.log(chalk.bold(`\nNo files written (dry-run).`));
     return;
   }
@@ -424,29 +355,5 @@ async function registerPathReference(
   if (language) console.log(chalk.dim(`  language:      ${language}`));
 }
 
-/**
- * v0.8.3 §3 — recursive copy used by `--keep-original`. Preserves regular
- * files + directories + symlinks; skips device nodes. Uses Node 16+
- * `fs.cpSync` when available; falls back to a manual walker otherwise.
- */
-function copyDirRecursive(src: string, dest: string): void {
-  type CpFn = (s: string, d: string, opts: Record<string, unknown>) => void;
-  const cpSync = (fs as unknown as { cpSync?: CpFn }).cpSync;
-  if (cpSync) {
-    cpSync(src, dest, { recursive: true, errorOnExist: false });
-    return;
-  }
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const sp = path.join(src, entry.name);
-    const dp = path.join(dest, entry.name);
-    if (entry.isSymbolicLink()) {
-      const target = fs.readlinkSync(sp);
-      fs.symlinkSync(target, dp);
-    } else if (entry.isDirectory()) {
-      copyDirRecursive(sp, dp);
-    } else if (entry.isFile()) {
-      fs.copyFileSync(sp, dp);
-    }
-  }
-}
+// v1.0 — copyDirRecursive removed (was used by --keep-original which is
+// now a deprecated no-op since path-reference never copies).

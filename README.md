@@ -2,7 +2,7 @@
 
 🇰🇷 **한국어 README: [README.kr.md](README.kr.md)**
 
-> A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord/Slack bot + scheduled routines + team-based agents, distributed as a single npm package.
+> A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord bot + scheduled routines + team-based agents, distributed as a single npm package.
 
 Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team of **25 specialist AI agents** across 4 disciplines (Strategy, Growth, Experience, Engineering), reachable from your messenger, with automated daily routines and per-product memory isolation.
 
@@ -11,7 +11,7 @@ Output ≠ Goal. Output = Means to achieve the goal.
 ```
 
 **Platforms:** Windows · macOS · Linux (cross-platform CLI, CI-tested)
-**Messenger:** Discord or Slack — one per workspace (Telegram support removed in v0.2.4)
+**Messenger:** Discord — one per workspace. Slack adapter code ships but is **not part of the v1.0 SemVer promise** (post-v1.0 slot). Telegram support removed in v0.2.4.
 **Stack:** TypeScript + Node.js 18+ · Claude Code as the AI engine · file-based memory (JSONL)
 
 ---
@@ -30,7 +30,7 @@ It covers, in ten menu-divided sections:
 | 2 | How It Works | System architecture, folder hierarchy, memory model, workflow definition |
 | 3 | Concept Glossary | `SKILL.md`, `KNOWLEDGE.md`, `CLAUDE.md`, `AGENTS.md` comparison; per-layer file inventory; 4-channel routing |
 | 4 | Onboarding | Branches for new users, existing-repo migration, and version upgrades |
-| 5 | Messenger Setup | Full 9-step Slack and 8-step Discord token walkthroughs |
+| 5 | Messenger Setup | 8-step Discord token walkthrough (Slack walkthrough retained as a post-v1.0 reference) |
 | 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
 | 8 | Version Differences | v0.8.3 (npm-published) vs v1.0+ (planned) |
@@ -53,8 +53,7 @@ npm install -g @anthropic-ai/claude-code
 # 2. Install SoloSquad
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
-solosquad init                                    # wizard asks for messenger token
-claude login                                      # browser OAuth — Claude Code on any compatible plan (Max recommended)
+solosquad init                                    # wizard handles Claude OAuth (Step 1.5) + messenger token + repo path-reference
 solosquad doctor                                  # verify environment
 
 # 3. Start the bot
@@ -63,9 +62,9 @@ solosquad bot                                     # foreground
 cd deploy/docker && docker compose up -d --build  # background + auto-restart
 ```
 
-Then send `안녕` or `hello` to `#owner-command` in your Slack/Discord channel — a specialist agent responds.
+Then send `안녕` or `hello` to your `#command-<handle>` Discord channel — a specialist agent responds.
 
-**Messenger token setup** takes 5–10 minutes (Slack) or 3–5 minutes (Discord). Follow [master-guide.html §5](manual/master-guide.html) step-by-step.
+**Messenger token setup** takes 3–5 minutes (Discord). Follow [master-guide.html §5](manual/master-guide.html) step-by-step.
 
 ### Upgrading from v0.5.x
 
@@ -273,7 +272,7 @@ The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stab
 | v0.5 (released) | Workflow maker + frontmatter routing | Messenger-native author loop (`_meta/workflow-maker`); 4-channel router (`slash > explicit > keyword > freq`) with paperclip budget envelope; repo analyzer (4-label classification + incremental ledger); 25 SKILL.md with Anthropic-compatible frontmatter; spec-gate ↔ `goal.md` integration |
 | v0.6 (released) | Default workflow tuning + memory archive + pattern miner + Org Layer | Org Layer (`<org>/{core,domain,agent-profile.yaml}` + spawn-assembler 8-layer + budget generalization); FTS5 archive with 4-event-type indexing for cumulative memory recall; trajectory + freq miners that auto-extract repeated patterns into SKILL drafts (reuses v0.5 `applyDraft`); stop-hook DSL (`command / metric / natural`) making v0.5 spec-gate executable; chokidar hot-reload + CI PR review bot |
 | v0.7 (released) | Uninstall & Lifecycle (Farewell Archive) | `solosquad uninstall`; data 5-classification (A/A*/B/C/D/E) with **user code untouchable** (class A); farewell archive with WAL-safe SQLite backup + streaming SHA256 manifest; concurrent-uninstall lockfile + stage progress journal (idempotent resume); REVOKE-CHECKLIST.md auto-generated; `--keep-workspace` class matrix; `solosquad reset`/`clean` permanently rejected (lifecycle is install ↔ uninstall). `solosquad logout` was added then **removed in v0.8.3** |
-| **v0.8.0 (released)** | **Multi-User Messenger** | Same Discord server / Slack workspace with N members each running their own bot. `command-<handle>` + `works-<handle>` channel pairs per user; bot multiplicity (1 user = 1 bot application); `author-guard` defense-in-depth (channel owner enforcement); explicit handle-collision rejection; opt-in broadcast channel (cross-user work feed in v1.x). Solo user remains a first-class citizen |
+| **v0.8.0 (released)** | **Multi-User Messenger** | Same Discord server with N members each running their own bot. `command-<handle>` + `works-<handle>` channel pairs per user; bot multiplicity (1 user = 1 bot application); `author-guard` defense-in-depth (channel owner enforcement); explicit handle-collision rejection; opt-in broadcast channel (cross-user work feed in v1.x). Solo user remains a first-class citizen. *(Slack adapter exposes the same channel pair convention but ships outside the v1.0 SemVer promise.)* |
 | **v0.8.1 (released)** | **Security & Lifecycle Pair** | `npm audit` 7 → 0 (discord.js 14.16 → 14.26 + undici 6.21 → 6.24 + overrides); `solosquad import <zip>` completes the v0.7 archive pair (dry-run + `--merge`/`--replace` + journal-idempotent resume); `solosquad archive verify/info/list` (yauzl-based); `docs/api-stability.md` 6 schema_version bump rules; SKILL.md `schema_version: 1` backfill |
 | **v0.8.2 (released)** | **Dev Capability** | SKILL frontmatter `dev_capability` + `dev_permissions` (Bash allow/deny, network, push confirmation, **`merge.auto: false` permanently forbidden**); engineering 5 SKILLs (`backend-developer / fde / api-developer / creative-frontend / qa-engineer`) baked in `true`, others `false`; workspace master toggle; `src/bot/dev-confirm.ts` 30-min timeout gate; `gh auth status` doctor check |
 | **v0.8.3 (released)** | **Onboarding UX + Observability** | `solosquad add repo --dry-run` + 5-scenario risk detection (lsof / symlinks / abs-paths / slug collision / IDE files); 5-step legacy repo migration guide; `solosquad logout` removed (replaced by `Ctrl+C` + `.env` mask + REVOKE-CHECKLIST); structured logger + `solosquad logs` CLI (level / JSON / file / 14-day rolling); master-guide §3/§6/§8/§9/§10 re-aligned for v0.7+v0.8; doctor CLI↔workspace version mismatch advisor; trajectory ROI gate measurement placeholder |
@@ -289,14 +288,14 @@ Decision log: [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) §6
 
 ## Multi-Workspace
 
-Want both Slack and Discord, or separate personas? Create multiple workspaces:
+Want separate Discord personas (e.g., business vs personal)? Create multiple workspaces:
 
 ```bash
-~/solopreneur/      # Slack bot, business persona
+~/solopreneur/      # Discord bot, business persona
 ~/personal-lab/     # Discord bot, hobby persona
 ```
 
-Each has independent `.env`, tokens, memory, and messenger account. They run side-by-side without interference. (Note: a single workspace is bound to one messenger — the v0.1.x `MESSENGER=discord,slack` syntax is no longer supported.)
+Each has independent `.env`, tokens, memory, and messenger account. They run side-by-side without interference. (Note: a single workspace is bound to one messenger — the v0.1.x `MESSENGER=discord,slack` multi-target syntax is no longer supported. v1.0 ships only the Discord adapter under the SemVer promise; the Slack adapter remains in the codebase but is a post-v1.0 slot.)
 
 ---
 
@@ -328,7 +327,7 @@ src/
                                      archive-search, route-event-sink
   analyze/                        → v0.5 repo analyzer — scanner, classifier, ledger,
                                      workflow-matcher, report-writer, applier
-  messenger/                      → Discord / Slack adapters
+  messenger/                      → Discord adapter (v1.0). Slack adapter present but post-v1.0 slot
   scheduler/                      → Cron-based routines + memory append;
                                      trajectory-extractor + freq-keyword-miner (v0.6),
                                      v06-stats-extract (v0.6 retrospective ETL)
@@ -407,7 +406,7 @@ End-user workspace (created by `solosquad init`, evolved through migrations):
     │   ├── analysis/                    (v0.5 — analyze-repo Markdown reports)
     │   └── analysis-ledger.yaml         (v0.5 — incremental ledger, path + SHA256[:12])
     ├── repositories/<repo>/             (Layer 2 — user product code)
-    ├── slack/  or  discord/             (channel config)
+    ├── discord/                          (channel config — v1.0 default). slack/ available but post-v1.0 slot
     └── product/                         (per-org artifacts)
 
 ~/.solosquad/

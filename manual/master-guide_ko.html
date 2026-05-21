@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v0.9.2 기준</span>
+  <span class="tag">종합 개념서 · v1.0.0 기준 (formal launch)</span>
   <nav>
     <ul>
       <li>
@@ -258,8 +258,8 @@
       <li>
         <a data-target="s5">5. 메신저 연결</a>
         <ul class="sub">
-          <li><a href="#s5-1">5.1 Slack (9단계)</a></li>
-          <li><a href="#s5-2">5.2 Discord (8단계)</a></li>
+          <li><a href="#s5-2">5.1 Discord (8단계) — v1.0 권장</a></li>
+          <li><a href="#s5-1">5.2 Slack (9단계) — post-v1.0 슬롯</a></li>
           <li><a href="#s5-3">5.3 동작 검증</a></li>
         </ul>
       </li>
@@ -318,7 +318,7 @@
   <h2><span class="num">1.</span>시작하기</h2>
 
   <h3 id="s1-1">1.1 프로젝트 소개</h3>
-  <p><strong>SoloSquad</strong>는 1인 창업자(솔로 파운더)를 위한 24/7 AI 비서 시스템입니다. 익숙한 메신저(Slack 또는 Discord)에서 25명의 전문 AI 팀원과 대화하며 제품을 만들고, 시장을 분석하고, 마케팅을 돌리고, 코드를 작성합니다.</p>
+  <p><strong>SoloSquad</strong>는 1인 창업자(솔로 파운더)를 위한 24/7 AI 비서 시스템입니다. 익숙한 메신저(v1.0 기준 <strong>Discord</strong>)에서 25명의 전문 AI 팀원과 대화하며 제품을 만들고, 시장을 분석하고, 마케팅을 돌리고, 코드를 작성합니다. Slack 어댑터는 코드에 동봉되나 v1.0 SemVer 약속 외 (post-v1.0 슬롯).</p>
   <p>설치는 npm 한 줄. 별도의 웹 대시보드나 GUI 도구 없이 "메신저-네이티브"로 모든 작업을 처리합니다.</p>
 
   <pre><code>npm install -g solosquad
@@ -476,7 +476,7 @@ Layer 2: Repository (저장소)    코드 — 리포별 코드·리포 한정 sk
     │   └── analysis-ledger.yaml      (v0.5 — analyze repo 증분 ledger: path + SHA256[:12])
     ├── repositories/&lt;repo-slug&gt;/      (코드 저장소들)
     │   └── (코드 파일들 + 자체 .git/, .claude/, CLAUDE.md 등)
-    ├── slack/  또는  discord/         (채널 매핑 설정)
+    ├── discord/                       (채널 매핑 — v1.0 기본). slack/ 동봉되나 post-v1.0 슬롯
     └── product/                      (조직별 자체 산출물)
 
 ~/.solosquad/agents/                   (v0.5 — user 글로벌 SKILL override, 모든 워크스페이스 공유)
@@ -1444,17 +1444,22 @@ solosquad update --channel stable  # 기본</code></pre>
 <!-- ========================== SECTION 5 ========================== -->
 <section id="s5">
   <h2><span class="num">5.</span>메신저 연결</h2>
-  <p>AI가 메신저에서 메시지를 주고받으려면 <strong>봇 계정</strong>이 필요합니다. SoloSquad는 <strong>Slack과 Discord</strong> 두 플랫폼을 지원하며, 한 워크스페이스당 1개만 선택합니다.</p>
+  <p>AI가 메신저에서 메시지를 주고받으려면 <strong>봇 계정</strong>이 필요합니다. <strong>v1.0의 공식 지원 메신저는 Discord</strong> 한 종류입니다. Slack 어댑터 코드도 동봉되어 동작하지만 <strong>v1.0 SemVer 약속에 포함되지 않습니다</strong> (post-v1.0 슬롯 — `docs/plan/v1.0-formal-launch.md` §5 참조). 한 워크스페이스당 1개 메신저만 선택합니다.</p>
+
+  <div class="callout" style="margin:12px 0; padding:12px; border-left:4px solid #f9a825; background:#fffbe6">
+    <strong>v1.0 권장 경로:</strong> §5.2 Discord 8-step 워크스루부터 시작하세요. §5.1 Slack 절은 <em>post-v1.0 참고용</em>으로 남겨 두며, v0.9.x 사용자가 이미 Slack으로 운영 중이라면 그대로 동작하지만 v1.0 출시 후 회귀·SemVer 보장 대상이 아닙니다.
+  </div>
 
   <table>
-    <thead><tr><th>플랫폼</th><th>추천 대상</th><th>장점</th><th>단점</th></tr></thead>
+    <thead><tr><th>플랫폼</th><th>v1.0 상태</th><th>추천 대상</th><th>장점</th><th>단점</th></tr></thead>
     <tbody>
-      <tr><td><strong>Slack</strong></td><td>워크스페이스 중심 협업, 조용한 UI</td><td>채널 구조 깔끔, 검색 강력</td><td>설정 단계 가장 많음</td></tr>
-      <tr><td><strong>Discord</strong></td><td>혼자 쓰되 친근한 UI</td><td>봇이 채널 자동 생성, 설정 단순</td><td>서버 이름에 제품 slug 포함 필요</td></tr>
+      <tr><td><strong>Discord</strong></td><td>★ v1.0 공식 지원</td><td>혼자 쓰되 친근한 UI</td><td>봇이 채널 자동 생성, 설정 단순</td><td>서버 이름에 제품 slug 포함 필요</td></tr>
+      <tr><td><strong>Slack</strong></td><td>post-v1.0 슬롯</td><td>워크스페이스 중심 협업, 조용한 UI</td><td>채널 구조 깔끔, 검색 강력</td><td>설정 단계 가장 많음 + v1.0 SemVer 약속 외</td></tr>
     </tbody>
   </table>
 
-  <h3 id="s5-1">5.1 Slack 봇 설정 (9단계)</h3>
+  <h3 id="s5-1">5.1 Slack 봇 설정 (9단계) <span class="badge plan">post-v1.0</span></h3>
+  <p><em>본 절은 post-v1.0 슬롯 — v1.0 SemVer 약속 대상이 아닙니다. v0.9.x에서 이미 Slack을 운영 중이거나 향후 슬롯이 활성화될 때 참조하세요. 새로 시작하는 사용자는 <a href="#s5-2">§5.2 Discord</a>를 권장합니다.</em></p>
   <p><strong>최종 결과물:</strong> <code>.env</code>에 <code>SLACK_BOT_TOKEN=xoxb-...</code>와 <code>SLACK_APP_TOKEN=xapp-...</code>가 저장되고, Slack 워크스페이스의 <code>#owner-command</code> 채널에서 봇이 응답.</p>
 
   <div class="step">
@@ -2539,8 +2544,8 @@ claude login
   </div>
 
   <h3 id="s9-2">9.2 멀티 워크스페이스 (페르소나 분리)</h3>
-  <p>Slack과 Discord를 동시에 쓰고 싶거나, 본업/사이드 페르소나를 분리하고 싶을 때 워크스페이스를 여러 개 만듭니다.</p>
-  <pre><code>~/solopreneur/      # Slack 봇, 본업 페르소나
+  <p>본업/사이드 페르소나를 분리하고 싶을 때 Discord 워크스페이스를 여러 개 만듭니다. (Slack 어댑터로 분리하는 것도 코드상 가능하지만 v1.0 SemVer 약속 외.)</p>
+  <pre><code>~/solopreneur/      # Discord 봇, 본업 페르소나
 ~/personal-lab/     # Discord 봇, 사이드 페르소나</code></pre>
   <p>각각 독립된 <code>.env</code>·토큰·봇 계정을 갖습니다. 서로 간섭 없이 동시 운영 가능. 이 제약은 v0.2.0부터 — 이전 v0.1.x의 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 지원하지 않습니다.</p>
 
@@ -2736,8 +2741,8 @@ docker compose restart    # Docker 사용 시</code></pre>
   <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
   A. Claude Code 사용 가능한 플랜 구독료만 있으면 시작 가능 (Max 권장). SoloSquad는 v0.9 기준 *Claude Code via OAuth* 단일 백엔드. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
 
-  <p><strong>Q. Discord와 Slack을 동시에 쓸 수 있나요?</strong><br>
-  A. 한 워크스페이스에서는 불가능. <strong>워크스페이스를 두 개</strong> 만들면 됩니다 — 예: <code>~/solopreneur/</code>(Slack 봇) + <code>~/elon-24-7/</code>(Discord 봇). 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 미지원.</p>
+  <p><strong>Q. v1.0에서 Slack은 지원되나요?</strong><br>
+  A. <strong>v1.0 공식 지원 메신저는 Discord</strong> 한 종류. Slack 어댑터는 코드상 동봉되어 v0.9.x에서 사용하던 사용자는 계속 동작하지만, <strong>v1.0 SemVer 약속 대상이 아닙니다</strong> (post-v1.0 슬롯). 새로 시작하면 Discord 사용을 권장합니다. 페르소나를 분리하고 싶으면 Discord 워크스페이스 2개로 분리: <code>~/solopreneur/</code> + <code>~/elon-24-7/</code> 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> multi-target 문법은 미지원.</p>
 
   <p><strong>Q. 시간대가 한국이 아니면?</strong><br>
   A. <code>.env</code>의 <code>TZ=</code>를 변경 (예: <code>TZ=America/Los_Angeles</code>). Docker도 동일.</p>

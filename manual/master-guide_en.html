@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v0.9.2</span>
+  <span class="tag">Master Guide · v1.0.0 (formal launch)</span>
   <nav>
     <ul>
       <li>
@@ -258,8 +258,8 @@
       <li>
         <a data-target="s5">5. Messenger Setup</a>
         <ul class="sub">
-          <li><a href="#s5-1">5.1 Slack (9 steps)</a></li>
-          <li><a href="#s5-2">5.2 Discord (8 steps)</a></li>
+          <li><a href="#s5-2">5.1 Discord (8 steps) — v1.0 recommended</a></li>
+          <li><a href="#s5-1">5.2 Slack (9 steps) — post-v1.0 slot</a></li>
           <li><a href="#s5-3">5.3 Verification</a></li>
         </ul>
       </li>
@@ -318,7 +318,7 @@
   <h2><span class="num">1.</span>Getting Started</h2>
 
   <h3 id="s1-1">1.1 Project Overview</h3>
-  <p><strong>SoloSquad</strong> is a 24/7 AI assistant system for solo founders. From a familiar messenger (Slack or Discord), you chat with 25 specialist AI teammates to build products, analyze markets, run marketing, and write code.</p>
+  <p><strong>SoloSquad</strong> is a 24/7 AI assistant system for solo founders. From a familiar messenger (<strong>Discord</strong> in v1.0), you chat with 25 specialist AI teammates to build products, analyze markets, run marketing, and write code. The Slack adapter ships in the codebase but sits outside the v1.0 SemVer promise (post-v1.0 slot).</p>
   <p>Installation is one npm line. Without a separate web dashboard or GUI tool, everything flows through the "messenger-native" interface.</p>
 
   <pre><code>npm install -g solosquad
@@ -477,7 +477,7 @@ Layer 2: Repository               code — per-repo code, repo-scoped skills</di
     │   └── analysis-ledger.yaml      (v0.5 — analyze repo ledger: path + SHA256[:12])
     ├── repositories/&lt;repo-slug&gt;/      (code repos)
     │   └── (code + own .git/, .claude/, CLAUDE.md, ...)
-    ├── slack/  or  discord/          (channel mapping config)
+    ├── discord/                      (channel mapping — v1.0 default). slack/ shipped but post-v1.0 slot
     └── product/                      (org-specific artifacts)
 
 ~/.solosquad/agents/                   (v0.5 — user-global SKILL override, shared across workspaces)
@@ -1445,17 +1445,22 @@ solosquad update --channel stable  # default</code></pre>
 <!-- ========================== SECTION 5 ========================== -->
 <section id="s5">
   <h2><span class="num">5.</span>Messenger Setup</h2>
-  <p>For an AI to send / receive messages on a messenger, you need a <strong>bot account</strong>. SoloSquad supports <strong>Slack and Discord</strong> — pick one per workspace.</p>
+  <p>For an AI to send / receive messages on a messenger, you need a <strong>bot account</strong>. <strong>The v1.0 officially supported messenger is Discord.</strong> The Slack adapter ships in the codebase and works, but it is <strong>not part of the v1.0 SemVer promise</strong> (post-v1.0 slot — see <code>docs/plan/v1.0-formal-launch.md</code> §5). Pick one messenger per workspace.</p>
+
+  <div class="callout" style="margin:12px 0; padding:12px; border-left:4px solid #f9a825; background:#fffbe6">
+    <strong>v1.0 recommended path:</strong> Start with the §5.2 Discord 8-step walkthrough. §5.1 Slack is kept as a <em>post-v1.0 reference</em> — existing v0.9.x users on Slack keep working, but v1.0 makes no regression / SemVer guarantee for Slack.
+  </div>
 
   <table>
-    <thead><tr><th>Platform</th><th>Best for</th><th>Pros</th><th>Cons</th></tr></thead>
+    <thead><tr><th>Platform</th><th>v1.0 status</th><th>Best for</th><th>Pros</th><th>Cons</th></tr></thead>
     <tbody>
-      <tr><td><strong>Slack</strong></td><td>Workspace-centric collab, calm UI</td><td>Clean channel structure, strong search</td><td>Most setup steps</td></tr>
-      <tr><td><strong>Discord</strong></td><td>Solo use with a friendly UI</td><td>Bot auto-creates channels, simple setup</td><td>Server name must include product slug</td></tr>
+      <tr><td><strong>Discord</strong></td><td>★ v1.0 officially supported</td><td>Solo use with a friendly UI</td><td>Bot auto-creates channels, simple setup</td><td>Server name must include product slug</td></tr>
+      <tr><td><strong>Slack</strong></td><td>post-v1.0 slot</td><td>Workspace-centric collab, calm UI</td><td>Clean channel structure, strong search</td><td>Most setup steps + outside v1.0 SemVer promise</td></tr>
     </tbody>
   </table>
 
-  <h3 id="s5-1">5.1 Slack Bot Setup (9 steps)</h3>
+  <h3 id="s5-1">5.1 Slack Bot Setup (9 steps) <span class="badge plan">post-v1.0</span></h3>
+  <p><em>This section is a post-v1.0 slot — not covered by the v1.0 SemVer promise. Use it if you already run Slack on v0.9.x or when the slot becomes active. New users: start with <a href="#s5-2">§5.2 Discord</a>.</em></p>
   <p><strong>End result:</strong> <code>.env</code> has <code>SLACK_BOT_TOKEN=xoxb-...</code> and <code>SLACK_APP_TOKEN=xapp-...</code>, and the bot responds in <code>#owner-command</code> of your Slack workspace.</p>
 
   <div class="step">
@@ -2514,10 +2519,10 @@ claude login
   </div>
 
   <h3 id="s9-2">9.2 Multi-Workspace (persona separation)</h3>
-  <p>When you want Slack and Discord simultaneously, or day-job / side-project persona separation, run multiple workspaces.</p>
-  <pre><code>~/solopreneur/      # Slack bot, day-job persona
+  <p>When you want day-job / side-project persona separation, run multiple Discord workspaces. (Slack adapter still works for legacy separation but is outside the v1.0 SemVer promise.)</p>
+  <pre><code>~/solopreneur/      # Discord bot, day-job persona
 ~/personal-lab/     # Discord bot, side persona</code></pre>
-  <p>Each gets independent <code>.env</code> / tokens / bot accounts. Operate in parallel without interference. This constraint exists from v0.2.0+ — v0.1.x's <code>MESSENGER=discord,slack</code> (multi-set) is no longer supported.</p>
+  <p>Each gets independent <code>.env</code> / tokens / bot accounts. Operate in parallel without interference. This constraint exists from v0.2.0+ — v0.1.x's <code>MESSENGER=discord,slack</code> (multi-target) is no longer supported. v1.0 ships only the Discord adapter under the SemVer promise; the Slack adapter remains in code but is a post-v1.0 slot.</p>
 
   <p><strong>Updating:</strong> CLI update is one-shot but <strong>migration runs per workspace</strong> (see §4.4).</p>
 
@@ -2711,8 +2716,8 @@ docker compose restart    # if Docker</code></pre>
   <p><strong>Q. How much does it cost?</strong><br>
   A. Any Claude Code-capable subscription works (Max recommended). As of v0.9, SoloSquad uses *Claude Code via OAuth* as its single backend. Cloud ops add ~$4-6/month for VPS.</p>
 
-  <p><strong>Q. Can I use Discord and Slack simultaneously?</strong><br>
-  A. Not in one workspace. <strong>Run two workspaces</strong> — e.g. <code>~/solopreneur/</code> (Slack bot) + <code>~/elon-24-7/</code> (Discord bot). Each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — older <code>MESSENGER=discord,slack</code> multi-set is no longer supported.</p>
+  <p><strong>Q. Is Slack supported in v1.0?</strong><br>
+  A. <strong>The v1.0 officially supported messenger is Discord.</strong> The Slack adapter ships in the codebase and continues to work for v0.9.x users, but it is <strong>not covered by the v1.0 SemVer promise</strong> (post-v1.0 slot). New users should start with Discord. For persona separation, run two Discord workspaces: <code>~/solopreneur/</code> + <code>~/elon-24-7/</code>, each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — the older <code>MESSENGER=discord,slack</code> multi-target syntax is not supported.</p>
 
   <p><strong>Q. What if my timezone isn't Korea?</strong><br>
   A. Change <code>TZ=</code> in <code>.env</code> (e.g. <code>TZ=America/Los_Angeles</code>). Same in Docker.</p>
