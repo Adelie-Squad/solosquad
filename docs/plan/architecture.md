@@ -884,7 +884,7 @@ Get-CimInstance Win32_Process |
 
 572/572 tests green (571 + 1 v0.9.2 regression test).
 
-자세히: `CHANGELOG.md` §[0.9.2]
+자세히: `docs/plan/v0.9.2-precheck-self-match-hotfix.md` (plan), `CHANGELOG.md` §[0.9.2]
 
 ### 13.7 v1.x 시리즈 (예고)
 
@@ -922,6 +922,7 @@ Get-CimInstance Win32_Process |
 - `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
 - `docs/plan/v0.8.7-tiny-stabilization.md`
 - `docs/plan/v0.9.1-workspace-repo-relationship.md` (plan + v0.9.1 Model B 구현)
+- `docs/plan/v0.9.2-precheck-self-match-hotfix.md` (Windows uninstall precheck self-match hotfix)
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)
