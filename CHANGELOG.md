@@ -4,15 +4,20 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.9.0] — 2026-05-20
+## [0.9.1] — 2026-05-21
 
-**v0.9.0 — Workspace ↔ Repository 관계 재설계 Model B 구현.** v0.9 plan
+**v0.9.1 — Workspace ↔ Repository 관계 재설계 Model B 구현 + master-guide §4.2 Step 1 prerequisites 보강.** v0.9 plan
 (§13.6.10)에서 박제한 *path-reference* 모델 코드 구현. 부수로 master-guide
 를 npm 패키지에 포함시켜 사용자가 `npm install` 후 *로컬에서 매뉴얼
 접근 가능*. backward-compat 100% — 기존 `<workspace>/<org>/repositories/<slug>/`
 트리 영구 동작.
 
-자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
+> **Note**: 0.9.0 was published-then-unpublished on 2026-05-20 and its
+> version number is burned per npm policy (`npm view solosquad time`에
+> 영구 기록). 0.9.1이 Model-B path-reference 디자인의 첫 설치 가능 릴리스.
+> 코드 자체는 0.9.0과 동일 + master-guide §4.2 Step 1 prerequisites 박스 3개 추가.
+
+자세히: `docs/plan/v0.9.1-workspace-repo-relationship.md`
 
 ### Added — Model B (path reference)
 - `src/util/config.ts:RepoYaml`에 `path?: string` 필드 — 외부 경로 참조
@@ -42,8 +47,14 @@ adheres to [Semantic Versioning](https://semver.org/).
 - 새 RepoYaml.path는 optional이라 기존 yaml 파일 untouched
 - v0.9.2+ slot: `solosquad migrate --externalize-repos` (현재 트리 → 외부 path-reference, opt-in)
 
+### Added — master-guide §4.2 Step 1 prerequisites 박스 3개 (v0.9.1)
+- `의존성 종합 표` — `solosquad doctor`가 점검하는 7개 도구 (node·npm·git·claude·gh·pwsh·docker) × 최소 버전 / 필수 여부 / 누락 시 동작
+- `환경 변수 종합 표` — `.env` 11종 (메신저 토큰·OWNER_*·REPOS_BASE_PATH·SOLOSQUAD_LOG_* 등). `ANTHROPIC_API_KEY는 사용 안 함` (Claude Code OAuth 위임) 명시
+- `자원·네트워크 하한 callout` — 디스크/메모리/OS×arch (better-sqlite3 prebuilt 매트릭스)/outbound 도메인/shell(fish 주의)/타임존/npm 권한(sudo 회피)
+- KO/EN 양쪽 동기화 (+46/+46 lines)
+
 ### Migration
-- `src/migrations/scripts/0.8.7-to-0.9.0.ts` — schema 변경 없음, version bump only
+- `src/migrations/scripts/0.8.7-to-0.9.1.ts` — schema 변경 없음, version bump only (TARGET = "0.9.1")
 
 ### Tests
 - 571/571 green (567 + 4 path-reference)
@@ -57,7 +68,7 @@ v0.8.5~v0.8.6 사용자 테스트에서 *repos-inside-workspace-tree* 강제가
 솔로 사용자 4 시나리오 모두 미해결임을 확인. peer agent 모델 (Hermes /
 Codex / Copilot Workspace) 비교 후 **모델 B (path reference) default 채택**.
 
-자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
+자세히: `docs/plan/v0.9.1-workspace-repo-relationship.md`
 
 ### Planned — 모델 B (path reference)
 - `repo.yaml.path: <absolute-path>` 필드 — 외부 경로 참조

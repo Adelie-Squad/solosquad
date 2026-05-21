@@ -89,7 +89,7 @@ async function registerRepoInline(
       }
       const slug = path.basename(src);
 
-      // v0.9.0 — for external paths that look like a git repo, default to
+      // v0.9.1 — for external paths that look like a git repo, default to
       // path-reference (no move, no copy). User can opt into legacy move
       // via prompt.
       if (isGitRepo(src)) {

@@ -821,10 +821,12 @@ v0.8.5~v0.8.6 사용자 테스트에서 *repos-inside-workspace-tree* 강제가 
 
 **모델 C (sandbox) v2.x slot 박제 사유**: SoloSquad는 *솔로 founder teammate* 시나리오 — 사용자가 IDE 옆에서 에이전트 commit을 실시간 봄. Hermes의 multi-user / cloud platform 시나리오와 다른 결.
 
-자세히: `docs/plan/v0.9-workspace-repo-relationship.md`
+자세히: `docs/plan/v0.9.1-workspace-repo-relationship.md`
 
-#### 13.6.11 v0.9.0 — Model B 구현 + master-guide npm 포함
+#### 13.6.11 v0.9.1 — Model B 구현 + master-guide npm 포함 + Step 1 prerequisites 보강
 v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visibility fix.
+
+> **Note**: 0.9.0은 2026-05-20에 publish-then-unpublish 됨. npm time 객체에 영구 기록 + 같은 번호 재사용 불가 (npm burn policy). 0.9.1이 Model-B path-reference 디자인의 첫 설치 가능 릴리스. 코드 자체는 0.9.0과 동일 + master-guide §4.2 Step 1 prerequisites 박스 3개 추가.
 
 **Model B 구현**:
 - `src/util/config.ts:RepoYaml`에 `path?: string` 필드 추가
@@ -845,11 +847,16 @@ v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visib
 - 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작
 - v0.9.2+ slot: `solosquad migrate --externalize-repos` (현재 트리 → 외부 path-reference, opt-in)
 
-**migration 0.8.7 → 0.9.0**: schema 변경 없음, version bump only. RepoYaml.path는 *옵셔널 추가*라 기존 yaml에 손 안 댐.
+**migration 0.8.7 → 0.9.1**: schema 변경 없음, version bump only. RepoYaml.path는 *옵셔널 추가*라 기존 yaml에 손 안 댐.
+
+**v0.9.1 추가 — master-guide §4.2 Step 1 prerequisites 박스 3개** (KO/EN +46/+46 lines):
+- 의존성 종합 표 (`solosquad doctor` 7개 도구 점검 — node·npm·git·claude·gh·pwsh·docker)
+- 환경 변수 종합 표 (`.env` 11종 + `ANTHROPIC_API_KEY는 사용 안 함` 명시)
+- 자원·네트워크 하한 callout (디스크/메모리/OS×arch/outbound/shell/타임존/npm 권한)
 
 571/571 tests green (567 + 4 path-reference).
 
-자세히: `docs/plan/v0.9-workspace-repo-relationship.md` (plan), code in `src/util/paths.ts` + `src/cli/add-repo.ts`
+자세히: `docs/plan/v0.9.1-workspace-repo-relationship.md` (plan), code in `src/util/paths.ts` + `src/cli/add-repo.ts`
 
 ### 13.7 v1.x 시리즈 (예고)
 
@@ -886,7 +893,7 @@ v0.9 plan (§13.6.10)의 추천 모델 B를 코드로 구현 + 부수 docs visib
 - `docs/plan/v0.8.5-onboarding-qa.md`
 - `docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md`
 - `docs/plan/v0.8.7-tiny-stabilization.md`
-- `docs/plan/v0.9-workspace-repo-relationship.md` (plan only, 구현은 v0.9.1+)
+- `docs/plan/v0.9.1-workspace-repo-relationship.md` (plan + v0.9.1 Model B 구현)
 
 **v1.x 포스트-런치 (계획):**
 - `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)

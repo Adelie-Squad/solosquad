@@ -5,7 +5,7 @@ import fs from "fs";
 import { createRequire } from "module";
 import { findWorkspaceRoot } from "../migrations/detect.js";
 
-// v0.9.0 — js-yaml accessed lazily via createRequire because resolveRepoCwd
+// v0.9.1 — js-yaml accessed lazily via createRequire because resolveRepoCwd
 // is in a hot path (called on every spawn) and we want to avoid a top-level
 // ESM import of js-yaml (which would bloat startup). The require ref is
 // cached after first call.
@@ -154,7 +154,7 @@ export function getRepoDir(orgSlug: string, repoSlug: string, workspace?: string
 /**
  * Resolve the runtime cwd for a given org/repo.
  *
- * Priority (v0.9.0+):
+ * Priority (v0.9.1+):
  * 1. **path-reference (model B)**: `<workspace>/<org>/repositories/<repo>.yaml`
  *    (file, not directory) has a `path:` field → resolve to that absolute
  *    external path (validated to exist).
@@ -163,7 +163,7 @@ export function getRepoDir(orgSlug: string, repoSlug: string, workspace?: string
  * 3. **legacy root (org=repo, pre-sync)**: `<org>/.git` exists → org root.
  * 4. Fallback: org root.
  *
- * See `docs/plan/v0.9-workspace-repo-relationship.md` §7 for the design
+ * See `docs/plan/v0.9.1-workspace-repo-relationship.md` §7 for the design
  * rationale (path-reference becomes the v0.9+ default; the legacy tree stays
  * permanently supported for backward-compat).
  */
@@ -174,7 +174,7 @@ export function resolveRepoCwd(
 ): string {
   const root = workspace ?? getWorkspaceRoot();
   if (repoSlug) {
-    // (1) path-reference mode (v0.9.0+) — repo.yaml file at repositories/<slug>.yaml
+    // (1) path-reference mode (v0.9.1+) — repo.yaml file at repositories/<slug>.yaml
     const yamlPath = path.join(root, orgSlug, "repositories", `${repoSlug}.yaml`);
     if (fs.existsSync(yamlPath)) {
       try {

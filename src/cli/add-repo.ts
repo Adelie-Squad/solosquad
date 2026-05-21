@@ -32,7 +32,7 @@ export interface AddRepoOpts {
   /** v0.8.3 §3 — copy the repo instead of moving (preserves original on disk). */
   keepOriginal?: boolean;
   /**
-   * v0.9.0 — register an external path as a path-reference. No move, no copy.
+   * v0.9.1 — register an external path as a path-reference. No move, no copy.
    * Workspace stores only a `<workspace>/<org>/repositories/<slug>.yaml` file
    * (not a directory) with the absolute `path` field. The agent's spawn cwd
    * resolves to this external path via `resolveRepoCwd` (paths.ts).
@@ -130,7 +130,7 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
     process.exit(1);
   }
 
-  // v0.9.0 — path-reference auto-detection.
+  // v0.9.1 — path-reference auto-detection.
   // If --path is set, OR if [input] is omitted and cwd happens to be a git
   // repo, take the path-reference flow (no move, no copy).
   const cwdIsRepo = !input && !opts.path && isGitRepo(process.cwd());
@@ -311,7 +311,7 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
 }
 
 /**
- * v0.9.0 — register an external path as a path-reference. No move, no copy.
+ * v0.9.1 — register an external path as a path-reference. No move, no copy.
  *
  * Disk effects (all class A* per v0.7 inviolability — only files SoloSquad
  * creates on disk inside the external repo are these two):
@@ -324,7 +324,7 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
  * Spawn cwd resolution: `resolveRepoCwd` reads (1) and returns the external
  * path. See `src/util/paths.ts:resolveRepoCwd`.
  *
- * Plan: `docs/plan/v0.9-workspace-repo-relationship.md` §7 + §13.
+ * Plan: `docs/plan/v0.9.1-workspace-repo-relationship.md` §7 + §13.
  */
 async function registerPathReference(
   workspace: string,

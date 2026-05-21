@@ -334,7 +334,7 @@ export interface RepoYaml {
   notes?: string;
   registered_at: string;
   /**
-   * v0.9.0 — path-reference mode (workspace ↔ repo 관계 재설계).
+   * v0.9.1 — path-reference mode (workspace ↔ repo 관계 재설계).
    * When set, the workspace's `<workspace>/<org>/repositories/<slug>/` tree
    * does not exist (or is empty) — the actual repo lives at this absolute
    * path on disk. The agent's spawn cwd resolves to this path via
@@ -343,7 +343,7 @@ export interface RepoYaml {
    * Backward-compat: when omitted, behavior falls back to the legacy
    * `<workspace>/<org>/repositories/<slug>/` tree (move/copy modes from v0.8.x).
    *
-   * Documented: docs/plan/v0.9-workspace-repo-relationship.md §7 (path-reference
+   * Documented: docs/plan/v0.9.1-workspace-repo-relationship.md §7 (path-reference
    * is the v0.9+ default; legacy tree stays permanently supported).
    */
   path?: string;
