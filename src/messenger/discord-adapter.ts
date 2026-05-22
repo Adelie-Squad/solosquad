@@ -22,10 +22,6 @@ import {
   type CommandHandler,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
-import {
-  isAuthorizedAuthor,
-  unauthorizedAuthorMessage,
-} from "../bot/author-guard.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
 import { getWorkspaceRoot } from "../util/paths.js";
 
@@ -149,18 +145,15 @@ export class DiscordAdapter implements MessengerAdapter {
       const ownHandle = this.ownHandle;
       if (!ownHandle || ownHandle !== parsed.handle) return;
 
-      // v0.8 §3.4 — author-guard: defense in depth on top of ACL.
-      const authorHandle = (message.author.username ?? "").toLowerCase();
-      if (!isAuthorizedAuthor(channelName, authorHandle)) {
-        try {
-          await message.author
-            .send(unauthorizedAuthorMessage(channelName, authorHandle))
-            .catch(() => undefined);
-        } catch {
-          // DM may fail (privacy settings) — best effort.
-        }
-        return;
-      }
+      // v1.0.2 — author-guard removed. Discord channel ACL is the canonical
+      // permission boundary; SoloSquad does not own that ACL and cannot add
+      // meaningful defense on top of it. Log author identity for post-hoc
+      // audit (no gating) — useful when investigating session contamination
+      // in shared/collaborator channels. See
+      // `docs/plan/v1.0.2-discord-author-guard-decoupling.md`.
+      console.log(
+        `[Discord Bot] message in ${channelName} from author id=${message.author.id} username=${message.author.username ?? "?"}`
+      );
 
       const product = this.getProductByGuild(message.guild!.id);
       if (!product) {

@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v1.0.1 기준 (post-launch first patch)</span>
+  <span class="tag">종합 개념서 · v1.0.2 기준 (post-launch second patch)</span>
   <nav>
     <ul>
       <li>
@@ -1127,14 +1127,16 @@ solosquad init</code></pre>
         <tr><td>Your role</td><td><code>founder</code></td><td>founder / developer / designer 등 자유</td><td>agent들이 사용자의 전문성·관심사를 추정해 응답의 기술 깊이·톤 조정. SoloSquad의 1차 사용자가 솔로 창업자라 default가 <code>founder</code></td><td><code>.solosquad/.env</code> <code>OWNER_ROLE</code></td></tr>
         <tr><td>Messenger platform</td><td>없음</td><td><code>discord</code> / <code>slack</code></td><td>1 워크스페이스 = 1 메신저. n잡은 별도 워크스페이스로 분리. 채널 페어·broadcast 동작 결정</td><td><code>.solosquad/.env</code> <code>MESSENGER</code></td></tr>
         <tr><td>Discord/Slack token</td><td>없음</td><td>토큰 문자열</td><td>봇 API 자격증명. 채널 자동 생성·메시지 송수신</td><td><code>.solosquad/.env</code> (gitignored)</td></tr>
+        <tr><td><strong>Your handle on {messenger}</strong> <span class="badge now">v1.0.2</span></td><td>봇 username 자동 추출 (정규화 후)</td><td><code>[a-z0-9_]+</code>만 (그 외 문자는 <code>_</code>로 자동 변환)</td><td><strong>SoloSquad 유일 canonical user identifier</strong>. 채널 페어 <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 명명 + workflow routing + memory partition. v1.0.2부터 토큰 입력 직후로 위치 이동 (narrative 정합). <em>안내: 메신저 서버의 다른 멤버 username/display name과 겹치지 않게</em></td><td><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code> (Step 6 silent write)</td></tr>
         <tr><td>Timezone</td><td><code>Asia/Seoul</code></td><td>IANA tz</td><td>morning/evening brief 시간 + 모든 routine cron의 기준</td><td><code>workspace.yaml.timezone</code></td></tr>
         <tr><td>Morning / Evening brief time</td><td>08:00 / 18:00</td><td>HH:MM</td><td>디폴트 routine 2건의 cron</td><td><code>workspace.yaml.briefings</code></td></tr>
         <tr><td>Organization name</td><td>없음</td><td>자유</td><td><strong>org = 사업/제품 단위</strong>. 1 워크스페이스에 여러 org 가능 (예: tesla + spacex). 메모리·워크플로우·repo가 org 단위 격리</td><td><code>&lt;workspace&gt;/&lt;slug&gt;/.org.yaml</code></td></tr>
         <tr><td>Provider</td><td><code>github</code></td><td>local / github / gitlab / gitea</td><td>org의 코드 호스팅 위치 메타데이터. <code>add repo</code>에서 git URL host 추정에 사용. 없으면 <code>local</code></td><td><code>.org.yaml.provider</code></td></tr>
         <tr><td>Org homepage URL</td><td>빈 값</td><td>URL 또는 빈 값</td><td>org 홈페이지(예: github.com/tesla)가 있으면 입력. 분석·linker가 활용. 없으면 Enter</td><td><code>.org.yaml.remote_url</code></td></tr>
-        <tr><td>Handle (봇 username 자동 추출 후 확인)</td><td>봇 username</td><td><code>[a-z0-9_]+</code>만 (그 외 문자는 <code>_</code>로 자동 변환)</td><td>메신저 채널 페어 <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 명명 + 멀티유저 식별자</td><td><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code></td></tr>
       </tbody>
     </table>
+    <p class="callout warn"><strong>v1.0.2 변경 — Step 순서 정합</strong>: handle 입력이 이전엔 *Step 5.2 (토큰 4단계 후)*에 있었으나, v1.0.2부터 *Step 3.5 (토큰 직후)*로 이동했습니다. "방금 Discord 토큰 입력 → 이제 그 메신저에서 어떤 이름으로 불릴지 결정" narrative 회복. yaml write는 Step 6 (org 생성 후) silent.</p>
+    <p class="callout info"><strong>v1.0.2 변경 — handle 의 정체 격상</strong>: handle 은 SoloSquad 의 *유일 canonical user identifier* 입니다 (채널 이름 derivation + workflow routing + memory partition). Discord 의 <code>message.author.username</code> 은 더 이상 비교 대상이 아니라 *audit log* 박제용입니다 — <code>seungw1n.</code> 같이 채널명 charset과 mismatch 인 username 도 더는 자기 채널에서 차단되지 않습니다.</p>
     <p class="callout warn"><strong>v0.8.5 변경</strong> — 부모 디렉터리에 기존 워크스페이스가 없으면, 마법사가 "Initialize workspace at: ..." prompt를 묻지 않고 <code>cwd</code>를 자동으로 사용합니다 (mkdir로 이미 결정한 디렉터리를 또 묻지 않음). 다른 경로에 만들려면 <code>cd</code>를 먼저 하세요.</p>
   </div>
 
@@ -2377,6 +2379,16 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>안정 API 약속 시작</li>
     <li>Breaking change 정책 도입</li>
     <li>v0.6 trajectory 자동 추출 ROI 지표 충족 시 *자동 등록 게이트* 검토</li>
+  </ul>
+
+  <h4>v1.0.2 — Discord author-guard 정합 + 온보딩 reorder<span class="badge now">v1.0.2</span></h4>
+  <ul>
+    <li><strong>Discord author-guard 영구 제거</strong> — <code>src/messenger/discord-adapter.ts</code> 의 <code>isAuthorizedAuthor</code> 가드 블록 삭제. <code>seungw1n.</code> 처럼 Discord username 에 <code>.</code> 가 포함된 사용자가 <em>자기 채널에서 자기 자신을 추방</em> 당하던 false positive 영구 해소. 채널명 charset <code>[a-z0-9_]</code> 와 Discord username charset 의 영구 불일치를 정직히 박제 — *"username = handle"* 이라는 v0.8 §3.4 의 암묵 invariant 가 보편적으로 깨졌음을 인정.</li>
+    <li><strong>handle = SoloSquad 유일 canonical user identifier 로 격상</strong>. Discord <code>message.author.username</code> 은 더 이상 비교 대상 아님 — audit log 에 박제만 (사후 추적용, 게이팅 0). Discord 채널 ACL 이 유일 permission boundary.</li>
+    <li><strong>온보딩 wizard reorder</strong> — handle 확인 단계를 <code>Step 5.2</code> (토큰 입력 4 단계 뒤) → <code>Step 3.5</code> (토큰 입력 직후) 이동. 사이에 timezone/workspace.yaml/org/repos 4 단계가 끼던 narrative 단절 해소. yaml write 는 Step 6 silent.</li>
+    <li><strong>handle 선택 안내 추가</strong> — prompt 위에 "메신저 서버의 다른 멤버 username/display name 과 겹치지 않게" guidance 표시. 채팅 혼선 방지.</li>
+    <li><strong>Slack 동등 fix 는 v1.0.3</strong> 슬롯 — post-v1.0 분리 release. v1.0.2 에선 <code>src/bot/author-guard.ts</code> 파일 *유지* (Slack 어댑터 단일 사용자).</li>
+    <li>596 tests green (588 baseline + 8 신규). schema 변경 0, CLI surface 변경 0.</li>
   </ul>
 
   <h4>v1.0.1 — Discord deprecation + 다중-repo 라우팅<span class="badge now">v1.0.1</span></h4>
