@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
-import { loadRepoYaml } from "../util/config.js";
 import { normalizeLine } from "../util/platform.js";
 
 export interface WorkflowStage {
@@ -66,32 +65,47 @@ export function resolveActiveStage(orgDir: string): { workflowId: string; stage:
   return null;
 }
 
-/** Pick the "main" repo slug from an org, or the first repo if none flagged main. */
-function pickMainRepoSlug(orgDir: string): string | null {
+/**
+ * Pick the default repo slug for *scheduler-driven* cwd resolution
+ * (morning brief / signal scan / weekly review — routines that run
+ * without user intent and need *some* cwd).
+ *
+ * v1.0.1: `role=main` lookup removed. Scheduler routines are org-level
+ * by nature (briefings + signal scans + weekly reviews) so the choice
+ * here is a tie-breaker, not an intent decision. User-driven routing
+ * happens at PM level via @<slug> mention + PM SKILL.md clarifying
+ * question (see `src/bot/mention-parser.ts`), never through this path.
+ *
+ * Returns first registered repo, or null if none registered.
+ */
+function pickDefaultRepoSlug(orgDir: string): string | null {
   const reposDir = path.join(orgDir, "repositories");
   if (!fs.existsSync(reposDir)) return null;
-  const candidates: { slug: string; role?: string }[] = [];
   for (const entry of fs.readdirSync(reposDir, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-    const repoYaml = loadRepoYaml(path.join(reposDir, entry.name));
-    candidates.push({ slug: entry.name, role: repoYaml?.role });
+    return entry.name;
   }
-  const main = candidates.find((c) => c.role === "main");
-  if (main) return main.slug;
-  return candidates[0]?.slug ?? null;
+  return null;
 }
 
 /**
- * Resolve the cwd to use when spawning Claude for a message in a given org.
+ * Resolve the cwd to use when spawning Claude for a *scheduler-driven*
+ * routine in a given org (morning brief / signal scan / weekly review).
  *
  * Priority:
  *   1. Active workflow stage's `target_repo` (if the corresponding folder exists)
- *   2. The org's "main" repo (role=main in repo.yaml), or first repo
- *   3. Org root itself (legacy: `.git` at org root, or no repos yet)
+ *   2. First registered repo (tie-breaker — pre-v1.0.1 used role=main)
+ *   3. Org root itself (no repos registered yet, or legacy `.git` at org root)
+ *
+ * v1.0.1: User-driven routing does NOT flow through this function. PM
+ * session cwd is fixed at org root and target_repo is decided inside
+ * the spawn prompt — by `@<slug>` mention (mention-parser.ts), workflow
+ * stage `target_repo`, or PM clarifying question. See `src/bot/index.ts`
+ * and `assets/orchestrator/SKILL.md`.
  */
 export function resolveOrgCwd(orgDir: string): {
   cwd: string;
-  reason: "workflow" | "main-repo" | "legacy-root";
+  reason: "workflow" | "first-repo" | "legacy-root";
   workflowId?: string;
   repoSlug?: string;
 } {
@@ -108,12 +122,12 @@ export function resolveOrgCwd(orgDir: string): {
     }
   }
 
-  const mainSlug = pickMainRepoSlug(orgDir);
-  if (mainSlug) {
+  const firstSlug = pickDefaultRepoSlug(orgDir);
+  if (firstSlug) {
     return {
-      cwd: path.join(orgDir, "repositories", mainSlug),
-      reason: "main-repo",
-      repoSlug: mainSlug,
+      cwd: path.join(orgDir, "repositories", firstSlug),
+      reason: "first-repo",
+      repoSlug: firstSlug,
     };
   }
 

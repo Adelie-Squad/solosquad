@@ -4,6 +4,37 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-05-22
+
+**v1.0.1 — 첫 patch.** v1.0.0 publish 직후 발견된 dependency-level deprecation 1건 + 사용자 가치에 어긋나던 onboarding friction 1건을 한 릴리스로 흡수. 같이 해소되는 의미적 빚: *"한 agent 가 여러 repo 를 다룬다"* 는 솔로스쿼드 포지셔닝과 `role=main` 단일 default repo 가정 사이의 모순. 자세히 `docs/plan/v1.0.1-discord-ready-deprecation.md`.
+
+### Fixed — discord.js v15 readiness
+- `src/messenger/discord-adapter.ts` — `client.on("ready", …)` → `client.on(Events.ClientReady, …)`. discord.js 14.26 이 `ready` alias 를 deprecate (사유: gateway READY opcode 와 이름 충돌 해소), v15 에서 완전 제거 예고. v1.0.0 봇 시작 시 매번 출력되던 Node `DeprecationWarning` 사라짐 + v15 업그레이드 시 silent failure (ready 핸들러 미발화) 사전 차단.
+- 회귀 catcher: `test/v1.0.1-discord-ready.test.ts` — adapter 소스가 `Events.ClientReady` enum 을 사용하는지 + 문자열 `"ready"` 리스너 미등록 확인 (1 case).
+
+### Changed — onboarding 친화도 + 다중-repo 라우팅 메커니즘 신설
+- **repo `role` prompt 제거** — `solosquad init` Step 5.1 (`registerRepoInline`) 과 `solosquad add repo` (`confirmRole`) 의 인터랙티브 `Role:` 프롬프트 삭제. 신규 등록은 `role = "main"` silent default. `--role <value>` flag 는 power-user override 로 유지하되 deprecation warning. 사유: `role` 필드의 실제 *load-bearing* 소비처는 `workflow-resolver.ts:79` 의 스케줄러 default cwd 결정 하나뿐이었고, 사용자 메시지 routing 에는 일절 관여 안 함. "frontend / backend / data / infra / docs" 값들은 어떤 라우팅에도 안 쓰이는 cargo cult.
+- **`workflow-resolver` `role=main` lookup 제거** — `pickMainRepoSlug` → `pickDefaultRepoSlug` (첫 등록 repo fallback). resolver return reason `"main-repo"` → `"first-repo"`. 스케줄러 routine 은 org-level (morning brief / signal scan / weekly review) 이므로 영향 적음. user-driven routing 은 PM 레벨로 단일화.
+- **`@<slug>` mention 라우팅 신설** — `src/bot/mention-parser.ts` 신규. 사용자가 `@landing-site 히어로 수정` 처럼 적으면 bot pre-processor 가 `[target_repo:landing-site]` (single) 또는 `[target_repos:a,b]` (multi) 마커를 메시지 앞에 주입해 PM 에게 전달. **regex 매칭 + 등록 slug 셋과 교집합** — Discord 사용자 핑 (`<@123456789>`) / 타이핑 오류는 silently drop, false positive 0. routing 시점 LLM 호출 0 — GitHub Slack `@<repo>` + Nx `nx run <project>:<target>` 패턴 동일.
+- **`assets/orchestrator/SKILL.md` §"Multi-Repo Intent (v1.0.1+)" 추가** — PM 이 마커 honor, 단일 repo 시 자동, 모호하면 *짧은 clarifying question 1번*. **silent guessing 금지** (GitHub Slack / OpenHands 사례 모두 silent inference 가 사용자 confusion 의 주범으로 박제됨).
+
+### Deprecated — schema/CLI surface (api-stability 정책 준수)
+- `RepoYaml.role` 필드 — `@deprecated` JSDoc 표시. 필드 hard 제거 = v2.0 (api-stability §schema "2-minor read window" 정책).
+- `solosquad add repo --role <value>` flag — `warnDeprecated` 안내. flag 제거 = v2.0 (CLI surface freeze).
+
+### Compatibility — v1.0.0 사용자
+- workspace.yaml.version 자동 마이그레이션 (1.0.0 → 1.0.1, `src/migrations/scripts/1.0.0-to-1.0.1.ts`, bump-only, idempotent).
+- 기존 `repo.yaml` 파일들의 `role:` 값 그대로 read. workflow-resolver 는 더 이상 그 값을 안 보지만 파일에 남아 있어도 무해.
+- 신규 등록 `repo.yaml` 도 `role: main` 으로 채워짐 (default). schema 호환 유지.
+- 데이터 손실 0, breaking 0 (사용자 데이터 면). schema 변경 0 (api-stability 정책 면).
+
+### Added — regression catchers (3 신규 파일, +14 cases)
+- `test/v1.0.1-discord-ready.test.ts` — Events.ClientReady 사용 trip-wire (1)
+- `test/v1.0.1-mention-parser.test.ts` — mention 정확성, dedupe, Discord 핑 무시, multi-mention 마커, unknown drop (8)
+- `test/v1.0.1-role-deprecated.test.ts` — resolver `first-repo` reason, legacy-root fallback, `listOrgRepoSlugs` 가 path-ref yaml + legacy dir 모두 인식 (4)
+- 1.0.0→1.0.1 migration `test/migration-v0.6.test.ts` 패턴 외 (추가 migration 테스트 없음 — bump-only)
+- 총 테스트: 573 → **588** green.
+
 ## [1.0.0] — 2026-05-21
 
 **v1.0.0 — Formal launch.** v0.x 전체는 *솔로 파운더 자기 사용*을 위한 빠른 반복 구간이었습니다. v1.0부터는 **공개 사용자 약속이 시작**됩니다 — `docs/api-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze됩니다.

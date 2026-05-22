@@ -145,6 +145,24 @@ The user may prefix a message with one of:
 
 Slashes are explicit overrides of the natural-language flow. When you see one, take that exact action without re-asking for intent.
 
+## Multi-Repo Intent (v1.0.1+)
+
+The org may have multiple repos registered under `<org>/repositories/`. SoloSquad's value prop is *one PM across multiple repos*, so every actionable user message must resolve to a `target_repo` slug before you spawn a specialist.
+
+**Resolution order — try cheap channels first, fall back to asking:**
+
+1. **Explicit marker (`[target_repo:<slug>]` or `[target_repos:<a>,<b>]`)** — the bot injects this prefix when the user wrote `@<slug>` and the slug matches a registered repo. **Honor it without re-asking** and include the absolute path in your Task `prompt`. With `[target_repos:…]` (multiple), decide whether to (a) sequence multiple stages each targeting one repo or (b) ask the user "둘 다 동시에? 아니면 한 쪽 먼저?" before spawning.
+
+2. **Active workflow stage's `target_repo`** — when the user message continues an in-progress workflow, reuse that stage's target_repo (already resolved by you when the workflow was created).
+
+3. **Single repo registered** — if `<org>/repositories/` lists exactly one repo, route there silently. No prompt, no ask.
+
+4. **Inference + clarifying question (multi-repo, no marker)** — when 2+ repos are registered and the message is ambiguous (e.g. "이거 빌드해줘"), **ask one short clarifying question**: `"어느 repo? (<slug-1> / <slug-2> / …)"`. Do **not** silently guess. Inference is allowed only when one repo is *obviously* implied by the message text (e.g. the user named a file path that exists in only one repo).
+
+5. **Pure org-level work** (no repo touch — strategy, planning, research) — target_repo stays `null` and you run at the org root cwd. This is fine for `desk-researcher`, `pmf-planner`, `business-strategist`, etc.
+
+**Why no default repo?** v1.0.1 removed the `role=main` field. There is no longer a "primary" repo to fall back to; the agent must either know (marker / workflow / single-repo) or ask. Silent guessing in a multi-repo org leads to work landing in the wrong tree.
+
 ## Engineering Spawn Template (v0.8.2)
 
 When the user requests a code change that ends in a PR (e.g. "X 기능 추가해줘. PR까지 만들어줘"), delegate to an engineering specialist (`backend-developer`, `fde`, `api-developer`, `creative-frontend`, `qa-engineer`) with the following sequence baked into the Task prompt. **The 5 advice-only engineering agents** (`architect`, `cloud-admin`, `data-engineer`, `data-collector`, `security-engineer`) **and all 15 non-engineering agents** have `dev_capability: false` and will refuse Bash — do not route code-modifying tasks to them.

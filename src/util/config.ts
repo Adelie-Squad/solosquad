@@ -326,6 +326,16 @@ export interface OrgYaml {
 export interface RepoYaml {
   slug: string;
   name: string;
+  /**
+   * @deprecated v1.0.1 — repo `role` field is no longer prompted at
+   * registration or read for routing. Existing yamls keep the value for
+   * backward compat; new yamls default to "main" silently. Multi-repo
+   * intent resolution is now handled by (a) `@<slug>` mention syntax in
+   * user messages (`src/bot/mention-parser.ts`), (b) PM clarifying
+   * question when ambiguous, (c) workflow stage `target_repo` for
+   * explicit declaration. Hard removal scheduled for v2.0 per
+   * `docs/api-stability.md` schema read-window policy.
+   */
   role: "main" | "frontend" | "backend" | "data" | "infra" | "docs" | "unknown";
   language?: string;
   linked_org: string;

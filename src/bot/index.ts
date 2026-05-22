@@ -6,6 +6,8 @@ import { SessionStore } from "./session-store.js";
 import { FileEventSink, pmEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
 import { handleSlashIfAny } from "./slash-commands.js";
+import { parseMentions } from "./mention-parser.js";
+import { listOrgRepoSlugs } from "./repo-registry.js";
 import { rebuildRoutes } from "./agent-router.js";
 import { commitSnapshot } from "./git-snapshot.js";
 import { startSkillWatcher, type Unwatch } from "./fs-watcher.js";
@@ -51,12 +53,21 @@ async function handleCommand(
     if (slashHandling.directReply) await ctx.reply(slashHandling.directReply);
     return;
   }
-  const forwardText = slashHandling.forwardText;
 
-  // v0.3.0 (PM mode): PM session cwd is fixed at the org root (per
-  // docs/plan/v0.3-pm-mode-orchestration.md §3.2.1). target_repo cwd
-  // branching happens inside subagent prompts, not by switching PM cwd.
+  // v1.0.1: `@<slug>` mention pre-processing. Resolves repo slugs from
+  // the user's message against the org's registered repos and injects a
+  // [target_repo:<slug>] marker so PM SKILL.md can route deterministically
+  // without LLM inference. Replaces the deprecated role=main lookup as the
+  // primary multi-repo intent channel.
   const orgCwd = path.join(getReposBase(), product.slug);
+  const registeredSlugs = listOrgRepoSlugs(orgCwd);
+  const mention = parseMentions(slashHandling.forwardText, registeredSlugs);
+  const forwardText = mention.forwardText;
+  if (mention.mentioned.length > 0) {
+    console.log(
+      `[Bot] mention → target_repo${mention.mentioned.length > 1 ? "s" : ""}: ${mention.mentioned.join(", ")}`
+    );
+  }
 
   console.log(
     `[Bot] PM turn: user=${ctx.userId} org=${product.slug} text="${forwardText.slice(0, 60)}${forwardText.length > 60 ? "…" : ""}"`

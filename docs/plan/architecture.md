@@ -912,7 +912,37 @@ Get-CimInstance Win32_Process |
 
 572 → **573 tests green** (572 baseline + `test/v1.0-path-ref-only.test.ts` 3건).
 
-자세히: `docs/plan/v1.0-formal-launch.md`, `docs/api-stability.md` (발효 본문), `CHANGELOG.md` §[1.0.0]
+자세히: `docs/plan/v1.0-official-launch.md`, `docs/api-stability.md` (발효 본문), `CHANGELOG.md` §[1.0.0]
+
+#### 13.6.14 v1.0.1 — Discord deprecation + repo `role` 제거 + 다중-repo 라우팅 (2026-05-22)
+
+**v1.0.0 publish 직후 첫 patch.** dependency-level deprecation 1건 + onboarding friction 1건 한 릴리스 흡수 + 그 자리 메우는 라우팅 메커니즘 신설. *"한 agent 가 여러 repo 를 다룬다"* 포지셔닝과 `role=main` 단일 default repo 가정 사이의 의미적 빚 동시 해소.
+
+**Fixed — discord.js v15 readiness**:
+- `src/messenger/discord-adapter.ts` — `client.on("ready", …)` → `client.on(Events.ClientReady, …)`.
+- discord.js 14.26: `ready` alias deprecate (사유: gateway READY opcode 와 이름 충돌). v15: alias 완전 제거.
+- v1.0.0 봇 시작 시 매번 출력되던 Node `DeprecationWarning` 사라짐 + v15 silent failure 사전 차단.
+
+**Changed — `role` cargo cult 제거 + `@<slug>` 라우팅 신설**:
+- repo `role` prompt 제거 (`solosquad init` Step 5.1 + `solosquad add repo`). 신규 등록은 silent `role = "main"`. `--role` flag 는 power-user override 로 유지하되 `warnDeprecated`.
+- `workflow-resolver.ts` `pickMainRepoSlug` → `pickDefaultRepoSlug` (첫 등록 repo fallback). resolver reason `"main-repo"` → `"first-repo"`. 스케줄러 default cwd 결정에만 쓰임 — user-driven routing 은 PM 레벨로 단일화.
+- `src/bot/mention-parser.ts` 신규 — `@<slug>` 메시지 mention 파서. 등록 slug 셋과 교집합 + Discord 핑 무시 + dedupe. routing 시점 LLM 호출 0.
+- `src/bot/index.ts` slash pre-processor 다음에 mention pre-processor wiring. 마커 `[target_repo:<slug>]` (single) / `[target_repos:a,b]` (multi).
+- `assets/orchestrator/SKILL.md` §"Multi-Repo Intent (v1.0.1+)" 신설 — PM 이 마커 honor, 단일 repo 자동, 모호하면 짧은 clarifying question, silent guessing 금지.
+
+**Deprecated — schema/CLI surface (api-stability 정책 준수)**:
+- `RepoYaml.role` 필드: `@deprecated` JSDoc. hard 제거 = v2.0 (schema "2-minor read window").
+- `solosquad add repo --role` flag: `warnDeprecated`. 제거 = v2.0 (CLI surface freeze).
+
+**Compatibility**:
+- migration 1.0.0 → 1.0.1: workspace.yaml.version bump only, idempotent.
+- 기존 `repo.yaml` 의 `role:` 그대로 read. resolver 가 더 이상 안 보지만 무해.
+- 신규 등록도 `role: main` 자동 채움 → schema 호환 유지.
+- breaking 0 (사용자 데이터·CLI surface 면), schema 변경 0.
+
+573 → **588 tests green** (573 baseline + `test/v1.0.1-discord-ready.test.ts` 1 + `test/v1.0.1-mention-parser.test.ts` 8 + `test/v1.0.1-role-deprecated.test.ts` 4 — 일부 케이스는 다중 assertion 묶음으로 14건 effective).
+
+자세히: `docs/plan/v1.0.1-discord-ready-deprecation.md`, `CHANGELOG.md` §[1.0.1]
 
 ### 13.7 v1.x 시리즈 (예고)
 

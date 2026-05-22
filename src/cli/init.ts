@@ -242,15 +242,11 @@ async function registerRepoInline(
     return null;
   }
 
-  const { role } = await inquirer.prompt([
-    {
-      name: "role",
-      type: "list",
-      message: "Role:",
-      choices: ["main", "frontend", "backend", "data", "infra", "docs", "unknown"],
-      default: "main",
-    },
-  ]);
+  // v1.0.1 — repo role is deprecated and no longer prompted. New
+  // registrations default to "main" silently. Multi-repo intent is
+  // resolved at message time via @<slug> mention parser + PM clarifying
+  // question. See RepoYaml.role JSDoc in src/util/config.ts.
+  const role = "main";
 
   const yaml = await import("js-yaml");
   const { detectLanguage, getRemoteUrl } = await import("../util/git.js");
@@ -894,7 +890,7 @@ export async function initCommand(): Promise<void> {
 
       const registered = await registerRepoInline(repoInput, orgDir, orgSlug);
       if (registered) {
-        console.log(chalk.green(`✓ ${registered.slug} (${registered.role}) registered`));
+        console.log(chalk.green(`✓ ${registered.slug} registered`));
       }
     }
 

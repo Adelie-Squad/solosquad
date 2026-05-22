@@ -81,24 +81,24 @@ async function pickOrgSlug(workspace: string, explicit?: string): Promise<string
   return org;
 }
 
-async function confirmRole(defaultRole: RepoYaml["role"], explicit?: RepoYaml["role"]): Promise<RepoYaml["role"]> {
-  if (explicit) {
-    if (!ROLES.includes(explicit)) {
-      console.log(chalk.red(`✗ Unknown role: ${explicit}. One of: ${ROLES.join(", ")}`));
-      process.exit(1);
-    }
-    return explicit;
+/**
+ * v1.0.1 — repo `role` is deprecated. Registration no longer prompts;
+ * default is "main" silently. `--role <value>` is still accepted as a
+ * power-user override (validated against ROLES) but emits a deprecation
+ * warning. See RepoYaml.role JSDoc in `src/util/config.ts`.
+ */
+function resolveRole(explicit?: RepoYaml["role"]): RepoYaml["role"] {
+  if (!explicit) return "main";
+  if (!ROLES.includes(explicit)) {
+    console.log(chalk.red(`✗ Unknown role: ${explicit}. One of: ${ROLES.join(", ")}`));
+    process.exit(1);
   }
-  const { role } = await inquirer.prompt([
-    {
-      name: "role",
-      type: "list",
-      message: "Role:",
-      choices: ROLES,
-      default: defaultRole,
-    },
-  ]);
-  return role as RepoYaml["role"];
+  warnDeprecated({
+    oldName: "--role",
+    newName:
+      "(no-op — repo role is deprecated since v1.0.1; multi-repo intent now uses @<slug> mention or PM clarifying question)",
+  });
+  return explicit;
 }
 
 /** Update `.org.yaml.products[].repos` to include the new repo slug (under a default product if needed). */
@@ -316,8 +316,7 @@ async function registerPathReference(
     process.exit(1);
   }
 
-  const defaultRole: RepoYaml["role"] = "main";
-  const role = await confirmRole(defaultRole, opts.role);
+  const role = resolveRole(opts.role);
 
   // Write the two yamls — one in workspace, one in the external repo.
   fs.mkdirSync(reposDir, { recursive: true });
