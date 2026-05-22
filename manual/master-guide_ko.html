@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v1.0.3 기준 (post-launch third patch)</span>
+  <span class="tag">종합 개념서 · v1.0.4 기준 (post-launch fourth patch)</span>
   <nav>
     <ul>
       <li>
@@ -2379,6 +2379,14 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>안정 API 약속 시작</li>
     <li>Breaking change 정책 도입</li>
     <li>v0.6 trajectory 자동 추출 ROI 지표 충족 시 *자동 등록 게이트* 검토</li>
+  </ul>
+
+  <h4>v1.0.4 — Discord config.yaml 자동 생성 + Slack author-guard 통째 cleanup<span class="badge now">v1.0.4</span></h4>
+  <ul>
+    <li><strong>Bug G — Discord 메신저 연결 실패 진짜 fix</strong>. v1.0.3 의 Bug D fix 가 *서버명 휴리스틱* 만 제거하고 *file-existence silent early-return* 분기는 남겨둠. <code>scaffoldOrg</code> 가 <code>&lt;org&gt;/discord/config.yaml</code> 을 never 작성해서 사용자가 v1.0.3 설치 후에도 <em>"No product linked to this server"</em> 받음. v1.0.4 는 <em>load-or-empty + auto-write</em> 패턴 — 봇 첫 시작 시 자동으로 그 파일 만들고 <code>guild_id</code> + <code>channels</code> 박제. 본 사용자 incident 진짜 해결.</li>
+    <li><strong>Bug H — Slack 어댑터 author-guard 통째 cleanup</strong>. v1.0.2 가 Discord 어댑터에서 제거했지만 Slack 의존성 때문에 유보했던 파일 삭제 마무리. <code>src/messenger/slack-adapter.ts</code> 의 author-guard 호출 제거 + audit log 추가. <code>src/bot/author-guard.ts</code> + <code>test/author-guard.test.ts</code> 통째 삭제.</li>
+    <li><strong>plan §1.3 박제</strong> — v1.0.3 plan §6 의 <em>반복 패턴</em> 에 3번째 변형 추가: <em>권위 결정자가 있는데도 옛 기록 파일 유무로 silently bail 하는 코드도 trip-wire 대상</em>. <code>if (!fs.existsSync(x)) return;</code> 류 silent bail 회귀 catcher 가이드라인 보강.</li>
+    <li>617 tests green (613 baseline + 10 신규 − 6 삭제). schema 변경 0, CLI surface 변경 0.</li>
   </ul>
 
   <h4>v1.0.3 — Discord 5-bug fix (migrate · sudo · 메신저 연결 · update next-step · 카테고리 이름)<span class="badge now">v1.0.3</span></h4>

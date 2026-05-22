@@ -4,6 +4,36 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.4] — 2026-05-22
+
+**v1.0.4 — Discord config.yaml 자동 생성 + Slack author-guard 통째 cleanup.** v1.0.3 의 Bug D fix 가 *root cause 의 절반만* 잡았던 정직 자가비판 박제. v1.0.3 이 `syncGuildProductMapping` 의 *서버명 휴리스틱* 만 제거하고 *file-existence early-return* 분기는 그대로 둠 → 사용자가 v1.0.3 설치 후에도 *"No product linked to this server"* 응답 받음. v1.0.4 는 *load-or-empty + auto-write* 패턴으로 진짜 fix + 같은 release 에서 약속된 Slack author-guard 제거. plan §1.3 에 *silent-bail 패턴* 을 v1.0.3 plan §6 *반복 패턴* 의 3번째 변형으로 추가. 자세히 `docs/plan/v1.0.4-messenger-config-auto-create.md`.
+
+### Fixed — Bug G: Discord `config.yaml` 자동 생성 (load-or-empty + auto-write)
+- `src/messenger/discord-adapter.ts:syncGuildProductMapping` — pre-v1.0.4 의 `if (!fs.existsSync(configFile)) return;` silent early-return 제거. 파일 없으면 빈 객체로 시작 + `mkdirSync` 로 디렉터리 보장 + 실제 바뀐 필드 있을 때만 writeFile (idempotent).
+- 사용자 incident 직접 fix: `scaffoldOrg` 가 `<org>/discord/` *빈 디렉터리만* 만들고 `config.yaml` 은 never 작성 → 모든 fresh `solosquad init` 워크스페이스가 silent-bail 분기에 차단되던 회귀. 봇 첫 시작 시 `[Discord] Bound guild <name> (<id>) → org=<slug>` 로그 *처음으로* 출력.
+- `getProductByGuild` 는 동작 변경 0 (주석만 갱신) — `syncGuildProductMapping` 이 항상 file 을 작성하므로 후속 메시지 처리에서 정상 동작.
+
+### Removed — Bug H: Slack author-guard 통째 cleanup (v1.0.2 Discord 대칭 마무리)
+- `src/messenger/slack-adapter.ts` — `isAuthorizedAuthor` import 제거 + 가드 블록 (~22줄) 제거 + audit log 1줄 추가 (`[Slack Bot] message in <channel> from author id=<id>`). v1.0.2 Discord 어댑터 fix 와 동일 패턴.
+- **`src/bot/author-guard.ts` 파일 통째 삭제** (36줄) — Slack 이 마지막 소비자였음. v1.0.2 가 *유보* 했던 파일 삭제를 v1.0.4 가 마무리.
+- **`test/author-guard.test.ts` 파일 통째 삭제** (45줄, 6 cases) — 대상 함수 사라짐. v1.0.2 의 회귀 catcher (`test/v1.0.2-discord-author-guard-removed.test.ts`) 마지막 case 는 *역전된 형태로 보존* — 파일 *부재* 를 assert 하도록 수정해 v1.0.2 → v1.0.4 의 *deletion 순차 진행* 사실 박제.
+
+### Compatibility — v1.0.3 사용자
+- workspace.yaml.version 자동 마이그레이션 (1.0.3 → 1.0.4, `src/migrations/scripts/1.0.3-to-1.0.4.ts`, bump-only, idempotent).
+- 기존 `<org>/discord/config.yaml` *있는* 사용자: 변경 0 (load → 같은 값 → dirty=false → writeFile 안 함).
+- 기존 `<org>/discord/config.yaml` *없는* 사용자 (대다수): 봇 첫 시작 시 *자동 작성*.
+- 기존 `<org>/discord/` 디렉터리도 없는 케이스: `mkdir -p` 가 보장.
+- Slack 사용자: author-guard false positive (v1.0.2 Discord 와 동일 패턴) 영구 0. audit log 추가.
+- breaking 0, schema 변경 0, CLI surface 변경 0 — api-stability 정책 완전 준수.
+
+### Added — regression catchers (2 신규 파일, +10 cases)
+- `test/v1.0.4-config-auto-create.test.ts` (4) — `if (!fs.existsSync) return;` silent-bail 부재, load-or-empty 삼항식 존재, mkdir -p 존재, `Bound guild ... → org=` 로그 보존.
+- `test/v1.0.4-slack-author-guard-removed.test.ts` (6) — slack-adapter author-guard import/call/DM 부재, audit log 출력, `src/bot/author-guard.ts` 파일 부재, `test/author-guard.test.ts` 파일 부재.
+- 순 테스트: 613 → **617 green** (+10 신규 − 6 author-guard.test.ts 삭제).
+
+### Spec retraction — v1.0.3 plan §6 *반복 패턴* 에 3번째 변형 추가
+v1.0.3 plan §6 이 박제한 두 갈래 — (a) 외부 자유 입력 ↔ 내부 슬러그 문자열 비교, (b) v0.1.x 잔재 vocab/UX — 에 v1.0.4 가 **3번째 변형**: *권위 결정자가 있는데도 옛 기록 파일 유무로 silently bail 하는 코드*. 본 v1.0.4 G fix 자체가 그 변형의 직접 해소. 향후 회귀 catcher 가이드라인 — `if (!fs.existsSync(x)) return;` 류 silent bail 도 trip-wire 대상.
+
 ## [1.0.3] — 2026-05-22
 
 **v1.0.3 — Discord 5-bug fix (migrate · sudo · guild-org binding · update next-step · category rename).** v1.0.2 publish 직후 사용자 dogfood 검증에서 *연속 5건* 의 *문자열 비교·v0.1.x 잔재 vocab* 함정이 노출됨. 다섯 건 모두 **솔로 파운더 정상 사용 시나리오에서 false positive 또는 friction 이 기본값** — *권위 결정자를 무시하고 약한 비교 휴리스틱으로 다시 추측* 하는 동일 패턴. v1.0.2 author-guard incident 와 같은 정신으로 *결정자 직접 사용 + 옛 vocab 은 backward compat lookup 만* 으로 통일. Slack 어댑터의 동등 author-guard 제거는 *v1.0.4 슬롯으로 분리*. 자세히 `docs/plan/v1.0.3-discord-triple-bug-fix.md`.

@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v1.0.3 (post-launch third patch)</span>
+  <span class="tag">Master Guide · v1.0.4 (post-launch fourth patch)</span>
   <nav>
     <ul>
       <li>
@@ -2352,6 +2352,14 @@ solosquad run-routine --all             # all</code></pre>
     <li>Begin stable API commitments</li>
     <li>Introduce breaking-change policy</li>
     <li>Consider auto-registration gate if v0.6 trajectory auto-extract ROI metrics pass</li>
+  </ul>
+
+  <h4>v1.0.4 — Discord config.yaml auto-create + Slack author-guard cleanup<span class="badge now">v1.0.4</span></h4>
+  <ul>
+    <li><strong>Bug G — Real fix for the Discord "No product linked" error</strong>. v1.0.3's Bug D only removed the server-name heuristic; the underlying silent <code>if (!fs.existsSync(configFile)) return;</code> bail remained. Since <code>scaffoldOrg</code> never writes the <code>&lt;org&gt;/discord/config.yaml</code> file, every fresh <code>solosquad init</code> workspace hit that bail. v1.0.4 switches to a load-or-empty + auto-write pattern: on first start the bot creates the file itself using info it already has (<code>ownOrgSlug</code> + the guild it just connected to).</li>
+    <li><strong>Bug H — Slack author-guard fully cleaned up</strong>. v1.0.2 removed the Discord callsite but left <code>src/bot/author-guard.ts</code> behind because Slack still imported it. v1.0.4 finishes the cleanup: the Slack callsite is gone, the file is deleted, and the unit test (<code>test/author-guard.test.ts</code>) is deleted too.</li>
+    <li><strong>Plan §1.3 pinned</strong> — v1.0.3 plan §6's <em>recurring pattern</em> gains a third variant: <em>code that silently bails on a missing record file when the authoritative decider is already in hand is also a trip-wire</em>. <code>if (!fs.existsSync(x)) return;</code>-style silent bails join the catcher guideline.</li>
+    <li>617 tests green (613 baseline + 10 new − 6 deleted). Zero schema changes, zero CLI surface changes.</li>
   </ul>
 
   <h4>v1.0.3 — Discord 5-bug fix (migrate · sudo · messenger binding · update next-step · category rename)<span class="badge now">v1.0.3</span></h4>

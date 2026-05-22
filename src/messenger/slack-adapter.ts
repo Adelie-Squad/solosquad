@@ -12,10 +12,6 @@ import {
   type CommandHandler,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
-import {
-  isAuthorizedAuthor,
-  unauthorizedAuthorMessage,
-} from "../bot/author-guard.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
 import { getWorkspaceRoot } from "../util/paths.js";
 
@@ -115,31 +111,17 @@ export class SlackAdapter implements MessengerAdapter {
       const ownHandle = this.ownHandle;
       if (!ownHandle || ownHandle !== parsed.handle) return;
 
-      // v0.8 §3.4 — author-guard. Look up author handle from Slack profile.
-      let authorHandle = "";
-      try {
-        const userId = (msg.user as string) || "";
-        if (userId) {
-          const info = await app.client.users.info({ user: userId });
-          authorHandle = (
-            (info.user as unknown as Record<string, unknown>)?.name as string
-          )?.toLowerCase() ?? "";
-        }
-      } catch {
-        authorHandle = "";
-      }
-      if (authorHandle && !isAuthorizedAuthor(channelName, authorHandle)) {
-        try {
-          await app.client.chat.postEphemeral({
-            channel: msg.channel as string,
-            user: (msg.user as string) || "",
-            text: unauthorizedAuthorMessage(channelName, authorHandle),
-          });
-        } catch {
-          // ephemeral may fail — best effort.
-        }
-        return;
-      }
+      // v1.0.4 — author-guard removed (Slack adapter). Same rationale as the
+      // Discord adapter in v1.0.2: comparing the Slack `user.name` against
+      // the channel-derived handle universally false-positives for users
+      // whose Slack username diverged from their SoloSquad handle (different
+      // charset, separate identities). Slack channel ACL is the canonical
+      // permission boundary; SoloSquad does not own it and cannot meaningfully
+      // layer a 2nd defense. Log author identity for post-hoc audit only.
+      const slackAuthorId = (msg.user as string) || "?";
+      console.log(
+        `[Slack Bot] message in ${channelName} from author id=${slackAuthorId}`,
+      );
 
       // Determine product
       let product = this.getProductForChannel(msg.channel as string);

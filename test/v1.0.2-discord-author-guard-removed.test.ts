@@ -65,13 +65,16 @@ test("v1.0.2 — discord-adapter logs author identity for audit", () => {
   );
 });
 
-test("v1.0.2 — author-guard.ts file still exists (Slack adapter dependency until v1.0.3)", () => {
-  // The file is NOT deleted in v1.0.2 because src/messenger/slack-adapter.ts
-  // still imports it. v1.0.3 will remove both the file and the Slack import.
+test("v1.0.2 — historical note: author-guard.ts file deletion deferred to v1.0.4", () => {
+  // v1.0.2 left src/bot/author-guard.ts in place because src/messenger/
+  // slack-adapter.ts still depended on it. v1.0.4 removed both the Slack
+  // callsite and the file itself. The catcher is preserved (inverted from
+  // its v1.0.2-era assertion) so the historical fact that file deletion
+  // was *deferred* one release stays visible in the test record.
   const exists = fs.existsSync(path.resolve(process.cwd(), "src/bot/author-guard.ts"));
   assert.equal(
     exists,
-    true,
-    "author-guard.ts must remain until v1.0.3 (Slack adapter still depends on it)",
+    false,
+    "author-guard.ts must be gone after v1.0.4 (Slack callsite + file deleted together)",
   );
 });

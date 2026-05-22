@@ -997,6 +997,33 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/plan/v1.0.3-discord-triple-bug-fix.md`, `CHANGELOG.md` §[1.0.3]
 
+#### 13.6.17 v1.0.4 — Discord config.yaml 자동 생성 + Slack author-guard 통째 cleanup (2026-05-22)
+
+**v1.0.3 Bug D fix 자가비판 박제 + 약속된 Slack cleanup 마무리.** v1.0.3 의 `syncGuildProductMapping` fix 가 *root cause 의 절반만* 잡음 — 서버명 휴리스틱은 제거했지만 *file-existence silent early-return* 분기는 남겨둠. `scaffoldOrg` 가 `<org>/discord/config.yaml` 을 never 작성하므로 모든 fresh `solosquad init` 워크스페이스가 그 분기에 차단. 사용자가 v1.0.3 설치 후에도 *"No product linked to this server"* 받음.
+
+**Fixed — Bug G**:
+- `src/messenger/discord-adapter.ts:syncGuildProductMapping` — `if (!fs.existsSync(configFile)) return;` silent bail 제거. load-or-empty 패턴 (`fs.existsSync ? load : {}`) + `mkdirSync(configDir, recursive: true)` + dirty 플래그로 변경 있을 때만 writeFile.
+- 봇 첫 시작 시 자동으로 `<org>/discord/config.yaml` 생성 + `guild_id` + `channels` 박제 + `[Discord] Bound guild <name> (<id>) → org=<slug>` 로그.
+- `getProductByGuild` 동작 변경 0 (주석만 갱신).
+
+**Removed — Bug H** (v1.0.2 Discord 대칭 마무리):
+- `src/messenger/slack-adapter.ts` author-guard import + 가드 블록 (~22줄) 제거 + audit log (`[Slack Bot] message in ... from author id=...`) 추가.
+- `src/bot/author-guard.ts` 파일 통째 삭제 (Slack 이 마지막 소비자였음).
+- `test/author-guard.test.ts` 파일 통째 삭제. v1.0.2 catcher 의 마지막 case 는 *역전 형태로 보존* — 파일 *부재* assert 로 변경해 v1.0.2 → v1.0.4 의 *deletion 순차* 사실 박제.
+
+**Compatibility**:
+- migration 1.0.3 → 1.0.4: workspace.yaml.version bump only, idempotent.
+- 기존 `discord/config.yaml` 있는 사용자: 변경 0 (idempotent).
+- 기존 `discord/config.yaml` 없는 사용자 (대다수): 봇 첫 시작 시 자동 작성.
+- Slack 사용자: false positive 영구 0.
+- breaking 0, schema 변경 0, CLI surface 변경 0.
+
+순 테스트: 613 → **617 green** (+10 신규 − 6 삭제).
+
+**Spec retraction** — v1.0.3 plan §6 *반복 패턴* 에 **3번째 변형** 추가: *권위 결정자가 있는데도 옛 기록 파일 유무로 silently bail 하는 코드*. `if (!fs.existsSync(x)) return;` 류 silent bail 도 trip-wire 대상.
+
+자세히: `docs/plan/v1.0.4-messenger-config-auto-create.md`, `CHANGELOG.md` §[1.0.4]
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):

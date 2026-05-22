@@ -329,25 +329,35 @@ export class DiscordAdapter implements MessengerAdapter {
   }
 
   /**
-   * v1.0.3 — bind the current Discord guild to the bot's own org.
+   * v1.0.4 — bind the current Discord guild to the bot's own org, creating
+   * `<org>/discord/config.yaml` on first run if missing.
    *
-   * Pre-v1.0.3 tried to auto-match by Discord server name containing the
-   * org's display name or slug — a v0.1.x heuristic that universally
-   * false-negatived when users named their server something humanly
-   * ("AI Native PO" instead of "rosyocean"). v0.8 multi-user messenger
-   * already resolves the bot's org via `resolveBotIdentity` into
-   * `this.ownOrgSlug`, so the heuristic was guessing an answered question.
+   * Pre-v1.0.4 silently early-returned when `discord/config.yaml` did not
+   * exist. The file was never scaffolded at org creation (`scaffoldOrg`
+   * makes the empty `discord/` directory but no yaml inside), so for any
+   * user who completed `solosquad init` without manually authoring this
+   * file, binding never happened — `getProductByGuild` then returned null
+   * and every Discord message produced "No product linked to this server".
+   * v1.0.3 fixed the name-match heuristic but not this file-existence bail.
    *
-   * Now: trust `ownOrgSlug` directly. Single guild is bound automatically.
-   * Multi-guild prints a notice and binds the first (multi-guild is not a
-   * v1.0.x supported scenario — v0.8 says one bot = one user = one org).
+   * v1.0.4: load-or-empty pattern + auto-write. The bot already knows
+   * (a) its own org from `ownOrgSlug`, (b) the guild it's connected to,
+   * and (c) the channels it just created via `ensureChannels` — all the
+   * info needed to write the config. No reason to require a pre-existing
+   * file.
    */
   private syncGuildProductMapping(): void {
     if (!this.client || !this.ownOrgSlug) return;
     const orgSlug = this.ownOrgSlug;
-    const configFile = path.join(getReposBase(), orgSlug, "discord", "config.yaml");
-    if (!fs.existsSync(configFile)) return;
-    const config = (yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) ?? {}) as Record<string, unknown>;
+    const configDir = path.join(getReposBase(), orgSlug, "discord");
+    const configFile = path.join(configDir, "config.yaml");
+    fs.mkdirSync(configDir, { recursive: true });
+
+    // v1.0.4 — load-or-empty. Pre-v1.0.4 returned silently here when the
+    // file was missing, which was the root cause of "No product linked".
+    const config = fs.existsSync(configFile)
+      ? ((yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) ?? {}) as Record<string, unknown>)
+      : ({} as Record<string, unknown>);
 
     const guilds = Array.from(this.client.guilds.cache.values());
     if (guilds.length === 0) return;
@@ -359,24 +369,32 @@ export class DiscordAdapter implements MessengerAdapter {
     }
 
     const guild = guilds[0];
+    const channels = (config.channels || {}) as Record<string, string>;
+    let dirty = false;
+
     if (config.guild_id !== guild.id) {
       config.guild_id = guild.id;
-      const channels = (config.channels || {}) as Record<string, string>;
-      for (const ch of guild.channels.cache.values()) {
-        if (this.channelNames.includes(ch.name)) {
-          channels[ch.name.replace(/-/g, "_")] = ch.id;
-        }
+      dirty = true;
+    }
+    for (const ch of guild.channels.cache.values()) {
+      if (this.channelNames.includes(ch.name) && channels[ch.name.replace(/-/g, "_")] !== ch.id) {
+        channels[ch.name.replace(/-/g, "_")] = ch.id;
+        dirty = true;
       }
-      config.channels = channels;
+    }
+    config.channels = channels;
+
+    if (dirty) {
       fs.writeFileSync(configFile, yaml.dump(config));
       console.log(`[Discord] Bound guild ${guild.name} (${guild.id}) → org=${orgSlug}`);
     }
   }
 
   /**
-   * v1.0.3 — resolve which org owns a given Discord guild. Trusts the bot's
-   * own org (`ownOrgSlug`) when set; checks that the persisted config's
-   * `guild_id` matches the incoming guildId. No name-match fallback.
+   * v1.0.4 — resolve which org owns a given Discord guild. Trusts the bot's
+   * own org (`ownOrgSlug`) when set; relies on `syncGuildProductMapping`
+   * having written `config.guild_id` (which v1.0.4 always does on startup
+   * since the auto-write happens unconditionally now).
    */
   private getProductByGuild(guildId: string): Product | null {
     if (!this.ownOrgSlug) return null;
