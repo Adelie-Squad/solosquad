@@ -1,7 +1,9 @@
 # Author-guard handle decoupling — Discord 닉네임 ≠ SoloSquad handle ideation
 
+> **⚠ Superseded by `docs/plan/v1.0.2-discord-author-guard-decoupling.md` (2026-05-22).** 본 ideation 의 옵션 A/B/C 비교 + TOFU 패턴 검토는 *기각 사유 박제* 자료로 보존. 최종 채택안은 옵션 C 변형 ("handle = canonical user identifier, author identity is audit-only") — `seungw1n.` (trailing dot) 사용자 케이스로 두 charset 의 영구 mismatch 가 폭로되면서 *어떤 비교식·정규화로도 해결 안 됨* 이 명확해진 결과. 본 ideation 의 옵션 B (TOFU) 는 *학습 전 첫 메시지가 handle 비교에 걸려 학습 못 함* 이라는 자체 막다른 골목 때문에 plan 단계에서 추가로 기각됨.
+
 - **작성일**: 2026-05-22
-- **상태**: ideation (plan 승격 전 단계 — 본 문서로 추가 논의 후 v1.0.2 또는 v1.1 슬롯 결정)
+- **상태**: ideation (plan 승격 완료 — 위 supersede 박스 참조)
 - **청자**: SoloSquad 개발자(본인)
 - **관련 코드**: [`src/bot/author-guard.ts`](../../src/bot/author-guard.ts), [`src/bot/user-registry.ts`](../../src/bot/user-registry.ts), [`src/bot/channel-bootstrap.ts`](../../src/bot/channel-bootstrap.ts), `<workspace>/<org>/.solosquad/users/<handle>.yaml`
 - **계기 incident**: v1.0.1 publish 직전 사용자(`discord_username: seungw1n`, `solosquad_handle: w1n`) 가 자기 자신의 `command-w1n` 채널에서 메시지 발사 → author-guard 가 차단 후 *"이 채널은 w1n의 명령 전용입니다. command-seungw1n 채널을 사용하세요"* DM 발사. **자기 자신을 자기 채널에서 추방**한 false positive.

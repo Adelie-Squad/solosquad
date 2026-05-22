@@ -944,6 +944,33 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/plan/v1.0.1-discord-ready-deprecation.md`, `CHANGELOG.md` §[1.0.1]
 
+#### 13.6.15 v1.0.2 — Discord author-guard 정합 + 온보딩 reorder (2026-05-22)
+
+**v1.0.1 publish 직전 발견된 author-guard false positive 의 박제 fix + 동시에 온보딩 narrative 정합 회복.** *"Discord username = SoloSquad handle"* 이라는 v0.8 §3.4 의 암묵 invariant 가 두 charset 의 영구 불일치 (`Discord username: seungw1n.` vs handle `[a-z0-9_]`) 로 깨졌음을 정직 박제. **handle 을 SoloSquad 유일 canonical user identifier 로 격상**, Discord author identity 는 *gate 아닌 audit log* 로 강등.
+
+**Fixed — Discord author-guard 영구 제거**:
+- `src/messenger/discord-adapter.ts` `isAuthorizedAuthor` 가드 블록 제거 + audit log 1줄 추가.
+- `seungw1n.` 류 *Discord username 에 `.` 포함* 사용자의 자기 추방 false positive 영구 0.
+- 친구 협업 케이스 (owner 가 자기 채널에 친구 초대 후 친구 메시지) 도 같이 풀림.
+- `src/bot/author-guard.ts` 는 *유지* (Slack 어댑터 의존). `@deprecated since v1.0.2 (Discord)` JSDoc + v1.0.3 통째 제거 예고.
+
+**Changed — onboarding wizard reorder (Step 3.5 신설)**:
+- Step 5.2 (handle) → **Step 3.5** (메신저 토큰 직후) 이동. narrative 단절 해소.
+- `registerUserIdentity` 모놀리식 → 3-phase 분리 (`fetchBotIdentity` + `promptHandleSelection` + `saveUserYamlForChoice`).
+- handle prompt guidance 추가 — *"unique in your messenger server, different from other members' usernames or display names"*.
+- Step renumber: 3.5→4 (Timezone), 4→5 (workspace.yaml, silent), 5→6 (Org), 5.1→6.1 (Repos), 5.2 *삭제*, 6→7, 6.5→7.5, 7→8.
+
+**Slack scope** — 본 v1.0.2 변경 0. 동등 fix 는 v1.0.3 슬롯 (post-v1.0 분리 release).
+
+**Compatibility**:
+- migration 1.0.1 → 1.0.2: workspace.yaml.version bump only, idempotent.
+- `UserYaml` schema 변경 0. user yaml 무손상.
+- breaking 0 (데이터·CLI surface 면).
+
+588 → **596 tests green** (588 baseline + `test/v1.0.2-discord-author-guard-removed.test.ts` 5 + `test/v1.0.2-init-handle-order.test.ts` 3).
+
+자세히: `docs/plan/v1.0.2-discord-author-guard-decoupling.md`, `CHANGELOG.md` §[1.0.2]
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):

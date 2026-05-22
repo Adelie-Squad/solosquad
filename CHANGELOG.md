@@ -4,6 +4,36 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] — 2026-05-22
+
+**v1.0.2 — Discord author-guard 정합 + 온보딩 wizard reorder.** v1.0.1 publish 직전 발견된 author-guard false positive (사용자 `Discord username: seungw1n.`, `handle: w1n` 가 자기 자신 채널에서 추방됨) 의 박제 fix + 동시에 *온보딩 narrative 정합 회복*. 두 charset (Discord username vs SoloSquad handle `[a-z0-9_]`) 의 영구 불일치가 폭로한 것: v0.8 §3.4 가 *"username = handle"* 을 암묵 invariant 로 깔고 있었지만 어떤 정규화로도 풀리지 않음. **handle 을 SoloSquad 유일 canonical user identifier 로 격상**, Discord author identity 는 audit log 로 강등. 자세히 `docs/plan/v1.0.2-discord-author-guard-decoupling.md`.
+
+### Fixed — Discord author-guard false positive 영구 해소
+- `src/messenger/discord-adapter.ts` — `isAuthorizedAuthor` 가드 블록 (12줄) 제거. `message.author.username` 비교가 root cause. `seungw1n.` 류 *Discord username 에 `.` 포함* 사용자가 *어떤 정규화로도* `command-<handle>` 채널에서 통과 못 하던 회귀 해소.
+- 그 자리에 audit log 1줄 추가 (`[Discord Bot] message in <channel> from author id=<id> username=<name>`) — 게이팅 0, 사후 추적용. Discord 채널 ACL 이 유일 permission boundary 임을 정직히 박제.
+- 친구를 자기 채널에 의도적으로 초대한 *owner 의도된 협업* 케이스도 같이 풀림 (이전엔 false positive 로 차단).
+
+### Changed — onboarding wizard narrative 정합 (Step reorder)
+- **Step 3.5 신설 — Your Handle on {messenger}** (was Step 5.2). 메신저 토큰 입력 직후로 위치 이동. 사용자 narrative: *"방금 Discord 토큰 입력 → 이제 그 메신저에서 어떤 이름으로 불릴지 결정"* — 사이에 timezone/workspace.yaml/org/repos 4단계가 끼던 v1.0.1 까지의 단절 해소.
+- `registerUserIdentity` 모놀리식 함수 → 3-phase 분리: `fetchBotIdentity` (API 호출, no UI) + `promptHandleSelection` (UI + guidance) + `saveUserYamlForChoice` (yaml write, no UI). Step 3.5 가 (1)+(2) 호출, Step 6 가 (3) 호출.
+- handle prompt guidance 카피 추가 — `💡 Pick a handle that is unique in your messenger server. Different from other discord members' usernames or display names → avoids "who said this" confusion`. 멤버 목록 자동 fetch 는 *안 함* (privileged intent 요구 + init 시점 guild 미가입 가능성).
+- Step renumber: 3.5 (was Timezone) → **4**, 4 (was workspace.yaml) → **5** (silent banner 없음), 5 (Org) → **6**, 5.1 (Repos) → **6.1**, 5.2 (User Identification) → **삭제** (3.5 로 흡수), 6 (Security) → **7**, 6.5 (Onboarding track) → **7.5**, 7 (Layout) → **8**.
+
+### Deprecated — author-guard (Discord 면 즉시, Slack 은 v1.0.3 슬롯)
+- `src/bot/author-guard.ts` — 파일 *유지* (Slack 어댑터가 여전히 사용). `@deprecated since v1.0.2 (Discord)` JSDoc 추가. v1.0.3 에서 `src/messenger/slack-adapter.ts` 사용처 제거 + 본 파일 통째 삭제 예정.
+- `src/messenger/slack-adapter.ts` — **본 v1.0.2 변경 0**. Slack 은 post-v1.0 슬롯 (v1.0 plan §5.3), SemVer 약속 외. 동등 fix 는 별 release (v1.0.3) 분리 → review·yank 용이.
+
+### Compatibility — v1.0.1 사용자
+- workspace.yaml.version 자동 마이그레이션 (1.0.1 → 1.0.2, `src/migrations/scripts/1.0.1-to-1.0.2.ts`, bump-only, idempotent).
+- `<workspace>/<org>/.solosquad/users/<handle>.yaml` 무손상 — schema 변경 0.
+- Slack 사용자: 동작 100% 보존 (v0.8 §3.4 false positive 도 100% 보존 — v1.0.3 fix 대기).
+- breaking 0 (사용자 데이터·CLI surface 면), CLI 명령 add/remove/rename 0, schema 변경 0 — api-stability 정책 완전 준수.
+
+### Added — regression catchers (2 신규 파일, +8 cases)
+- `test/v1.0.2-discord-author-guard-removed.test.ts` (5) — discord-adapter source 가 author-guard import/call/DM 안 함 + audit log present + `author-guard.ts` 파일은 *유지* (Slack 의존성).
+- `test/v1.0.2-init-handle-order.test.ts` (3) — init.ts banner set (3.5 present, 5/5.1/5.2/6.5 부재), Step 3.5 가 `.env saved` 직후 위치, guidance 카피 verify.
+- 총 테스트: 588 → **596 green**.
+
 ## [1.0.1] — 2026-05-22
 
 **v1.0.1 — 첫 patch.** v1.0.0 publish 직후 발견된 dependency-level deprecation 1건 + 사용자 가치에 어긋나던 onboarding friction 1건을 한 릴리스로 흡수. 같이 해소되는 의미적 빚: *"한 agent 가 여러 repo 를 다룬다"* 는 솔로스쿼드 포지셔닝과 `role=main` 단일 default repo 가정 사이의 모순. 자세히 `docs/plan/v1.0.1-discord-ready-deprecation.md`.

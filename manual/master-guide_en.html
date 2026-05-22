@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v1.0.1 (post-launch first patch)</span>
+  <span class="tag">Master Guide · v1.0.2 (post-launch second patch)</span>
   <nav>
     <ul>
       <li>
@@ -1128,14 +1128,16 @@ solosquad init</code></pre>
         <tr><td>Your role</td><td><code>founder</code></td><td>founder / developer / designer etc. (free)</td><td>Agents infer your expertise / interests to tune response depth and tone. Default is <code>founder</code> because SoloSquad's primary user is a solo founder.</td><td><code>.solosquad/.env</code> <code>OWNER_ROLE</code></td></tr>
         <tr><td>Messenger platform</td><td>None</td><td><code>discord</code> / <code>slack</code></td><td>One workspace = one messenger. n-job: separate workspaces. Decides channel pair / broadcast behavior.</td><td><code>.solosquad/.env</code> <code>MESSENGER</code></td></tr>
         <tr><td>Discord/Slack token</td><td>None</td><td>Token string</td><td>Bot API credential. Auto-channel creation, message I/O.</td><td><code>.solosquad/.env</code> (gitignored)</td></tr>
+        <tr><td><strong>Your handle on {messenger}</strong> <span class="badge now">v1.0.2</span></td><td>Bot username (auto-extracted, normalized)</td><td><code>[a-z0-9_]+</code> only (other chars auto-replaced with <code>_</code>)</td><td><strong>SoloSquad's canonical user identifier</strong>. Names channel pair <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code>, drives workflow routing + memory partition. Moved to right after token entry in v1.0.2 (narrative coherence). <em>Pick a handle that's unique among other messenger members' usernames or display names to avoid "who said this" confusion.</em></td><td><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code> (Step 6 silent write)</td></tr>
         <tr><td>Timezone</td><td><code>Asia/Seoul</code></td><td>IANA tz</td><td>Morning/evening brief times + all routine crons</td><td><code>workspace.yaml.timezone</code></td></tr>
         <tr><td>Morning / Evening brief time</td><td>08:00 / 18:00</td><td>HH:MM</td><td>Cron for the two default user briefs</td><td><code>workspace.yaml.briefings</code></td></tr>
         <tr><td>Organization name</td><td>None</td><td>Free</td><td><strong>Org = business/product unit</strong>. Multiple orgs per workspace possible (e.g. tesla + spacex). Memory / workflows / repos isolated per org.</td><td><code>&lt;workspace&gt;/&lt;slug&gt;/.org.yaml</code></td></tr>
         <tr><td>Provider</td><td><code>github</code></td><td>local / github / gitlab / gitea</td><td>Org's code hosting location metadata. <code>add repo</code> uses this to infer git URL host. Pick <code>local</code> if no remote.</td><td><code>.org.yaml.provider</code></td></tr>
         <tr><td>Org homepage URL</td><td>Empty</td><td>URL or empty</td><td>Optional org homepage (e.g. github.com/tesla). Used by analysis / linker. Press Enter to skip.</td><td><code>.org.yaml.remote_url</code></td></tr>
-        <tr><td>Handle (auto-extracted from bot username, with confirmation)</td><td>Bot username</td><td><code>[a-z0-9_]+</code> only (other chars auto-replaced with <code>_</code>)</td><td>Names the messenger channel pair <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> + identifies you across multi-user setups</td><td><code>&lt;org&gt;/.solosquad/users/&lt;handle&gt;.yaml</code></td></tr>
       </tbody>
     </table>
+    <p class="callout warn"><strong>v1.0.2 change — step order</strong>: the handle prompt used to live at <em>Step 5.2 (four steps after the messenger token)</em>; v1.0.2 moves it to <em>Step 3.5 (immediately after the token)</em>. Restores the narrative "I just connected my Discord token → now decide what name I'll be known by on that messenger." The yaml write itself is deferred to Step 6 (after the org dir exists), silently.</p>
+    <p class="callout info"><strong>v1.0.2 change — handle elevated</strong>: handle is now SoloSquad's <em>sole canonical user identifier</em> (channel-name derivation + workflow routing + memory partition). Discord's <code>message.author.username</code> is no longer compared — it lives only in audit logs. Usernames like <code>seungw1n.</code> that can't fit the channel-name charset are no longer blocked from their own channel.</p>
     <p class="callout warn"><strong>v0.8.5 change</strong> — If no existing workspace is detected in a parent directory, the wizard no longer asks "Initialize workspace at: ..." — it uses the cwd silently (the directory you already chose with <code>mkdir</code> is not asked again). To create it elsewhere, <code>cd</code> there first.</p>
   </div>
 
@@ -2350,6 +2352,16 @@ solosquad run-routine --all             # all</code></pre>
     <li>Begin stable API commitments</li>
     <li>Introduce breaking-change policy</li>
     <li>Consider auto-registration gate if v0.6 trajectory auto-extract ROI metrics pass</li>
+  </ul>
+
+  <h4>v1.0.2 — Discord author-guard decoupling + onboarding reorder<span class="badge now">v1.0.2</span></h4>
+  <ul>
+    <li><strong>Discord author-guard removed</strong>. The <code>isAuthorizedAuthor</code> gate in <code>src/messenger/discord-adapter.ts</code> compared <code>message.author.username</code> against the channel-derived handle — a comparison that universally false-positived whenever a user's Discord username contained any character outside the SoloSquad handle charset <code>[a-z0-9_]</code> (e.g. <code>seungw1n.</code> with a trailing dot). The gate is gone; author identity is logged for audit but never gated. Discord channel ACL is now the sole permission boundary.</li>
+    <li><strong>Handle = SoloSquad's sole canonical user identifier</strong>. Discord's <code>message.author.username</code> is no longer a comparison axis — it's raw input, recorded in audit logs only.</li>
+    <li><strong>Onboarding wizard reordered</strong> — handle prompt moved from <code>Step 5.2</code> (four steps after the messenger token) to <code>Step 3.5</code> (immediately after the token). The yaml write itself defers to Step 6 (silent, after the org dir exists).</li>
+    <li><strong>Handle-selection guidance added</strong> — the prompt now suggests picking a handle that's unique among other messenger members' usernames or display names, to avoid chat confusion.</li>
+    <li><strong>Slack equivalent fix is v1.0.3</strong> — a separate post-v1.0 release. v1.0.2 keeps <code>src/bot/author-guard.ts</code> in place because the Slack adapter still imports it; v1.0.3 will delete both the Slack callsite and the file.</li>
+    <li>596 tests green (588 baseline + 8 new). Zero schema changes, zero CLI surface changes.</li>
   </ul>
 
   <h4>v1.0.1 — Discord deprecation + multi-repo routing<span class="badge now">v1.0.1</span></h4>
