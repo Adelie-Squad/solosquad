@@ -34,6 +34,17 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Spec retraction — v1.0.3 plan §6 *반복 패턴* 에 3번째 변형 추가
 v1.0.3 plan §6 이 박제한 두 갈래 — (a) 외부 자유 입력 ↔ 내부 슬러그 문자열 비교, (b) v0.1.x 잔재 vocab/UX — 에 v1.0.4 가 **3번째 변형**: *권위 결정자가 있는데도 옛 기록 파일 유무로 silently bail 하는 코드*. 본 v1.0.4 G fix 자체가 그 변형의 직접 해소. 향후 회귀 catcher 가이드라인 — `if (!fs.existsSync(x)) return;` 류 silent bail 도 trip-wire 대상.
 
+### Added — Best Practice P 일부 적용: *5-hop binding 진단 메시지*
+- `src/messenger/discord-adapter.ts` — *9-reference 조사* (OpenClaw, Claude Code Channels, LangChain, AutoGen, Composio, llmcord, openai/gpt-discord-bot, LibreChat, AnythingLLM) 합의된 **Best Practice 5: 누락값 hard fail + actionable hint** 도입.
+- generic *"No product linked to this server. Re-run \`solosquad init\`."* 메시지 제거 → `diagnoseProductByGuildFailure` helper 가 *5-hop chain 의 어느 마디* 가 깨졌는지 명시 (ownOrgSlug null / config.yaml 부재 / guild_id 미박제 / guild_id 불일치 / loadProducts 미포함). 사용자가 *어디부터* 디버깅해야 할지 즉시 파악.
+- 향후 binding 회귀 발생 시 *attributable hop* 으로 잡힘 — silent-fail 시대 마감의 디버깅 인프라.
+- 신규 catcher 2 cases (`test/v1.0.4-config-auto-create.test.ts`): 진단 helper 존재 + 5 hop 각각의 메시지 string 박제.
+
+### Spec retraction — *9-reference 조사 결과 plan §7.2 박제*
+plan doc `docs/plan/v1.0.4-messenger-config-auto-create.md` §7.2 에 *9-reference 조사 보고서 요약* 박제. 모든 레퍼런스 공통 *필수 값 3개* (Bot Token / Message Content Intent / OAuth `bot` scope), 바인딩 패턴 4가지 분류, SoloSquad 의 *(b) 패턴 절반 채택* 진단, 그리고 *5 Best Practice* (L 페어링 + approve CLI / M snowflake branded types / N silent early-return 전수 제거 / O token precedence 명문화 / P actionable hint). v1.0.4 는 P 일부만 흡수, 나머지 L+M+N+O 는 v1.0.5 ~ v1.1 슬롯 후보 박제.
+
+순 테스트 갱신: 613 → **619 green** (+10 신규 + 2 추가 진단 catcher − 6 author-guard.test.ts 삭제).
+
 ## [1.0.3] — 2026-05-22
 
 **v1.0.3 — Discord 5-bug fix (migrate · sudo · guild-org binding · update next-step · category rename).** v1.0.2 publish 직후 사용자 dogfood 검증에서 *연속 5건* 의 *문자열 비교·v0.1.x 잔재 vocab* 함정이 노출됨. 다섯 건 모두 **솔로 파운더 정상 사용 시나리오에서 false positive 또는 friction 이 기본값** — *권위 결정자를 무시하고 약한 비교 휴리스틱으로 다시 추측* 하는 동일 패턴. v1.0.2 author-guard incident 와 같은 정신으로 *결정자 직접 사용 + 옛 vocab 은 backward compat lookup 만* 으로 통일. Slack 어댑터의 동등 author-guard 제거는 *v1.0.4 슬롯으로 분리*. 자세히 `docs/plan/v1.0.3-discord-triple-bug-fix.md`.

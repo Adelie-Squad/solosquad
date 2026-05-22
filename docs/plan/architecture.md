@@ -1018,11 +1018,16 @@ Get-CimInstance Win32_Process |
 - Slack 사용자: false positive 영구 0.
 - breaking 0, schema 변경 0, CLI surface 변경 0.
 
-순 테스트: 613 → **617 green** (+10 신규 − 6 삭제).
+순 테스트: 613 → **619 green** (+12 신규 − 6 삭제).
 
-**Spec retraction** — v1.0.3 plan §6 *반복 패턴* 에 **3번째 변형** 추가: *권위 결정자가 있는데도 옛 기록 파일 유무로 silently bail 하는 코드*. `if (!fs.existsSync(x)) return;` 류 silent bail 도 trip-wire 대상.
+**Added — Best Practice P 일부 적용 (9-reference 조사 결과 즉시 흡수)**:
+- `discord-adapter.ts` 의 *generic "No product linked"* 메시지 → `diagnoseProductByGuildFailure` 5-hop 진단 메시지로 교체. ownOrgSlug / config.yaml 부재 / guild_id 미박제 / guild_id 불일치 / loadProducts 미포함 각각 명시.
+- plan §7.2 에 9-reference 조사 (OpenClaw / Claude Code Channels / LangChain / AutoGen / Composio / llmcord / openai-gpt-discord-bot / LibreChat / AnythingLLM) 박제. *(b) Runtime pairing* 이 주류 표준. SoloSquad 가 (b) 의 *자동 캡처* 만 채택하고 *명시 approve* 부재 → v1.0.2 ~ v1.0.4 의 4번 누적 회귀 root cause.
+- 나머지 best practice (L 페어링 + approve CLI / M snowflake branded types / N silent early-return 전수 제거 / O token precedence) 는 v1.0.5 ~ v1.1 슬롯 후보.
 
-자세히: `docs/plan/v1.0.4-messenger-config-auto-create.md`, `CHANGELOG.md` §[1.0.4]
+**Spec retraction** — v1.0.3 plan §6 *반복 패턴* 에 **3번째 변형** 추가: *권위 결정자가 있는데도 옛 기록 파일 유무로 silently bail 하는 코드*. `if (!fs.existsSync(x)) return;` 류 silent bail 도 trip-wire 대상. **v1.0.4 가 Best Practice P 일부 도입으로 같은 패턴 진단 인프라 마련** — 향후 회귀 시 *어느 hop* 인지 즉시 attribute 가능.
+
+자세히: `docs/plan/v1.0.4-messenger-config-auto-create.md` §7.2, `CHANGELOG.md` §[1.0.4]
 
 ### 13.7 v1.x 시리즈 (예고)
 

@@ -157,7 +157,19 @@ export class DiscordAdapter implements MessengerAdapter {
 
       const product = this.getProductByGuild(message.guild!.id);
       if (!product) {
-        await message.channel.send("No product linked to this server. Re-run `solosquad init`.");
+        // v1.0.4 — Best Practice 5 (Discord ↔ AI agent 9-reference research):
+        // silent / generic 메시지 금지, *어느 hop 이 실패했는지* 명시 +
+        // actionable hint. Bug G fix 후에도 이 경로가 도달 가능한 케이스
+        // (예: 봇이 unbound guild 에 invite 됐거나 user.yaml 매칭 실패)
+        // 에서 사용자가 *어디부터* 봐야 할지 알게 함.
+        const reason = this.diagnoseProductByGuildFailure(message.guild!.id);
+        const guildLabel = message.guild?.name ?? "(unknown)";
+        console.log(`[Discord Bot] product lookup failed for guild=${guildLabel} (${message.guild!.id}): ${reason}`);
+        await message.channel.send(
+          `Bot can't find a SoloSquad org bound to **${guildLabel}**.\n` +
+            `Reason: ${reason}\n` +
+            "Try `solosquad doctor` for full diagnostics, or `solosquad init` if this is a fresh setup."
+        );
         return;
       }
 
@@ -388,6 +400,43 @@ export class DiscordAdapter implements MessengerAdapter {
       fs.writeFileSync(configFile, yaml.dump(config));
       console.log(`[Discord] Bound guild ${guild.name} (${guild.id}) → org=${orgSlug}`);
     }
+  }
+
+  /**
+   * v1.0.4 — diagnose *which hop* of the 5-stage Discord ↔ org binding
+   * chain failed. Called from the messageCreate handler when
+   * `getProductByGuild` returns null. Output is a single-line human-
+   * readable reason that goes into both console logs and the user-facing
+   * channel reply.
+   *
+   * Per the 9-reference research (Best Practice 5): silent / generic
+   * failure messages are the primary cause of repeated regression. Each
+   * SoloSquad release v1.0.2-v1.0.4 fixed one hop's silent fail; this
+   * helper makes future regressions immediately attributable.
+   */
+  private diagnoseProductByGuildFailure(guildId: string): string {
+    if (!this.ownOrgSlug) {
+      return "bot has no resolved org — user.yaml not matched by bot_user_id (check `solosquad init` ran with this bot token)";
+    }
+    const configFile = path.join(getReposBase(), this.ownOrgSlug, "discord", "config.yaml");
+    if (!fs.existsSync(configFile)) {
+      return `<org>/discord/config.yaml missing at ${configFile} — v1.0.4 should have auto-created this; check filesystem permissions`;
+    }
+    try {
+      const config = yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) as Record<string, unknown> | null;
+      if (!config) return "config.yaml is empty / unparseable";
+      if (!config.guild_id) return "config.yaml exists but has no guild_id field — was syncGuildProductMapping skipped?";
+      if (config.guild_id !== guildId) {
+        return `config.yaml.guild_id=${config.guild_id} but message came from guild ${guildId} — bot is in a different server than recorded`;
+      }
+    } catch (e) {
+      return `config.yaml unreadable: ${(e as Error).message}`;
+    }
+    const products = loadProducts();
+    if (!products.find((p) => p.slug === this.ownOrgSlug)) {
+      return `loadProducts() does not include org=${this.ownOrgSlug} — check workspace.yaml + ${this.ownOrgSlug}/.org.yaml`;
+    }
+    return `unknown — every checked hop passed but Product lookup still failed. Please attach \`solosquad doctor\` output.`;
   }
 
   /**

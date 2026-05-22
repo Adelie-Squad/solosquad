@@ -67,3 +67,47 @@ test("v1.0.4 — discord-adapter writes 'Bound guild ... → org=' log on first 
     "discord-adapter must log 'Bound guild ... → org=...' when binding (preserved from v1.0.3)",
   );
 });
+
+test("v1.0.4 — generic 'No product linked' is replaced with diagnostic reason + actionable hint", () => {
+  const src = fs.readFileSync(ADAPTER_PATH, "utf-8");
+  // Per 9-reference research Best Practice 5 (Discord ↔ AI agent
+  // connection): silent or generic failure messages are the primary
+  // cause of repeated regression. v1.0.4 routes the failure through a
+  // diagnoseProductByGuildFailure helper that names the failed hop.
+  assert.match(
+    src,
+    /diagnoseProductByGuildFailure/,
+    "discord-adapter must define diagnoseProductByGuildFailure helper",
+  );
+  assert.match(
+    src,
+    /Bot can't find a SoloSquad org bound to/,
+    "user-facing message must name the guild and the diagnosed reason",
+  );
+  assert.match(
+    src,
+    /solosquad doctor/,
+    "diagnostic message must surface 'solosquad doctor' as actionable next step",
+  );
+  // The pre-v1.0.4 generic message must be gone.
+  assert.equal(
+    /No product linked to this server\. Re-run `solosquad init`\./.test(src),
+    false,
+    "generic 'No product linked' message must be replaced with the diagnostic variant",
+  );
+});
+
+test("v1.0.4 — diagnoseProductByGuildFailure names each of the 5 binding hops", () => {
+  const src = fs.readFileSync(ADAPTER_PATH, "utf-8");
+  // Per the 9-reference research, every hop in the binding chain should
+  // be individually attributable so future regressions don't return to
+  // the silent-fail era. We assert the diagnostic strings are present in
+  // the adapter source — extracting the exact method body with regex is
+  // brittle across formatter changes, so we grep the full file instead
+  // and rely on these strings being unique to the helper.
+  assert.match(src, /bot has no resolved org/, "must report the ownOrgSlug null case (hop 3)");
+  assert.match(src, /config\.yaml missing at/, "must report config.yaml missing case (hop 4a)");
+  assert.match(src, /no guild_id field/, "must report missing guild_id case (hop 4b)");
+  assert.match(src, /but message came from guild/, "must report guild_id mismatch case (hop 4c)");
+  assert.match(src, /loadProducts\(\) does not include org/, "must report loadProducts mismatch case (hop 5)");
+});
