@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import fs from "fs";
 import os from "os";
 import path from "path";
 
@@ -25,11 +26,32 @@ export function globalConfigDir(): string {
   return path.join(os.homedir(), ".solosquad");
 }
 
-/** npm global install command (auto-detects sudo need on Unix). */
+/**
+ * npm global install command — chooses whether to prepend sudo by checking
+ * the actual npm prefix's write permission (v1.0.3 fix).
+ *
+ * Pre-v1.0.3 unconditionally prepended `sudo` whenever the current process
+ * was not root. That's wrong for nvm / fnm / asdf / Homebrew users whose
+ * npm prefix lives inside their home dir (no sudo needed). The new check
+ * runs `npm config get prefix` then `fs.accessSync(prefix, W_OK)` — when
+ * the user can write to the prefix dir, no sudo is prepended. If anything
+ * in that detection chain throws (command not found, prefix dir gone,
+ * access denied), we fall back to `sudo` to keep the install command
+ * usable on system-package installs (e.g. apt nodejs under /usr/local).
+ */
 export function npmGlobalInstallCmd(pkg: string): string {
   if (IS_WINDOWS) return `npm install -g ${pkg}`;
-  const isRoot = process.getuid?.() === 0;
-  return isRoot ? `npm install -g ${pkg}` : `sudo npm install -g ${pkg}`;
+  try {
+    const prefix = execSync("npm config get prefix", {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (!prefix) return `sudo npm install -g ${pkg}`;
+    fs.accessSync(prefix, fs.constants.W_OK);
+    return `npm install -g ${pkg}`;
+  } catch {
+    return `sudo npm install -g ${pkg}`;
+  }
 }
 
 /** Default repos base path per OS. */

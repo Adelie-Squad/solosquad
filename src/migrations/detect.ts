@@ -52,13 +52,22 @@ export function findWorkspaceRoot(start: string): string | null {
   }
 }
 
-/** Matcher: does a migration's "from" spec match the detected version? */
+/** Matcher: does a migration's "from" spec match the detected version?
+ *
+ * v1.0.3 fix — `X.Y.Z.x` patterns must match exact `X.Y.Z` too. Pre-v1.0.3
+ * the matcher sliced off only the trailing `x`, leaving `"1.0.0."` as the
+ * startsWith prefix — so `"1.0.0"` (without trailing dot) silently missed,
+ * breaking patch-level migrations. Both ".x" patterns now match:
+ *   - "0.1.x"   → matches "0.1" exact AND "0.1.0"/"0.1.5"/...
+ *   - "1.0.0.x" → matches "1.0.0" exact AND "1.0.0.5"/... (4-segment is
+ *                  unused in semver but pattern preserved for legacy migrations)
+ */
 export function versionMatches(spec: string, detected: string): boolean {
   if (spec === detected) return true;
-  // "0.1.x" matches "0.1.0", "0.1.5" etc.
   if (spec.endsWith(".x")) {
-    const prefix = spec.slice(0, -1); // "0.1."
-    return detected.startsWith(prefix);
+    const baseExact = spec.slice(0, -2);          // "1.0.0.x" → "1.0.0"
+    const prefixWithDot = spec.slice(0, -1);      // "1.0.0.x" → "1.0.0."
+    return detected === baseExact || detected.startsWith(prefixWithDot);
   }
   return false;
 }

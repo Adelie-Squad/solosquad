@@ -101,7 +101,21 @@ export async function updateCommand(channel: string): Promise<void> {
       try {
         execSync(updateCmd, { stdio: "inherit" });
         console.log(chalk.green("\n✓ Updated successfully!"));
-        console.log(chalk.dim("Run `solosquad doctor` to verify."));
+
+        // v1.0.3 — surface the workspace-lag next step inside the update
+        // flow itself, instead of relying on a separate `solosquad doctor`
+        // round-trip to discover that `migrate --apply` is required.
+        const workspaceVersionAfter = detectWorkspaceVersion(getWorkspaceRoot());
+        if (workspaceVersionAfter && isNewer(latest, workspaceVersionAfter)) {
+          console.log(
+            chalk.yellow(
+              `\n  ⚠ Workspace is at v${workspaceVersionAfter}, CLI is now v${latest}.`,
+            ),
+          );
+          console.log(chalk.cyan(`  Next step:  solosquad migrate --apply\n`));
+        } else {
+          console.log(chalk.dim("Run `solosquad doctor` to verify."));
+        }
       } catch {
         console.log(chalk.red(`\nUpdate failed. Try manually: ${updateCmd}`));
       }

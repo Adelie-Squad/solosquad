@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v1.0.2 (post-launch second patch)</span>
+  <span class="tag">Master Guide · v1.0.3 (post-launch third patch)</span>
   <nav>
     <ul>
       <li>
@@ -2352,6 +2352,16 @@ solosquad run-routine --all             # all</code></pre>
     <li>Begin stable API commitments</li>
     <li>Introduce breaking-change policy</li>
     <li>Consider auto-registration gate if v0.6 trajectory auto-extract ROI metrics pass</li>
+  </ul>
+
+  <h4>v1.0.3 — Discord 5-bug fix (migrate · sudo · messenger binding · update next-step · category rename)<span class="badge now">v1.0.3</span></h4>
+  <ul>
+    <li><strong>Bug A — <code>solosquad migrate</code> permanent block lifted</strong>. The <code>versionMatches</code> slice arithmetic missed exact <code>X.Y.Z</code> when the pattern was <code>X.Y.Z.x</code>, permanently blocking patch-level migration chains (v1.0.0 → v1.0.x). The <code>"No migration found for source version 1.0.0"</code> error is gone.</li>
+    <li><strong>Bug B — <code>solosquad update</code> no longer wrongly suggests <code>sudo</code></strong> for nvm/Homebrew users. Switched from a <code>process.getuid()</code> guess to an actual <code>npm config get prefix</code> + <code>fs.accessSync(W_OK)</code> check. Most modern macOS users (user-owned prefix) no longer get a password prompt.</li>
+    <li><strong>Bug D — Discord messenger connection failure resolved</strong>. Removed the v0.1.x heuristic that required the Discord server name to contain the SoloSquad org slug; the bot already knows its org (<code>ownOrgSlug</code> from v0.8 <code>resolveBotIdentity</code>). The <em>"No product linked to this server"</em> error is gone regardless of how you name your Discord server. Boot log now prints <code>[Discord] Bound guild &lt;name&gt; (&lt;id&gt;) → org=&lt;slug&gt;</code>.</li>
+    <li><strong>Bug E — <code>solosquad update</code> surfaces the next step</strong>. After a successful install, checks workspace version lag and prints <code>Next step: solosquad migrate --apply</code> explicitly. No more <code>doctor</code> round-trip to discover the missing step.</li>
+    <li><strong>Bug F — Discord category renamed to <code>"solosquad"</code></strong>. v0.1.x's agent-team-as-product vocab (<code>"AI Team Reports"</code>) is replaced for new creations; existing categories with the legacy name are matched and reused (the bot does not force-rename them).</li>
+    <li>613 tests green (596 baseline + 17 new). Zero schema changes, zero CLI surface changes.</li>
   </ul>
 
   <h4>v1.0.2 — Discord author-guard decoupling + onboarding reorder<span class="badge now">v1.0.2</span></h4>

@@ -4,6 +4,54 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] — 2026-05-22
+
+**v1.0.3 — Discord 5-bug fix (migrate · sudo · guild-org binding · update next-step · category rename).** v1.0.2 publish 직후 사용자 dogfood 검증에서 *연속 5건* 의 *문자열 비교·v0.1.x 잔재 vocab* 함정이 노출됨. 다섯 건 모두 **솔로 파운더 정상 사용 시나리오에서 false positive 또는 friction 이 기본값** — *권위 결정자를 무시하고 약한 비교 휴리스틱으로 다시 추측* 하는 동일 패턴. v1.0.2 author-guard incident 와 같은 정신으로 *결정자 직접 사용 + 옛 vocab 은 backward compat lookup 만* 으로 통일. Slack 어댑터의 동등 author-guard 제거는 *v1.0.4 슬롯으로 분리*. 자세히 `docs/plan/v1.0.3-discord-triple-bug-fix.md`.
+
+### Fixed — Bug A: `versionMatches` slice 산수가 patch-level migration 영구 차단
+- `src/migrations/detect.ts:versionMatches` — `X.Y.Z.x` 패턴이 *exact `X.Y.Z`* 도 매치하도록 한 줄 수정. `spec.slice(0, -2)` 추가.
+- 본 사용자가 workspace v1.0.0 에서 `solosquad migrate --apply` 실행 시 *"No migration found for source version 1.0.0"* 실패 → root cause: `versionMatches("1.0.0.x", "1.0.0")` 가 false (slice 가 `"1.0.0."` 만 남기고 detected 가 그 prefix startsWith 못 함).
+- 동일 함정이 v092ToV100 (`from: "0.9.2.x"`), v100ToV101, v101ToV102 + 옛 8건의 patch-exact 패턴에 잠재. 본 한 줄 fix 가 모든 누적 함정 동시 해소 + 미래 patch migration 도 같은 함정 면역.
+
+### Fixed — Bug B: `npmGlobalInstallCmd` 가 nvm/Homebrew 사용자에게 잘못된 `sudo` 권유
+- `src/util/platform.ts:npmGlobalInstallCmd` — `process.getuid() === 0` 추측 → `npm config get prefix` 결과에 `fs.accessSync(prefix, W_OK)` 실제 권한 체크.
+- nvm / fnm / asdf / Homebrew (Apple Silicon 및 Intel chowned) 사용자: false sudo 권유 사라짐 + `Password:` 입력 단계 사라짐.
+- 시스템 패키지 (`apt install nodejs`) 사용자: 정확한 sudo 권유 유지 (fallback 분기).
+
+### Fixed — Bug D: Discord guild-org binding 의 v0.1.x 서버명 휴리스틱
+- `src/messenger/discord-adapter.ts:syncGuildProductMapping` — `guild.name.includes(product.slug)` 휴리스틱 제거 + `this.ownOrgSlug` (v0.8 `resolveBotIdentity` 가 이미 결정한 값) 직접 사용.
+- 본 사용자 incident: `command-w1n` 채널 메시지 → *"No product linked to this server. Re-run solosquad init"* — root cause: Discord 서버 이름이 SoloSquad org slug `rosyocean` 을 포함하지 않아 `syncGuildProductMapping` IF 가 false → guild_id 박제 안 됨 → `getProductByGuild` null.
+- v1.0.3 부팅 로그: `[Discord] Bound guild <name> (<id>) → org=<slug>` — 봇 자기 org 명시적 binding. 다중 guild 일 때는 첫 guild 로 binding + 명시적 안내 로그.
+- 인접 정리: `getProductByGuild` 도 `ownOrgSlug` 직접 사용 — 매 메시지마다 yaml read 반복 제거.
+
+### Changed — Bug E: `solosquad update` 가 post-install workspace lag 안내
+- `src/cli/update.ts:updateCommand` — install 성공 직후 `detectWorkspaceVersion` 호출, CLI > workspace 면 `Next step: solosquad migrate --apply` 명시 출력. 사용자가 *동일 터미널 세션* 에서 다음 액션 받음.
+- 이전: `Run \`solosquad doctor\` to verify.` 만 출력 → 사용자가 `doctor` 후속 round-trip 후에야 `migrate --apply` 학습. 본 사용자 frustration *"업데이트 관련 계속 문제"* 의 한 축.
+
+### Changed — Bug F: Discord 채널 카테고리 이름 → `"solosquad"` (legacy 매칭 유지)
+- `src/messenger/discord-adapter.ts:ensureChannels` — 카테고리 lookup 이 `["solosquad", "AI Team Reports"]` 둘 다 매치. 신규 생성은 `"solosquad"` 사용.
+- 사용자 명시 요구: *"디코에서 채널 카테고리 생성할 때 이름 solosquad 로 생성되게"*. v0.1.x 시절 *agent-team-as-product* vocab 의 잔재 정리.
+- 기존 `"AI Team Reports"` 카테고리는 *그대로 동작* — 봇이 강제 rename 안 함 (ManageChannels 권한 가정 없음 + 사용자가 의도적으로 다른 이름 골랐을 가능성 존중). 원하면 Discord UI 에서 수동 rename.
+
+### Compatibility — v1.0.2 사용자
+- workspace.yaml.version 자동 마이그레이션 (1.0.2 → 1.0.3, `src/migrations/scripts/1.0.2-to-1.0.3.ts`, bump-only, idempotent).
+- v1.0.0 / v1.0.1 / v1.0.2 워크스페이스 *전부* 이번 1.0.3 CLI 로 단번에 migrate 가능 (Bug A fix 가 모든 누적 patch chain 통과 시킴).
+- 기존 `discord/config.yaml` 의 `guild_id` 무손상.
+- 기존 `"AI Team Reports"` Discord 카테고리 무손상 (lookup 으로 매치 + 재사용).
+- Slack 사용자: 동작 100% 보존 (v1.0.2 author-guard false positive 도 100% 보존 — v1.0.4 fix 대기).
+- breaking 0 (사용자 데이터·CLI surface 면), schema 변경 0 — api-stability 정책 완전 준수.
+
+### Added — regression catchers (5 신규 파일, +17 cases)
+- `test/v1.0.3-version-matches.test.ts` (5) — `X.Y.Z.x` 가 exact `X.Y.Z` 도 매치, minor-loose 회귀 0.
+- `test/v1.0.3-npm-install-cmd.test.ts` (3) — prefix-writable env 에서 no-sudo 형, 아니면 sudo 형.
+- `test/v1.0.3-guild-org-binding.test.ts` (4) — discord-adapter source 가 v0.1.x 휴리스틱 없음 + `ownOrgSlug` 게이팅 + `Bound guild ... → org=` 로그.
+- `test/v1.0.3-update-next-step.test.ts` (2) — update.ts post-install 분기에 `solosquad migrate --apply` 안내 출력.
+- `test/v1.0.3-category-name.test.ts` (3) — `"solosquad"` + `"AI Team Reports"` 둘 다 lookup, 신규 생성은 `"solosquad"`, 강제 rename 없음.
+- 총 테스트: 596 → **613 green**.
+
+### Spec retraction — 본 patch 가 박제하는 *반복 패턴 6번째 누적 fix*
+v1.0.2 + v1.0.3 의 6 incident 공통 root cause 두 갈래: (a) *외부 자유 입력 (Discord username · workspace.yaml.version 사용자 값 · npm prefix 권한 · guild.name) ↔ 내부 슬러그* 문자열 비교, (b) *v0.1.x 잔재 vocab/UX* (update next-step 안내 부재, "AI Team Reports" category 이름). 향후 회귀 catcher 설계 가이드라인 — 외부 자유 입력 비교 + v0.1.x string literal 모두 trip-wire 대상. 자세히 plan §6.
+
 ## [1.0.2] — 2026-05-22
 
 **v1.0.2 — Discord author-guard 정합 + 온보딩 wizard reorder.** v1.0.1 publish 직전 발견된 author-guard false positive (사용자 `Discord username: seungw1n.`, `handle: w1n` 가 자기 자신 채널에서 추방됨) 의 박제 fix + 동시에 *온보딩 narrative 정합 회복*. 두 charset (Discord username vs SoloSquad handle `[a-z0-9_]`) 의 영구 불일치가 폭로한 것: v0.8 §3.4 가 *"username = handle"* 을 암묵 invariant 로 깔고 있었지만 어떤 정규화로도 풀리지 않음. **handle 을 SoloSquad 유일 canonical user identifier 로 격상**, Discord author identity 는 audit log 로 강등. 자세히 `docs/plan/v1.0.2-discord-author-guard-decoupling.md`.

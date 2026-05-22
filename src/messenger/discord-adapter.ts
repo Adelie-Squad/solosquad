@@ -239,12 +239,20 @@ export class DiscordAdapter implements MessengerAdapter {
   private async ensureChannels(guild: Guild): Promise<string[]> {
     const existing = new Set(guild.channels.cache.map((ch) => ch.name));
 
+    // v1.0.3 — category name normalized to brand-consistent "solosquad".
+    // Pre-v1.0.3 used "AI Team Reports" (v0.1.x agent-team-as-product vocab).
+    // Match either name so existing installs keep their channel parent
+    // relationship intact; new installs get the canonical name. Users who
+    // want to rename can do it in Discord's UI — the bot won't fight it.
+    const CATEGORY_NAMES = ["solosquad", "AI Team Reports"] as const;
     let category = guild.channels.cache.find(
-      (ch) => ch.type === ChannelType.GuildCategory && ch.name === "AI Team Reports"
+      (ch) =>
+        ch.type === ChannelType.GuildCategory &&
+        (CATEGORY_NAMES as readonly string[]).includes(ch.name),
     );
     if (!category) {
       category = await guild.channels.create({
-        name: "AI Team Reports",
+        name: "solosquad",
         type: ChannelType.GuildCategory,
       });
     }
@@ -320,45 +328,63 @@ export class DiscordAdapter implements MessengerAdapter {
     });
   }
 
+  /**
+   * v1.0.3 — bind the current Discord guild to the bot's own org.
+   *
+   * Pre-v1.0.3 tried to auto-match by Discord server name containing the
+   * org's display name or slug — a v0.1.x heuristic that universally
+   * false-negatived when users named their server something humanly
+   * ("AI Native PO" instead of "rosyocean"). v0.8 multi-user messenger
+   * already resolves the bot's org via `resolveBotIdentity` into
+   * `this.ownOrgSlug`, so the heuristic was guessing an answered question.
+   *
+   * Now: trust `ownOrgSlug` directly. Single guild is bound automatically.
+   * Multi-guild prints a notice and binds the first (multi-guild is not a
+   * v1.0.x supported scenario — v0.8 says one bot = one user = one org).
+   */
   private syncGuildProductMapping(): void {
-    if (!this.client) return;
-    const products = loadProducts();
-    const reposBase = getReposBase();
+    if (!this.client || !this.ownOrgSlug) return;
+    const orgSlug = this.ownOrgSlug;
+    const configFile = path.join(getReposBase(), orgSlug, "discord", "config.yaml");
+    if (!fs.existsSync(configFile)) return;
+    const config = (yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) ?? {}) as Record<string, unknown>;
 
-    for (const guild of this.client.guilds.cache.values()) {
-      for (const product of products) {
-        if (guild.name.includes(product.name) || guild.name.toLowerCase().includes(product.slug)) {
-          const configFile = path.join(reposBase, product.slug, "discord", "config.yaml");
-          if (!fs.existsSync(configFile)) continue;
+    const guilds = Array.from(this.client.guilds.cache.values());
+    if (guilds.length === 0) return;
+    if (guilds.length > 1) {
+      console.log(
+        `[Discord Bot] Bot in ${guilds.length} guilds; binding the first (${guilds[0].name}) to org=${orgSlug}. ` +
+          `Multi-guild orchestration is not supported in v1.0.x.`,
+      );
+    }
 
-          const config = yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) as Record<string, unknown>;
-          if (config.guild_id !== guild.id) {
-            config.guild_id = guild.id;
-            const channels = (config.channels || {}) as Record<string, string>;
-            for (const ch of guild.channels.cache.values()) {
-              if (this.channelNames.includes(ch.name)) {
-                channels[ch.name.replace(/-/g, "_")] = ch.id;
-              }
-            }
-            config.channels = channels;
-            fs.writeFileSync(configFile, yaml.dump(config));
-            console.log(`[Discord] Mapped: ${guild.name} ↔ ${product.name}`);
-          }
+    const guild = guilds[0];
+    if (config.guild_id !== guild.id) {
+      config.guild_id = guild.id;
+      const channels = (config.channels || {}) as Record<string, string>;
+      for (const ch of guild.channels.cache.values()) {
+        if (this.channelNames.includes(ch.name)) {
+          channels[ch.name.replace(/-/g, "_")] = ch.id;
         }
       }
+      config.channels = channels;
+      fs.writeFileSync(configFile, yaml.dump(config));
+      console.log(`[Discord] Bound guild ${guild.name} (${guild.id}) → org=${orgSlug}`);
     }
   }
 
+  /**
+   * v1.0.3 — resolve which org owns a given Discord guild. Trusts the bot's
+   * own org (`ownOrgSlug`) when set; checks that the persisted config's
+   * `guild_id` matches the incoming guildId. No name-match fallback.
+   */
   private getProductByGuild(guildId: string): Product | null {
+    if (!this.ownOrgSlug) return null;
+    const configFile = path.join(getReposBase(), this.ownOrgSlug, "discord", "config.yaml");
+    if (!fs.existsSync(configFile)) return null;
+    const config = yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) as Record<string, unknown>;
+    if (config.guild_id !== guildId) return null;
     const products = loadProducts();
-    const reposBase = getReposBase();
-
-    for (const p of products) {
-      const configFile = path.join(reposBase, p.slug, "discord", "config.yaml");
-      if (!fs.existsSync(configFile)) continue;
-      const config = yaml.load(normalizeLine(fs.readFileSync(configFile, "utf-8"))) as Record<string, unknown>;
-      if (config.guild_id === guildId) return p;
-    }
-    return null;
+    return products.find((p) => p.slug === this.ownOrgSlug) ?? null;
   }
 }

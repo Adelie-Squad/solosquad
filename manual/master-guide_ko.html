@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v1.0.2 기준 (post-launch second patch)</span>
+  <span class="tag">종합 개념서 · v1.0.3 기준 (post-launch third patch)</span>
   <nav>
     <ul>
       <li>
@@ -2379,6 +2379,16 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>안정 API 약속 시작</li>
     <li>Breaking change 정책 도입</li>
     <li>v0.6 trajectory 자동 추출 ROI 지표 충족 시 *자동 등록 게이트* 검토</li>
+  </ul>
+
+  <h4>v1.0.3 — Discord 5-bug fix (migrate · sudo · 메신저 연결 · update next-step · 카테고리 이름)<span class="badge now">v1.0.3</span></h4>
+  <ul>
+    <li><strong>Bug A — <code>solosquad migrate</code> 영구 차단 해소</strong>. <code>versionMatches</code> 의 slice 산수가 <code>X.Y.Z.x</code> 패턴을 exact <code>X.Y.Z</code> 와 매치 못 해서 <em>v1.0.0 → v1.0.x patch chain</em> 이 영구 차단되던 회귀. <code>"No migration found for source version 1.0.0"</code> 오류 사라짐.</li>
+    <li><strong>Bug B — <code>solosquad update</code> 가 nvm/Homebrew 사용자에게 잘못된 <code>sudo</code> 권유</strong> 해소. <code>process.getuid()</code> 추측 → <code>npm config get prefix</code> + <code>fs.accessSync(W_OK)</code> 실제 권한 체크. 본인 prefix 가 user-owned 인 대다수 macOS 사용자 비번 입력 단계 사라짐.</li>
+    <li><strong>Bug D — Discord 메신저 연결 실패 해소</strong>. <code>syncGuildProductMapping</code> 의 v0.1.x 휴리스틱 (<em>Discord 서버 이름이 SoloSquad org slug 를 포함해야 함</em>) 제거 → 봇이 이미 자기 org 를 안다 (<code>ownOrgSlug</code>) 는 사실 활용. 서버 이름 임의로 두고도 <em>"No product linked to this server"</em> 오류 사라짐. 부팅 로그에 <code>[Discord] Bound guild &lt;name&gt; (&lt;id&gt;) → org=&lt;slug&gt;</code> 명시.</li>
+    <li><strong>Bug E — <code>solosquad update</code> 직후 다음 단계 안내</strong>. install 성공 후 workspace 버전 lag 검사 → <code>Next step: solosquad migrate --apply</code> 명시 출력. <code>doctor</code> 후속 round-trip 없이 한 흐름에서 path 받음.</li>
+    <li><strong>Bug F — Discord 카테고리 이름 <code>"solosquad"</code></strong>. v0.1.x 시절 <em>agent-team-as-product</em> vocab 의 <code>"AI Team Reports"</code> 카테고리 명 → 신규 생성은 <code>"solosquad"</code>. 기존 카테고리는 lookup 으로 매치 + 재사용 (봇 강제 rename 안 함).</li>
+    <li>613 tests green (596 baseline + 17 신규). schema 변경 0, CLI surface 변경 0.</li>
   </ul>
 
   <h4>v1.0.2 — Discord author-guard 정합 + 온보딩 reorder<span class="badge now">v1.0.2</span></h4>

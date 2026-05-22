@@ -971,6 +971,32 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/plan/v1.0.2-discord-author-guard-decoupling.md`, `CHANGELOG.md` §[1.0.2]
 
+#### 13.6.16 v1.0.3 — Discord 5-bug fix (2026-05-22)
+
+**v1.0.2 publish 직후 사용자 dogfood 검증에서 *연속 5건* 함정 노출 → 일괄 fix.** 다섯 건 모두 *권위 결정자 (Discord ACL · prefix 권한 · ownOrgSlug · workspace.yaml.version) 를 무시하고 약한 문자열 비교·옛 vocab 으로 다시 추측* 하는 동일 패턴. v1.0.2 author-guard incident 와 같은 정신으로 *결정자 직접 사용 + 옛 vocab 은 backward compat lookup 만*.
+
+**Fixed**:
+- **Bug A** — `src/migrations/detect.ts:versionMatches` slice 산수. `X.Y.Z.x` 패턴이 exact `X.Y.Z` 매치하도록 한 줄. 본 사용자 *v1.0.0 → v1.0.x migrate 영구 차단* 해소 + 옛 8건 patch-exact 패턴 누적 함정 동시 해소.
+- **Bug B** — `src/util/platform.ts:npmGlobalInstallCmd`. UID 추측 → `npm config get prefix` + `fs.accessSync(W_OK)` 실제 권한 체크. nvm/Homebrew/fnm/asdf 사용자 false sudo 권유 사라짐.
+- **Bug D** — `src/messenger/discord-adapter.ts:syncGuildProductMapping`. `guild.name.includes(product.slug)` v0.1.x 휴리스틱 제거 → `this.ownOrgSlug` (v0.8 `resolveBotIdentity` 결과) 직접 사용. 사용자 *서버 이름이 SoloSquad 내부 슬러그 포함해야 함* 가정 폐기. 부팅 시 `[Discord] Bound guild <name> (<id>) → org=<slug>` 명시 로그.
+
+**Changed**:
+- **Bug E** — `src/cli/update.ts:updateCommand` post-install 분기에 workspace lag 검사 + `Next step: solosquad migrate --apply` 명시 출력. update→doctor→migrate 3-step round-trip → update 한 흐름 내 안내로 단축.
+- **Bug F** — `src/messenger/discord-adapter.ts:ensureChannels` 카테고리 이름. 신규 `"solosquad"`, lookup 은 `["solosquad", "AI Team Reports"]` 둘 다. v0.1.x agent-team-as-product vocab 잔재 정리 + 기존 사용자 채널 부모 관계 보존.
+
+**Compatibility**:
+- migration 1.0.2 → 1.0.3: workspace.yaml.version bump only, idempotent.
+- v1.0.0 / v1.0.1 / v1.0.2 워크스페이스 *모두* 1.0.3 CLI 로 단번에 migrate 가능 (Bug A fix 가 chain 전부 통과).
+- 기존 `discord/config.yaml.guild_id` + `"AI Team Reports"` 카테고리 무손상.
+- Slack 사용자: 변경 0 (v1.0.4 슬롯).
+- breaking 0, schema 변경 0, CLI surface 변경 0.
+
+596 → **613 tests green** (596 baseline + `test/v1.0.3-version-matches.test.ts` 5 + `test/v1.0.3-npm-install-cmd.test.ts` 3 + `test/v1.0.3-guild-org-binding.test.ts` 4 + `test/v1.0.3-update-next-step.test.ts` 2 + `test/v1.0.3-category-name.test.ts` 3).
+
+**Spec retraction** — 본 patch 가 박제하는 *반복 패턴 6번째 누적 fix*. v1.0.2 + v1.0.3 의 6 incident 공통 root cause 두 갈래: (a) 외부 자유 입력 ↔ 내부 슬러그 문자열 비교, (b) v0.1.x 잔재 vocab/UX. 향후 회귀 catcher 설계 가이드라인 — 두 패턴 모두 trip-wire 대상.
+
+자세히: `docs/plan/v1.0.3-discord-triple-bug-fix.md`, `CHANGELOG.md` §[1.0.3]
+
 ### 13.7 v1.x 시리즈 (예고)
 
 **v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):
