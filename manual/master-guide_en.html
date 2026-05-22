@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v1.0.0 (formal launch)</span>
+  <span class="tag">Master Guide · v1.0.1 (post-launch first patch)</span>
   <nav>
     <ul>
       <li>
@@ -2350,6 +2350,15 @@ solosquad run-routine --all             # all</code></pre>
     <li>Begin stable API commitments</li>
     <li>Introduce breaking-change policy</li>
     <li>Consider auto-registration gate if v0.6 trajectory auto-extract ROI metrics pass</li>
+  </ul>
+
+  <h4>v1.0.1 — Discord deprecation + multi-repo routing<span class="badge now">v1.0.1</span></h4>
+  <ul>
+    <li>Switch discord.js <code>ready</code> listener to <code>Events.ClientReady</code>. v14.26 deprecated the <code>ready</code> alias (renamed to disambiguate from the gateway READY opcode) and will remove it in v15. Removes the Node <code>DeprecationWarning</code> printed on every bot start and pre-empts a silent failure (handler never firing) at the v15 cutover.</li>
+    <li>Drop the repo <code>role</code> prompt from <code>solosquad init</code> / <code>solosquad add repo</code>. New registrations default to <code>role = "main"</code> silently. <code>--role</code> flag stays as a power-user override with a deprecation warning. Rationale: the field had exactly one load-bearing consumer (scheduler default cwd) and zero involvement in user-message routing — values like "frontend / backend / data / infra / docs" were never consumed by any router.</li>
+    <li>Add <code>@&lt;slug&gt;</code> mention routing — a bot pre-processor scans user messages for <code>@&lt;slug&gt;</code> tokens, intersects them with the org's registered repos, and injects a stable <code>[target_repo:&lt;slug&gt;]</code> (or <code>[target_repos:a,b]</code>) marker for the PM. Discord user pings (<code>&lt;@123456789&gt;</code>) and typos are silently dropped — zero false positives. Zero LLM calls at routing time (mirrors GitHub's Slack <code>@&lt;repo&gt;</code> and Nx <code>nx run &lt;project&gt;:&lt;target&gt;</code> patterns).</li>
+    <li>Add §"Multi-Repo Intent" to PM <code>SKILL.md</code> — honor the marker first, auto-route when only one repo exists, ask one short clarifying question when ambiguous. Silent guessing is forbidden.</li>
+    <li>588 tests green (573 baseline + 15 new). Zero schema changes, zero CLI surface removals — full api-stability policy compliance.</li>
   </ul>
 
   <h4>v1.1 — Dashboard Interaction</h4>

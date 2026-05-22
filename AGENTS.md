@@ -50,7 +50,7 @@ src/
                                        events, agents-builder, workflow-reconciler,
                                        slash-commands, git-snapshot, workspace-meta,
                                        spawn-assembler (v0.6 8-layer JIT),
-                                       agent-budget (v0.6 — author-budget 일반화)
+                                       agent-budget (v0.6 — author-budget 일반화), mention-parser (v1.0.1 — @<slug> multi-repo intent), repo-registry (v1.0.1)
   messenger/                        → Platform adapters (Discord, Slack)
   scheduler/                        → Cron-based routine execution + memory,
                                        trajectory-extractor (v0.6 §3),
@@ -165,6 +165,7 @@ than going through router resolution.
 - v0.4: autonomous goal runner with metric-driven keep/discard cycles (`solosquad goal new/list/show/run/status/stop/verify`, engine in `src/engine/`)
 - v0.5 onward: 4-channel triggers (slash / keyword / freq auto-load / explicit PM call), see `docs/plan/v0.5-workflow-maker.md` §7
 - v0.6 onward: FTS5 archive fallback for past memory recall (`docs/plan/v0.6-default-workflow-tuning.md` §4)
+- v1.0.1 onward: `@<slug>` mention pre-processor for multi-repo intent routing (`src/bot/mention-parser.ts`). Sits between slash and PM dispatch — resolves `@<slug>` tokens against the org's registered repos and injects a `[target_repo:<slug>]` (or `[target_repos:a,b]`) marker into the PM prompt. Zero LLM calls at routing time. See `docs/plan/v1.0.1-discord-ready-deprecation.md` §2.4 and PM SKILL.md §"Multi-Repo Intent (v1.0.1+)".
 
 ## Automated Routines + Memory Storage (v0.2.4+)
 
@@ -272,7 +273,7 @@ metric-game / guardrail integrity collapses (Goodhart's Law).
 ```bash
 npm install
 npm run build           # tsc emits dist/
-npm test                # node --test, 75 cases as of v0.3.0
+npm test                # node --test, 588 cases as of v1.0.1
 ```
 
 `prepublishOnly` script runs `npm run build` automatically before `npm publish`.

@@ -212,7 +212,7 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v1.0.0 기준 (formal launch)</span>
+  <span class="tag">종합 개념서 · v1.0.1 기준 (post-launch first patch)</span>
   <nav>
     <ul>
       <li>
@@ -2377,6 +2377,15 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>안정 API 약속 시작</li>
     <li>Breaking change 정책 도입</li>
     <li>v0.6 trajectory 자동 추출 ROI 지표 충족 시 *자동 등록 게이트* 검토</li>
+  </ul>
+
+  <h4>v1.0.1 — Discord deprecation + 다중-repo 라우팅<span class="badge now">v1.0.1</span></h4>
+  <ul>
+    <li>discord.js <code>ready</code> 이벤트 → <code>Events.ClientReady</code> 전환. v14.26이 <code>ready</code> alias를 deprecate (게이트웨이 READY opcode와 이름 충돌 해소), v15에서 완전 제거 예고. 봇 시작 시 매번 출력되던 Node <code>DeprecationWarning</code> 사라짐 + v15 silent-failure 사전 차단</li>
+    <li>repo <code>role</code> prompt 제거 — <code>solosquad init</code> / <code>solosquad add repo</code>의 <code>Role:</code> 질문 삭제. 신규 등록은 silent <code>role = "main"</code>. <code>--role</code> flag는 power-user override로 유지(deprecation 안내). 사유: <code>role</code>의 실제 load-bearing 소비처는 스케줄러 default cwd 결정 1건뿐이었고, 사용자 메시지 routing에는 일절 관여 안 했음 — "frontend/backend/data/infra/docs" 값들은 어떤 라우팅에도 안 쓰이는 cargo cult</li>
+    <li><code>@&lt;slug&gt;</code> mention 라우팅 신설 — 사용자가 <code>@landing-site 히어로 수정</code>처럼 적으면 봇 pre-processor가 <code>[target_repo:landing-site]</code> 마커를 메시지 앞에 주입해 PM에 전달. 등록 slug 셋과 교집합 + Discord 핑(<code>&lt;@123456789&gt;</code>) 무시. routing 시점 LLM 호출 0 (GitHub Slack <code>@&lt;repo&gt;</code> + Nx <code>nx run &lt;project&gt;:&lt;target&gt;</code> 패턴)</li>
+    <li>PM SKILL.md §"Multi-Repo Intent" 신설 — 마커 honor, 단일 repo 자동, 모호하면 *짧은 clarifying question 1번*. silent guessing 금지</li>
+    <li>588 tests green (573 baseline + 15 신규). schema 변경 0, CLI surface 변경 0 — api-stability 정책 준수</li>
   </ul>
 
   <h4>v1.1 — 대시보드 상호작용</h4>

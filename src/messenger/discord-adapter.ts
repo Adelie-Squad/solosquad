@@ -1,5 +1,6 @@
 import {
   Client,
+  Events,
   GatewayIntentBits,
   ChannelType,
   type Message,
@@ -61,7 +62,7 @@ export class DiscordAdapter implements MessengerAdapter {
   readonly platform = "discord";
   readonly channelNames = DEFAULT_CHANNELS;
   private client: Client | null = null;
-  /** v0.8 §3.5 — resolved bot user's handle. Null until `ready` fires. */
+  /** v0.8 §3.5 — resolved bot user's handle. Null until `clientReady` fires. */
   private ownHandle: string | null = null;
   private ownOrgSlug: string | null = null;
 
@@ -88,7 +89,10 @@ export class DiscordAdapter implements MessengerAdapter {
     });
     this.client = client;
 
-    client.on("ready", async () => {
+    // v1.0.1 — discord.js v14.26 deprecated the `ready` alias in favor of
+    // `clientReady` (renamed to disambiguate from the gateway READY opcode;
+    // `ready` is removed in v15). Use the typed Events.ClientReady enum.
+    client.on(Events.ClientReady, async () => {
       console.log(`[Discord Bot] Logged in: ${client.user?.tag}`);
 
       // v0.8 §3.5 — match this gateway connection to a user yaml so we know
