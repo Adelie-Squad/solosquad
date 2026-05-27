@@ -1,0 +1,64 @@
+# autoplan-pm workflow template (v1.1).
+#
+# gstack /autoplan 패턴. Chief 의 1회 dispatch 로 4 product specialist
+# 가 sequential chain 실행. 각 단계 산출이 다음 단계 입력으로 자동 주입.
+#
+# 참조: v1.1 PRD §13.3
+schema_version: 2
+id: "autoplan-pm"
+name: "Auto-plan (PM chain)"
+description: "Single Chief dispatch chains pmf-planner → business-strategist → policy-architect → data-analyst with auto-piped artifacts."
+template_id: "autoplan-pm"
+hard_gate: false
+
+stages:
+  - id: stage-1-pmf
+    agent: product/pmf-planner
+    task: |
+      Open PMF lens on the request. Run discovery-synthesis + Six Forcing
+      Questions self-check. Output: pmf-assessment.md with go/no-go + risk
+      register.
+    inputs: []
+    outputs:
+      - pmf-assessment.md
+    handoff_to: stage-2-business
+
+  - id: stage-2-business
+    agent: product/business-strategist
+    task: |
+      Build Lean Canvas + Value Proposition Canvas from PMF assessment.
+      Add Status-Quo competitor frame (NOT startup-vs-startup). Identify
+      monetization candidates ≥2. Output: business-model.md.
+    inputs:
+      - pmf-assessment.md
+    outputs:
+      - business-model.md
+    handoff_to: stage-3-policy
+
+  - id: stage-3-policy
+    agent: product/policy-architect
+    task: |
+      Review the proposed scope for policy/regulatory impact (privacy,
+      ToS, AI usage, payments, age). HARD GATE applies — output is design
+      doc only, no implementation. Returns blocking issues if any.
+    inputs:
+      - business-model.md
+    outputs:
+      - policy-review.md
+    handoff_to: stage-4-data
+
+  - id: stage-4-data
+    agent: product/data-analyst
+    task: |
+      Define the metrics & dashboard required to validate everything
+      above. Compute Confidence Score for the overall plan. Output:
+      metrics-spec.yaml + dashboard-mock.md + confidence-score.json.
+    inputs:
+      - pmf-assessment.md
+      - business-model.md
+      - policy-review.md
+    outputs:
+      - metrics-spec.yaml
+      - dashboard-mock.md
+      - confidence-score.json
+    handoff_to: null
