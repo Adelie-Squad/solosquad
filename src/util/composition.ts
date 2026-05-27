@@ -61,7 +61,14 @@ function compositionPath(root: string, team: TeamName): string {
 function readYaml(filePath: string): Composition | null {
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf8");
-  const parsed = loadYamlLib().load(raw) as Partial<Composition> | undefined;
+  let parsed: Partial<Composition> | undefined;
+  try {
+    parsed = loadYamlLib().load(raw) as Partial<Composition> | undefined;
+  } catch {
+    // Malformed YAML — return null so the caller falls back to the next
+    // resolution tier instead of crashing the runtime.
+    return null;
+  }
   if (!parsed || typeof parsed !== "object") return null;
   if (typeof parsed.main !== "string" || parsed.main.length === 0) return null;
   if (!Array.isArray(parsed.members)) return null;
