@@ -6,6 +6,7 @@ import {
   getKnowledgeDir,
   getOrgDir,
   getRepoDir,
+  getTeamsDir,
 } from "../util/paths.js";
 import { normalizeLine } from "../util/platform.js";
 import {
@@ -53,6 +54,7 @@ export type LayerKind =
   | "workspace-knowledge" // [1]
   | "team-knowledge" //      [2]
   | "agent-skill" //         [3]
+  | "team-okr" //            [4a] v1.1 — quarterly OKR for the agent's team
   | "org-core" //            [4]
   | "agent-profile" //       [5]
   | "org-domain" //          [6]
@@ -371,6 +373,7 @@ function applyDropPolicy(
     "repo-context",
     "workspace-knowledge",
     "org-domain",
+    "team-okr",
     "team-knowledge",
     "handoff",
   ];
@@ -482,8 +485,36 @@ export function assembleSpawnContext(
     tokens: estimateTokens(skillContent, charsPerToken),
   });
 
-  // [4] Org core — PRINCIPLES + VOICE.
+  // [4a] Team OKR (v1.1 §11) — quarterly objective + key results for the
+  // agent's team. Org override wins over the workspace bundle. Empty
+  // content is fine (template not yet customized); the layer is created
+  // either way so callers can detect presence vs absence.
   const orgDir = getOrgDir(input.orgSlug, input.workspace);
+  const teamsRoot = getTeamsDir();
+  const okrCandidates = [
+    path.join(orgDir, "teams", input.agentRef.team, "OKR.md"),
+    path.join(teamsRoot, input.agentRef.team, "OKR.md"),
+  ];
+  let teamOkrContent = "";
+  let teamOkrSource = "";
+  for (const candidate of okrCandidates) {
+    const content = safeReadFile(candidate);
+    if (content !== null && content.trim().length > 0) {
+      teamOkrContent = content;
+      teamOkrSource = candidate;
+      break;
+    }
+  }
+  layers.push({
+    index: 4,
+    kind: "team-okr",
+    label: `[4a] team OKR (${input.agentRef.team})`,
+    content: teamOkrContent,
+    sources: teamOkrSource ? [teamOkrSource] : [],
+    tokens: estimateTokens(teamOkrContent, charsPerToken),
+  });
+
+  // [4] Org core — PRINCIPLES + VOICE.
   const corePieces: string[] = [];
   const coreSources: string[] = [];
   for (const fname of ["PRINCIPLES.md", "VOICE.md"]) {

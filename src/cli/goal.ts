@@ -34,6 +34,9 @@ export interface GoalRunOpts { org?: string; hours?: string; cycles?: string }
 export interface GoalStatusOpts { org?: string }
 export interface GoalStopOpts { org?: string }
 export interface GoalVerifyOpts { org?: string; cycle: string }
+export interface GoalQueueOpts { org?: string }
+export interface GoalActiveOpts { org?: string }
+export interface GoalNextOpts { org?: string }
 
 // ---------- new ----------
 
@@ -344,6 +347,87 @@ export async function goalVerifyCommand(goalId: string, opts: GoalVerifyOpts): P
 }
 
 // ---------- helpers ----------
+
+// ---------- queue / active / next (v1.1 §12.1) ----------
+
+export async function goalQueueCommand(
+  goalId: string | undefined,
+  opts: GoalQueueOpts
+): Promise<void> {
+  if (!goalId) {
+    console.log(chalk.red("✗ goal-id is required."));
+    process.exit(1);
+  }
+  const ws = getWorkspaceRoot();
+  const orgSlug = await pickOrg(opts.org);
+  if (!orgSlug) return;
+  const orgRoot = getOrgDir(orgSlug, ws);
+  const { enqueue, getActive, listQueue } = await import(
+    "../util/goal-queue.js"
+  );
+  enqueue({ orgRoot }, goalId);
+  const active = getActive({ orgRoot });
+  const queue = listQueue({ orgRoot });
+  console.log(chalk.green(`✓ Enqueued ${goalId} (org ${orgSlug})`));
+  if (active) {
+    console.log(chalk.dim(`  active: ${active}`));
+  } else {
+    console.log(
+      chalk.dim(
+        `  no goal is currently active — run 'solosquad goal next' to promote.`
+      )
+    );
+  }
+  console.log(chalk.dim(`  queue depth: ${queue.length}`));
+}
+
+export async function goalActiveCommand(opts: GoalActiveOpts): Promise<void> {
+  const ws = getWorkspaceRoot();
+  const orgSlug = await pickOrg(opts.org);
+  if (!orgSlug) return;
+  const orgRoot = getOrgDir(orgSlug, ws);
+  const { getActive, listQueue } = await import("../util/goal-queue.js");
+  const active = getActive({ orgRoot });
+  const queue = listQueue({ orgRoot });
+  if (active) {
+    console.log(chalk.cyan(`active: ${active}`));
+  } else {
+    console.log(chalk.dim("(no active goal)"));
+  }
+  if (queue.length > 0) {
+    console.log(chalk.dim(`queued (${queue.length}):`));
+    for (const entry of queue) {
+      console.log(chalk.dim(`  - ${entry.goal_id}  (${entry.enqueued_at})`));
+    }
+  } else {
+    console.log(chalk.dim("queue: (empty)"));
+  }
+}
+
+export async function goalNextCommand(opts: GoalNextOpts): Promise<void> {
+  const ws = getWorkspaceRoot();
+  const orgSlug = await pickOrg(opts.org);
+  if (!orgSlug) return;
+  const orgRoot = getOrgDir(orgSlug, ws);
+  const { getActive, promoteNext } = await import("../util/goal-queue.js");
+  if (getActive({ orgRoot }) !== null) {
+    console.log(
+      chalk.yellow(
+        `✗ A goal is already active in ${orgSlug}. Run 'solosquad goal stop <id>' or wait for it to finish.`
+      )
+    );
+    return;
+  }
+  const promoted = promoteNext({ orgRoot });
+  if (!promoted) {
+    console.log(chalk.dim("(queue is empty — nothing to promote)"));
+    return;
+  }
+  console.log(chalk.green(`✓ Promoted ${promoted} → active`));
+  console.log(
+    chalk.dim(`  next step: solosquad goal run ${promoted} --org ${orgSlug}`)
+  );
+}
 
 async function pickOrg(orgArg: string | undefined): Promise<string | null> {
   const ws = getWorkspaceRoot();

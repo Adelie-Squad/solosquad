@@ -357,6 +357,34 @@ goalGroup
     await goalVerifyCommand(goalId, opts);
   });
 
+goalGroup
+  .command("queue")
+  .description("Enqueue a goal for the org (1-active-per-org semaphore, v1.1)")
+  .argument("<goal-id>", "Goal id")
+  .option("--org <slug>", "Organization slug")
+  .action(async (goalId, opts) => {
+    const { goalQueueCommand } = await import("./goal.js");
+    await goalQueueCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("active")
+  .description("Show the active goal + queue for the org (v1.1)")
+  .option("--org <slug>", "Organization slug")
+  .action(async (opts) => {
+    const { goalActiveCommand } = await import("./goal.js");
+    await goalActiveCommand(opts);
+  });
+
+goalGroup
+  .command("next")
+  .description("Promote the head of the queue to active if slot is free (v1.1)")
+  .option("--org <slug>", "Organization slug")
+  .action(async (opts) => {
+    const { goalNextCommand } = await import("./goal.js");
+    await goalNextCommand(opts);
+  });
+
 program
   .command("rollback")
   .description("Revert <org>/memory and <org>/workflows to an earlier snapshot")
