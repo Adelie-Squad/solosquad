@@ -232,5 +232,28 @@ export async function syncCommand(opts: SyncOpts): Promise<void> {
     if (!res.existing.length && !res.added.length && !res.nonRepoFolders.length) {
       console.log(chalk.dim("  (empty — clone a repo into repositories/ then re-run sync)"));
     }
+
+    // Heal `.claude/agents/` if it's missing or stale. This is a fix for
+    // orgs created before the agent-sync bug was patched — without it,
+    // the org's agent roster is invisible to Claude Code. Idempotent:
+    // syncAgentsToOrg overwrites existing files so a re-sync after a
+    // bundle upgrade also refreshes them.
+    if (!opts.dryRun) {
+      try {
+        const { syncAgentsToOrg } = await import("../bot/agents-builder.js");
+        const synced = syncAgentsToOrg(workspace, o.slug);
+        if (synced.length > 0) {
+          console.log(
+            chalk.dim(`  agents: ${synced.length} synced into .claude/agents/`)
+          );
+        }
+      } catch (err) {
+        console.log(
+          chalk.yellow(
+            `  ⚠ agent sync failed: ${(err as Error).message}`
+          )
+        );
+      }
+    }
   }
 }

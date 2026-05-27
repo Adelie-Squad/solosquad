@@ -5,6 +5,7 @@ import inquirer from "inquirer";
 import { getWorkspaceRoot } from "../util/paths.js";
 import { loadEnv, loadWorkspaceYaml, normalizeMessenger, type OrgYaml } from "../util/config.js";
 import { scaffoldOrg, slugify } from "../util/scaffold.js";
+import { syncAgentsToOrg } from "../bot/agents-builder.js";
 
 export interface AddOrgOpts {
   provider?: OrgYaml["provider"];
@@ -80,7 +81,26 @@ export async function addOrgCommand(
     messenger,
   });
 
+  // Sync the bundled agent roster into <org>/.claude/agents/ so Claude
+  // Code's Task tool can find specialists. Without this, the org's
+  // agent list comes up empty after install — historically only the
+  // v0.2.4→v0.3.0 migration did this sync, and no other code path
+  // re-ran it for orgs added later.
+  let syncedAgents = 0;
+  try {
+    syncedAgents = syncAgentsToOrg(workspace, slug).length;
+  } catch (err) {
+    console.log(
+      chalk.yellow(
+        `⚠ Agent sync failed: ${(err as Error).message}. Run \`solosquad sync\` to retry.`
+      )
+    );
+  }
+
   console.log(chalk.green(`✓ ${path.basename(created)}/ created`));
+  if (syncedAgents > 0) {
+    console.log(chalk.dim(`  synced ${syncedAgents} agents into .claude/agents/`));
+  }
   console.log(chalk.dim("  Next: add repos with `solosquad add repo <url|path>` or clone into"));
   console.log(chalk.dim(`        ${path.basename(created)}/repositories/ and run \`solosquad sync\`.`));
 }

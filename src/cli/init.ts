@@ -913,6 +913,27 @@ export async function initCommand(): Promise<void> {
     scaffoldV06OrgLayer(orgDir, orgSlug);
     console.log(chalk.green(`✓ ${orgSlug}/core, agent-profile.yaml, domain/ scaffolded`));
 
+    // Sync bundled agent roster into <org>/.claude/agents/ so Claude
+    // Code's Task tool can find specialists immediately after init.
+    // Historically only the v0.2.4→v0.3.0 migration ran this; we
+    // restore it on the init path so fresh installs see the full agent
+    // list out of the box.
+    try {
+      const { syncAgentsToOrg } = await import("../bot/agents-builder.js");
+      const synced = syncAgentsToOrg(workspace, orgSlug);
+      if (synced.length > 0) {
+        console.log(
+          chalk.green(`✓ ${synced.length} agents synced into .claude/agents/`)
+        );
+      }
+    } catch (err) {
+      console.log(
+        chalk.yellow(
+          `⚠ Agent sync failed: ${(err as Error).message}. Run \`solosquad sync\` to retry.`
+        )
+      );
+    }
+
     // Step 6.1: Register repositories (loop) — v1.0 path-reference only (renumbered from 5.1 in v1.0.2)
     console.log(chalk.bold("\n-- Step 6.1: Register Repositories (optional) --"));
     console.log(chalk.dim(
