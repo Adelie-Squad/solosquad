@@ -1695,10 +1695,17 @@ solosquad bot --debug               # 자세한 로그</code></pre>
 
   <h4>추후 추가 예정<span class="badge plan">v1.1+</span></h4>
   <table>
-    <thead><tr><th>명령어</th><th>버전</th><th>역할</th></tr></thead>
+    <thead><tr><th>명령어 / 인프라</th><th>버전</th><th>역할</th></tr></thead>
     <tbody>
-      <tr><td>웹 대시보드 상호작용 클라이언트</td><td>v1.1</td><td>읽기 전용 시각화·인박스 (별도 리포)</td></tr>
-      <tr><td>지식 온톨로지 MCP 연결</td><td>v1.2</td><td>Notion·Obsidian·외부 API·타 에이전트 그래프 인덱싱</td></tr>
+      <tr><td><code>solosquad goal queue &lt;id&gt;</code></td><td>v1.1</td><td>1-active-per-org 세마포어의 queue 진입</td></tr>
+      <tr><td><code>solosquad experiment new/list/show/run/stop/conclude</code></td><td>v1.1</td><td>실험 인프라 (Amplitude 4 패턴 차용)</td></tr>
+      <tr><td>4 main 봇 직원화 (chief + designer + engineer + marketer)</td><td>v1.1</td><td>Hermes V2 Main+Specialist 2-tier. chief 는 organization 위계 + 도메인 전문가 겸업</td></tr>
+      <tr><td>디렉토리 재편 (<code>assets/</code> 폐지 → 루트 5 디렉토리)</td><td>v1.1</td><td><code>agents/main</code> + <code>agents/specialists</code> + <code>skills/</code> + <code>user/</code> + <code>team/</code> + <code>schedules/</code> (구 routines)</td></tr>
+      <tr><td>팀 4축 재편 (chief / engineering / design / marketing)</td><td>v1.1</td><td>구 strategy→chief / growth→marketing / experience→design. <code>team/{team}/{KNOWLEDGE,OKR}.md</code></td></tr>
+      <tr><td>5 specialist 병합 (25 → 20)</td><td>v1.1</td><td>backend-engineer · data-engineer · idea-scoper · researcher · content-marketer 신설</td></tr>
+      <tr><td>Forum Channel + 9-hop diagnostic + Echo guard</td><td>v1.2</td><td>L1 Gateway 표면 (Discord 우선)</td></tr>
+      <tr><td>웹 대시보드 상호작용 클라이언트</td><td>v1.x (cascade-shifted)</td><td>구 v1.1 — 읽기 전용 시각화·인박스 (별도 리포)</td></tr>
+      <tr><td>지식 온톨로지 MCP 연결</td><td>v1.x (cascade-shifted)</td><td>구 v1.2 — Notion·Obsidian·외부 API·타 에이전트</td></tr>
     </tbody>
   </table>
 
@@ -2420,16 +2427,37 @@ solosquad run-routine --all          # 전부</code></pre>
     <li>588 tests green (573 baseline + 15 신규). schema 변경 0, CLI surface 변경 0 — api-stability 정책 준수</li>
   </ul>
 
-  <h4>v1.1 — 대시보드 상호작용</h4>
+  <h4>v1.1 — Multi-Agent Team Architecture<span class="badge plan">v1.1</span></h4>
   <ul>
-    <li>웹 대시보드 자체는 별도 리포(<code>solopreneur-dashboard</code>/<code>solopreneur-api</code>)에서 개발</li>
-    <li>본 리포는 상호작용 클라이언트·인박스만 제공</li>
+    <li><strong>5-layer 위계 (Hermes V2 차용):</strong> L1 Gateway(v1.2) → L2 Orchestrator(<strong>Chief session</strong>, 구 PM) → L3 Team(<code>team/{team}/{KNOWLEDGE,OKR}.md</code>) → L4 Agent(4 main bots) → L5 Specialist(20 + skills/)</li>
+    <li><strong>디렉토리 재편 (2026-05-27):</strong> <code>assets/</code> 폴더 폐지 → workspace 루트 5 디렉토리. <code>agents/main</code>(4) + <code>agents/specialists/{team}</code>(20) + <code>skills/</code>(cross-agent 도구) + <code>user/</code>(founder 정보) + <code>team/{team}/{KNOWLEDGE,OKR}.md</code>(팀 지식+OKR) + <code>schedules/</code>(구 routines)</li>
+    <li><strong>Chief = orchestrator + 도메인 전문가 겸업:</strong> <code>&lt;org&gt;/agents/main/chief/SKILL.md</code> — organization 위계 거주, org 마다 도메인 전문가화 customize. <em>기존 PM session 격상</em></li>
+    <li><strong>4 main + 20 specialist (2-tier):</strong> chief · designer · engineer · marketer + 각 팀 specialists. <em>5 specialist 병합</em> — backend-engineer · data-engineer · idea-scoper · researcher · content-marketer 신설</li>
+    <li><strong>Chief = Supervisor 6 stage:</strong> TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE (LangGraph + AutoGen 합의 패턴)</li>
+    <li><strong>Educational Nudge (Triage stage 0):</strong> 막연한 입력 → KNOWLEDGE.md slice 우선 제시 후 진행 확인</li>
+    <li><strong>Dependency Injection (8-layer JIT Layer 6.5):</strong> stage 도메인 키워드 매칭 → signals.jsonl 자동 inject. <strong>Layer 4a (Team OKR) 신설</strong></li>
+    <li><strong>실험 인프라:</strong> <code>&lt;org&gt;/experiments/&lt;id&gt;/manifest.yaml</code> + Amplitude 4 패턴 차용 + significance check</li>
+    <li><strong>SKILL frontmatter v1 → v2:</strong> <code>bot_name</code> / <code>tier</code> / <code>domain_tags</code> / <code>routing_keywords</code> 4 신규 필드</li>
+    <li><strong>routine → schedule 어휘 통일:</strong> <code>assets/routines/</code> → <code>schedules/</code>, CLI <code>run-routine</code> → <code>run-schedule</code> (alias 6개월)</li>
+    <li><strong>Board of Agents 톤:</strong> Chief = "이사회 의장", 사용자 = "founder", specialist = "이사회 멤버"</li>
+    <li>자세히 <code>docs/prd/v1.1-multi-agent-team-architecture.md</code> (§21 Amendment 포함)</li>
   </ul>
 
-  <h4>v1.2 — 사용자 지식·암묵지 온톨로지</h4>
+  <h4>v1.2 — 메신저 연결 (Discord 우선)<span class="badge plan">v1.2</span></h4>
   <ul>
-    <li>누적된 메모리/이벤트 데이터를 그래프 백엔드로 인덱싱</li>
-    <li>MCP 외부 연결 (Notion·Obsidian·외부 API·타 에이전트)</li>
+    <li><strong>L1 Gateway 분리:</strong> v1.1 의 L2~L5 위에 메신저 표면만 추가</li>
+    <li><strong>Bot Identity Registry</strong> (<code>&lt;org&gt;/.solosquad/bots.json</code>) + 9-hop diagnostic + Echo guard</li>
+    <li><strong>Forum Channel + Thread budget:</strong> goal 1 cycle = 1 forum post</li>
+    <li><strong>Mention routing 확장:</strong> v1.0.1 <code>@&lt;slug&gt;</code> 위에 <code>@&lt;bot&gt;</code> 추가 (예: <code>@eng 이거 어떻게 짜</code>)</li>
+    <li><strong>v1.0.4 G+H+P + 미적용 L+M+N+O Best Practice</strong> 본 슬롯 흡수. Slack 동등 fix 는 v1.2.x patch</li>
+    <li>자세히 <code>docs/prd/v1.2-messenger-connection-discord-first.md</code></li>
+  </ul>
+
+  <h4>v1.x — cascade-shifted 슬롯<span class="badge plan">v1.x</span></h4>
+  <ul>
+    <li><strong>구 v1.1 → v1.x 대시보드 상호작용</strong> — 웹 대시보드 자체는 별도 리포(<code>solopreneur-dashboard</code>/<code>solopreneur-api</code>). 본 리포는 상호작용 클라이언트·인박스만</li>
+    <li><strong>구 v1.2 → v1.x 지식·암묵지 온톨로지</strong> — MCP 외부 연결 (Notion·Obsidian·외부 API·타 에이전트)</li>
+    <li>cascade 사유: 1인 dogfooder 단계 leading indicator(24/7 자율 팀)가 dashboard·ontology 보다 우선. 자세히 <code>docs/prd/product-roadmap.md</code> §6 2026-05-24 entry</li>
   </ul>
 
   <h4>참고 문서</h4>
@@ -2443,9 +2471,11 @@ solosquad run-routine --all          # 전부</code></pre>
     <li><code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></li>
     <li><code>docs/plan/v0.8.2-dev-capability.md</code></li>
     <li><code>docs/plan/v0.8.3-onboarding-ux-observability.md</code></li>
-    <li><code>docs/plan/v1.1-dashboard-interaction.md</code></li>
-    <li><code>docs/plan/v1.2-knowledge-ontology.md</code></li>
-    <li><code>docs/plan/product-roadmap.md</code> — 전체 결정 로그</li>
+    <li><code>docs/prd/v1.1-multi-agent-team-architecture.md</code> — <strong>신 v1.1.</strong> Multi-Agent Team Architecture</li>
+    <li><code>docs/prd/v1.2-messenger-connection-discord-first.md</code> — <strong>신 v1.2.</strong> 메신저 연결 (L1 Gateway)</li>
+    <li><code>docs/prd/v1.x-dashboard-interaction.md</code> — <em>구 v1.1 cascade-shifted</em></li>
+    <li><code>docs/prd/v1.x-knowledge-ontology.md</code> — <em>구 v1.2 cascade-shifted</em></li>
+    <li><code>docs/prd/product-roadmap.md</code> — 전체 결정 로그</li>
     <li><code>docs/reference/AI_Agent_Harness_Report.md</code> — 설계 어휘 출처</li>
     <li><code>docs/trend-record/2026-05-11-baseline-survey.md</code> — 피어 프로젝트 비교</li>
   </ul>

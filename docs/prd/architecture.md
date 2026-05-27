@@ -1029,24 +1029,78 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/plan/v1.0.4-messenger-config-auto-create.md` §7.2, `CHANGELOG.md` §[1.0.4]
 
-### 13.7 v1.x 시리즈 (예고)
+### 13.7 v1.1 — Multi-Agent Team Architecture (예고)
 
-**v1.x — Workflow / Goal / Routine 고도화** (`docs/plan/v1.x-workflow-goal-routine-evolution.md`):
-- Q1 leading indicator (24/7 자율 팀 측정): morning brief에 4 지표 inline
-- Q2 암묵지 1차 source (사용자 명시): `/save-as-skill` + 자연어 인식
-- Q4 goal cycle 중간 통지/개입: works-<handle> 스레드에 실시간 상태 + 사용자 메시지 폴링
-- Q5 1 active goal per org: `<org>/goals/.active-goal` 세마포어 + `goal queue`
-- Q6 루틴 사용자별: 디폴트 3 routine을 user yaml routines 설정 기반 per-user cron
-- Q7 실험 인프라 (Amplitude 패턴 차용): `<org>/experiments/<id>/manifest.yaml` + 자동 query + significance check + 권고 변환
+> **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.
 
-**그 외 v1.x**:
-- v1.1: 대시보드 상호작용 (별도 리포)
-- v1.2: 지식 온톨로지 + MCP
-- v1.3: 일정 관리 + 메모
+**시너지** — Hermes V2 5-layer 위계 + Harness Report §7.5 4 권고 + 7 framework supervisor 합의 + v1.x ideation Q1~Q7 *완전 흡수* (단일 plan 으로 정렬). v0.4 goal-runner / v0.5 workflow-maker / v0.6 8-layer JIT + KNOWLEDGE.md / v0.8 multi-user 모델 *위에* 쌓아 인프라 재사용.
 
-자세히: `docs/plan/v1.x-workflow-goal-routine-evolution.md`, `docs/plan/v1.1-dashboard-interaction.md`, `docs/plan/v1.2-knowledge-ontology.md`
+**역할 위계 (L2~L5 — L1 은 v1.2):**
+- **L2 Orchestrator** — **Chief session** (구 PM session 격상) + Scheduler + WorkflowReconciler. Chief 는 *organization 위계 거주* + *도메인 전문가 겸업*
+- **L3 Team** — `team/{team}/KNOWLEDGE.md` + `team/{team}/OKR.md` (4 팀: chief/engineering/design/marketing)
+- **L4 Agent** — 4 Main bots (`agents/main/{chief,designer,engineer,marketer}/SKILL.md`). Main Agent = Hermes V2 §4.3 "specialist 의 SKILL.md 를 *마치 도구처럼* 호출"
+- **L5 Specialist** — 20 specialists (병합 후) + cross-agent `skills/` (workflow-maker · search · verify · code-review · citation · screenshot)
 
-### 13.8 기획 문서 목록 (v0.x → v1.x)
+**디렉토리 구조 (workspace root — assets/ 폐지):**
+```
+agents/main/{chief,designer,engineer,marketer}/
+agents/specialists/{chief,engineering,design,marketing}/...
+skills/{workflow-maker,search,verify,code-review,...}/
+user/{profile,voice,preferences}.md
+team/{chief,engineering,design,marketing}/{KNOWLEDGE,OKR}.md
+schedules/   (구 routines/)
+templates/
+```
+
+**구조 — 4 인프라 신설 + 5 디렉토리 재편:**
+
+| # | 신설 | 위치 |
+|---|---|---|
+| 4 Main + 20 Specialist 2-tier | 격상 | `agents/main/` + `agents/specialists/{team}/` |
+| Chief = orchestrator + 도메인 전문가 겸업 | organization 위계 | `<org>/agents/main/chief/SKILL.md` (org-specific override) |
+| Team Knowledge + **OKR.md 신설** | Layer 4a JIT inject | `team/{team}/OKR.md` |
+| skills/ cross-agent 도구 | leader tier | `skills/{skill}/SKILL.md` |
+| Educational Nudge (Triage stage 0) | chief 막연도 측정 → KNOWLEDGE.md slice 우선 제시 | `agents/main/chief/SKILL.md` + `<org>/.solosquad/nudge.yaml` |
+| Dependency Injection (지표 layer 6.5) | stage 도메인 키워드 매칭 → signals.jsonl 자동 inject | `src/bot/spawn-assembler.ts` + `<org>/.solosquad/metric-injection.yaml` |
+
+**5 specialist 병합:** backend-developer+api-developer → `backend-engineer`, data-collector+data-engineer → `data-engineer`, idea-refiner+scope-estimator → `idea-scoper`, user-researcher+desk-researcher → `researcher`, brand-marketer+content-writer → `content-marketer`. (25 → 20)
+
+**SKILL frontmatter v1 → v2:** `bot_name` / `tier` / `domain_tags` / `routing_keywords` 4 신규 필드. migration `1.0.4-to-1.1.0.ts` 가 team 기반 80% 자동 채움 + 21a~21g 디렉토리 재편 일괄 적용.
+
+**신규 CLI:** `solosquad goal queue <id>` · `solosquad experiment new/list/show/run/stop/conclude` · `solosquad run-schedule <id>` (구 `run-routine`, alias 6개월).
+
+**비전** — *Chief 단일 voice* 가 *이사회 의장 (Board Chair)* 톤 (Harness §7.5 권고 4). 사용자 입력 = *founder 명령* / specialist 회신 = *이사회 합의*. Chief 가 org 도메인 전문가 겸업 = 일반 startup CEO 의 *founder + domain* 이중 정체성 정합. 1인 founder dogfood 단계 leading indicator 4지표 (대화→작업 변환률·자동 PR 성공률·자율 goal cycle 수·dev_capability 활용도) 가 본 plan 의 *성공 지표*.
+
+### 13.8 v1.2 — 메신저 연결 (Discord 우선) (예고)
+
+> **L1 Gateway 분리.** 상세 작업은 `docs/prd/v1.2-messenger-connection-discord-first.md`.
+
+**시너지** — v1.1 의 5 코어 봇 (L4) 위에 *메신저 측 표면 (L1)* 만 분리. v1.0.4 의 G+H+P 흡수 + 미적용 L+M+N+O Best Practice 본 슬롯에서 적용. Slack 동등 fix 는 v1.2.x patch.
+
+**구조 — 7 인프라:**
+- Channel topology (5 코어 봇 × forum channel)
+- Bot Identity Registry (`<org>/.solosquad/bots.json`)
+- 9-hop diagnostic (v1.0.4 5-hop 의 확장)
+- Forum Channel + Thread budget
+- Mention routing (v1.0.1 `@<slug>` 위에 `@<bot>` 추가)
+- Echo guard (봇 ↔ 봇 무한루프 차단)
+- handoff-trace.jsonl 스키마
+
+**비전** — *PM 단일 voice* 채널 모델 유지하되, 사용자가 특정 team 봇에게 직접 `@eng 이거 어떻게 짜` 같이 dispatch 가능. PM 은 항상 listener 로 남아 *이사회 의장* 역할 (v1.1 §14 톤 정합).
+
+### 13.9 v1.x 시리즈 (예고 — cascade-shifted 슬롯)
+
+**v1.x 슬롯 cascade (2026-05-24 결정 — product-roadmap §6 참조):**
+- 구 v1.1 → v1.x **대시보드 상호작용** (별도 리포 `solopreneur-dashboard`+`solopreneur-api`) — `docs/prd/v1.x-dashboard-interaction.md`
+- 구 v1.2 → v1.x **지식·암묵지 온톨로지 + MCP** (Notion·Obsidian·외부 API·타 에이전트) — `docs/prd/v1.x-knowledge-ontology.md`
+- v1.x **LLM backend 추상화** — `docs/prd/v1.x-llm-backend-abstraction.md`
+- **v1.3** 일정 관리 + 메모 (n잡 사용자) — 예정
+
+**v1.x-workflow-goal-routine-evolution.md** — v1.1 plan §0 박제 표로 §1~§6 *완전 흡수* → *역사적 reference* 로 격하. 살아있는 영역 = 변경 이력 + 외부 reference 만.
+
+자세히: `docs/prd/v1.1-multi-agent-team-architecture.md`, `docs/prd/v1.2-messenger-connection-discord-first.md`, `docs/prd/v1.x-*.md`
+
+### 13.10 기획 문서 목록 (v0.x → v1.x)
 
 **v0.x 프리-런치 (구현 완료):**
 - `docs/plan/v0.1-cross-platform.md` · `v0.1.1-qa-hardening.md` · `v0.1.2-npm-publish.md`
@@ -1068,12 +1122,15 @@ Get-CimInstance Win32_Process |
 - `docs/plan/v0.9.2-precheck-self-match-hotfix.md` (Windows uninstall precheck self-match hotfix)
 
 **v1.x 포스트-런치 (계획):**
-- `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation 통합 (workflow / goal / 루틴 진화 + Amplitude 실험 인프라)
-- `docs/plan/v1.1-dashboard-interaction.md` — 대시보드 상호작용 (대시보드 자체는 별도 리포)
-- `docs/plan/v1.2-knowledge-ontology.md` — 지식 온톨로지 + MCP 외부 연결
-- `docs/plan/v1.3-schedule-memo.md` (예정) — 일정 관리 + 메모 (지식 온톨로지와 같은 결)
+- `docs/prd/v1.1-multi-agent-team-architecture.md` — **신 v1.1.** Multi-Agent Team Architecture (Hermes V2 5-layer + Harness §7.5 4 권고 + Q1~Q7 흡수). L2~L5 만 — L1 은 v1.2
+- `docs/prd/v1.2-messenger-connection-discord-first.md` — **신 v1.2.** 메신저 연결 (L1 Gateway, Discord 우선)
+- `docs/prd/v1.x-dashboard-interaction.md` — *구 v1.1 cascade-shifted.* 대시보드 상호작용 (대시보드 자체는 별도 리포)
+- `docs/prd/v1.x-knowledge-ontology.md` — *구 v1.2 cascade-shifted.* 지식 온톨로지 + MCP 외부 연결
+- `docs/prd/v1.x-llm-backend-abstraction.md` — LLM backend 추상화
+- `docs/prd/v1.x-workflow-goal-routine-evolution.md` — *archived.* Q1~Q7 ideation 7건 → v1.1 plan §0 박제로 *완전 흡수*. 살아있는 영역 = 변경 이력 + 외부 reference
+- `docs/prd/v1.3-schedule-memo.md` (예정) — 일정 관리 + 메모 (지식 온톨로지와 같은 결)
 
-롤링 상태는 `docs/plan/product-roadmap.md`.
+롤링 상태는 `docs/prd/product-roadmap.md`.
 
 ---
 

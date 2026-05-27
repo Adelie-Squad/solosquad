@@ -1696,10 +1696,17 @@ solosquad bot --debug               # verbose logs</code></pre>
 
   <h4>Planned<span class="badge plan">v1.1+</span></h4>
   <table>
-    <thead><tr><th>Command</th><th>Version</th><th>Role</th></tr></thead>
+    <thead><tr><th>Command / Infrastructure</th><th>Version</th><th>Role</th></tr></thead>
     <tbody>
-      <tr><td>Web dashboard interaction client</td><td>v1.1</td><td>Read-only visualization / inbox (separate repo)</td></tr>
-      <tr><td>Knowledge ontology MCP connectors</td><td>v1.2</td><td>Notion / Obsidian / external APIs / cross-agent graph indexing</td></tr>
+      <tr><td><code>solosquad goal queue &lt;id&gt;</code></td><td>v1.1</td><td>Enter 1-active-per-org semaphore queue</td></tr>
+      <tr><td><code>solosquad experiment new/list/show/run/stop/conclude</code></td><td>v1.1</td><td>Experiment infrastructure (Amplitude 4-pattern borrowing)</td></tr>
+      <tr><td>4 main bots as staff (chief + designer + engineer + marketer)</td><td>v1.1</td><td>Hermes V2 Main + Specialist 2-tier. Chief lives in organization layer + doubles as domain expert</td></tr>
+      <tr><td>Directory re-architecture (<code>assets/</code> dropped → 5 root dirs)</td><td>v1.1</td><td><code>agents/main</code> + <code>agents/specialists</code> + <code>skills/</code> + <code>user/</code> + <code>team/</code> + <code>schedules/</code> (former routines)</td></tr>
+      <tr><td>4 team axes (chief / engineering / design / marketing)</td><td>v1.1</td><td>former strategy→chief / growth→marketing / experience→design. <code>team/{team}/{KNOWLEDGE,OKR}.md</code></td></tr>
+      <tr><td>5 specialist merges (25 → 20)</td><td>v1.1</td><td>backend-engineer · data-engineer · idea-scoper · researcher · content-marketer</td></tr>
+      <tr><td>Forum Channel + 9-hop diagnostic + Echo guard</td><td>v1.2</td><td>L1 Gateway surface (Discord first)</td></tr>
+      <tr><td>Web dashboard interaction client</td><td>v1.x (cascade-shifted)</td><td>Former v1.1 — read-only visualization / inbox (separate repo)</td></tr>
+      <tr><td>Knowledge ontology MCP connectors</td><td>v1.x (cascade-shifted)</td><td>Former v1.2 — Notion / Obsidian / external APIs / cross-agent</td></tr>
     </tbody>
   </table>
 
@@ -2393,16 +2400,37 @@ solosquad run-routine --all             # all</code></pre>
     <li>588 tests green (573 baseline + 15 new). Zero schema changes, zero CLI surface removals — full api-stability policy compliance.</li>
   </ul>
 
-  <h4>v1.1 — Dashboard Interaction</h4>
+  <h4>v1.1 — Multi-Agent Team Architecture<span class="badge plan">v1.1</span></h4>
   <ul>
-    <li>Web dashboard itself developed in a separate repo (<code>solopreneur-dashboard</code> / <code>solopreneur-api</code>)</li>
-    <li>This repo provides only the interaction client / inbox</li>
+    <li><strong>5-layer hierarchy (Hermes V2):</strong> L1 Gateway (v1.2) → L2 Orchestrator (<strong>Chief session</strong>, formerly PM) → L3 Team (<code>team/{team}/{KNOWLEDGE,OKR}.md</code>) → L4 Agent (4 main bots) → L5 Specialist (20 + skills/)</li>
+    <li><strong>Directory re-architecture (2026-05-27):</strong> <code>assets/</code> dropped → 5 root dirs. <code>agents/main</code>(4) + <code>agents/specialists/{team}</code>(20) + <code>skills/</code>(cross-agent tools) + <code>user/</code>(founder info) + <code>team/{team}/{KNOWLEDGE,OKR}.md</code>(team knowledge+OKR) + <code>schedules/</code>(former routines)</li>
+    <li><strong>Chief = orchestrator + domain expert (dual role):</strong> <code>&lt;org&gt;/agents/main/chief/SKILL.md</code> — lives in organization layer, customized per-org as domain expert. <em>Former PM session promoted</em></li>
+    <li><strong>4 main + 20 specialists (2-tier):</strong> chief · designer · engineer · marketer + per-team specialists. <em>5 specialist merges</em> — backend-engineer · data-engineer · idea-scoper · researcher · content-marketer</li>
+    <li><strong>Chief = Supervisor 6 stages:</strong> TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE (LangGraph + AutoGen consensus pattern)</li>
+    <li><strong>Educational Nudge (Triage stage 0):</strong> vague input → present KNOWLEDGE.md slice first, confirm before proceeding</li>
+    <li><strong>Dependency Injection (8-layer JIT Layer 6.5):</strong> stage domain keyword match → auto-inject signals.jsonl. <strong>New Layer 4a (Team OKR)</strong></li>
+    <li><strong>Experiment infrastructure:</strong> <code>&lt;org&gt;/experiments/&lt;id&gt;/manifest.yaml</code> + Amplitude 4-pattern + significance check</li>
+    <li><strong>SKILL frontmatter v1 → v2:</strong> 4 new fields — <code>bot_name</code> / <code>tier</code> / <code>domain_tags</code> / <code>routing_keywords</code></li>
+    <li><strong>routine → schedule vocabulary unification:</strong> <code>assets/routines/</code> → <code>schedules/</code>, CLI <code>run-routine</code> → <code>run-schedule</code> (alias for 6 months)</li>
+    <li><strong>Board of Agents tone:</strong> Chief = "Board Chair", user = "founder", specialists = "board members"</li>
+    <li>Details: <code>docs/prd/v1.1-multi-agent-team-architecture.md</code> (includes §21 Amendment)</li>
   </ul>
 
-  <h4>v1.2 — User Knowledge &amp; Tacit-Knowledge Ontology</h4>
+  <h4>v1.2 — Messenger Connection (Discord-first)<span class="badge plan">v1.2</span></h4>
   <ul>
-    <li>Index accumulated memory / event data into a graph backend</li>
-    <li>MCP external connections (Notion / Obsidian / external APIs / cross-agent)</li>
+    <li><strong>L1 Gateway split:</strong> adds messenger surface on top of v1.1's L2~L5</li>
+    <li><strong>Bot Identity Registry</strong> (<code>&lt;org&gt;/.solosquad/bots.json</code>) + 9-hop diagnostic + Echo guard</li>
+    <li><strong>Forum Channel + Thread budget:</strong> 1 goal cycle = 1 forum post</li>
+    <li><strong>Mention routing extension:</strong> add <code>@&lt;bot&gt;</code> on top of v1.0.1 <code>@&lt;slug&gt;</code> (e.g. <code>@eng how do I write this</code>)</li>
+    <li><strong>Absorbs v1.0.4 G+H+P + un-applied L+M+N+O</strong> best practices. Slack parity fix in v1.2.x patch</li>
+    <li>Details: <code>docs/prd/v1.2-messenger-connection-discord-first.md</code></li>
+  </ul>
+
+  <h4>v1.x — Cascade-shifted slots<span class="badge plan">v1.x</span></h4>
+  <ul>
+    <li><strong>Former v1.1 → v1.x Dashboard Interaction</strong> — web dashboard itself developed in a separate repo (<code>solopreneur-dashboard</code> / <code>solopreneur-api</code>). This repo provides only the interaction client / inbox</li>
+    <li><strong>Former v1.2 → v1.x Knowledge &amp; Tacit-Knowledge Ontology</strong> — MCP external connections (Notion / Obsidian / external APIs / cross-agent)</li>
+    <li>Cascade rationale: at the solo-founder dogfooding stage, the leading indicator (24/7 autonomous team) outweighs dashboard / ontology priority. Details: <code>docs/prd/product-roadmap.md</code> §6 2026-05-24 entry</li>
   </ul>
 
   <h4>Reference docs</h4>
@@ -2418,9 +2446,11 @@ solosquad run-routine --all             # all</code></pre>
     <li><code>docs/plan/v0.8.3-onboarding-ux-observability.md</code></li>
     <li><code>docs/plan/v0.8.4-cli-surface-reduction.md</code></li>
     <li><code>docs/plan/v0.8.5-onboarding-qa.md</code></li>
-    <li><code>docs/plan/v1.1-dashboard-interaction.md</code></li>
-    <li><code>docs/plan/v1.2-knowledge-ontology.md</code></li>
-    <li><code>docs/plan/product-roadmap.md</code> — full decision log</li>
+    <li><code>docs/prd/v1.1-multi-agent-team-architecture.md</code> — <strong>new v1.1.</strong> Multi-Agent Team Architecture</li>
+    <li><code>docs/prd/v1.2-messenger-connection-discord-first.md</code> — <strong>new v1.2.</strong> Messenger Connection (L1 Gateway)</li>
+    <li><code>docs/prd/v1.x-dashboard-interaction.md</code> — <em>former v1.1 cascade-shifted</em></li>
+    <li><code>docs/prd/v1.x-knowledge-ontology.md</code> — <em>former v1.2 cascade-shifted</em></li>
+    <li><code>docs/prd/product-roadmap.md</code> — full decision log</li>
     <li><code>docs/reference/AI_Agent_Harness_Report.md</code> — design vocabulary source</li>
     <li><code>docs/trend-record/2026-05-11-baseline-survey.md</code> — peer-project comparison</li>
   </ul>
