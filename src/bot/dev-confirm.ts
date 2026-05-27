@@ -70,7 +70,7 @@ export interface DevConfirmController {
   promise: Promise<DevConfirmDecision>;
   /** Called by the messenger reader when a user replies. */
   resolve: (decision: "y" | "n") => void;
-  /** Called by pm-runner if the PM session aborts mid-flight. */
+  /** Called by chief-runner if the PM session aborts mid-flight. */
   abort: () => void;
   /** The original request (for callers that want to render a message). */
   request: DevConfirmRequest;

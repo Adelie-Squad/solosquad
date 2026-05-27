@@ -63,7 +63,7 @@ export async function rollbackCommand(opts: RollbackOpts): Promise<void> {
   let targetSha = opts.to;
   if (!targetSha) {
     // Pick the most recent pre-spawn commit. Convention: snapshots created
-    // by pm-runner have subject prefixes like "before-spawn: ..." or
+    // by chief-runner have subject prefixes like "before-spawn: ..." or
     // "after-spawn: ...". We pick the most recent "before-spawn" (one step
     // older than the latest record).
     const candidates = opts.workflow

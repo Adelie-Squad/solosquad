@@ -22,10 +22,20 @@ import { loadWorkspaceYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
 
 /**
- * v0.3.0 — PM session driver.
+ * v0.3.0 — Chief session driver (renamed from pm-runner in v1.1).
  *
- * Wraps the long-lived Claude Code session that talks to the user. The flow
- * (per docs/plan/v0.3-pm-mode-orchestration.md §4.2):
+ * Wraps the long-lived Claude Code session that talks to the user. Per
+ * v1.1 PRD §5 (Chief Sub-System), this driver hosts the Chief — the
+ * org-level supervisor — not PM. PM is a separate workspace-bundle main
+ * bot (`agents/main/pm/`) that Chief dispatches to via the Task tool for
+ * autonomous deep work; PM never talks to the user directly.
+ *
+ * Event names ("pm.message_in", "pm.rate_limit", "pm.error",
+ * "pm.message_out") are intentionally retained for backward-compat with
+ * existing archive.sqlite consumers and dashboards. Treat the "pm." prefix
+ * as the legacy *session-driver* namespace, not as the v1.1 "PM" agent.
+ *
+ * The flow (per docs/plan/v0.3-pm-mode-orchestration.md §4.2):
  *
  *   handleUserMessage(call)
  *     1. Acquire session-id mutex (per PoC #1 §1.5 — concurrent --resume
@@ -49,7 +59,7 @@ import { loadAgentProfile } from "../util/agent-profile.js";
  *     9. Release mutex
  */
 
-export interface PmRunnerDeps {
+export interface ChiefRunnerDeps {
   claude: ClaudeProcessFactory;
   sessions: SessionStore;
   events: (orgSlug: string, userId: string) => EventSink;
@@ -57,14 +67,14 @@ export interface PmRunnerDeps {
   timeoutMs?: number;
 }
 
-export interface PmCall {
+export interface ChiefCall {
   userId: string;
   orgSlug: string;
   orgCwd: string;
   userText: string;
 }
 
-export interface PmReply {
+export interface ChiefReply {
   text: string;
   costUsd: number;
   durationMs: number;
@@ -123,12 +133,12 @@ export class SessionMutex {
   }
 }
 
-export class PmRunner {
+export class ChiefRunner {
   private readonly mutex = new SessionMutex();
 
-  constructor(private readonly deps: PmRunnerDeps) {}
+  constructor(private readonly deps: ChiefRunnerDeps) {}
 
-  async handleUserMessage(call: PmCall): Promise<PmReply> {
+  async handleUserMessage(call: ChiefCall): Promise<ChiefReply> {
     const key = `${call.orgSlug}:${call.userId}`;
     return this.mutex.acquire(key, () => this.runTurn(call));
   }
@@ -141,7 +151,7 @@ export class PmRunner {
     return this.deps.sessions.rotate(orgSlug, userId, reason);
   }
 
-  private async runTurn(call: PmCall): Promise<PmReply> {
+  private async runTurn(call: ChiefCall): Promise<ChiefReply> {
     const sink = this.deps.events(call.orgSlug, call.userId);
     const startedAt = Date.now();
     sink.append({
@@ -176,7 +186,7 @@ export class PmRunner {
   }
 
   private async invokeWithSessionRecovery(
-    call: PmCall,
+    call: ChiefCall,
     sink: EventSink,
     rotatedAlready: boolean
   ): Promise<InternalTurnResult> {
@@ -417,7 +427,7 @@ export function ifEvent<K extends AnyEvent["kind"]>(
 // v0.6 §2.2 — spawn preflight helpers.
 //
 // The PM session itself runs inside Claude Code, and the `Task` tool that
-// launches specialists is internal to that process — pm-runner cannot
+// launches specialists is internal to that process — chief-runner cannot
 // intercept individual Task calls from the host side. These helpers expose
 // the 8-layer assembly + agent-budget check as *pure functions* so:
 //   - bot-layer adapters can do budget gating before relaying a user message

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { PmRunner, AuthExpiredError } from "../src/bot/pm-runner.js";
+import { ChiefRunner, AuthExpiredError } from "../src/bot/chief-runner.js";
 import { SessionStore } from "../src/bot/session-store.js";
 import { MemoryEventSink, type EventSink } from "../src/bot/events.js";
 import {
@@ -34,7 +34,7 @@ interface TestRig {
   orgCwd: string;
   fake: FakeClaudeProcessFactory;
   sessions: SessionStore;
-  pm: PmRunner;
+  pm: ChiefRunner;
   events: Map<string, MemoryEventSink>;
 }
 
@@ -53,7 +53,7 @@ function makeRig(orgSlug = "test-org"): TestRig {
     }
     return s;
   };
-  const pm = new PmRunner({ claude: fake, sessions, events: sinkFor });
+  const pm = new ChiefRunner({ claude: fake, sessions, events: sinkFor });
   return { workspace, orgSlug, orgCwd, fake, sessions, pm, events };
 }
 

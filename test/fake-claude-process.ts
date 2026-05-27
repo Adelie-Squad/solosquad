@@ -9,12 +9,12 @@ import type {
 } from "../src/bot/claude-process.js";
 
 /**
- * Test harness for unit-testing pm-runner without spawning real Claude Code.
+ * Test harness for unit-testing chief-runner without spawning real Claude Code.
  *
  * Pattern (per docs/plan/v0.3-pm-mode-orchestration.md §11 success criteria):
  *   const fake = new FakeClaudeProcessFactory();
  *   fake.registerScenario({ resume: true }, [...]);
- *   const pm = new PmRunner({ claude: fake, ... });
+ *   const pm = new ChiefRunner({ claude: fake, ... });
  *   await pm.handleUserMessage(...);
  *   assert.equal(fake.invocations.length, 1);
  */

@@ -44,7 +44,7 @@ export interface PmConfig {
   include_partial_messages?: boolean;
   /** Cross-call prompt-cache friendliness (--exclude-dynamic-system-prompt-sections). */
   exclude_dynamic_system_prompt_sections?: boolean;
-  /** Per-session in-process mutex queue depth (pm-runner). */
+  /** Per-session in-process mutex queue depth (chief-runner). */
   mutex_queue_depth?: number;
   /** v0.3.0+: daily pm-compaction trigger time (HH:MM). */
   compaction_time?: string;

@@ -28,7 +28,7 @@ import type { SkillSpec } from "./skill-parser.js";
  *
  * Pure aggregator: returns an ordered list of Layer records. Building the
  * actual Task prompt string (concatenation order, header decorations,
- * tool/system-prompt placement) is the caller's job — `pm-runner.ts`. The
+ * tool/system-prompt placement) is the caller's job — `chief-runner.ts`. The
  * split exists because spawn callers have different needs (Task tool prompt,
  * `--append-system-prompt`, cwd-adjacent file injection) and the assembler
  * has no business hard-coding one.
