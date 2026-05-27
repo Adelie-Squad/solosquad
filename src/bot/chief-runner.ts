@@ -20,6 +20,39 @@ import {
 import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js";
 import { loadWorkspaceYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
+import {
+  emit as emitChiefStage,
+  type ChiefStage,
+} from "../util/chief-stage-events.js";
+
+/**
+ * Emit a Chief 6+1 stage event (v1.1 §5.2) without ever throwing — a
+ * jsonl-write failure must not poison the user turn. orgRoot is the same
+ * directory chief-runner operates in (the org cwd), so all artifacts
+ * land under <org>/memory/chief-stage-events.jsonl.
+ */
+function safeEmitStage(
+  orgRoot: string,
+  turnId: string,
+  stage: ChiefStage,
+  detail?: string,
+  extra?: { dispatched?: string[]; skills_used?: string[] }
+): void {
+  try {
+    emitChiefStage(
+      { orgRoot },
+      {
+        turn_id: turnId,
+        stage,
+        detail,
+        dispatched: extra?.dispatched,
+        skills_used: extra?.skills_used,
+      }
+    );
+  } catch {
+    // Diagnostic-only — never gate a user turn on jsonl I/O.
+  }
+}
 
 /**
  * v0.3.0 — Chief session driver (renamed from pm-runner in v1.1).
@@ -154,6 +187,12 @@ export class ChiefRunner {
   private async runTurn(call: ChiefCall): Promise<ChiefReply> {
     const sink = this.deps.events(call.orgSlug, call.userId);
     const startedAt = Date.now();
+    // v1.1 §5.2 — Chief 6+1 stage machine. Each turn gets a stable id so
+    // RETROSPECT/skill-refinement can replay it later. The turn_id is the
+    // start timestamp + user id; uniqueness inside an org is sufficient.
+    const turnId = `turn-${startedAt}-${call.userId}`;
+    safeEmitStage(call.orgCwd, turnId, "TRIAGE", "user_message_in");
+
     sink.append({
       ts: nowIso(),
       kind: "pm.message_in",
@@ -161,7 +200,25 @@ export class ChiefRunner {
       userId: call.userId,
     });
 
-    const result = await this.invokeWithSessionRecovery(call, sink, false);
+    const result = await this.invokeWithSessionRecovery(
+      call,
+      sink,
+      false,
+      turnId
+    );
+
+    // After Claude finishes its tool loop and emits a final result, the
+    // turn enters SYNTHESIZE (merging any task outputs into the assistant
+    // reply) and then DECIDE (the reply itself is the decision). We emit
+    // both unconditionally — even a discussion-only turn passes through
+    // both, just with a tiny SYNTHESIZE.
+    safeEmitStage(call.orgCwd, turnId, "SYNTHESIZE", `spawns=${result.spawnCount}`);
+    safeEmitStage(
+      call.orgCwd,
+      turnId,
+      "DECIDE",
+      result.rateLimited ? "rate_limited" : "ok"
+    );
 
     const durationMs = Date.now() - startedAt;
     this.deps.sessions.recordTurn(call.orgSlug, call.userId, result.costUsd);
@@ -174,6 +231,10 @@ export class ChiefRunner {
       durationMs,
       userId: call.userId,
     });
+
+    // RETROSPECT closes the turn. Future work (chief retrospective skill)
+    // reads chief-stage-events.jsonl per turn_id to learn from the cycle.
+    safeEmitStage(call.orgCwd, turnId, "RETROSPECT", `duration_ms=${durationMs}`);
 
     return {
       text: result.text,
@@ -188,7 +249,8 @@ export class ChiefRunner {
   private async invokeWithSessionRecovery(
     call: ChiefCall,
     sink: EventSink,
-    rotatedAlready: boolean
+    rotatedAlready: boolean,
+    turnId?: string
   ): Promise<InternalTurnResult> {
     const { record, fresh } = this.deps.sessions.ensure(call.orgSlug, call.userId);
     const sessionId = record.sessionId;
@@ -221,10 +283,23 @@ export class ChiefRunner {
     let lastResultText = "";
     const collectedAssistantText: string[] = [];
 
+    let decomposeEmitted = false;
     for await (const line of stream.lines) {
       this.processLine(line, sink, {
         onAssistantText: (text) => collectedAssistantText.push(text),
-        onSpawn: () => spawnCount++,
+        onSpawn: () => {
+          spawnCount++;
+          if (turnId) {
+            // First spawn implies Chief has DECOMPOSEd the request. Emit
+            // once, then a DISPATCH per spawn so downstream count is
+            // exactly the spawn fan-out.
+            if (!decomposeEmitted) {
+              safeEmitStage(call.orgCwd, turnId, "DECOMPOSE", "first_spawn");
+              decomposeEmitted = true;
+            }
+            safeEmitStage(call.orgCwd, turnId, "DISPATCH", `spawn=${spawnCount}`);
+          }
+        },
         onRateLimit: () => (rateLimited = true),
         onResult: (text, cost) => {
           lastResultText = text;
@@ -232,6 +307,13 @@ export class ChiefRunner {
         },
         userId: call.userId,
       });
+    }
+    // If at least one spawn happened, the runner spent time in AWAIT
+    // between the last DISPATCH and the stream's final result. Emit AWAIT
+    // once so the trace shows the full TRIAGE→…→DECIDE arc rather than a
+    // gap where AWAIT belongs.
+    if (turnId && spawnCount > 0) {
+      safeEmitStage(call.orgCwd, turnId, "AWAIT", `spawn_count=${spawnCount}`);
     }
 
     const exit = await stream.done;
@@ -269,7 +351,7 @@ export class ChiefRunner {
         newSessionId: next,
         userId: call.userId,
       });
-      const retry = await this.invokeWithSessionRecovery(call, sink, true);
+      const retry = await this.invokeWithSessionRecovery(call, sink, true, turnId);
       return { ...retry, sessionRotated: true };
     }
 

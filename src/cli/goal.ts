@@ -243,7 +243,46 @@ export async function goalRunCommand(goalId: string, opts: GoalRunOpts): Promise
     measurer,
   });
 
-  const report = await runner.run({ goal });
+  // v1.1 §12.1 — acquire the 1-active-per-org semaphore before the run.
+  // If a different goal is already active, refuse and direct the user
+  // toward `solosquad goal queue` so they can chain runs without
+  // overrunning the org's chief session.
+  const orgRoot = getOrgDir(orgSlug, ws);
+  const goalQueue = await import("../util/goal-queue.js");
+  const activeBefore = goalQueue.getActive({ orgRoot });
+  if (activeBefore !== null && activeBefore !== goalId) {
+    console.log(
+      chalk.red(
+        `✗ Cannot start: ${activeBefore} is already active in ${orgSlug}.`
+      )
+    );
+    console.log(
+      chalk.dim(
+        `  Enqueue instead: solosquad goal queue ${goalId} --org ${orgSlug}`
+      )
+    );
+    process.exit(1);
+  }
+  if (activeBefore === null) goalQueue.acquire({ orgRoot }, goalId);
+
+  let report;
+  try {
+    report = await runner.run({ goal });
+  } finally {
+    // Always release on completion or error — leaves the slot in a sane
+    // state for the next `goal next` / `goal run`.
+    goalQueue.release({ orgRoot }, goalId);
+  }
+
+  // If something is queued behind us, surface it so the user can promote.
+  const queuedNext = goalQueue.listQueue({ orgRoot })[0];
+  if (queuedNext) {
+    console.log(
+      chalk.dim(
+        `\n  Queue head: ${queuedNext.goal_id}. Run 'solosquad goal next' to promote.`
+      )
+    );
+  }
 
   console.log(chalk.bold(`\nFinal state: ${report.state}`));
   console.log(chalk.dim(`  reason: ${report.terminationReason}`));

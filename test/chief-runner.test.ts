@@ -252,3 +252,33 @@ test("PM records spawn.start + spawn.complete from task_started/task_notificatio
   const completes = sink.history.filter((e) => e.kind === "spawn.complete");
   assert.equal(completes.length, 1, "dedup by task_id should prevent duplicate spawn.complete");
 });
+
+test("v1.1 §5.2 — Chief stage events emit TRIAGE → SYNTHESIZE → DECIDE → RETROSPECT on a discussion-only turn", async () => {
+  const rig = makeRig();
+  rig.fake.setDefaultScenario({
+    lines: [
+      initLine("placeholder", rig.orgCwd, ["desk-researcher"]),
+      textAssistantLine("placeholder", "Acknowledged."),
+      resultLine("placeholder", "Acknowledged.", { costUsd: 0.01 }),
+    ],
+  });
+
+  await rig.pm.handleUserMessage({
+    userId: "U1",
+    orgSlug: rig.orgSlug,
+    orgCwd: rig.orgCwd,
+    userText: "Just checking in.",
+  });
+
+  const { readEvents } = await import("../src/util/chief-stage-events.js");
+  const events = readEvents({ orgRoot: rig.orgCwd });
+  const stages = events.map((e) => e.stage);
+  assert.deepEqual(
+    stages,
+    ["TRIAGE", "SYNTHESIZE", "DECIDE", "RETROSPECT"],
+    "discussion turn: no DECOMPOSE/DISPATCH/AWAIT, only the closing arc"
+  );
+  // All events share the same turn_id.
+  const turnIds = new Set(events.map((e) => e.turn_id));
+  assert.equal(turnIds.size, 1, "all stages in one turn share a turn_id");
+});
