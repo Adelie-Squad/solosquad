@@ -26,6 +26,7 @@ interface TeamDefaults {
 
 /** Per-team default tool allowlist + model. */
 const TEAM_DEFAULTS: Record<string, TeamDefaults> = {
+  // v1.0.x team names — kept for backward compat during transition.
   strategy: {
     tools: ["Read", "Grep", "Glob", "WebFetch", "WebSearch", "Write"],
     model: "sonnet",
@@ -41,6 +42,27 @@ const TEAM_DEFAULTS: Record<string, TeamDefaults> = {
   engineering: {
     tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "WebFetch", "WebSearch"],
     model: "opus",
+  },
+  // v1.1 team names — product / design / marketing replace strategy /
+  // experience / growth respectively; engineering keeps its name.
+  product: {
+    tools: ["Read", "Grep", "Glob", "WebFetch", "WebSearch", "Write"],
+    model: "sonnet",
+  },
+  design: {
+    tools: ["Read", "Grep", "Glob", "WebFetch", "WebSearch", "Write"],
+    model: "sonnet",
+  },
+  marketing: {
+    tools: ["Read", "Grep", "Glob", "WebFetch", "WebSearch", "Write"],
+    model: "sonnet",
+  },
+  // v1.1 main-bot bucket. Chief / pm / designer / marketer rarely need
+  // Bash on their own (specialists do the work); engineer gets it via
+  // AGENT_OVERRIDES below.
+  chief: {
+    tools: ["Read", "Grep", "Glob", "WebFetch", "WebSearch", "Write"],
+    model: "sonnet",
   },
 };
 
@@ -64,6 +86,25 @@ export interface BuiltAgent {
   model: string;
 }
 
+/**
+ * Light frontmatter peek — just enough to extract the `team:` field for
+ * v1.1 flat-layout specialists. Avoids pulling in the full skill-parser
+ * (and its validation cost) when all we need is one string.
+ */
+function peekTeamFrontmatter(skillPath: string): string | null {
+  try {
+    const raw = fs.readFileSync(skillPath, "utf-8");
+    if (!raw.startsWith("---")) return null;
+    const end = raw.indexOf("\n---", 3);
+    if (end < 0) return null;
+    const front = raw.slice(3, end);
+    const match = /^team:\s*"?([^"\n#]+)"?\s*$/m.exec(front);
+    return match?.[1]?.trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function listSourceAgents(agentsDir: string = getAgentsDir()): Array<{
   team: string;
   agent: string;
@@ -75,6 +116,32 @@ export function listSourceAgents(agentsDir: string = getAgentsDir()): Array<{
     if (!teamEntry.isDirectory()) continue;
     if (teamEntry.name.startsWith("_")) continue; // skip _meta/ + legacy _teams/
     const teamPath = path.join(agentsDir, teamEntry.name);
+
+    // v1.1 flat layout — <agentsDir>/{main,specialists}/<name>/SKILL.md.
+    // The "team" entry here is just a flat bucket; the actual team field
+    // comes from the SKILL.md frontmatter (product / design / marketing /
+    // engineering / chief). Falling back to `chief` for main bots that
+    // don't declare a team makes the TEAM_DEFAULTS lookup graceful.
+    if (teamEntry.name === "main" || teamEntry.name === "specialists") {
+      for (const agentEntry of fs.readdirSync(teamPath, {
+        withFileTypes: true,
+      })) {
+        if (!agentEntry.isDirectory()) continue;
+        const skillPath = path.join(teamPath, agentEntry.name, "SKILL.md");
+        if (!fs.existsSync(skillPath)) continue;
+        const fmTeam = peekTeamFrontmatter(skillPath);
+        const team =
+          fmTeam && fmTeam.length > 0
+            ? fmTeam
+            : teamEntry.name === "main"
+              ? "chief"
+              : "engineering";
+        out.push({ team, agent: agentEntry.name, skillPath });
+      }
+      continue;
+    }
+
+    // v1.0.x nested layout — <agentsDir>/<team>/<name>/SKILL.md.
     for (const agentEntry of fs.readdirSync(teamPath, { withFileTypes: true })) {
       // KNOWLEDGE.md lives at the team root as a *file* — agent iteration only
       // descends into agent subdirectories, so it's naturally skipped here.

@@ -4,6 +4,59 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] — 2026-05-27
+
+**v1.1.0 — Multi-Agent Team Architecture.** Single PM session 패러다임을 Team-Centric Multi-Agent 로 격상. Chief (org-level supervisor) + 4 main bot (pm/engineer/designer/marketer) + 20 specialist + 18 skill + 4 team. Hermes V2 5-layer 위계 + gstack Six Forcing Questions + RO-PNA 6-Phase + phuryn pm-skills 통합. **메신저 연결은 v1.2 별도 plan** (L1 Gateway). 자세히 `docs/prd/v1.1-multi-agent-team-architecture.md`.
+
+### Added — Multi-agent architecture (PRD §3-§8)
+
+- **Chief role** (`<org>/agents/main/chief/SKILL.md`) — org-level 도메인 전문가, 유일한 user-facing bot. 책임 4가지: 사용자 소통 / 과제화 (triage) / 오케스트레이션 / 회고. 6+1 stage state machine (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT) 가 `<org>/memory/chief-stage-events.jsonl` 에 자동 기록 (`src/util/chief-stage-events.ts`).
+- **PM role** (`agents/main/pm/SKILL.md`) — workspace bundle, 자율 product manager. 사용자와 **직접 대화 안 함** (Chief 경유). 책임: 문제 정의 / 가설·실험 / 마일스톤·WBS / 데이터 기반 판단. open_questions[] 프로토콜로 정보 부족 시 Chief 에게 batch escalate.
+- **Engineer / Designer / Marketer** main bot 3개 — 각 팀 specialist 오케스트레이션.
+- **20 specialist** (4 병합 + 1 rename): backend-developer+api-developer→backend-engineer, data-collector+data-engineer→data-engineer, idea-refiner+scope-estimator→idea-scoper, user-researcher+desk-researcher→researcher, paid-marketer→performance-marketer. content-marketer 병합은 취소 (`brand-marketer` 유지 + `content-writing` skill 로 분리).
+- **4 팀**: product (구 strategy), engineering, design (구 experience), marketing (구 growth). 각 팀에 `KNOWLEDGE.md` + `OKR.md` + `composition.yaml`.
+- **OKR ↔ 마일스톤/WBS 의사결정 분리** — Chief 가 OKR (분기 정성+정량), PM 이 마일스톤·WBS (주~월 실행) 결정.
+
+### Added — Skill catalog (18개, agentskills.io 표준)
+
+- Problem definition: `problem-definition`(RO-PNA 6-Phase 6 assets 포함) / `discovery-synthesis` / `opportunity-tree` / `hypothesis-design`
+- Planning: `prd-writer` / `prioritization` (9-framework) / `wbs-decomposition` / `experiment-design` / `jobs-stories` / `lean-canvas` / `premortem`
+- Discovery: `interview-script-author` (Mom Test)
+- Reflection (Chief 호출): `retrospective` (gstack /retro pattern) / `skill-refinement` / `workflow-refinement`
+- Orchestration: `okr-writer` / `triage` (Educational Nudge 포함)
+- Core (기존): `workflow-maker` / `content-writing` / `search` / `verify` / `code-review` / `citation` / `screenshot`
+
+### Added — Infrastructure
+
+- **9-layer JIT context** — Layer 4a (team OKR) 신설 (`src/bot/spawn-assembler.ts`). Chief 가 작성한 분기 OKR 이 매 spawn 시 자동 inject.
+- **`open_questions[]` 프로토콜** (`src/util/open-questions.ts`) — PM 이 컨텍스트로 풀 수 없는 항목을 batch JSON 으로 escalate. Chief 가 사용자에게 묶어 질의.
+- **Goal queue** (`src/util/goal-queue.ts` + `solosquad goal queue/active/next` CLI) — 1-active-per-org semaphore, FIFO 대기열.
+- **Leading indicator** (`schedules/leading-indicator.md` + `src/util/leading-indicators.ts`) — 매일 5 지표: 대화→작업 변환률, 자동 PR 성공률, autonomous goal cycles, shipping streak, avg confidence score.
+- **Experiment 인프라** — `<org>/experiments/<id>/manifest.yaml` 템플릿 (variants + metrics + gates + Amplitude pattern).
+- **3 신규 schedule** — leading-indicator, trace-rotate, bot-health-check.
+- **4 workflow templates** — discovery-cycle, pmf-validation, autoplan-pm, weekly-retro.
+- **composition.yaml** (`src/util/composition.ts`) — 팀 멤버십 데이터 (specialists 평탄 폴더 + 팀 = YAML 으로 정의).
+
+### Changed — Code refactors
+
+- `src/bot/pm-runner.ts` → **`src/bot/chief-runner.ts`** rename (class `PmRunner` → `ChiefRunner`, etc.). Event 이름 `pm.*` 은 backward-compat 유지 (archive consumers).
+- `src/util/paths.ts` 신규 path resolver 6개: `getBundleRoot`, `getMainAgentsDir`, `getSpecialistsDir`, `getSkillsDir`, `getTeamsDir`, `getUserDir`, `getSchedulesDir`.
+- `src/bot/agent-router.ts` / `src/bot/agents-builder.ts` — v1.1 flat layout (`agents/{main,specialists}/<name>/SKILL.md`) 인식. v1.0.x nested layout 도 그대로 지원 (transition coexistence).
+- `solosquad init` 이 v1.1 번들 디렉토리 (`agents`, `skills`, `teams`, `schedules`, `user`, `knowledge`) 도 `.solosquad/` 로 복사.
+
+### Fixed — 빈 agent list 버그
+
+- `syncAgentsToOrg` 가 v0.2.4→v0.3.0 마이그레이션에서만 호출되던 결함 해결. v0.3.0 이후 생성된 org 가 `.claude/agents/` 비어있어 specialist 가 보이지 않던 문제 영구 fix. `solosquad init` / `add-org` / `sync` 세 경로 모두에 sync 추가 (`src/cli/{init,add-org,sync}.ts`).
+
+### Migration
+
+- **No-op for v1.0.x users** (현재 사용자 0 — clean slate). `src/migrations/scripts/1.0.2-to-1.1.0.ts` 는 workspace.yaml 버전 bump + per-org seed (Chief SKILL.md template, team OKR.md × 4, memory/open-questions, memory/ledger) 만 수행. 기존 사용자 데이터 변경 없음. v1.0.3 / v1.0.4 patch 도 본 1.1.0 에 흡수 — chained migration 정상 동작.
+
+### Out of scope (v1.2 plan 으로 위임)
+
+- **L1 Gateway** — Discord/Slack 채널 토폴로지 재편, 9-hop diagnostic, Forum Channel, Echo guard.
+- 본 v1.1 은 L2~L5 (internal architecture) 만 다룸.
+
 ## [1.0.4] — 2026-05-22
 
 **v1.0.4 — Discord config.yaml 자동 생성 + Slack author-guard 통째 cleanup.** v1.0.3 의 Bug D fix 가 *root cause 의 절반만* 잡았던 정직 자가비판 박제. v1.0.3 이 `syncGuildProductMapping` 의 *서버명 휴리스틱* 만 제거하고 *file-existence early-return* 분기는 그대로 둠 → 사용자가 v1.0.3 설치 후에도 *"No product linked to this server"* 응답 받음. v1.0.4 는 *load-or-empty + auto-write* 패턴으로 진짜 fix + 같은 release 에서 약속된 Slack author-guard 제거. plan §1.3 에 *silent-bail 패턴* 을 v1.0.3 plan §6 *반복 패턴* 의 3번째 변형으로 추가. 자세히 `docs/plan/v1.0.4-messenger-config-auto-create.md`.

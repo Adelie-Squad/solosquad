@@ -1,0 +1,91 @@
+# discovery-cycle workflow template (v1.1).
+#
+# PM 자율 문제 정의 cycle. Chief 가 호출하면 PM 이 백그라운드에서
+# discovery-synthesis → problem-definition → opportunity-tree → hypothesis-
+# design → prd-writer chain 을 실행. 산출 = design doc + open_questions[].
+#
+# 참조: v1.1 PRD §13.1
+schema_version: 2
+id: "discovery-cycle"
+name: "Discovery Cycle"
+description: "PM autonomous problem definition (no direct user Q&A). Returns design doc + open_questions[] to Chief."
+template_id: "discovery-cycle"
+hard_gate: true
+
+stages:
+  - id: stage-1-discovery-synthesis
+    agent: product/pmf-planner
+    task: |
+      Run discovery-synthesis skill against <org>/memory/archive.sqlite +
+      domain/customers.md. Extract JTBD signals + problem patterns. Append
+      gaps as open_questions[] entries to <org>/memory/open-questions/{{task_id}}.json.
+    inputs: []
+    outputs:
+      - discovery-output.json
+    handoff_to: stage-2-problem-definition
+
+  - id: stage-2-problem-definition
+    agent: product/pmf-planner
+    task: |
+      Run problem-definition skill. Execute 6-Phase chain (SCQA → 5-Whys →
+      MECE → TDCC → XYZ → 1-pager). For each phase, write evidence-refs.
+      Unanswerable fields → open_questions[]. Output: problem_statement,
+      root_cause, hypotheses[].
+    inputs:
+      - discovery-output.json
+    outputs:
+      - problem-definition.json
+    handoff_to: stage-3-opportunity-tree
+
+  - id: stage-3-opportunity-tree
+    agent: product/idea-scoper
+    task: |
+      Run opportunity-tree skill. Build OST (outcome → opportunity → solution →
+      experiment) from team OKR KR. Self-validate with Six Forcing Questions
+      (Demand Reality, Status Quo, Desperate Specificity, Narrowest Wedge,
+      Observation, Future-Fit). Each opportunity needs ≥2 solutions.
+    inputs:
+      - problem-definition.json
+    outputs:
+      - opportunity-tree.json
+    handoff_to: stage-4-hypothesis
+
+  - id: stage-4-hypothesis
+    agent: product/feature-planner
+    task: |
+      Run hypothesis-design skill. Convert recommended solutions into ≥2
+      XYZ hypotheses with V/U/V/F assumption classification. Identify
+      riskiest assumption. Confidence score per hypothesis.
+    inputs:
+      - opportunity-tree.json
+    outputs:
+      - hypotheses.json
+    handoff_to: stage-5-prd
+
+  - id: stage-5-prd
+    agent: product/feature-planner
+    task: |
+      Run prd-writer skill. Synthesize 8-section PRD from prior outputs.
+      HARD GATE checks: ≥2 approaches in §6, V/U/V/F in §6, success
+      threshold in §8. open_questions[] must be empty or have all blocking
+      items resolved by Chief.
+    inputs:
+      - hypotheses.json
+      - opportunity-tree.json
+      - problem-definition.json
+    outputs:
+      - PRD.md
+    handoff_to: stage-6-wbs
+
+  - id: stage-6-wbs
+    agent: product/feature-planner
+    task: |
+      Run wbs-decomposition skill. Break milestones → workstreams → tasks
+      with dependency graph + critical path. Returns milestones[] for
+      engineering/design/marketing handoff.
+    inputs:
+      - PRD.md
+    outputs:
+      - milestones.yaml
+      - critical-path.md
+    handoff_to: null

@@ -58,6 +58,91 @@ triggers:
   assert.ok(idx.explicit["pmf-planner"]);
 });
 
+test("buildRoutes v1.1 flat layout — specialists/<name>/SKILL.md takes team from frontmatter", () => {
+  const root = makeFixture();
+  writeSkill(
+    root,
+    "specialists",
+    "pmf-planner",
+    `name: "pmf-planner"
+description: "PMF Planner (v1.1 flat)"
+team: "product"
+triggers:
+  slash: ["/pmf"]
+  keyword: ["pmf"]
+  explicit: true`,
+  );
+  writeSkill(
+    root,
+    "specialists",
+    "brand-marketer",
+    `name: "brand-marketer"
+description: "Brand Marketer (v1.1 flat)"
+team: "marketing"
+triggers:
+  keyword: ["brand"]
+  explicit: true`,
+  );
+  const idx = buildRoutes({ agents_root: root, user_root: "/__nope__" });
+  assert.equal(idx.slash["/pmf"]?.team, "product");
+  assert.equal(idx.explicit["pmf-planner"]?.team, "product");
+  assert.equal(idx.explicit["brand-marketer"]?.team, "marketing");
+});
+
+test("buildRoutes v1.1 flat layout — main/<name>/SKILL.md takes team from frontmatter", () => {
+  const root = makeFixture();
+  writeSkill(
+    root,
+    "main",
+    "pm",
+    `name: "pm"
+description: "PM main bot"
+team: "product"
+triggers:
+  explicit: true`,
+  );
+  writeSkill(
+    root,
+    "main",
+    "engineer",
+    `name: "engineer"
+description: "Engineer main bot"
+team: "engineering"
+triggers:
+  explicit: true`,
+  );
+  const idx = buildRoutes({ agents_root: root, user_root: "/__nope__" });
+  assert.equal(idx.explicit["pm"]?.team, "product");
+  assert.equal(idx.explicit["engineer"]?.team, "engineering");
+});
+
+test("buildRoutes coexistence — v1.0.x nested + v1.1 flat in the same scan", () => {
+  const root = makeFixture();
+  writeSkill(
+    root,
+    "strategy",
+    "old-pmf-planner",
+    `name: "old-pmf-planner"
+description: "Legacy nested layout"
+team: "strategy"
+triggers:
+  explicit: true`,
+  );
+  writeSkill(
+    root,
+    "specialists",
+    "new-pmf-planner",
+    `name: "new-pmf-planner"
+description: "New flat layout"
+team: "product"
+triggers:
+  explicit: true`,
+  );
+  const idx = buildRoutes({ agents_root: root, user_root: "/__nope__" });
+  assert.equal(idx.explicit["old-pmf-planner"]?.team, "strategy");
+  assert.equal(idx.explicit["new-pmf-planner"]?.team, "product");
+});
+
 test("buildRoutes silently skips SKILL.md without frontmatter (pre-S5 state)", () => {
   const root = makeFixture();
   const dir = path.join(root, "strategy", "legacy");

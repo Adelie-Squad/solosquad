@@ -2,7 +2,7 @@
  * v0.3.0 — parse `[focus:<wf-id>]` markers PM emits in assistant replies.
  *
  * When PM switches its mental "active workflow" from one to another, it
- * includes a single `[focus:wf-YYYY-MM-DD-slug]` line in its reply. pm-runner
+ * includes a single `[focus:wf-YYYY-MM-DD-slug]` line in its reply. chief-runner
  * reads the marker out of the assistant text and updates the SessionStore's
  * activeWorkflowId so the next turn's system prompt prefix reflects it.
  *

@@ -33,8 +33,10 @@ const pkg = JSON.parse(
 const version = pkg.version;
 
 const targets = [
-  "docs/plan/product-roadmap.md",
-  "docs/plan/architecture.md",
+  // v1.0.4 renamed docs/plan/ → docs/prd/. Keep both paths for backward
+  // compat — the check passes if EITHER location is present per row.
+  "docs/prd/product-roadmap.md",
+  "docs/prd/architecture.md",
   "manual/master-guide_ko.html",
   "manual/master-guide_en.html",
 ];

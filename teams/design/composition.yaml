@@ -1,0 +1,13 @@
+# teams/design/composition.yaml
+main: designer
+members:
+  - researcher
+  - ux-designer
+  - ui-designer
+shared_skills:
+  - search
+  - citation
+  - screenshot
+  - discovery-synthesis
+cross_team_members:
+  - brand-marketer  # marketing 팀 specialist 도 visual identity 정합 시 호출

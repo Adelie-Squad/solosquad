@@ -20,12 +20,55 @@ import {
 import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js";
 import { loadWorkspaceYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
+import {
+  emit as emitChiefStage,
+  type ChiefStage,
+} from "../util/chief-stage-events.js";
 
 /**
- * v0.3.0 — PM session driver.
+ * Emit a Chief 6+1 stage event (v1.1 §5.2) without ever throwing — a
+ * jsonl-write failure must not poison the user turn. orgRoot is the same
+ * directory chief-runner operates in (the org cwd), so all artifacts
+ * land under <org>/memory/chief-stage-events.jsonl.
+ */
+function safeEmitStage(
+  orgRoot: string,
+  turnId: string,
+  stage: ChiefStage,
+  detail?: string,
+  extra?: { dispatched?: string[]; skills_used?: string[] }
+): void {
+  try {
+    emitChiefStage(
+      { orgRoot },
+      {
+        turn_id: turnId,
+        stage,
+        detail,
+        dispatched: extra?.dispatched,
+        skills_used: extra?.skills_used,
+      }
+    );
+  } catch {
+    // Diagnostic-only — never gate a user turn on jsonl I/O.
+  }
+}
+
+/**
+ * v0.3.0 — Chief session driver (renamed from pm-runner in v1.1).
  *
- * Wraps the long-lived Claude Code session that talks to the user. The flow
- * (per docs/plan/v0.3-pm-mode-orchestration.md §4.2):
+ * Wraps the long-lived Claude Code session that talks to the user. Per
+ * v1.1 PRD §5 (Chief Sub-System), this driver hosts the Chief — the
+ * org-level supervisor — not PM. PM is a separate workspace-bundle main
+ * bot (`agents/main/pm/`) that Chief dispatches to via the Task tool for
+ * autonomous deep work; PM never talks to the user directly.
+ *
+ * Event names ("pm.message_in", "pm.rate_limit", "pm.error",
+ * "pm.message_out") are intentionally retained for backward-compat with
+ * existing archive.sqlite consumers and dashboards. Treat the "pm." prefix
+ * as the legacy *session-driver* namespace, not as the v1.1 "PM" agent.
+ *
+ * The flow (per docs/plan/v0.3-pm-mode-orchestration.md §4.2):
  *
  *   handleUserMessage(call)
  *     1. Acquire session-id mutex (per PoC #1 §1.5 — concurrent --resume
@@ -49,7 +92,7 @@ import { loadAgentProfile } from "../util/agent-profile.js";
  *     9. Release mutex
  */
 
-export interface PmRunnerDeps {
+export interface ChiefRunnerDeps {
   claude: ClaudeProcessFactory;
   sessions: SessionStore;
   events: (orgSlug: string, userId: string) => EventSink;
@@ -57,14 +100,14 @@ export interface PmRunnerDeps {
   timeoutMs?: number;
 }
 
-export interface PmCall {
+export interface ChiefCall {
   userId: string;
   orgSlug: string;
   orgCwd: string;
   userText: string;
 }
 
-export interface PmReply {
+export interface ChiefReply {
   text: string;
   costUsd: number;
   durationMs: number;
@@ -123,12 +166,12 @@ export class SessionMutex {
   }
 }
 
-export class PmRunner {
+export class ChiefRunner {
   private readonly mutex = new SessionMutex();
 
-  constructor(private readonly deps: PmRunnerDeps) {}
+  constructor(private readonly deps: ChiefRunnerDeps) {}
 
-  async handleUserMessage(call: PmCall): Promise<PmReply> {
+  async handleUserMessage(call: ChiefCall): Promise<ChiefReply> {
     const key = `${call.orgSlug}:${call.userId}`;
     return this.mutex.acquire(key, () => this.runTurn(call));
   }
@@ -141,9 +184,15 @@ export class PmRunner {
     return this.deps.sessions.rotate(orgSlug, userId, reason);
   }
 
-  private async runTurn(call: PmCall): Promise<PmReply> {
+  private async runTurn(call: ChiefCall): Promise<ChiefReply> {
     const sink = this.deps.events(call.orgSlug, call.userId);
     const startedAt = Date.now();
+    // v1.1 §5.2 — Chief 6+1 stage machine. Each turn gets a stable id so
+    // RETROSPECT/skill-refinement can replay it later. The turn_id is the
+    // start timestamp + user id; uniqueness inside an org is sufficient.
+    const turnId = `turn-${startedAt}-${call.userId}`;
+    safeEmitStage(call.orgCwd, turnId, "TRIAGE", "user_message_in");
+
     sink.append({
       ts: nowIso(),
       kind: "pm.message_in",
@@ -151,7 +200,25 @@ export class PmRunner {
       userId: call.userId,
     });
 
-    const result = await this.invokeWithSessionRecovery(call, sink, false);
+    const result = await this.invokeWithSessionRecovery(
+      call,
+      sink,
+      false,
+      turnId
+    );
+
+    // After Claude finishes its tool loop and emits a final result, the
+    // turn enters SYNTHESIZE (merging any task outputs into the assistant
+    // reply) and then DECIDE (the reply itself is the decision). We emit
+    // both unconditionally — even a discussion-only turn passes through
+    // both, just with a tiny SYNTHESIZE.
+    safeEmitStage(call.orgCwd, turnId, "SYNTHESIZE", `spawns=${result.spawnCount}`);
+    safeEmitStage(
+      call.orgCwd,
+      turnId,
+      "DECIDE",
+      result.rateLimited ? "rate_limited" : "ok"
+    );
 
     const durationMs = Date.now() - startedAt;
     this.deps.sessions.recordTurn(call.orgSlug, call.userId, result.costUsd);
@@ -165,6 +232,10 @@ export class PmRunner {
       userId: call.userId,
     });
 
+    // RETROSPECT closes the turn. Future work (chief retrospective skill)
+    // reads chief-stage-events.jsonl per turn_id to learn from the cycle.
+    safeEmitStage(call.orgCwd, turnId, "RETROSPECT", `duration_ms=${durationMs}`);
+
     return {
       text: result.text,
       costUsd: result.costUsd,
@@ -176,9 +247,10 @@ export class PmRunner {
   }
 
   private async invokeWithSessionRecovery(
-    call: PmCall,
+    call: ChiefCall,
     sink: EventSink,
-    rotatedAlready: boolean
+    rotatedAlready: boolean,
+    turnId?: string
   ): Promise<InternalTurnResult> {
     const { record, fresh } = this.deps.sessions.ensure(call.orgSlug, call.userId);
     const sessionId = record.sessionId;
@@ -211,10 +283,23 @@ export class PmRunner {
     let lastResultText = "";
     const collectedAssistantText: string[] = [];
 
+    let decomposeEmitted = false;
     for await (const line of stream.lines) {
       this.processLine(line, sink, {
         onAssistantText: (text) => collectedAssistantText.push(text),
-        onSpawn: () => spawnCount++,
+        onSpawn: () => {
+          spawnCount++;
+          if (turnId) {
+            // First spawn implies Chief has DECOMPOSEd the request. Emit
+            // once, then a DISPATCH per spawn so downstream count is
+            // exactly the spawn fan-out.
+            if (!decomposeEmitted) {
+              safeEmitStage(call.orgCwd, turnId, "DECOMPOSE", "first_spawn");
+              decomposeEmitted = true;
+            }
+            safeEmitStage(call.orgCwd, turnId, "DISPATCH", `spawn=${spawnCount}`);
+          }
+        },
         onRateLimit: () => (rateLimited = true),
         onResult: (text, cost) => {
           lastResultText = text;
@@ -222,6 +307,13 @@ export class PmRunner {
         },
         userId: call.userId,
       });
+    }
+    // If at least one spawn happened, the runner spent time in AWAIT
+    // between the last DISPATCH and the stream's final result. Emit AWAIT
+    // once so the trace shows the full TRIAGE→…→DECIDE arc rather than a
+    // gap where AWAIT belongs.
+    if (turnId && spawnCount > 0) {
+      safeEmitStage(call.orgCwd, turnId, "AWAIT", `spawn_count=${spawnCount}`);
     }
 
     const exit = await stream.done;
@@ -259,7 +351,7 @@ export class PmRunner {
         newSessionId: next,
         userId: call.userId,
       });
-      const retry = await this.invokeWithSessionRecovery(call, sink, true);
+      const retry = await this.invokeWithSessionRecovery(call, sink, true, turnId);
       return { ...retry, sessionRotated: true };
     }
 
@@ -417,7 +509,7 @@ export function ifEvent<K extends AnyEvent["kind"]>(
 // v0.6 §2.2 — spawn preflight helpers.
 //
 // The PM session itself runs inside Claude Code, and the `Task` tool that
-// launches specialists is internal to that process — pm-runner cannot
+// launches specialists is internal to that process — chief-runner cannot
 // intercept individual Task calls from the host side. These helpers expose
 // the 8-layer assembly + agent-budget check as *pure functions* so:
 //   - bot-layer adapters can do budget gating before relaying a user message

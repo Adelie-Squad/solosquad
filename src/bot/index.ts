@@ -1,7 +1,7 @@
 import path from "path";
 import { createAdapters } from "../messenger/index.js";
 import { RealClaudeProcessFactory } from "./claude-process.js";
-import { PmRunner, AuthExpiredError } from "./pm-runner.js";
+import { ChiefRunner, AuthExpiredError } from "./chief-runner.js";
 import { SessionStore } from "./session-store.js";
 import { FileEventSink, pmEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
@@ -27,7 +27,7 @@ const MAX_MESSAGE_LENGTH = 4000;
 const workspaceRoot = getWorkspaceDir();
 const claude = new RealClaudeProcessFactory();
 const sessions = new SessionStore(workspaceRoot);
-const pmRunner = new PmRunner({
+const chiefRunner = new ChiefRunner({
   claude,
   sessions,
   events: (orgSlug, userId) =>
@@ -83,7 +83,7 @@ async function handleCommand(
   }
 
   try {
-    const reply = await pmRunner.handleUserMessage({
+    const reply = await chiefRunner.handleUserMessage({
       userId: ctx.userId,
       orgSlug: product.slug,
       orgCwd,

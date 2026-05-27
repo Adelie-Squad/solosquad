@@ -212,7 +212,21 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v1.0.4 기준 (post-launch fourth patch)</span>
+  <span class="tag">종합 개념서 · v1.1.0 기준 (Multi-Agent Team Architecture; 이전 patch: v1.0.3 / v1.0.4)</span>
+
+  <section class="release-callout" style="background: #f6f8fa; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 8px 0;">
+    <strong>v1.1.0 (2026-05-27) — Multi-Agent Team Architecture.</strong>
+    Single PM session 패러다임을 Team-Centric 으로 격상. <strong>Chief</strong> (org-level supervisor) +
+    <strong>PM</strong> (workspace-bundle, 자율 product manager, 사용자와 직접 대화 안 함) 역할 분리.
+    4 main bot (chief/pm/engineer/designer/marketer) + 20 specialist (평탄) + 18 skill +
+    4 팀 (product/engineering/design/marketing). 9-layer JIT (team OKR Layer 4a). Chief 6+1 stage
+    state machine. open_questions[] 프로토콜. Goal queue (1-active-per-org semaphore).
+    4 workflow templates. Leading indicator 5 지표. <code>solosquad init</code> / <code>add-org</code> /
+    <code>sync</code> 가 <code>.claude/agents/</code> 채우게 한 버그 fix. 외부 reference: Hermes V2 +
+    gstack (Garry Tan) + RO-PNA pna-builders + phuryn pm-skills. 메신저 연결은 v1.2 별도.
+    자세히 <code>docs/prd/v1.1-multi-agent-team-architecture.md</code> + <code>CHANGELOG.md</code> §[1.1.0].
+  </section>
+
   <nav>
     <ul>
       <li>

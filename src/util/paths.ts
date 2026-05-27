@@ -108,6 +108,102 @@ export function getKnowledgeDir(workspace?: string): string {
   return path.join(getAssetsDir(), "knowledge");
 }
 
+/**
+ * v1.1 — Bundle root (the directory above `assets/`). Used by new
+ * top-level bundled folders introduced in v1.1: `agents/`, `skills/`,
+ * `teams/`, `user/`, `schedules/`. These supersede the old `assets/*`
+ * layout but the migration to `assets/` is gradual — both layouts may
+ * coexist during the transition.
+ */
+export function getBundleRoot(): string {
+  // Mirror getAssetsDir's two-candidate resolution then strip the trailing
+  // `/assets`. Keeps the source-vs-installed-package distinction consistent.
+  const fromAssets = getAssetsDir();
+  return path.dirname(fromAssets);
+}
+
+/**
+ * v1.1 — `agents/main/<name>/` (workspace bundle). Main bot SKILL.md
+ * files: pm, engineer, designer, marketer (chief lives org-side).
+ * Resolution mirrors getAgentsDir: workspace override > bundle.
+ */
+export function getMainAgentsDir(): string {
+  const root = getWorkspaceRoot();
+  const userOverride = path.join(root, ".solosquad", "agents", "main");
+  if (fs.existsSync(userOverride)) return userOverride;
+  const legacy = path.join(root, "agents", "main");
+  if (fs.existsSync(legacy)) return legacy;
+  return path.join(getBundleRoot(), "agents", "main");
+}
+
+/**
+ * v1.1 — `agents/specialists/<name>/` (workspace bundle, flat). Members
+ * of teams are declared in `teams/<team>/composition.yaml`, not by
+ * folder nesting.
+ */
+export function getSpecialistsDir(): string {
+  const root = getWorkspaceRoot();
+  const userOverride = path.join(root, ".solosquad", "agents", "specialists");
+  if (fs.existsSync(userOverride)) return userOverride;
+  const legacy = path.join(root, "agents", "specialists");
+  if (fs.existsSync(legacy)) return legacy;
+  return path.join(getBundleRoot(), "agents", "specialists");
+}
+
+/**
+ * v1.1 — `skills/<name>/` (workspace bundle, flat). agentskills.io-
+ * compliant: each skill folder has SKILL.md + optional assets/, scripts/,
+ * references/.
+ */
+export function getSkillsDir(): string {
+  const root = getWorkspaceRoot();
+  const userOverride = path.join(root, ".solosquad", "skills");
+  if (fs.existsSync(userOverride)) return userOverride;
+  const legacy = path.join(root, "skills");
+  if (fs.existsSync(legacy)) return legacy;
+  return path.join(getBundleRoot(), "skills");
+}
+
+/**
+ * v1.1 — `teams/<team>/` (workspace bundle). KNOWLEDGE.md + OKR.md +
+ * composition.yaml per team. Four known teams: product, engineering,
+ * design, marketing.
+ */
+export function getTeamsDir(): string {
+  const root = getWorkspaceRoot();
+  const userOverride = path.join(root, ".solosquad", "teams");
+  if (fs.existsSync(userOverride)) return userOverride;
+  const legacy = path.join(root, "teams");
+  if (fs.existsSync(legacy)) return legacy;
+  return path.join(getBundleRoot(), "teams");
+}
+
+/** v1.1 — `user/` (workspace bundle): profile.md, voice.md, preferences.md. */
+export function getUserDir(): string {
+  const root = getWorkspaceRoot();
+  const userOverride = path.join(root, ".solosquad", "user");
+  if (fs.existsSync(userOverride)) return userOverride;
+  const legacy = path.join(root, "user");
+  if (fs.existsSync(legacy)) return legacy;
+  return path.join(getBundleRoot(), "user");
+}
+
+/**
+ * v1.1 — `schedules/` (workspace bundle). Renamed from `routines/`. Each
+ * `.md` file = scheduled prompt run via node-cron.
+ */
+export function getSchedulesDir(): string {
+  const root = getWorkspaceRoot();
+  const userOverride = path.join(root, ".solosquad", "schedules");
+  if (fs.existsSync(userOverride)) return userOverride;
+  const legacy = path.join(root, "schedules");
+  if (fs.existsSync(legacy)) return legacy;
+  const bundleNew = path.join(getBundleRoot(), "schedules");
+  if (fs.existsSync(bundleNew)) return bundleNew;
+  // Defensive fallback to the v1.0.x `routines/` layout during transition.
+  return getRoutinesDir();
+}
+
 /** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */
 export function getProductsFile(): string {
   const root = getWorkspaceRoot();

@@ -1029,7 +1029,42 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/plan/v1.0.4-messenger-config-auto-create.md` §7.2, `CHANGELOG.md` §[1.0.4]
 
-### 13.7 v1.1 — Multi-Agent Team Architecture (예고)
+#### 13.6.18 v1.1.0 — Multi-Agent Team Architecture (2026-05-27)
+
+**핵심 변화** — 단일 PM session 패러다임을 **Team-Centric Multi-Agent** 로 격상. v1.0.x 의 *PM + Task 도구 + 25 specialist* 모델을 **Chief + 4 main + 20 specialist + 18 skill + 4 team** 의 5-layer (Hermes V2 차용) 계층으로 재편.
+
+**아키텍처 5 결정 (2026-05-27 directive)**:
+1. **Chief ≠ PM** — Chief 는 org-level user-facing supervisor (`<org>/agents/main/chief/SKILL.md`, 도메인 customized), PM 은 workspace-bundle 자율 product manager (`agents/main/pm/SKILL.md`, **사용자와 직접 대화 안 함**). PM 은 `open_questions[]` 프로토콜로 Chief 에게 batch escalate.
+2. **모든 폴더 평탄(flat)** — `specialists/{team}/{name}/` 이중 중첩 폐기. 팀 멤버십은 `teams/{team}/composition.yaml` 데이터로.
+3. **agentskills.io 표준** — skill 폴더 = `SKILL.md` + `assets/` + `scripts/` + `references/`. 루트 `templates/` 폐지 후 각 skill 의 `assets/` 로 분산.
+4. **PM 고도화 최우선** — gstack(Garry Tan) Six Forcing Questions + Anti-Sycophancy + Hard Gate / RO-PNA pna-builders 6-Phase (SCQA→5-Whys→MECE→TDCC→XYZ) + phuryn pm-skills (OST / 8-section PRD / 9-framework prioritization) 통합.
+5. **OKR=Chief 결정 / 마일스톤·WBS=PM 결정** — 의사결정 권한 분리.
+
+**구현 산출물**:
+- **신규 main bot 5**: chief / pm / engineer / designer / marketer. Chief 6+1 stage state machine (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT) 가 `<org>/memory/chief-stage-events.jsonl` 에 자동 emit.
+- **20 specialist 평탄** (4 병합 + 1 rename): backend-developer+api-developer→backend-engineer, data-collector+data-engineer→data-engineer, idea-refiner+scope-estimator→idea-scoper, user-researcher+desk-researcher→researcher, paid-marketer→performance-marketer. content-marketer 병합은 취소 (brand-marketer 유지 + content-writing → skill).
+- **4 팀**: product (구 strategy), engineering, design (구 experience), marketing (구 growth). 각각 `KNOWLEDGE.md` + `OKR.md` + `composition.yaml`.
+- **18 skill** (problem-definition / discovery-synthesis / opportunity-tree / hypothesis-design / prd-writer / prioritization / wbs-decomposition / experiment-design / jobs-stories / lean-canvas / premortem / interview-script-author / retrospective / skill-refinement / workflow-refinement / okr-writer / triage / + 기존 7).
+- **9-layer JIT context** — Layer 4a (team OKR) 신설. Chief 작성 OKR 이 매 spawn 시 자동 inject.
+- **신규 util 모듈 5**: `composition` / `open-questions` / `leading-indicators` / `goal-queue` / `chief-stage-events`. 각각 unit test 포함 (60+ new tests).
+- **path resolver 6**: `getBundleRoot` / `getMainAgentsDir` / `getSpecialistsDir` / `getSkillsDir` / `getTeamsDir` / `getUserDir` / `getSchedulesDir`.
+- **agent-router + agents-builder** — v1.1 flat layout (`agents/{main,specialists}/<name>/`) 인식. v1.0.x nested layout 도 그대로 지원.
+- **신규 CLI 3**: `solosquad goal queue <id>` / `goal active` / `goal next` (1-active-per-org semaphore).
+- **신규 schedule 3**: leading-indicator (5 지표) / trace-rotate / bot-health-check.
+- **4 workflow templates**: discovery-cycle / pmf-validation / autoplan-pm / weekly-retro.
+- **Experiment 인프라**: `<org>/experiments/<id>/manifest.yaml` (variants + metrics + gates + Amplitude pattern).
+
+**Fixed — 빈 agent list 버그**: `syncAgentsToOrg` 가 v0.2.4→v0.3.0 마이그레이션에서만 호출되어 그 후 org 가 비어있던 결함을 `solosquad init` / `add-org` / `sync` 세 진입점 모두에 호출 추가.
+
+**Code rename**: `src/bot/pm-runner.ts` → `src/bot/chief-runner.ts` (class `PmRunner` → `ChiefRunner`). Event 이름 `pm.*` 은 archive consumer backward-compat 위해 유지.
+
+**Out of scope (v1.2 위임)**: L1 Gateway — Discord/Slack 채널 토폴로지 재편 / 9-hop diagnostic / Forum Channel / Echo guard.
+
+**QA**: 649 tests / 646 pass / 3 fail (3개 모두 pre-existing `test/git-snapshot.test.ts` — v1.1 무관). 신규 추가 60+ tests 전부 통과.
+
+자세히: `docs/prd/v1.1-multi-agent-team-architecture.md`, `CHANGELOG.md` §[1.1.0]
+
+### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
 > **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.
 

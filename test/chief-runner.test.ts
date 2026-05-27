@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { PmRunner, AuthExpiredError } from "../src/bot/pm-runner.js";
+import { ChiefRunner, AuthExpiredError } from "../src/bot/chief-runner.js";
 import { SessionStore } from "../src/bot/session-store.js";
 import { MemoryEventSink, type EventSink } from "../src/bot/events.js";
 import {
@@ -34,7 +34,7 @@ interface TestRig {
   orgCwd: string;
   fake: FakeClaudeProcessFactory;
   sessions: SessionStore;
-  pm: PmRunner;
+  pm: ChiefRunner;
   events: Map<string, MemoryEventSink>;
 }
 
@@ -53,7 +53,7 @@ function makeRig(orgSlug = "test-org"): TestRig {
     }
     return s;
   };
-  const pm = new PmRunner({ claude: fake, sessions, events: sinkFor });
+  const pm = new ChiefRunner({ claude: fake, sessions, events: sinkFor });
   return { workspace, orgSlug, orgCwd, fake, sessions, pm, events };
 }
 
@@ -251,4 +251,34 @@ test("PM records spawn.start + spawn.complete from task_started/task_notificatio
   });
   const completes = sink.history.filter((e) => e.kind === "spawn.complete");
   assert.equal(completes.length, 1, "dedup by task_id should prevent duplicate spawn.complete");
+});
+
+test("v1.1 §5.2 — Chief stage events emit TRIAGE → SYNTHESIZE → DECIDE → RETROSPECT on a discussion-only turn", async () => {
+  const rig = makeRig();
+  rig.fake.setDefaultScenario({
+    lines: [
+      initLine("placeholder", rig.orgCwd, ["desk-researcher"]),
+      textAssistantLine("placeholder", "Acknowledged."),
+      resultLine("placeholder", "Acknowledged.", { costUsd: 0.01 }),
+    ],
+  });
+
+  await rig.pm.handleUserMessage({
+    userId: "U1",
+    orgSlug: rig.orgSlug,
+    orgCwd: rig.orgCwd,
+    userText: "Just checking in.",
+  });
+
+  const { readEvents } = await import("../src/util/chief-stage-events.js");
+  const events = readEvents({ orgRoot: rig.orgCwd });
+  const stages = events.map((e) => e.stage);
+  assert.deepEqual(
+    stages,
+    ["TRIAGE", "SYNTHESIZE", "DECIDE", "RETROSPECT"],
+    "discussion turn: no DECOMPOSE/DISPATCH/AWAIT, only the closing arc"
+  );
+  // All events share the same turn_id.
+  const turnIds = new Set(events.map((e) => e.turn_id));
+  assert.equal(turnIds.size, 1, "all stages in one turn share a turn_id");
 });

@@ -142,7 +142,7 @@ export interface ClaudeInvocation {
   /**
    * v0.8.2 §4.2 — Claude Code `--allowed-tools` / `--disallowed-tools`
    * passthrough. When omitted, the CLI's defaults apply (broad permissions —
-   * legacy behavior). The PM-session caller (`pm-runner.ts`) keeps these
+   * legacy behavior). The PM-session caller (`chief-runner.ts`) keeps these
    * unset; per-spawn engineering tasks set them via `applyDevPermissions()`.
    */
   allowedTools?: string[];

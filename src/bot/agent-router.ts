@@ -274,6 +274,26 @@ interface ScannedSkill {
   spec: SkillSpec;
 }
 
+function tryReadSkill(skillPath: string): SkillSpec | null {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(skillPath, "utf-8");
+  } catch {
+    return null;
+  }
+  let spec: SkillSpec;
+  try {
+    spec = parseSkillMd(raw, skillPath);
+  } catch {
+    // No frontmatter (pre-S5) or malformed — silently skip. S5 migration
+    // fixes the bundled 25; user-authored SKILLs failing here are a
+    // validate-time error reported by `solosquad agent validate`.
+    return null;
+  }
+  if (!validateSkill(spec).ok) return null;
+  return spec;
+}
+
 function scanSkills(root: string): ScannedSkill[] {
   const out: ScannedSkill[] = [];
   for (const teamEntry of fs.readdirSync(root, { withFileTypes: true })) {
@@ -282,26 +302,40 @@ function scanSkills(root: string): ScannedSkill[] {
     // agents-builder.ts respectively).
     if (teamEntry.name.startsWith("_")) continue;
     const teamPath = path.join(root, teamEntry.name);
+
+    // v1.1 flat layouts under <root>/{main,specialists}/<name>/SKILL.md.
+    // The team is the SKILL.md frontmatter `team:` field — for main bots
+    // (chief / pm / engineer / designer / marketer) the frontmatter team
+    // matches the bot's own role; for specialists it identifies their
+    // home team (product / engineering / design / marketing).
+    if (teamEntry.name === "main" || teamEntry.name === "specialists") {
+      for (const agentEntry of fs.readdirSync(teamPath, {
+        withFileTypes: true,
+      })) {
+        if (!agentEntry.isDirectory()) continue;
+        const skillPath = path.join(teamPath, agentEntry.name, "SKILL.md");
+        if (!fs.existsSync(skillPath)) continue;
+        const spec = tryReadSkill(skillPath);
+        if (!spec) continue;
+        const team =
+          (typeof spec.team === "string" && spec.team.length > 0
+            ? spec.team
+            : teamEntry.name === "main"
+              ? "_main"
+              : "_specialist") ?? "_unknown";
+        out.push({ team, skill_path: skillPath, spec });
+      }
+      continue;
+    }
+
+    // v1.0.x nested layout: <root>/<team>/<name>/SKILL.md — team is the
+    // folder name.
     for (const agentEntry of fs.readdirSync(teamPath, { withFileTypes: true })) {
       if (!agentEntry.isDirectory()) continue;
       const skillPath = path.join(teamPath, agentEntry.name, "SKILL.md");
       if (!fs.existsSync(skillPath)) continue;
-      let raw: string;
-      try {
-        raw = fs.readFileSync(skillPath, "utf-8");
-      } catch {
-        continue;
-      }
-      let spec: SkillSpec;
-      try {
-        spec = parseSkillMd(raw, skillPath);
-      } catch {
-        // No frontmatter (pre-S5) or malformed — silently skip. S5 migration
-        // fixes the bundled 25; user-authored SKILLs failing here are a
-        // validate-time error reported by `solosquad agent validate`.
-        continue;
-      }
-      if (!validateSkill(spec).ok) continue;
+      const spec = tryReadSkill(skillPath);
+      if (!spec) continue;
       out.push({ team: teamEntry.name, skill_path: skillPath, spec });
     }
   }
