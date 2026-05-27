@@ -1,6 +1,6 @@
 {
   "name": "solosquad",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "24/7 AI assistant system for solo founders — Discord/Slack bot + scheduled routines + team-based agents",
   "author": "seungw1n",
   "type": "module",

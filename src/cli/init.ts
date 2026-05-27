@@ -673,6 +673,30 @@ export async function initCommand(): Promise<void> {
     }
   }
 
+  // v1.1 bundle dirs (live at <bundle>/<dir>/, not under assets/). Copy
+  // them into .solosquad/ so the workspace has the v1.1 layout
+  // (agents/main/*, agents/specialists/*, skills/*, teams/*, schedules/*,
+  // user/*, knowledge/*). Each is optional — the path resolvers in
+  // util/paths.ts fall back to the bundle when the workspace copy is
+  // absent. copyDirSync is "merge, don't clobber" (skips existing files)
+  // so re-running init never overwrites user customizations.
+  const { getBundleRoot } = await import("../util/paths.js");
+  const bundleRoot = getBundleRoot();
+  const v11Dirs = [
+    "agents",
+    "skills",
+    "teams",
+    "schedules",
+    "user",
+    "knowledge",
+  ];
+  for (const dir of v11Dirs) {
+    const src = path.join(bundleRoot, dir);
+    if (!fs.existsSync(src)) continue;
+    copyDirSync(src, path.join(solosquadDir, dir));
+    console.log(` ${chalk.green("✓")} .solosquad/${dir}/  ${chalk.dim("(v1.1)")}`);
+  }
+
   // .env.example → .solosquad/.env (if missing)
   const envExampleSrc = path.join(assetsDir, ".env.example");
   const envDest = path.join(solosquadDir, ".env");
