@@ -4,7 +4,7 @@
 
 > 영문 버전: [README.md](README.md)
 
-혼자 회사를 운영한다는 게 혼자 일한다는 뜻은 아닙니다. SoloSquad는 4개 분야(전략 · 그로스 · 경험 · 엔지니어링)에 걸친 **25명의 전문 AI 에이전트**를 가상의 팀으로 제공하며, 사용자는 메신저 안에서 그들과 대화하면 됩니다. 자동화된 일일 루틴과 프로덕트별 메모리 격리도 기본 탑재돼 있습니다.
+혼자 회사를 운영한다는 게 혼자 일한다는 뜻은 아닙니다. SoloSquad는 **Chief 1명** (조직별 supervisor, 유일한 사용자 대면 에이전트) + **4 main bot** (pm / engineer / designer / marketer) + 4개 팀(product · engineering · design · marketing)에 걸친 **20명의 specialist**를 가상의 팀으로 제공합니다. 사용자는 메신저 안에서 Chief와 대화하면 됩니다. 자동화된 일일 루틴, 조직별 메모리 격리, 6+1 단계 의사결정 루프(TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT)가 기본 탑재돼 있습니다.
 
 ```
 산출물 ≠ 목표.  산출물 = 목표를 달성하기 위한 수단.
@@ -30,7 +30,7 @@ SoloSquad의 핵심 약속은 **"사용자가 코드를 직접 보지 않고도,
 
 가장 정합한 사용자 가이드는 메뉴 분할 HTML 매뉴얼입니다.
 
-> **[`manual/master-guide.html`](manual/master-guide.html)** — 브라우저에서 열어주세요.
+> **[`manual/master-guide_ko.html`](manual/master-guide_ko.html)** (한국어) · **[`manual/master-guide_en.html`](manual/master-guide_en.html)** (English) — 브라우저에서 열어주세요.
 
 10개 메뉴 섹션 구성:
 
@@ -43,13 +43,32 @@ SoloSquad의 핵심 약속은 **"사용자가 코드를 직접 보지 않고도,
 | 5 | Messenger Setup | Discord 8단계 토큰 워크스루 (Slack 절은 post-v1.0 참고용으로 유지) |
 | 6 | Usage | CLI 레퍼런스 · 일일 운영 · 첫 실행 체크리스트 · 자동 루틴 |
 | 7 | Glossary | 60+ 핵심 용어 사전 · 파일명 사전 · 약어 사전 (초심자 친화) |
-| 8 | Version Differences | v0.8.x (npm 배포) vs v1.0+ (예정) |
+| 8 | Version Differences | v1.2.0 (npm 배포) vs 다음 릴리스 |
 | 9 | Operations | 24/7 호스팅 옵션(터미널 · Docker · launchd/NSSM · VPS) · 멀티 워크스페이스 · 멀티 조직 · 보안 체크리스트 |
 | 10 | Troubleshooting & FAQ | 설치/런타임 이슈 · 마이그레이션 실패 · FAQ |
 
-모든 기능에는 버전 배지가 붙어 있습니다: 🟢 v0.8.x (지금 사용 가능) · 🟡 v1.0+ (예정) · 🔴 제거됨 (예: Telegram).
+모든 기능에는 버전 배지가 붙어 있습니다.
 
-내부 아키텍처 · 릴리스 계획 · 결정 이력은 [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) 참조.
+내부 아키텍처 · 릴리스 계획 · 결정 이력은 [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) + [`docs/prd/architecture.md`](docs/prd/architecture.md) 참조.
+
+---
+
+## v1.2.0 신규 (2026-05-28)
+
+**메신저 연결 — Chief on Discord, auto-connect first.** v1.1.0 의 내부 에이전트 아키텍처 위에 *외부 사용자 가시 UX* 만 얹은 minor 릴리스:
+
+- **조직 1개당 1 Chief 봇** — `solosquad add org --chief-name Hermes` 로 이름 부여. Discord Developer Portal 에서 Bot 생성 시 같은 이름을 쓰면 메신저 표면 정체성이 일관됩니다.
+- **OAuth Invite URL 1-click** — `solosquad discord invite-url` 가 application client_id + 권장 10-perm bitfield (verification trigger 6건은 의도적 배제) 합성 → 브라우저 자동 open → clipboard fallback.
+- **handle 기반 채널 portability** — 한 사용자가 Discord 서버 N개 + 추후 Slack workspace 추가해도 모든 표면이 동일한 `command-<handle>` / `works-<handle>` 페어 자동 재사용.
+- **owner-only 게이트** (신규 설치 default ON, 업그레이드는 OFF — neutral) — Chief 가 워크스페이스 owner 의 메시지만 처리. 미일치 사용자는 silently ignore + 첫 1회 ephemeral 안내.
+- **TRIAGE kind 분기** — 짧은 대화는 command 채널 평탄 응답. `workflow` / `schedule` / `goal` 은 `works-<handle>` 채널에 task card embed + thread 자동 생성, sub-agent 활동(DECOMPOSE / DISPATCH / AWAIT)이 thread 내부에 narration. command 채널엔 `📋 작업 등록됨 → <thread URL>` 1줄.
+- **`solosquad add org`** 가 새 조직을 *완전 동작 상태* 로 부트스트랩 — Chief 이름 + v1.1.0 위계 (agents/main/chief, 4 teams, memory/open-questions·ledger, knowledge/) + `problem-definition` workflow 기본 시드 + Discord inline 연결.
+- **`solosquad doctor --discord` 5-hop diagnostic** — token shape → REST `/users/@me` → bot_user_id match → guild membership → command 채널 ID. 매 hop attributable + actionable.
+- **guildCreate onboarding embed + 2 button** (Auto-create / Manual choose) + `/chat` slash command (MESSAGE_CONTENT intent 거부 fallback).
+
+신규 test 53건; 728/728 pass. Migration `1.1.0 → 1.2.0` 멱등; 기존 사용자는 `owner_only: false` neutral upgrade.
+
+전체 릴리스 노트: [CHANGELOG.md §1.2.0](CHANGELOG.md#120--2026-05-28).
 
 ---
 
@@ -63,8 +82,9 @@ npm install -g @anthropic-ai/claude-code
 # 2. SoloSquad 설치
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
-solosquad init                                    # wizard가 Claude OAuth(Step 1.5) + 메신저 토큰 + repo path-reference 자동 처리
+solosquad init                                    # wizard가 Claude OAuth(Step 1.5) + Chief 이름 + Discord 토큰 + invite URL 자동 open 처리
 solosquad doctor                                  # 환경 점검
+solosquad doctor --discord                        # v1.2 — Discord 5-hop diagnostic (token / REST / bot_user_id / guild / channel)
 
 # 3. 봇 기동
 solosquad bot                                     # 포그라운드
@@ -72,9 +92,9 @@ solosquad bot                                     # 포그라운드
 cd deploy/docker && docker compose up -d --build  # 백그라운드 + 자동 재시작
 ```
 
-봇이 켜진 뒤, 메신저의 `#command-<handle>` 채널 (예: `#command-alice`)에 "안녕"이라고 보내면 전문 에이전트가 응답합니다.
+봇을 길드에 초대하면 **guildCreate onboarding embed** 가 system 채널에 표시됩니다. **Auto-create channels** 버튼을 누르면 `#command-<handle>` / `#works-<handle>` 자동 생성 + command 채널에서 Chief 첫 인사 → 메시지 한 번 보내면 Chief 가 답합니다.
 
-**메신저 토큰 셋업**은 Discord 기준 3~5분 정도 걸립니다. [`master-guide.html` §5](manual/master-guide.html)의 단계 절차를 따라가세요.
+**메신저 토큰 셋업**은 Discord 기준 3~5분 정도 걸립니다. [`master-guide_ko.html` §5](manual/master-guide_ko.html)의 단계 절차를 따라가세요.
 
 ### 메신저 셋업이 핵심인 이유
 
@@ -338,7 +358,7 @@ v0.7 + v0.8 패치 시리즈가 위에 얹은 라이프사이클 + 멀티 유저
 24/7 항상-가동 운영은 다음 중 택1:
 - Docker Compose (권장, 백그라운드 + 자동 재시작) — [`deploy/docker/README.md`](deploy/docker/README.md)
 - macOS `launchd` plist / Windows NSSM 서비스
-- VPS + systemd (자세히는 [`docs/plan/cloud-deployment.md`](docs/plan/cloud-deployment.md))
+- VPS + systemd (자세히는 [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
 
 자세히는 master-guide §9.
 
@@ -346,9 +366,9 @@ v0.7 + v0.8 패치 시리즈가 위에 얹은 라이프사이클 + 멀티 유저
 
 ## 버전
 
-현재 npm 릴리스: **v0.8.3** (npm registry: `0.8.3`).
+현재 npm 릴리스: **v1.2.0** (npm registry: `1.2.0`).
 
-본 프로젝트는 pre-launch (v0.x) 단계. **v1.0 이 정식 출시 마일스톤** — 안정 API 보장 시작. 출시된 + 예정된 마일스톤:
+v1.0 이 정식 출시 마일스톤으로 안정 API 보장이 시작되었습니다. 출시된 + 예정된 마일스톤 (전체 이력은 [`CHANGELOG.md`](CHANGELOG.md), 결정 로그는 [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6):
 
 | 버전 | 테마 | 핵심 |
 |---|---|---|
@@ -361,13 +381,17 @@ v0.7 + v0.8 패치 시리즈가 위에 얹은 라이프사이클 + 멀티 유저
 | **v0.8.1 (출시)** | **Security & Lifecycle Pair** | npm audit 7건 → 0; archive 페어 완결 (`solosquad import` + `archive verify/info/list`); `docs/api-stability.md` (6 schema_version 의 bump 룰); 25 SKILL.md `schema_version: 1` 백필 |
 | **v0.8.2 (출시)** | **Dev Capability** | SKILL frontmatter `dev_capability` + `dev_permissions`; engineering 5 SKILL 박제; push/merge confirmation gate; **자동 머지 영구 거부**; workspace 마스터 토글 |
 | **v0.8.3 (출시)** | **Onboarding UX + Observability** | `add repo --dry-run`/`--inspect`/`--keep-original`; logger 확장 + `solosquad logs` CLI; `log-rotate` (14일); doctor CLI↔workspace mismatch 감지; trajectory ROI 측정 스크립트 |
-| **v0.9** (예정) | 안정화 + 자체 사용 검증 | v0.8.x 누적 회고 + i18n 준비 |
-| **v1.0** (예정) | **정식 출시** | 안정 API · breaking-change 정책 시작 |
-| v1.1 (예정) | 대시보드 인터랙션 | 컴패니언 웹 대시보드 (별도 리포) |
-| v1.2 (예정) | 지식 온톨로지 | 그래프 백엔드 + MCP 외부 커넥터 (Notion · Obsidian 등) |
+| **v1.0.0 (출시)** | **정식 출시** | 안정 API 보장 · 42 CLI surface freeze · `docs/api-stability.md` 공개 약속 발효 · Discord 단일 메신저 (Slack post-v1.0 슬롯) |
+| v1.0.1 – v1.0.4 (출시) | **Discord robustness patch chain** | discord.js v15 deprecation · `@<slug>` mention · author-guard 정합 · guild-org binding · category rename · config.yaml load-or-empty + 5-hop diagnostic + Slack author-guard cleanup |
+| **v1.1.0 (출시)** | **Multi-Agent Team Architecture** | Single PM session → Team-Centric. Chief (org-level supervisor, 사용자 대면) + PM (workspace-bundle, 자율 product manager) 분리. 4 main bot + 20 specialist + 18 skill + 4 team. 9-layer JIT (team OKR Layer 4a). Chief 6+1 stage state machine. open_questions[] async-batch protocol. Goal queue (1-active-per-org). 4 workflow templates. 외부 reference: Hermes V2 + gstack (Garry Tan) + RO-PNA pna-builders + phuryn pm-skills |
+| **v1.2.0 (출시)** | **Messenger Connection (Chief on Discord, auto-connect first)** | 조직 1개당 1 Chief 봇 (`OrgYaml.chief_name`) · OAuth Invite URL 1-click (`solosquad discord invite-url`) · handle 기반 채널 멀티-메신저 portable · owner-only 게이트 (v1.0.2 reversal, 신규 ON / 업그레이드 OFF) · TRIAGE kind 분기 → `works-<handle>` task card + thread + stage narration · `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 시드까지 완전 부트스트랩 · `solosquad doctor --discord` 5-hop diagnostic · guildCreate onboarding embed + 2 button · `/chat` slash fallback. 53 신규 test (728/728 pass) |
+| v1.2.1 (예정) | 메신저 thread 연속성 | referencedMessage chain + LRU cache + thread token budget. messageCreate 가 thread 메시지 수신 + thread→workflow_id reverse lookup. Slack adapter 동일 슬롯 |
 | v1.3 (예정) | 일정 관리 + 메모 | n잡 사용자의 시간·기억 통합 — Calendar/Apple Notes/Obsidian/Notion MCP 연결 |
+| v1.x (예정) | 대시보드 인터랙션 | 컴패니언 웹 대시보드 (별도 리포 `solopreneur-dashboard` + `solopreneur-api`) |
+| v1.x (예정) | 지식 온톨로지 + MCP | 그래프 백엔드 + MCP 외부 커넥터 (Notion · Obsidian 등) |
+| v1.x (예정) | LLM backend abstraction | Multi-backend (single Claude → pluggable) |
 
-결정 로그: [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) §4.
+결정 로그: [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6.
 
 ---
 
@@ -533,7 +557,7 @@ scripts/                          → backfill-bundled-frontmatter,
 | [gh CLI](https://github.com/cli/cli) | logout / data-removal 분리, server-side revoke 한계 명시 (v0.7 차용) |
 | Amplitude AI agents | 자연어 → metric/segment 자동 query, statistical significance 자동 check (v1.x 실험 인프라 슬롯) |
 
-솔로 파운더에 *과한 엔지니어링*으로 명시적 거부된 항목: 3-repo 물리 분리, LangGraph v3 그래프 오케스트레이션, MCP 기반 내부 SKILL 레지스트리, Vector + Graph DB 하이브리드, 자동 머지. 사유는 [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) §4 참조.
+솔로 파운더에 *과한 엔지니어링*으로 명시적 거부된 항목: 3-repo 물리 분리, LangGraph v3 그래프 오케스트레이션, MCP 기반 내부 SKILL 레지스트리, Vector + Graph DB 하이브리드, 자동 머지. 사유는 [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6 참조.
 
 ---
 

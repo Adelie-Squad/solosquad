@@ -4,6 +4,68 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-05-28
+
+**v1.2.0 — Messenger Connection (Chief on Discord, auto-connect first).** v1.1.0 Multi-Agent Team Architecture 위에 *외부 가시 UX* 를 얹어 *조직 1개당 1 Chief 봇* + *OAuth Invite URL 1-click* + *handle 기반 채널 멀티-메신저 portable* + *owner-only 게이트* + *TRIAGE kind 분기로 작업 단위는 `works-<handle>` task hub + thread* + *`solosquad add-org` 가 새 조직을 완전 동작 상태로 부트스트랩 (Chief 이름 + v1.1 위계 + problem-definition workflow 기본 시드)*. 자세히 `docs/prd/v1.2-messenger-connection-discord-first.md`.
+
+### Added — Discord auto-connect (PRD §3, §4)
+
+- **`solosquad discord invite-url` CLI** (`src/cli/discord.ts` + `src/messenger/discord-invite-url.ts`) — `bot_application_id` + v1.2 §4.2 권장 permissions bitfield (10 perms — Manage Channels/View Channels/Send Messages/Embed Links/Attach Files/Read Message History/Manage Threads/Create Public Threads/Send Messages in Threads/Use Application Commands; Administrator/Manage Guild/Manage Roles/Kick/Ban/Mention Everyone 의도적 배제) 으로 OAuth URL 합성 + 브라우저 자동 열기 + clipboard fallback. `bigint` 으로 64-bit 권한 정확도.
+- **`OrgYaml.chief_name`** — org 단위 Chief 이름. `init` / `add-org` 가 prompt → `.org.yaml` 박제. Discord onboarding embed 제목 / narration prefix / doctor 출력에 변수화. Developer Portal Bot 이름과 동일 사용 권장.
+- **`init` Step 4 강화** — Discord token prompt 전에 *"Bot 이름 = Chief 이름 권장"* guidance. 토큰 입력 직후 invite URL 자동 합성 + 브라우저 open.
+- **`solosquad add org` 보강** — `--chief-name <name>` / `--skip-discord` 플래그. Chief 이름 prompt + scaffoldOrg 가 v1.1.0 전체 위계 시드 (`agents/main/chief/SKILL.md`, `teams/{product,engineering,design,marketing}/{OKR.md, KNOWLEDGE.md, composition.yaml}`, `memory/{open-questions,ledger}`, `knowledge/`) + problem-definition workflow 기본 seed + 메신저 inline 연결 prompt (Discord 봇이 이미 등록되어 있으면 즉시 invite URL 출력).
+
+### Added — Onboarding & gating (PRD §5, §4.5)
+
+- **guildCreate onboarding embed + button** (`src/messenger/discord-onboarding.ts`) — 봇이 길드에 추가되면 systemChannel (없으면 첫 writable text 채널) 에 환영 embed 송신. 제목 = Chief 이름. 2 button: `chief:onboard:auto` → ensureChannels 실행 + `#command-<handle>` 에서 첫 인사 / `chief:onboard:manual` → 채널 멘션 prompt. 멱등 — `chief-onboard-embed:v1.2` 마커로 마지막 50 메시지 dedupe, 첫 인사도 채널 last-10 스캔으로 dedupe. systemChannel 권한 부족 시 owner DM fallback.
+- **Owner-only gate** (`src/messenger/discord-owner-gate.ts`) — `message.author.id === user.yaml.messenger_user_id` author check. 신규 설치 = `owner_only: true` default, 기존 v1.0.x→v1.1.0→v1.2.0 업그레이드는 migration 이 `owner_only: false` 박제 (v1.0.2 channel-ACL-only 동작 보존, neutral upgrade). 미일치 → silently ignore + 첫 1회 ephemeral 안내 (LRU per-(guild, sender) 1시간 dedupe + 30s auto-delete). `messenger_user_id` 미설정 시 fail-open (브릭 방지). v1.0.2 author-guard 제거의 *진짜* 사유 (= 당시 채널명이 user-id 라 봇 인식 실패) 가 handle 기반 채널명 (v0.8.0~) 으로 해소된 이상 재도입 정당화 + bidirectional configurable.
+
+### Added — TRIAGE kind branch + works task hub (PRD §6.2, §8)
+
+- **`ChiefReply.kind` 필드 + `[kind:...]` 마커 파서** (`src/bot/chief-runner.ts`) — Chief 가 응답 첫 줄에 `[kind:<chat|workflow|schedule|goal>]` 출력하면 runner 가 strip 후 ChiefReply.kind 노출. 마커 부재 시 user-text 휴리스틱 (`/workflow`/`워크플로`/`/schedule`/`스케줄`/`/goal`/`목표`) fallback. agents/main/chief/SKILL.md 에 마커 출력 가이드 신설.
+- **`MessageContext.postTaskCard` + `discord-task-card.ts`** — `kind ∈ {workflow, schedule, goal}` 시 `works-<handle>` 채널에 task card embed (`📋 WORKFLOW: <title>` / 색깔 차등: workflow=blurple, schedule=green, goal=amber; 요청 / workflow_id / KST 시각) post → `message.startThread({ autoArchiveDuration: 10080 })` → Chief reply 가 thread 내부에 chunk 분할 송신. `<org>/workflows/<wf-id>/discord-thread.txt` (thread URL + thread_id + works message_id + kind + started_at) 박제로 chief-runner reconcile (§6.3) 가 같은 thread 재개 가능. `command-<handle>` 채널엔 *"📋 작업 등록됨 → <thread URL>"* 1줄 announce. `kind === chat` 은 v1.0 동작 그대로 평탄 응답.
+- **Stage event → thread narration** (`src/messenger/discord-narration.ts`) — `chief-stage-events.jsonl` 의 turnId 일치 entry 를 thread 메시지로 projection. DECOMPOSE → `🗂 작업 분해 중...`, DISPATCH → `📤 dispatch: pm, engineer (병렬 2)`, AWAIT (open_questions detail) → `❓ <detail>`. TRIAGE/SYNTHESIZE/DECIDE/RETROSPECT 는 생략 (Chief reply 가 자체 표현). `skills_used` 가 있으면 `↳ skill1, skill2` follow-on 라인 추가. `ChiefReply.turnId` 노출로 adapter 가 정확한 turn 만 가져옴.
+
+### Added — Diagnostics + fallback (PRD §10, §7.4)
+
+- **`solosquad doctor --discord` 5-hop diagnostic** (`src/cli/doctor-discord.ts`) — DISCORD_TOKEN env 존재 + shape → REST `/users/@me` 호출 (live token + 응답 valid) → bot_user_id 가 workspace 의 user.yaml 1개와 일치 → guild membership (proxy: `<org>/discord/config.yaml.guild_id` 박제됨) → command 채널 ID 박제. 매 hop attributable + actionable; Hop 4 실패 시 합성된 invite URL 까지 같이 출력. `--ci` 가 실패 count 를 exit code 로 propagate.
+- **`/chat` slash command 등록** (`src/messenger/discord-chat-slash.ts`) — MESSAGE_CONTENT intent 거부 (Discord verification edge case / 100길드 초과) fallback. Guild scope 등록 (immediate REST 반영, 1시간 global 전파 회피). 응답은 same `onCommand` 파이프라인. `postTaskCard` 는 slash MessageContext 에서 의도적 누락 — slash fallback 은 flat 응답 유지.
+
+### Added — Bootstrap + workflow seed (PRD §5.5, §12 #16)
+
+- **`scaffoldOrg` v1.1 + v1.2 전체 위계 시드** (`src/util/scaffold.ts`) — 기존 v0.2 시드 (memory/routine-logs, workflows, repositories, <messenger>, 4 schema JSONL) 위에 v1.1.0 시드 추가 (memory/{open-questions,ledger}, knowledge/, agents/main/chief/SKILL.md, 4 teams × 3 files). 모두 idempotent (bundle copy 가 dest 존재 시 skip — 사용자 customization 보호). 기존 v1.1.0 출시에서 *migration 만 시드하고 add-org 는 시드 누락* 했던 gap 해소.
+- **`skills/workflow-maker/assets/workflows/problem-definition/workflow.yaml`** — 새 조직 기본 워크플로 (v1.2 directive #6). 6-stage chain: SCQA (assets/01) → 5-Whys (assets/02) → MECE (assets/03) → TDCC (assets/04) → XYZ Hypothesis (assets/05) → 1-pager PRD (assets/06). 각 phase 가 PM (`product/pmf-planner`) 실행, evidence-refs 또는 open_questions[] 출력. discovery-cycle 보다 *문제 정의 그 자체* 에 집중한 가벼운 entry point.
+
+### Migration
+
+- `src/migrations/scripts/1.1.0-to-1.2.0.ts` — workspace.yaml.version bump + `workspace.yaml.messenger.discord.{owner_only:false, install_mode:byo_manual, thread_token_budget:80000}` 박제 + 기존 org 의 `workflows/problem-definition/workflow.yaml` 시드. Idempotent (재실행 = no-op), 기존 user.yaml / channel / token / config.yaml / open-questions / ledger 무손상. `org.yaml.chief_name` 은 *interactive* — migration 이 자동 박제 안 함, doctor / init / add-org 가 prompt; runtime fallback `"Chief"`.
+
+### Schema
+
+- `org.yaml.chief_name` (신규 optional string)
+- `workspace.yaml.messenger.discord.owner_only` (boolean, default `true` 신규 / `false` 업그레이드)
+- `workspace.yaml.messenger.discord.install_mode` (`oauth_invite` | `byo_manual`)
+- `workspace.yaml.messenger.discord.thread_token_budget` (default 80000)
+- breaking 0 (모두 optional + 기존 동작 보존)
+
+### CLI surface
+
+- 신규: `solosquad discord invite-url [--client-id <id>] [--print-only] [--org <slug>]`, `solosquad doctor --discord`
+- 확장: `solosquad add org [--chief-name <name>] [--skip-discord]`, `solosquad init` Step 4 / Step 6 (Chief 이름 prompt + 자동 invite URL)
+- freeze 침범 0 (`add-org` 는 v1.1.0 신설)
+
+### Tests
+
+- 53 신규 tests across 6 files (`discord-invite-url.test.ts` × 10, `chief-kind-parser.test.ts` × 8, `migration-1.1.0-to-1.2.0.test.ts` × 10, `scaffold-org-v12.test.ts` × 7, `discord-owner-gate.test.ts` × 8, `discord-narration.test.ts` × 8). Suite 675 → **728 / 728 pass**. Pre-flight 검증 7/7 통과 (CLI surface, invite-url 합성, doctor --discord 5-hop, add-org tmpdir end-to-end, migration apply+verify+idempotent).
+
+### Deferred to v1.2.1 (thread 연속성 인프라 선행 필요)
+
+- referencedMessage chain + LRU cache (PRD §7.3 / §12 #8)
+- Thread token budget guard (PRD §9.2 / §12 #11)
+- 둘 다 messageCreate 가 thread 메시지를 수신 + thread → workflow_id reverse lookup 인프라가 선행되어야 의미 있음. v1.2.0 = 작업 1개 = thread 1개 모델이라 연속성 surface 없음. Slack adapter 와 동일 슬롯.
+
+---
+
 ## [1.1.0] — 2026-05-27
 
 **v1.1.0 — Multi-Agent Team Architecture.** Single PM session 패러다임을 Team-Centric Multi-Agent 로 격상. Chief (org-level supervisor) + 4 main bot (pm/engineer/designer/marketer) + 20 specialist + 18 skill + 4 team. Hermes V2 5-layer 위계 + gstack Six Forcing Questions + RO-PNA 6-Phase + phuryn pm-skills 통합. **메신저 연결은 v1.2 별도 plan** (L1 Gateway). 자세히 `docs/prd/v1.1-multi-agent-team-architecture.md`.
