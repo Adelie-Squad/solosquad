@@ -119,11 +119,21 @@ async function handleCommand(
       ctx.postTaskCard
     ) {
       try {
+        // v1.2 §8 — fetch the stage events emitted during this turn
+        // and project DECOMPOSE/DISPATCH/AWAIT into the thread. Pure
+        // file read; takes < 5ms on a sane jsonl, no network.
+        const narration = await import("../messenger/discord-narration.js").then(
+          (m) =>
+            m.narrationLinesAsStrings(
+              m.buildStageNarration(orgCwd, reply.turnId),
+            ),
+        );
         const card = await ctx.postTaskCard({
           kind: reply.kind,
           userRequest: forwardText,
           chiefReply: reply.text,
           chiefName: resolveChiefDisplayName(product.slug),
+          narrationLines: narration,
         });
         await ctx.reply(`📋 작업 등록됨 → ${card.threadUrl}`);
       } catch (cardErr) {

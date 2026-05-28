@@ -31,6 +31,14 @@ export interface TaskCardInput {
   chiefName: string;
   /** Stable workflow id when available (e.g. wf-20260528-pmf). */
   workflowId?: string;
+  /**
+   * v1.2 §8 — Chief 6+1 stage narration. Posted between the task card
+   * and the Chief reply so the user sees DISPATCH/AWAIT activity before
+   * reading the synthesized response. Built upstream from
+   * `chief-stage-events.jsonl`; empty when there are no projectable
+   * stages (chat-only turn or DECOMPOSE/DISPATCH not yet emitted).
+   */
+  narrationLines?: string[];
 }
 
 export interface TaskCardResult {

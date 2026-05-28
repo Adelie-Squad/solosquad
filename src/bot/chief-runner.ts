@@ -122,6 +122,12 @@ export interface ChiefReply {
   text: string;
   /** v1.2 §6.2 — parsed from `[kind:...]` marker; defaults to "chat". */
   kind: ChiefKind;
+  /**
+   * v1.2 §8 — correlation id for the turn. Used by messenger adapters
+   * to fetch matching entries from `<org>/memory/chief-stage-events.jsonl`
+   * for thread narration (DISPATCH / AWAIT / skills_used).
+   */
+  turnId: string;
   costUsd: number;
   durationMs: number;
   sessionRotated: boolean;
@@ -297,6 +303,7 @@ export class ChiefRunner {
     return {
       text: parsed.text,
       kind,
+      turnId,
       costUsd: result.costUsd,
       durationMs,
       sessionRotated: result.sessionRotated,

@@ -77,6 +77,17 @@ export async function postTaskCard(
     reason: `SoloSquad ${input.kind} ${workflowId}`,
   });
 
+  // v1.2 §8 — stage narration first (DECOMPOSE / DISPATCH / AWAIT),
+  // then the Chief reply text. Order matches the user's mental model:
+  // "what did Chief do" → "what does Chief say".
+  if (input.narrationLines && input.narrationLines.length > 0) {
+    for (const line of input.narrationLines) {
+      for (const chunk of chunkForDiscord(line)) {
+        await thread.send(chunk);
+      }
+    }
+  }
+
   if (input.chiefReply.trim().length > 0) {
     for (const chunk of chunkForDiscord(input.chiefReply)) {
       await thread.send(chunk);

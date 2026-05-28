@@ -30,6 +30,7 @@ import { loadOrgYaml } from "../util/config.js";
 import { decideOwnerGate } from "./discord-owner-gate.js";
 import { registerOnboarding, sendOnboardingEmbed } from "./discord-onboarding.js";
 import { postTaskCard } from "./discord-task-card.js";
+import { registerChatSlash } from "./discord-chat-slash.js";
 
 class DiscordMessageContext implements MessageContext {
   _agentLabel = "";
@@ -162,6 +163,20 @@ export class DiscordAdapter implements MessengerAdapter {
         ownHandle: this.ownHandle,
         ensureChannels: (g) => this.ensureChannels(g),
       }));
+
+      // v1.2 §7.4 — register `/chat` slash command as a fallback for
+      // MESSAGE_CONTENT intent denial. Idempotent + safe to call after
+      // the gateway is ready (guild commands are registered via REST,
+      // immediate reflection).
+      try {
+        await registerChatSlash(client, onCommand, () => ({
+          ownHandle: this.ownHandle,
+          ownOrgSlug: this.ownOrgSlug,
+          getProductByGuild: (guildId) => this.getProductByGuild(guildId),
+        }));
+      } catch (e) {
+        console.log(`[Discord] /chat slash registration failed: ${e}`);
+      }
     });
 
     client.on("guildCreate", async (guild) => {
