@@ -8,6 +8,44 @@ export interface MessageContext {
    * Used by PM-runner to key session-store: (userId, orgSlug) → session-id.
    * Discord: message.author.id. Slack: event.user. */
   userId: string;
+  /**
+   * v1.2 §6.2 — When Chief's TRIAGE classifies the turn as a work unit
+   * (workflow / schedule / goal), the bot/index.ts dispatcher invokes
+   * this to post a task card embed in `works-<handle>` + start a thread
+   * on that embed. Adapters that haven't implemented v1.2 yet can leave
+   * this undefined — the dispatcher falls back to a flat reply with a
+   * `📋` prefix in the command channel so the routing intent is still
+   * visible to the user.
+   */
+  postTaskCard?: (input: TaskCardInput) => Promise<TaskCardResult>;
+}
+
+export interface TaskCardInput {
+  /** Chief's TRIAGE kind. Drives embed color + label. */
+  kind: "workflow" | "schedule" | "goal";
+  /** Short user request (first line of original message, or summary). */
+  userRequest: string;
+  /** Full Chief reply text — posted as the first thread message. */
+  chiefReply: string;
+  /** Chief display name (org.yaml.chief_name or "Chief"). */
+  chiefName: string;
+  /** Stable workflow id when available (e.g. wf-20260528-pmf). */
+  workflowId?: string;
+  /**
+   * v1.2 §8 — Chief 6+1 stage narration. Posted between the task card
+   * and the Chief reply so the user sees DISPATCH/AWAIT activity before
+   * reading the synthesized response. Built upstream from
+   * `chief-stage-events.jsonl`; empty when there are no projectable
+   * stages (chat-only turn or DECOMPOSE/DISPATCH not yet emitted).
+   */
+  narrationLines?: string[];
+}
+
+export interface TaskCardResult {
+  /** Best-effort URL to the started thread (for the command-channel announce). */
+  threadUrl: string;
+  /** Resolved workflow id (echoed back; useful when caller didn't supply one). */
+  workflowId: string;
 }
 
 export type CommandHandler = (

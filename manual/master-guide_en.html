@@ -212,26 +212,43 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v1.1.0 (Multi-Agent Team Architecture; previous patches: v1.0.3 / v1.0.4)</span>
+  <span class="tag">Master Guide · v1.2.2 (Messenger Connection — Chief on Discord; previous minor: v1.1.0)</span>
 
   <section class="release-callout" style="background: #f6f8fa; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 8px 0;">
-    <strong>v1.1.0 (2026-05-27) — Multi-Agent Team Architecture.</strong>
-    The single-PM-session paradigm is upgraded to Team-Centric. <strong>Chief</strong>
-    (org-level supervisor, the only user-facing agent) and <strong>PM</strong>
-    (workspace-bundle autonomous product manager, never talks to the user
-    directly) are now distinct roles. The org has 4 main bots
-    (chief/pm/engineer/designer/marketer) + 20 specialists (flat catalog)
-    + 18 skills + 4 teams (product/engineering/design/marketing). 9-layer
-    JIT context (team OKR is the new Layer 4a). Chief runs a 6+1 stage
-    machine (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE
-    → RETROSPECT). PM surfaces gaps via the <code>open_questions[]</code>
-    async-batch protocol. Goal queue with a 1-active-per-org semaphore.
-    Four bundled workflow templates. Five leading indicators tracked
-    daily. Bug fix — <code>solosquad init</code> / <code>add-org</code> /
-    <code>sync</code> now populate <code>.claude/agents/</code>. External
-    references: Hermes V2, gstack (Garry Tan), RO-PNA pna-builders,
-    phuryn pm-skills. Messenger wiring deferred to v1.2. Details:
-    <code>docs/prd/v1.1-multi-agent-team-architecture.md</code> + <code>CHANGELOG.md</code> §[1.1.0].
+    <strong>v1.2.2 (2026-05-28) — Messenger Connection (Chief on Discord, auto-connect first).</strong>
+    Layered on top of v1.1.0's <em>internal agent architecture</em>, v1.2.2 ships only
+    the <em>external user-visible UX</em>: <strong>one Chief bot per org</strong>
+    (<code>OrgYaml.chief_name</code>, recommended to match the Developer Portal Bot name);
+    <strong>OAuth Invite URL 1-click</strong> via <code>solosquad discord invite-url</code>
+    (synthesizes app client_id + the recommended 10-perm bitfield — 6 verification-trigger
+    perms deliberately excluded — opens the default browser, falls back to clipboard);
+    <strong>handle-based channel portability</strong> (the same
+    <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> pair is auto-created
+    across multiple Discord guilds, and across future Slack workspaces);
+    <strong>owner-only gate</strong> (<code>message.author.id === user.yaml.messenger_user_id</code>) —
+    v1.0.2's <em>actual</em> reason for removing the author guard (user-id channel
+    names making bot recognition impossible) was solved by handle-based channels, so
+    reinstating the gate is now both feasible and the right policy; fresh installs
+    land ON, upgrades land OFF (migration writes <code>owner_only: false</code> for a
+    neutral upgrade); <strong>TRIAGE kind branching</strong> — Chief emits
+    <code>[kind:chat|workflow|schedule|goal]</code> as the first reply line; chat replies
+    flat in the command channel, workflow/schedule/goal post a task card embed in
+    <code>works-&lt;handle&gt;</code> + <code>startThread</code>, with stage narration
+    (DECOMPOSE / DISPATCH / AWAIT) projected into the thread and the command channel
+    receiving only a 1-line <em>"📋 task registered → &lt;thread URL&gt;"</em> announce;
+    <strong><code>solosquad add-org</code></strong> now bootstraps a new org to a fully working
+    state (Chief name prompt + the entire v1.1.0 hierarchy + the problem-definition
+    workflow as the default seed + inline Discord connect);
+    <strong>guildCreate onboarding embed + 2 buttons</strong> (Auto-create / Manual
+    choose) with the Chief name in the title and the owner mention in the body;
+    <strong><code>solosquad doctor --discord</code> 5-hop diagnostic</strong>
+    (token shape → REST /users/@me → bot_user_id match → guild membership proxy →
+    command channel ID, every hop attributable and actionable);
+    <code>/chat</code> slash command registered as the MESSAGE_CONTENT-intent fallback.
+    Zero CLI-freeze surface change, zero schema-breaking change. 53 new tests
+    (728/728 pass). Deferred to v1.2.1: referencedMessage chain + thread token budget
+    (both depend on thread-continuity infrastructure not in v1.2.2 scope).
+    Details: <code>docs/prd/v1.2-messenger-connection-discord-first.md</code> + <code>CHANGELOG.md</code> §[1.2.2].
   </section>
 
   <nav>

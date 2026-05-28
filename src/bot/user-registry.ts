@@ -17,6 +17,8 @@ export interface UserYaml {
   handle: string;
   display_name?: string;
   messenger: "discord" | "slack";
+  /** v0.8 — sender id used by §4.5 owner-only gate (v1.2). Discord: message.author.id. Slack: event.user. */
+  messenger_user_id?: string;
   bot_application_id?: string;
   bot_user_id: string;
   joined_at: string;

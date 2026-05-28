@@ -4,6 +4,7 @@ import yaml from "js-yaml";
 import {
   loadWorkspaceYaml,
   saveWorkspaceYaml,
+  type MessengerWorkspaceConfig,
   type WorkspaceYaml,
 } from "../util/config.js";
 import { getWorkspaceYamlPath } from "../util/paths.js";
@@ -22,22 +23,15 @@ import { normalizeLine } from "../util/platform.js";
 export const BROADCAST_CHANNEL_DEFAULT = "solosquad-broadcast";
 
 /**
- * Augmentation for `workspace.yaml`. Loosely typed because the migration
- * stamps it without strictly extending the central WorkspaceYaml interface
- * (kept narrow on purpose — broadcast is an optional add-on).
+ * @deprecated v1.2 — kept as a type alias for backward compatibility with
+ * call sites that imported `MessengerSection`. The canonical type lives in
+ * `src/util/config.ts` as `MessengerWorkspaceConfig` (covers broadcast +
+ * discord + slack subsections).
  */
-export interface MessengerSection {
-  broadcast_enabled?: boolean;
-  broadcast_owner_handle?: string | null;
-  broadcast_channel?: string;
-}
+export type MessengerSection = MessengerWorkspaceConfig;
 
-interface WorkspaceYamlWithMessenger extends WorkspaceYaml {
-  messenger?: MessengerSection;
-}
-
-export function loadMessengerSection(workspace?: string): MessengerSection {
-  const ws = loadWorkspaceYaml(workspace) as WorkspaceYamlWithMessenger | null;
+export function loadMessengerSection(workspace?: string): MessengerWorkspaceConfig {
+  const ws = loadWorkspaceYaml(workspace);
   return ws?.messenger ?? {};
 }
 
@@ -100,7 +94,7 @@ export function handoverBroadcast(input: HandoverInput): HandoverResult {
     throw new Error("workspace.yaml not found — run `solosquad init` first.");
   }
   const raw = yaml.load(normalizeLine(fs.readFileSync(file, "utf-8"))) as
-    | WorkspaceYamlWithMessenger
+    | WorkspaceYaml
     | null;
   if (!raw) throw new Error("workspace.yaml is empty or unreadable");
 
@@ -146,7 +140,7 @@ export function ensureMessengerSectionPresent(workspace?: string): void {
   const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true });
   const raw = yaml.load(normalizeLine(fs.readFileSync(file, "utf-8"))) as
-    | WorkspaceYamlWithMessenger
+    | WorkspaceYaml
     | null;
   if (!raw) return;
   if (!raw.messenger) {

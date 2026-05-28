@@ -4,7 +4,7 @@
 
 > A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord bot + scheduled routines + team-based agents, distributed as a single npm package.
 
-Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team of **25 specialist AI agents** across 4 disciplines (Strategy, Growth, Experience, Engineering), reachable from your messenger, with automated daily routines and per-product memory isolation.
+Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team — **1 Chief** (org-level supervisor, the only user-facing agent), **4 main bots** (pm / engineer / designer / marketer), and **20 specialists** across 4 teams (product, engineering, design, marketing) — reachable from your messenger, with automated daily routines, per-org memory isolation, and a 6+1 stage decision loop (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT).
 
 ```
 Output ≠ Goal. Output = Means to achieve the goal.
@@ -20,7 +20,7 @@ Output ≠ Goal. Output = Means to achieve the goal.
 
 📖 **The canonical user guide is the menu-divided HTML manual:**
 
-> **[`manual/master-guide.html`](manual/master-guide.html)** — open it in a browser.
+> **[`manual/master-guide_en.html`](manual/master-guide_en.html)** (English) · **[`manual/master-guide_ko.html`](manual/master-guide_ko.html)** (한국어) — open in a browser.
 
 It covers, in ten menu-divided sections:
 
@@ -33,13 +33,32 @@ It covers, in ten menu-divided sections:
 | 5 | Messenger Setup | 8-step Discord token walkthrough (Slack walkthrough retained as a post-v1.0 reference) |
 | 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
-| 8 | Version Differences | v0.8.3 (npm-published) vs v1.0+ (planned) |
+| 8 | Version Differences | v1.2.2 (npm-published) vs upcoming releases |
 | 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
 | 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
 
-Every feature is tagged with a version badge: 🟢 v0.8.3 (available now) · 🟡 v1.0+ (planned) · 🔴 removed (e.g. Telegram).
+Every feature is tagged with a version badge.
 
-For internal architecture, release planning, and decision history, see [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md).
+For internal architecture, release planning, and decision history, see [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) + [`docs/prd/architecture.md`](docs/prd/architecture.md).
+
+---
+
+## What's new in v1.2.2 (2026-05-28)
+
+**Messenger Connection — Chief on Discord, auto-connect first.** Layered onto v1.1.0's internal agent architecture, v1.2 ships the external user-visible UX:
+
+- **One Chief bot per org** — give it a name (`solosquad add org --chief-name Hermes`) and use the same name when you create the Discord Developer Portal Bot. The Chief's name surfaces in the welcome embed, narration, and `doctor` output.
+- **OAuth Invite URL 1-click** — `solosquad discord invite-url` synthesizes the URL from your app's client_id + the recommended 10-permission bitfield (verification-trigger perms deliberately excluded), opens it in the default browser, falls back to clipboard.
+- **Handle-based channel portability** — `command-<handle>` / `works-<handle>` is the same pair across every Discord guild you invite the bot to, and across future Slack workspaces.
+- **Owner-only gate** (default ON for fresh installs, OFF for upgrades for backward compat) — Chief only processes messages whose author is the workspace owner.
+- **TRIAGE kind branch** — short chats reply flat in the command channel; `workflow` / `schedule` / `goal` requests post a task card embed in `works-<handle>` and start a thread, with sub-agent activity (DECOMPOSE / DISPATCH / AWAIT) projected into that thread. The command channel only sees `📋 작업 등록됨 → <thread URL>`.
+- **`solosquad add org`** now bootstraps a fully working org — Chief name + the entire v1.1.0 hierarchy + a `problem-definition` workflow seed + inline Discord connect.
+- **`solosquad doctor --discord` 5-hop diagnostic** — token shape → REST `/users/@me` → bot_user_id match → guild membership → command channel ID. Every failure is attributable and actionable.
+- **guildCreate onboarding embed + 2 buttons** (Auto-create / Manual choose) + `/chat` slash fallback for MESSAGE_CONTENT-intent denial.
+
+53 new tests; 728/728 pass. Migration `1.1.0 → 1.2.2` is idempotent; existing users land on `owner_only: false` for a neutral upgrade.
+
+Full release notes: [CHANGELOG.md §1.2.2](CHANGELOG.md#122--2026-05-28).
 
 ---
 
@@ -53,8 +72,9 @@ npm install -g @anthropic-ai/claude-code
 # 2. Install SoloSquad
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
-solosquad init                                    # wizard handles Claude OAuth (Step 1.5) + messenger token + repo path-reference
+solosquad init                                    # wizard handles Claude OAuth (Step 1.5) + Chief name + Discord token + invite URL auto-open
 solosquad doctor                                  # verify environment
+solosquad doctor --discord                        # focused 5-hop Discord diagnostic (v1.2)
 
 # 3. Start the bot
 solosquad bot                                     # foreground
@@ -62,9 +82,9 @@ solosquad bot                                     # foreground
 cd deploy/docker && docker compose up -d --build  # background + auto-restart
 ```
 
-Then send `안녕` or `hello` to your `#command-<handle>` Discord channel — a specialist agent responds.
+When you invite the bot to a guild, the **guildCreate onboarding embed** appears in the system channel. Click **Auto-create channels** → the bot creates `#command-<handle>` and `#works-<handle>`, posts a first greeting in the command channel, and you're ready. Send a message — the Chief responds.
 
-**Messenger token setup** takes 3–5 minutes (Discord). Follow [master-guide.html §5](manual/master-guide.html) step-by-step.
+**Messenger token setup** takes 3–5 minutes (Discord). Follow [master-guide §5](manual/master-guide_en.html) step-by-step.
 
 ### Upgrading from v0.5.x
 
@@ -253,7 +273,7 @@ v0.6 layers five more pieces over the v0.3–v0.5 base:
 For production-grade always-on, choose one of:
 - Docker Compose (recommended, background + auto-restart) — see [`deploy/docker/README.md`](deploy/docker/README.md)
 - macOS `launchd` plist / Windows NSSM service
-- VPS + systemd (see [`docs/plan/cloud-deployment.md`](docs/plan/cloud-deployment.md))
+- VPS + systemd (see [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
 
 Full details in master-guide §9.
 
@@ -261,9 +281,9 @@ Full details in master-guide §9.
 
 ## Versions
 
-Current npm release: **v0.8.3** (npm registry: `0.8.3`).
+Current npm release: **v1.2.2** (npm registry: `1.2.2`).
 
-The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stable API guarantees. Shipped + planned milestones:
+v1.0 marked the formal release with stable API guarantees. Shipped + planned milestones (full history in [`CHANGELOG.md`](CHANGELOG.md), decision log in [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6):
 
 | Version | Theme | Highlights |
 |---|---|---|
@@ -276,13 +296,17 @@ The project is in pre-launch (v0.x). **v1.0 will mark formal release** with stab
 | **v0.8.1 (released)** | **Security & Lifecycle Pair** | `npm audit` 7 → 0 (discord.js 14.16 → 14.26 + undici 6.21 → 6.24 + overrides); `solosquad import <zip>` completes the v0.7 archive pair (dry-run + `--merge`/`--replace` + journal-idempotent resume); `solosquad archive verify/info/list` (yauzl-based); `docs/api-stability.md` 6 schema_version bump rules; SKILL.md `schema_version: 1` backfill |
 | **v0.8.2 (released)** | **Dev Capability** | SKILL frontmatter `dev_capability` + `dev_permissions` (Bash allow/deny, network, push confirmation, **`merge.auto: false` permanently forbidden**); engineering 5 SKILLs (`backend-developer / fde / api-developer / creative-frontend / qa-engineer`) baked in `true`, others `false`; workspace master toggle; `src/bot/dev-confirm.ts` 30-min timeout gate; `gh auth status` doctor check |
 | **v0.8.3 (released)** | **Onboarding UX + Observability** | `solosquad add repo --dry-run` + 5-scenario risk detection (lsof / symlinks / abs-paths / slug collision / IDE files); 5-step legacy repo migration guide; `solosquad logout` removed (replaced by `Ctrl+C` + `.env` mask + REVOKE-CHECKLIST); structured logger + `solosquad logs` CLI (level / JSON / file / 14-day rolling); master-guide §3/§6/§8/§9/§10 re-aligned for v0.7+v0.8; doctor CLI↔workspace version mismatch advisor; trajectory ROI gate measurement placeholder |
-| **v1.0** (planned) | **Formal launch** | Stable API · breaking-change policy starts |
-| v1.x (planned) | Workflow / Goal / Routine evolution | `docs/plan/v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 ideation: 24/7 자율 팀 leading indicator · `/save-as-skill` 명시 · goal cycle 중간 통지/개입 · 사용자별 루틴 · Amplitude-style 실험 인프라 |
-| v1.1 (planned) | Dashboard interaction | Companion web dashboard (separate repo) |
-| v1.2 (planned) | Knowledge ontology | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
-| v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes — aligned with knowledge ontology |
+| **v1.0.0 (released)** | **Formal launch** | Stable API guarantees · 42 CLI surface freeze · `docs/api-stability.md` 공개 약속 발효 · Discord 단일 메신저 (Slack post-v1.0 슬롯) |
+| v1.0.1 – v1.0.4 (released) | **Discord robustness patch chain** | discord.js v15 deprecation · `@<slug>` mention · author-guard 정합 · guild-org binding · category rename · config.yaml load-or-empty + 5-hop diagnostic + Slack author-guard cleanup |
+| **v1.1.0 (released)** | **Multi-Agent Team Architecture** | Single PM session → Team-Centric. **Chief** (org-level supervisor, 사용자 대면) + **PM** (workspace-bundle, 자율 product manager) 분리. 4 main bot + 20 specialist + 18 skill + 4 team. 9-layer JIT (team OKR Layer 4a). Chief 6+1 stage state machine. open_questions[] async-batch protocol. Goal queue (1-active-per-org). 4 workflow templates. 외부 reference: Hermes V2 + gstack (Garry Tan) + RO-PNA pna-builders + phuryn pm-skills |
+| **v1.2.2 (released)** | **Messenger Connection (Chief on Discord, auto-connect first)** | 조직 1개당 1 Chief 봇 (`OrgYaml.chief_name`) · OAuth Invite URL 1-click (`solosquad discord invite-url`) · handle 기반 채널 멀티-메신저 portable · owner-only 게이트 (v1.0.2 reversal, default ON 신규 / OFF 업그레이드) · TRIAGE kind 분기 → `works-<handle>` task card + thread + stage narration · `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 · `solosquad doctor --discord` 5-hop diagnostic · guildCreate onboarding embed + 2 button · `/chat` slash fallback. 53 신규 test (728/728 pass) |
+| v1.2.1 (planned) | Messenger thread continuity | referencedMessage chain + LRU cache + thread token budget guard. messageCreate가 thread 메시지 수신 + thread→workflow_id reverse lookup. Slack adapter 동일 슬롯 |
+| v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes |
+| v1.x (planned) | Dashboard interaction | Companion web dashboard (별도 리포 `solopreneur-dashboard` + `solopreneur-api`) |
+| v1.x (planned) | Knowledge ontology + MCP | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
+| v1.x (planned) | LLM backend abstraction | Multi-backend (single Claude → pluggable) |
 
-Decision log: [`docs/plan/product-roadmap.md`](docs/plan/product-roadmap.md) §6.
+Decision log: [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6.
 
 ---
 
@@ -304,16 +328,16 @@ Each has independent `.env`, tokens, memory, and messenger account. They run sid
 Source tree (this repo):
 
 ```
-package.json                      → npm package config (v0.8.3)
+package.json                      → npm package config (v1.2.2)
 tsconfig.json                     → TypeScript config
 bin/solosquad.ts                  → CLI entry point
 AGENTS.md                         → canonical workspace guide (v0.4 — immutable, cross-tool)
 CLAUDE.md                         → 3-line redirect to AGENTS.md (backward-compat)
 src/
-  cli/                            → CLI commands (init, bot, schedule, doctor, pm, workflow,
-                                     goal, agent, analyze, add, sync, migrate, rollback,
-                                     memory, readiness)
-  bot/                            → pm-runner, claude-process, session-store, events,
+  cli/                            → CLI commands (init, bot, schedule, doctor, doctor-discord,
+                                     pm, workflow, goal, agent, analyze, add, sync, migrate,
+                                     rollback, memory, readiness, discord)
+  bot/                            → chief-runner, claude-process, session-store, events,
                                      agents-builder, workflow-reconciler, slash-commands,
                                      git-snapshot, skill-parser, agent-router,
                                      meta-skill-scanner, skill-author, author-budget,
@@ -350,7 +374,7 @@ assets/                           → Bundled defaults (copied to user workspace
 deploy/
   docker/                         → Container deployment (Dockerfile + compose + README)
 docs/
-  manual/master-guide.html        → 📖 Canonical user manual (10 sections)
+  manual/master-guide_{en,ko}.html → 📖 Canonical user manual (10 sections, EN + KO)
   plan/                           → Release planning + decision log (v0.1 → v1.2)
   plan/product-roadmap.md         → Master roadmap + decision log §4
   plan/architecture.md            → Internal system design
@@ -427,7 +451,7 @@ End-user workspace (created by `solosquad init`, evolved through migrations):
 | [phuryn/pm-skills](https://github.com/phuryn/pm-skills) | auto-load + slash dual-trigger SKILL routing (adopted in v0.5 4-channel router) |
 | [OpenClaw](https://github.com/openclaw/openclaw) | npm publishing + `update` / `doctor` CLI patterns |
 
-Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration, MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/plan/product-roadmap.md` §4 for the reasoning.
+Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration, MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/prd/product-roadmap.md` §4 for the reasoning.
 
 ---
 

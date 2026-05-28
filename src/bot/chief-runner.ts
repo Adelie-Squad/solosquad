@@ -107,13 +107,71 @@ export interface ChiefCall {
   userText: string;
 }
 
+/**
+ * v1.2 §6.2 — TRIAGE classifier output. Chief is instructed (per
+ * `agents/main/chief/SKILL.md`) to emit `[kind:<value>]` as the first
+ * line of every reply. The runner strips the marker and exposes the
+ * parsed value so messenger adapters can route accordingly.
+ *
+ * `chat` (default) → command channel flat reply.
+ * `workflow` / `schedule` / `goal` → works-handle task card + thread.
+ */
+export type ChiefKind = "chat" | "workflow" | "schedule" | "goal";
+
 export interface ChiefReply {
   text: string;
+  /** v1.2 §6.2 — parsed from `[kind:...]` marker; defaults to "chat". */
+  kind: ChiefKind;
+  /**
+   * v1.2 §8 — correlation id for the turn. Used by messenger adapters
+   * to fetch matching entries from `<org>/memory/chief-stage-events.jsonl`
+   * for thread narration (DISPATCH / AWAIT / skills_used).
+   */
+  turnId: string;
   costUsd: number;
   durationMs: number;
   sessionRotated: boolean;
   rateLimited: boolean;
   spawnCount: number;
+}
+
+const KIND_MARKER_RE = /^\s*\[kind:(chat|workflow|schedule|goal)\]\s*\n?/i;
+const USER_TEXT_KIND_HEURISTICS: Array<[RegExp, ChiefKind]> = [
+  [/^\s*\/?(workflow|워크플로|워크플로우)\b/i, "workflow"],
+  [/^\s*\/?(schedule|스케줄|매일|매주|매월)\b/i, "schedule"],
+  [/^\s*\/?(goal|목표)\b/i, "goal"],
+];
+
+/**
+ * Heuristic classifier used when Chief's reply has no `[kind:...]`
+ * marker (older Chief templates, or chief-stage-events log replay). The
+ * primary signal is still the Chief-emitted marker — this is just a
+ * safety net so v1.2 routing works for explicit user requests even
+ * without Chief retraining.
+ */
+function classifyByUserText(userText: string): ChiefKind {
+  for (const [re, kind] of USER_TEXT_KIND_HEURISTICS) {
+    if (re.test(userText)) return kind;
+  }
+  return "chat";
+}
+
+/**
+ * Extract the kind marker from a reply, returning the parsed kind plus
+ * the reply text with the marker stripped. When no marker is present,
+ * the text is returned unchanged and kind is null (caller falls back to
+ * `classifyByUserText`).
+ */
+export function parseKindMarker(reply: string): {
+  kind: ChiefKind | null;
+  text: string;
+} {
+  const m = reply.match(KIND_MARKER_RE);
+  if (!m) return { kind: null, text: reply };
+  return {
+    kind: m[1].toLowerCase() as ChiefKind,
+    text: reply.slice(m[0].length),
+  };
 }
 
 export class AuthExpiredError extends Error {
@@ -236,8 +294,16 @@ export class ChiefRunner {
     // reads chief-stage-events.jsonl per turn_id to learn from the cycle.
     safeEmitStage(call.orgCwd, turnId, "RETROSPECT", `duration_ms=${durationMs}`);
 
+    // v1.2 §6.2 — strip the `[kind:...]` marker before handing back to
+    // the messenger. Fallback to user-text heuristics when Chief didn't
+    // emit the marker (older Chief templates).
+    const parsed = parseKindMarker(result.text);
+    const kind: ChiefKind = parsed.kind ?? classifyByUserText(call.userText);
+
     return {
-      text: result.text,
+      text: parsed.text,
+      kind,
+      turnId,
       costUsd: result.costUsd,
       durationMs,
       sessionRotated: result.sessionRotated,

@@ -17,10 +17,26 @@ import {
   loadEnv,
   loadFsWatchConfig,
   loadMessengerConfig,
+  loadOrgYaml,
   listOrganizations,
   type Product,
 } from "../util/config.js";
+import { getOrgDir } from "../util/paths.js";
 import type { MessageContext, MessengerAdapter } from "../messenger/base.js";
+
+/**
+ * v1.2 — resolve the org's Chief display name (org.yaml.chief_name)
+ * with a "Chief" fallback. Cached lightly by re-reading per turn; the
+ * file is tiny and the call is once per Chief reply (low frequency).
+ */
+function resolveChiefDisplayName(orgSlug: string): string {
+  try {
+    const org = loadOrgYaml(getOrgDir(orgSlug, workspaceRoot));
+    return org?.chief_name?.trim() || "Chief";
+  } catch {
+    return "Chief";
+  }
+}
 
 const MAX_MESSAGE_LENGTH = 4000;
 
@@ -89,7 +105,46 @@ async function handleCommand(
       orgCwd,
       userText: forwardText,
     });
-    if (reply.text) {
+
+    // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply
+    // in the command channel; `workflow` / `schedule` / `goal` post a
+    // task card embed in `works-<handle>` + thread carrying the full
+    // Chief reply, and the command channel only sees a 1-line announce
+    // with the thread link. Adapters that haven't implemented
+    // `postTaskCard` (Slack v1.2.x) fall back to a `📋` prefix so the
+    // routing intent stays visible.
+    if (
+      reply.kind !== "chat" &&
+      reply.text.trim().length > 0 &&
+      ctx.postTaskCard
+    ) {
+      try {
+        // v1.2 §8 — fetch the stage events emitted during this turn
+        // and project DECOMPOSE/DISPATCH/AWAIT into the thread. Pure
+        // file read; takes < 5ms on a sane jsonl, no network.
+        const narration = await import("../messenger/discord-narration.js").then(
+          (m) =>
+            m.narrationLinesAsStrings(
+              m.buildStageNarration(orgCwd, reply.turnId),
+            ),
+        );
+        const card = await ctx.postTaskCard({
+          kind: reply.kind,
+          userRequest: forwardText,
+          chiefReply: reply.text,
+          chiefName: resolveChiefDisplayName(product.slug),
+          narrationLines: narration,
+        });
+        await ctx.reply(`📋 작업 등록됨 → ${card.threadUrl}`);
+      } catch (cardErr) {
+        console.log(
+          `[Bot] task-card post failed (${reply.kind}): ${
+            cardErr instanceof Error ? cardErr.message : String(cardErr)
+          } — falling back to flat reply`,
+        );
+        await ctx.reply(`📋 [${reply.kind}] ${reply.text}`);
+      }
+    } else if (reply.text) {
       await ctx.reply(reply.text);
     } else {
       await ctx.reply("(no reply generated — please try again or check `solosquad doctor`)");
@@ -100,7 +155,7 @@ async function handleCommand(
       );
     }
     console.log(
-      `[Bot] PM turn done: cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`
+      `[Bot] PM turn done: kind=${reply.kind} cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`
     );
     try {
       commitSnapshot(workspaceRoot, product.slug, `after-spawn: ${ctx.userId} cost=$${reply.costUsd.toFixed(4)} spawns=${reply.spawnCount}`);

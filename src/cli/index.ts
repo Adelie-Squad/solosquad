@@ -118,7 +118,13 @@ program
   .description("Check environment and diagnose issues")
   .option("--ci", "CI mode: exit with non-zero code on failure, no color")
   .option("--messenger-check", "Validate messenger tokens against live APIs (Slack/Discord)")
+  .option("--discord", "v1.2 — run the focused Discord 5-hop diagnostic instead of the full sweep")
   .action(async (opts) => {
+    if (opts.discord) {
+      const { doctorDiscordCommand } = await import("./doctor-discord.js");
+      await doctorDiscordCommand({ ci: opts.ci });
+      return;
+    }
     const { doctorCommand } = await import("./doctor.js");
     await doctorCommand(opts.ci, opts.messengerCheck);
   });
@@ -159,6 +165,8 @@ addGroup
   .option("--provider <provider>", "local | github | gitlab | gitea")
   .option("--remote-url <url>", "Remote URL for the organization")
   .option("--messenger <platform>", "Override workspace messenger for this org's channels")
+  .option("--chief-name <name>", "Chief display name (v1.2 — blank = use default \"Chief\")")
+  .option("--skip-discord", "Skip the inline Discord invite-URL prompt")
   .action(async (name, opts) => {
     const { addOrgCommand } = await import("./add-org.js");
     await addOrgCommand(name, opts);
@@ -537,6 +545,26 @@ messengerGroup
   .action(async (opts) => {
     const { broadcastHandoverCommand } = await import("./messenger.js");
     await broadcastHandoverCommand({ to: opts.to, enable: opts.enable });
+  });
+
+// v1.2 §3.1 — Discord auto-connect ops.
+const discordGroup = program
+  .command("discord")
+  .description("Discord auto-connect ops (v1.2)");
+
+discordGroup
+  .command("invite-url")
+  .description("Synthesize an OAuth invite URL for the Chief bot and open it in a browser")
+  .option("--client-id <id>", "Override the auto-detected application client_id")
+  .option("--print-only", "Only print the URL — skip browser-open")
+  .option("--org <slug>", "Restrict to one org when the workspace has many")
+  .action(async (opts) => {
+    const { inviteUrlCommand } = await import("./discord.js");
+    await inviteUrlCommand({
+      clientId: opts.clientId,
+      printOnly: opts.printOnly,
+      org: opts.org,
+    });
   });
 
 // v0.8.1 §4 — `solosquad import <archive.zip>`
