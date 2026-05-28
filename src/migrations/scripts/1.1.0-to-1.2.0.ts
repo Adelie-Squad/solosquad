@@ -36,8 +36,9 @@ import { getBundleRoot, getOrgDir } from "../../util/paths.js";
  *      overwritten.
  *
  * What this migration does **not** do:
- *   - `chief_name` is *not* auto-set. doctor / init / add-org prompts it
- *     interactively. Runtime fallback is the string "Chief". PRD §4.1.
+ *   - `org.yaml.chief_name` is *not* auto-set. doctor / init / add-org
+ *     prompts it interactively. Runtime fallback is the string "Chief".
+ *     PRD §4.1.
  *   - `bot_application_id` is reused (v0.8.0 field, set by 0.7.0-to-0.8.0).
  *     No restructure to a hypothetical `bots.chief.*` nested namespace.
  *   - Existing channels / token / config.yaml / open-questions / ledger
@@ -140,7 +141,7 @@ export const migration: Migration = {
     }
 
     warnings.push(
-      "Chief name (user.yaml.chief_name) is not auto-set. Run `solosquad doctor` or re-run `solosquad init` to set it; runtime fallback is the literal \"Chief\".",
+      "Chief name (org.yaml.chief_name) is not auto-set. Run `solosquad doctor` or re-run `solosquad init` to set it; runtime fallback is the literal \"Chief\".",
     );
     warnings.push(
       "Discord owner-only gate stays OFF for upgraded workspaces (preserves v1.0.2 mode). To enable strict owner-only, edit workspace.yaml: messenger.discord.owner_only=true. Fresh installs land with owner_only=true by default.",

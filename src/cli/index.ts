@@ -159,6 +159,8 @@ addGroup
   .option("--provider <provider>", "local | github | gitlab | gitea")
   .option("--remote-url <url>", "Remote URL for the organization")
   .option("--messenger <platform>", "Override workspace messenger for this org's channels")
+  .option("--chief-name <name>", "Chief display name (v1.2 — blank = use default \"Chief\")")
+  .option("--skip-discord", "Skip the inline Discord invite-URL prompt")
   .action(async (name, opts) => {
     const { addOrgCommand } = await import("./add-org.js");
     await addOrgCommand(name, opts);

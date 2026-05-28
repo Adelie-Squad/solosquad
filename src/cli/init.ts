@@ -768,7 +768,22 @@ export async function initCommand(): Promise<void> {
     console.log(chalk.yellow("\nDiscord Bot Token required."));
     console.log("  https://discord.com/developers/applications → Bot → Reset Token");
     console.log("  Also enable: Bot → Privileged Gateway Intents → MESSAGE CONTENT");
-    console.log("  Bot permissions: View Channels, Send Messages, Read Message History, Create Public Threads\n");
+    console.log("  Bot permissions: View Channels, Send Messages, Read Message History, Create Public Threads");
+    console.log(
+      chalk.dim(
+        "\n  v1.2 tip: when Discord asks for the Bot's name on the Developer Portal page,",
+      ),
+    );
+    console.log(
+      chalk.dim(
+        "  use the same string you'll pick as the Chief name (Step 6 below). Keeping",
+      ),
+    );
+    console.log(
+      chalk.dim(
+        "  them identical means the messenger surface and SoloSquad's narration match.\n",
+      ),
+    );
     const { token } = await inquirer.prompt([
       { name: "token", message: "Discord Bot Token:", type: "password" },
     ]);
@@ -923,12 +938,42 @@ export async function initCommand(): Promise<void> {
       },
     ]);
 
+    // v1.2 §4.1 — org-level Chief display name. Skip = runtime falls back
+    // to literal "Chief". Recommend matching the Discord Developer Portal
+    // Bot name (asked in Step 3 above) so the messenger surface stays
+    // consistent with SoloSquad's internal identity.
+    console.log(
+      chalk.dim(
+        "\n  Each org has one Chief — the user-facing supervisor agent.",
+      ),
+    );
+    console.log(
+      chalk.dim(
+        "  Give it a name (e.g. Hermes, Atlas, Apollo). If you set a Discord Bot",
+      ),
+    );
+    console.log(
+      chalk.dim(
+        "  name in Step 3 above, use the same string here.",
+      ),
+    );
+    const { chiefName } = await inquirer.prompt([
+      {
+        name: "chiefName",
+        message: "Chief name (blank = use default \"Chief\"):",
+        type: "input",
+        default: "",
+      },
+    ]);
+    const trimmedChief = (chiefName as string).trim() || undefined;
+
     const { orgDir } = scaffoldOrg({
       workspace,
       name: orgName,
       provider,
       remoteUrl: remoteUrl || null,
       messenger,
+      chiefName: trimmedChief,
     });
     orgSlug = path.basename(orgDir);
     console.log(chalk.green(`✓ ${orgSlug}/ organization created`));
@@ -994,6 +1039,57 @@ export async function initCommand(): Promise<void> {
         choice: identityChoice,
         ownerName,
       });
+    }
+
+    // v1.2 §3.1 / §5 Step 4 — auto-print the Discord invite URL right after
+    // the user yaml is saved. The user clicks once → Discord OAuth →
+    // bot joins their guild → guildCreate handler (v1.2 §5) onboards them.
+    // Skipped silently when bot_application_id wasn't recovered from the
+    // token (token invalid / network down — promptHandleSelection already
+    // warned).
+    if (
+      messengerPlatform === "discord" &&
+      identityChoice?.bot.appId
+    ) {
+      const { buildInviteUrl, openInBrowser } = await import(
+        "../messenger/discord-invite-url.js"
+      );
+      try {
+        const url = buildInviteUrl({
+          applicationClientId: identityChoice.bot.appId,
+        });
+        console.log(chalk.bold("\n-- Discord Invite URL --"));
+        console.log(
+          chalk.dim(
+            "  Click once to add your Chief bot to a guild. Discord will ask which server",
+          ),
+        );
+        console.log(
+          chalk.dim(
+            "  to add it to and which permissions to grant — keep the defaults.",
+          ),
+        );
+        console.log("");
+        console.log(chalk.cyan(`  ${url}`));
+        if (openInBrowser(url)) {
+          console.log(chalk.dim("  → opened in your default browser"));
+        } else {
+          console.log(
+            chalk.yellow(
+              "  ⚠ Could not launch a browser automatically — copy the URL above.",
+            ),
+          );
+        }
+      } catch (err) {
+        console.log(
+          chalk.yellow(
+            `  ⚠ Invite URL synthesis failed: ${(err as Error).message}`,
+          ),
+        );
+        console.log(
+          chalk.dim("    Run `solosquad discord invite-url` later to retry."),
+        );
+      }
     }
   }
 

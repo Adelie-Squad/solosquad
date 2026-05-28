@@ -391,6 +391,13 @@ export interface OrgYaml {
   homepage?: string | null;
   products?: OrgProduct[];
   description?: string;
+  /**
+   * v1.2 §4.1 — org-level Chief display name (e.g. "Hermes", "Atlas").
+   * One Chief per org; init/add-org prompts for it and recommends the same
+   * string for the Discord Developer Portal Bot name. Missing → runtime
+   * falls back to the literal "Chief".
+   */
+  chief_name?: string;
   created_at: string;
 }
 
