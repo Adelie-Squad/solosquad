@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import yaml from "js-yaml";
 
-import { migration } from "../src/migrations/scripts/1.1.0-to-1.2.0.js";
+import { migration } from "../src/migrations/scripts/1.1.0-to-1.2.2.js";
 
 function tempWorkspace(version: string, productSlugs: string[] = ["acme"]): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solosquad-v12-mig-"));
@@ -29,36 +29,36 @@ function tempWorkspace(version: string, productSlugs: string[] = ["acme"]): stri
   return dir;
 }
 
-test("1.1.0→1.2.0 — detect() fires on 1.1.0", async () => {
+test("1.1.0→1.2.2 — detect() fires on 1.1.0", async () => {
   const ws = tempWorkspace("1.1.0");
   assert.equal(await migration.detect(ws), true);
 });
 
-test("1.1.0→1.2.0 — detect() fires on 1.1.0.<extra> (4-segment legacy)", async () => {
+test("1.1.0→1.2.2 — detect() fires on 1.1.0.<extra> (4-segment legacy)", async () => {
   const ws = tempWorkspace("1.1.0.1");
   assert.equal(await migration.detect(ws), true);
 });
 
-test("1.1.0→1.2.0 — detect() does NOT fire on 1.0.x", async () => {
+test("1.1.0→1.2.2 — detect() does NOT fire on 1.0.x", async () => {
   const ws = tempWorkspace("1.0.4");
   assert.equal(await migration.detect(ws), false);
 });
 
-test("1.1.0→1.2.0 — detect() does NOT fire on 1.2.0 (idempotent)", async () => {
-  const ws = tempWorkspace("1.2.0");
+test("1.1.0→1.2.2 — detect() does NOT fire on 1.2.2 (idempotent)", async () => {
+  const ws = tempWorkspace("1.2.2");
   assert.equal(await migration.detect(ws), false);
 });
 
-test("1.1.0→1.2.0 — plan() includes version bump", async () => {
+test("1.1.0→1.2.2 — plan() includes version bump", async () => {
   const ws = tempWorkspace("1.1.0");
   const plan = await migration.plan(ws);
   const bump = plan.steps.find(
-    (s) => s.kind === "update" && (s.to ?? "").includes("workspace.yaml.version=1.2.0"),
+    (s) => s.kind === "update" && (s.to ?? "").includes("workspace.yaml.version=1.2.2"),
   );
   assert.ok(bump, "version-bump step missing");
 });
 
-test("1.1.0→1.2.0 — plan() includes discord workspace policy seed when missing", async () => {
+test("1.1.0→1.2.2 — plan() includes discord workspace policy seed when missing", async () => {
   const ws = tempWorkspace("1.1.0");
   const plan = await migration.plan(ws);
   const seed = plan.steps.find(
@@ -70,7 +70,7 @@ test("1.1.0→1.2.0 — plan() includes discord workspace policy seed when missi
   assert.match(seed!.to ?? "", /owner_only:false/);
 });
 
-test("1.1.0→1.2.0 — plan() warns about Chief name + owner_only=false (upgrade-safe)", async () => {
+test("1.1.0→1.2.2 — plan() warns about Chief name + owner_only=false (upgrade-safe)", async () => {
   const ws = tempWorkspace("1.1.0");
   const plan = await migration.plan(ws);
   assert.ok(
@@ -83,14 +83,14 @@ test("1.1.0→1.2.0 — plan() warns about Chief name + owner_only=false (upgrad
   );
 });
 
-test("1.1.0→1.2.0 — apply() bumps version + seeds messenger.discord", async () => {
+test("1.1.0→1.2.2 — apply() bumps version + seeds messenger.discord", async () => {
   const ws = tempWorkspace("1.1.0");
   await migration.apply(ws);
   const after = yaml.load(
     fs.readFileSync(path.join(ws, ".solosquad", "workspace.yaml"), "utf-8"),
   ) as Record<string, unknown>;
-  assert.equal(after.version, "1.2.0");
-  assert.equal(after.last_migrated_to, "1.2.0");
+  assert.equal(after.version, "1.2.2");
+  assert.equal(after.last_migrated_to, "1.2.2");
   const msg = (after.messenger as Record<string, unknown> | undefined)?.discord as
     | Record<string, unknown>
     | undefined;
@@ -100,7 +100,7 @@ test("1.1.0→1.2.0 — apply() bumps version + seeds messenger.discord", async 
   assert.equal(msg!.thread_token_budget, 80_000);
 });
 
-test("1.1.0→1.2.0 — apply() preserves an existing messenger.discord block (idempotent)", async () => {
+test("1.1.0→1.2.2 — apply() preserves an existing messenger.discord block (idempotent)", async () => {
   const ws = tempWorkspace("1.1.0");
   const file = path.join(ws, ".solosquad", "workspace.yaml");
   const original = yaml.load(fs.readFileSync(file, "utf-8")) as Record<string, unknown>;
@@ -114,7 +114,7 @@ test("1.1.0→1.2.0 — apply() preserves an existing messenger.discord block (i
   assert.equal(msg.install_mode, "oauth_invite");
 });
 
-test("1.1.0→1.2.0 — apply() never clobbers a pre-existing workflows/problem-definition/workflow.yaml", async () => {
+test("1.1.0→1.2.2 — apply() never clobbers a pre-existing workflows/problem-definition/workflow.yaml", async () => {
   const ws = tempWorkspace("1.1.0", ["acme"]);
   const seededDir = path.join(ws, "acme", "workflows", "problem-definition");
   fs.mkdirSync(seededDir, { recursive: true });
@@ -127,14 +127,14 @@ test("1.1.0→1.2.0 — apply() never clobbers a pre-existing workflows/problem-
   );
 });
 
-test("1.1.0→1.2.0 — verify() succeeds after apply", async () => {
+test("1.1.0→1.2.2 — verify() succeeds after apply", async () => {
   const ws = tempWorkspace("1.1.0");
   await migration.apply(ws);
   const v = await migration.verify(ws);
   assert.equal(v.ok, true);
 });
 
-test("1.1.0→1.2.0 — verify() reports version mismatch when apply did not run", async () => {
+test("1.1.0→1.2.2 — verify() reports version mismatch when apply did not run", async () => {
   const ws = tempWorkspace("1.1.0");
   const v = await migration.verify(ws);
   assert.equal(v.ok, false);

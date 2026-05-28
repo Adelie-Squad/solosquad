@@ -14,14 +14,14 @@ import {
 import { getBundleRoot, getOrgDir } from "../../util/paths.js";
 
 /**
- * v1.1.0 → v1.2.0 — Discord auto-connect + Chief identity + owner-only gate +
+ * v1.1.0 → v1.2.2 — Discord auto-connect + Chief identity + owner-only gate +
  * works-handle task hub + add-org bootstrap + problem-definition workflow seed.
  *
  * Per `docs/prd/v1.2-messenger-connection-discord-first.md` §13.
  *
  * Three concrete actions, all idempotent:
  *
- *   1. **Bump** workspace.yaml.version to 1.2.0.
+ *   1. **Bump** workspace.yaml.version to 1.2.2.
  *
  *   2. **Seed Discord workspace policy** at `workspace.yaml.messenger.discord`:
  *      - `owner_only: false` — preserves v1.0.2 channel-ACL-only behavior for
@@ -44,11 +44,11 @@ import { getBundleRoot, getOrgDir } from "../../util/paths.js";
  *   - Existing channels / token / config.yaml / open-questions / ledger
  *     are untouched.
  *
- * Idempotent: detect() returns false on 1.2.0; apply() guards every seed
+ * Idempotent: detect() returns false on 1.2.2; apply() guards every seed
  * with existsSync.
  */
 
-const TARGET = "1.2.0";
+const TARGET = "1.2.2";
 
 function isFromVersion(version: string | undefined): boolean {
   if (typeof version !== "string") return false;
@@ -92,7 +92,7 @@ export const migration: Migration = {
   from: "1.1.0",
   to: TARGET,
   description:
-    "v1.2.0 — Discord auto-connect + Chief identity (chief_name) + owner-only gate + works-handle task hub + problem-definition workflow seed. Bumps workspace version, seeds workspace.yaml.messenger.discord defaults (owner_only=false preserves v1.0.2 behavior), and copies problem-definition workflow to each org.",
+    "v1.2.2 — Discord auto-connect + Chief identity (chief_name) + owner-only gate + works-handle task hub + problem-definition workflow seed. Bumps workspace version, seeds workspace.yaml.messenger.discord defaults (owner_only=false preserves v1.0.2 behavior), and copies problem-definition workflow to each org.",
 
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
@@ -110,7 +110,7 @@ export const migration: Migration = {
         kind: "update",
         from: `workspace.yaml.version=${ws.version ?? "(unset)"}`,
         to: `workspace.yaml.version=${TARGET}`,
-        description: "Bump workspace version to 1.2.0",
+        description: "Bump workspace version to 1.2.2",
       });
 
       const hasDiscordCfg = !!ws.messenger?.discord;

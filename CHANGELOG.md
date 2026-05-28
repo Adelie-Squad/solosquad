@@ -4,9 +4,11 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.2.0] — 2026-05-28
+## [1.2.2] — 2026-05-28
 
-**v1.2.0 — Messenger Connection (Chief on Discord, auto-connect first).** v1.1.0 Multi-Agent Team Architecture 위에 *외부 가시 UX* 를 얹어 *조직 1개당 1 Chief 봇* + *OAuth Invite URL 1-click* + *handle 기반 채널 멀티-메신저 portable* + *owner-only 게이트* + *TRIAGE kind 분기로 작업 단위는 `works-<handle>` task hub + thread* + *`solosquad add-org` 가 새 조직을 완전 동작 상태로 부트스트랩 (Chief 이름 + v1.1 위계 + problem-definition workflow 기본 시드)*. 자세히 `docs/prd/v1.2-messenger-connection-discord-first.md`.
+> **npm version note:** the work was originally tagged "v1.2.0" internally, but the `1.2.0` / `1.2.1` numbers on the npm registry were burned during pre-launch experimentation (2026-04-22~23 publish + later unpublish — visible via `npm view solosquad time`). Per npm policy these numbers cannot be re-published, so the actual release lands at **`1.2.2`**. Migration target, doc labels, and CHANGELOG heading all reflect `1.2.2`. The narrative "v1.2 series" (Messenger Connection) is unchanged — this is the *first published* release in the series.
+
+**v1.2.2 — Messenger Connection (Chief on Discord, auto-connect first).** v1.1.0 Multi-Agent Team Architecture 위에 *외부 가시 UX* 를 얹어 *조직 1개당 1 Chief 봇* + *OAuth Invite URL 1-click* + *handle 기반 채널 멀티-메신저 portable* + *owner-only 게이트* + *TRIAGE kind 분기로 작업 단위는 `works-<handle>` task hub + thread* + *`solosquad add-org` 가 새 조직을 완전 동작 상태로 부트스트랩 (Chief 이름 + v1.1 위계 + problem-definition workflow 기본 시드)*. 자세히 `docs/prd/v1.2-messenger-connection-discord-first.md`.
 
 ### Added — Discord auto-connect (PRD §3, §4)
 
@@ -18,7 +20,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 ### Added — Onboarding & gating (PRD §5, §4.5)
 
 - **guildCreate onboarding embed + button** (`src/messenger/discord-onboarding.ts`) — 봇이 길드에 추가되면 systemChannel (없으면 첫 writable text 채널) 에 환영 embed 송신. 제목 = Chief 이름. 2 button: `chief:onboard:auto` → ensureChannels 실행 + `#command-<handle>` 에서 첫 인사 / `chief:onboard:manual` → 채널 멘션 prompt. 멱등 — `chief-onboard-embed:v1.2` 마커로 마지막 50 메시지 dedupe, 첫 인사도 채널 last-10 스캔으로 dedupe. systemChannel 권한 부족 시 owner DM fallback.
-- **Owner-only gate** (`src/messenger/discord-owner-gate.ts`) — `message.author.id === user.yaml.messenger_user_id` author check. 신규 설치 = `owner_only: true` default, 기존 v1.0.x→v1.1.0→v1.2.0 업그레이드는 migration 이 `owner_only: false` 박제 (v1.0.2 channel-ACL-only 동작 보존, neutral upgrade). 미일치 → silently ignore + 첫 1회 ephemeral 안내 (LRU per-(guild, sender) 1시간 dedupe + 30s auto-delete). `messenger_user_id` 미설정 시 fail-open (브릭 방지). v1.0.2 author-guard 제거의 *진짜* 사유 (= 당시 채널명이 user-id 라 봇 인식 실패) 가 handle 기반 채널명 (v0.8.0~) 으로 해소된 이상 재도입 정당화 + bidirectional configurable.
+- **Owner-only gate** (`src/messenger/discord-owner-gate.ts`) — `message.author.id === user.yaml.messenger_user_id` author check. 신규 설치 = `owner_only: true` default, 기존 v1.0.x→v1.1.0→v1.2.2 업그레이드는 migration 이 `owner_only: false` 박제 (v1.0.2 channel-ACL-only 동작 보존, neutral upgrade). 미일치 → silently ignore + 첫 1회 ephemeral 안내 (LRU per-(guild, sender) 1시간 dedupe + 30s auto-delete). `messenger_user_id` 미설정 시 fail-open (브릭 방지). v1.0.2 author-guard 제거의 *진짜* 사유 (= 당시 채널명이 user-id 라 봇 인식 실패) 가 handle 기반 채널명 (v0.8.0~) 으로 해소된 이상 재도입 정당화 + bidirectional configurable.
 
 ### Added — TRIAGE kind branch + works task hub (PRD §6.2, §8)
 
@@ -38,7 +40,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Migration
 
-- `src/migrations/scripts/1.1.0-to-1.2.0.ts` — workspace.yaml.version bump + `workspace.yaml.messenger.discord.{owner_only:false, install_mode:byo_manual, thread_token_budget:80000}` 박제 + 기존 org 의 `workflows/problem-definition/workflow.yaml` 시드. Idempotent (재실행 = no-op), 기존 user.yaml / channel / token / config.yaml / open-questions / ledger 무손상. `org.yaml.chief_name` 은 *interactive* — migration 이 자동 박제 안 함, doctor / init / add-org 가 prompt; runtime fallback `"Chief"`.
+- `src/migrations/scripts/1.1.0-to-1.2.2.ts` — workspace.yaml.version bump + `workspace.yaml.messenger.discord.{owner_only:false, install_mode:byo_manual, thread_token_budget:80000}` 박제 + 기존 org 의 `workflows/problem-definition/workflow.yaml` 시드. Idempotent (재실행 = no-op), 기존 user.yaml / channel / token / config.yaml / open-questions / ledger 무손상. `org.yaml.chief_name` 은 *interactive* — migration 이 자동 박제 안 함, doctor / init / add-org 가 prompt; runtime fallback `"Chief"`.
 
 ### Schema
 
@@ -56,13 +58,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Tests
 
-- 53 신규 tests across 6 files (`discord-invite-url.test.ts` × 10, `chief-kind-parser.test.ts` × 8, `migration-1.1.0-to-1.2.0.test.ts` × 10, `scaffold-org-v12.test.ts` × 7, `discord-owner-gate.test.ts` × 8, `discord-narration.test.ts` × 8). Suite 675 → **728 / 728 pass**. Pre-flight 검증 7/7 통과 (CLI surface, invite-url 합성, doctor --discord 5-hop, add-org tmpdir end-to-end, migration apply+verify+idempotent).
+- 53 신규 tests across 6 files (`discord-invite-url.test.ts` × 10, `chief-kind-parser.test.ts` × 8, `migration-1.1.0-to-1.2.2.test.ts` × 10, `scaffold-org-v12.test.ts` × 7, `discord-owner-gate.test.ts` × 8, `discord-narration.test.ts` × 8). Suite 675 → **728 / 728 pass**. Pre-flight 검증 7/7 통과 (CLI surface, invite-url 합성, doctor --discord 5-hop, add-org tmpdir end-to-end, migration apply+verify+idempotent).
 
 ### Deferred to v1.2.1 (thread 연속성 인프라 선행 필요)
 
 - referencedMessage chain + LRU cache (PRD §7.3 / §12 #8)
 - Thread token budget guard (PRD §9.2 / §12 #11)
-- 둘 다 messageCreate 가 thread 메시지를 수신 + thread → workflow_id reverse lookup 인프라가 선행되어야 의미 있음. v1.2.0 = 작업 1개 = thread 1개 모델이라 연속성 surface 없음. Slack adapter 와 동일 슬롯.
+- 둘 다 messageCreate 가 thread 메시지를 수신 + thread → workflow_id reverse lookup 인프라가 선행되어야 의미 있음. v1.2.2 = 작업 1개 = thread 1개 모델이라 연속성 surface 없음. Slack adapter 와 동일 슬롯.
 
 ---
 
