@@ -20,17 +20,30 @@ import {
   type MessengerAdapter,
   type MessageContext,
   type CommandHandler,
+  type TaskCardInput,
+  type TaskCardResult,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
-import { getWorkspaceRoot } from "../util/paths.js";
+import { getWorkspaceRoot, getOrgDir } from "../util/paths.js";
+import { loadOrgYaml } from "../util/config.js";
+import { decideOwnerGate } from "./discord-owner-gate.js";
+import { registerOnboarding, sendOnboardingEmbed } from "./discord-onboarding.js";
+import { postTaskCard } from "./discord-task-card.js";
 
 class DiscordMessageContext implements MessageContext {
   _agentLabel = "";
   readonly userId: string;
   constructor(
     private message: Message,
-    private product: Product
+    private product: Product,
+    /** v1.2 — handle for `works-<handle>` lookup. Null when bot is
+     *  unbound (legacy path). */
+    private ownHandle: string | null,
+    /** v1.2 — workspace for org.yaml lookup (Chief name + cwd). */
+    private workspace: string,
+    /** v1.2 — bound org slug for task card persistence. */
+    private ownOrgSlug: string | null,
   ) {
     this.userId = message.author.id;
   }
@@ -51,6 +64,24 @@ class DiscordMessageContext implements MessageContext {
     if ("sendTyping" in this.message.channel) {
       await (this.message.channel as TextChannel).sendTyping();
     }
+  }
+
+  /**
+   * v1.2 §6.2 — post task card embed in `works-<handle>` and start a
+   * thread on it. Throws when works channel is missing (caller falls
+   * back to flat reply with a `📋` prefix in the command channel).
+   */
+  async postTaskCard(input: TaskCardInput): Promise<TaskCardResult> {
+    if (!this.message.guild || !this.ownHandle || !this.ownOrgSlug) {
+      throw new Error("postTaskCard requires a bound bot in a guild");
+    }
+    const orgCwd = getOrgDir(this.ownOrgSlug, this.workspace);
+    return postTaskCard({
+      ...input,
+      guild: this.message.guild,
+      handle: this.ownHandle,
+      orgCwd,
+    });
   }
 }
 
@@ -121,11 +152,39 @@ export class DiscordAdapter implements MessengerAdapter {
       }
       this.syncGuildProductMapping();
       console.log(`[Discord Bot] Ready. Connected to ${client.guilds.cache.size} server(s)`);
+
+      // v1.2 §5 — register guildCreate onboarding embed + button handlers
+      // here (after the bot is bound to a handle/org) so the embed text
+      // can interpolate the resolved Chief name + owner ID.
+      registerOnboarding(client, () => ({
+        workspace: getWorkspaceRoot(),
+        ownOrgSlug: this.ownOrgSlug,
+        ownHandle: this.ownHandle,
+        ensureChannels: (g) => this.ensureChannels(g),
+      }));
     });
 
     client.on("guildCreate", async (guild) => {
+      // ensureChannels + product mapping still runs synchronously here for
+      // backward compat with v1.0.4 behavior. The v1.2 onboarding embed
+      // (registered in ClientReady above) fires on its own GuildCreate
+      // listener and supplements — never replaces — this fast path.
       await this.ensureChannels(guild);
       this.syncGuildProductMapping();
+      // Belt-and-suspenders: if the registerOnboarding listener races and
+      // sees the guild before clientReady wired it, still try to send the
+      // embed here. embedAlreadySent dedupes on the marker so the second
+      // call is a no-op.
+      try {
+        await sendOnboardingEmbed(guild, {
+          workspace: getWorkspaceRoot(),
+          ownOrgSlug: this.ownOrgSlug,
+          ownHandle: this.ownHandle,
+          ensureChannels: (g) => this.ensureChannels(g),
+        });
+      } catch (e) {
+        console.log(`[Discord] onboarding embed send failed: ${e}`);
+      }
     });
 
     client.on("messageCreate", async (message) => {
@@ -145,15 +204,40 @@ export class DiscordAdapter implements MessengerAdapter {
       const ownHandle = this.ownHandle;
       if (!ownHandle || ownHandle !== parsed.handle) return;
 
-      // v1.0.2 — author-guard removed. Discord channel ACL is the canonical
-      // permission boundary; SoloSquad does not own that ACL and cannot add
-      // meaningful defense on top of it. Log author identity for post-hoc
-      // audit (no gating) — useful when investigating session contamination
-      // in shared/collaborator channels. See
-      // `docs/plan/v1.0.2-discord-author-guard-decoupling.md`.
+      // v1.0.2 logged author identity for post-hoc audit without gating.
+      // v1.2 §4.5 restores the gate as an owner-id check (default OFF for
+      // workspaces upgraded from v1.0.x — migration writes owner_only=false;
+      // fresh installs land owner_only=true via DEFAULT_DISCORD_WORKSPACE_CONFIG).
+      // The audit log line is kept either way so the action is attributable.
       console.log(
-        `[Discord Bot] message in ${channelName} from author id=${message.author.id} username=${message.author.username ?? "?"}`
+        `[Discord Bot] message in ${channelName} from author id=${message.author.id} username=${message.author.username ?? "?"}`,
       );
+
+      const gate = decideOwnerGate(message, {
+        workspace: getWorkspaceRoot(),
+        orgSlug: this.ownOrgSlug,
+        ownHandle: this.ownHandle,
+      });
+      if (!gate.allow) {
+        if (gate.ephemeralNotice) {
+          try {
+            // Discord plain messages can't be ephemeral — auto-delete after
+            // 30s as the closest approximation, and prefix-mention the sender
+            // so they see it in the channel feed even if they were not paying
+            // attention.
+            const sent = await message.channel.send({
+              content: `<@${message.author.id}> ${gate.ephemeralNotice}`,
+              allowedMentions: { users: [message.author.id] },
+            });
+            setTimeout(() => {
+              sent.delete().catch(() => undefined);
+            }, 30_000).unref?.();
+          } catch (e) {
+            console.log(`[Discord] Failed to send owner-gate notice: ${e}`);
+          }
+        }
+        return;
+      }
 
       const product = this.getProductByGuild(message.guild!.id);
       if (!product) {
@@ -173,7 +257,13 @@ export class DiscordAdapter implements MessengerAdapter {
         return;
       }
 
-      const ctx = new DiscordMessageContext(message, product);
+      const ctx = new DiscordMessageContext(
+        message,
+        product,
+        this.ownHandle,
+        getWorkspaceRoot(),
+        this.ownOrgSlug,
+      );
       await message.channel.sendTyping();
       try {
         await onCommand(message.content.trim(), product, ctx);

@@ -118,7 +118,13 @@ program
   .description("Check environment and diagnose issues")
   .option("--ci", "CI mode: exit with non-zero code on failure, no color")
   .option("--messenger-check", "Validate messenger tokens against live APIs (Slack/Discord)")
+  .option("--discord", "v1.2 — run the focused Discord 5-hop diagnostic instead of the full sweep")
   .action(async (opts) => {
+    if (opts.discord) {
+      const { doctorDiscordCommand } = await import("./doctor-discord.js");
+      await doctorDiscordCommand({ ci: opts.ci });
+      return;
+    }
     const { doctorCommand } = await import("./doctor.js");
     await doctorCommand(opts.ci, opts.messengerCheck);
   });

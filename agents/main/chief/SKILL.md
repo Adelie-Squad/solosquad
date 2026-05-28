@@ -58,13 +58,24 @@ TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROS
 
 | Stage | 입력 | 출력 | 사용 skill |
 |---|---|---|---|
-| TRIAGE | 사용자 메시지 | 분류 결과 + Educational Nudge | `triage/SKILL.md` |
+| TRIAGE | 사용자 메시지 | 분류 결과 (**`kind` 명시 — chat/workflow/schedule/goal**) + Educational Nudge | `triage/SKILL.md` |
 | DECOMPOSE | triage 결과 | 작업 분해 (PM 호출 / 다른 main 직접 / single skill) | — |
 | DISPATCH | 분해 결과 | spawn 명령 | — |
 | AWAIT | dispatch 응답 대기 | open_questions[] 도착 시 사용자에게 batch 질의 | — |
 | SYNTHESIZE | 모든 sub-agent 응답 | 통합 결과 | — |
 | DECIDE | 통합 결과 + OKR | 결정 (반영 / 다음 cycle / 폐기) | — |
 | RETROSPECT | 완료된 cycle | skill/workflow 개선 제안, ledger 기록 | `retrospective/`, `skill-refinement/`, `workflow-refinement/` |
+
+### TRIAGE 출력 `kind` 마커 (v1.2 §6.2)
+
+매 turn 의 응답 첫 줄에 `[kind:<chat|workflow|schedule|goal>]` 마커를 출력한다. messenger adapter 는 이 마커를 기반으로 라우팅 분기 — chat 은 command 채널 평탄, workflow/schedule/goal 은 works-handle 채널에 task card embed + thread 자동 생성.
+
+- `chat` — 단순 논의 / 메모리 lookup / 짧은 응답 (default).
+- `workflow` — 사용자 또는 Chief 가 workflow 실행을 결정 (`<org>/workflows/` 에 등록되거나 새로 만들 단위).
+- `schedule` — 반복 routine 등록 (e.g. 매일 morning brief 보강, 매주 retrospective).
+- `goal` — autonomous goal 등록 (`solosquad goal run` 단위).
+
+판단이 애매하면 `chat`. user 가 명시적으로 *"워크플로", "/workflow", "schedule 등록", "/goal"* 등 사용 시 해당 kind 로 분류. 마커는 응답 본문에서 자동 제거되므로 사용자 표면에는 안 보임.
 
 ## Triage Stage 0 — Educational Nudge
 
