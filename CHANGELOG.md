@@ -4,9 +4,36 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.2.2] — 2026-05-28
+## [1.2.3] — 2026-05-28 (hotfix on 1.2.2)
 
-> **npm version note:** the work was originally tagged "v1.2.0" internally, but the `1.2.0` / `1.2.1` numbers on the npm registry were burned during pre-launch experimentation (2026-04-22~23 publish + later unpublish — visible via `npm view solosquad time`). Per npm policy these numbers cannot be re-published, so the actual release lands at **`1.2.2`**. Migration target, doc labels, and CHANGELOG heading all reflect `1.2.2`. The narrative "v1.2 series" (Messenger Connection) is unchanged — this is the *first published* release in the series.
+**Bundle resources restored to the npm tarball.** v1.2.2 (published 2026-05-28 ~ KST 17:00) shipped with `package.json.files` whitelisting only `dist/` + `assets/` + `manual/`. The v1.1.0-era root directories (`agents/`, `skills/`, `teams/`, `schedules/`, `user/`, `knowledge/`) were *omitted from the tarball*, so any user running `solosquad migrate --apply` from an earlier workspace hit `Verify failed at 1.1.0: Bundle resources missing — package is incomplete` at step 6/7 of a 0.9.2 → 1.2.x chain (chief SKILL.md + 4 team folders + problem-definition workflow seed all missing from the install).
+
+### Fixed
+
+- **`package.json` `files` whitelist** now includes every v1.1+ bundle root: `agents/`, `skills/`, `teams/`, `schedules/`, `user/`, `knowledge/`. Tarball file count 567 → 649; size 875 kB → 933 kB. `npm pack --dry-run` now lists chief / pm / engineer / designer / marketer SKILL.md, 20 specialist SKILL.md, every team's OKR.md + KNOWLEDGE.md + composition.yaml, and the problem-definition workflow.yaml — exactly the sources that the v1.0.4 → v1.1.0 and v1.1.0 → v1.2.x migrations need at `verify()` time.
+- **Migration target renamed** — `src/migrations/scripts/1.1.0-to-1.2.2.ts` → `1.1.0-to-1.2.3.ts`, `TARGET = "1.2.2"` → `"1.2.3"`. Index registry import + tests updated. No user is at workspace v1.2.2 (the broken release was published but no install successfully completed past v1.0.4 → v1.1.0 verify); renaming forward is safe.
+
+### User action
+
+Users who attempted `migrate --apply` on v1.2.2 and saw `Bundle resources missing — package is incomplete`:
+
+1. `solosquad migrate --rollback` — restore the pre-migration backup (path printed in the failure message, e.g. `~/.solosquad-backups/2026-05-28T...-v0.9.2`).
+2. `npm install -g solosquad@latest` — pick up 1.2.3.
+3. `solosquad migrate --apply` — re-run the full chain. With the bundle present, v1.0.4 → v1.1.0 verify passes and the chain completes at `workspace.yaml.version=1.2.3`.
+
+The v1.0.4 → v1.1.0 migration's `apply()` step skips missing seeds silently (`if (!fs.existsSync(seed.source)) continue;`) and bumps `workspace.yaml.version` *before* `verify()` runs. So a failed v1.2.2 attempt may have left the workspace at version `1.1.0` with zero seeds applied. Rollback (per the runner's preserved backup) is the cleanest recovery.
+
+### Why this slipped past the v1.2.2 publish check
+
+`npm run prepublishOnly` only runs `tsc` + `docs-check`. It doesn't inspect tarball contents. The `npm pack --dry-run` runs done before publishing v1.2.2 reported total file counts but I didn't grep them for the seeded bundle paths. Tests caught nothing because they use the *repo's* on-disk bundle (which is intact); they don't simulate the npm-install-then-migrate path. Tightening the pre-publish gate to assert seed-path presence is queued as a follow-up.
+
+---
+
+## [1.2.2] — 2026-05-28 (npm-burned — superseded by 1.2.3)
+
+> **Status:** Published to npm at 1.2.2 but broken (bundle root dirs missing from tarball). See [1.2.3] above for the hotfix. The *work content* below is identical between 1.2.2 and 1.2.3; only the `files` whitelist + version label changed.
+
+> **npm version note:** the work was originally tagged "v1.2.0" internally, but the `1.2.0` / `1.2.1` numbers on the npm registry were burned during pre-launch experimentation (2026-04-22~23 publish + later unpublish — visible via `npm view solosquad time`). Per npm policy these numbers cannot be re-published, so the v1.2 series first attempted publish at **`1.2.2`** then hot-fixed forward to **`1.2.3`** when the bundle-files gap was caught. The narrative "v1.2 series" (Messenger Connection) is unchanged — 1.2.3 is the *first usable* published release in the series.
 
 **v1.2.2 — Messenger Connection (Chief on Discord, auto-connect first).** v1.1.0 Multi-Agent Team Architecture 위에 *외부 가시 UX* 를 얹어 *조직 1개당 1 Chief 봇* + *OAuth Invite URL 1-click* + *handle 기반 채널 멀티-메신저 portable* + *owner-only 게이트* + *TRIAGE kind 분기로 작업 단위는 `works-<handle>` task hub + thread* + *`solosquad add-org` 가 새 조직을 완전 동작 상태로 부트스트랩 (Chief 이름 + v1.1 위계 + problem-definition workflow 기본 시드)*. 자세히 `docs/prd/v1.2-messenger-connection-discord-first.md`.
 
