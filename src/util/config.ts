@@ -85,8 +85,79 @@ export interface WorkspaceYaml {
   migration?: MigrationBudgetConfig;
   /** v0.8.2+: workspace-wide dev_capability master toggle + bash denylist. */
   dev_capability?: DevCapabilityConfig;
+  /** v1.2.0+: messenger-wide policies (owner-only gate, install mode, thread budget). */
+  messenger?: MessengerWorkspaceConfig;
   created_at: string;
   last_migrated_to?: string;
+}
+
+/**
+ * v0.8 §3.6 (broadcast fields) + v1.2 §13.3 (discord/slack subsections) —
+ * Workspace-level messenger policies. Per-org / per-guild binding still
+ * lives at `<org>/<platform>/config.yaml` (v0.2.2+); this section is for
+ * policies that apply across every adapter instance.
+ */
+export interface MessengerWorkspaceConfig {
+  /** v0.8 §3.6 — broadcast channel opt-in (single designated owner bot). */
+  broadcast_enabled?: boolean;
+  broadcast_owner_handle?: string | null;
+  broadcast_channel?: string;
+  /** v1.2 §4.5 / §3 / §9.2 — Discord-specific policies. */
+  discord?: DiscordWorkspaceConfig;
+  /** v1.2.x — Slack-specific policies (mirror of discord). */
+  slack?: SlackWorkspaceConfig;
+}
+
+export interface DiscordWorkspaceConfig {
+  /**
+   * v1.2 §4.5 — When `true` (fresh install default), Chief only processes
+   * messages whose `author.id === user.yaml.messenger_user_id`. v1.0.x
+   * upgrades land with `false` (preserves v1.0.2 channel-ACL-only behavior).
+   */
+  owner_only?: boolean;
+  /**
+   * v1.2 §3 — `oauth_invite` (default fresh install) auto-synthesizes the
+   * invite URL via `solosquad discord invite-url`. `byo_manual` skips URL
+   * synthesis — user pastes their own. Migration defaults existing users
+   * to `byo_manual` (their current flow).
+   */
+  install_mode?: "oauth_invite" | "byo_manual";
+  /**
+   * v1.2 §9.2 — Token budget per workflow thread. Once exceeded, Chief
+   * prompts the user to start a fresh thread with a summary link back.
+   */
+  thread_token_budget?: number;
+}
+
+export interface SlackWorkspaceConfig {
+  owner_only?: boolean;
+}
+
+export const DEFAULT_DISCORD_WORKSPACE_CONFIG: Required<
+  Pick<DiscordWorkspaceConfig, "owner_only" | "install_mode" | "thread_token_budget">
+> = {
+  owner_only: true,
+  install_mode: "oauth_invite",
+  thread_token_budget: 80_000,
+};
+
+/**
+ * Resolve Discord workspace config — fresh-install defaults from
+ * DEFAULT_DISCORD_WORKSPACE_CONFIG. Migrations write explicit values for
+ * upgraded workspaces so the resolver never has to guess based on workspace
+ * age.
+ */
+export function loadDiscordWorkspaceConfig(
+  workspace?: string,
+): Required<Pick<DiscordWorkspaceConfig, "owner_only" | "install_mode" | "thread_token_budget">> {
+  const ws = loadWorkspaceYaml(workspace);
+  const partial = ws?.messenger?.discord ?? {};
+  return {
+    owner_only: partial.owner_only ?? DEFAULT_DISCORD_WORKSPACE_CONFIG.owner_only,
+    install_mode: partial.install_mode ?? DEFAULT_DISCORD_WORKSPACE_CONFIG.install_mode,
+    thread_token_budget:
+      partial.thread_token_budget ?? DEFAULT_DISCORD_WORKSPACE_CONFIG.thread_token_budget,
+  };
 }
 
 /**

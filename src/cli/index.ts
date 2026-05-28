@@ -539,6 +539,26 @@ messengerGroup
     await broadcastHandoverCommand({ to: opts.to, enable: opts.enable });
   });
 
+// v1.2 §3.1 — Discord auto-connect ops.
+const discordGroup = program
+  .command("discord")
+  .description("Discord auto-connect ops (v1.2)");
+
+discordGroup
+  .command("invite-url")
+  .description("Synthesize an OAuth invite URL for the Chief bot and open it in a browser")
+  .option("--client-id <id>", "Override the auto-detected application client_id")
+  .option("--print-only", "Only print the URL — skip browser-open")
+  .option("--org <slug>", "Restrict to one org when the workspace has many")
+  .action(async (opts) => {
+    const { inviteUrlCommand } = await import("./discord.js");
+    await inviteUrlCommand({
+      clientId: opts.clientId,
+      printOnly: opts.printOnly,
+      org: opts.org,
+    });
+  });
+
 // v0.8.1 §4 — `solosquad import <archive.zip>`
 program
   .command("import")
