@@ -214,29 +214,8 @@
   <h1>SoloSquad</h1>
   <span class="tag">종합 개념서 · v1.2.3 기준 (Messenger Connection — Chief on Discord; 이전 minor: v1.1.0)</span>
 
-  <section class="release-callout" style="background: #f6f8fa; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 8px 0;">
-    <strong>v1.2.3 (2026-05-28) — Messenger Connection (Chief on Discord, auto-connect first).</strong>
-    v1.1.0 *내부 에이전트 격상* 위에 *외부 가시 UX* 만 얹음. <strong>조직 1개당 1 Chief 봇</strong>
-    (<code>OrgYaml.chief_name</code> org 단위; Developer Portal Bot 이름과 동일 사용 권장).
-    <strong>OAuth Invite URL 1-click</strong> — <code>solosquad discord invite-url</code> 가
-    application client_id + 권장 permissions bitfield (10 perms, verification trigger 6건 배제)
-    합성 + 브라우저 자동 open + clipboard fallback.
-    <strong>handle 기반 채널 portability</strong> — 멀티 Discord 서버 / 추후 Slack 모두
-    같은 <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 페어 자동 재사용.
-    <strong>owner-only 게이트</strong> (<code>message.author.id === user.yaml.messenger_user_id</code>) —
-    v1.0.2 의 *실제* 사유 (= 채널명이 user-id 라 봇 인식 실패) 가 handle 기반 채널로 해소된 이상
-    reversal 정당. 신규 설치 = ON, 업그레이드 = OFF (migration 이 <code>owner_only: false</code> 박제, neutral).
-    <strong>TRIAGE kind 분기</strong> — Chief 가 응답 첫 줄에 <code>[kind:chat|workflow|schedule|goal]</code>
-    출력 → chat 은 command 채널 평탄, workflow/schedule/goal 은 <code>works-&lt;handle&gt;</code> 에 task card embed +
-    <code>startThread</code> → stage narration (DECOMPOSE/DISPATCH/AWAIT) 이 thread 내부, command 채널엔
-    *"📋 작업 등록됨 → &lt;thread URL&gt;"* 1줄.
-    <strong><code>solosquad add-org</code></strong> 가 새 조직을 *완전 동작 상태* 부트스트랩 — Chief 이름 prompt + v1.1.0 전체 위계 (agents/main/chief, 4 teams, memory/open-questions·ledger, knowledge/) + problem-definition workflow 기본 시드 + Discord inline 연결.
-    <strong>guildCreate onboarding embed + 2 button</strong> (Auto-create / Manual choose) — Chief 이름 변수 + owner 멘션.
-    <strong><code>solosquad doctor --discord</code> 5-hop diagnostic</strong> — token shape → REST /users/@me → bot_user_id match → guild membership proxy → command 채널 ID.
-    <code>/chat</code> slash command 등록 (MESSAGE_CONTENT intent 거부 fallback).
-    CLI freeze 침범 0, schema breaking 0. 53 신규 test (728/728 pass).
-    v1.2.1 위임: referencedMessage chain + thread token budget (둘 다 thread 연속성 인프라 선행 필요).
-    자세히 <code>docs/prd/v1.2-messenger-connection-discord-first.md</code> + <code>CHANGELOG.md</code> §[1.2.3].
+  <section class="release-callout" style="background: #f6f8fa; border-left: 4px solid #2563eb; padding: 10px 12px; margin: 8px 0; font-size: 0.85em; line-height: 1.45;">
+    <strong>v1.2.3 (2026-05-28)</strong> — Messenger Connection. 조직 1개당 1 Chief 봇 (이름 부여), Discord OAuth invite URL 1-click, handle 기반 채널 portability, owner-only 게이트, TRIAGE <code>kind</code> 분기 (작업 단위 → <code>works-&lt;handle&gt;</code> task card + thread + stage narration), <code>add-org</code> 부트스트랩, <code>doctor --discord</code> 5-hop. CLI freeze 침범 0, schema breaking 0. 자세히 <code>CHANGELOG.md</code> §[1.2.3].
   </section>
 
   <nav>
