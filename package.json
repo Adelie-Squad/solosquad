@@ -1,6 +1,6 @@
 {
   "name": "solosquad",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "24/7 AI assistant system for solo founders — Discord/Slack bot + scheduled routines + team-based agents",
   "author": "seungw1n",
   "type": "module",
@@ -19,6 +19,12 @@
   "files": [
     "dist/",
     "assets/",
+    "agents/",
+    "skills/",
+    "teams/",
+    "schedules/",
+    "user/",
+    "knowledge/",
     "manual/",
     "AGENTS.md",
     "CHANGELOG.md"

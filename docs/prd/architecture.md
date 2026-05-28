@@ -1064,7 +1064,7 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.1-multi-agent-team-architecture.md`, `CHANGELOG.md` §[1.1.0]
 
-#### 13.6.19 v1.2.2 — Messenger Connection (Chief on Discord, auto-connect first) (2026-05-28)
+#### 13.6.19 v1.2.3 — Messenger Connection (Chief on Discord, auto-connect first) (2026-05-28)
 
 **핵심 변화** — v1.1.0 *내부 에이전트 격상* 위에 *외부 가시 UX 확장* 만 추가. 조직 1개당 1 Chief 봇 (multi-bot 분기 안 함) + Discord OAuth invite URL 1-click + handle 기반 채널이 멀티 메신저 / 멀티 서버 portable + owner-only 게이트로 채널 ACL 위에 author-id 권한 boundary 신설 + Chief 6+1 의 TRIAGE 가 `kind ∈ {chat, workflow, schedule, goal}` 분류해서 *chat 은 command 채널 평탄 응답 / 작업 단위는 works-handle 채널에 task card embed + thread 생성*. CLI freeze 침범 0, schema breaking 0.
 
@@ -1074,7 +1074,7 @@ Get-CimInstance Win32_Process |
 3. **owner-only 게이트 default ON** — `message.author.id === user.yaml.messenger_user_id`. 신규 설치 = true, 기존 v1.0.x/v1.1.0 업그레이드 = `owner_only: false` (migration 이 명시 박제, v1.0.2 channel-ACL-only 동작 보존). 미일치 → silently ignore + 첫 1회 ephemeral 안내 (per-(guild,sender) 1시간 dedupe, 30s auto-delete). v1.0.2 author-guard 제거의 *실제* 사유 (= 채널명이 user-id 라 봇 인식 실패) 가 handle 기반 채널명으로 해소된 이상 reversal 정당.
 4. **TRIAGE kind 분기 — works-handle 과제 허브** — Chief 가 응답 첫 줄에 `[kind:<chat|workflow|schedule|goal>]` 마커 출력. chief-runner 가 strip 후 ChiefReply.kind 노출. `chat` 은 command 채널 평탄. `workflow/schedule/goal` 은 works-handle 에 task card embed (제목/kind/시작/요청 1줄, 색깔 차등) + `startThread({ autoArchiveDuration: 10080 })` → Chief reply + stage narration (DECOMPOSE/DISPATCH/AWAIT) 가 thread 내부, command 채널엔 *"📋 작업 등록됨 → <thread URL>"* 1줄. 마커 부재 시 user-text 휴리스틱 fallback (`/workflow`, `워크플로`, etc.).
 5. **`solosquad add-org` 가 새 조직을 완전 동작 상태로 부트스트랩** — Chief 이름 prompt + `scaffoldOrg` 가 v1.1.0 전체 위계 시드 (agents/main/chief/SKILL.md, 4 teams × 3 files, memory/{open-questions,ledger}, knowledge/, workflows/problem-definition/) + Discord 봇이 이미 등록되어 있으면 invite URL 인라인 출력. 기존 v1.1.0 출시의 *migration 만 시드, add-org 는 누락* 결함 해소.
-6. **problem-definition workflow 기본 시드** — `skills/workflow-maker/assets/workflows/problem-definition/workflow.yaml` 신규. 6 stages (SCQA → 5-Whys → MECE → TDCC → XYZ → 1-pager PRD), 각 phase 가 PM (pmf-planner) 가 problem-definition skill assets/01~06 로 실행. discovery-cycle 보다 가벼운 entry point. add-org 및 1.1.0→1.2.2 migration 모두 `<org>/workflows/` 에 자동 복사.
+6. **problem-definition workflow 기본 시드** — `skills/workflow-maker/assets/workflows/problem-definition/workflow.yaml` 신규. 6 stages (SCQA → 5-Whys → MECE → TDCC → XYZ → 1-pager PRD), 각 phase 가 PM (pmf-planner) 가 problem-definition skill assets/01~06 로 실행. discovery-cycle 보다 가벼운 entry point. add-org 및 1.1.0→1.2.3 migration 모두 `<org>/workflows/` 에 자동 복사.
 
 **구현 산출물** (commit chain `00a64d3` → `8108ca6`):
 - **신규 모듈 6** (`src/messenger/`): discord-invite-url (bigint 권한 + 브라우저 open + clipboard fallback) / discord-onboarding (guildCreate embed + button interaction, 마커 dedupe) / discord-owner-gate (per-(guild,sender) LRU 1h, fail-open on missing messenger_user_id) / discord-task-card (works embed + startThread + `<org>/workflows/<wf-id>/discord-thread.txt` 박제) / discord-narration (chief-stage-events → thread 메시지 formatter, skip TRIAGE/SYNTHESIZE/DECIDE/RETROSPECT) / discord-chat-slash (`/chat` guild scope, intent fallback).
@@ -1084,13 +1084,13 @@ Get-CimInstance Win32_Process |
 - **`init` Step 4/6 보강** — Discord token prompt 전 "Bot 이름 = Chief 이름 권장" guidance + Chief 이름 prompt + user.yaml 저장 후 invite URL 자동 출력 + 브라우저 open.
 - **ChiefReply schema 확장** — `kind: ChiefKind` + `turnId: string` 필드 추가. `parseKindMarker` + 마커 부재 시 user-text 휴리스틱 fallback.
 - **agents/main/chief/SKILL.md** — TRIAGE 단계에 *kind 마커 출력* 가이드 신설.
-- **Migration 1.1.0 → 1.2.2** — version bump + workspace.yaml.messenger.discord 블록 (owner_only=false neutral upgrade) + problem-definition workflow 기본 시드. user.yaml/channel/token/config.yaml 무손상.
+- **Migration 1.1.0 → 1.2.3** — version bump + workspace.yaml.messenger.discord 블록 (owner_only=false neutral upgrade) + problem-definition workflow 기본 시드. user.yaml/channel/token/config.yaml 무손상.
 
-**Tests**: 675 → **728 / 728 pass**. 53 신규 (`discord-invite-url.test.ts` 10, `chief-kind-parser.test.ts` 8, `migration-1.1.0-to-1.2.2.test.ts` 10, `scaffold-org-v12.test.ts` 7, `discord-owner-gate.test.ts` 8, `discord-narration.test.ts` 8). Pre-flight 검증 7/7 통과 (CLI surface, invite-url 합성, doctor --discord 5-hop, add-org tmpdir end-to-end, migration apply+verify+idempotent).
+**Tests**: 675 → **728 / 728 pass**. 53 신규 (`discord-invite-url.test.ts` 10, `chief-kind-parser.test.ts` 8, `migration-1.1.0-to-1.2.3.test.ts` 10, `scaffold-org-v12.test.ts` 7, `discord-owner-gate.test.ts` 8, `discord-narration.test.ts` 8). Pre-flight 검증 7/7 통과 (CLI surface, invite-url 합성, doctor --discord 5-hop, add-org tmpdir end-to-end, migration apply+verify+idempotent).
 
-**Out of scope (v1.2.1 위임)**: referencedMessage chain + LRU cache (PRD §7.3 / §12 #8) + thread token budget (PRD §9.2 / §12 #11) — 둘 다 thread 연속성 인프라 (messageCreate 가 thread 메시지 수신 + thread→workflow_id reverse lookup) 가 선행되어야 의미 있음. v1.2.2 = 작업 1개 = thread 1개 모델. Slack adapter 와 동일 슬롯에 합류.
+**Out of scope (v1.2.1 위임)**: referencedMessage chain + LRU cache (PRD §7.3 / §12 #8) + thread token budget (PRD §9.2 / §12 #11) — 둘 다 thread 연속성 인프라 (messageCreate 가 thread 메시지 수신 + thread→workflow_id reverse lookup) 가 선행되어야 의미 있음. v1.2.3 = 작업 1개 = thread 1개 모델. Slack adapter 와 동일 슬롯에 합류.
 
-자세히: `docs/prd/v1.2-messenger-connection-discord-first.md`, `CHANGELOG.md` §[1.2.2]
+자세히: `docs/prd/v1.2-messenger-connection-discord-first.md`, `CHANGELOG.md` §[1.2.3]
 
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
