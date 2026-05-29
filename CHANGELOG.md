@@ -53,7 +53,9 @@ Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
 
 ### Migration
 
-- `src/migrations/scripts/1.1.0-to-1.2.4.ts` (renamed from `1.1.0-to-1.2.3.ts`, `TARGET = "1.2.3"` → `"1.2.3"`). The migration body is unchanged — v1.2.4 is purely UX/vocab; no new schema fields, no new seeds. Tests + index registry updated.
+- `src/migrations/scripts/1.1.0-to-1.2.4.ts` (renamed from `1.1.0-to-1.2.3.ts`, `TARGET = "1.2.3"` → `"1.2.4"`). Migration body otherwise unchanged — v1.2.4 is purely UX/vocab; no new schema fields, no new bundle seeds.
+- **New `src/migrations/scripts/1.2.3-to-1.2.4.ts`** handles workspaces already at v1.2.3 (the typical case for anyone who installed the v1.2.3 hotfix immediately). Two actions: version bump + Claude Code trust backfill (every existing org cwd + every registered repo path). Idempotent on re-run.
+- **Both migrations now backfill Claude Code directory trust** for existing org / repo paths via `grantClaudeTrustMany`. So `migrate --apply` on a workspace that predates v1.2.4 *retroactively* fixes the trust dialog for every org cwd and every repo registered before the v1.2.4 install — not just new registrations. Best-effort: a missing `~/.claude.json` (Claude not yet run on this machine) logs and skips.
 
 ### Schema
 

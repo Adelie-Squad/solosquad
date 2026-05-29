@@ -2490,7 +2490,7 @@ stages:
     <li><strong><code>messenger_user_id</code> 자동 채움</strong> — <code>init</code> Step 3.5 prompt + 첫 메시지 hydration. owner-only 게이트가 fail-open 으로 끝나지 않고 진짜 동작</li>
     <li><strong>Slack picker 임시 비활성</strong> — Discord 단독 선택, picker 단계는 유지 (v1.2.x adapter 슬롯 활성화 시 복원)</li>
     <li><strong>Path 따옴표 strip</strong> — <code>solosquad add repo "C:\path"</code> 의 양옆 따옴표 자동 제거. PowerShell / Explorer "Copy as path" 패턴</li>
-    <li><strong>Claude Code trust 자동 grant</strong> — 봇이 <code>claude --print</code> spawn 할 때 디렉토리 trust 다이얼로그 안 띄움. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> 셋 다 <code>~/.claude.json</code> 에 박제</li>
+    <li><strong>Claude Code trust 자동 grant</strong> — 봇이 <code>claude --print</code> spawn 할 때 디렉토리 trust 다이얼로그 안 띄움. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> 셋 다 <code>~/.claude.json</code> 에 박제. <strong>v1.2.3 → v1.2.4 migration 이 기존 org cwd + 등록된 repo 경로 전부 backfill</strong> — <code>solosquad migrate --apply</code> 1회로 과거에 등록한 repo 모두 trust 적용</li>
     <li><strong>Chief 정체성 plumbing</strong> — 봇 응답 prefix <code>[Hermes]</code> (chief_name 기준). LLM system prompt 에 <code>[identity]</code> 1줄 inject 로 Chief 가 자기 이름으로 self-reference</li>
     <li><strong>Chief 이름 prompt 보강</strong> — 6 surface 설명 + 7 예시 (Hermes / Atlas / Apollo / Iris / Janus / Athena / Hephaestus)</li>
     <li><strong>어휘 정합</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, 등 사용자 대면 라벨. jsonl event kind <code>pm.*</code> 는 schema_version 호환을 위해 유지</li>
