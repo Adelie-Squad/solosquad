@@ -20,13 +20,13 @@ export async function pmStatusCommand(opts: PmStatusOpts): Promise<void> {
     return;
   }
 
-  console.log(chalk.bold("\nPM sessions:\n"));
+  console.log(chalk.bold("\nChief sessions:\n"));
   let totalSessions = 0;
   let totalCost = 0;
   for (const org of orgs) {
     const records = sessions.listForOrg(org.slug);
     if (records.length === 0) {
-      console.log(chalk.dim(`  ${org.slug}: (no PM sessions yet)`));
+      console.log(chalk.dim(`  ${org.slug}: (no Chief sessions yet)`));
       continue;
     }
     console.log(chalk.cyan(`  ${org.slug}:`));
@@ -91,7 +91,7 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
   const records = sessions.listForOrg(orgSlug);
   if (!userId) {
     if (records.length === 0) {
-      console.log(chalk.yellow(`No PM sessions for org ${orgSlug}.`));
+      console.log(chalk.yellow(`No Chief sessions for org ${orgSlug}.`));
       return;
     }
     if (records.length === 1) userId = records[0].userId;
@@ -100,7 +100,7 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
         {
           type: "list",
           name: "pick",
-          message: "Which user's session should we reset?",
+          message: "Which user's Chief session should we reset?",
           choices: records.map((r) => ({
             name: `${r.userId}  (last=${r.lastInteractionAt.slice(0, 19)}, $${r.totalCostUsd.toFixed(4)})`,
             value: r.userId,
@@ -122,7 +122,7 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
       {
         type: "confirm",
         name: "confirm",
-        message: `Archive PM session for ${userId}@${orgSlug} (reason: "${reason}") and mint a new one?`,
+        message: `Archive Chief session for ${userId}@${orgSlug} (reason: "${reason}") and mint a new one?`,
         default: false,
       },
     ]);
@@ -145,7 +145,7 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
     userId,
   });
 
-  console.log(chalk.green(`✓ Rotated PM session for ${userId}@${orgSlug}.`));
+  console.log(chalk.green(`✓ Rotated Chief session for ${userId}@${orgSlug}.`));
   console.log(chalk.dim(`  previous: ${previous ?? "(none)"}`));
   console.log(chalk.dim(`  next:     ${next}`));
 }

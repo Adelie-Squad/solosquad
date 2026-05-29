@@ -212,10 +212,10 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">종합 개념서 · v1.2.3 기준 (Messenger Connection — Chief on Discord; 이전 minor: v1.1.0)</span>
+  <span class="tag" style="font-size: 0.75em;">v1.2.4 기준 · Messenger Connection</span>
 
-  <section class="release-callout" style="background: #f6f8fa; border-left: 4px solid #2563eb; padding: 10px 12px; margin: 8px 0; font-size: 0.85em; line-height: 1.45;">
-    <strong>v1.2.3 (2026-05-28)</strong> — Messenger Connection. 조직 1개당 1 Chief 봇 (이름 부여), Discord OAuth invite URL 1-click, handle 기반 채널 portability, owner-only 게이트, TRIAGE <code>kind</code> 분기 (작업 단위 → <code>works-&lt;handle&gt;</code> task card + thread + stage narration), <code>add-org</code> 부트스트랩, <code>doctor --discord</code> 5-hop. CLI freeze 침범 0, schema breaking 0. 자세히 <code>CHANGELOG.md</code> §[1.2.3].
+  <section class="release-callout" style="background: #f6f8fa; border-left: 3px solid #2563eb; padding: 6px 10px; margin: 6px 0; font-size: 0.75em; line-height: 1.4;">
+    <strong>v1.2.4</strong> — Discord 자동 연결 + Chief 이름 + owner-only 게이트 + TRIAGE kind 분기. 자세히 <code>CHANGELOG.md</code> §[1.2.4].
   </section>
 
   <nav>
@@ -263,8 +263,8 @@
       <li>
         <a data-target="s5">5. 메신저 연결</a>
         <ul class="sub">
-          <li><a href="#s5-2">5.1 Discord (8단계) — v1.0 권장</a></li>
-          <li><a href="#s5-1">5.2 Slack (9단계) — post-v1.0 슬롯</a></li>
+          <li><a href="#s5-1">5.1 Discord (v1.2 정합) — v1.0 권장</a></li>
+          <li><a href="#s5-2">5.2 Slack (post-v1.0 슬롯)</a></li>
           <li><a href="#s5-3">5.3 동작 검증</a></li>
         </ul>
       </li>
@@ -1465,8 +1465,103 @@ solosquad update --channel stable  # 기본</code></pre>
     </tbody>
   </table>
 
-  <h3 id="s5-1">5.1 Slack 봇 설정 (9단계) <span class="badge plan">post-v1.0</span></h3>
-  <p><em>본 절은 post-v1.0 슬롯 — v1.0 SemVer 약속 대상이 아닙니다. v0.9.x에서 이미 Slack을 운영 중이거나 향후 슬롯이 활성화될 때 참조하세요. 새로 시작하는 사용자는 <a href="#s5-2">§5.2 Discord</a>를 권장합니다.</em></p>
+  <h3 id="s5-1">5.1 Discord 봇 설정 (v1.2 정합) <span class="badge now">v1.2</span></h3>
+  <p><strong>최종 결과물:</strong> <code>.env</code> 의 <code>DISCORD_TOKEN</code> + 워크스페이스 owner 의 <code>messenger_user_id</code> + <code>OrgYaml.chief_name</code> 박제. Discord 서버에 봇 초대 → <code>guildCreate</code> 가 자동으로 welcome embed 송신 → <code>#command-&lt;handle&gt;</code> / <code>#works-&lt;handle&gt;</code> 채널 페어 자동 생성 → owner 가 "안녕" 메시지 → Chief (예: <em>Hermes</em>) 가 답.</p>
+
+  <div class="callout info">
+    <strong>v1.2 변경 요약 (v0.x ~ v1.1 사용자):</strong>
+    <ul>
+      <li><strong>채널명</strong>: 옛 <code>owner-command</code> → 신 <code>command-&lt;handle&gt;</code> (handle = 사용자 식별자, 멀티 Discord 서버 / 추후 Slack 워크스페이스 동일 페어 자동 재사용)</li>
+      <li><strong>서버 이름 규칙 폐지</strong>: 옛 "서버 이름에 제품 슬러그 포함" 매핑 (v0.2.x) 제거. v1.0.3 부터 <code>ownOrgSlug</code> 가 <code>&lt;org&gt;/discord/config.yaml</code> 의 guild_id 박제로 직접 binding. 사용자가 서버 이름 자유롭게.</li>
+      <li><strong>OAuth 초대 URL</strong>: 옛 수동 URL Generator 폐기. <code>solosquad discord invite-url</code> 가 권장 권한 bitfield 자동 합성 + 브라우저 자동 open.</li>
+      <li><strong>Chief 이름</strong>: 조직 1개당 1 Chief 봇, 사용자가 이름 부여 (Hermes / Atlas / Apollo). Discord Developer Portal Bot 이름과 동일 권장.</li>
+      <li><strong>Owner-only 게이트</strong>: <code>messenger_user_id</code> 박제된 사용자만 봇 응답 받음. 신규 설치 default ON, 업그레이드 default OFF (neutral).</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Discord Application + Bot 생성</div>
+    <ol>
+      <li>https://discord.com/developers/applications → <strong>New Application</strong></li>
+      <li>이름 입력 (예: <strong>Hermes</strong>) → Create. 이 이름이 §6 Chief 이름과 동일하면 Discord 표면 정체성 일관성 ↑</li>
+      <li>좌측 <strong>Bot</strong> → <strong>Reset Token</strong> → 즉시 복사 (한 번만 보여줌). 이 값이 <code>DISCORD_TOKEN</code>.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — Privileged Gateway Intents</div>
+    <p>같은 Bot 페이지 하단 → <strong>Privileged Gateway Intents</strong> → <strong>Message Content Intent</strong> 토글 ON → Save Changes.</p>
+    <div class="callout warn"><strong>필수</strong> — 켜지 않으면 메시지 본문이 빈 문자열로 도착해 봇이 응답 못 함.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — Application Client ID 복사</div>
+    <p>좌측 <strong>General Information</strong> → <strong>Application ID</strong> 복사. <code>solosquad init</code> Step 3.5 에서 이 값을 묻습니다 (또는 추후 <code>solosquad discord invite-url --client-id &lt;id&gt;</code> 로 ad-hoc).</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — 본인 Discord User ID 확인 (Owner-only 게이트 용)</div>
+    <ol>
+      <li>Discord 클라이언트 → User Settings → <strong>Advanced</strong> → <strong>Developer Mode</strong> ON</li>
+      <li>본인 프로필 우클릭 → <strong>Copy User ID</strong> (17~20자리 숫자)</li>
+      <li><code>solosquad init</code> Step 3.5 에서 이 값을 prompt — skip 하면 첫 메시지 자동 hydration</li>
+    </ol>
+    <div class="callout info"><strong>왜 필요한가</strong>: <code>owner_only=true</code> 게이트가 <code>message.author.id === messenger_user_id</code> 검증으로 채널에 다른 사람이 글 써도 봇이 무시.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — <code>solosquad init</code> 실행</div>
+    <pre><code>cd ~/your-workspace
+solosquad init</code></pre>
+    <p>wizard 가 다음을 처리:</p>
+    <ol>
+      <li>Claude OAuth login</li>
+      <li>Workspace 메타데이터 (이름, owner profile, timezone)</li>
+      <li>Step 3 메신저 선택 → <strong>Discord</strong> (Slack 임시 비활성)</li>
+      <li><code>DISCORD_TOKEN</code> 입력 (Step 1 의 값)</li>
+      <li>Step 3.5 — handle 선택 + Application Client ID + <strong>본인 Discord User ID</strong> 입력</li>
+      <li>Step 6 — 첫 조직 + <strong>Chief 이름</strong> (Hermes, Atlas, Apollo 등) prompt</li>
+      <li>user.yaml 저장 후 <strong>OAuth invite URL 자동 합성 + 브라우저 자동 열기</strong></li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — OAuth invite URL 클릭 → 길드 선택 + Authorize</div>
+    <p>브라우저가 자동으로 OAuth 페이지로 이동:</p>
+    <ul>
+      <li>서버 선택 (본인이 owner 인 길드 — 또는 새로 만들기)</li>
+      <li>권장 권한 bitfield 자동 포함 (10 권한 — Manage Channels / View Channels / Send Messages / Embed Links / Attach Files / Read Message History / Manage Threads / Create Public Threads / Send Messages in Threads / Use Application Commands)</li>
+      <li><strong>Authorize</strong> 클릭</li>
+    </ul>
+    <div class="callout info"><strong>의도적 배제</strong>: Administrator / Manage Guild / Manage Roles / Kick / Ban / Mention Everyone — Discord verification trigger 회피.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — 자동 onboarding embed</div>
+    <p>봇이 길드에 추가되면 <code>guildCreate</code> 핸들러가 자동으로:</p>
+    <ol>
+      <li>systemChannel (없으면 첫 writable text channel) 에 welcome embed 송신:
+        <ul>
+          <li>제목: <em>"안녕하세요, Hermes 입니다 🫡"</em> (Chief 이름)</li>
+          <li>2 button: <strong>✓ Auto-create channels</strong> / <strong>⚙ Manual choose</strong></li>
+        </ul>
+      </li>
+      <li><strong>Auto-create</strong> 클릭 → <code>#command-&lt;handle&gt;</code> + <code>#works-&lt;handle&gt;</code> 자동 생성 + Chief 첫 인사</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — 봇 기동 + 검증</div>
+    <pre><code>solosquad bot                       # 봇 기동
+# 다른 터미널:
+solosquad doctor --discord          # 5-hop diagnostic
+# 결과: ✓ 1.DISCORD_TOKEN  ✓ 2./users/@me  ✓ 3.bot_user_id match
+#       ✓ 4.guild membership  ✓ 5.config.yaml + command channel</code></pre>
+    <p><code>#command-&lt;handle&gt;</code> 에 "안녕" → 봇이 <code>**[Hermes]** ...</code> 형태로 응답하면 정상.</p>
+  </div>
+
+  <h3 id="s5-2">5.2 Slack 봇 설정 (post-v1.0 슬롯) <span class="badge plan">post-v1.0</span></h3>
+  <p><em>본 절은 post-v1.0 슬롯 — v1.0 SemVer 약속 대상이 아닙니다. v1.2.x adapter 슬롯 활성화 시 복원. v0.9.x ~ v1.1 에서 이미 Slack 을 운영 중인 사용자는 아래 v0.x 절차 그대로 참조.</em></p>
   <p><strong>최종 결과물:</strong> <code>.env</code>에 <code>SLACK_BOT_TOKEN=xoxb-...</code>와 <code>SLACK_APP_TOKEN=xapp-...</code>가 저장되고, Slack 워크스페이스의 <code>#owner-command</code> 채널에서 봇이 응답.</p>
 
   <div class="step">
@@ -1555,81 +1650,6 @@ SLACK_COMMAND_CHANNEL=owner-command</code></pre>
     <pre><code>solosquad doctor --messenger-check
 solosquad bot</code></pre>
     <p><code>Slack auth.test → &lt;봇사용자명&gt;</code>이 ✓이고, <code>#owner-command</code>에 "안녕" → 응답 오면 성공.</p>
-  </div>
-
-  <h3 id="s5-2">5.2 Discord 봇 설정 (8단계)</h3>
-  <p><strong>최종 결과물:</strong> <code>.env</code>에 <code>DISCORD_TOKEN=...</code>이 저장되고, Discord 서버의 <code>#owner-command</code>에서 봇이 응답.</p>
-
-  <div class="step">
-    <div class="step-head">Step 1 — Application 생성</div>
-    <ol>
-      <li>https://discord.com/developers/applications 접속</li>
-      <li>우측 상단 <strong>New Application</strong></li>
-      <li>이름 입력 → <strong>Create</strong></li>
-    </ol>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 2 — Bot 토큰 발급</div>
-    <ol>
-      <li>좌측 <strong>Bot</strong> 클릭</li>
-      <li><strong>Reset Token</strong> → Yes</li>
-      <li>나타난 토큰을 즉시 복사 (한 번만 보여줌). 이 값이 <code>DISCORD_TOKEN</code>.</li>
-    </ol>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 3 — Privileged Gateway Intents</div>
-    <p>같은 Bot 페이지 아래로 스크롤 → <strong>Privileged Gateway Intents</strong>:</p>
-    <ul>
-      <li><strong>Message Content Intent</strong> — <strong class="err">필수</strong> (켜지 않으면 메시지 본문이 빈 문자열로 도착해 봇이 응답 못 함)</li>
-    </ul>
-    <p>Save Changes.</p>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 4 — OAuth2 URL Generator</div>
-    <p>좌측 <strong>OAuth2 → URL Generator</strong></p>
-    <ul>
-      <li><strong>Scopes</strong>: <code>bot</code>, <code>applications.commands</code></li>
-      <li><strong>Bot Permissions</strong>: View Channels, Send Messages, Read Message History, Manage Channels, Create Public Threads (v0.2.4+)</li>
-    </ul>
-    <p>Generated URL 복사 → 브라우저에서 열기 → 서버 선택 → Authorize.</p>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 5 — 서버 이름 규칙</div>
-    <p>봇이 서버를 제품에 연결하려면 <strong>서버 이름에 제품 slug</strong>가 포함되어야 함.</p>
-    <ul>
-      <li>제품 등록: <code>My Startup</code> (slug: <code>my-startup</code>)</li>
-      <li>Discord 서버 이름이 <code>My Startup</code> · <code>My Startup Workspace</code> · <code>my-startup-dev</code> → 자동 매핑 성공</li>
-      <li>이름이 <code>Awesome Team</code>이면 매핑 실패 → 서버 설정 → Overview → Server Name으로 변경</li>
-    </ul>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 6 — 채널 자동 생성 확인</div>
-    <p>봇 초대 후 <code>solosquad bot</code> 실행 시 자동 생성:</p>
-    <div class="tree">📁 AI Team Reports
-  #daily-brief
-  #signals
-  #experiments
-  #weekly-review
-  #owner-command       ← 여기서 봇에게 명령</div>
-    <p>이미 같은 이름 채널이 있으면 생성 생략.</p>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 7 — .env 작성</div>
-    <pre><code>MESSENGER=discord
-DISCORD_TOKEN=MTIzNDU2...</code></pre>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 8 — 검증</div>
-    <pre><code>solosquad doctor --messenger-check
-solosquad bot</code></pre>
-    <p><code>Discord /users/@me → &lt;봇사용자명&gt;</code>이 ✓이고, <code>#owner-command</code>에 "안녕" → 응답 오면 성공.</p>
   </div>
 
   <h3 id="s5-3">5.3 동작 검증</h3>

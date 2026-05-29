@@ -18,7 +18,7 @@ import {
   type AssembledContext,
 } from "./spawn-assembler.js";
 import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js";
-import { loadWorkspaceYaml } from "../util/config.js";
+import { loadWorkspaceYaml, loadOrgYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
 import {
   emit as emitChiefStage,
@@ -31,6 +31,28 @@ import {
  * directory chief-runner operates in (the org cwd), so all artifacts
  * land under <org>/memory/chief-stage-events.jsonl.
  */
+/**
+ * v1.2.4 §B.2 — Build the Chief identity hint injected into the system
+ * prompt. Reads `<org>/.org.yaml.chief_name`; falls back silently to an
+ * empty string when the field is unset (runtime label still defaults to
+ * "Chief" in the messenger surface). Pure file read — no LLM contact.
+ *
+ * Format keeps the prompt small + cache-friendly (same org → same
+ * string → same cache hit across turns).
+ */
+function resolveChiefIdentityHint(orgCwd: string): string {
+  try {
+    const org = loadOrgYaml(orgCwd);
+    const name = org?.chief_name?.trim();
+    if (!org || !name) return "";
+    return (
+      `\n\n[identity] You are **${name}** — the org-level Chief / supervisor for "${org.name}". Refer to yourself by this name when you sign off, narrate progress, or describe your role. The user picked it specifically; honor it.`
+    );
+  } catch {
+    return "";
+  }
+}
+
 function safeEmitStage(
   orgRoot: string,
   turnId: string,
@@ -331,6 +353,13 @@ export class ChiefRunner {
       ? `\n\n[ambient] Your currently-focused workflow is \`${record.activeWorkflowId}\`. If you switch focus, include \`[focus:<new-wf-id>]\` (or \`[focus:none]\`) in your reply.`
       : "";
 
+    // v1.2.4 §B.2 — inject the org's Chief name into the system prompt
+    // so Claude signs/refers to itself with the user-chosen identity
+    // (e.g. "Hermes" instead of falling back to the org slug or
+    // "Claude"). Pure read from <org>/.org.yaml — cache-friendly: same
+    // org → same prompt → same cache hit.
+    const chiefIdentity = resolveChiefIdentityHint(call.orgCwd);
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -340,7 +369,8 @@ export class ChiefRunner {
       includePartialMessages: true,
       maxBudgetUsd: this.deps.maxBudgetUsd ?? 5,
       timeoutMs: this.deps.timeoutMs ?? 300_000,
-      appendSystemPrompt: focusHint || undefined,
+      appendSystemPrompt:
+        (chiefIdentity + focusHint) || undefined,
     });
 
     let costUsd = 0;

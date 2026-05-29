@@ -78,18 +78,26 @@ export async function addOrgCommand(
     remoteUrl = a.remoteUrl;
   }
 
-  // v1.2 §4.1 — Chief name (org-scoped). One prompt, optional; skip = runtime
-  // falls back to literal "Chief". Recommend reusing the same string for the
-  // Discord Developer Portal Bot name so the messenger surface stays
-  // consistent with SoloSquad's internal identity.
+  // v1.2 §4.1 — Chief name (org-scoped). v1.2.4 §B.3 — copy 보강.
+  // Skip = runtime fallback "Chief".
   let chiefName = opts.chiefName?.trim();
   if (chiefName === undefined) {
     console.log(
+      chalk.bold("\n  💡 Chief 이름 — 조직 1개당 1명, 사용자 대면 supervisor"),
+    );
+    console.log(
       chalk.dim(
-        "\n  Each org has one Chief — the user-facing supervisor agent.\n" +
-          "  Give it a name (e.g. Hermes, Atlas, Apollo) — recommended to use the\n" +
-          "  same name for the Discord Developer Portal Bot so the surface stays\n" +
-          "  consistent. Leave blank to use the default \"Chief\".",
+        "  Chief 는 사용자가 메신저에서 직접 대화하는 유일한 에이전트입니다.\n" +
+          "  4 main bot (pm / engineer / designer / marketer) + 20 specialist 를\n" +
+          "  내부적으로 spawn 해서 결과를 합성 → 사용자에게는 *Chief 1명* 으로 보임.\n" +
+          "\n  이름은 다음 6곳에 노출됩니다:\n" +
+          "    • 봇 응답 prefix             [Hermes]\n" +
+          "    • Discord onboarding embed   안녕하세요, Hermes 입니다 🫡\n" +
+          "    • works 채널 task card       Hermes · Chief\n" +
+          "    • owner-only 안내 메시지      Hermes only takes commands from @you\n" +
+          "    • doctor / log 출력\n" +
+          "    • Discord Developer Portal Bot 이름 권장 동일\n" +
+          "\n  추천 예시: Hermes, Atlas, Apollo, Iris, Janus, Athena, Hephaestus.",
       ),
     );
     const answer = await inquirer.prompt([

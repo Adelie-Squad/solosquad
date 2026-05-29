@@ -212,10 +212,10 @@
 
 <aside class="sidebar">
   <h1>SoloSquad</h1>
-  <span class="tag">Master Guide · v1.2.3 (Messenger Connection — Chief on Discord; previous minor: v1.1.0)</span>
+  <span class="tag" style="font-size: 0.75em;">v1.2.4 · Messenger Connection</span>
 
-  <section class="release-callout" style="background: #f6f8fa; border-left: 4px solid #2563eb; padding: 10px 12px; margin: 8px 0; font-size: 0.85em; line-height: 1.45;">
-    <strong>v1.2.3 (2026-05-28)</strong> — Messenger Connection. One Chief bot per org (named), Discord OAuth invite URL 1-click, handle-based channel portability, owner-only gate, TRIAGE <code>kind</code> branching (work units → <code>works-&lt;handle&gt;</code> task card + thread + stage narration), <code>add-org</code> bootstrap, <code>doctor --discord</code> 5-hop. Zero CLI-freeze surface change, zero schema-breaking change. Full notes in <code>CHANGELOG.md</code> §[1.2.3].
+  <section class="release-callout" style="background: #f6f8fa; border-left: 3px solid #2563eb; padding: 6px 10px; margin: 6px 0; font-size: 0.75em; line-height: 1.4;">
+    <strong>v1.2.4</strong> — Discord auto-connect + Chief name + owner-only gate + TRIAGE kind branching. Full notes in <code>CHANGELOG.md</code> §[1.2.4].
   </section>
 
   <nav>
@@ -263,8 +263,8 @@
       <li>
         <a data-target="s5">5. Messenger Setup</a>
         <ul class="sub">
-          <li><a href="#s5-2">5.1 Discord (8 steps) — v1.0 recommended</a></li>
-          <li><a href="#s5-1">5.2 Slack (9 steps) — post-v1.0 slot</a></li>
+          <li><a href="#s5-1">5.1 Discord (v1.2) — v1.0 recommended</a></li>
+          <li><a href="#s5-2">5.2 Slack (post-v1.0 slot)</a></li>
           <li><a href="#s5-3">5.3 Verification</a></li>
         </ul>
       </li>
@@ -1466,8 +1466,103 @@ solosquad update --channel stable  # default</code></pre>
     </tbody>
   </table>
 
-  <h3 id="s5-1">5.1 Slack Bot Setup (9 steps) <span class="badge plan">post-v1.0</span></h3>
-  <p><em>This section is a post-v1.0 slot — not covered by the v1.0 SemVer promise. Use it if you already run Slack on v0.9.x or when the slot becomes active. New users: start with <a href="#s5-2">§5.2 Discord</a>.</em></p>
+  <h3 id="s5-1">5.1 Discord Bot Setup (v1.2 path) <span class="badge now">v1.2</span></h3>
+  <p><strong>End result:</strong> <code>.env</code> has <code>DISCORD_TOKEN</code>; the workspace owner's <code>messenger_user_id</code> + <code>OrgYaml.chief_name</code> are persisted. Invite the bot → <code>guildCreate</code> auto-sends a welcome embed → channel pair <code>#command-&lt;handle&gt;</code> / <code>#works-&lt;handle&gt;</code> is auto-created → the owner sends "hi" → Chief (e.g. <em>Hermes</em>) replies.</p>
+
+  <div class="callout info">
+    <strong>What's new vs. v0.x ~ v1.1:</strong>
+    <ul>
+      <li><strong>Channel names</strong>: old <code>owner-command</code> → new <code>command-&lt;handle&gt;</code> (handle = user identifier; the same pair auto-reuses across multiple Discord guilds and across future Slack workspaces).</li>
+      <li><strong>"Server name = product slug" rule retired</strong>: pre-v1.0.3 required the Discord server name to include the product slug for auto-mapping. Since v1.0.3, <code>ownOrgSlug</code> binds via guild_id persisted in <code>&lt;org&gt;/discord/config.yaml</code> — server names are free.</li>
+      <li><strong>OAuth invite URL</strong>: the old manual URL Generator is retired. <code>solosquad discord invite-url</code> synthesizes the recommended permissions bitfield + opens the URL in your default browser.</li>
+      <li><strong>Chief name</strong>: one Chief bot per org, you choose the name (Hermes / Atlas / Apollo). Recommended to match the Discord Developer Portal Bot name.</li>
+      <li><strong>Owner-only gate</strong>: only the user whose <code>messenger_user_id</code> is persisted gets a response. Fresh installs land ON, upgrades land OFF (neutral).</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 1 — Create Discord Application + Bot</div>
+    <ol>
+      <li>https://discord.com/developers/applications → <strong>New Application</strong></li>
+      <li>Enter a name (e.g. <strong>Hermes</strong>) → Create. Matching this with the Chief name (Step 6) keeps the Discord surface identity consistent.</li>
+      <li>Left sidebar <strong>Bot</strong> → <strong>Reset Token</strong> → copy immediately (shown once). This is <code>DISCORD_TOKEN</code>.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 2 — Privileged Gateway Intents</div>
+    <p>Same Bot page bottom → <strong>Privileged Gateway Intents</strong> → toggle <strong>Message Content Intent</strong> ON → Save Changes.</p>
+    <div class="callout warn"><strong>Required</strong> — without it, message bodies arrive as empty strings and the bot can't respond.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 3 — Copy Application Client ID</div>
+    <p>Left sidebar <strong>General Information</strong> → copy <strong>Application ID</strong>. <code>solosquad init</code> Step 3.5 prompts for this (or use <code>solosquad discord invite-url --client-id &lt;id&gt;</code> ad-hoc later).</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 4 — Copy your own Discord User ID (for owner-only gate)</div>
+    <ol>
+      <li>Discord client → User Settings → <strong>Advanced</strong> → <strong>Developer Mode</strong> ON</li>
+      <li>Right-click your own profile → <strong>Copy User ID</strong> (17~20-digit number)</li>
+      <li><code>solosquad init</code> Step 3.5 prompts for this value — skipping triggers first-message hydration as a fallback.</li>
+    </ol>
+    <div class="callout info"><strong>Why</strong>: the <code>owner_only=true</code> gate enforces <code>message.author.id === messenger_user_id</code>, so messages from anyone else in the channel are silently ignored.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 5 — Run <code>solosquad init</code></div>
+    <pre><code>cd ~/your-workspace
+solosquad init</code></pre>
+    <p>The wizard walks:</p>
+    <ol>
+      <li>Claude OAuth login</li>
+      <li>Workspace metadata (name, owner profile, timezone)</li>
+      <li>Step 3 messenger picker → <strong>Discord</strong> (Slack is temporarily hidden)</li>
+      <li>Enter <code>DISCORD_TOKEN</code> (Step 1's value)</li>
+      <li>Step 3.5 — pick handle + Application Client ID + <strong>your own Discord User ID</strong></li>
+      <li>Step 6 — first org + <strong>Chief name</strong> prompt (Hermes / Atlas / Apollo / Iris / Janus)</li>
+      <li>After user.yaml save, the wizard <strong>auto-synthesizes the OAuth invite URL and opens it in your default browser</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 6 — Click the OAuth invite URL → pick a guild + Authorize</div>
+    <p>The browser is already at the OAuth page:</p>
+    <ul>
+      <li>Pick the server (one you own — or create a fresh one)</li>
+      <li>The recommended permissions bitfield is pre-filled (10 perms — Manage Channels / View Channels / Send Messages / Embed Links / Attach Files / Read Message History / Manage Threads / Create Public Threads / Send Messages in Threads / Use Application Commands)</li>
+      <li>Click <strong>Authorize</strong>.</li>
+    </ul>
+    <div class="callout info"><strong>Deliberately excluded</strong>: Administrator / Manage Guild / Manage Roles / Kick / Ban / Mention Everyone — avoids Discord verification triggers.</div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 7 — Automatic onboarding embed</div>
+    <p>The moment the bot joins, the <code>guildCreate</code> handler:</p>
+    <ol>
+      <li>Posts a welcome embed in the systemChannel (or the first writable text channel):
+        <ul>
+          <li>Title: <em>"안녕하세요, Hermes 입니다 🫡"</em> (the Chief name)</li>
+          <li>2 buttons: <strong>✓ Auto-create channels</strong> / <strong>⚙ Manual choose</strong></li>
+        </ul>
+      </li>
+      <li>Click <strong>Auto-create</strong> → <code>#command-&lt;handle&gt;</code> + <code>#works-&lt;handle&gt;</code> are created and Chief posts the first greeting.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <div class="step-head">Step 8 — Start the bot + verify</div>
+    <pre><code>solosquad bot                       # foreground
+# Another terminal:
+solosquad doctor --discord          # 5-hop diagnostic
+# Expected: ✓ 1.DISCORD_TOKEN  ✓ 2./users/@me  ✓ 3.bot_user_id match
+#           ✓ 4.guild membership  ✓ 5.config.yaml + command channel</code></pre>
+    <p>Send "hi" in <code>#command-&lt;handle&gt;</code> → the bot replies as <code>**[Hermes]** ...</code>.</p>
+  </div>
+
+  <h3 id="s5-2">5.2 Slack Bot Setup (post-v1.0 slot) <span class="badge plan">post-v1.0</span></h3>
+  <p><em>This section is a post-v1.0 slot — not covered by the v1.0 SemVer promise. Restored when the v1.2.x adapter slot is activated. v0.9.x ~ v1.1 users already running Slack: follow the v0.x procedure below as-is.</em></p>
   <p><strong>End result:</strong> <code>.env</code> has <code>SLACK_BOT_TOKEN=xoxb-...</code> and <code>SLACK_APP_TOKEN=xapp-...</code>, and the bot responds in <code>#owner-command</code> of your Slack workspace.</p>
 
   <div class="step">
@@ -1556,81 +1651,6 @@ SLACK_COMMAND_CHANNEL=owner-command</code></pre>
     <pre><code>solosquad doctor --messenger-check
 solosquad bot</code></pre>
     <p>If <code>Slack auth.test → &lt;bot-username&gt;</code> is ✓ and <code>#owner-command</code> echoes "hi", you're good.</p>
-  </div>
-
-  <h3 id="s5-2">5.2 Discord Bot Setup (8 steps)</h3>
-  <p><strong>End result:</strong> <code>.env</code> has <code>DISCORD_TOKEN=...</code>, and the bot responds in <code>#owner-command</code> of your Discord server.</p>
-
-  <div class="step">
-    <div class="step-head">Step 1 — Create Application</div>
-    <ol>
-      <li>Visit https://discord.com/developers/applications</li>
-      <li>Top right <strong>New Application</strong></li>
-      <li>Enter name → <strong>Create</strong></li>
-    </ol>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 2 — Issue Bot token</div>
-    <ol>
-      <li>Click left <strong>Bot</strong></li>
-      <li><strong>Reset Token</strong> → Yes</li>
-      <li>Copy the token immediately (shown once). This is <code>DISCORD_TOKEN</code>.</li>
-    </ol>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 3 — Privileged Gateway Intents</div>
-    <p>Scroll down on the same Bot page → <strong>Privileged Gateway Intents</strong>:</p>
-    <ul>
-      <li><strong>Message Content Intent</strong> — <strong class="err">REQUIRED</strong> (without it, message bodies arrive as empty strings and the bot can't respond)</li>
-    </ul>
-    <p>Save Changes.</p>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 4 — OAuth2 URL Generator</div>
-    <p>Left sidebar <strong>OAuth2 → URL Generator</strong></p>
-    <ul>
-      <li><strong>Scopes</strong>: <code>bot</code>, <code>applications.commands</code></li>
-      <li><strong>Bot Permissions</strong>: View Channels, Send Messages, Read Message History, Manage Channels, Create Public Threads (v0.2.4+)</li>
-    </ul>
-    <p>Copy the generated URL → open in browser → select server → Authorize.</p>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 5 — Server name rule</div>
-    <p>To map the server to a product, <strong>the server name must contain the product slug</strong>.</p>
-    <ul>
-      <li>Registered product: <code>My Startup</code> (slug: <code>my-startup</code>)</li>
-      <li>Discord server name <code>My Startup</code> · <code>My Startup Workspace</code> · <code>my-startup-dev</code> → auto-maps</li>
-      <li>Name like <code>Awesome Team</code> → mapping fails. Server settings → Overview → change Server Name</li>
-    </ul>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 6 — Verify auto-created channels</div>
-    <p>After bot invite and <code>solosquad bot</code>, these auto-create:</p>
-    <div class="tree">📁 AI Team Reports
-  #daily-brief
-  #signals
-  #experiments
-  #weekly-review
-  #owner-command       ← issue commands here</div>
-    <p>If a channel with the same name exists, creation is skipped.</p>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 7 — Write .env</div>
-    <pre><code>MESSENGER=discord
-DISCORD_TOKEN=MTIzNDU2...</code></pre>
-  </div>
-
-  <div class="step">
-    <div class="step-head">Step 8 — Verify</div>
-    <pre><code>solosquad doctor --messenger-check
-solosquad bot</code></pre>
-    <p>If <code>Discord /users/@me → &lt;bot-username&gt;</code> is ✓ and <code>#owner-command</code> echoes "hi", you're good.</p>
   </div>
 
   <h3 id="s5-3">5.3 Operation Verification</h3>

@@ -4,6 +4,71 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.4] — 2026-05-29 (onboarding + vocabulary polish on 1.2.3)
+
+**Dogfood feedback on v1.2.3 surfaced 11 small but visible UX gaps — bundled into a single patch.** No new functionality; the v1.2 series scope (Chief on Discord, OAuth invite, owner-only, TRIAGE kind routing, etc.) is unchanged. Schema breaking 0, CLI freeze 침범 0.
+
+Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3 hotfix is preserved as a historical record in `docs/prd/v1.2.3-bundle-files-hotfix.md`.
+
+### Fixed — Workspace detection
+
+- **`detectWorkspaceVersion` no longer returns `"0.2.0"` when `.solosquad/` exists but `workspace.yaml` is missing.** Running `solosquad bot` from inside `<org>/` walked up only as far as `<org>/.solosquad/users/` (which is a v0.8 per-user yaml dir, *not* a workspace), treated it as v0.2.0 layout, matched no user yaml, and fell back to legacy `DEFAULT_CHANNELS` (`owner-command`, `workflow`) — creating ghost channels and disconnecting the bot from the real org. The strict workspace.yaml gate forces `findWorkspaceRoot` to keep walking up to the real root. (PRD §A.1)
+
+### Fixed — Onboarding
+
+- **`messenger_user_id` auto-populate** (PRD §A.2). The v1.2.3 owner-only gate needed `messenger_user_id` to compare against `message.author.id`, but no flow ever populated it — every fresh install fell open at the gate with a startup warning. v1.2.4 lands two complementary paths:
+  - `init` Step 3.5 now prompts for the owner's Discord/Slack User ID with how-to-find guidance (Discord: enable Developer Mode → right-click avatar → Copy User ID; Slack: profile → More → Copy member ID). Skip is allowed for users who don't have it handy.
+  - `discord-owner-gate.decideOwnerGate` now hydrates the field from the *first message's `author.id`* when the yaml value is empty, persists via `saveUserYaml`, and logs the captured ID. Safe assumption in solo-founder / private-guild setups; the captured ID can be edited manually if wrong.
+- **Slack option hidden from `init` messenger picker** (PRD §A.3). The picker step itself is kept so the flow extends naturally once the v1.2.x Slack adapter lands; Slack is shown as `disabled` with a "post-v1.0 슬롯" hint.
+- **Path quotes stripped from `add repo` input** (PRD §A.4). PowerShell / Explorer "Copy as path" wraps Windows paths in `"..."` literally, and pre-v1.2.4 those quotes leaked into `path.resolve` and made every pasted Windows path look missing. New `normalizeUserPath()` helper in `src/util/platform.ts` does a balanced-quote strip + trim before `path.resolve`. Wired into both `solosquad add repo` and the `init` repo-loop. The `init` repo prompt copy also calls out the convention.
+
+### Fixed — Chief identity plumbing
+
+- **DiscordMessageContext reply prefix uses `OrgYaml.chief_name`** instead of the org slug. Pre-v1.2.4 the bot replied as `**[bv-po]**` (the org's filesystem slug) even when the user picked `chief_name: "Hermes"` — surfacing org identity where Chief identity belonged. The Chief name is read once from `<org>/.org.yaml`, cached per `DiscordMessageContext` instance, and falls back to `"Chief"` when unset. (PRD §B.1)
+- **Chief identity injected into the LLM system prompt** via `chief-runner.invokeWithSessionRecovery.appendSystemPrompt`. New `resolveChiefIdentityHint(orgCwd)` reads `<org>/.org.yaml` once per turn and appends `[identity] You are **<chief_name>** — the org-level Chief / supervisor for "<org name>". Refer to yourself by this name when you sign off ...` to the system prompt. Cache-friendly: same org → same string → same Claude prompt-cache hit across turns. Empty when `chief_name` is unset. (PRD §B.2)
+- **Chief name prompt copy boosted in `init` Step 6 + `add org`** (PRD §B.3). The prompt now explains the 6 surfaces the name appears on (bot reply prefix, onboarding embed, works task card footer, owner-only ephemeral, doctor/log, Developer Portal Bot name), with 7 examples (Hermes, Atlas, Apollo, Iris, Janus, Athena, Hephaestus). Pre-v1.2.4 the prompt was a one-liner without context.
+
+### Fixed — Vocabulary (`PM` → `Chief` in user-facing labels)
+
+- **Surface labels renamed** to match the v1.1.0 Chief role: `[Bot] PM turn:` → `[Bot] Chief turn:`, `[Bot] PM error:` → `[Bot] Chief error:`, `[Bot] PM turn done:` → `[Bot] Chief turn done:`, `solosquad pm status` output `"PM sessions:"` → `"Chief sessions:"`, `"Rotated PM session"` → `"Rotated Chief session"`, etc. Inquirer prompts that say "Archive PM session for ..." now say "Archive Chief session for ...". (PRD §C.1, §C.2)
+- **`pm.message_in` / `pm.message_out` / `pm.error` jsonl event kinds stay as-is** (PRD §C.3) — schema_version backward-compat per `docs/api-stability.md` §6, and the archive consumers (`solosquad memory search` / `archive verify`) depend on the literal `kind` strings. Internal vocabulary mismatch is acceptable; user-facing UX takes priority.
+- **CLI command `solosquad pm <status|reset|compact>` kept verbatim** — v1.0 CLI surface freeze. A future `solosquad chief` alias is queued for v2 SemVer, where renaming a command is legal.
+
+### Fixed — Manual
+
+- **Master-guide §5 reorder** — Discord is now §5.1 (was §5.2), Slack is §5.2 (was §5.1). Both `_ko.html` + `_en.html`. (PRD §D.1)
+- **§5.1 Discord content fully rewritten for v1.2** (PRD §D.2). The pre-v1.2 walkthrough was a v0.2.x artifact:
+  - Removed: the "Step 5 — server name rule" block (the v0.2.x mapping that required Discord server names to contain the product slug — superseded by v1.0.3 `ownOrgSlug` direct binding via `<org>/discord/config.yaml`).
+  - Removed: the `📁 AI Team Reports` channel tree with `#daily-brief` / `#signals` / `#experiments` / `#weekly-review` / `#owner-command` — that whole topology was v0.2.x. v1.2 uses handle-based channels (`#command-<handle>` / `#works-<handle>`).
+  - Added: the v1.2 onboarding flow as 8 steps — Developer Portal Bot creation with name matching the Chief name, Privileged Gateway Intent toggle, Application Client ID copy, Discord User ID copy for owner-only, `solosquad init` walk, OAuth invite URL click, automatic guildCreate onboarding embed + Auto-create button, `solosquad doctor --discord` 5-hop verification.
+- **Sidebar release-callout further compressed** (PRD §D.3). Pre-v1.2.4 it was a ~22-line dense paragraph that pushed nav off-screen; v1.2.3 compressed it to one 250-character line; v1.2.4 trims it further to a sub-line teaser pointing to `CHANGELOG.md §[1.2.4]`. KO + EN both.
+
+### Migration
+
+- `src/migrations/scripts/1.1.0-to-1.2.4.ts` (renamed from `1.1.0-to-1.2.3.ts`, `TARGET = "1.2.3"` → `"1.2.3"`). The migration body is unchanged — v1.2.4 is purely UX/vocab; no new schema fields, no new seeds. Tests + index registry updated.
+
+### Schema
+
+- No new fields. `UserYaml.messenger_user_id` (declared in v1.2.3) is now actively populated by both `init` and the first-message hydration.
+
+### CLI surface
+
+- Zero new commands. Zero command renames. `--chief-name` / `--skip-discord` flags on `add org` (v1.2.3) continue to work.
+
+### Tests
+
+- 728/728 pass (unchanged count — v1.2.4 is repackaging existing behavior, not adding new test surface).
+
+### Recovery for users stuck at `workspace.yaml.version: 1.2.2` (the burned label)
+
+The v1.2.4 migration still chains `1.1.0 → 1.2.4`, not `1.2.2 → 1.2.4`. Anyone whose workspace bumped to 1.2.2 from the broken v1.2.2 release (no actual user known) should:
+
+1. Manually edit `.solosquad/workspace.yaml`: change `version: 1.2.2` to `version: 1.0.4`.
+2. `npm install -g solosquad@latest` (pulls 1.2.4).
+3. `solosquad migrate --apply` — the full chain re-runs from 1.0.4 with the bundle intact and lands at 1.2.4.
+
+---
+
 ## [1.2.3] — 2026-05-28 (hotfix on 1.2.2)
 
 **Bundle resources restored to the npm tarball.** v1.2.2 (published 2026-05-28 ~ KST 17:00) shipped with `package.json.files` whitelisting only `dist/` + `assets/` + `manual/`. The v1.1.0-era root directories (`agents/`, `skills/`, `teams/`, `schedules/`, `user/`, `knowledge/`) were *omitted from the tarball*, so any user running `solosquad migrate --apply` from an earlier workspace hit `Verify failed at 1.1.0: Bundle resources missing — package is incomplete` at step 6/7 of a 0.9.2 → 1.2.x chain (chief SKILL.md + 4 team folders + problem-definition workflow seed all missing from the install).

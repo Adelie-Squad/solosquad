@@ -14,7 +14,7 @@ import {
   saveEnv,
   saveWorkspaceYaml,
 } from "../util/config.js";
-import { commandExists, IS_WINDOWS } from "../util/platform.js";
+import { commandExists, IS_WINDOWS, normalizeUserPath } from "../util/platform.js";
 import { scaffoldOrg, slugify } from "../util/scaffold.js";
 import { isGitRepo, looksLikeGitUrl, slugFromUrl } from "../util/git.js";
 import { detectV05Usage } from "./detect-v05-usage.js";
@@ -190,10 +190,16 @@ const ORG_EXAMPLES = `
  * working via `resolveRepoCwd` (`src/util/paths.ts`).
  */
 async function registerRepoInline(
-  input: string,
+  rawInput: string,
   orgDir: string,
   orgSlug: string
 ): Promise<{ slug: string; role: string } | null> {
+  // v1.2.4 §A.4 — strip surrounding quotes from user-pasted path.
+  // PowerShell / Explorer "Copy as path" both wrap paths in `"..."` and
+  // the literal quotes leak into `path.resolve`. The normalizer is a
+  // pure trim + balanced-quote-strip; cross-platform separators are
+  // handled by `path.resolve` itself.
+  const input = normalizeUserPath(rawInput);
   if (looksLikeGitUrl(input)) {
     const suggestedSlug = slugFromUrl(input);
     console.log(chalk.red(`  ✗ Git URL is not accepted in v1.0 path-reference mode.`));
@@ -386,6 +392,10 @@ interface BotIdentity {
 interface IdentityChoice {
   handle: string;       // the handle the user actually wants
   bot: BotIdentity;     // the bot's own identity (for bot_user_id field)
+  /** v1.2.4 §A.2 — owner's Discord/Slack user id. Used by §4.5 owner-only
+   *  gate. Optional — Step 3.5 prompt allows skip + first-message
+   *  hydration fallback captures it on first owner message. */
+  messengerUserId?: string;
 }
 
 async function fetchBotIdentity(
@@ -497,9 +507,56 @@ async function promptHandleSelection(args: {
       },
     },
   ]);
+
+  // v1.2.4 §A.2 — owner messenger user id prompt. Required for §4.5
+  // owner-only gate (default ON for fresh installs). Pre-v1.2.4 the field
+  // was never populated → gate fell open + warned at every bot start.
+  //
+  // Discord: enable Developer Mode (User Settings → Advanced → Developer
+  // Mode) → right-click your own profile → Copy User ID. Slack: profile
+  // → More → Copy member ID (or the api auth.test response).
+  //
+  // Optional — skip falls back to first-message hydration (the adapter
+  // captures author.id from the first owner-eligible message and persists
+  // to user.yaml). Manual prompt is preferred because hydration assumes
+  // the first message is from the owner, which fails in noisy channels.
+  console.log(
+    chalk.bold("\n  💡 Your Discord User ID (for the owner-only command gate)"),
+  );
+  console.log(
+    chalk.dim(
+      `  - Discord: enable Developer Mode (Settings → Advanced → Developer Mode)\n` +
+        `    then right-click your own avatar → "Copy User ID". 18~19-digit number.\n` +
+        `  - Slack: profile → More menu → "Copy member ID" (Uxxxxxxxxx).\n` +
+        `  - Press Enter to skip — the bot will capture it from your first message.`,
+    ),
+  );
+  const { messengerUserId } = await inquirer.prompt([
+    {
+      name: "messengerUserId",
+      message: `Your ${args.messenger} User ID (Enter = capture on first message):`,
+      type: "input",
+      default: "",
+      validate: (v: string) => {
+        const trimmed = v.trim();
+        if (!trimmed) return true; // skip allowed
+        if (args.messenger === "discord") {
+          return /^\d{17,20}$/.test(trimmed)
+            ? true
+            : "Discord User ID is a 17~20 digit number (right-click your avatar → Copy User ID).";
+        }
+        // slack
+        return /^U[A-Z0-9]{6,}$/.test(trimmed)
+          ? true
+          : "Slack member ID starts with U + uppercase alphanumerics (e.g. U0ABCDEFG).";
+      },
+    },
+  ]);
+
   return {
     handle: normalizeHandle(confirmHandle),
     bot: extracted,
+    messengerUserId: (messengerUserId as string).trim() || undefined,
   };
 }
 
@@ -529,6 +586,12 @@ function saveUserYamlForChoice(args: {
     handle,
     display_name: args.ownerName || undefined,
     messenger: args.messenger,
+    // v1.2.4 §A.2 — owner messenger id when supplied at Step 3.5. Omitted
+    // when user skipped; first-message hydration in the adapter will fill
+    // it on the first owner-eligible message.
+    ...(args.choice.messengerUserId
+      ? { messenger_user_id: args.choice.messengerUserId }
+      : {}),
     bot_application_id: args.choice.bot.appId,
     bot_user_id: args.choice.bot.botUserId,
     joined_at: new Date().toISOString(),
@@ -745,14 +808,21 @@ export async function initCommand(): Promise<void> {
         "  create a separate workspace directory per messenger.",
     ),
   );
+  // v1.2.4 §A.3 — Slack 옵션은 picker 에서 임시 숨김 (v1.2.x adapter 슬롯
+  // 활성화 시 복원). picker 단계 자체는 유지하여 향후 항목 추가 시 흐름이
+  // 자연스럽게 확장되도록.
   const { messenger } = await inquirer.prompt([
     {
       name: "messenger",
       message: "Messenger platform:",
       type: "list",
       choices: [
-        { name: "Discord — Best for team channels", value: "discord" },
-        { name: "Slack   — Great for workspace integration", value: "slack" },
+        { name: "Discord — v1.2 default (1 Chief bot per org, OAuth invite URL 1-click)", value: "discord" },
+        {
+          name: "Slack   — (coming back in v1.2.x — temporarily hidden)",
+          value: "slack",
+          disabled: "post-v1.0 슬롯, v1.2.x adapter 활성화 후 복원",
+        },
       ],
     },
   ]);
@@ -938,23 +1008,33 @@ export async function initCommand(): Promise<void> {
       },
     ]);
 
-    // v1.2 §4.1 — org-level Chief display name. Skip = runtime falls back
-    // to literal "Chief". Recommend matching the Discord Developer Portal
-    // Bot name (asked in Step 3 above) so the messenger surface stays
-    // consistent with SoloSquad's internal identity.
+    // v1.2 §4.1 — org-level Chief display name. v1.2.4 §B.3 — copy
+    // 보강. Chief 이름은 다음 표면에서 노출됨:
+    //   1. 봇 응답 prefix              `[Hermes]` (Discord/Slack 메시지)
+    //   2. guildCreate onboarding embed `안녕하세요, Hermes 입니다 🫡`
+    //   3. works 채널 task card footer  `Hermes · Chief`
+    //   4. owner-only 게이트 ephemeral  `Hermes only takes commands from <@owner>`
+    //   5. doctor / log 출력            `Chief name: Hermes`
+    //   6. Discord Developer Portal Bot 이름 권장 동일 (메신저 표면 일관성)
+    //
+    // Skip = runtime fallback `"Chief"`. 동작은 정상이지만 정체성 약함.
     console.log(
-      chalk.dim(
-        "\n  Each org has one Chief — the user-facing supervisor agent.",
-      ),
+      chalk.bold("\n  💡 Chief 이름 — 조직 1개당 1명, 사용자 대면 supervisor"),
     );
     console.log(
       chalk.dim(
-        "  Give it a name (e.g. Hermes, Atlas, Apollo). If you set a Discord Bot",
-      ),
-    );
-    console.log(
-      chalk.dim(
-        "  name in Step 3 above, use the same string here.",
+        "  Chief 는 사용자가 메신저에서 직접 대화하는 유일한 에이전트입니다.\n" +
+          "  4 main bot (pm / engineer / designer / marketer) + 20 specialist 를\n" +
+          "  내부적으로 spawn 해서 결과를 합성 → 사용자에게는 *Chief 1명* 으로 보임.\n" +
+          "\n  이름은 다음 6곳에 노출됩니다:\n" +
+          "    • 봇 응답 prefix         [Hermes]\n" +
+          "    • Discord onboarding embed  안녕하세요, Hermes 입니다 🫡\n" +
+          "    • works 채널 task card    Hermes · Chief\n" +
+          "    • owner-only 안내 메시지   Hermes only takes commands from @you\n" +
+          "    • doctor / log 출력\n" +
+          "    • Discord Developer Portal Bot 이름 권장 동일\n" +
+          "\n  추천 예시: Hermes, Atlas, Apollo, Iris, Janus, Athena, Hephaestus.\n" +
+          `  Step 3 에서 Discord Bot 을 만들었으면 같은 이름을 쓰세요.`,
       ),
     );
     const { chiefName } = await inquirer.prompt([
@@ -1009,7 +1089,12 @@ export async function initCommand(): Promise<void> {
       "  Paste a local path that is already a git repo.\n" +
       "  SoloSquad registers the path (no move, no copy) — your existing dev tree stays in place.\n" +
       "  Leave empty to skip. Repeat to add more.\n" +
-      "  Need to clone? Run `git clone <url> <path>` first, then re-add the path here."
+      "  Need to clone? Run `git clone <url> <path>` first, then re-add the path here.\n" +
+      "\n" +
+      "  💡 Path tips:\n" +
+      "    • 따옴표 없이 붙여넣기 (Explorer / PowerShell 의 'Copy as path' 는 \" \" 가 붙음 — 자동 strip 되지만 안 붙이는 편이 안전)\n" +
+      "    • Windows: C:\\\\Dev\\\\my-repo 또는 C:/Dev/my-repo 모두 OK\n" +
+      "    • macOS / Linux: /Users/you/Code/my-repo"
     ));
 
     while (true) {
