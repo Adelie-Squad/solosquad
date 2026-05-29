@@ -1,6 +1,15 @@
 # v0.5+ Docker stack — `cd deploy/docker && docker compose up -d --build`.
 # Workspace root is the repo root (`../..` from this file). Override
 # SOLOSQUAD_WORKSPACE in .env if your workspace lives elsewhere.
+#
+# v1.2.8 migration restart flow:
+#   `solosquad migrate --apply` 가 봇의 PID 파일 (<workspace>/.solosquad/bot.pid)
+#   읽어 SIGTERM 전달 → 봇은 graceful drain (Chief turn 응답 송신까지 최대 120s)
+#   후 exit code 0 으로 종료 → Docker `restart: unless-stopped` 가 자동 respawn.
+#   사용자는 `docker compose restart bot` 칠 필요 없음.
+#
+#   stop_grace_period 는 Docker 가 봇에 보낼 SIGKILL 전 대기 시간 — graceful
+#   drain 의 120s 보다 여유 두려고 130s 로 설정.
 
 services:
   bot:
@@ -10,6 +19,8 @@ services:
     image: solosquad:latest
     container_name: solosquad-bot
     restart: unless-stopped
+    # v1.2.8 §A.12 graceful drain (default 120s) 보다 여유 있게.
+    stop_grace_period: 130s
     env_file: ${SOLOSQUAD_WORKSPACE:-../..}/.env
     working_dir: /workspace
     environment:

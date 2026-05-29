@@ -172,6 +172,8 @@ EOF
 
 봇과 스케줄러를 시스템 서비스로 등록하여 서버 재부팅 시 자동 시작.
 
+> **v1.2.8+ 자동 재기동 흐름**: `solosquad migrate --apply` 가 워크스페이스 마이그레이션 성공 후 봇의 PID 파일 (`<workspace>/.solosquad/bot.pid`) 을 읽어 자동으로 `SIGTERM` 전송. systemd 의 `Restart=always` 가 봇 종료 감지 + 자동 respawn → 새 코드 반영. 사용자는 `systemctl restart` 도 안 쳐도 됨. 봇이 Chief turn 진행 중이면 v1.2.8 의 graceful drain 으로 *현재 응답 송신까지 기다린 후* clean exit → respawn → 사용자는 다음 turn 부터 새 코드 사용.
+
 ```bash
 # 봇 서비스
 sudo tee /etc/systemd/system/solosquad-bot.service << 'EOF'
@@ -184,8 +186,14 @@ Type=simple
 User=deploy
 WorkingDirectory=/home/deploy/solosquad
 ExecStart=/home/deploy/.nvm/versions/node/v20.18.0/bin/solosquad bot
+# Restart=always: v1.2.8 migration SIGTERM (exit code 0) 후 자동 respawn.
+# crash (non-zero exit) 도 동일하게 재기동.
 Restart=always
 RestartSec=10
+# TimeoutStopSec: v1.2.8 graceful drain 이 최대 120s 대기하므로 그보다 여유.
+TimeoutStopSec=140
+# KillSignal: 명시. SoloSquad 봇은 SIGTERM 받으면 drain 모드 진입.
+KillSignal=SIGTERM
 EnvironmentFile=/home/deploy/solosquad/.env
 
 [Install]
@@ -225,18 +233,27 @@ journalctl -u solosquad-bot -f
 journalctl -u solosquad-scheduler -f
 ```
 
-#### Step 7: 업데이트
+#### Step 7: 업데이트 (v1.2.8+ 자동화)
 
 ```bash
-# 방법 1: CLI 명령
-solosquad update
+# 1. CLI 갱신
+npm install -g solosquad@latest
 
-# 방법 2: 수동
-npm update -g solosquad
+# 2. 워크스페이스 마이그레이션 + 봇 자동 재기동
+solosquad migrate --apply
+# → "✓ Migration complete (x.y.z → x.y.z+1)."
+# → "✓ Signalled running bot (PID xxxx)." (PID 파일에서 읽어 SIGTERM)
+# → systemd 가 봇 종료 감지 → 자동 respawn (새 코드 반영)
+# → 사용자는 systemctl restart 입력 불필요
 
-# 서비스 재시작
-sudo systemctl restart solosquad-bot solosquad-scheduler
+# 스케줄러는 v1.2.8 drain 미적용 (별도 프로세스). 필요 시 수동 재기동:
+sudo systemctl restart solosquad-scheduler
+
+# 봇 동작 확인 (재기동 후)
+sudo systemctl status solosquad-bot
 ```
+
+> **drain 시간이 길어 보이는 경우**: 봇이 Chief turn 진행 중이면 SIGTERM 받은 후 *현재 응답 송신까지 최대 120s 대기*. systemd `TimeoutStopSec=140` 가 그보다 여유라 강제 SIGKILL 안 들어감. drain 완료 → clean exit → systemd respawn 흐름이 자연스럽게 흘러감.
 
 #### Step 8: 환경 진단
 
@@ -551,17 +568,42 @@ async function handleMessage(userMessage: string) {
 
 ## 운영 공통사항
 
-### 업데이트
+### 업데이트 (v1.2.8+ 자동 봇 재기동)
 
+v1.2.8 부터 `solosquad migrate --apply` 가 *실행 중인 봇에게 자동으로 SIGTERM* 전송:
+- 봇은 PID 파일 (`<workspace>/.solosquad/bot.pid`) 에 자기 PID 박제
+- migrate 가 그 PID 읽어 SIGTERM 전달
+- 봇은 진행 중인 Chief turn 응답 송신까지 graceful drain (최대 120s)
+- clean exit → 프로세스 매니저 (systemd / PM2 / Docker `restart: unless-stopped`) 가 자동 respawn → 새 코드 반영
+
+**업데이트 절차** (PaaS / VPS / Docker 공통):
 ```bash
-# CLI 내장 업데이트
-solosquad update
+# 1. CLI 갱신 (Docker 는 이미지 rebuild 로 대체)
+npm install -g solosquad@latest
 
-# 또는 npm 직접
-npm update -g solosquad
+# 2. 워크스페이스 마이그레이션 — 봇 자동 재기동까지 일어남
+solosquad migrate --apply
 
-# Docker 환경에서는 이미지 재빌드
+# Docker 환경
 docker compose up -d --build
+# (compose 의 restart: unless-stopped 가 SIGTERM 후 자동 respawn)
+```
+
+**로컬 + supervise 모드** (process manager 없이 자동 재기동 원할 때):
+```bash
+# 봇을 supervise wrapper 로 띄움 (한 번만)
+solosquad bot --supervise
+
+# 다른 터미널에서 migrate
+solosquad migrate --apply
+# → supervise wrapper 가 child 종료 감지 → 1.5초 후 자동 respawn
+```
+
+**스케줄러는 v1.2.8 drain 적용 안 됨** (별도 프로세스). 필요 시 수동 재기동:
+```bash
+sudo systemctl restart solosquad-scheduler   # systemd
+# 또는
+docker compose restart scheduler              # Docker
 ```
 
 ### 모니터링

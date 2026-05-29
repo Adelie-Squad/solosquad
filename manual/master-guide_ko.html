@@ -2014,6 +2014,42 @@ claude login
     <code>docs/cloud-deployment.md</code>에 VPS 최초 설정, Node.js 설치, solosquad 글로벌 설치, systemd 서비스 등록, 로그 관리, 업데이트, 백업이 정리되어 있습니다.
   </div>
 
+  <h4>7.1.1 봇 재기동 자동화 <span class="badge now">v1.2.8</span></h4>
+  <p>업데이트 시 봇을 수동으로 Ctrl+C 후 재실행해야 하는 번거로움이 사라졌습니다. 환경별로 동작이 다릅니다.</p>
+
+  <p><strong>클라우드 (systemd / PM2 / Docker)</strong> — process manager 가 자동 재기동:</p>
+  <pre><code># 1. CLI 갱신
+npm install -g solosquad@latest
+
+# 2. 마이그레이션 — 봇 자동 SIGTERM + process manager 자동 respawn
+solosquad migrate --apply
+# → "✓ Signalled running bot (PID xxxx). Cloud will auto-respawn."
+# → systemctl restart / docker compose restart 입력 불필요</code></pre>
+
+  <p><strong>로컬 + supervise 모드</strong> — process manager 없이도 자동 재기동:</p>
+  <pre><code># 봇을 supervise wrapper 로 띄움 (한 번만)
+solosquad bot --supervise
+
+# 다른 터미널에서 마이그레이션
+solosquad migrate --apply
+# → supervise wrapper 가 child 종료 감지 → 1.5초 후 자동 respawn</code></pre>
+
+  <p><strong>로컬 + 수동</strong> — supervise 안 쓰는 경우:</p>
+  <pre><code># 마이그레이션 시 봇이 깨끗하게 종료 (Ctrl+C 불필요)
+solosquad migrate --apply
+# 봇만 다시 띄우면 됨
+solosquad bot</code></pre>
+
+  <div class="callout info">
+    <strong>봇이 작업 중일 때 SIGTERM 받으면?</strong>
+    Chief 가 응답 생성 중이거나 Discord 메시지 송신 중이면 즉시 종료 안 함. 현재 turn 완료까지 <em>최대 120초 대기</em> (graceful drain) → clean exit → respawn. 사용자는 침묵 대신 응답 정상 수신. 새 메시지는 drain 중 거부되며 <em>"🛑 SoloSquad is restarting — please send it again in a few seconds"</em> 안내가 표시됩니다. Ctrl+C 두 번 누르면 강제 종료.
+  </div>
+
+  <div class="callout info">
+    <strong>이전 세션 기억은?</strong>
+    Claude session-id 가 디스크에 박제돼 있어서 봇 재기동 후에도 <code>--resume &lt;id&gt;</code> 로 자동 복원. Chief 가 <em>"이전에 우리 X 얘기하다 멈췄지"</em> 같은 컨텍스트 정확히 인지. 워크플로 stage, open_questions, goal cycle, memory jsonl 모두 디스크 저장이라 손실 0.
+  </div>
+
   <h3 id="s7-2">7.2 멀티 워크스페이스 (페르소나 분리)</h3>
   <p>본업/사이드 페르소나를 분리하고 싶을 때 Discord 워크스페이스를 여러 개 만듭니다. (Slack 어댑터로 분리하는 것도 코드상 가능하지만 v1.0 SemVer 약속 외.)</p>
   <pre><code>~/solopreneur/      # Discord 봇, 본업 페르소나
@@ -2484,7 +2520,26 @@ stages:
 
   <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
-  <h4>v1.2.8 (2026-05-29) <span class="badge now">최신</span> — Onboarding &amp; Vocabulary Polish</h4>
+  <h4>v1.2.8 (2026-05-29) <span class="badge now">최신</span> — Bot 재기동 자동화 + ESM/CJS fix</h4>
+  <ul>
+    <li><strong>v1.2.7 의 <code>--add-dir</code> wiring 실작동 복구</strong> — <code>chief-runner.ts</code> 의 helper 들이 ESM 컨텍스트에서 <code>require("fs"|"path"|"js-yaml")</code> 호출 → silent throw → <code>addDirs</code> 빈 배열 → <code>--add-dir</code> spawn 에 안 들어감. v1.2.8 가 top-level <code>import</code> 로 교체 → 실제로 모든 등록된 repo 에 봇이 자유롭게 접근</li>
+    <li><strong>봇 PID 파일 + migration 자동 SIGTERM</strong> — <code>&lt;workspace&gt;/.solosquad/bot.pid</code> 에 봇 PID 박제. <code>solosquad migrate --apply</code> 가 마이그레이션 성공 후 그 PID 에 SIGTERM 전송 → 클라우드 (systemd / PM2 / Docker <code>restart: unless-stopped</code>) 자동 respawn. 사용자는 <code>systemctl restart</code> / <code>docker compose restart</code> 입력 불필요</li>
+    <li><strong><code>solosquad bot --supervise</code></strong> — 로컬 wrapper. 자식으로 <code>solosquad bot</code> spawn → child 종료 감지 → 1.5초 후 자동 respawn. 3회 연속 crash 시 포기. 로컬 사용자도 process manager 없이 migration 자동 재기동 받을 수 있음</li>
+    <li><strong>Graceful drain on SIGTERM</strong> — 봇이 Chief turn 진행 중 SIGTERM 받으면 즉시 종료 안 함. 현재 turn 의 응답 송신까지 최대 120s 대기 → clean exit. 사용자는 *침묵 대신 응답 정상 수신*. 두번째 signal (Ctrl+C 한 번 더) 받으면 강제 exit</li>
+    <li><strong>Pre-publish ESM purity gate</strong> — <code>npm run prepublishOnly</code> 가 <code>dist/**/*.js</code> grep 으로 bare <code>require(</code> 검출 시 publish 차단. 같은 종류 사고 재발 방지. 주석 / 문자열 / <code>createRequire(import.meta.url)</code> 정당한 케이스 skip</li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.2.8], <code>docs/prd/v1.2.8-bot-restart-and-esm-fix.md</code></li>
+  </ul>
+
+  <h4>v1.2.7 (2026-05-29) — Bot spawn <code>--add-dir</code> (broken-as-published)</h4>
+  <p><em>npm publish 완료 됐으나 ESM/CJS 표기 결함으로 wiring 이 실작동 안 함. v1.2.8 이 정정 + chain. 1.2.7 신규 install 불필요 — 사용자는 1.2.8 부터 받으면 됨.</em></p>
+  <ul>
+    <li>봇이 매 spawn 마다 <code>&lt;org&gt;/repositories/*.yaml</code> 스캔 → 등록된 repo path 전부 모음 → <code>claude --print --add-dir &lt;path1&gt; &lt;path2&gt; ...</code> spawn 인자로 전달 (의도). 사용자가 *<code>/add-dir</code> 슬래시 명령 직접 실행* 안 해도 봇이 자동 권한 확보 (의도)</li>
+    <li>Chief 와 대화로 새 repo 클론 시 기본 위치 = 기존 등록 repo 의 공통 부모 디렉토리 (동적 계산, 사용자별로 다름)</li>
+    <li>v0.x 시절 <code>migrate</code> / <code>sync</code> CLI 메시지의 path-reference 모델 정합 (in-workspace clone 안내 제거)</li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.2.7]</li>
+  </ul>
+
+  <h4>v1.2.6 (2026-05-29) — Onboarding &amp; Vocabulary Polish</h4>
   <ul>
     <li><strong>workspace 탐지 strict</strong> — <code>.solosquad/</code> 디렉토리만으로 워크스페이스 판정 안 함. <code>workspace.yaml</code> 존재까지 가드 → <code>cd &lt;org&gt;</code> 에서 봇 실행해도 잘못된 루트 안 잡힘 (legacy <code>owner-command</code> / <code>workflow</code> 채널 fallback 결함 해소)</li>
     <li><strong><code>messenger_user_id</code> 자동 채움</strong> — <code>init</code> Step 3.5 prompt + 첫 메시지 hydration. owner-only 게이트가 fail-open 으로 끝나지 않고 진짜 동작</li>
@@ -2496,7 +2551,7 @@ stages:
     <li><strong>어휘 정합</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, 등 사용자 대면 라벨. jsonl event kind <code>pm.*</code> 는 schema_version 호환을 위해 유지</li>
     <li><strong>매뉴얼 §5 재배치</strong> — Discord = §5.1 (was §5.2), Slack = §5.2 (was §5.1). §5.1 Discord 본문 v1.2 정합 재작성 — 옛 "서버 이름 = 제품 slug" 규칙 제거, <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 채널 모델 반영</li>
     <li><strong>§10 FAQ 맨 아래로</strong> — 10.3 Uninstall / 10.4 봇·스케줄러 / 10.5 FAQ</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code></li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code> <em>(npm 1.2.4 / 1.2.5 burned, 실제 publish 슬롯 1.2.6)</em></li>
   </ul>
 
   <h4>v1.2.3 (2026-05-28) — Bundle-files hotfix</h4>

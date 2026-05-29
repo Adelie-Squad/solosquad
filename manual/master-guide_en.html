@@ -2004,6 +2004,42 @@ claude login
     <code>docs/cloud-deployment.md</code> covers VPS initial setup, Node.js install, global solosquad install, systemd service registration, log management, updates, backups.
   </div>
 
+  <h4>7.1.1 Bot restart automation <span class="badge now">v1.2.8</span></h4>
+  <p>You no longer need to Ctrl+C the bot and re-run it after every update. Behavior differs by environment.</p>
+
+  <p><strong>Cloud (systemd / PM2 / Docker)</strong> — the process manager handles respawn:</p>
+  <pre><code># 1. Update the CLI
+npm install -g solosquad@latest
+
+# 2. Migrate — auto-signals SIGTERM to the bot, process manager respawns
+solosquad migrate --apply
+# → "✓ Signalled running bot (PID xxxx). Cloud will auto-respawn."
+# → no need to run systemctl restart / docker compose restart</code></pre>
+
+  <p><strong>Local with supervise mode</strong> — auto-restart without configuring PM2:</p>
+  <pre><code># Launch the bot inside a supervisor (one-time)
+solosquad bot --supervise
+
+# In another terminal, migrate normally
+solosquad migrate --apply
+# → supervise wrapper sees child exit → 1.5s backoff → auto-respawn</code></pre>
+
+  <p><strong>Local plain</strong> — without --supervise:</p>
+  <pre><code># Migration cleanly stops the running bot (no Ctrl+C needed)
+solosquad migrate --apply
+# Just re-launch the bot
+solosquad bot</code></pre>
+
+  <div class="callout info">
+    <strong>What if the bot is mid-turn when SIGTERM arrives?</strong>
+    If Chief is generating a response or a Discord reply is in flight, the bot does NOT exit immediately. It enters drain mode and waits up to <em>120 seconds</em> for active turns to finish (graceful drain), then clean-exits and respawns. The user receives the response instead of silence. New incoming messages during drain are refused with a brief <em>"🛑 SoloSquad is restarting — please send it again in a few seconds"</em>. Pressing Ctrl+C twice forces immediate exit.
+  </div>
+
+  <div class="callout info">
+    <strong>What about prior session memory?</strong>
+    The Claude session-id is persisted to disk, so after restart the bot resumes via <code>--resume &lt;id&gt;</code> with the full conversation history intact. Chief can correctly reference things like "earlier we were discussing X" — workflow stages, open_questions, goal cycles, memory JSONLs all live on disk so nothing is lost.
+  </div>
+
   <h3 id="s7-2">7.2 Multi-Workspace (persona separation)</h3>
   <p>When you want day-job / side-project persona separation, run multiple Discord workspaces. (Slack adapter still works for legacy separation but is outside the v1.0 SemVer promise.)</p>
   <pre><code>~/solopreneur/      # Discord bot, day-job persona
@@ -2440,7 +2476,26 @@ stages:
 
   <h3 id="s9-1">9.1 Released (npm-published)</h3>
 
-  <h4>v1.2.8 (2026-05-29) <span class="badge now">latest</span> — Onboarding &amp; Vocabulary Polish</h4>
+  <h4>v1.2.8 (2026-05-29) <span class="badge now">latest</span> — Bot restart automation + ESM/CJS fix</h4>
+  <ul>
+    <li><strong>v1.2.7's <code>--add-dir</code> wiring made to actually run</strong> — chief-runner helpers used <code>require("fs"|"path"|"js-yaml")</code> inside an ESM package → silent throw → <code>addDirs</code> came back empty → <code>--add-dir</code> never reached the spawn. v1.2.8 replaces with top-level <code>import</code> so the bot actually receives access to every registered repo.</li>
+    <li><strong>Bot PID file + migration SIGTERM</strong> — <code>solosquad bot</code> writes its PID to <code>&lt;workspace&gt;/.solosquad/bot.pid</code>. <code>solosquad migrate --apply</code> reads it after a successful migration and sends SIGTERM. Cloud users (systemd / PM2 / Docker <code>restart: unless-stopped</code>) auto-respawn — no <code>systemctl restart</code> / <code>docker compose restart</code> needed.</li>
+    <li><strong><code>solosquad bot --supervise</code></strong> — local wrapper that spawns the bot as a child, respawns on clean exit (1.5s backoff). Crash threshold = 3 consecutive non-zero exits. Lets local users get migration auto-restart without configuring a process manager.</li>
+    <li><strong>Graceful drain on SIGTERM</strong> — when the bot receives a signal mid Chief turn, it enters drain mode (refuses new turns), waits up to 120s for active turns to finish (so the user gets the reply, not silence), then clean-exits. Second signal forces immediate exit.</li>
+    <li><strong>Pre-publish ESM purity gate</strong> — <code>npm run prepublishOnly</code> now greps <code>dist/**/*.js</code> for bare <code>require(</code> and aborts publish if any exist. Skips comments / string literals / <code>createRequire(import.meta.url)</code> (the legitimate ESM bridge). Catches the v1.2.7-class bug 1 second before npm publish.</li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.2.8], <code>docs/prd/v1.2.8-bot-restart-and-esm-fix.md</code></li>
+  </ul>
+
+  <h4>v1.2.7 (2026-05-29) — Bot spawn <code>--add-dir</code> (broken-as-published)</h4>
+  <p><em>npm publish completed but the wiring didn't actually run due to an ESM/CJS notation bug. v1.2.8 fixes and chains. No need to install v1.2.7 directly — users jump straight to v1.2.8.</em></p>
+  <ul>
+    <li>Bot was supposed to scan <code>&lt;org&gt;/repositories/*.yaml</code> on every spawn, collect registered repo paths, and pass them as <code>claude --print --add-dir &lt;path1&gt; &lt;path2&gt; ...</code>. Users would no longer have to run <code>/add-dir</code> manually (intended behavior).</li>
+    <li>Default clone target for Chief-requested new repos = parent directory shared by existing registered repos (dynamic per-user, not hardcoded).</li>
+    <li>v0.x-era <code>migrate</code> / <code>sync</code> CLI messages updated to match the v1.0+ path-reference model (no more "clone into repositories/" prompts).</li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.2.7]</li>
+  </ul>
+
+  <h4>v1.2.6 (2026-05-29) — Onboarding &amp; Vocabulary Polish</h4>
   <ul>
     <li><strong>Strict workspace detection</strong> — bare <code>.solosquad/</code> no longer qualifies as a workspace root; <code>workspace.yaml</code> is required. Running <code>solosquad bot</code> from inside <code>&lt;org&gt;/</code> no longer creates ghost <code>owner-command</code> / <code>workflow</code> channels.</li>
     <li><strong><code>messenger_user_id</code> auto-populate</strong> — <code>init</code> Step 3.5 prompt + first-message hydration. Owner-only gate is finally protective in practice.</li>
@@ -2452,7 +2507,7 @@ stages:
     <li><strong>Vocabulary</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, etc. JSONL event kind <code>pm.*</code> stays for schema_version backward-compat.</li>
     <li><strong>Manual §5 reorder</strong> — Discord = §5.1 (was §5.2). §5.1 content rewritten for v1.2 — the v0.2.x "server name = product slug" rule and the <code>AI Team Reports</code> channel tree are gone.</li>
     <li><strong>§10 FAQ moved to bottom</strong> — 10.3 Uninstall / 10.4 Bot &amp; Scheduler / 10.5 FAQ.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code></li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code> <em>(npm 1.2.4 / 1.2.5 were burned during pre-launch, so the actual publish slot is 1.2.6)</em></li>
   </ul>
 
   <h4>v1.2.3 (2026-05-28) — Bundle-files hotfix</h4>
