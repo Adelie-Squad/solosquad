@@ -455,7 +455,20 @@ export class ChiefRunner {
     // Chief will then ask the user where to clone.
     const cloneDefault = resolveRepoCloneDefault(call.orgCwd);
     const cloneHint = cloneDefault
-      ? `\n\n[repo-clone-defaults] When the user asks you to clone a new git repo, default the target path to \`${cloneDefault}\\<repo-name>\` (the directory where existing registered repos already live). Recipe:\n  1. \`git clone <url> ${cloneDefault}\\<repo-name>\` (via Bash). The Bash tool can clone to that path without explicit \`--add-dir\` — only Read/Edit/Write tools are path-restricted.\n  2. \`solosquad add repo ${cloneDefault}\\<repo-name>\` so the next turn picks up the path in --add-dir.\n  3. Tell the user the new repo will be accessible *starting next turn* (current turn's spawn args are already fixed). If the user wants a different location, ask them and use their choice instead.`
+      ? // v1.2.7 §A.7 — path separator from Node's `path` module so the
+        // hint renders correctly on both Windows (`\`) and POSIX (`/`).
+        // `path.join(parent, "<repo-name>")` does the right thing per OS.
+        (() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const path = require("path") as typeof import("path");
+          const target = path.join(cloneDefault, "<repo-name>");
+          return (
+            `\n\n[repo-clone-defaults] When the user asks you to clone a new git repo, default the target path to \`${target}\` (the directory where existing registered repos already live — this value is the most-common parent dirname across the user's already-registered \`<org>/repositories/*.yaml\` entries, NOT a hardcoded constant). Recipe:\n` +
+            `  1. \`git clone <url> ${target}\` (via Bash). The Bash tool can clone to that path without explicit \`--add-dir\` — only Read/Edit/Write tools are path-restricted; Bash inherits OS permissions.\n` +
+            `  2. \`solosquad add repo ${target}\` so the next turn picks up the path in --add-dir.\n` +
+            `  3. Tell the user the new repo will be accessible *starting next turn* (current turn's spawn args are already fixed). If the user wants a different location, ask them and use their choice instead.`
+          );
+        })()
       : "";
 
     const stream = this.deps.claude.invokeStreaming({
