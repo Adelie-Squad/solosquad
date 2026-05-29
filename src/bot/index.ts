@@ -191,6 +191,19 @@ export async function startBot(): Promise<void> {
   const { value, source } = resolveMessengerSource();
   console.log(`[Bot] MESSENGER=${value} (from ${source})`);
 
+  // v1.2.8 §A.10 — write PID file so `solosquad migrate --apply` can
+  // signal us on upgrade. Released by the graceful-shutdown handler
+  // when SIGTERM/SIGINT fires (or by a stale-file sweep on next start).
+  try {
+    const { writeBotPid } = await import("../util/bot-pidfile.js");
+    const file = writeBotPid(workspaceRoot);
+    console.log(`[Bot] PID ${process.pid} → ${file}`);
+  } catch (err) {
+    console.log(
+      `[Bot] PID file write failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   // v0.3.0: confirm Claude Code is authenticated before listening.
   const auth = await claude.authStatus();
   if (!auth.loggedIn) {
@@ -313,6 +326,14 @@ function installGracefulShutdown(unwatch: Unwatch): void {
       console.log(
         `[Bot] watcher close error (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
+    // v1.2.8 §A.10 — release the PID file last so migrate / supervise
+    // wrappers see the bot as truly gone before respawning.
+    try {
+      const { clearBotPid } = await import("../util/bot-pidfile.js");
+      clearBotPid(workspaceRoot);
+    } catch {
+      /* best-effort */
     }
     process.exit(0);
   };

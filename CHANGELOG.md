@@ -41,7 +41,15 @@ The package ships as `"type": "module"` in package.json, so `require` is undefin
 - `npm test` 728/728 pass — none of the 728 tests exercise `collectRegisteredRepoPaths` in an actual ESM-runtime context. The helpers are runtime-injected at bot spawn, not unit-tested.
 - The outer `try { ... } catch { /* skip on any infrastructure failure */ }` was an intentional best-effort posture — the migration's trust backfill swallows missing-claude-config errors the same way. But this case the swallowed error was actually programmer error, not infrastructure. Catch-everything postures need a logged warning for the next iteration so a future ESM/CJS slip doesn't disappear into the same hole.
 
-Tightening publishing gates to grep for `require(` in compiled `.js` files under `dist/` is queued for v1.2.9 — it would have caught this before the `npm publish`.
+### Also fixed (folded into v1.2.8)
+
+- **Pre-publish ESM purity gate** (§A.11). `npm run prepublishOnly` now runs `scripts/check-esm-purity.ts` after build — walks `dist/**/*.js` and exits non-zero if any bare `require(` call survives compilation. The check is regex-only (not AST), with skips for JSDoc / single-line comments / string literals / `createRequire(import.meta.url)` (the legitimate ESM bridge). Would have caught the v1.2.7 bug 1 second before `npm publish`.
+
+- **Bot PID file + migration auto-restart signal** (§A.10). The bot writes `<workspace>/.solosquad/bot.pid` at startup and releases it on graceful shutdown. `solosquad migrate --apply` reads the PID and sends `SIGTERM` — cloud users with PM2 / systemd / Docker auto-restart on signal; local users with `solosquad bot --supervise` (new flag, also v1.2.8) auto-respawn via supervisor loop. Plain local users still re-run `solosquad bot` manually, but at least the running instance dies cleanly instead of holding stale code in memory while the user wonders why the migration "didn't take effect".
+
+- **`solosquad bot --supervise`** (§A.10) — new flag. Spawns the actual bot as a child process; respawns the child on clean exit (signal or zero exit code). Crash threshold = 3 consecutive non-zero exits, then the supervisor gives up rather than hammer the machine in a crash loop. Mainly for local users who want migration-driven auto-restart without configuring PM2.
+
+  Cloud users shouldn't use `--supervise` — their process manager already handles restart. Documented in the `--help` text.
 
 ---
 

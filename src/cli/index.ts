@@ -83,7 +83,16 @@ program
 program
   .command("bot")
   .description("Start messenger bot")
-  .action(async () => {
+  .option(
+    "--supervise",
+    "v1.2.8 — wrap the bot in a supervisor that auto-respawns on clean exit. Pairs with `solosquad migrate --apply` (which signals SIGTERM to the running bot) so users don't have to Ctrl+C + re-run after every migration. Cloud users with PM2 / systemd / Docker don't need this — their manager already restarts.",
+  )
+  .action(async (opts) => {
+    if (opts.supervise) {
+      const { runBotSupervisor } = await import("./bot-supervise.js");
+      await runBotSupervisor();
+      return;
+    }
     const { startBot } = await import("../bot/index.js");
     await startBot();
   });

@@ -36,7 +36,8 @@
     "test:corpus": "node --test --import tsx test/validator-corpus.test.ts",
     "validate-skills": "node dist/bin/solosquad.js agent validate --all && npm run test:corpus",
     "docs-check": "tsx scripts/check-docs-freshness.ts",
-    "prepublishOnly": "npm run build && npm run docs-check"
+    "esm-check": "tsx scripts/check-esm-purity.ts",
+    "prepublishOnly": "npm run build && npm run docs-check && npm run esm-check"
   },
   "dependencies": {
     "@slack/bolt": "^4.1.0",

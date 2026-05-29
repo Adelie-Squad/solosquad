@@ -64,6 +64,48 @@ export async function migrateCommand(opts: MigrateCliOpts): Promise<void> {
   if (!dryRun && result.chain.length > 0) {
     console.log(chalk.green.bold(`\n✓ Migration complete (${result.sourceVersion} → ${result.targetVersion}).`));
     console.log(chalk.dim(`Backup: ${result.backupPath}`));
+
+    // v1.2.8 §A.10 — if a `solosquad bot` is running, signal it so it
+    // reloads with the new on-disk code. Cloud users with PM2 / systemd /
+    // Docker auto-restart on SIGTERM. Local users with `solosquad bot
+    // --supervise` auto-respawn. Plain local users still need to re-run
+    // `solosquad bot` manually, but at least the running instance dies
+    // cleanly instead of using stale code.
+    try {
+      const { signalBotRestart } = await import("../util/bot-pidfile.js");
+      const r = signalBotRestart();
+      if (r.kind === "signaled") {
+        console.log(
+          chalk.green(
+            `\n✓ Signalled running bot (PID ${r.pid}) to restart with the new code.`,
+          ),
+        );
+        console.log(
+          chalk.dim(
+            "  Cloud (PM2/systemd/Docker) will auto-respawn. Local: re-run `solosquad bot` if you didn't use --supervise.",
+          ),
+        );
+      } else if (r.kind === "error" && r.pid) {
+        console.log(
+          chalk.yellow(
+            `\n⚠ Failed to signal bot PID ${r.pid}: ${r.message ?? "unknown error"}`,
+          ),
+        );
+        console.log(
+          chalk.dim(
+            "  You may need to stop the bot manually so it picks up the new code.",
+          ),
+        );
+      }
+      // r.kind === "not-running": no message — most users aren't running
+      // the bot during a migration. Quiet success.
+    } catch (err) {
+      console.log(
+        chalk.dim(
+          `\n(skip bot restart signal: ${err instanceof Error ? err.message : String(err)})`,
+        ),
+      );
+    }
     console.log("\nNext steps:");
     console.log("  1. solosquad doctor                                 # general environment check");
     console.log("  2. solosquad doctor --discord                       # Discord-specific 5-hop diagnostic (v1.2+)");
