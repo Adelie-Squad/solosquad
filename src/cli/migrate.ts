@@ -65,11 +65,16 @@ export async function migrateCommand(opts: MigrateCliOpts): Promise<void> {
     console.log(chalk.green.bold(`\n✓ Migration complete (${result.sourceVersion} → ${result.targetVersion}).`));
     console.log(chalk.dim(`Backup: ${result.backupPath}`));
     console.log("\nNext steps:");
-    console.log("  1. solosquad doctor");
-    console.log("  2. cd <your-org> && git clone <your-repos>   (if you have repos)");
-    console.log("  3. solosquad sync   (register repos in .org.yaml)");
-    console.log("  4. solosquad bot    (start the bot)");
-    console.log(chalk.dim("\nIf something looks wrong: solosquad migrate --rollback"));
+    console.log("  1. solosquad doctor                                 # general environment check");
+    console.log("  2. solosquad doctor --discord                       # Discord-specific 5-hop diagnostic (v1.2+)");
+    console.log("  3. solosquad bot                                    # start the bot");
+    console.log("");
+    console.log(chalk.dim("  (Optional) Register additional repos using v1.0+ path-reference mode:"));
+    console.log(chalk.dim("     git clone <url> <your-local-path>      # cloning happens OUTSIDE the workspace"));
+    console.log(chalk.dim("     solosquad add repo <your-local-path>   # register the local path (no move, no copy)"));
+    console.log(chalk.dim("     # v1.2.7+: Chief can also do this for you via conversation — \"X repo 클론해서 추가해줘\"."));
+    console.log("");
+    console.log(chalk.dim("If something looks wrong: solosquad migrate --rollback"));
   }
 }
 

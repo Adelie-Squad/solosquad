@@ -230,7 +230,19 @@ export async function syncCommand(opts: SyncOpts): Promise<void> {
       for (const s of res.missing) console.log(chalk.red(`  - ${s}   (listed in .org.yaml but missing on disk)`));
     }
     if (!res.existing.length && !res.added.length && !res.nonRepoFolders.length) {
-      console.log(chalk.dim("  (empty — clone a repo into repositories/ then re-run sync)"));
+      // v1.2.7 §A.8 — message updated for the v1.0+ path-reference model.
+      // Pre-v1.2.7 said "clone a repo into repositories/ then re-run
+      // sync" which was the v0.x in-workspace clone model. v1.0+ stores
+      // repos outside the workspace and registers them via
+      // `solosquad add repo <abs-path>` — `sync` walks any legacy
+      // in-workspace repo trees but is no longer the registration path.
+      console.log(
+        chalk.dim(
+          "  (no in-workspace repo trees found — that's expected for v1.0+ path-reference mode.\n" +
+            "   To register an external repo: `solosquad add repo <abs-path-to-existing-git-repo>`\n" +
+            "   v1.2.7+: Chief can clone + register for you via conversation — \"X repo 클론해서 추가해줘\".)",
+        ),
+      );
     }
 
     // Heal `.claude/agents/` if it's missing or stale. This is a fix for
