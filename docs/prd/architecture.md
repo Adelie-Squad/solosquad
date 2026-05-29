@@ -1092,6 +1092,23 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.2-messenger-connection-discord-first.md`, `CHANGELOG.md` §[1.2.6]
 
+#### 13.6.20 v1.2.7 — Bot spawn `--add-dir` for registered repos (2026-05-29)
+
+**핵심 변화** — v1.2.6 dogfood 직후 발견: 봇이 `cwd=<org>` 에서 `claude --print` spawn 하면 *org cwd 외부* 의 path-reference 등록 repo (예: `C:\Dev\bv-po-flow`) 에 접근 못 함. Chief 가 사용자에게 *"`/add-dir` 슬래시 명령을 직접 실행해주세요"* 안내하지만 그건 슬래시 명령이라 봇이 대신 호출 불가. → claude CLI 의 `--add-dir <abs-path1> <abs-path2> ...` flag 를 spawn 인자에 자동 추가하는 runtime 패치.
+
+**구현**:
+- `src/bot/claude-process.ts` — `ClaudeInvocation.addDirs?: string[]` 신규. `buildArgs()` 가 `args.push("--add-dir", ...inv.addDirs)` 처리. Node spawn 의 variadic 처리로 path 의 space 도 자동 escape.
+- `src/bot/chief-runner.ts` — `collectRegisteredRepoPaths(orgCwd)` 신규. `<orgCwd>/repositories/*.yaml` 모두 읽어 `path:` 필드 + 디스크 존재 확인 후 절대경로 array 반환. `invokeWithSessionRecovery` 가 spawn 호출에 `addDirs` 전달.
+- `src/migrations/scripts/1.2.6-to-1.2.7.ts` — pure version bump migration. workspace schema 변경 0.
+
+**의도적 결정**:
+- *manifest 박제 안 함* — 매 spawn 마다 `repositories/*.yaml` 실시간 스캔. add-repo / remove-repo 한 직후 봇 재시작 없이 즉시 반영.
+- *path 존재 확인 (`fs.existsSync`)* — 등록만 됐고 실제 디렉토리는 사라진 (`git rm -rf` 등) 케이스에서 `--add-dir` 가 실패하지 않도록 silently skip.
+
+**v1.2.x 흐름 정합** — v1.2.6 의 Claude trust 자동 grant 가 *디렉토리 자체에서 작업 가능한지* (trust dialog) 만 처리. v1.2.7 가 *cwd 외부 디렉토리 접근 허용* (--add-dir) 추가. 두 메커니즘 합쳐서 사용자가 봇 spawn 권한 다이얼로그를 한 번도 안 보고 모든 repo 작업 가능.
+
+자세히: `CHANGELOG.md` §[1.2.7]
+
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
 > **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.

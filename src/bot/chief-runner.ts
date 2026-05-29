@@ -53,6 +53,49 @@ function resolveChiefIdentityHint(orgCwd: string): string {
   }
 }
 
+/**
+ * v1.2.7 §A.6 — collect absolute paths of every repo registered under
+ * `<org>/repositories/*.yaml` so the bot's `claude --print` spawn can
+ * pass them as `--add-dir <path1> <path2> ...`. Without this, Chief
+ * operating from cwd=<org> reports "no access" to repos that live at
+ * paths like `C:\Dev\<repo>` (registered via the v1.0+ path-reference
+ * model — repos are NOT moved into the workspace).
+ *
+ * Pure file read. Best-effort: unparseable yamls are skipped (the
+ * Chief turn must not abort on user-yaml shape drift).
+ */
+function collectRegisteredRepoPaths(orgCwd: string): string[] {
+  const out: string[] = [];
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require("fs") as typeof import("fs");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("path") as typeof import("path");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const yamlLib = require("js-yaml") as typeof import("js-yaml");
+    const reposDir = path.join(orgCwd, "repositories");
+    if (!fs.existsSync(reposDir)) return out;
+
+    for (const entry of fs.readdirSync(reposDir)) {
+      if (!entry.endsWith(".yaml")) continue;
+      try {
+        const body = fs.readFileSync(path.join(reposDir, entry), "utf-8");
+        const doc = yamlLib.load(body) as { path?: string } | null;
+        const p = doc?.path;
+        if (typeof p === "string" && p.trim().length > 0) {
+          const resolved = path.resolve(p);
+          if (fs.existsSync(resolved)) out.push(resolved);
+        }
+      } catch {
+        /* skip unparseable */
+      }
+    }
+  } catch {
+    /* skip on any infrastructure failure */
+  }
+  return out;
+}
+
 function safeEmitStage(
   orgRoot: string,
   turnId: string,
@@ -360,6 +403,14 @@ export class ChiefRunner {
     // org → same prompt → same cache hit.
     const chiefIdentity = resolveChiefIdentityHint(call.orgCwd);
 
+    // v1.2.7 §A.6 — pass every registered repo's absolute path via
+    // `--add-dir` so Chief can read/write files in repos that live
+    // outside the org cwd (the v1.0+ path-reference model never moves
+    // repos into the workspace tree). Without this, Chief reports
+    // "no access" to repos and instructs the user to run `/add-dir`
+    // manually — a slash command the bot can't invoke for itself.
+    const addDirs = collectRegisteredRepoPaths(call.orgCwd);
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -371,6 +422,7 @@ export class ChiefRunner {
       timeoutMs: this.deps.timeoutMs ?? 300_000,
       appendSystemPrompt:
         (chiefIdentity + focusHint) || undefined,
+      addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
 
     let costUsd = 0;

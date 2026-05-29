@@ -4,6 +4,44 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.7] — 2026-05-29 (bot spawn `--add-dir` for registered repos)
+
+**v1.2.6 dogfood within hours of publish revealed a missing piece in the v1.2 trust story.** The Claude trust auto-grant added in v1.2.6 covers the *trust dialog* — Claude will start working in a directory without prompting. It does **not** cover the *additional working directories* permission: when Claude is spawned with `cwd=<org>/bv-po`, it can read/write files inside `<org>/bv-po` but **cannot** reach the user's actual repos at paths like `C:\Dev\bv-po-flow`, because the v1.0 path-reference model registers repos *outside* the workspace tree.
+
+Symptom: Chief replies to "리포지토리 접근 권한 확인해봐" with
+> 아직 권한이 없습니다. 3개 리포 모두 동일하게 막혀있어요.
+> `/add-dir C:\Dev\... C:\Dev\... C:\Dev\...` 를 직접 실행해 주세요. 이건 사용자가 슬래시 커맨드로 입력해야 추가됩니다 — 제가 대신 호출할 수 없는 명령입니다.
+
+The `/add-dir` slash command Chief is pointing at is a Claude TUI-only command that the bot's `claude --print` process can't invoke. The user can't easily run it either — the slash command lives inside an interactive Claude session, not on the host shell.
+
+### Fixed
+
+- **`claude --add-dir <abs-path1> <abs-path2> ...` passed automatically.** When chief-runner spawns the Claude session, it now calls a new helper `collectRegisteredRepoPaths(orgCwd)` that walks `<orgCwd>/repositories/*.yaml`, extracts each repo's `path:` field, filters out paths that no longer exist on disk, and passes the survivors to the spawn via `ClaudeInvocation.addDirs`. `claude-process.ts:buildArgs` then appends `--add-dir <path...>` to the CLI args (variadic — paths with spaces are auto-escaped by Node's `child_process.spawn`).
+
+- **Live-scan per spawn**, not a persisted manifest. Every Chief turn re-reads `repositories/*.yaml`, so `solosquad add repo` / `solosquad remove repo` take effect on the next turn without restarting the bot.
+
+- **Idempotent + safe.** Repos whose registered `path:` no longer points to an existing directory (manually deleted, moved, etc.) are silently skipped — `--add-dir` would otherwise error out and abort the whole spawn.
+
+### Migration
+
+- `src/migrations/scripts/1.2.6-to-1.2.7.ts` — pure version bump. No workspace schema changes; the `--add-dir` plumbing is entirely runtime. The migration exists so `solosquad doctor` stops nagging about CLI ↔ workspace version mismatch after the upgrade.
+- Chained from v1.2.3 via `1.2.3 → 1.2.6 → 1.2.7` and from v1.1.0 via `1.1.0 → 1.2.6 → 1.2.7`. Both chains automatic on `solosquad migrate --apply`.
+
+### Relationship to v1.2.6 trust grant
+
+| Mechanism | v1.2.6 (already shipped) | v1.2.7 (this release) |
+|---|---|---|
+| **Trust dialog** (`hasTrustDialogAccepted`) | Pre-stamped in `~/.claude.json` for every org cwd + every registered repo path so Claude doesn't refuse to start there. | unchanged |
+| **Cross-directory access** (`--add-dir`) | not handled — bot stayed locked to its `cwd=<org>` | now passed automatically for every registered repo path |
+
+Together: from v1.2.7 onward, a freshly-installed bot + `migrate --apply` + `bot` is ready to operate across the org cwd *and* every registered repo without any interactive trust prompt or manual `/add-dir`.
+
+### CLI surface
+
+- Zero new commands. Zero command renames. New flag goes onto the *internal* `claude` spawn — users never type it.
+
+---
+
 ## [1.2.6] — 2026-05-29 (onboarding + vocabulary polish on 1.2.3)
 
 > **npm version note:** internal work was labeled "v1.2.4" but `1.2.4` and `1.2.5` were burned during pre-launch experimentation (2026-05-11 / 2026-05-13 publish + later unpublish — visible via `npm view solosquad time`). Per npm policy these numbers cannot be re-used, so the actual release lands at **`1.2.6`**. The narrative "v1.2.4 onboarding polish" work content is unchanged — only the version label moves forward. Same pattern as the v1.2.0/v1.2.1 burn → v1.2.2/v1.2.3 jump documented in §[1.2.3].

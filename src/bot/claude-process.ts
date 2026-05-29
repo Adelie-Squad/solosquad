@@ -155,6 +155,15 @@ export interface ClaudeInvocation {
    */
   bashAllowlist?: string[];
   bashDenylist?: string[];
+  /**
+   * v1.2.7 §A.6 — additional working directories the Claude session can
+   * read/write outside of `cwd`. Maps to `claude --add-dir <path1>
+   * <path2> ...`. Used by chief-runner to grant the bot's spawn access
+   * to every repo registered under `<org>/repositories/` — without
+   * this, Chief operating from `cwd=<org>` reports "no access" to
+   * repos at `C:\Dev\<repo>` etc.
+   */
+  addDirs?: string[];
 }
 
 export interface ClaudeInvocationResult {
@@ -240,6 +249,12 @@ function buildArgs(inv: ClaudeInvocation): string[] {
   }
   if (inv.allowedTools && inv.allowedTools.length > 0) {
     args.push("--allowed-tools", inv.allowedTools.join(","));
+  }
+  if (inv.addDirs && inv.addDirs.length > 0) {
+    // v1.2.7 §A.6 — `--add-dir` takes space-separated paths as variadic
+    // positional values. discord.js / Node's spawn auto-escapes each
+    // arg so paths with spaces work without manual quoting.
+    args.push("--add-dir", ...inv.addDirs);
   }
   if (inv.disallowedTools && inv.disallowedTools.length > 0) {
     args.push("--disallowed-tools", inv.disallowedTools.join(","));
