@@ -64,6 +64,42 @@ function resolveChiefIdentityHint(orgCwd: string): string {
  * Pure file read. Best-effort: unparseable yamls are skipped (the
  * Chief turn must not abort on user-yaml shape drift).
  */
+/**
+ * v1.2.7 §A.7 — derive a sensible default location for *new* repo
+ * clones requested via Chief conversation. Strategy: pick the most
+ * common parent dir of the user's already-registered repos.
+ * Returns "" when no repos are registered yet (Chief will ask the user).
+ *
+ * Why deterministic injection: asking Chief to compute this every turn
+ * is unreliable + token-expensive. The system prompt hint is constant
+ * across turns for a given org → same Claude cache hit.
+ */
+function resolveRepoCloneDefault(orgCwd: string): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require("path") as typeof import("path");
+    const paths = collectRegisteredRepoPaths(orgCwd);
+    if (paths.length === 0) return "";
+
+    const counts = new Map<string, number>();
+    for (const p of paths) {
+      const parent = path.dirname(p);
+      counts.set(parent, (counts.get(parent) ?? 0) + 1);
+    }
+    let bestDir = "";
+    let bestCount = 0;
+    for (const [d, c] of counts) {
+      if (c > bestCount) {
+        bestDir = d;
+        bestCount = c;
+      }
+    }
+    return bestDir;
+  } catch {
+    return "";
+  }
+}
+
 function collectRegisteredRepoPaths(orgCwd: string): string[] {
   const out: string[] = [];
   try {
@@ -411,6 +447,17 @@ export class ChiefRunner {
     // manually — a slash command the bot can't invoke for itself.
     const addDirs = collectRegisteredRepoPaths(call.orgCwd);
 
+    // v1.2.7 §A.7 — when the user asks Chief to clone a new repo, the
+    // sensible default location is *next to existing registered repos*
+    // (same parent dir). Inject the most-common parent of registered
+    // repo paths so Chief can default cleanly without computing this
+    // itself every turn. Empty string when no repos registered yet —
+    // Chief will then ask the user where to clone.
+    const cloneDefault = resolveRepoCloneDefault(call.orgCwd);
+    const cloneHint = cloneDefault
+      ? `\n\n[repo-clone-defaults] When the user asks you to clone a new git repo, default the target path to \`${cloneDefault}\\<repo-name>\` (the directory where existing registered repos already live). Recipe:\n  1. \`git clone <url> ${cloneDefault}\\<repo-name>\` (via Bash). The Bash tool can clone to that path without explicit \`--add-dir\` — only Read/Edit/Write tools are path-restricted.\n  2. \`solosquad add repo ${cloneDefault}\\<repo-name>\` so the next turn picks up the path in --add-dir.\n  3. Tell the user the new repo will be accessible *starting next turn* (current turn's spawn args are already fixed). If the user wants a different location, ask them and use their choice instead.`
+      : "";
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -421,7 +468,7 @@ export class ChiefRunner {
       maxBudgetUsd: this.deps.maxBudgetUsd ?? 5,
       timeoutMs: this.deps.timeoutMs ?? 300_000,
       appendSystemPrompt:
-        (chiefIdentity + focusHint) || undefined,
+        (chiefIdentity + focusHint + cloneHint) || undefined,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
 
