@@ -4,6 +4,47 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.8] — 2026-05-29 (fix ESM `require()` bug that broke v1.2.7 `--add-dir`)
+
+**v1.2.7 was published with a hidden ESM/CommonJS bug that defeated the entire `--add-dir` wiring.** After install + migrate, dogfood reported that Chief *still* said "haven't granted it yet" for every external repo path — the exact problem v1.2.7 claimed to fix. Direct CLI tests proved `claude --add-dir` itself worked; the v1.2.6 trust grants in `~/.claude.json` were correct; the registered repo yamls were intact. But `addDirs` somehow came back empty in the actual spawn.
+
+### Root cause
+
+`src/bot/chief-runner.ts` had two helpers (`collectRegisteredRepoPaths`, `resolveRepoCloneDefault`) that lazy-loaded the standard library via:
+
+```ts
+const fs = require("fs") as typeof import("fs");
+const path = require("path") as typeof import("path");
+const yamlLib = require("js-yaml") as typeof import("js-yaml");
+```
+
+The package ships as `"type": "module"` in package.json, so `require` is undefined inside those function bodies. The lazy loads threw `ReferenceError: require is not defined`. The outer `try { ... } catch { /* infrastructure failure */ }` silently swallowed the error → `collectRegisteredRepoPaths` returned `[]` → `addDirs.length > 0 ? addDirs : undefined` evaluated to `undefined` → `claude-process.buildArgs` saw no `addDirs` and skipped the `--add-dir` flag entirely.
+
+### Fixed
+
+- **Top-level ESM imports** for `fs` / `path` / `js-yaml` in chief-runner.ts. The four `require()` call sites (`resolveRepoCloneDefault` x1, `collectRegisteredRepoPaths` x3, cloneHint formatter x1) all collapse to module-scope identifiers. Same behavior every call site intended, except now it actually runs.
+
+- **Migration**: new `src/migrations/scripts/1.2.7-to-1.2.8.ts` (workspace at 1.2.7 → 1.2.8, pure version bump). The pre-existing `1.2.6-to-1.2.7.ts` migration is renamed to `1.2.6-to-1.2.8.ts` so users on v1.2.6 skip straight to v1.2.8 without touching the broken v1.2.7 label.
+
+- **Verification**: a standalone ESM test (no compilation step) confirms `collectRegisteredRepoPaths` against the live dogfood workspace now returns the expected 3 paths (`C:\Dev\bv-po-flow`, `C:\Dev\bv-po-homepage-nextjs`, `C:\Dev\bv-po-platform-policy`).
+
+### User recovery (v1.2.7 installs)
+
+1. `npm install -g solosquad@latest` (pulls 1.2.8)
+2. `solosquad migrate --apply` (1.2.7 → 1.2.8 single-step chain)
+3. `solosquad pm reset --user <id> --reason "post-v1.2.8-add-dir-fix"` (clears the session whose prior turns learned the "no access" pattern)
+4. `solosquad bot` (restart with the fixed wiring)
+
+### Why it slipped past every gate
+
+- `npx tsc --noEmit` clean — the `require` calls were type-cast as `as typeof import("...")`, so TypeScript saw a valid type for the result and didn't flag the ESM/CJS mismatch.
+- `npm test` 728/728 pass — none of the 728 tests exercise `collectRegisteredRepoPaths` in an actual ESM-runtime context. The helpers are runtime-injected at bot spawn, not unit-tested.
+- The outer `try { ... } catch { /* skip on any infrastructure failure */ }` was an intentional best-effort posture — the migration's trust backfill swallows missing-claude-config errors the same way. But this case the swallowed error was actually programmer error, not infrastructure. Catch-everything postures need a logged warning for the next iteration so a future ESM/CJS slip doesn't disappear into the same hole.
+
+Tightening publishing gates to grep for `require(` in compiled `.js` files under `dist/` is queued for v1.2.9 — it would have caught this before the `npm publish`.
+
+---
+
 ## [1.2.7] — 2026-05-29 (bot spawn `--add-dir` for registered repos)
 
 **v1.2.6 dogfood within hours of publish revealed a missing piece in the v1.2 trust story.** The Claude trust auto-grant added in v1.2.6 covers the *trust dialog* — Claude will start working in a directory without prompting. It does **not** cover the *additional working directories* permission: when Claude is spawned with `cwd=<org>/bv-po`, it can read/write files inside `<org>/bv-po` but **cannot** reach the user's actual repos at paths like `C:\Dev\bv-po-flow`, because the v1.0 path-reference model registers repos *outside* the workspace tree.

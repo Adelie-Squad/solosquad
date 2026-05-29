@@ -7,7 +7,7 @@ import type {
 import { loadWorkspaceYaml, saveWorkspaceYaml } from "../../util/config.js";
 
 /**
- * v1.2.6 → v1.2.7 — Bot spawn passes `--add-dir <path>` for every
+ * v1.2.6 → v1.2.8 — Bot spawn passes `--add-dir <path>` for every
  * registered repo so Chief can read/write the actual repo paths outside
  * the org cwd.
  *
@@ -21,7 +21,7 @@ import { loadWorkspaceYaml, saveWorkspaceYaml } from "../../util/config.js";
  * Idempotent. detect() matches "1.2.6" exact.
  */
 
-const TARGET = "1.2.7";
+const TARGET = "1.2.8";
 
 function isFromVersion(version: string | undefined): boolean {
   if (typeof version !== "string") return false;
@@ -32,7 +32,7 @@ export const migration: Migration = {
   from: "1.2.6",
   to: TARGET,
   description:
-    "v1.2.7 — Bot spawn passes --add-dir for registered repos (so Chief can access repos outside the org cwd). Workspace shape unchanged; version bump only.",
+    "v1.2.8 — Bot spawn passes --add-dir for registered repos (so Chief can access repos outside the org cwd). Workspace shape unchanged; version bump only.",
 
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
@@ -48,13 +48,13 @@ export const migration: Migration = {
         kind: "update",
         from: `workspace.yaml.version=${ws.version ?? "(unset)"}`,
         to: `workspace.yaml.version=${TARGET}`,
-        description: "Bump workspace version to 1.2.7",
+        description: "Bump workspace version to 1.2.8",
       });
     }
     return {
       steps,
       warnings: [
-        "v1.2.7 is a runtime fix — adds `--add-dir` to claude spawn so Chief can access repos registered under `<org>/repositories/`. No workspace data is modified.",
+        "v1.2.8 is a runtime fix — adds `--add-dir` to claude spawn so Chief can access repos registered under `<org>/repositories/`. No workspace data is modified.",
       ],
       irreversible_changes: [],
       estimated_disk_delta_mb: 0,

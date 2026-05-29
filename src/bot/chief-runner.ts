@@ -24,6 +24,17 @@ import {
   emit as emitChiefStage,
   type ChiefStage,
 } from "../util/chief-stage-events.js";
+// v1.2.8 §A.9 — Top-level ESM imports for fs / path / js-yaml.
+// Pre-v1.2.8 these were lazy `require()` calls inside helper functions
+// (`collectRegisteredRepoPaths`, `resolveRepoCloneDefault`, the cloneHint
+// formatter). The package ships as `"type": "module"`, so `require` is
+// undefined in those contexts → silent throw inside the outer try/catch →
+// addDirs returned empty → bot's `claude --print` never received the
+// `--add-dir` flag → Chief kept reporting "haven't granted it yet" for
+// every registered repo even though v1.2.7 wiring was logically correct.
+import fs from "fs";
+import path from "path";
+import yamlLib from "js-yaml";
 
 /**
  * Emit a Chief 6+1 stage event (v1.1 §5.2) without ever throwing — a
@@ -76,8 +87,6 @@ function resolveChiefIdentityHint(orgCwd: string): string {
  */
 function resolveRepoCloneDefault(orgCwd: string): string {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require("path") as typeof import("path");
     const paths = collectRegisteredRepoPaths(orgCwd);
     if (paths.length === 0) return "";
 
@@ -103,12 +112,6 @@ function resolveRepoCloneDefault(orgCwd: string): string {
 function collectRegisteredRepoPaths(orgCwd: string): string[] {
   const out: string[] = [];
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require("fs") as typeof import("fs");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require("path") as typeof import("path");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const yamlLib = require("js-yaml") as typeof import("js-yaml");
     const reposDir = path.join(orgCwd, "repositories");
     if (!fs.existsSync(reposDir)) return out;
 
@@ -459,8 +462,6 @@ export class ChiefRunner {
         // hint renders correctly on both Windows (`\`) and POSIX (`/`).
         // `path.join(parent, "<repo-name>")` does the right thing per OS.
         (() => {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const path = require("path") as typeof import("path");
           const target = path.join(cloneDefault, "<repo-name>");
           return (
             `\n\n[repo-clone-defaults] When the user asks you to clone a new git repo, default the target path to \`${target}\` (the directory where existing registered repos already live — this value is the most-common parent dirname across the user's already-registered \`<org>/repositories/*.yaml\` entries, NOT a hardcoded constant). Recipe:\n` +

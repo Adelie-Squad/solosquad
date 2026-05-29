@@ -1092,7 +1092,7 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.2-messenger-connection-discord-first.md`, `CHANGELOG.md` §[1.2.6]
 
-#### 13.6.20 v1.2.7 — Bot spawn `--add-dir` for registered repos (2026-05-29)
+#### 13.6.20 v1.2.8 — Bot spawn `--add-dir` for registered repos (2026-05-29)
 
 **핵심 변화** — v1.2.6 dogfood 직후 발견: 봇이 `cwd=<org>` 에서 `claude --print` spawn 하면 *org cwd 외부* 의 path-reference 등록 repo (예: `C:\Dev\bv-po-flow`) 에 접근 못 함. Chief 가 사용자에게 *"`/add-dir` 슬래시 명령을 직접 실행해주세요"* 안내하지만 그건 슬래시 명령이라 봇이 대신 호출 불가. → claude CLI 의 `--add-dir <abs-path1> <abs-path2> ...` flag 를 spawn 인자에 자동 추가하는 runtime 패치.
 
