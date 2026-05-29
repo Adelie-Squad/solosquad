@@ -307,9 +307,9 @@
         <ul class="sub">
           <li><a href="#s10-1">10.1 설치·실행 문제</a></li>
           <li><a href="#s10-2">10.2 마이그레이션 문제</a></li>
-          <li><a href="#s10-3">10.3 FAQ</a></li>
-          <li><a href="#s10-4">10.4 Uninstall · 재설치</a></li>
-          <li><a href="#s10-5">10.5 봇 · 스케줄러 · dev_capability</a></li>
+          <li><a href="#s10-3">10.3 Uninstall · 재설치</a></li>
+          <li><a href="#s10-4">10.4 봇 · 스케줄러 · dev_capability</a></li>
+          <li><a href="#s10-5">10.5 FAQ</a></li>
         </ul>
       </li>
     </ul>
@@ -2832,72 +2832,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   </ul>
   <p>breaking change가 포함된 minor 업데이트는 중요 프로젝트용으로는 <strong>일주일 정도 관찰</strong> 후 올라가는 것도 합리적.</p>
 
-  <h3 id="s10-3">10.3 자주 묻는 질문 (FAQ)</h3>
-
-  <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
-  A. Claude Code 사용 가능한 플랜 구독료만 있으면 시작 가능 (Max 권장). SoloSquad는 v0.9 기준 *Claude Code via OAuth* 단일 백엔드. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
-
-  <p><strong>Q. v1.0에서 Slack은 지원되나요?</strong><br>
-  A. <strong>v1.0 공식 지원 메신저는 Discord</strong> 한 종류. Slack 어댑터는 코드상 동봉되어 v0.9.x에서 사용하던 사용자는 계속 동작하지만, <strong>v1.0 SemVer 약속 대상이 아닙니다</strong> (post-v1.0 슬롯). 새로 시작하면 Discord 사용을 권장합니다. 페르소나를 분리하고 싶으면 Discord 워크스페이스 2개로 분리: <code>~/solopreneur/</code> + <code>~/elon-24-7/</code> 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> multi-target 문법은 미지원.</p>
-
-  <p><strong>Q. 시간대가 한국이 아니면?</strong><br>
-  A. <code>.env</code>의 <code>TZ=</code>를 변경 (예: <code>TZ=America/Los_Angeles</code>). Docker도 동일.</p>
-
-  <p><strong>Q. AI가 틀린 답을 하면?</strong><br>
-  A. AI는 도구입니다. 중요한 결정은 반드시 본인이 직접 확인. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+)로 spawn 결과 revert 가능. v0.4 자율 실행은 per-cycle git-snapshot keep/discard로 자동 보호.</p>
-
-  <p><strong>Q. Mac Mini 대신 Raspberry Pi로 돌릴 수 있나요?</strong><br>
-  A. Node.js 18+이 돌면 가능. 단, Claude Code CLI는 arm64 기반 리눅스를 공식 지원하는지 먼저 확인 필요.</p>
-
-  <p><strong>Q. 완전 오프라인에서 쓸 수 있나요?</strong><br>
-  A. 불가. Claude API와 Slack/Discord 서버 통신이 필수.</p>
-
-  <p><strong>Q. 업데이트 전에 꼭 해야 할 일이 있나요?</strong><br>
-  A. <code>solosquad bot</code> / <code>schedule</code>이 실행 중이면 먼저 정지. <code>docker compose down</code> 또는 터미널 <code>Ctrl+C</code>.</p>
-
-  <p><strong>Q. 매번 업데이트해야 하나요?</strong><br>
-  A. 아닙니다. 안정적으로 쓰고 있다면 급할 이유는 없음. 다만 <strong>보안 hotfix</strong>(예: v0.1.3 dotenv 누락)는 빠르게 적용 권장.</p>
-
-  <p><strong>Q. 업데이트 자동화가 가능한가요?</strong><br>
-  A. Docker 환경이면 <code>docker compose up -d --build</code>를 cron에 걸면 이미지 최신화됩니다. 단 <strong>마이그레이션 필요 시엔 자동화 불가</strong> — 사람의 확인이 들어가는 게 원칙.</p>
-
-  <p><strong>Q. 예전 버전으로 고정하고 싶어요.</strong><br>
-  A. <code>npm install -g solosquad@0.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
-
-  <p><strong>Q. 여러 사람이 한 머신에서 씁니다.</strong><br>
-  A. 각자 OS 계정을 다르게 쓰고, 각 계정의 홈 디렉토리에 독립된 워크스페이스를 두세요. 마이그레이션도 계정별로 따로 진행.</p>
-
-  <p><strong>Q. 베타·개발 채널이 있나요?</strong><br>
-  A. <code>solosquad update --channel dev</code>로 전환 가능 (단, 안정성 보장 없음). <code>--channel stable</code>이 기본.</p>
-
-  <p><strong>Q. v0.5에서 v0.6으로 업그레이드는 어떻게 하나요?</strong><br>
-  A. <code>npm install -g solosquad@latest</code> 후 워크스페이스 루트에서 <code>solosquad migrate --dry-run</code> 실행 → 보고서(<code>&lt;org&gt;/memory/migration-2026-XX-dryrun.md</code>) 검토 → 문제 없으면 <code>solosquad migrate --apply --confirm</code>. <code>--confirm</code> 플래그 없으면 거부됩니다 (실수 방지). 마이그레이션 후 <code>solosquad agent validate --all</code>이 자동 실행되어 실패 항목을 STDOUT에 보고합니다.</p>
-
-  <p><strong>Q. 마이그레이션이 "human_review_required" 항목을 보고하면?</strong><br>
-  A. v0.5 ledger의 일부 자산은 휴리스틱 기반 재배치라 100% 정확 불가 — <code>SKILL</code> 본문에서 "조직 색채" 추출 매칭 0건 케이스 등이 해당. 해당 항목은 <code>human_review_required: true</code> 마킹되어 자동 적용이 거부됩니다. 사용자가 보고서를 보고 수동으로 <code>&lt;org&gt;/agent-profile.yaml</code>의 해당 agent 섹션을 보강한 후 마이그레이션을 재실행하세요. 비파괴 원칙으로 원본은 손대지 않습니다.</p>
-
-  <p><strong>Q. v0.6 자율 reload가 너무 적극적이에요. 직접 트리거하고 싶어요.</strong><br>
-  A. <code>workspace.yaml.fs_watch.mode: manual</code>로 설정하면 자동 reload가 꺼집니다. SKILL 변경 후 <code>solosquad agent reload</code>로 명시 호출. <code>fs_watch.mode: prompt</code>(기본)는 PM이 메신저에서 적용 여부를 묻는 중간 모드입니다.</p>
-
-  <p><strong>Q. (v0.8.3) <code>solosquad update</code>와 <code>solosquad migrate</code>의 차이는?</strong><br>
-  A. <code>update</code>는 <strong>CLI 바이너리</strong>(npm 패키지) 자체를 갱신, <code>migrate</code>는 <strong>워크스페이스</strong> 스키마/레이아웃을 새 CLI 버전에 맞게 변환. 일반적인 흐름: ① <code>solosquad doctor</code>로 CLI ↔ workspace mismatch 확인 → ② <code>npm install -g solosquad@latest</code> 또는 <code>solosquad update</code>로 CLI 갱신 → ③ <code>solosquad migrate --dry-run</code> 미리보기 → ④ <code>solosquad migrate --apply</code>로 적용. doctor가 어느 명령이 필요한지 명시적으로 안내합니다 (v0.8.3 §7.3).</p>
-
-  <p><strong>Q. (v0.8.3) 기존 product code를 SoloSquad 워크스페이스 안으로 어떻게 옮기나요?</strong><br>
-  A. ① <code>cd ~/projects/my-saas &amp;&amp; git status</code>로 untracked 정리·<code>git push</code>로 안전망 확보 → ② <code>mkdir ~/solosquad &amp;&amp; cd ~/solosquad &amp;&amp; solosquad init</code> → ③ <strong><code>solosquad add repo ~/projects/my-saas --dry-run</code></strong>으로 폴더 매핑·사이즈·위험 5종(IDE lock·심링크·외부 절대경로·slug 충돌·활성 프로세스) 미리 확인 → ④ <code>solosquad add repo ~/projects/my-saas</code>로 실제 이동(또는 <code>--keep-original</code>로 복사). 원본 사용자 파일은 byte-identical (v0.7 클래스 A 룰). SoloSquad가 추가하는 건 <code>&lt;repo&gt;/.solosquad/repo.yaml</code> 1개뿐.</p>
-
-  <p><strong>Q. (v0.8.3) 기존 리포 이동 후 IDE 경로가 깨졌어요.</strong><br>
-  A. <code>.vscode/settings.json</code>·<code>.idea/workspace.xml</code> 같은 IDE 설정에 <strong>절대경로</strong>가 들어있는 경우 SoloSquad는 사용자 파일을 변형하지 않으므로 사용자가 수동으로 갱신해야 합니다. <code>solosquad add repo &lt;path&gt; --dry-run</code> 출력에 절대경로 설정이 감지된 IDE 파일 경고가 표시됩니다. cron 작업·alias·CI runner 경로도 동일 — 외부 시스템이 옛 경로를 가리키면 사용자가 갱신.</p>
-
-  <p><strong>Q. (v0.8.3) 봇이 무엇을 하고 있는지 보고 싶어요 — 로그가 어디 있나요?</strong><br>
-  A. 환경변수 <code>SOLOSQUAD_LOG_FILE=1</code>을 설정하면 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>에 일별 rolling. <code>solosquad logs --tail 200 --follow</code>로 실시간 tail. <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>로 4 operational jsonl 직접 조회. 보존은 14일(매일 00:30 log-rotate routine이 자동 정리).</p>
-
-  <p><strong>Q. (v0.8.3) <code>solosquad logout</code>은 어디로 갔나요?</strong><br>
-  A. v0.7에서 추가됐다가 v0.8.3에서 제거됐습니다. 사용 가치 < 구현 복잡도 판정. 대체 흐름: 봇 일시 중지는 <strong>Ctrl+C</strong>로 프로세스 종료(다시 시작은 <code>solosquad bot</code>), .env 시크릿 마스킹/REVOKE 체크리스트는 <code>solosquad uninstall --archive-only</code>가 동일하게 제공, sessions 보관은 <code>&lt;org&gt;/.solosquad/sessions/</code>에서 직접 이동 또는 <code>solosquad pm reset --user &lt;id&gt;</code>. 기존 <code>logout.lock</code> 파일은 v0.8.3에서 inert가 되었으므로 수동 삭제 가능.</p>
-
-  <p><strong>Q. (v0.8.3) trajectory 자동 등록은 언제 활성화되나요?</strong><br>
-  A. v0.6에서 정의한 ROI 4지표(① 30일 제안 ≥ 5건 ② 채택률 ≥ 60% ③ 채택 SKILL의 30일 사용률 ≥ 평균 ④ reject cooldown < 30%) 중 모두 통과 시 v0.9에서 <code>workspace.yaml.trajectory.auto_register: true</code>가 기본값이 됩니다. 1개라도 fail이면 "제안만 영구" 잠금. v0.8.3 패치는 측정값을 CHANGELOG에 박제만 합니다 (자동 등록 코드는 v0.9에서 추가).</p>
-
-  <h3 id="s10-4">10.4 Uninstall · 재설치 · 마이그레이션 회피<span class="badge now">v0.8.5</span></h3>
+  <h3 id="s10-3">10.3 Uninstall · 재설치 · 마이그레이션 회피<span class="badge now">v0.8.5</span></h3>
 
   <h4>안전한 uninstall 순서</h4>
   <p>npm v7+가 <code>preuninstall</code> 훅을 글로벌 패키지에서 호출하지 않는 한계(<a href="https://github.com/npm/cli/issues/3042">npm/cli#3042</a>) 때문에, <strong>사용자가 직접 순서를 지켜야</strong> farewell archive와 REVOKE-CHECKLIST가 생성됩니다.</p>
@@ -2982,7 +2917,7 @@ solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
     <code>solosquad uninstall</code>이 jsonl 파일들을 streaming SHA256으로 매니페스트 작성합니다. 봇이 동시에 jsonl append하면 매니페스트 SHA 불일치 → archive 검증 실패. <code>--force</code>로 우회 가능하지만 archive 무결성을 잃습니다.
   </div>
 
-  <h3 id="s10-5">10.5 봇 · 스케줄러 · 에이전트 git 작업<span class="badge now">v0.8.2~v0.8.6</span></h3>
+  <h3 id="s10-4">10.4 봇 · 스케줄러 · 에이전트 git 작업<span class="badge now">v0.8.2~v0.8.6</span></h3>
 
   <h4>스케줄러는 디폴트 실행되지 않음</h4>
   <p>SoloSquad는 데몬 / 백그라운드 자동 시작이 없습니다. <code>solosquad init</code>이 cron 등록을 하지 않으며, OS 부팅 시 자동 실행도 없음. 다음 명령으로 *명시적으로* 시작해야 합니다:</p>
@@ -3091,6 +3026,71 @@ git push --dry-run        # 워크스페이스 안에서도 인증 동작 확인
     </ul>
     상세 설계: <code>docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md</code> §3, <code>docs/plan/v1.x-workflow-goal-routine-evolution.md</code> (PR workflow §추가 슬롯)
   </div>
+  <h3 id="s10-5">10.5 자주 묻는 질문 (FAQ)</h3>
+
+  <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
+  A. Claude Code 사용 가능한 플랜 구독료만 있으면 시작 가능 (Max 권장). SoloSquad는 v0.9 기준 *Claude Code via OAuth* 단일 백엔드. 클라우드 운영 시 VPS 월 $4~6 추가.</p>
+
+  <p><strong>Q. v1.0에서 Slack은 지원되나요?</strong><br>
+  A. <strong>v1.0 공식 지원 메신저는 Discord</strong> 한 종류. Slack 어댑터는 코드상 동봉되어 v0.9.x에서 사용하던 사용자는 계속 동작하지만, <strong>v1.0 SemVer 약속 대상이 아닙니다</strong> (post-v1.0 슬롯). 새로 시작하면 Discord 사용을 권장합니다. 페르소나를 분리하고 싶으면 Discord 워크스페이스 2개로 분리: <code>~/solopreneur/</code> + <code>~/elon-24-7/</code> 각자 독립된 <code>.env</code>·토큰·봇 계정. 이 제약은 v0.2.0+ — 이전 <code>MESSENGER=discord,slack</code> multi-target 문법은 미지원.</p>
+
+  <p><strong>Q. 시간대가 한국이 아니면?</strong><br>
+  A. <code>.env</code>의 <code>TZ=</code>를 변경 (예: <code>TZ=America/Los_Angeles</code>). Docker도 동일.</p>
+
+  <p><strong>Q. AI가 틀린 답을 하면?</strong><br>
+  A. AI는 도구입니다. 중요한 결정은 반드시 본인이 직접 확인. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+)로 spawn 결과 revert 가능. v0.4 자율 실행은 per-cycle git-snapshot keep/discard로 자동 보호.</p>
+
+  <p><strong>Q. Mac Mini 대신 Raspberry Pi로 돌릴 수 있나요?</strong><br>
+  A. Node.js 18+이 돌면 가능. 단, Claude Code CLI는 arm64 기반 리눅스를 공식 지원하는지 먼저 확인 필요.</p>
+
+  <p><strong>Q. 완전 오프라인에서 쓸 수 있나요?</strong><br>
+  A. 불가. Claude API와 Slack/Discord 서버 통신이 필수.</p>
+
+  <p><strong>Q. 업데이트 전에 꼭 해야 할 일이 있나요?</strong><br>
+  A. <code>solosquad bot</code> / <code>schedule</code>이 실행 중이면 먼저 정지. <code>docker compose down</code> 또는 터미널 <code>Ctrl+C</code>.</p>
+
+  <p><strong>Q. 매번 업데이트해야 하나요?</strong><br>
+  A. 아닙니다. 안정적으로 쓰고 있다면 급할 이유는 없음. 다만 <strong>보안 hotfix</strong>(예: v0.1.3 dotenv 누락)는 빠르게 적용 권장.</p>
+
+  <p><strong>Q. 업데이트 자동화가 가능한가요?</strong><br>
+  A. Docker 환경이면 <code>docker compose up -d --build</code>를 cron에 걸면 이미지 최신화됩니다. 단 <strong>마이그레이션 필요 시엔 자동화 불가</strong> — 사람의 확인이 들어가는 게 원칙.</p>
+
+  <p><strong>Q. 예전 버전으로 고정하고 싶어요.</strong><br>
+  A. <code>npm install -g solosquad@0.1.5</code>처럼 명시적 버전으로 설치. <code>solosquad update</code>가 업그레이드 제안해도 거절하면 됨.</p>
+
+  <p><strong>Q. 여러 사람이 한 머신에서 씁니다.</strong><br>
+  A. 각자 OS 계정을 다르게 쓰고, 각 계정의 홈 디렉토리에 독립된 워크스페이스를 두세요. 마이그레이션도 계정별로 따로 진행.</p>
+
+  <p><strong>Q. 베타·개발 채널이 있나요?</strong><br>
+  A. <code>solosquad update --channel dev</code>로 전환 가능 (단, 안정성 보장 없음). <code>--channel stable</code>이 기본.</p>
+
+  <p><strong>Q. v0.5에서 v0.6으로 업그레이드는 어떻게 하나요?</strong><br>
+  A. <code>npm install -g solosquad@latest</code> 후 워크스페이스 루트에서 <code>solosquad migrate --dry-run</code> 실행 → 보고서(<code>&lt;org&gt;/memory/migration-2026-XX-dryrun.md</code>) 검토 → 문제 없으면 <code>solosquad migrate --apply --confirm</code>. <code>--confirm</code> 플래그 없으면 거부됩니다 (실수 방지). 마이그레이션 후 <code>solosquad agent validate --all</code>이 자동 실행되어 실패 항목을 STDOUT에 보고합니다.</p>
+
+  <p><strong>Q. 마이그레이션이 "human_review_required" 항목을 보고하면?</strong><br>
+  A. v0.5 ledger의 일부 자산은 휴리스틱 기반 재배치라 100% 정확 불가 — <code>SKILL</code> 본문에서 "조직 색채" 추출 매칭 0건 케이스 등이 해당. 해당 항목은 <code>human_review_required: true</code> 마킹되어 자동 적용이 거부됩니다. 사용자가 보고서를 보고 수동으로 <code>&lt;org&gt;/agent-profile.yaml</code>의 해당 agent 섹션을 보강한 후 마이그레이션을 재실행하세요. 비파괴 원칙으로 원본은 손대지 않습니다.</p>
+
+  <p><strong>Q. v0.6 자율 reload가 너무 적극적이에요. 직접 트리거하고 싶어요.</strong><br>
+  A. <code>workspace.yaml.fs_watch.mode: manual</code>로 설정하면 자동 reload가 꺼집니다. SKILL 변경 후 <code>solosquad agent reload</code>로 명시 호출. <code>fs_watch.mode: prompt</code>(기본)는 PM이 메신저에서 적용 여부를 묻는 중간 모드입니다.</p>
+
+  <p><strong>Q. (v0.8.3) <code>solosquad update</code>와 <code>solosquad migrate</code>의 차이는?</strong><br>
+  A. <code>update</code>는 <strong>CLI 바이너리</strong>(npm 패키지) 자체를 갱신, <code>migrate</code>는 <strong>워크스페이스</strong> 스키마/레이아웃을 새 CLI 버전에 맞게 변환. 일반적인 흐름: ① <code>solosquad doctor</code>로 CLI ↔ workspace mismatch 확인 → ② <code>npm install -g solosquad@latest</code> 또는 <code>solosquad update</code>로 CLI 갱신 → ③ <code>solosquad migrate --dry-run</code> 미리보기 → ④ <code>solosquad migrate --apply</code>로 적용. doctor가 어느 명령이 필요한지 명시적으로 안내합니다 (v0.8.3 §7.3).</p>
+
+  <p><strong>Q. (v0.8.3) 기존 product code를 SoloSquad 워크스페이스 안으로 어떻게 옮기나요?</strong><br>
+  A. ① <code>cd ~/projects/my-saas &amp;&amp; git status</code>로 untracked 정리·<code>git push</code>로 안전망 확보 → ② <code>mkdir ~/solosquad &amp;&amp; cd ~/solosquad &amp;&amp; solosquad init</code> → ③ <strong><code>solosquad add repo ~/projects/my-saas --dry-run</code></strong>으로 폴더 매핑·사이즈·위험 5종(IDE lock·심링크·외부 절대경로·slug 충돌·활성 프로세스) 미리 확인 → ④ <code>solosquad add repo ~/projects/my-saas</code>로 실제 이동(또는 <code>--keep-original</code>로 복사). 원본 사용자 파일은 byte-identical (v0.7 클래스 A 룰). SoloSquad가 추가하는 건 <code>&lt;repo&gt;/.solosquad/repo.yaml</code> 1개뿐.</p>
+
+  <p><strong>Q. (v0.8.3) 기존 리포 이동 후 IDE 경로가 깨졌어요.</strong><br>
+  A. <code>.vscode/settings.json</code>·<code>.idea/workspace.xml</code> 같은 IDE 설정에 <strong>절대경로</strong>가 들어있는 경우 SoloSquad는 사용자 파일을 변형하지 않으므로 사용자가 수동으로 갱신해야 합니다. <code>solosquad add repo &lt;path&gt; --dry-run</code> 출력에 절대경로 설정이 감지된 IDE 파일 경고가 표시됩니다. cron 작업·alias·CI runner 경로도 동일 — 외부 시스템이 옛 경로를 가리키면 사용자가 갱신.</p>
+
+  <p><strong>Q. (v0.8.3) 봇이 무엇을 하고 있는지 보고 싶어요 — 로그가 어디 있나요?</strong><br>
+  A. 환경변수 <code>SOLOSQUAD_LOG_FILE=1</code>을 설정하면 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>에 일별 rolling. <code>solosquad logs --tail 200 --follow</code>로 실시간 tail. <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>로 4 operational jsonl 직접 조회. 보존은 14일(매일 00:30 log-rotate routine이 자동 정리).</p>
+
+  <p><strong>Q. (v0.8.3) <code>solosquad logout</code>은 어디로 갔나요?</strong><br>
+  A. v0.7에서 추가됐다가 v0.8.3에서 제거됐습니다. 사용 가치 < 구현 복잡도 판정. 대체 흐름: 봇 일시 중지는 <strong>Ctrl+C</strong>로 프로세스 종료(다시 시작은 <code>solosquad bot</code>), .env 시크릿 마스킹/REVOKE 체크리스트는 <code>solosquad uninstall --archive-only</code>가 동일하게 제공, sessions 보관은 <code>&lt;org&gt;/.solosquad/sessions/</code>에서 직접 이동 또는 <code>solosquad pm reset --user &lt;id&gt;</code>. 기존 <code>logout.lock</code> 파일은 v0.8.3에서 inert가 되었으므로 수동 삭제 가능.</p>
+
+  <p><strong>Q. (v0.8.3) trajectory 자동 등록은 언제 활성화되나요?</strong><br>
+  A. v0.6에서 정의한 ROI 4지표(① 30일 제안 ≥ 5건 ② 채택률 ≥ 60% ③ 채택 SKILL의 30일 사용률 ≥ 평균 ④ reject cooldown < 30%) 중 모두 통과 시 v0.9에서 <code>workspace.yaml.trajectory.auto_register: true</code>가 기본값이 됩니다. 1개라도 fail이면 "제안만 영구" 잠금. v0.8.3 패치는 측정값을 CHANGELOG에 박제만 합니다 (자동 등록 코드는 v0.9에서 추가).</p>
+
 </section>
 
 </main>

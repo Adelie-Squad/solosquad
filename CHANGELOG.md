@@ -16,6 +16,13 @@ Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
 
 ### Fixed — Onboarding
 
+- **Claude Code directory trust auto-grant** (PRD §A.5). The bot spawns `claude --print` with `cwd=<org>` (and the user's repos when Chief operates inside a registered path). Pre-v1.2.4 every new directory triggered Claude's interactive trust dialog on first use, which a bot process can't answer — so the first turn deadlocked or aborted. New `src/util/claude-trust.ts` writes `~/.claude.json` `projects[<absPath>].hasTrustDialogAccepted = true` (plus the surrounding default fields Claude's reader expects) when:
+  - `scaffoldOrg` creates a new org dir (chief-runner's cwd is pre-trusted),
+  - `registerRepoInline` in `init` Step 6.1 registers a repo path,
+  - `solosquad add repo` registers a repo path.
+
+  Best-effort: a missing `~/.claude.json` (fresh Claude install, never run) logs and skips. Idempotent — re-running on an already-trusted path is a no-op. Atomic write via `tmp + rename`. Quiet mode for `scaffoldOrg` to avoid log spam; chatty for the `add repo` CLI surface so the user sees the grant happened.
+
 - **`messenger_user_id` auto-populate** (PRD §A.2). The v1.2.3 owner-only gate needed `messenger_user_id` to compare against `message.author.id`, but no flow ever populated it — every fresh install fell open at the gate with a startup warning. v1.2.4 lands two complementary paths:
   - `init` Step 3.5 now prompts for the owner's Discord/Slack User ID with how-to-find guidance (Discord: enable Developer Mode → right-click avatar → Copy User ID; Slack: profile → More → Copy member ID). Skip is allowed for users who don't have it handy.
   - `discord-owner-gate.decideOwnerGate` now hydrates the field from the *first message's `author.id`* when the yaml value is empty, persists via `saveUserYaml`, and logs the captured ID. Safe assumption in solo-founder / private-guild setups; the captured ID can be edited manually if wrong.
@@ -41,7 +48,8 @@ Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
   - Removed: the "Step 5 — server name rule" block (the v0.2.x mapping that required Discord server names to contain the product slug — superseded by v1.0.3 `ownOrgSlug` direct binding via `<org>/discord/config.yaml`).
   - Removed: the `📁 AI Team Reports` channel tree with `#daily-brief` / `#signals` / `#experiments` / `#weekly-review` / `#owner-command` — that whole topology was v0.2.x. v1.2 uses handle-based channels (`#command-<handle>` / `#works-<handle>`).
   - Added: the v1.2 onboarding flow as 8 steps — Developer Portal Bot creation with name matching the Chief name, Privileged Gateway Intent toggle, Application Client ID copy, Discord User ID copy for owner-only, `solosquad init` walk, OAuth invite URL click, automatic guildCreate onboarding embed + Auto-create button, `solosquad doctor --discord` 5-hop verification.
-- **Sidebar release-callout further compressed** (PRD §D.3). Pre-v1.2.4 it was a ~22-line dense paragraph that pushed nav off-screen; v1.2.3 compressed it to one 250-character line; v1.2.4 trims it further to a sub-line teaser pointing to `CHANGELOG.md §[1.2.4]`. KO + EN both.
+- **Sidebar release-callout further compressed** (PRD §D.3). Pre-v1.2.4 it was a ~22-line dense paragraph that pushed nav off-screen; v1.2.3 compressed it to one 250-character line; v1.2.4 trims it further to a sub-line teaser pointing to `CHANGELOG.md §[1.2.4]`. KO + EN both. The remaining `· Messenger Connection / v1.2.4 — Discord 자동 연결 + Chief 이름 + owner-only 게이트 + TRIAGE kind 분기. 자세히 CHANGELOG.md §[1.2.4].` text is the *intended* compact teaser, not a layout artifact.
+- **§10 reorder — FAQ at the bottom** (PRD §D.4). The pre-v1.2.4 §10 order put FAQ in the middle (10.3) between Migration (10.2) and Uninstall (10.4). v1.2.4 moves FAQ to §10.5 (Uninstall → 10.3, Bot/Scheduler → 10.4, FAQ → 10.5) so the "quick reference" lookup lands at the end of the manual where users expect it. IDs renumbered in lockstep with labels (s10-3 = Uninstall, s10-4 = Bot, s10-5 = FAQ). External anchor links to old `#s10-3` (FAQ) and `#s10-5` (Bot) shift — accepted churn cost for cleaner navigation.
 
 ### Migration
 

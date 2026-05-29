@@ -360,6 +360,15 @@ async function registerPathReference(
   console.log(chalk.dim(`  workspace ref: ${path.relative(workspace, yamlPath)}`));
   if (remoteUrl) console.log(chalk.dim(`  remote:        ${remoteUrl}`));
   if (language) console.log(chalk.dim(`  language:      ${language}`));
+
+  // v1.2.4 §A.5 — pre-grant Claude Code's directory trust for the
+  // registered repo path. Best-effort; see src/util/claude-trust.ts.
+  try {
+    const { grantClaudeTrust } = await import("../util/claude-trust.js");
+    grantClaudeTrust(externalPath);
+  } catch {
+    /* best-effort */
+  }
 }
 
 // v1.0 — copyDirRecursive removed (was used by --keep-original which is

@@ -3,6 +3,7 @@ import path from "path";
 import { saveOrgYaml, saveRepoYaml, type OrgYaml, type RepoYaml } from "./config.js";
 import { detectLanguage, getRemoteUrl, isGitRepo, slugFromUrl } from "./git.js";
 import { getBundleRoot } from "./paths.js";
+import { grantClaudeTrust } from "./claude-trust.js";
 
 export const MEMORY_SCHEMAS: Record<string, string> = {
   "hypotheses.jsonl":
@@ -126,6 +127,18 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
     created_at: new Date().toISOString(),
   };
   saveOrgYaml(orgDir, orgYaml);
+
+  // v1.2.4 §A.5 — pre-grant Claude Code's directory trust for the new
+  // org cwd. chief-runner.invokeStreaming spawns `claude --print` with
+  // cwd=<org>; without trust pre-granted, the first turn would block on
+  // an interactive trust dialog the bot can't answer. Best-effort: a
+  // missing ~/.claude.json (fresh Claude install) is logged and skipped.
+  try {
+    grantClaudeTrust(orgDir, { quiet: true });
+  } catch {
+    /* trust grant is best-effort — see src/util/claude-trust.ts */
+  }
+
   return { orgDir, orgYaml };
 }
 

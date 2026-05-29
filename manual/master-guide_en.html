@@ -307,9 +307,9 @@
         <ul class="sub">
           <li><a href="#s10-1">10.1 Install / Run</a></li>
           <li><a href="#s10-2">10.2 Migration</a></li>
-          <li><a href="#s10-3">10.3 FAQ</a></li>
-          <li><a href="#s10-4">10.4 Uninstall · Reinstall</a></li>
-          <li><a href="#s10-5">10.5 Bot / Scheduler / dev_capability</a></li>
+          <li><a href="#s10-3">10.3 Uninstall · Reinstall</a></li>
+          <li><a href="#s10-4">10.4 Bot · Scheduler · dev_capability</a></li>
+          <li><a href="#s10-5">10.5 FAQ</a></li>
         </ul>
       </li>
     </ul>
@@ -2807,72 +2807,7 @@ docker compose restart    # if Docker</code></pre>
   </ul>
   <p>For minor updates containing breaking changes in important projects, <strong>observing for about a week</strong> before upgrading is reasonable.</p>
 
-  <h3 id="s10-3">10.3 FAQ</h3>
-
-  <p><strong>Q. How much does it cost?</strong><br>
-  A. Any Claude Code-capable subscription works (Max recommended). As of v0.9, SoloSquad uses *Claude Code via OAuth* as its single backend. Cloud ops add ~$4-6/month for VPS.</p>
-
-  <p><strong>Q. Is Slack supported in v1.0?</strong><br>
-  A. <strong>The v1.0 officially supported messenger is Discord.</strong> The Slack adapter ships in the codebase and continues to work for v0.9.x users, but it is <strong>not covered by the v1.0 SemVer promise</strong> (post-v1.0 slot). New users should start with Discord. For persona separation, run two Discord workspaces: <code>~/solopreneur/</code> + <code>~/elon-24-7/</code>, each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — the older <code>MESSENGER=discord,slack</code> multi-target syntax is not supported.</p>
-
-  <p><strong>Q. What if my timezone isn't Korea?</strong><br>
-  A. Change <code>TZ=</code> in <code>.env</code> (e.g. <code>TZ=America/Los_Angeles</code>). Same in Docker.</p>
-
-  <p><strong>Q. What if the AI gives a wrong answer?</strong><br>
-  A. AI is a tool. Always verify important decisions yourself. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+) can revert spawn results. v0.4 autonomous execution auto-protects via per-cycle git-snapshot keep/discard.</p>
-
-  <p><strong>Q. Can I run it on a Raspberry Pi instead of Mac Mini?</strong><br>
-  A. Possible if Node.js 18+ runs. But verify whether Claude Code CLI officially supports arm64 Linux first.</p>
-
-  <p><strong>Q. Can I use it fully offline?</strong><br>
-  A. No. Claude API and Slack/Discord server communication are required.</p>
-
-  <p><strong>Q. Anything I must do before updating?</strong><br>
-  A. If <code>solosquad bot</code> / <code>schedule</code> is running, stop it first. <code>docker compose down</code> or <code>Ctrl+C</code> in terminal.</p>
-
-  <p><strong>Q. Do I have to update every time?</strong><br>
-  A. No. If you're using it stably, there's no rush. But <strong>security hotfixes</strong> (e.g. v0.1.3 dotenv miss) should be applied quickly.</p>
-
-  <p><strong>Q. Can I automate updates?</strong><br>
-  A. With Docker, scheduling <code>docker compose up -d --build</code> in cron will refresh the image. But <strong>automation isn't possible when migration is required</strong> — human confirmation is the principle.</p>
-
-  <p><strong>Q. I want to pin an older version.</strong><br>
-  A. Install explicitly: <code>npm install -g solosquad@0.1.5</code>. Decline <code>solosquad update</code>'s upgrade prompts.</p>
-
-  <p><strong>Q. Multiple people use one machine.</strong><br>
-  A. Use different OS accounts. Each account's home directory holds an independent workspace. Run migration per account.</p>
-
-  <p><strong>Q. Are there beta / dev channels?</strong><br>
-  A. <code>solosquad update --channel dev</code> switches to beta (no stability guarantee). <code>--channel stable</code> is default.</p>
-
-  <p><strong>Q. How do I upgrade from v0.5 to v0.6?</strong><br>
-  A. <code>npm install -g solosquad@latest</code>, then from workspace root run <code>solosquad migrate --dry-run</code> → review report (<code>&lt;org&gt;/memory/migration-2026-XX-dryrun.md</code>) → if OK, <code>solosquad migrate --apply --confirm</code>. The <code>--confirm</code> flag is required (mistake prevention). After migration, <code>solosquad agent validate --all</code> auto-runs and reports failures to STDOUT.</p>
-
-  <p><strong>Q. Migration reported "human_review_required" items — now what?</strong><br>
-  A. Some v0.5 ledger assets use heuristic re-placement that can't be 100% accurate — e.g. "org flavor" extraction from a SKILL body with 0 matches. These items are marked <code>human_review_required: true</code> and refused for auto-application. Review the report, manually augment the relevant agent section in <code>&lt;org&gt;/agent-profile.yaml</code>, then re-run migration. Originals are never touched (non-destructive principle).</p>
-
-  <p><strong>Q. (v0.6) Auto-reload feels too aggressive — I want to trigger it manually.</strong><br>
-  A. Set <code>workspace.yaml.fs_watch.mode: manual</code> to disable auto-reload. After SKILL changes, call <code>solosquad agent reload</code> explicitly. <code>fs_watch.mode: prompt</code> (default) is an intermediate mode where the PM asks in messenger whether to apply.</p>
-
-  <p><strong>Q. (v0.8.3) What's the difference between <code>solosquad update</code> and <code>solosquad migrate</code>?</strong><br>
-  A. <code>update</code> refreshes the <strong>CLI binary</strong> (npm package). <code>migrate</code> converts the <strong>workspace</strong> schema / layout to match the new CLI. Typical flow: ① <code>solosquad doctor</code> to check CLI ↔ workspace mismatch → ② <code>npm install -g solosquad@latest</code> or <code>solosquad update</code> to refresh CLI → ③ <code>solosquad migrate --dry-run</code> preview → ④ <code>solosquad migrate --apply</code>. doctor explicitly tells you which command is needed (v0.8.3 §7.3).</p>
-
-  <p><strong>Q. (v0.8.3) How do I bring existing product code into a SoloSquad workspace?</strong><br>
-  A. ① <code>cd ~/projects/my-saas &amp;&amp; git status</code> to clean untracked + <code>git push</code> for safety → ② <code>mkdir ~/solosquad &amp;&amp; cd ~/solosquad &amp;&amp; solosquad init</code> → ③ <strong><code>solosquad add repo ~/projects/my-saas --dry-run</code></strong> to pre-check folder mapping / size / 5 risks (IDE lock · symlinks · external abs paths · slug collision · active processes) → ④ <code>solosquad add repo ~/projects/my-saas</code> to actually move (or <code>--keep-original</code> to copy). Your original files remain byte-identical (v0.7 class A rule). The only thing SoloSquad adds is one <code>&lt;repo&gt;/.solosquad/repo.yaml</code>.</p>
-
-  <p><strong>Q. (v0.8.3) After moving an existing repo, IDE paths broke.</strong><br>
-  A. If IDE configs like <code>.vscode/settings.json</code> / <code>.idea/workspace.xml</code> contain <strong>absolute paths</strong>, SoloSquad doesn't modify user files — you have to update them manually. The dry-run output flags IDE files with absolute-path settings. Same for cron jobs / aliases / CI runner paths — external systems pointing at old paths must be updated by the user.</p>
-
-  <p><strong>Q. (v0.8.3) I want to see what the bot is doing — where are the logs?</strong><br>
-  A. Set <code>SOLOSQUAD_LOG_FILE=1</code> for daily rolling at <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>. Tail in real-time with <code>solosquad logs --tail 200 --follow</code>. Directly query 4 operational jsonl with <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>. 14-day retention (system-housekeeping at 00:00 auto-cleans).</p>
-
-  <p><strong>Q. (v0.8.3) Where did <code>solosquad logout</code> go?</strong><br>
-  A. Added in v0.7, removed in v0.8.3. Judged value &lt; complexity. Replacement flow: pause bot via <strong>Ctrl+C</strong> to kill the process (restart with <code>solosquad bot</code>); .env secret masking / REVOKE checklist is provided by <code>solosquad uninstall --archive-only</code>; sessions preservation via direct file move under <code>&lt;org&gt;/.solosquad/sessions/</code> or <code>solosquad pm reset --user &lt;id&gt;</code>. Existing <code>logout.lock</code> files are inert as of v0.8.3 and can be deleted manually.</p>
-
-  <p><strong>Q. (v0.8.3) When does trajectory auto-registration activate?</strong><br>
-  A. When all 4 ROI metrics defined in v0.6 pass (① 30-day suggestions ≥ 5 ② adoption rate ≥ 60% ③ adopted SKILLs' 30-day usage rate ≥ average ④ reject cooldown &lt; 30%), <code>workspace.yaml.trajectory.auto_register: true</code> becomes default in v0.9. If any one fails, "suggestion-only forever" is locked. The v0.8.3 patch only pins the measured values in CHANGELOG; auto-registration code lands in v0.9.</p>
-
-  <h3 id="s10-4">10.4 Uninstall · Reinstall · Migration Workaround<span class="badge now">v0.8.5</span></h3>
+  <h3 id="s10-3">10.3 Uninstall · Reinstall · Migration Workaround<span class="badge now">v0.8.5</span></h3>
 
   <h4>Safe uninstall sequence</h4>
   <p>Because npm v7+ does not invoke the <code>preuninstall</code> hook on global packages (<a href="https://github.com/npm/cli/issues/3042">npm/cli#3042</a>), <strong>you must follow the order yourself</strong> for the farewell archive and REVOKE-CHECKLIST to be generated.</p>
@@ -2957,7 +2892,7 @@ solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
     <code>solosquad uninstall</code> writes the manifest with streaming SHA256 over the jsonl files. If the bot is appending jsonl concurrently, the manifest SHA will mismatch → archive verification fails. <code>--force</code> bypasses, but you lose archive integrity.
   </div>
 
-  <h3 id="s10-5">10.5 Bot · Scheduler · Agent git Operations<span class="badge now">v0.8.2~v0.8.6</span></h3>
+  <h3 id="s10-4">10.4 Bot · Scheduler · Agent git Operations<span class="badge now">v0.8.2~v0.8.6</span></h3>
 
   <h4>Scheduler does not auto-start</h4>
   <p>SoloSquad has no daemon / background auto-start. <code>solosquad init</code> does not register cron, and there is no OS-boot auto-start. You must <em>explicitly</em> start with:</p>
@@ -3066,6 +3001,71 @@ git push --dry-run        # confirm auth works inside the workspace too</code></
     </ul>
     Design details: <code>docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md</code> §3, <code>docs/plan/v1.x-workflow-goal-routine-evolution.md</code> (PR workflow §additions slot)
   </div>
+  <h3 id="s10-5">10.5 FAQ</h3>
+
+  <p><strong>Q. How much does it cost?</strong><br>
+  A. Any Claude Code-capable subscription works (Max recommended). As of v0.9, SoloSquad uses *Claude Code via OAuth* as its single backend. Cloud ops add ~$4-6/month for VPS.</p>
+
+  <p><strong>Q. Is Slack supported in v1.0?</strong><br>
+  A. <strong>The v1.0 officially supported messenger is Discord.</strong> The Slack adapter ships in the codebase and continues to work for v0.9.x users, but it is <strong>not covered by the v1.0 SemVer promise</strong> (post-v1.0 slot). New users should start with Discord. For persona separation, run two Discord workspaces: <code>~/solopreneur/</code> + <code>~/elon-24-7/</code>, each with independent <code>.env</code> / tokens / bot accounts. This constraint exists since v0.2.0+ — the older <code>MESSENGER=discord,slack</code> multi-target syntax is not supported.</p>
+
+  <p><strong>Q. What if my timezone isn't Korea?</strong><br>
+  A. Change <code>TZ=</code> in <code>.env</code> (e.g. <code>TZ=America/Los_Angeles</code>). Same in Docker.</p>
+
+  <p><strong>Q. What if the AI gives a wrong answer?</strong><br>
+  A. AI is a tool. Always verify important decisions yourself. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+) can revert spawn results. v0.4 autonomous execution auto-protects via per-cycle git-snapshot keep/discard.</p>
+
+  <p><strong>Q. Can I run it on a Raspberry Pi instead of Mac Mini?</strong><br>
+  A. Possible if Node.js 18+ runs. But verify whether Claude Code CLI officially supports arm64 Linux first.</p>
+
+  <p><strong>Q. Can I use it fully offline?</strong><br>
+  A. No. Claude API and Slack/Discord server communication are required.</p>
+
+  <p><strong>Q. Anything I must do before updating?</strong><br>
+  A. If <code>solosquad bot</code> / <code>schedule</code> is running, stop it first. <code>docker compose down</code> or <code>Ctrl+C</code> in terminal.</p>
+
+  <p><strong>Q. Do I have to update every time?</strong><br>
+  A. No. If you're using it stably, there's no rush. But <strong>security hotfixes</strong> (e.g. v0.1.3 dotenv miss) should be applied quickly.</p>
+
+  <p><strong>Q. Can I automate updates?</strong><br>
+  A. With Docker, scheduling <code>docker compose up -d --build</code> in cron will refresh the image. But <strong>automation isn't possible when migration is required</strong> — human confirmation is the principle.</p>
+
+  <p><strong>Q. I want to pin an older version.</strong><br>
+  A. Install explicitly: <code>npm install -g solosquad@0.1.5</code>. Decline <code>solosquad update</code>'s upgrade prompts.</p>
+
+  <p><strong>Q. Multiple people use one machine.</strong><br>
+  A. Use different OS accounts. Each account's home directory holds an independent workspace. Run migration per account.</p>
+
+  <p><strong>Q. Are there beta / dev channels?</strong><br>
+  A. <code>solosquad update --channel dev</code> switches to beta (no stability guarantee). <code>--channel stable</code> is default.</p>
+
+  <p><strong>Q. How do I upgrade from v0.5 to v0.6?</strong><br>
+  A. <code>npm install -g solosquad@latest</code>, then from workspace root run <code>solosquad migrate --dry-run</code> → review report (<code>&lt;org&gt;/memory/migration-2026-XX-dryrun.md</code>) → if OK, <code>solosquad migrate --apply --confirm</code>. The <code>--confirm</code> flag is required (mistake prevention). After migration, <code>solosquad agent validate --all</code> auto-runs and reports failures to STDOUT.</p>
+
+  <p><strong>Q. Migration reported "human_review_required" items — now what?</strong><br>
+  A. Some v0.5 ledger assets use heuristic re-placement that can't be 100% accurate — e.g. "org flavor" extraction from a SKILL body with 0 matches. These items are marked <code>human_review_required: true</code> and refused for auto-application. Review the report, manually augment the relevant agent section in <code>&lt;org&gt;/agent-profile.yaml</code>, then re-run migration. Originals are never touched (non-destructive principle).</p>
+
+  <p><strong>Q. (v0.6) Auto-reload feels too aggressive — I want to trigger it manually.</strong><br>
+  A. Set <code>workspace.yaml.fs_watch.mode: manual</code> to disable auto-reload. After SKILL changes, call <code>solosquad agent reload</code> explicitly. <code>fs_watch.mode: prompt</code> (default) is an intermediate mode where the PM asks in messenger whether to apply.</p>
+
+  <p><strong>Q. (v0.8.3) What's the difference between <code>solosquad update</code> and <code>solosquad migrate</code>?</strong><br>
+  A. <code>update</code> refreshes the <strong>CLI binary</strong> (npm package). <code>migrate</code> converts the <strong>workspace</strong> schema / layout to match the new CLI. Typical flow: ① <code>solosquad doctor</code> to check CLI ↔ workspace mismatch → ② <code>npm install -g solosquad@latest</code> or <code>solosquad update</code> to refresh CLI → ③ <code>solosquad migrate --dry-run</code> preview → ④ <code>solosquad migrate --apply</code>. doctor explicitly tells you which command is needed (v0.8.3 §7.3).</p>
+
+  <p><strong>Q. (v0.8.3) How do I bring existing product code into a SoloSquad workspace?</strong><br>
+  A. ① <code>cd ~/projects/my-saas &amp;&amp; git status</code> to clean untracked + <code>git push</code> for safety → ② <code>mkdir ~/solosquad &amp;&amp; cd ~/solosquad &amp;&amp; solosquad init</code> → ③ <strong><code>solosquad add repo ~/projects/my-saas --dry-run</code></strong> to pre-check folder mapping / size / 5 risks (IDE lock · symlinks · external abs paths · slug collision · active processes) → ④ <code>solosquad add repo ~/projects/my-saas</code> to actually move (or <code>--keep-original</code> to copy). Your original files remain byte-identical (v0.7 class A rule). The only thing SoloSquad adds is one <code>&lt;repo&gt;/.solosquad/repo.yaml</code>.</p>
+
+  <p><strong>Q. (v0.8.3) After moving an existing repo, IDE paths broke.</strong><br>
+  A. If IDE configs like <code>.vscode/settings.json</code> / <code>.idea/workspace.xml</code> contain <strong>absolute paths</strong>, SoloSquad doesn't modify user files — you have to update them manually. The dry-run output flags IDE files with absolute-path settings. Same for cron jobs / aliases / CI runner paths — external systems pointing at old paths must be updated by the user.</p>
+
+  <p><strong>Q. (v0.8.3) I want to see what the bot is doing — where are the logs?</strong><br>
+  A. Set <code>SOLOSQUAD_LOG_FILE=1</code> for daily rolling at <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>. Tail in real-time with <code>solosquad logs --tail 200 --follow</code>. Directly query 4 operational jsonl with <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>. 14-day retention (system-housekeeping at 00:00 auto-cleans).</p>
+
+  <p><strong>Q. (v0.8.3) Where did <code>solosquad logout</code> go?</strong><br>
+  A. Added in v0.7, removed in v0.8.3. Judged value &lt; complexity. Replacement flow: pause bot via <strong>Ctrl+C</strong> to kill the process (restart with <code>solosquad bot</code>); .env secret masking / REVOKE checklist is provided by <code>solosquad uninstall --archive-only</code>; sessions preservation via direct file move under <code>&lt;org&gt;/.solosquad/sessions/</code> or <code>solosquad pm reset --user &lt;id&gt;</code>. Existing <code>logout.lock</code> files are inert as of v0.8.3 and can be deleted manually.</p>
+
+  <p><strong>Q. (v0.8.3) When does trajectory auto-registration activate?</strong><br>
+  A. When all 4 ROI metrics defined in v0.6 pass (① 30-day suggestions ≥ 5 ② adoption rate ≥ 60% ③ adopted SKILLs' 30-day usage rate ≥ average ④ reject cooldown &lt; 30%), <code>workspace.yaml.trajectory.auto_register: true</code> becomes default in v0.9. If any one fails, "suggestion-only forever" is locked. The v0.8.3 patch only pins the measured values in CHANGELOG; auto-registration code lands in v0.9.</p>
+
 </section>
 
 </main>

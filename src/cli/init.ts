@@ -277,6 +277,19 @@ async function registerRepoInline(
     fs.writeFileSync(externalYaml, yaml.dump(doc, { lineWidth: 100 }), "utf-8");
   }
   console.log(chalk.green(`  ✓ ${slug} registered as path-reference → ${src}`));
+
+  // v1.2.4 §A.5 — pre-grant Claude Code's directory trust for the
+  // registered repo path so the bot's `claude --print` spawn doesn't
+  // hit the interactive trust dialog the first time it operates in the
+  // repo. Best-effort: skip silently when ~/.claude.json is missing
+  // (fresh Claude install), error-tolerant on write failure.
+  try {
+    const { grantClaudeTrust } = await import("../util/claude-trust.js");
+    grantClaudeTrust(src);
+  } catch {
+    /* trust grant is best-effort */
+  }
+
   return { slug, role };
 }
 
