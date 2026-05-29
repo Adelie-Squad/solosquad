@@ -51,6 +51,16 @@ The package ships as `"type": "module"` in package.json, so `require` is undefin
 
   Cloud users shouldn't use `--supervise` — their process manager already handles restart. Documented in the `--help` text.
 
+- **Bot graceful drain on SIGTERM** (§A.12). The previous shutdown handler called `process.exit(0)` the moment a signal arrived — any active Chief turn got cut off mid-stride (orphaned `claude` child, Discord reply not sent, workflow stage left at `in_progress`). v1.2.8 adds an in-flight turn counter (`src/bot/in-flight.ts`):
+
+  - `handleCommand` increments on entry and decrements in a `finally` block — exceptions and early returns still release.
+  - SIGTERM/SIGINT handler sets the *drain* flag (new Chief turns refused with a user-visible "🛑 SoloSquad is restarting — please send it again in a few seconds") and waits up to 120 seconds for active turns to finish before exiting.
+  - Second signal during drain forces immediate exit so the user isn't held hostage by a stuck turn.
+  - Drain timeout (default 120s) covers typical Chief turns (5-30s) plus a buffer for slow Claude API responses; short enough not to hang migration.
+  - Goal cycles and scheduler routines run in separate processes (`solosquad goal run`, `solosquad schedule`) — outside the bot's drain responsibility; each owns its own lifecycle.
+
+  Net effect: `solosquad migrate --apply` during an active turn now waits politely for that turn's reply to land before restarting the bot, instead of leaving the user with silence.
+
 ---
 
 ## [1.2.7] — 2026-05-29 (bot spawn `--add-dir` for registered repos)

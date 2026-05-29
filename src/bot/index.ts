@@ -61,6 +61,30 @@ async function handleCommand(
     return;
   }
 
+  // v1.2.8 §A.12 — refuse new turns once the bot has started draining
+  // (SIGTERM received, waiting for active turns to finish). The user
+  // gets a clear "try again" so they're not silently dropped.
+  const { isDraining, enterTurn } = await import("./in-flight.js");
+  if (isDraining()) {
+    await ctx.reply(
+      "🛑 SoloSquad is restarting (migration in progress). Your message wasn't processed — please send it again in a few seconds.",
+    );
+    return;
+  }
+  const releaseTurn = enterTurn();
+  try {
+    await handleCommandInner(userInput, product, ctx);
+  } finally {
+    releaseTurn();
+  }
+}
+
+async function handleCommandInner(
+  userInput: string,
+  product: Product,
+  ctx: MessageContext
+): Promise<void> {
+
   // v0.3.0: slash command pre-processing. Unknown slashes get a direct
   // reply from the bot (no PM call). Known slashes are wrapped in a
   // [SLASH /xyz] marker so the PM SKILL.md can parse them deterministically.
@@ -318,8 +342,48 @@ let shutdownInstalled = false;
 function installGracefulShutdown(unwatch: Unwatch): void {
   if (shutdownInstalled) return;
   shutdownInstalled = true;
+  let stopping = false;
   const stop = async (sig: NodeJS.Signals): Promise<void> => {
-    console.log(`[Bot] received ${sig} — closing SKILL watcher`);
+    // v1.2.8 §A.12 — re-entry guard. Pressing Ctrl+C twice during a long
+    // drain shouldn't kick off two parallel shutdowns. Second signal
+    // skips straight to force-exit so the user isn't held hostage.
+    if (stopping) {
+      console.log(`[Bot] second ${sig} — forcing exit immediately.`);
+      process.exit(1);
+    }
+    stopping = true;
+
+    console.log(`[Bot] received ${sig} — entering drain mode.`);
+
+    // v1.2.8 §A.12 — block new turns + wait for in-flight to finish.
+    // Discord messages mid-reply are awaited as part of handleCommand,
+    // so the drain wait covers reply send too. Default 120s budget —
+    // long enough for typical Chief turns (5-30s) plus a buffer for
+    // slow Claude API responses; short enough to not hang migrations.
+    try {
+      const { startDrain, waitForDrain, inFlight } = await import("./in-flight.js");
+      const active = inFlight();
+      if (active > 0) {
+        console.log(
+          `[Bot] draining ${active} active turn(s) — max 120s wait before force exit.`,
+        );
+      }
+      startDrain();
+      const result = await waitForDrain(120_000);
+      if (!result.drained) {
+        console.log(
+          `[Bot] drain timeout — ${result.remaining} turn(s) still active. Forcing exit; their replies may be lost.`,
+        );
+      } else if (active > 0) {
+        console.log(`[Bot] drain complete — all turns finished.`);
+      }
+    } catch (err) {
+      console.log(
+        `[Bot] drain wait failed (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    console.log(`[Bot] closing SKILL watcher`);
     try {
       await unwatch();
     } catch (err) {
