@@ -273,28 +273,28 @@
         </ul>
       </li>
       <li>
-        <a data-target="s7">7. 용어 사전</a>
+        <a data-target="s7">7. 운영 가이드</a>
         <ul class="sub">
-          <li><a href="#s7-1">7.1 핵심 용어</a></li>
-          <li><a href="#s7-2">7.2 파일명 사전</a></li>
-          <li><a href="#s7-3">7.3 약어 사전</a></li>
+          <li><a href="#s7-1">7.1 24/7 운영 방식</a></li>
+          <li><a href="#s7-2">7.2 멀티 워크스페이스</a></li>
+          <li><a href="#s7-3">7.3 제품 여러 개 운영</a></li>
+          <li><a href="#s7-4">7.4 보안 체크리스트</a></li>
+          <li><a href="#s7-5">7.5 백업 + 관측성</a></li>
         </ul>
       </li>
       <li>
-        <a data-target="s8">8. 버전별 차이</a>
+        <a data-target="s8">8. 용어 사전</a>
         <ul class="sub">
-          <li><a href="#s8-1">8.1 출시된 버전</a></li>
-          <li><a href="#s8-2">8.2 다음 슬롯</a></li>
+          <li><a href="#s8-1">8.1 핵심 용어</a></li>
+          <li><a href="#s8-2">8.2 파일명 사전</a></li>
+          <li><a href="#s8-3">8.3 약어 사전</a></li>
         </ul>
       </li>
       <li>
-        <a data-target="s9">9. 운영 가이드</a>
+        <a data-target="s9">9. CHANGELOG</a>
         <ul class="sub">
-          <li><a href="#s9-1">9.1 24/7 운영 방식</a></li>
-          <li><a href="#s9-2">9.2 멀티 워크스페이스</a></li>
-          <li><a href="#s9-3">9.3 제품 여러 개 운영</a></li>
-          <li><a href="#s9-4">9.4 보안 체크리스트</a></li>
-          <li><a href="#s9-5">9.5 백업 + 관측성</a></li>
+          <li><a href="#s9-1">9.1 출시된 버전</a></li>
+          <li><a href="#s9-2">9.2 다음 슬롯</a></li>
         </ul>
       </li>
       <li>
@@ -1887,10 +1887,237 @@ solosquad run-routine --all          # 전부</code></pre>
 
 <!-- ========================== SECTION 7 ========================== -->
 <section id="s7">
-  <h2><span class="num">7.</span>용어 사전</h2>
+  <h2><span class="num">7.</span>운영 가이드</h2>
+
+  <h3 id="s7-1">7.1 24/7 운영 방식 선택</h3>
+  <p>봇이 메신저와 연결을 유지하려면 <code>solosquad bot</code>이 계속 실행 중이어야 합니다. 방식 비교:</p>
+  <table>
+    <thead><tr><th>방식</th><th>대상</th><th>난이도</th><th>유지비</th><th>PC 전원</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. 로컬 데스크탑</strong></td><td>Mac Mini 등 항상 켜두는 PC</td><td>낮음</td><td>전기비만</td><td>항상 켜둬야 함</td></tr>
+      <tr><td><strong>B. 클라우드 VPS</strong></td><td>집에 서버 없음, 완전 24/7</td><td>중</td><td>월 $4~6+</td><td>PC 꺼도 무관</td></tr>
+    </tbody>
+  </table>
+
+  <h4>A-1. 터미널 열어두기 (가장 간단)</h4>
+  <pre><code>solosquad bot</code></pre>
+  <p>터미널이 열려 있는 동안만 동작. <code>Ctrl+C</code>나 창 닫으면 멈춤. PC 슬립 시 연결 끊김.</p>
+
+  <p><strong>macOS 슬립 방지 (Mac Mini에 특히 유용):</strong></p>
+  <pre><code>caffeinate -dims</code></pre>
+  <p>또는 시스템 설정 → 에너지 절약 → "디스플레이 끄기 제외" + 절전 모드 비활성화.</p>
+
+  <p><strong>Windows 슬립 방지:</strong> 설정 → 시스템 → 전원 → "절대 절전 모드로 설정 안 함".</p>
+
+  <p>스케줄러도 병행하려면 별도 터미널:</p>
+  <pre><code>solosquad schedule</code></pre>
+
+  <h4>A-2. Docker Compose (백그라운드 + 자동 재시작, 권장)</h4>
+  <p>전제: Docker Desktop 설치 (https://docs.docker.com/desktop/). macOS Apple Silicon/Intel 모두 동작. <code>solosquad init</code>이 <code>Dockerfile</code>과 <code>docker-compose.yml</code>을 워크스페이스에 복사했는지 확인.</p>
+  <pre><code>cd ~/solosquad-workspace
+docker compose up -d --build      # 최초 빌드 + 백그라운드 기동
+docker compose logs -f bot        # 봇 로그
+docker compose logs -f scheduler  # 스케줄러 로그
+docker compose ps                 # 서비스 상태
+docker compose restart            # 재시작
+docker compose down               # 정지</code></pre>
+
+  <p><strong>Claude Code 인증 공유:</strong> 컨테이너 내부의 <code>claude</code> CLI도 인증이 필요. <code>docker-compose.yml</code>이 호스트의 <code>${HOME}/.claude</code>를 컨테이너의 <code>/root/.claude</code>로 마운트 → 호스트 로그인 세션 공유.</p>
+  <ol>
+    <li>호스트에서 <code>claude login</code> 완료</li>
+    <li><code>docker compose up -d --build</code></li>
+    <li>컨테이너 안의 <code>claude</code>가 호스트 자격증명을 읽어 동일 계정으로 동작</li>
+  </ol>
+  <p>다른 경로면 <code>.env</code>에 명시:</p>
+  <pre><code>CLAUDE_AUTH_DIR=/Users/youruser/.claude</code></pre>
+
+  <p><strong>PC 재부팅 후:</strong> Docker Desktop 자동 시작 설정 시 (Docker Desktop 설정 → "Start Docker Desktop when you log in") 컨테이너는 <code>restart: unless-stopped</code> 정책으로 자동 복귀.</p>
+
+  <div class="callout warn">
+    <strong>Windows Docker 주의</strong>
+    <code>${HOME}/.claude</code> 볼륨 마운트는 macOS/Linux 기준. Windows에서 Docker를 쓴다면 <code>CLAUDE_AUTH_DIR</code>을 <code>C:/Users/yourname/.claude</code> 같은 절대 경로로 명시하거나, A-1 또는 A-3 방식 권장.
+  </div>
+
+  <h4>A-3. macOS launchd / Windows NSSM (서비스화)</h4>
+  <p>Docker 없이 네이티브 프로세스를 로그인 시 자동 시작하려면.</p>
+
+  <p><strong>macOS — launchd</strong>. <code>~/Library/LaunchAgents/com.solosquad.bot.plist</code>:</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.solosquad.bot&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;
+    &lt;string&gt;/usr/local/bin/solosquad&lt;/string&gt;
+    &lt;string&gt;bot&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/YOURNAME/solosquad-workspace&lt;/string&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.log&lt;/string&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.err&lt;/string&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+  <p>경로(<code>/usr/local/bin/solosquad</code>)는 <code>which solosquad</code>로 확인. 등록/시작:</p>
+  <pre><code>launchctl load ~/Library/LaunchAgents/com.solosquad.bot.plist
+launchctl start com.solosquad.bot
+tail -f /tmp/solosquad-bot.log</code></pre>
+  <p>스케줄러도 동일하게 <code>com.solosquad.scheduler.plist</code> 추가.</p>
+
+  <p><strong>Windows — NSSM:</strong></p>
+  <ol>
+    <li>https://nssm.cc 에서 NSSM 다운로드 → <code>nssm.exe</code>를 PATH에 추가</li>
+    <li>관리자 PowerShell:
+      <pre><code>nssm install SolosquadBot "C:\Users\YOU\AppData\Roaming\npm\solosquad.cmd" bot
+nssm set SolosquadBot AppDirectory "C:\Users\YOU\solosquad-workspace"
+nssm start SolosquadBot</code></pre>
+    </li>
+  </ol>
+
+  <h4>B. 클라우드 VPS (고급)</h4>
+  <p>"집에 서버 둘 생각 없음" 또는 "PC 꺼도 봇은 살아있어야" 할 때.</p>
+
+  <p><strong>고려 시점:</strong></p>
+  <ul>
+    <li>집에 24/7 켜둘 PC 없음</li>
+    <li>여행 중이거나 노트북만 쓰는 라이프스타일</li>
+    <li>팀원 추가로 봇을 공동 운영해야 함</li>
+    <li>안정성이 사업에 직결 (자동 알림/루틴 실패가 손실)</li>
+  </ul>
+
+  <table>
+    <thead><tr><th>제공업체</th><th>월 비용</th><th>특징</th></tr></thead>
+    <tbody>
+      <tr><td>Hetzner</td><td>~$4</td><td>유럽 기반, 가성비 최고</td></tr>
+      <tr><td>Vultr</td><td>$5</td><td>서울 리전 있음</td></tr>
+      <tr><td>Linode</td><td>$5</td><td>안정적</td></tr>
+      <tr><td>DigitalOcean</td><td>$6</td><td>커뮤니티 자료 풍부</td></tr>
+      <tr><td>Railway (PaaS)</td><td>$5+</td><td>GitHub 연동 자동 배포, 서버 관리 불필요</td></tr>
+      <tr><td>Fly.io (Docker PaaS)</td><td>$5+</td><td>도쿄 리전, 글로벌 배포</td></tr>
+      <tr><td>AWS ECS Fargate</td><td>$10~15</td><td>엔터프라이즈급</td></tr>
+    </tbody>
+  </table>
+
+  <p>빠른 요약 (VPS + systemd):</p>
+  <pre><code># VPS SSH 접속 후
+sudo apt update && sudo apt install -y nodejs npm git
+npm install -g @anthropic-ai/claude-code solosquad
+mkdir ~/solosquad && cd ~/solosquad
+solosquad init
+claude login
+# systemd 서비스 등록 — 상세는 docs/cloud-deployment.md</code></pre>
+
+  <div class="callout info">
+    <strong>상세 가이드</strong>
+    <code>docs/cloud-deployment.md</code>에 VPS 최초 설정, Node.js 설치, solosquad 글로벌 설치, systemd 서비스 등록, 로그 관리, 업데이트, 백업이 정리되어 있습니다.
+  </div>
+
+  <h3 id="s7-2">7.2 멀티 워크스페이스 (페르소나 분리)</h3>
+  <p>본업/사이드 페르소나를 분리하고 싶을 때 Discord 워크스페이스를 여러 개 만듭니다. (Slack 어댑터로 분리하는 것도 코드상 가능하지만 v1.0 SemVer 약속 외.)</p>
+  <pre><code>~/solopreneur/      # Discord 봇, 본업 페르소나
+~/personal-lab/     # Discord 봇, 사이드 페르소나</code></pre>
+  <p>각각 독립된 <code>.env</code>·토큰·봇 계정을 갖습니다. 서로 간섭 없이 동시 운영 가능. 이 제약은 v0.2.0부터 — 이전 v0.1.x의 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 지원하지 않습니다.</p>
+
+  <p><strong>업데이트 시:</strong> CLI 업데이트는 한 번이면 되지만 <strong>마이그레이션은 각 워크스페이스에서 개별 실행</strong> (§4.4 참조).</p>
+
+  <h3 id="s7-3">7.3 제품 여러 개 운영 (조직·저장소 관리)</h3>
+  <p>한 워크스페이스 안에 조직(=제품/사업)을 여러 개 둘 수 있습니다. 각 조직은 완전 격리된 메모리·워크플로·메신저 채널을 갖습니다.</p>
+
+  <h4>조직 추가</h4>
+  <pre><code>solosquad add org &lt;name&gt;                        # 대화형 (provider/remote_url 질의)
+solosquad add org my-side --provider github --remote-url https://github.com/my-side</code></pre>
+  <p><code>&lt;workspace&gt;/&lt;name&gt;/</code> 폴더 + <code>.org.yaml</code> + <code>memory/</code> (routine-logs/ + 4개 JSONL 스키마) + <code>workflows/</code> + <code>repositories/</code> + 메신저 폴더 자동 생성.</p>
+
+  <h4>저장소 추가</h4>
+  <p>URL이면 clone, 경로면 등록(필요시 이동).</p>
+  <pre><code>solosquad add repo https://github.com/foo/bar.git                       # clone + 등록
+solosquad add repo ./existing-local-repo                                # 이동(확인 후) + 등록
+solosquad add repo https://github.com/foo/bar.git --org tesla --role frontend
+solosquad add repo &lt;url|path&gt; --slug my-custom-slug                     # 폴더명 override</code></pre>
+
+  <p><strong>org 자동 판정 순서:</strong></p>
+  <ol>
+    <li><code>--org &lt;slug&gt;</code> 명시 → 즉시 사용</li>
+    <li>워크스페이스에 조직이 하나뿐 → 자동 선택 (묻지 않음)</li>
+    <li>현재 cwd가 특정 org 폴더 안 → 그 org 자동</li>
+    <li>복수 org + 위 모두 해당 안 됨 → 대화형 선택</li>
+  </ol>
+
+  <p><strong>자동 추출:</strong></p>
+  <ul>
+    <li><code>remote_url</code> — git remote에서 읽어 <code>repo.yaml</code>에 기록</li>
+    <li><code>language</code> — <code>package.json</code> (TypeScript 자동 감지) / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code>에서 감지</li>
+    <li><code>role</code> 기본값 — <code>.git</code> 있으면 <code>main</code>, 없으면 <code>unknown</code></li>
+  </ul>
+
+  <h4>Bulk 동기화</h4>
+  <p>이미 <code>repositories/</code>에 clone해둔 repo들을 한 번에 등록:</p>
+  <pre><code>solosquad sync                # 모든 org 스캔
+solosquad sync --org tesla    # 특정 org만
+solosquad sync --dry-run      # 미리보기 (아무 것도 쓰지 않음)</code></pre>
+  <p><strong>동작:</strong></p>
+  <ul>
+    <li><code>&lt;org&gt;/repositories/&lt;folder&gt;</code> 중 <code>.git</code> 있는데 <code>repo.yaml</code> 없는 경우 → 자동 등록</li>
+    <li>이미 등록된 repo → <code>=</code> 표시로 스킵</li>
+    <li><code>.git</code> 없는 폴더 → <code>?</code> 경고 표시 후 스킵</li>
+    <li><code>.org.yaml.products[].repos</code>를 실제 존재 repo 목록으로 갱신</li>
+    <li><code>.org.yaml</code>에 나열됐지만 실제 폴더가 없는 repo → <code>-</code> 빨간색 경고</li>
+  </ul>
+
+  <h4>Cross-repo workflow (v0.2.1+)</h4>
+  <p>v0.2.1 런타임은 워크플로우 <code>_status.yaml</code>의 stage에 <code>target_repo</code> 필드가 있으면 해당 stage 실행 시 그 repo를 cwd로 사용합니다. 여러 repo에 걸친 작업 흐름을 하나의 workflow로 조율 가능:</p>
+  <pre><code># &lt;org&gt;/workflows/model-y-refresh/_status.yaml
+stages:
+  - id: stage-1-vision
+    target_repo: autopilot-vision       # Claude가 이 repo를 cwd로
+    status: in_progress
+    depends_on: []
+
+  - id: stage-2-planner
+    target_repo: autopilot-planner      # 다른 repo
+    status: pending
+    depends_on: [stage-1-vision]</code></pre>
+  <p><strong>활성 stage 판정:</strong></p>
+  <ol>
+    <li><code>status: in_progress</code>인 stage가 있으면 그것</li>
+    <li>없으면 <code>status: pending</code> 중 <code>depends_on</code>이 모두 completed인 첫 stage</li>
+    <li>둘 다 없으면 role=main repo → org 루트 순 fallback</li>
+  </ol>
+  <p>stage 상태 전환 (<code>pending → in_progress → completed</code>)은 v0.3 PM 모드에서 자동화됩니다 — PM이 specialist를 spawn하기 전에 <code>in_progress</code>로 표시하고, Task tool 응답을 합치며 <code>completed</code>로 갱신.</p>
+
+  <h3 id="s7-4">7.4 보안 체크리스트</h3>
+  <p>이 시스템은 AI가 코드와 명령을 실행합니다. 다음을 꼭 확인.</p>
+  <ul>
+    <li><code>.env</code>가 <code>.gitignore</code>에 포함되어 있는지</li>
+    <li>봇 토큰 주기적 교체 (90일 권장)</li>
+    <li>AI 출력을 프로덕션에 배포하기 전 반드시 검토</li>
+    <li>메신저 봇 권한은 최소로 설정 — §5의 scope 리스트 이상 주지 않기</li>
+    <li><code>solosquad doctor</code> 주기적 실행</li>
+    <li>클라우드 운영 시: SSH 키 인증만 허용, 방화벽은 아웃바운드만 허용</li>
+    <li>v0.8.1+: <code>solosquad archive verify</code>를 외부 저장 전에 1회 실행 (PII-NOTICE 스캔 + manifest SHA 검증)</li>
+    <li>v0.8 멀티유저: 추가 사용자 등록 시 봇 multiplicity 안내 — 각 유저는 자기 채널 쌍(<code>command-&lt;handle&gt;</code>/<code>works-&lt;handle&gt;</code>)에서만 응답 (author-guard)</li>
+  </ul>
+  <p>상세: <code>docs/plan/v0.2-safety-security.md</code>, <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></p>
+
+  <h3 id="s7-5">7.5 정기 백업 + 관측성<span class="badge now">v0.8.3</span></h3>
+  <p>운영 중 정기 백업 + 로그 관측을 위한 흐름.</p>
+  <ul>
+    <li><strong>정기 백업</strong>: 월 1회 권장. <code>solosquad uninstall --mode archive-only</code>로 farewell archive zip만 생성(워크스페이스는 그대로). archive는 manifest.tsv SHA로 무결성 보장. 외부 저장 전 <code>solosquad archive verify</code>로 PII-NOTICE 스캔 권장. 마이그레이션 백업(<code>~/.solosquad-backups/</code>)은 <code>solosquad backup list</code>로 조회, 오래된 백업은 <code>solosquad backup purge --keep-recent 3</code>로 정리</li>
+    <li><strong>gh CLI 인증</strong>: dev_capability(<code>patch</code>/<code>pr</code>)가 PR을 만들려면 <code>gh auth login</code>이 호스트에 완료되어 있어야 함. <code>solosquad doctor</code>가 <code>gh</code> 존재만 체크 — 토큰 유효성은 <code>gh auth status</code>로 별도 확인</li>
+    <li><strong>로그 위치 + retention</strong>: <code>SOLOSQUAD_LOG_FILE=1</code> 활성 시 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code> 일별 rolling. 14일 보존(매일 00:30 log-rotate routine). <code>SOLOSQUAD_LOG_FORMAT=json</code>으로 구조화 출력 가능</li>
+    <li><strong>solosquad logs 명령</strong>: 4 operational jsonl(agent-costs / spawn-decisions / stop-hook-events / dev-confirmations / migration-costs)을 한 곳에서 tail/follow/필터 가능</li>
+    <li><strong>CLI ↔ workspace mismatch</strong>: <code>solosquad doctor</code>가 mismatch 감지 시 <code>migrate</code> vs <code>update</code> 어느 쪽이 필요한지 명시</li>
+  </ul>
+</section>
+
+<!-- ========================== SECTION 8 ========================== -->
+<section id="s8">
+  <h2><span class="num">8.</span>용어 사전</h2>
   <p>AI/개발 초보자가 이 문서나 코드를 읽다 막힐 만한 모든 용어와 파일명을 친절히 설명합니다.</p>
 
-  <h3 id="s7-1">7.1 핵심 용어</h3>
+  <h3 id="s8-1">8.1 핵심 용어</h3>
   <dl class="terms">
     <dt>Workspace (워크스페이스)</dt>
     <dd>SoloSquad 사용자의 최상위 폴더. 보통 <code>~/solosquad-workspace</code>. 안에 1개 이상의 organization을 담는다. 워크스페이스는 사용자 한 명의 "AI 비서 본부".</dd>
@@ -2061,7 +2288,7 @@ solosquad run-routine --all          # 전부</code></pre>
     <dd>URL/폴더 친화적 이름. 소문자·하이픈만 사용. 예: "My Startup" → <code>my-startup</code>.</dd>
   </dl>
 
-  <h3 id="s7-2">7.2 파일명 사전</h3>
+  <h3 id="s8-2">8.2 파일명 사전</h3>
   <p>워크스페이스나 코드에서 마주칠 모든 파일의 의미.</p>
 
   <dl class="terms">
@@ -2159,7 +2386,7 @@ solosquad run-routine --all          # 전부</code></pre>
     <dd>이 프로젝트에 기여하는 방법 안내 (개발자용).</dd>
   </dl>
 
-  <h3 id="s7-3">7.3 약어 사전</h3>
+  <h3 id="s8-3">8.3 약어 사전</h3>
   <dl class="terms">
     <dt>API</dt>
     <dd>Application Programming Interface. 소프트웨어 간 통신 규약. Slack API·Claude API 등.</dd>
@@ -2250,12 +2477,12 @@ solosquad run-routine --all          # 전부</code></pre>
   </dl>
 </section>
 
-<!-- ========================== SECTION 8 ========================== -->
-<section id="s8">
-  <h2><span class="num">8.</span>버전별 차이 (CHANGELOG)</h2>
+<!-- ========================== SECTION 9 ========================== -->
+<section id="s9">
+  <h2><span class="num">9.</span>CHANGELOG</h2>
   <p>출시된 모든 버전의 핵심 변경 사항. 완전한 release note 는 <code>CHANGELOG.md</code> 참조 — 본 절은 메뉴얼 단독으로도 읽을 수 있도록 같은 내용을 정리.</p>
 
-  <h3 id="s8-1">8.1 출시된 버전 (npm 배포 완료)</h3>
+  <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
   <h4>v1.2.4 (2026-05-29) <span class="badge now">최신</span> — Onboarding &amp; Vocabulary Polish</h4>
   <ul>
@@ -2329,7 +2556,7 @@ solosquad run-routine --all          # 전부</code></pre>
     <li><strong>v0.1.x</strong> — 최초 npm 배포, 25 specialist agents, Discord/Slack 어댑터</li>
   </ul>
 
-  <h3 id="s8-2">8.2 다음 슬롯 (기획 중)</h3>
+  <h3 id="s9-2">9.2 다음 슬롯 (기획 중)</h3>
 
   <h4>v1.2.x — 다음 patch / sub-version</h4>
   <ul>
@@ -2353,233 +2580,6 @@ solosquad run-routine --all          # 전부</code></pre>
   <div class="footer-note">
     완전한 결정 로그는 <code>docs/prd/product-roadmap.md</code> §5~§6 참조. 외부 reference 및 출처는 <code>docs/prd/architecture.md</code> §14 참조.
   </div>
-</section>
-
-<!-- ========================== SECTION 9 ========================== -->
-<section id="s9">
-  <h2><span class="num">9.</span>운영 가이드</h2>
-
-  <h3 id="s9-1">9.1 24/7 운영 방식 선택</h3>
-  <p>봇이 메신저와 연결을 유지하려면 <code>solosquad bot</code>이 계속 실행 중이어야 합니다. 방식 비교:</p>
-  <table>
-    <thead><tr><th>방식</th><th>대상</th><th>난이도</th><th>유지비</th><th>PC 전원</th></tr></thead>
-    <tbody>
-      <tr><td><strong>A. 로컬 데스크탑</strong></td><td>Mac Mini 등 항상 켜두는 PC</td><td>낮음</td><td>전기비만</td><td>항상 켜둬야 함</td></tr>
-      <tr><td><strong>B. 클라우드 VPS</strong></td><td>집에 서버 없음, 완전 24/7</td><td>중</td><td>월 $4~6+</td><td>PC 꺼도 무관</td></tr>
-    </tbody>
-  </table>
-
-  <h4>A-1. 터미널 열어두기 (가장 간단)</h4>
-  <pre><code>solosquad bot</code></pre>
-  <p>터미널이 열려 있는 동안만 동작. <code>Ctrl+C</code>나 창 닫으면 멈춤. PC 슬립 시 연결 끊김.</p>
-
-  <p><strong>macOS 슬립 방지 (Mac Mini에 특히 유용):</strong></p>
-  <pre><code>caffeinate -dims</code></pre>
-  <p>또는 시스템 설정 → 에너지 절약 → "디스플레이 끄기 제외" + 절전 모드 비활성화.</p>
-
-  <p><strong>Windows 슬립 방지:</strong> 설정 → 시스템 → 전원 → "절대 절전 모드로 설정 안 함".</p>
-
-  <p>스케줄러도 병행하려면 별도 터미널:</p>
-  <pre><code>solosquad schedule</code></pre>
-
-  <h4>A-2. Docker Compose (백그라운드 + 자동 재시작, 권장)</h4>
-  <p>전제: Docker Desktop 설치 (https://docs.docker.com/desktop/). macOS Apple Silicon/Intel 모두 동작. <code>solosquad init</code>이 <code>Dockerfile</code>과 <code>docker-compose.yml</code>을 워크스페이스에 복사했는지 확인.</p>
-  <pre><code>cd ~/solosquad-workspace
-docker compose up -d --build      # 최초 빌드 + 백그라운드 기동
-docker compose logs -f bot        # 봇 로그
-docker compose logs -f scheduler  # 스케줄러 로그
-docker compose ps                 # 서비스 상태
-docker compose restart            # 재시작
-docker compose down               # 정지</code></pre>
-
-  <p><strong>Claude Code 인증 공유:</strong> 컨테이너 내부의 <code>claude</code> CLI도 인증이 필요. <code>docker-compose.yml</code>이 호스트의 <code>${HOME}/.claude</code>를 컨테이너의 <code>/root/.claude</code>로 마운트 → 호스트 로그인 세션 공유.</p>
-  <ol>
-    <li>호스트에서 <code>claude login</code> 완료</li>
-    <li><code>docker compose up -d --build</code></li>
-    <li>컨테이너 안의 <code>claude</code>가 호스트 자격증명을 읽어 동일 계정으로 동작</li>
-  </ol>
-  <p>다른 경로면 <code>.env</code>에 명시:</p>
-  <pre><code>CLAUDE_AUTH_DIR=/Users/youruser/.claude</code></pre>
-
-  <p><strong>PC 재부팅 후:</strong> Docker Desktop 자동 시작 설정 시 (Docker Desktop 설정 → "Start Docker Desktop when you log in") 컨테이너는 <code>restart: unless-stopped</code> 정책으로 자동 복귀.</p>
-
-  <div class="callout warn">
-    <strong>Windows Docker 주의</strong>
-    <code>${HOME}/.claude</code> 볼륨 마운트는 macOS/Linux 기준. Windows에서 Docker를 쓴다면 <code>CLAUDE_AUTH_DIR</code>을 <code>C:/Users/yourname/.claude</code> 같은 절대 경로로 명시하거나, A-1 또는 A-3 방식 권장.
-  </div>
-
-  <h4>A-3. macOS launchd / Windows NSSM (서비스화)</h4>
-  <p>Docker 없이 네이티브 프로세스를 로그인 시 자동 시작하려면.</p>
-
-  <p><strong>macOS — launchd</strong>. <code>~/Library/LaunchAgents/com.solosquad.bot.plist</code>:</p>
-  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
-&lt;plist version="1.0"&gt;
-&lt;dict&gt;
-  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.solosquad.bot&lt;/string&gt;
-  &lt;key&gt;ProgramArguments&lt;/key&gt;
-  &lt;array&gt;
-    &lt;string&gt;/usr/local/bin/solosquad&lt;/string&gt;
-    &lt;string&gt;bot&lt;/string&gt;
-  &lt;/array&gt;
-  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/YOURNAME/solosquad-workspace&lt;/string&gt;
-  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
-  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
-  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.log&lt;/string&gt;
-  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.err&lt;/string&gt;
-&lt;/dict&gt;
-&lt;/plist&gt;</code></pre>
-  <p>경로(<code>/usr/local/bin/solosquad</code>)는 <code>which solosquad</code>로 확인. 등록/시작:</p>
-  <pre><code>launchctl load ~/Library/LaunchAgents/com.solosquad.bot.plist
-launchctl start com.solosquad.bot
-tail -f /tmp/solosquad-bot.log</code></pre>
-  <p>스케줄러도 동일하게 <code>com.solosquad.scheduler.plist</code> 추가.</p>
-
-  <p><strong>Windows — NSSM:</strong></p>
-  <ol>
-    <li>https://nssm.cc 에서 NSSM 다운로드 → <code>nssm.exe</code>를 PATH에 추가</li>
-    <li>관리자 PowerShell:
-      <pre><code>nssm install SolosquadBot "C:\Users\YOU\AppData\Roaming\npm\solosquad.cmd" bot
-nssm set SolosquadBot AppDirectory "C:\Users\YOU\solosquad-workspace"
-nssm start SolosquadBot</code></pre>
-    </li>
-  </ol>
-
-  <h4>B. 클라우드 VPS (고급)</h4>
-  <p>"집에 서버 둘 생각 없음" 또는 "PC 꺼도 봇은 살아있어야" 할 때.</p>
-
-  <p><strong>고려 시점:</strong></p>
-  <ul>
-    <li>집에 24/7 켜둘 PC 없음</li>
-    <li>여행 중이거나 노트북만 쓰는 라이프스타일</li>
-    <li>팀원 추가로 봇을 공동 운영해야 함</li>
-    <li>안정성이 사업에 직결 (자동 알림/루틴 실패가 손실)</li>
-  </ul>
-
-  <table>
-    <thead><tr><th>제공업체</th><th>월 비용</th><th>특징</th></tr></thead>
-    <tbody>
-      <tr><td>Hetzner</td><td>~$4</td><td>유럽 기반, 가성비 최고</td></tr>
-      <tr><td>Vultr</td><td>$5</td><td>서울 리전 있음</td></tr>
-      <tr><td>Linode</td><td>$5</td><td>안정적</td></tr>
-      <tr><td>DigitalOcean</td><td>$6</td><td>커뮤니티 자료 풍부</td></tr>
-      <tr><td>Railway (PaaS)</td><td>$5+</td><td>GitHub 연동 자동 배포, 서버 관리 불필요</td></tr>
-      <tr><td>Fly.io (Docker PaaS)</td><td>$5+</td><td>도쿄 리전, 글로벌 배포</td></tr>
-      <tr><td>AWS ECS Fargate</td><td>$10~15</td><td>엔터프라이즈급</td></tr>
-    </tbody>
-  </table>
-
-  <p>빠른 요약 (VPS + systemd):</p>
-  <pre><code># VPS SSH 접속 후
-sudo apt update && sudo apt install -y nodejs npm git
-npm install -g @anthropic-ai/claude-code solosquad
-mkdir ~/solosquad && cd ~/solosquad
-solosquad init
-claude login
-# systemd 서비스 등록 — 상세는 docs/cloud-deployment.md</code></pre>
-
-  <div class="callout info">
-    <strong>상세 가이드</strong>
-    <code>docs/cloud-deployment.md</code>에 VPS 최초 설정, Node.js 설치, solosquad 글로벌 설치, systemd 서비스 등록, 로그 관리, 업데이트, 백업이 정리되어 있습니다.
-  </div>
-
-  <h3 id="s9-2">9.2 멀티 워크스페이스 (페르소나 분리)</h3>
-  <p>본업/사이드 페르소나를 분리하고 싶을 때 Discord 워크스페이스를 여러 개 만듭니다. (Slack 어댑터로 분리하는 것도 코드상 가능하지만 v1.0 SemVer 약속 외.)</p>
-  <pre><code>~/solopreneur/      # Discord 봇, 본업 페르소나
-~/personal-lab/     # Discord 봇, 사이드 페르소나</code></pre>
-  <p>각각 독립된 <code>.env</code>·토큰·봇 계정을 갖습니다. 서로 간섭 없이 동시 운영 가능. 이 제약은 v0.2.0부터 — 이전 v0.1.x의 <code>MESSENGER=discord,slack</code> 복수 지정은 더 이상 지원하지 않습니다.</p>
-
-  <p><strong>업데이트 시:</strong> CLI 업데이트는 한 번이면 되지만 <strong>마이그레이션은 각 워크스페이스에서 개별 실행</strong> (§4.4 참조).</p>
-
-  <h3 id="s9-3">9.3 제품 여러 개 운영 (조직·저장소 관리)</h3>
-  <p>한 워크스페이스 안에 조직(=제품/사업)을 여러 개 둘 수 있습니다. 각 조직은 완전 격리된 메모리·워크플로·메신저 채널을 갖습니다.</p>
-
-  <h4>조직 추가</h4>
-  <pre><code>solosquad add org &lt;name&gt;                        # 대화형 (provider/remote_url 질의)
-solosquad add org my-side --provider github --remote-url https://github.com/my-side</code></pre>
-  <p><code>&lt;workspace&gt;/&lt;name&gt;/</code> 폴더 + <code>.org.yaml</code> + <code>memory/</code> (routine-logs/ + 4개 JSONL 스키마) + <code>workflows/</code> + <code>repositories/</code> + 메신저 폴더 자동 생성.</p>
-
-  <h4>저장소 추가</h4>
-  <p>URL이면 clone, 경로면 등록(필요시 이동).</p>
-  <pre><code>solosquad add repo https://github.com/foo/bar.git                       # clone + 등록
-solosquad add repo ./existing-local-repo                                # 이동(확인 후) + 등록
-solosquad add repo https://github.com/foo/bar.git --org tesla --role frontend
-solosquad add repo &lt;url|path&gt; --slug my-custom-slug                     # 폴더명 override</code></pre>
-
-  <p><strong>org 자동 판정 순서:</strong></p>
-  <ol>
-    <li><code>--org &lt;slug&gt;</code> 명시 → 즉시 사용</li>
-    <li>워크스페이스에 조직이 하나뿐 → 자동 선택 (묻지 않음)</li>
-    <li>현재 cwd가 특정 org 폴더 안 → 그 org 자동</li>
-    <li>복수 org + 위 모두 해당 안 됨 → 대화형 선택</li>
-  </ol>
-
-  <p><strong>자동 추출:</strong></p>
-  <ul>
-    <li><code>remote_url</code> — git remote에서 읽어 <code>repo.yaml</code>에 기록</li>
-    <li><code>language</code> — <code>package.json</code> (TypeScript 자동 감지) / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code>에서 감지</li>
-    <li><code>role</code> 기본값 — <code>.git</code> 있으면 <code>main</code>, 없으면 <code>unknown</code></li>
-  </ul>
-
-  <h4>Bulk 동기화</h4>
-  <p>이미 <code>repositories/</code>에 clone해둔 repo들을 한 번에 등록:</p>
-  <pre><code>solosquad sync                # 모든 org 스캔
-solosquad sync --org tesla    # 특정 org만
-solosquad sync --dry-run      # 미리보기 (아무 것도 쓰지 않음)</code></pre>
-  <p><strong>동작:</strong></p>
-  <ul>
-    <li><code>&lt;org&gt;/repositories/&lt;folder&gt;</code> 중 <code>.git</code> 있는데 <code>repo.yaml</code> 없는 경우 → 자동 등록</li>
-    <li>이미 등록된 repo → <code>=</code> 표시로 스킵</li>
-    <li><code>.git</code> 없는 폴더 → <code>?</code> 경고 표시 후 스킵</li>
-    <li><code>.org.yaml.products[].repos</code>를 실제 존재 repo 목록으로 갱신</li>
-    <li><code>.org.yaml</code>에 나열됐지만 실제 폴더가 없는 repo → <code>-</code> 빨간색 경고</li>
-  </ul>
-
-  <h4>Cross-repo workflow (v0.2.1+)</h4>
-  <p>v0.2.1 런타임은 워크플로우 <code>_status.yaml</code>의 stage에 <code>target_repo</code> 필드가 있으면 해당 stage 실행 시 그 repo를 cwd로 사용합니다. 여러 repo에 걸친 작업 흐름을 하나의 workflow로 조율 가능:</p>
-  <pre><code># &lt;org&gt;/workflows/model-y-refresh/_status.yaml
-stages:
-  - id: stage-1-vision
-    target_repo: autopilot-vision       # Claude가 이 repo를 cwd로
-    status: in_progress
-    depends_on: []
-
-  - id: stage-2-planner
-    target_repo: autopilot-planner      # 다른 repo
-    status: pending
-    depends_on: [stage-1-vision]</code></pre>
-  <p><strong>활성 stage 판정:</strong></p>
-  <ol>
-    <li><code>status: in_progress</code>인 stage가 있으면 그것</li>
-    <li>없으면 <code>status: pending</code> 중 <code>depends_on</code>이 모두 completed인 첫 stage</li>
-    <li>둘 다 없으면 role=main repo → org 루트 순 fallback</li>
-  </ol>
-  <p>stage 상태 전환 (<code>pending → in_progress → completed</code>)은 v0.3 PM 모드에서 자동화됩니다 — PM이 specialist를 spawn하기 전에 <code>in_progress</code>로 표시하고, Task tool 응답을 합치며 <code>completed</code>로 갱신.</p>
-
-  <h3 id="s9-4">9.4 보안 체크리스트</h3>
-  <p>이 시스템은 AI가 코드와 명령을 실행합니다. 다음을 꼭 확인.</p>
-  <ul>
-    <li><code>.env</code>가 <code>.gitignore</code>에 포함되어 있는지</li>
-    <li>봇 토큰 주기적 교체 (90일 권장)</li>
-    <li>AI 출력을 프로덕션에 배포하기 전 반드시 검토</li>
-    <li>메신저 봇 권한은 최소로 설정 — §5의 scope 리스트 이상 주지 않기</li>
-    <li><code>solosquad doctor</code> 주기적 실행</li>
-    <li>클라우드 운영 시: SSH 키 인증만 허용, 방화벽은 아웃바운드만 허용</li>
-    <li>v0.8.1+: <code>solosquad archive verify</code>를 외부 저장 전에 1회 실행 (PII-NOTICE 스캔 + manifest SHA 검증)</li>
-    <li>v0.8 멀티유저: 추가 사용자 등록 시 봇 multiplicity 안내 — 각 유저는 자기 채널 쌍(<code>command-&lt;handle&gt;</code>/<code>works-&lt;handle&gt;</code>)에서만 응답 (author-guard)</li>
-  </ul>
-  <p>상세: <code>docs/plan/v0.2-safety-security.md</code>, <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></p>
-
-  <h3 id="s9-5">9.5 정기 백업 + 관측성<span class="badge now">v0.8.3</span></h3>
-  <p>운영 중 정기 백업 + 로그 관측을 위한 흐름.</p>
-  <ul>
-    <li><strong>정기 백업</strong>: 월 1회 권장. <code>solosquad uninstall --mode archive-only</code>로 farewell archive zip만 생성(워크스페이스는 그대로). archive는 manifest.tsv SHA로 무결성 보장. 외부 저장 전 <code>solosquad archive verify</code>로 PII-NOTICE 스캔 권장. 마이그레이션 백업(<code>~/.solosquad-backups/</code>)은 <code>solosquad backup list</code>로 조회, 오래된 백업은 <code>solosquad backup purge --keep-recent 3</code>로 정리</li>
-    <li><strong>gh CLI 인증</strong>: dev_capability(<code>patch</code>/<code>pr</code>)가 PR을 만들려면 <code>gh auth login</code>이 호스트에 완료되어 있어야 함. <code>solosquad doctor</code>가 <code>gh</code> 존재만 체크 — 토큰 유효성은 <code>gh auth status</code>로 별도 확인</li>
-    <li><strong>로그 위치 + retention</strong>: <code>SOLOSQUAD_LOG_FILE=1</code> 활성 시 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code> 일별 rolling. 14일 보존(매일 00:30 log-rotate routine). <code>SOLOSQUAD_LOG_FORMAT=json</code>으로 구조화 출력 가능</li>
-    <li><strong>solosquad logs 명령</strong>: 4 operational jsonl(agent-costs / spawn-decisions / stop-hook-events / dev-confirmations / migration-costs)을 한 곳에서 tail/follow/필터 가능</li>
-    <li><strong>CLI ↔ workspace mismatch</strong>: <code>solosquad doctor</code>가 mismatch 감지 시 <code>migrate</code> vs <code>update</code> 어느 쪽이 필요한지 명시</li>
-  </ul>
 </section>
 
 <!-- ========================== SECTION 10 ========================== -->

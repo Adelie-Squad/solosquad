@@ -273,28 +273,28 @@
         </ul>
       </li>
       <li>
-        <a data-target="s7">7. Glossary</a>
+        <a data-target="s7">7. Operations Guide</a>
         <ul class="sub">
-          <li><a href="#s7-1">7.1 Core Terms</a></li>
-          <li><a href="#s7-2">7.2 File Dictionary</a></li>
-          <li><a href="#s7-3">7.3 Abbreviations</a></li>
+          <li><a href="#s7-1">7.1 24/7 Operating Mode</a></li>
+          <li><a href="#s7-2">7.2 Multi-Workspace</a></li>
+          <li><a href="#s7-3">7.3 Multi-Product</a></li>
+          <li><a href="#s7-4">7.4 Security Checklist</a></li>
+          <li><a href="#s7-5">7.5 Backup &amp; Observability</a></li>
         </ul>
       </li>
       <li>
-        <a data-target="s8">8. Version Differences</a>
+        <a data-target="s8">8. Glossary</a>
         <ul class="sub">
-          <li><a href="#s8-1">8.1 Released</a></li>
-          <li><a href="#s8-2">8.2 Upcoming slots</a></li>
+          <li><a href="#s8-1">8.1 Core Terms</a></li>
+          <li><a href="#s8-2">8.2 File Dictionary</a></li>
+          <li><a href="#s8-3">8.3 Abbreviations</a></li>
         </ul>
       </li>
       <li>
-        <a data-target="s9">9. Operations Guide</a>
+        <a data-target="s9">9. CHANGELOG</a>
         <ul class="sub">
-          <li><a href="#s9-1">9.1 24/7 Operating Mode</a></li>
-          <li><a href="#s9-2">9.2 Multi-Workspace</a></li>
-          <li><a href="#s9-3">9.3 Multi-Product</a></li>
-          <li><a href="#s9-4">9.4 Security Checklist</a></li>
-          <li><a href="#s9-5">9.5 Backup &amp; Observability</a></li>
+          <li><a href="#s9-1">9.1 Released</a></li>
+          <li><a href="#s9-2">9.2 Upcoming slots</a></li>
         </ul>
       </li>
       <li>
@@ -1877,10 +1877,237 @@ solosquad run-routine --all             # all</code></pre>
 
 <!-- ========================== SECTION 7 ========================== -->
 <section id="s7">
-  <h2><span class="num">7.</span>Glossary</h2>
+  <h2><span class="num">7.</span>Operations Guide</h2>
+
+  <h3 id="s7-1">7.1 Choose a 24/7 Operating Mode</h3>
+  <p>The bot needs <code>solosquad bot</code> running continuously to maintain its messenger connection. Comparison:</p>
+  <table>
+    <thead><tr><th>Mode</th><th>Target</th><th>Difficulty</th><th>Cost</th><th>PC power</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. Local desktop</strong></td><td>A PC kept always on (Mac Mini, etc.)</td><td>Low</td><td>Electricity only</td><td>Must stay on</td></tr>
+      <tr><td><strong>B. Cloud VPS</strong></td><td>No home server, fully 24/7</td><td>Medium</td><td>$4-6+/month</td><td>PC can be off</td></tr>
+    </tbody>
+  </table>
+
+  <h4>A-1. Keep terminal open (simplest)</h4>
+  <pre><code>solosquad bot</code></pre>
+  <p>Runs only while the terminal is open. Stops on <code>Ctrl+C</code> or window close. PC sleep breaks the connection.</p>
+
+  <p><strong>macOS sleep prevention (especially useful on Mac Mini):</strong></p>
+  <pre><code>caffeinate -dims</code></pre>
+  <p>Or System Settings → Energy Saver → "Prevent display sleep" + disable Power Nap.</p>
+
+  <p><strong>Windows sleep prevention:</strong> Settings → System → Power → "Never go to sleep."</p>
+
+  <p>For the scheduler in parallel, separate terminal:</p>
+  <pre><code>solosquad schedule</code></pre>
+
+  <h4>A-2. Docker Compose (background + auto-restart, recommended)</h4>
+  <p>Prerequisite: Docker Desktop installed (https://docs.docker.com/desktop/). Works on macOS Apple Silicon / Intel. Verify <code>solosquad init</code> copied <code>Dockerfile</code> and <code>docker-compose.yml</code> to the workspace.</p>
+  <pre><code>cd ~/solosquad-workspace
+docker compose up -d --build      # initial build + background start
+docker compose logs -f bot        # bot logs
+docker compose logs -f scheduler  # scheduler logs
+docker compose ps                 # service status
+docker compose restart            # restart
+docker compose down               # stop</code></pre>
+
+  <p><strong>Sharing Claude Code authentication:</strong> the in-container <code>claude</code> CLI also needs auth. <code>docker-compose.yml</code> mounts host's <code>${HOME}/.claude</code> to container's <code>/root/.claude</code> → host login session is shared.</p>
+  <ol>
+    <li><code>claude login</code> on host</li>
+    <li><code>docker compose up -d --build</code></li>
+    <li>In-container <code>claude</code> reads host credentials, operates under the same account</li>
+  </ol>
+  <p>For a different path, set in <code>.env</code>:</p>
+  <pre><code>CLAUDE_AUTH_DIR=/Users/youruser/.claude</code></pre>
+
+  <p><strong>After PC reboot:</strong> with Docker Desktop set to auto-start (Docker Desktop settings → "Start Docker Desktop when you log in"), containers auto-recover via <code>restart: unless-stopped</code>.</p>
+
+  <div class="callout warn">
+    <strong>Windows Docker caveat</strong>
+    The <code>${HOME}/.claude</code> volume mount is macOS/Linux. On Windows Docker, set <code>CLAUDE_AUTH_DIR</code> to an absolute path like <code>C:/Users/yourname/.claude</code>, or use A-1 / A-3.
+  </div>
+
+  <h4>A-3. macOS launchd / Windows NSSM (service-ify)</h4>
+  <p>For native process auto-start on login without Docker.</p>
+
+  <p><strong>macOS — launchd.</strong> Create <code>~/Library/LaunchAgents/com.solosquad.bot.plist</code>:</p>
+  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.solosquad.bot&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;
+    &lt;string&gt;/usr/local/bin/solosquad&lt;/string&gt;
+    &lt;string&gt;bot&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/YOURNAME/solosquad-workspace&lt;/string&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
+  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.log&lt;/string&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.err&lt;/string&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;</code></pre>
+  <p>Verify the path (<code>/usr/local/bin/solosquad</code>) with <code>which solosquad</code>. Register / start:</p>
+  <pre><code>launchctl load ~/Library/LaunchAgents/com.solosquad.bot.plist
+launchctl start com.solosquad.bot
+tail -f /tmp/solosquad-bot.log</code></pre>
+  <p>Add <code>com.solosquad.scheduler.plist</code> similarly for the scheduler.</p>
+
+  <p><strong>Windows — NSSM:</strong></p>
+  <ol>
+    <li>Download NSSM from https://nssm.cc → add <code>nssm.exe</code> to PATH</li>
+    <li>Admin PowerShell:
+      <pre><code>nssm install SolosquadBot "C:\Users\YOU\AppData\Roaming\npm\solosquad.cmd" bot
+nssm set SolosquadBot AppDirectory "C:\Users\YOU\solosquad-workspace"
+nssm start SolosquadBot</code></pre>
+    </li>
+  </ol>
+
+  <h4>B. Cloud VPS (advanced)</h4>
+  <p>When you have no plan to keep a home server on, or "bot must live even when PC is off."</p>
+
+  <p><strong>Worth considering when:</strong></p>
+  <ul>
+    <li>No 24/7 PC at home</li>
+    <li>Traveling / laptop-only lifestyle</li>
+    <li>Multiple team members co-operate the bot</li>
+    <li>Stability ties directly to business (auto-alert / routine failures cause losses)</li>
+  </ul>
+
+  <table>
+    <thead><tr><th>Provider</th><th>Monthly</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Hetzner</td><td>~$4</td><td>EU-based, best price/perf</td></tr>
+      <tr><td>Vultr</td><td>$5</td><td>Seoul region available</td></tr>
+      <tr><td>Linode</td><td>$5</td><td>Stable</td></tr>
+      <tr><td>DigitalOcean</td><td>$6</td><td>Rich community resources</td></tr>
+      <tr><td>Railway (PaaS)</td><td>$5+</td><td>GitHub integration auto-deploy, no server management</td></tr>
+      <tr><td>Fly.io (Docker PaaS)</td><td>$5+</td><td>Tokyo region, global deploy</td></tr>
+      <tr><td>AWS ECS Fargate</td><td>$10-15</td><td>Enterprise-grade</td></tr>
+    </tbody>
+  </table>
+
+  <p>Quick summary (VPS + systemd):</p>
+  <pre><code># SSH into VPS
+sudo apt update &amp;&amp; sudo apt install -y nodejs npm git
+npm install -g @anthropic-ai/claude-code solosquad
+mkdir ~/solosquad &amp;&amp; cd ~/solosquad
+solosquad init
+claude login
+# Register systemd service — see docs/cloud-deployment.md</code></pre>
+
+  <div class="callout info">
+    <strong>Detailed guide</strong>
+    <code>docs/cloud-deployment.md</code> covers VPS initial setup, Node.js install, global solosquad install, systemd service registration, log management, updates, backups.
+  </div>
+
+  <h3 id="s7-2">7.2 Multi-Workspace (persona separation)</h3>
+  <p>When you want day-job / side-project persona separation, run multiple Discord workspaces. (Slack adapter still works for legacy separation but is outside the v1.0 SemVer promise.)</p>
+  <pre><code>~/solopreneur/      # Discord bot, day-job persona
+~/personal-lab/     # Discord bot, side persona</code></pre>
+  <p>Each gets independent <code>.env</code> / tokens / bot accounts. Operate in parallel without interference. This constraint exists from v0.2.0+ — v0.1.x's <code>MESSENGER=discord,slack</code> (multi-target) is no longer supported. v1.0 ships only the Discord adapter under the SemVer promise; the Slack adapter remains in code but is a post-v1.0 slot.</p>
+
+  <p><strong>Updating:</strong> CLI update is one-shot but <strong>migration runs per workspace</strong> (see §4.4).</p>
+
+  <h3 id="s7-3">7.3 Multi-Product Operation (organizations &amp; repos)</h3>
+  <p>A workspace can hold multiple organizations (= product/business). Each has fully isolated memory / workflows / messenger channels.</p>
+
+  <h4>Add organization</h4>
+  <pre><code>solosquad add org &lt;name&gt;                        # interactive (asks for provider/remote_url)
+solosquad add org my-side --provider github --remote-url https://github.com/my-side</code></pre>
+  <p>Creates <code>&lt;workspace&gt;/&lt;name&gt;/</code> folder + <code>.org.yaml</code> + <code>memory/</code> (routine-logs/ + 4 JSONL schemas) + <code>workflows/</code> + <code>repositories/</code> + messenger folder automatically.</p>
+
+  <h4>Add repository</h4>
+  <p>URL → clone, path → register (move if needed).</p>
+  <pre><code>solosquad add repo https://github.com/foo/bar.git                       # clone + register
+solosquad add repo ./existing-local-repo                                # move (after confirm) + register
+solosquad add repo https://github.com/foo/bar.git --org tesla --role frontend
+solosquad add repo &lt;url|path&gt; --slug my-custom-slug                     # folder name override</code></pre>
+
+  <p><strong>Org auto-decision order:</strong></p>
+  <ol>
+    <li><code>--org &lt;slug&gt;</code> explicit → use immediately</li>
+    <li>Workspace has exactly one org → auto-pick (don't ask)</li>
+    <li>Current cwd is inside a specific org folder → auto-use that org</li>
+    <li>Multiple orgs + above all fail → interactive prompt</li>
+  </ol>
+
+  <p><strong>Auto-extraction:</strong></p>
+  <ul>
+    <li><code>remote_url</code> — read from git remote, recorded in <code>repo.yaml</code></li>
+    <li><code>language</code> — detected from <code>package.json</code> (TypeScript auto-detected) / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code></li>
+    <li><code>role</code> default — <code>main</code> if <code>.git</code> exists, else <code>unknown</code></li>
+  </ul>
+
+  <h4>Bulk sync</h4>
+  <p>If repos are already cloned in <code>repositories/</code>, register them all at once:</p>
+  <pre><code>solosquad sync                # scan all orgs
+solosquad sync --org tesla    # specific org
+solosquad sync --dry-run      # preview (writes nothing)</code></pre>
+  <p><strong>Behavior:</strong></p>
+  <ul>
+    <li>Folders under <code>&lt;org&gt;/repositories/&lt;folder&gt;</code> with <code>.git</code> but no <code>repo.yaml</code> → auto-register</li>
+    <li>Already-registered repos → skipped with <code>=</code> marker</li>
+    <li>Folders without <code>.git</code> → <code>?</code> warning, skipped</li>
+    <li><code>.org.yaml.products[].repos</code> updated to actually-existing repos</li>
+    <li>Repos listed in <code>.org.yaml</code> but no longer existing → <code>-</code> red warning</li>
+  </ul>
+
+  <h4>Cross-repo workflow (v0.2.1+)</h4>
+  <p>The v0.2.1 runtime, when a stage in <code>_status.yaml</code> has a <code>target_repo</code> field, uses that repo as cwd when executing the stage. Workflows spanning multiple repos can be coordinated as one workflow:</p>
+  <pre><code># &lt;org&gt;/workflows/model-y-refresh/_status.yaml
+stages:
+  - id: stage-1-vision
+    target_repo: autopilot-vision       # Claude uses this repo as cwd
+    status: in_progress
+    depends_on: []
+
+  - id: stage-2-planner
+    target_repo: autopilot-planner      # different repo
+    status: pending
+    depends_on: [stage-1-vision]</code></pre>
+  <p><strong>Active stage decision:</strong></p>
+  <ol>
+    <li>A stage with <code>status: in_progress</code> → that one</li>
+    <li>Otherwise, the first <code>status: pending</code> whose <code>depends_on</code> are all completed</li>
+    <li>If neither, fall back to role=main repo → org root</li>
+  </ol>
+  <p>Stage transitions (<code>pending → in_progress → completed</code>) are automated by v0.3 PM mode — PM marks <code>in_progress</code> before spawning a specialist, merges the Task tool response, then advances to <code>completed</code>.</p>
+
+  <h3 id="s7-4">7.4 Security Checklist</h3>
+  <p>This system has AI executing code and commands. Confirm the following:</p>
+  <ul>
+    <li><code>.env</code> is in <code>.gitignore</code></li>
+    <li>Rotate bot tokens periodically (90 days recommended)</li>
+    <li>Always review AI output before deploying to production</li>
+    <li>Keep messenger bot permissions minimal — don't grant beyond §5's scope list</li>
+    <li>Run <code>solosquad doctor</code> periodically</li>
+    <li>Cloud ops: SSH key auth only, firewall outbound-only</li>
+    <li>v0.8.1+: run <code>solosquad archive verify</code> once before externally storing an archive (PII-NOTICE scan + manifest SHA verify)</li>
+    <li>v0.8 multi-user: when adding another user, explain bot multiplicity — each user only responds in their own channel pair (<code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code>) per author-guard</li>
+  </ul>
+  <p>Details: <code>docs/plan/v0.2-safety-security.md</code>, <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></p>
+
+  <h3 id="s7-5">7.5 Periodic Backup + Observability<span class="badge now">v0.8.3</span></h3>
+  <p>Backup + log observability flow during operation.</p>
+  <ul>
+    <li><strong>Periodic backup</strong>: monthly recommended. <code>solosquad uninstall --mode archive-only</code> creates just the farewell archive zip (workspace stays). Archive integrity ensured via manifest.tsv SHA. <code>solosquad archive verify</code> recommended before external storage. Migration backups (<code>~/.solosquad-backups/</code>) listed via <code>solosquad backup list</code>; old backups cleaned via <code>solosquad backup purge --keep-recent 3</code></li>
+    <li><strong>gh CLI authentication</strong>: for dev_capability (<code>patch</code> / <code>pr</code>) to create PRs, <code>gh auth login</code> must be complete on the host. <code>solosquad doctor</code> only checks <code>gh</code> existence — token validity is verified separately via <code>gh auth status</code></li>
+    <li><strong>Log location + retention</strong>: with <code>SOLOSQUAD_LOG_FILE=1</code> enabled, daily rolling at <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>. Retained 14 days (daily 00:00 system-housekeeping). <code>SOLOSQUAD_LOG_FORMAT=json</code> for structured output</li>
+    <li><strong>solosquad logs command</strong>: tail/follow/filter 4 operational jsonl (agent-costs / spawn-decisions / stop-hook-events / dev-confirmations / migration-costs) in one place</li>
+    <li><strong>CLI ↔ workspace mismatch</strong>: <code>solosquad doctor</code> explicitly indicates whether <code>migrate</code> or <code>update</code> is needed</li>
+  </ul>
+</section>
+
+<!-- ========================== SECTION 8 ========================== -->
+<section id="s8">
+  <h2><span class="num">8.</span>Glossary</h2>
   <p>This section explains every term and filename a newcomer to AI / dev might hit while reading these docs or the code.</p>
 
-  <h3 id="s7-1">7.1 Core Terms</h3>
+  <h3 id="s8-1">8.1 Core Terms</h3>
   <dl class="terms">
     <dt>Workspace</dt>
     <dd>SoloSquad user's top-level folder, typically <code>~/solosquad-workspace</code>. Holds 1+ organizations. A workspace is one user's "AI assistant HQ."</dd>
@@ -2045,7 +2272,7 @@ solosquad run-routine --all             # all</code></pre>
     <dd>URL/folder-friendly name. Lowercase + hyphens. e.g. "My Startup" → <code>my-startup</code>.</dd>
   </dl>
 
-  <h3 id="s7-2">7.2 File Dictionary</h3>
+  <h3 id="s8-2">8.2 File Dictionary</h3>
   <p>Meaning of every file you'll encounter in a workspace or the code.</p>
 
   <dl class="terms">
@@ -2143,7 +2370,7 @@ solosquad run-routine --all             # all</code></pre>
     <dd>Guide for contributing (developer-facing).</dd>
   </dl>
 
-  <h3 id="s7-3">7.3 Abbreviation Dictionary</h3>
+  <h3 id="s8-3">8.3 Abbreviation Dictionary</h3>
   <dl class="terms">
     <dt>API</dt>
     <dd>Application Programming Interface. Inter-software protocol. Slack API, Claude API, etc.</dd>
@@ -2206,12 +2433,12 @@ solosquad run-routine --all             # all</code></pre>
   </dl>
 </section>
 
-<!-- ========================== SECTION 8 ========================== -->
-<section id="s8">
-  <h2><span class="num">8.</span>Version Differences (CHANGELOG)</h2>
+<!-- ========================== SECTION 9 ========================== -->
+<section id="s9">
+  <h2><span class="num">9.</span>CHANGELOG</h2>
   <p>Core changes per released version. Full release notes live in <code>CHANGELOG.md</code> — this section mirrors the same content so the manual is self-contained.</p>
 
-  <h3 id="s8-1">8.1 Released (npm-published)</h3>
+  <h3 id="s9-1">9.1 Released (npm-published)</h3>
 
   <h4>v1.2.4 (2026-05-29) <span class="badge now">latest</span> — Onboarding &amp; Vocabulary Polish</h4>
   <ul>
@@ -2284,7 +2511,7 @@ solosquad run-routine --all             # all</code></pre>
     <li><strong>v0.1.x</strong> — First npm publishes, 25 specialist agents, Discord/Slack adapters.</li>
   </ul>
 
-  <h3 id="s8-2">8.2 Upcoming slots (planned)</h3>
+  <h3 id="s9-2">9.2 Upcoming slots (planned)</h3>
 
   <h4>v1.2.x — Next patches / sub-versions</h4>
   <ul>
@@ -2308,233 +2535,6 @@ solosquad run-routine --all             # all</code></pre>
   <div class="footer-note">
     Full decision log in <code>docs/prd/product-roadmap.md</code> §5~§6. External references and sources in <code>docs/prd/architecture.md</code> §14.
   </div>
-</section>
-
-<!-- ========================== SECTION 9 ========================== -->
-<section id="s9">
-  <h2><span class="num">9.</span>Operations Guide</h2>
-
-  <h3 id="s9-1">9.1 Choose a 24/7 Operating Mode</h3>
-  <p>The bot needs <code>solosquad bot</code> running continuously to maintain its messenger connection. Comparison:</p>
-  <table>
-    <thead><tr><th>Mode</th><th>Target</th><th>Difficulty</th><th>Cost</th><th>PC power</th></tr></thead>
-    <tbody>
-      <tr><td><strong>A. Local desktop</strong></td><td>A PC kept always on (Mac Mini, etc.)</td><td>Low</td><td>Electricity only</td><td>Must stay on</td></tr>
-      <tr><td><strong>B. Cloud VPS</strong></td><td>No home server, fully 24/7</td><td>Medium</td><td>$4-6+/month</td><td>PC can be off</td></tr>
-    </tbody>
-  </table>
-
-  <h4>A-1. Keep terminal open (simplest)</h4>
-  <pre><code>solosquad bot</code></pre>
-  <p>Runs only while the terminal is open. Stops on <code>Ctrl+C</code> or window close. PC sleep breaks the connection.</p>
-
-  <p><strong>macOS sleep prevention (especially useful on Mac Mini):</strong></p>
-  <pre><code>caffeinate -dims</code></pre>
-  <p>Or System Settings → Energy Saver → "Prevent display sleep" + disable Power Nap.</p>
-
-  <p><strong>Windows sleep prevention:</strong> Settings → System → Power → "Never go to sleep."</p>
-
-  <p>For the scheduler in parallel, separate terminal:</p>
-  <pre><code>solosquad schedule</code></pre>
-
-  <h4>A-2. Docker Compose (background + auto-restart, recommended)</h4>
-  <p>Prerequisite: Docker Desktop installed (https://docs.docker.com/desktop/). Works on macOS Apple Silicon / Intel. Verify <code>solosquad init</code> copied <code>Dockerfile</code> and <code>docker-compose.yml</code> to the workspace.</p>
-  <pre><code>cd ~/solosquad-workspace
-docker compose up -d --build      # initial build + background start
-docker compose logs -f bot        # bot logs
-docker compose logs -f scheduler  # scheduler logs
-docker compose ps                 # service status
-docker compose restart            # restart
-docker compose down               # stop</code></pre>
-
-  <p><strong>Sharing Claude Code authentication:</strong> the in-container <code>claude</code> CLI also needs auth. <code>docker-compose.yml</code> mounts host's <code>${HOME}/.claude</code> to container's <code>/root/.claude</code> → host login session is shared.</p>
-  <ol>
-    <li><code>claude login</code> on host</li>
-    <li><code>docker compose up -d --build</code></li>
-    <li>In-container <code>claude</code> reads host credentials, operates under the same account</li>
-  </ol>
-  <p>For a different path, set in <code>.env</code>:</p>
-  <pre><code>CLAUDE_AUTH_DIR=/Users/youruser/.claude</code></pre>
-
-  <p><strong>After PC reboot:</strong> with Docker Desktop set to auto-start (Docker Desktop settings → "Start Docker Desktop when you log in"), containers auto-recover via <code>restart: unless-stopped</code>.</p>
-
-  <div class="callout warn">
-    <strong>Windows Docker caveat</strong>
-    The <code>${HOME}/.claude</code> volume mount is macOS/Linux. On Windows Docker, set <code>CLAUDE_AUTH_DIR</code> to an absolute path like <code>C:/Users/yourname/.claude</code>, or use A-1 / A-3.
-  </div>
-
-  <h4>A-3. macOS launchd / Windows NSSM (service-ify)</h4>
-  <p>For native process auto-start on login without Docker.</p>
-
-  <p><strong>macOS — launchd.</strong> Create <code>~/Library/LaunchAgents/com.solosquad.bot.plist</code>:</p>
-  <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
-&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
-&lt;plist version="1.0"&gt;
-&lt;dict&gt;
-  &lt;key&gt;Label&lt;/key&gt;&lt;string&gt;com.solosquad.bot&lt;/string&gt;
-  &lt;key&gt;ProgramArguments&lt;/key&gt;
-  &lt;array&gt;
-    &lt;string&gt;/usr/local/bin/solosquad&lt;/string&gt;
-    &lt;string&gt;bot&lt;/string&gt;
-  &lt;/array&gt;
-  &lt;key&gt;WorkingDirectory&lt;/key&gt;&lt;string&gt;/Users/YOURNAME/solosquad-workspace&lt;/string&gt;
-  &lt;key&gt;RunAtLoad&lt;/key&gt;&lt;true/&gt;
-  &lt;key&gt;KeepAlive&lt;/key&gt;&lt;true/&gt;
-  &lt;key&gt;StandardOutPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.log&lt;/string&gt;
-  &lt;key&gt;StandardErrorPath&lt;/key&gt;&lt;string&gt;/tmp/solosquad-bot.err&lt;/string&gt;
-&lt;/dict&gt;
-&lt;/plist&gt;</code></pre>
-  <p>Verify the path (<code>/usr/local/bin/solosquad</code>) with <code>which solosquad</code>. Register / start:</p>
-  <pre><code>launchctl load ~/Library/LaunchAgents/com.solosquad.bot.plist
-launchctl start com.solosquad.bot
-tail -f /tmp/solosquad-bot.log</code></pre>
-  <p>Add <code>com.solosquad.scheduler.plist</code> similarly for the scheduler.</p>
-
-  <p><strong>Windows — NSSM:</strong></p>
-  <ol>
-    <li>Download NSSM from https://nssm.cc → add <code>nssm.exe</code> to PATH</li>
-    <li>Admin PowerShell:
-      <pre><code>nssm install SolosquadBot "C:\Users\YOU\AppData\Roaming\npm\solosquad.cmd" bot
-nssm set SolosquadBot AppDirectory "C:\Users\YOU\solosquad-workspace"
-nssm start SolosquadBot</code></pre>
-    </li>
-  </ol>
-
-  <h4>B. Cloud VPS (advanced)</h4>
-  <p>When you have no plan to keep a home server on, or "bot must live even when PC is off."</p>
-
-  <p><strong>Worth considering when:</strong></p>
-  <ul>
-    <li>No 24/7 PC at home</li>
-    <li>Traveling / laptop-only lifestyle</li>
-    <li>Multiple team members co-operate the bot</li>
-    <li>Stability ties directly to business (auto-alert / routine failures cause losses)</li>
-  </ul>
-
-  <table>
-    <thead><tr><th>Provider</th><th>Monthly</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td>Hetzner</td><td>~$4</td><td>EU-based, best price/perf</td></tr>
-      <tr><td>Vultr</td><td>$5</td><td>Seoul region available</td></tr>
-      <tr><td>Linode</td><td>$5</td><td>Stable</td></tr>
-      <tr><td>DigitalOcean</td><td>$6</td><td>Rich community resources</td></tr>
-      <tr><td>Railway (PaaS)</td><td>$5+</td><td>GitHub integration auto-deploy, no server management</td></tr>
-      <tr><td>Fly.io (Docker PaaS)</td><td>$5+</td><td>Tokyo region, global deploy</td></tr>
-      <tr><td>AWS ECS Fargate</td><td>$10-15</td><td>Enterprise-grade</td></tr>
-    </tbody>
-  </table>
-
-  <p>Quick summary (VPS + systemd):</p>
-  <pre><code># SSH into VPS
-sudo apt update &amp;&amp; sudo apt install -y nodejs npm git
-npm install -g @anthropic-ai/claude-code solosquad
-mkdir ~/solosquad &amp;&amp; cd ~/solosquad
-solosquad init
-claude login
-# Register systemd service — see docs/cloud-deployment.md</code></pre>
-
-  <div class="callout info">
-    <strong>Detailed guide</strong>
-    <code>docs/cloud-deployment.md</code> covers VPS initial setup, Node.js install, global solosquad install, systemd service registration, log management, updates, backups.
-  </div>
-
-  <h3 id="s9-2">9.2 Multi-Workspace (persona separation)</h3>
-  <p>When you want day-job / side-project persona separation, run multiple Discord workspaces. (Slack adapter still works for legacy separation but is outside the v1.0 SemVer promise.)</p>
-  <pre><code>~/solopreneur/      # Discord bot, day-job persona
-~/personal-lab/     # Discord bot, side persona</code></pre>
-  <p>Each gets independent <code>.env</code> / tokens / bot accounts. Operate in parallel without interference. This constraint exists from v0.2.0+ — v0.1.x's <code>MESSENGER=discord,slack</code> (multi-target) is no longer supported. v1.0 ships only the Discord adapter under the SemVer promise; the Slack adapter remains in code but is a post-v1.0 slot.</p>
-
-  <p><strong>Updating:</strong> CLI update is one-shot but <strong>migration runs per workspace</strong> (see §4.4).</p>
-
-  <h3 id="s9-3">9.3 Multi-Product Operation (organizations &amp; repos)</h3>
-  <p>A workspace can hold multiple organizations (= product/business). Each has fully isolated memory / workflows / messenger channels.</p>
-
-  <h4>Add organization</h4>
-  <pre><code>solosquad add org &lt;name&gt;                        # interactive (asks for provider/remote_url)
-solosquad add org my-side --provider github --remote-url https://github.com/my-side</code></pre>
-  <p>Creates <code>&lt;workspace&gt;/&lt;name&gt;/</code> folder + <code>.org.yaml</code> + <code>memory/</code> (routine-logs/ + 4 JSONL schemas) + <code>workflows/</code> + <code>repositories/</code> + messenger folder automatically.</p>
-
-  <h4>Add repository</h4>
-  <p>URL → clone, path → register (move if needed).</p>
-  <pre><code>solosquad add repo https://github.com/foo/bar.git                       # clone + register
-solosquad add repo ./existing-local-repo                                # move (after confirm) + register
-solosquad add repo https://github.com/foo/bar.git --org tesla --role frontend
-solosquad add repo &lt;url|path&gt; --slug my-custom-slug                     # folder name override</code></pre>
-
-  <p><strong>Org auto-decision order:</strong></p>
-  <ol>
-    <li><code>--org &lt;slug&gt;</code> explicit → use immediately</li>
-    <li>Workspace has exactly one org → auto-pick (don't ask)</li>
-    <li>Current cwd is inside a specific org folder → auto-use that org</li>
-    <li>Multiple orgs + above all fail → interactive prompt</li>
-  </ol>
-
-  <p><strong>Auto-extraction:</strong></p>
-  <ul>
-    <li><code>remote_url</code> — read from git remote, recorded in <code>repo.yaml</code></li>
-    <li><code>language</code> — detected from <code>package.json</code> (TypeScript auto-detected) / <code>pyproject.toml</code> / <code>go.mod</code> / <code>Cargo.toml</code></li>
-    <li><code>role</code> default — <code>main</code> if <code>.git</code> exists, else <code>unknown</code></li>
-  </ul>
-
-  <h4>Bulk sync</h4>
-  <p>If repos are already cloned in <code>repositories/</code>, register them all at once:</p>
-  <pre><code>solosquad sync                # scan all orgs
-solosquad sync --org tesla    # specific org
-solosquad sync --dry-run      # preview (writes nothing)</code></pre>
-  <p><strong>Behavior:</strong></p>
-  <ul>
-    <li>Folders under <code>&lt;org&gt;/repositories/&lt;folder&gt;</code> with <code>.git</code> but no <code>repo.yaml</code> → auto-register</li>
-    <li>Already-registered repos → skipped with <code>=</code> marker</li>
-    <li>Folders without <code>.git</code> → <code>?</code> warning, skipped</li>
-    <li><code>.org.yaml.products[].repos</code> updated to actually-existing repos</li>
-    <li>Repos listed in <code>.org.yaml</code> but no longer existing → <code>-</code> red warning</li>
-  </ul>
-
-  <h4>Cross-repo workflow (v0.2.1+)</h4>
-  <p>The v0.2.1 runtime, when a stage in <code>_status.yaml</code> has a <code>target_repo</code> field, uses that repo as cwd when executing the stage. Workflows spanning multiple repos can be coordinated as one workflow:</p>
-  <pre><code># &lt;org&gt;/workflows/model-y-refresh/_status.yaml
-stages:
-  - id: stage-1-vision
-    target_repo: autopilot-vision       # Claude uses this repo as cwd
-    status: in_progress
-    depends_on: []
-
-  - id: stage-2-planner
-    target_repo: autopilot-planner      # different repo
-    status: pending
-    depends_on: [stage-1-vision]</code></pre>
-  <p><strong>Active stage decision:</strong></p>
-  <ol>
-    <li>A stage with <code>status: in_progress</code> → that one</li>
-    <li>Otherwise, the first <code>status: pending</code> whose <code>depends_on</code> are all completed</li>
-    <li>If neither, fall back to role=main repo → org root</li>
-  </ol>
-  <p>Stage transitions (<code>pending → in_progress → completed</code>) are automated by v0.3 PM mode — PM marks <code>in_progress</code> before spawning a specialist, merges the Task tool response, then advances to <code>completed</code>.</p>
-
-  <h3 id="s9-4">9.4 Security Checklist</h3>
-  <p>This system has AI executing code and commands. Confirm the following:</p>
-  <ul>
-    <li><code>.env</code> is in <code>.gitignore</code></li>
-    <li>Rotate bot tokens periodically (90 days recommended)</li>
-    <li>Always review AI output before deploying to production</li>
-    <li>Keep messenger bot permissions minimal — don't grant beyond §5's scope list</li>
-    <li>Run <code>solosquad doctor</code> periodically</li>
-    <li>Cloud ops: SSH key auth only, firewall outbound-only</li>
-    <li>v0.8.1+: run <code>solosquad archive verify</code> once before externally storing an archive (PII-NOTICE scan + manifest SHA verify)</li>
-    <li>v0.8 multi-user: when adding another user, explain bot multiplicity — each user only responds in their own channel pair (<code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code>) per author-guard</li>
-  </ul>
-  <p>Details: <code>docs/plan/v0.2-safety-security.md</code>, <code>docs/plan/v0.8.1-security-lifecycle-pair.md</code></p>
-
-  <h3 id="s9-5">9.5 Periodic Backup + Observability<span class="badge now">v0.8.3</span></h3>
-  <p>Backup + log observability flow during operation.</p>
-  <ul>
-    <li><strong>Periodic backup</strong>: monthly recommended. <code>solosquad uninstall --mode archive-only</code> creates just the farewell archive zip (workspace stays). Archive integrity ensured via manifest.tsv SHA. <code>solosquad archive verify</code> recommended before external storage. Migration backups (<code>~/.solosquad-backups/</code>) listed via <code>solosquad backup list</code>; old backups cleaned via <code>solosquad backup purge --keep-recent 3</code></li>
-    <li><strong>gh CLI authentication</strong>: for dev_capability (<code>patch</code> / <code>pr</code>) to create PRs, <code>gh auth login</code> must be complete on the host. <code>solosquad doctor</code> only checks <code>gh</code> existence — token validity is verified separately via <code>gh auth status</code></li>
-    <li><strong>Log location + retention</strong>: with <code>SOLOSQUAD_LOG_FILE=1</code> enabled, daily rolling at <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>. Retained 14 days (daily 00:00 system-housekeeping). <code>SOLOSQUAD_LOG_FORMAT=json</code> for structured output</li>
-    <li><strong>solosquad logs command</strong>: tail/follow/filter 4 operational jsonl (agent-costs / spawn-decisions / stop-hook-events / dev-confirmations / migration-costs) in one place</li>
-    <li><strong>CLI ↔ workspace mismatch</strong>: <code>solosquad doctor</code> explicitly indicates whether <code>migrate</code> or <code>update</code> is needed</li>
-  </ul>
 </section>
 
 <!-- ========================== SECTION 10 ========================== -->
