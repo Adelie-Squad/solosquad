@@ -15,6 +15,7 @@ import { applyReport, type MergePolicy } from "../analyze/applier.js";
 import { rebuildRoutes } from "../bot/agent-router.js";
 import { inspectRepo, formatInspectionReport } from "../util/repo-inspect.js";
 import { warnDeprecated } from "../util/deprecation.js";
+import { normalizeUserPath } from "../util/platform.js";
 
 export interface AddRepoOpts {
   org?: string;
@@ -128,6 +129,13 @@ export async function addRepoCommand(input: string | undefined, opts: AddRepoOpt
     console.log(chalk.red("✗ Not inside a SoloSquad workspace. Run `solosquad init` first."));
     process.exit(1);
   }
+
+  // v1.2.4 §A.4 — strip surrounding quotes from input + --path. PowerShell
+  // and Explorer "Copy as path" wrap Windows paths in `"..."` literally;
+  // pre-v1.2.4 those quotes leaked into `path.resolve` and made every
+  // pasted Windows path look missing.
+  if (input) input = normalizeUserPath(input);
+  if (opts.path) opts.path = normalizeUserPath(opts.path);
 
   // v1.0 — path-reference is the only registration mode. URL clone + Move/Copy
   // into the workspace tree were removed; SoloSquad does not own git clone

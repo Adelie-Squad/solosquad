@@ -86,7 +86,7 @@ async function handleCommand(
   }
 
   console.log(
-    `[Bot] PM turn: user=${ctx.userId} org=${product.slug} text="${forwardText.slice(0, 60)}${forwardText.length > 60 ? "…" : ""}"`
+    `[Bot] Chief turn: user=${ctx.userId} org=${product.slug} text="${forwardText.slice(0, 60)}${forwardText.length > 60 ? "…" : ""}"`
   );
 
   // v0.3.0: snapshot memory/ + workflows/ before the turn. PM may make
@@ -155,7 +155,7 @@ async function handleCommand(
       );
     }
     console.log(
-      `[Bot] PM turn done: kind=${reply.kind} cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`
+      `[Bot] Chief turn done: kind=${reply.kind} cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`
     );
     try {
       commitSnapshot(workspaceRoot, product.slug, `after-spawn: ${ctx.userId} cost=$${reply.costUsd.toFixed(4)} spawns=${reply.spawnCount}`);
@@ -169,7 +169,7 @@ async function handleCommand(
       );
       return;
     }
-    console.log(`[Bot] PM error: ${err instanceof Error ? err.message : String(err)}`);
+    console.log(`[Bot] Chief error: ${err instanceof Error ? err.message : String(err)}`);
     await ctx.reply(
       `An error occurred while processing your message: ${err instanceof Error ? err.message : "unknown error"}`
     );

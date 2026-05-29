@@ -11,7 +11,17 @@ import { normalizeLine } from "../util/platform.js";
 export function detectWorkspaceVersion(workspace: string): string | null {
   if (!fs.existsSync(workspace)) return null;
 
-  // v0.2.2+: .solosquad/ subdirectory with workspace.yaml
+  // v0.2.2+: .solosquad/ subdirectory with workspace.yaml.
+  //
+  // v1.2.4 §A.1 — require workspace.yaml presence to qualify, not just the
+  // bare `.solosquad/` directory. Pre-v1.2.4 returned "0.2.0" any time
+  // `<dir>/.solosquad/` existed, which mis-identified an org root (where
+  // `<org>/.solosquad/users/` is a v0.8 per-user yaml dir) as a workspace.
+  // Symptom: running `solosquad bot` from inside an org directory walked
+  // up only as far as `<org>/.solosquad/`, treated it as v0.2.0 layout,
+  // matched no user yaml, and silently fell back to DEFAULT_CHANNELS
+  // (`owner-command`, `workflow`). The strict workspace.yaml check forces
+  // `findWorkspaceRoot` to keep walking up to the real workspace root.
   const solosquadDir = path.join(workspace, ".solosquad");
   if (fs.existsSync(solosquadDir)) {
     const wsFile = path.join(solosquadDir, "workspace.yaml");
@@ -24,8 +34,15 @@ export function detectWorkspaceVersion(workspace: string): string | null {
       } catch {
         /* fall through */
       }
+      // workspace.yaml present but unparseable / missing version — still a
+      // workspace, just an unknown version. Return the v0.2.0 default so
+      // the migration runner can attempt a forward chain from there.
+      return "0.2.0";
     }
-    return "0.2.0";
+    // .solosquad/ exists but no workspace.yaml. NOT a workspace root —
+    // could be `<org>/.solosquad/users/`, `<org>/.solosquad/sessions/`,
+    // or an unrelated tool's config dir. Fall through to legacy-marker
+    // and parent-walk paths.
   }
 
   // v0.1.x: config folders at root, no .solosquad/

@@ -4,7 +4,7 @@ import {
   loadOrgYaml,
 } from "../util/config.js";
 import { getOrgDir } from "../util/paths.js";
-import { listUserYamls } from "../bot/user-registry.js";
+import { listUserYamls, saveUserYaml } from "../bot/user-registry.js";
 
 /**
  * v1.2 §4.5 — Owner-only gate (default ON for fresh installs; OFF for
@@ -88,18 +88,48 @@ export function decideOwnerGate(
   // Find the user yaml for the bound handle to read messenger_user_id.
   const userYamls = listUserYamls(ctx.orgSlug, ctx.workspace);
   const owner = userYamls.find((u) => u.handle === ctx.ownHandle);
-  if (!owner || !owner.messenger_user_id) {
-    // Owner-only is requested but the workspace lacks the messenger_user_id
-    // to compare against. Fail open + warn once per process — refusing
-    // every message would brick the bot, and the workspace.yaml owner_only
-    // flag is a workspace-wide policy, not an opt-in per user.
-    if (!warnedAboutMissingMessengerUserId) {
-      console.log(
-        "[Discord Bot] owner_only=true but messenger_user_id is missing in user.yaml — gate disabled. " +
-          "Run `solosquad doctor --discord` to fix.",
+  if (!owner) {
+    // Bound handle ↔ user.yaml mismatch (should be caught upstream by
+    // ownHandle short-circuit). Fail open as a safety net.
+    return { allow: true };
+  }
+  if (!owner.messenger_user_id) {
+    // v1.2.4 §A.2 — first-message hydration. Pre-v1.2.4 init didn't
+    // prompt for messenger_user_id, so existing workspaces (and any
+    // fresh init that skipped the Step 3.5 prompt) have an empty value
+    // and the gate falls open with a noisy warning at every bot start.
+    // Capture the first message's author.id, persist to user.yaml,
+    // and proceed. This assumes the first message comes from the
+    // workspace owner — true in the solo-founder case (private guild)
+    // and tolerable in the dogfood / small-team case (single shared
+    // guild, owner posts first). Wrong-capture recovery: edit user.yaml.
+    const capturedId = message.author.id;
+    try {
+      saveUserYaml(
+        ctx.orgSlug,
+        { ...owner, messenger_user_id: capturedId },
+        ctx.workspace,
+        true /* allowOverwrite */,
       );
-      warnedAboutMissingMessengerUserId = true;
+      console.log(
+        `[Discord Bot] hydrated user.yaml.messenger_user_id=${capturedId} from first message ` +
+          `(handle=${owner.handle} org=${ctx.orgSlug}). If wrong, edit user.yaml manually.`,
+      );
+    } catch (err) {
+      // Hydration is best-effort. If save fails, fall back to v1.2.3
+      // fail-open + once-per-process warning so the bot still works.
+      if (!warnedAboutMissingMessengerUserId) {
+        console.log(
+          `[Discord Bot] owner_only=true but messenger_user_id hydration failed (${
+            (err as Error).message
+          }) — gate disabled. Edit user.yaml manually or run \`solosquad doctor --discord\`.`,
+        );
+        warnedAboutMissingMessengerUserId = true;
+      }
+      return { allow: true };
     }
+    // Hydrated successfully — this message *is* the owner (by definition
+    // of the hydration heuristic). Allow.
     return { allow: true };
   }
 

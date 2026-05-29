@@ -67,6 +67,34 @@ export function normalizeLine(content: string): string {
   return content.replace(/\r\n/g, "\n");
 }
 
+/**
+ * v1.2.4 §A.4 — normalize a user-pasted filesystem path. The most common
+ * mistake is copying a Windows path with surrounding quotes — PowerShell
+ * and Explorer's "Copy as path" both add them — and the literal quotes
+ * end up *in* the path argument, so `fs.existsSync` reports it missing.
+ *
+ * Rules (order matters):
+ *   1. trim whitespace
+ *   2. strip a single pair of surrounding " " or ' ' (only if balanced)
+ *   3. trim whitespace again (paste sometimes leaves internal pads)
+ *   4. leave the path as-is otherwise — `path.resolve` handles both
+ *      `C:\foo\bar` and `/c/foo/bar` and mixed separators on Windows.
+ *
+ * Pure function — does not touch the filesystem. Caller is expected to
+ * `path.resolve` + `fs.existsSync` after.
+ */
+export function normalizeUserPath(raw: string): string {
+  let p = raw.trim();
+  if (p.length >= 2) {
+    const first = p[0];
+    const last = p[p.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      p = p.slice(1, -1).trim();
+    }
+  }
+  return p;
+}
+
 /** Parse JSONL content (CRLF-safe). */
 export function parseJsonl<T = Record<string, unknown>>(content: string): T[] {
   return normalizeLine(content)

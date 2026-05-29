@@ -49,10 +49,29 @@ class DiscordMessageContext implements MessageContext {
     this.userId = message.author.id;
   }
 
+  /**
+   * v1.2.4 §B.1 — reply prefix uses Chief name (org.yaml.chief_name)
+   * with `"Chief"` fallback. Pre-v1.2.4 used `product.name` (the org
+   * slug) — surfacing org identity where Chief identity belonged.
+   * Cached per-instance: org.yaml read once on first call.
+   */
+  private _chiefLabel: string | undefined;
+  private chiefLabel(): string {
+    if (this._chiefLabel) return this._chiefLabel;
+    if (!this.ownOrgSlug) {
+      this._chiefLabel = "Chief";
+      return this._chiefLabel;
+    }
+    const org = loadOrgYaml(getOrgDir(this.ownOrgSlug, this.workspace));
+    this._chiefLabel = org?.chief_name?.trim() || "Chief";
+    return this._chiefLabel;
+  }
+
   async reply(text: string): Promise<void> {
     const chunks = text.match(/.{1,1900}/gs) || [text];
+    const prefixLabel = `${this.chiefLabel()}${this._agentLabel}`;
     for (let i = 0; i < chunks.length; i++) {
-      const prefix = i === 0 ? `**[${this.product.name}${this._agentLabel}]**\n` : "";
+      const prefix = i === 0 ? `**[${prefixLabel}]**\n` : "";
       try {
         await this.message.reply(`${prefix}\`\`\`\n${chunks[i]}\n\`\`\``);
       } catch (e) {
