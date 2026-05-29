@@ -17,26 +17,26 @@ import yaml from "js-yaml";
 import { normalizeLine } from "../../util/platform.js";
 
 /**
- * v1.2.3 → v1.2.4 — Onboarding & Vocabulary Polish.
+ * v1.2.3 → v1.2.6 — Onboarding & Vocabulary Polish.
  *
- * v1.2.4 is a pure UX / vocabulary patch — no new schema fields, no new
+ * v1.2.6 is a pure UX / vocabulary patch — no new schema fields, no new
  * bundle seeds (problem-definition workflow was already shipped in v1.2.3).
  * So this migration's only structural work is:
  *
- *   1. Bump workspace.yaml.version to 1.2.4.
- *   2. **Backfill Claude Code directory trust** (v1.2.4 §A.5) for every
+ *   1. Bump workspace.yaml.version to 1.2.6.
+ *   2. **Backfill Claude Code directory trust** (v1.2.6 §A.5) for every
  *      existing org cwd + every registered repo path. Without this, the
  *      bot's first `claude --print` spawn in each path hits the
  *      interactive trust dialog the bot process can't answer. New paths
  *      registered via `add-org` / `add repo` after install are handled
  *      at registration time; this migration covers paths that were
- *      registered *before* the v1.2.4 install.
+ *      registered *before* the v1.2.6 install.
  *
  * Idempotent. detect() matches "1.2.3" exact (no .x suffix — there's
  * only one usable 1.2.3 release in the registry).
  */
 
-const TARGET = "1.2.4";
+const TARGET = "1.2.6";
 
 function isFromVersion(version: string | undefined): boolean {
   if (typeof version !== "string") return false;
@@ -73,7 +73,7 @@ export const migration: Migration = {
   from: "1.2.3",
   to: TARGET,
   description:
-    "v1.2.4 — Onboarding & Vocabulary Polish. Pure UX/vocab patch (no schema fields, no new seeds). Bumps workspace version + backfills Claude Code directory trust for existing org/repo paths.",
+    "v1.2.6 — Onboarding & Vocabulary Polish. Pure UX/vocab patch (no schema fields, no new seeds). Bumps workspace version + backfills Claude Code directory trust for existing org/repo paths.",
 
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
@@ -91,7 +91,7 @@ export const migration: Migration = {
         kind: "update",
         from: `workspace.yaml.version=${ws.version ?? "(unset)"}`,
         to: `workspace.yaml.version=${TARGET}`,
-        description: "Bump workspace version to 1.2.4",
+        description: "Bump workspace version to 1.2.6",
       });
     }
 
@@ -108,7 +108,7 @@ export const migration: Migration = {
     }
 
     warnings.push(
-      "v1.2.4 is a pure UX/vocabulary patch — no new schema fields, no new bundle seeds. Workspace data is untouched.",
+      "v1.2.6 is a pure UX/vocabulary patch — no new schema fields, no new bundle seeds. Workspace data is untouched.",
     );
 
     return {
@@ -130,7 +130,7 @@ export const migration: Migration = {
       }
     } catch (err) {
       console.log(
-        `[1.2.3→1.2.4] trust backfill skipped: ${(err as Error).message}`,
+        `[1.2.3→1.2.6] trust backfill skipped: ${(err as Error).message}`,
       );
     }
 

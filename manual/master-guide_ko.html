@@ -211,7 +211,7 @@
 <body>
 
 <aside class="sidebar">
-  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.2.4</span></h1>
+  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.2.6</span></h1>
 
   <nav>
     <ul>
@@ -2484,19 +2484,19 @@ stages:
 
   <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
-  <h4>v1.2.4 (2026-05-29) <span class="badge now">최신</span> — Onboarding &amp; Vocabulary Polish</h4>
+  <h4>v1.2.6 (2026-05-29) <span class="badge now">최신</span> — Onboarding &amp; Vocabulary Polish</h4>
   <ul>
     <li><strong>workspace 탐지 strict</strong> — <code>.solosquad/</code> 디렉토리만으로 워크스페이스 판정 안 함. <code>workspace.yaml</code> 존재까지 가드 → <code>cd &lt;org&gt;</code> 에서 봇 실행해도 잘못된 루트 안 잡힘 (legacy <code>owner-command</code> / <code>workflow</code> 채널 fallback 결함 해소)</li>
     <li><strong><code>messenger_user_id</code> 자동 채움</strong> — <code>init</code> Step 3.5 prompt + 첫 메시지 hydration. owner-only 게이트가 fail-open 으로 끝나지 않고 진짜 동작</li>
     <li><strong>Slack picker 임시 비활성</strong> — Discord 단독 선택, picker 단계는 유지 (v1.2.x adapter 슬롯 활성화 시 복원)</li>
     <li><strong>Path 따옴표 strip</strong> — <code>solosquad add repo "C:\path"</code> 의 양옆 따옴표 자동 제거. PowerShell / Explorer "Copy as path" 패턴</li>
-    <li><strong>Claude Code trust 자동 grant</strong> — 봇이 <code>claude --print</code> spawn 할 때 디렉토리 trust 다이얼로그 안 띄움. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> 셋 다 <code>~/.claude.json</code> 에 박제. <strong>v1.2.3 → v1.2.4 migration 이 기존 org cwd + 등록된 repo 경로 전부 backfill</strong> — <code>solosquad migrate --apply</code> 1회로 과거에 등록한 repo 모두 trust 적용</li>
+    <li><strong>Claude Code trust 자동 grant</strong> — 봇이 <code>claude --print</code> spawn 할 때 디렉토리 trust 다이얼로그 안 띄움. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> 셋 다 <code>~/.claude.json</code> 에 박제. <strong>v1.2.3 → v1.2.6 migration 이 기존 org cwd + 등록된 repo 경로 전부 backfill</strong> — <code>solosquad migrate --apply</code> 1회로 과거에 등록한 repo 모두 trust 적용</li>
     <li><strong>Chief 정체성 plumbing</strong> — 봇 응답 prefix <code>[Hermes]</code> (chief_name 기준). LLM system prompt 에 <code>[identity]</code> 1줄 inject 로 Chief 가 자기 이름으로 self-reference</li>
     <li><strong>Chief 이름 prompt 보강</strong> — 6 surface 설명 + 7 예시 (Hermes / Atlas / Apollo / Iris / Janus / Athena / Hephaestus)</li>
     <li><strong>어휘 정합</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, 등 사용자 대면 라벨. jsonl event kind <code>pm.*</code> 는 schema_version 호환을 위해 유지</li>
     <li><strong>매뉴얼 §5 재배치</strong> — Discord = §5.1 (was §5.2), Slack = §5.2 (was §5.1). §5.1 Discord 본문 v1.2 정합 재작성 — 옛 "서버 이름 = 제품 slug" 규칙 제거, <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 채널 모델 반영</li>
     <li><strong>§10 FAQ 맨 아래로</strong> — 10.3 Uninstall / 10.4 봇·스케줄러 / 10.5 FAQ</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.4], <code>docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md</code></li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code></li>
   </ul>
 
   <h4>v1.2.3 (2026-05-28) — Bundle-files hotfix</h4>
@@ -2537,7 +2537,7 @@ stages:
   <ul>
     <li><strong>v1.0.0</strong> — 정식 출시. 안정 API 보장. 42 CLI surface freeze. <code>docs/api-stability.md</code> 공개 약속 발효. Discord 단일 메신저 (Slack post-v1.0 슬롯)</li>
     <li><strong>v1.0.1</strong> — discord.js v15 deprecation fix, <code>@&lt;slug&gt;</code> mention parser, multi-repo intent routing</li>
-    <li><strong>v1.0.2</strong> — Discord author-guard 제거 (당시 사유: 채널명이 user-id 라 봇 인식 실패 — v1.2.4 에서 handle 기반 채널로 해소된 후 owner-only 게이트로 reversal)</li>
+    <li><strong>v1.0.2</strong> — Discord author-guard 제거 (당시 사유: 채널명이 user-id 라 봇 인식 실패 — v1.2.6 에서 handle 기반 채널로 해소된 후 owner-only 게이트로 reversal)</li>
     <li><strong>v1.0.3</strong> — 5건 fix: versionMatches slice 산수 / npm sudo prefix 권한 체크 / guild-org binding <code>ownOrgSlug</code> 직접 사용 / update next-step 안내 / 카테고리 이름 정합 ("AI Team Reports" → "solosquad")</li>
     <li><strong>v1.0.4</strong> — Discord <code>config.yaml</code> 자동 생성 + Slack author-guard 통째 cleanup + 5-hop diagnostic 메시지 + 9-reference 조사 박제</li>
     <li>상세: <code>CHANGELOG.md</code> §[1.0.0]~[1.0.4]</li>

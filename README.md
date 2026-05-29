@@ -33,7 +33,7 @@ It covers, in ten menu-divided sections:
 | 5 | Messenger Setup | 8-step Discord token walkthrough (Slack walkthrough retained as a post-v1.0 reference) |
 | 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
-| 8 | Version Differences | v1.2.4 (npm-published) vs upcoming releases |
+| 8 | Version Differences | v1.2.6 (npm-published) vs upcoming releases |
 | 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
 | 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
 
@@ -43,7 +43,7 @@ For internal architecture, release planning, and decision history, see [`docs/pr
 
 ---
 
-## What's new in v1.2.4 (2026-05-28)
+## What's new in v1.2.6 (2026-05-28)
 
 **Messenger Connection — Chief on Discord, auto-connect first.** Layered onto v1.1.0's internal agent architecture, v1.2 ships the external user-visible UX:
 
@@ -56,9 +56,9 @@ For internal architecture, release planning, and decision history, see [`docs/pr
 - **`solosquad doctor --discord` 5-hop diagnostic** — token shape → REST `/users/@me` → bot_user_id match → guild membership → command channel ID. Every failure is attributable and actionable.
 - **guildCreate onboarding embed + 2 buttons** (Auto-create / Manual choose) + `/chat` slash fallback for MESSAGE_CONTENT-intent denial.
 
-53 new tests; 728/728 pass. Migration `1.1.0 → 1.2.4` is idempotent; existing users land on `owner_only: false` for a neutral upgrade.
+53 new tests; 728/728 pass. Migration `1.1.0 → 1.2.6` is idempotent; existing users land on `owner_only: false` for a neutral upgrade.
 
-Full release notes: [CHANGELOG.md §1.2.4](CHANGELOG.md#122--2026-05-28).
+Full release notes: [CHANGELOG.md §1.2.6](CHANGELOG.md#122--2026-05-28).
 
 ---
 
@@ -281,7 +281,7 @@ Full details in master-guide §9.
 
 ## Versions
 
-Current npm release: **v1.2.4** (npm registry: `1.2.4`).
+Current npm release: **v1.2.6** (npm registry: `1.2.6`).
 
 v1.0 marked the formal release with stable API guarantees. Shipped + planned milestones (full history in [`CHANGELOG.md`](CHANGELOG.md), decision log in [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6):
 
@@ -299,7 +299,7 @@ v1.0 marked the formal release with stable API guarantees. Shipped + planned mil
 | **v1.0.0 (released)** | **Formal launch** | Stable API guarantees · 42 CLI surface freeze · `docs/api-stability.md` 공개 약속 발효 · Discord 단일 메신저 (Slack post-v1.0 슬롯) |
 | v1.0.1 – v1.0.4 (released) | **Discord robustness patch chain** | discord.js v15 deprecation · `@<slug>` mention · author-guard 정합 · guild-org binding · category rename · config.yaml load-or-empty + 5-hop diagnostic + Slack author-guard cleanup |
 | **v1.1.0 (released)** | **Multi-Agent Team Architecture** | Single PM session → Team-Centric. **Chief** (org-level supervisor, 사용자 대면) + **PM** (workspace-bundle, 자율 product manager) 분리. 4 main bot + 20 specialist + 18 skill + 4 team. 9-layer JIT (team OKR Layer 4a). Chief 6+1 stage state machine. open_questions[] async-batch protocol. Goal queue (1-active-per-org). 4 workflow templates. 외부 reference: Hermes V2 + gstack (Garry Tan) + RO-PNA pna-builders + phuryn pm-skills |
-| **v1.2.4 (released)** | **Messenger Connection (Chief on Discord, auto-connect first)** | 조직 1개당 1 Chief 봇 (`OrgYaml.chief_name`) · OAuth Invite URL 1-click (`solosquad discord invite-url`) · handle 기반 채널 멀티-메신저 portable · owner-only 게이트 (v1.0.2 reversal, default ON 신규 / OFF 업그레이드) · TRIAGE kind 분기 → `works-<handle>` task card + thread + stage narration · `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 · `solosquad doctor --discord` 5-hop diagnostic · guildCreate onboarding embed + 2 button · `/chat` slash fallback. 53 신규 test (728/728 pass) |
+| **v1.2.6 (released)** | **Messenger Connection (Chief on Discord, auto-connect first)** | 조직 1개당 1 Chief 봇 (`OrgYaml.chief_name`) · OAuth Invite URL 1-click (`solosquad discord invite-url`) · handle 기반 채널 멀티-메신저 portable · owner-only 게이트 (v1.0.2 reversal, default ON 신규 / OFF 업그레이드) · TRIAGE kind 분기 → `works-<handle>` task card + thread + stage narration · `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 · `solosquad doctor --discord` 5-hop diagnostic · guildCreate onboarding embed + 2 button · `/chat` slash fallback. 53 신규 test (728/728 pass) |
 | v1.2.1 (planned) | Messenger thread continuity | referencedMessage chain + LRU cache + thread token budget guard. messageCreate가 thread 메시지 수신 + thread→workflow_id reverse lookup. Slack adapter 동일 슬롯 |
 | v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes |
 | v1.x (planned) | Dashboard interaction | Companion web dashboard (별도 리포 `solopreneur-dashboard` + `solopreneur-api`) |
@@ -328,7 +328,7 @@ Each has independent `.env`, tokens, memory, and messenger account. They run sid
 Source tree (this repo):
 
 ```
-package.json                      → npm package config (v1.2.4)
+package.json                      → npm package config (v1.2.6)
 tsconfig.json                     → TypeScript config
 bin/solosquad.ts                  → CLI entry point
 AGENTS.md                         → canonical workspace guide (v0.4 — immutable, cross-tool)

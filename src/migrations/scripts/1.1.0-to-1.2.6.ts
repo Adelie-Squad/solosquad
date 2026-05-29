@@ -17,14 +17,14 @@ import { grantClaudeTrustMany } from "../../util/claude-trust.js";
 import { normalizeLine } from "../../util/platform.js";
 
 /**
- * v1.1.0 → v1.2.4 — Discord auto-connect + Chief identity + owner-only gate +
+ * v1.1.0 → v1.2.6 — Discord auto-connect + Chief identity + owner-only gate +
  * works-handle task hub + add-org bootstrap + problem-definition workflow seed.
  *
  * Per `docs/prd/v1.2-messenger-connection-discord-first.md` §13.
  *
  * Three concrete actions, all idempotent:
  *
- *   1. **Bump** workspace.yaml.version to 1.2.4.
+ *   1. **Bump** workspace.yaml.version to 1.2.6.
  *
  *   2. **Seed Discord workspace policy** at `workspace.yaml.messenger.discord`:
  *      - `owner_only: false` — preserves v1.0.2 channel-ACL-only behavior for
@@ -47,11 +47,11 @@ import { normalizeLine } from "../../util/platform.js";
  *   - Existing channels / token / config.yaml / open-questions / ledger
  *     are untouched.
  *
- * Idempotent: detect() returns false on 1.2.4; apply() guards every seed
+ * Idempotent: detect() returns false on 1.2.6; apply() guards every seed
  * with existsSync.
  */
 
-const TARGET = "1.2.4";
+const TARGET = "1.2.6";
 
 function isFromVersion(version: string | undefined): boolean {
   if (typeof version !== "string") return false;
@@ -78,7 +78,7 @@ interface WorkflowSeed {
 }
 
 /**
- * v1.2.4 §A.5 — collect all paths that should be granted Claude Code
+ * v1.2.6 §A.5 — collect all paths that should be granted Claude Code
  * directory trust on migrate:
  *   - every org cwd (chief-runner spawns `claude --print` with cwd=<org>)
  *   - every registered repo's absolute `path` (read from each
@@ -131,7 +131,7 @@ export const migration: Migration = {
   from: "1.1.0",
   to: TARGET,
   description:
-    "v1.2.4 — Discord auto-connect + Chief identity (chief_name) + owner-only gate + works-handle task hub + problem-definition workflow seed. Bumps workspace version, seeds workspace.yaml.messenger.discord defaults (owner_only=false preserves v1.0.2 behavior), and copies problem-definition workflow to each org.",
+    "v1.2.6 — Discord auto-connect + Chief identity (chief_name) + owner-only gate + works-handle task hub + problem-definition workflow seed. Bumps workspace version, seeds workspace.yaml.messenger.discord defaults (owner_only=false preserves v1.0.2 behavior), and copies problem-definition workflow to each org.",
 
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
@@ -149,7 +149,7 @@ export const migration: Migration = {
         kind: "update",
         from: `workspace.yaml.version=${ws.version ?? "(unset)"}`,
         to: `workspace.yaml.version=${TARGET}`,
-        description: "Bump workspace version to 1.2.4",
+        description: "Bump workspace version to 1.2.6",
       });
 
       const hasDiscordCfg = !!ws.messenger?.discord;
@@ -186,7 +186,7 @@ export const migration: Migration = {
       "Discord owner-only gate stays OFF for upgraded workspaces (preserves v1.0.2 mode). To enable strict owner-only, edit workspace.yaml: messenger.discord.owner_only=true. Fresh installs land with owner_only=true by default.",
     );
 
-    // v1.2.4 §A.5 — list trust-backfill paths in the plan output so
+    // v1.2.6 §A.5 — list trust-backfill paths in the plan output so
     // the user sees what migrate will touch in ~/.claude.json.
     const trustPaths = collectTrustPaths(workspace);
     if (trustPaths.length > 0) {
@@ -229,9 +229,9 @@ export const migration: Migration = {
       fs.copyFileSync(seed.source, seed.dest);
     }
 
-    // v1.2.4 §A.5 — backfill Claude Code directory trust for every
+    // v1.2.6 §A.5 — backfill Claude Code directory trust for every
     // existing org dir + every registered repo path. Without this,
-    // workspaces created before v1.2.4 keep hitting the interactive
+    // workspaces created before v1.2.6 keep hitting the interactive
     // trust dialog on first `claude --print` spawn in each path.
     // Best-effort: a missing ~/.claude.json (Claude not yet run on
     // this machine) logs and skips. Idempotent — re-running migrate
@@ -243,7 +243,7 @@ export const migration: Migration = {
       }
     } catch (err) {
       console.log(
-        `[1.1.0→1.2.4] trust backfill skipped: ${(err as Error).message}`,
+        `[1.1.0→1.2.6] trust backfill skipped: ${(err as Error).message}`,
       );
     }
 

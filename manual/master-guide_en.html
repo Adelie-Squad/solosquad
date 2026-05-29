@@ -211,7 +211,7 @@
 <body>
 
 <aside class="sidebar">
-  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.2.4</span></h1>
+  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.2.6</span></h1>
 
   <nav>
     <ul>
@@ -2440,19 +2440,19 @@ stages:
 
   <h3 id="s9-1">9.1 Released (npm-published)</h3>
 
-  <h4>v1.2.4 (2026-05-29) <span class="badge now">latest</span> — Onboarding &amp; Vocabulary Polish</h4>
+  <h4>v1.2.6 (2026-05-29) <span class="badge now">latest</span> — Onboarding &amp; Vocabulary Polish</h4>
   <ul>
     <li><strong>Strict workspace detection</strong> — bare <code>.solosquad/</code> no longer qualifies as a workspace root; <code>workspace.yaml</code> is required. Running <code>solosquad bot</code> from inside <code>&lt;org&gt;/</code> no longer creates ghost <code>owner-command</code> / <code>workflow</code> channels.</li>
     <li><strong><code>messenger_user_id</code> auto-populate</strong> — <code>init</code> Step 3.5 prompt + first-message hydration. Owner-only gate is finally protective in practice.</li>
     <li><strong>Slack temporarily hidden</strong> from <code>init</code> messenger picker. Picker step kept for the v1.2.x adapter slot.</li>
     <li><strong>Path quote stripping</strong> — <code>solosquad add repo "C:\path"</code> tolerates the quotes PowerShell / Explorer "Copy as path" wraps Windows paths in.</li>
-    <li><strong>Claude Code trust auto-grant</strong> — bot's <code>claude --print</code> spawns no longer hit the interactive trust dialog. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> all stamp <code>~/.claude.json</code>. <strong>v1.2.3 → v1.2.4 migration backfills every existing org cwd + every registered repo path</strong> — one <code>solosquad migrate --apply</code> retroactively grants trust for paths registered before the v1.2.4 install.</li>
+    <li><strong>Claude Code trust auto-grant</strong> — bot's <code>claude --print</code> spawns no longer hit the interactive trust dialog. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> all stamp <code>~/.claude.json</code>. <strong>v1.2.3 → v1.2.6 migration backfills every existing org cwd + every registered repo path</strong> — one <code>solosquad migrate --apply</code> retroactively grants trust for paths registered before the v1.2.6 install.</li>
     <li><strong>Chief identity plumbing</strong> — bot reply prefix uses <code>chief_name</code> (<code>[Hermes]</code>, not <code>[bv-po]</code>). LLM system prompt receives an <code>[identity]</code> line so Chief signs by name.</li>
     <li><strong>Chief name prompt copy</strong> — explains the 6 surfaces + 7 examples (Hermes / Atlas / Apollo / Iris / Janus / Athena / Hephaestus).</li>
     <li><strong>Vocabulary</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, etc. JSONL event kind <code>pm.*</code> stays for schema_version backward-compat.</li>
     <li><strong>Manual §5 reorder</strong> — Discord = §5.1 (was §5.2). §5.1 content rewritten for v1.2 — the v0.2.x "server name = product slug" rule and the <code>AI Team Reports</code> channel tree are gone.</li>
     <li><strong>§10 FAQ moved to bottom</strong> — 10.3 Uninstall / 10.4 Bot &amp; Scheduler / 10.5 FAQ.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.4], <code>docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md</code></li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code></li>
   </ul>
 
   <h4>v1.2.3 (2026-05-28) — Bundle-files hotfix</h4>
@@ -2492,7 +2492,7 @@ stages:
   <ul>
     <li><strong>v1.0.0</strong> — formal launch. Stable API guarantees. 42-command CLI surface freeze. <code>docs/api-stability.md</code> goes live. Discord-only messenger (Slack is a post-v1.0 slot).</li>
     <li><strong>v1.0.1</strong> — discord.js v15 deprecation fix, <code>@&lt;slug&gt;</code> mention parser, multi-repo intent routing.</li>
-    <li><strong>v1.0.2</strong> — Discord author-guard removed (real reason at the time: user-id channel names blocked bot recognition — v1.2.4 reinstates the gate as owner-only after handle-based channels solved the recognition layer).</li>
+    <li><strong>v1.0.2</strong> — Discord author-guard removed (real reason at the time: user-id channel names blocked bot recognition — v1.2.6 reinstates the gate as owner-only after handle-based channels solved the recognition layer).</li>
     <li><strong>v1.0.3</strong> — 5 bugs fixed: versionMatches slice math / npm sudo prefix permission check / guild-org binding via <code>ownOrgSlug</code> / update next-step hint / category rename ("AI Team Reports" → "solosquad").</li>
     <li><strong>v1.0.4</strong> — Discord <code>config.yaml</code> auto-create + Slack author-guard cleanup + 5-hop diagnostic message + 9-reference research persisted.</li>
     <li>Details: <code>CHANGELOG.md</code> §[1.0.0]~[1.0.4]</li>

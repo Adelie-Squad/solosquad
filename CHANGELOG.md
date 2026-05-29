@@ -4,11 +4,13 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.2.4] — 2026-05-29 (onboarding + vocabulary polish on 1.2.3)
+## [1.2.6] — 2026-05-29 (onboarding + vocabulary polish on 1.2.3)
+
+> **npm version note:** internal work was labeled "v1.2.4" but `1.2.4` and `1.2.5` were burned during pre-launch experimentation (2026-05-11 / 2026-05-13 publish + later unpublish — visible via `npm view solosquad time`). Per npm policy these numbers cannot be re-used, so the actual release lands at **`1.2.6`**. The narrative "v1.2.4 onboarding polish" work content is unchanged — only the version label moves forward. Same pattern as the v1.2.0/v1.2.1 burn → v1.2.2/v1.2.3 jump documented in §[1.2.3].
 
 **Dogfood feedback on v1.2.3 surfaced 11 small but visible UX gaps — bundled into a single patch.** No new functionality; the v1.2 series scope (Chief on Discord, OAuth invite, owner-only, TRIAGE kind routing, etc.) is unchanged. Schema breaking 0, CLI freeze 침범 0.
 
-Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3 hotfix is preserved as a historical record in `docs/prd/v1.2.3-bundle-files-hotfix.md`.
+Details: `docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md`. The prior v1.2.3 hotfix is preserved as a historical record in `docs/prd/v1.2.3-bundle-files-hotfix.md`.
 
 ### Fixed — Workspace detection
 
@@ -16,24 +18,24 @@ Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
 
 ### Fixed — Onboarding
 
-- **Claude Code directory trust auto-grant** (PRD §A.5). The bot spawns `claude --print` with `cwd=<org>` (and the user's repos when Chief operates inside a registered path). Pre-v1.2.4 every new directory triggered Claude's interactive trust dialog on first use, which a bot process can't answer — so the first turn deadlocked or aborted. New `src/util/claude-trust.ts` writes `~/.claude.json` `projects[<absPath>].hasTrustDialogAccepted = true` (plus the surrounding default fields Claude's reader expects) when:
+- **Claude Code directory trust auto-grant** (PRD §A.5). The bot spawns `claude --print` with `cwd=<org>` (and the user's repos when Chief operates inside a registered path). Pre-v1.2.6 every new directory triggered Claude's interactive trust dialog on first use, which a bot process can't answer — so the first turn deadlocked or aborted. New `src/util/claude-trust.ts` writes `~/.claude.json` `projects[<absPath>].hasTrustDialogAccepted = true` (plus the surrounding default fields Claude's reader expects) when:
   - `scaffoldOrg` creates a new org dir (chief-runner's cwd is pre-trusted),
   - `registerRepoInline` in `init` Step 6.1 registers a repo path,
   - `solosquad add repo` registers a repo path.
 
   Best-effort: a missing `~/.claude.json` (fresh Claude install, never run) logs and skips. Idempotent — re-running on an already-trusted path is a no-op. Atomic write via `tmp + rename`. Quiet mode for `scaffoldOrg` to avoid log spam; chatty for the `add repo` CLI surface so the user sees the grant happened.
 
-- **`messenger_user_id` auto-populate** (PRD §A.2). The v1.2.3 owner-only gate needed `messenger_user_id` to compare against `message.author.id`, but no flow ever populated it — every fresh install fell open at the gate with a startup warning. v1.2.4 lands two complementary paths:
+- **`messenger_user_id` auto-populate** (PRD §A.2). The v1.2.3 owner-only gate needed `messenger_user_id` to compare against `message.author.id`, but no flow ever populated it — every fresh install fell open at the gate with a startup warning. v1.2.6 lands two complementary paths:
   - `init` Step 3.5 now prompts for the owner's Discord/Slack User ID with how-to-find guidance (Discord: enable Developer Mode → right-click avatar → Copy User ID; Slack: profile → More → Copy member ID). Skip is allowed for users who don't have it handy.
   - `discord-owner-gate.decideOwnerGate` now hydrates the field from the *first message's `author.id`* when the yaml value is empty, persists via `saveUserYaml`, and logs the captured ID. Safe assumption in solo-founder / private-guild setups; the captured ID can be edited manually if wrong.
 - **Slack option hidden from `init` messenger picker** (PRD §A.3). The picker step itself is kept so the flow extends naturally once the v1.2.x Slack adapter lands; Slack is shown as `disabled` with a "post-v1.0 슬롯" hint.
-- **Path quotes stripped from `add repo` input** (PRD §A.4). PowerShell / Explorer "Copy as path" wraps Windows paths in `"..."` literally, and pre-v1.2.4 those quotes leaked into `path.resolve` and made every pasted Windows path look missing. New `normalizeUserPath()` helper in `src/util/platform.ts` does a balanced-quote strip + trim before `path.resolve`. Wired into both `solosquad add repo` and the `init` repo-loop. The `init` repo prompt copy also calls out the convention.
+- **Path quotes stripped from `add repo` input** (PRD §A.4). PowerShell / Explorer "Copy as path" wraps Windows paths in `"..."` literally, and pre-v1.2.6 those quotes leaked into `path.resolve` and made every pasted Windows path look missing. New `normalizeUserPath()` helper in `src/util/platform.ts` does a balanced-quote strip + trim before `path.resolve`. Wired into both `solosquad add repo` and the `init` repo-loop. The `init` repo prompt copy also calls out the convention.
 
 ### Fixed — Chief identity plumbing
 
-- **DiscordMessageContext reply prefix uses `OrgYaml.chief_name`** instead of the org slug. Pre-v1.2.4 the bot replied as `**[bv-po]**` (the org's filesystem slug) even when the user picked `chief_name: "Hermes"` — surfacing org identity where Chief identity belonged. The Chief name is read once from `<org>/.org.yaml`, cached per `DiscordMessageContext` instance, and falls back to `"Chief"` when unset. (PRD §B.1)
+- **DiscordMessageContext reply prefix uses `OrgYaml.chief_name`** instead of the org slug. Pre-v1.2.6 the bot replied as `**[bv-po]**` (the org's filesystem slug) even when the user picked `chief_name: "Hermes"` — surfacing org identity where Chief identity belonged. The Chief name is read once from `<org>/.org.yaml`, cached per `DiscordMessageContext` instance, and falls back to `"Chief"` when unset. (PRD §B.1)
 - **Chief identity injected into the LLM system prompt** via `chief-runner.invokeWithSessionRecovery.appendSystemPrompt`. New `resolveChiefIdentityHint(orgCwd)` reads `<org>/.org.yaml` once per turn and appends `[identity] You are **<chief_name>** — the org-level Chief / supervisor for "<org name>". Refer to yourself by this name when you sign off ...` to the system prompt. Cache-friendly: same org → same string → same Claude prompt-cache hit across turns. Empty when `chief_name` is unset. (PRD §B.2)
-- **Chief name prompt copy boosted in `init` Step 6 + `add org`** (PRD §B.3). The prompt now explains the 6 surfaces the name appears on (bot reply prefix, onboarding embed, works task card footer, owner-only ephemeral, doctor/log, Developer Portal Bot name), with 7 examples (Hermes, Atlas, Apollo, Iris, Janus, Athena, Hephaestus). Pre-v1.2.4 the prompt was a one-liner without context.
+- **Chief name prompt copy boosted in `init` Step 6 + `add org`** (PRD §B.3). The prompt now explains the 6 surfaces the name appears on (bot reply prefix, onboarding embed, works task card footer, owner-only ephemeral, doctor/log, Developer Portal Bot name), with 7 examples (Hermes, Atlas, Apollo, Iris, Janus, Athena, Hephaestus). Pre-v1.2.6 the prompt was a one-liner without context.
 
 ### Fixed — Vocabulary (`PM` → `Chief` in user-facing labels)
 
@@ -48,14 +50,14 @@ Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
   - Removed: the "Step 5 — server name rule" block (the v0.2.x mapping that required Discord server names to contain the product slug — superseded by v1.0.3 `ownOrgSlug` direct binding via `<org>/discord/config.yaml`).
   - Removed: the `📁 AI Team Reports` channel tree with `#daily-brief` / `#signals` / `#experiments` / `#weekly-review` / `#owner-command` — that whole topology was v0.2.x. v1.2 uses handle-based channels (`#command-<handle>` / `#works-<handle>`).
   - Added: the v1.2 onboarding flow as 8 steps — Developer Portal Bot creation with name matching the Chief name, Privileged Gateway Intent toggle, Application Client ID copy, Discord User ID copy for owner-only, `solosquad init` walk, OAuth invite URL click, automatic guildCreate onboarding embed + Auto-create button, `solosquad doctor --discord` 5-hop verification.
-- **Sidebar release-callout further compressed** (PRD §D.3). Pre-v1.2.4 it was a ~22-line dense paragraph that pushed nav off-screen; v1.2.3 compressed it to one 250-character line; v1.2.4 trims it further to a sub-line teaser pointing to `CHANGELOG.md §[1.2.4]`. KO + EN both. The remaining `· Messenger Connection / v1.2.4 — Discord 자동 연결 + Chief 이름 + owner-only 게이트 + TRIAGE kind 분기. 자세히 CHANGELOG.md §[1.2.4].` text is the *intended* compact teaser, not a layout artifact.
-- **§10 reorder — FAQ at the bottom** (PRD §D.4). The pre-v1.2.4 §10 order put FAQ in the middle (10.3) between Migration (10.2) and Uninstall (10.4). v1.2.4 moves FAQ to §10.5 (Uninstall → 10.3, Bot/Scheduler → 10.4, FAQ → 10.5) so the "quick reference" lookup lands at the end of the manual where users expect it. IDs renumbered in lockstep with labels (s10-3 = Uninstall, s10-4 = Bot, s10-5 = FAQ). External anchor links to old `#s10-3` (FAQ) and `#s10-5` (Bot) shift — accepted churn cost for cleaner navigation.
+- **Sidebar release-callout further compressed** (PRD §D.3). Pre-v1.2.6 it was a ~22-line dense paragraph that pushed nav off-screen; v1.2.3 compressed it to one 250-character line; v1.2.6 trims it further to a sub-line teaser pointing to `CHANGELOG.md §[1.2.6]`. KO + EN both. The remaining `· Messenger Connection / v1.2.6 — Discord 자동 연결 + Chief 이름 + owner-only 게이트 + TRIAGE kind 분기. 자세히 CHANGELOG.md §[1.2.6].` text is the *intended* compact teaser, not a layout artifact.
+- **§10 reorder — FAQ at the bottom** (PRD §D.4). The pre-v1.2.6 §10 order put FAQ in the middle (10.3) between Migration (10.2) and Uninstall (10.4). v1.2.6 moves FAQ to §10.5 (Uninstall → 10.3, Bot/Scheduler → 10.4, FAQ → 10.5) so the "quick reference" lookup lands at the end of the manual where users expect it. IDs renumbered in lockstep with labels (s10-3 = Uninstall, s10-4 = Bot, s10-5 = FAQ). External anchor links to old `#s10-3` (FAQ) and `#s10-5` (Bot) shift — accepted churn cost for cleaner navigation.
 
 ### Migration
 
-- `src/migrations/scripts/1.1.0-to-1.2.4.ts` (renamed from `1.1.0-to-1.2.3.ts`, `TARGET = "1.2.3"` → `"1.2.4"`). Migration body otherwise unchanged — v1.2.4 is purely UX/vocab; no new schema fields, no new bundle seeds.
-- **New `src/migrations/scripts/1.2.3-to-1.2.4.ts`** handles workspaces already at v1.2.3 (the typical case for anyone who installed the v1.2.3 hotfix immediately). Two actions: version bump + Claude Code trust backfill (every existing org cwd + every registered repo path). Idempotent on re-run.
-- **Both migrations now backfill Claude Code directory trust** for existing org / repo paths via `grantClaudeTrustMany`. So `migrate --apply` on a workspace that predates v1.2.4 *retroactively* fixes the trust dialog for every org cwd and every repo registered before the v1.2.4 install — not just new registrations. Best-effort: a missing `~/.claude.json` (Claude not yet run on this machine) logs and skips.
+- `src/migrations/scripts/1.1.0-to-1.2.6.ts` (renamed from `1.1.0-to-1.2.3.ts`, `TARGET = "1.2.3"` → `"1.2.6"`). Migration body otherwise unchanged — v1.2.6 is purely UX/vocab; no new schema fields, no new bundle seeds.
+- **New `src/migrations/scripts/1.2.3-to-1.2.6.ts`** handles workspaces already at v1.2.3 (the typical case for anyone who installed the v1.2.3 hotfix immediately). Two actions: version bump + Claude Code trust backfill (every existing org cwd + every registered repo path). Idempotent on re-run.
+- **Both migrations now backfill Claude Code directory trust** for existing org / repo paths via `grantClaudeTrustMany`. So `migrate --apply` on a workspace that predates v1.2.6 *retroactively* fixes the trust dialog for every org cwd and every repo registered before the v1.2.6 install — not just new registrations. Best-effort: a missing `~/.claude.json` (Claude not yet run on this machine) logs and skips.
 
 ### Schema
 
@@ -67,15 +69,15 @@ Details: `docs/prd/v1.2.4-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
 
 ### Tests
 
-- 728/728 pass (unchanged count — v1.2.4 is repackaging existing behavior, not adding new test surface).
+- 728/728 pass (unchanged count — v1.2.6 is repackaging existing behavior, not adding new test surface).
 
 ### Recovery for users stuck at `workspace.yaml.version: 1.2.2` (the burned label)
 
-The v1.2.4 migration still chains `1.1.0 → 1.2.4`, not `1.2.2 → 1.2.4`. Anyone whose workspace bumped to 1.2.2 from the broken v1.2.2 release (no actual user known) should:
+The v1.2.6 migration still chains `1.1.0 → 1.2.6`, not `1.2.2 → 1.2.6`. Anyone whose workspace bumped to 1.2.2 from the broken v1.2.2 release (no actual user known) should:
 
 1. Manually edit `.solosquad/workspace.yaml`: change `version: 1.2.2` to `version: 1.0.4`.
-2. `npm install -g solosquad@latest` (pulls 1.2.4).
-3. `solosquad migrate --apply` — the full chain re-runs from 1.0.4 with the bundle intact and lands at 1.2.4.
+2. `npm install -g solosquad@latest` (pulls 1.2.6).
+3. `solosquad migrate --apply` — the full chain re-runs from 1.0.4 with the bundle intact and lands at 1.2.6.
 
 ---
 
