@@ -27,6 +27,7 @@ import { migration as v110ToV126 } from "./scripts/1.1.0-to-1.2.6.js";
 import { migration as v123ToV126 } from "./scripts/1.2.3-to-1.2.6.js";
 import { migration as v126ToV128 } from "./scripts/1.2.6-to-1.2.8.js";
 import { migration as v127ToV128 } from "./scripts/1.2.7-to-1.2.8.js";
+import { migration as v128ToV129 } from "./scripts/1.2.8-to-1.2.9.js";
 import { versionMatches } from "./detect.js";
 
 /**
@@ -68,6 +69,7 @@ export const MIGRATIONS: Migration[] = [
   v123ToV126,
   v126ToV128,
   v127ToV128,
+  v128ToV129,
 ];
 
 /**

@@ -1109,6 +1109,22 @@ Get-CimInstance Win32_Process |
 
 자세히: `CHANGELOG.md` §[1.2.7]
 
+#### 13.6.21 v1.2.9 — Discord Application ID 자동 감지 + Invite URL 1-click 복구 (2026-06-01)
+
+**핵심 변화** — v1.2.6 가 설계한 *OAuth Invite URL 1-click* 온보딩이 **존재하지 않는 API 필드 1개** 때문에 출시 이래 한 번도 작동한 적 없음을 dogfood 가 노출. `fetchBotIdentity` 가 `GET /users/@me` 의 봇 User 객체에서 `application_id` 를 읽었으나 **그 필드는 User 객체에 없다** (application id 는 별도 리소스). → `BotIdentity.appId` 영구 `undefined` → init Step 4 invite URL 블록의 `if (... && bot.appId)` 가드가 항상 skip → URL 미출력 / 브라우저 미오픈 / `user.yaml.bot_application_id` 미박제 / 후속 `discord invite-url` 실패. prompt fallback 도 없어 *"앱 ID 를 안 물어본다"* 로 직결.
+
+**구현**:
+- `src/cli/init.ts` — `fetchDiscordApplicationId(token)` 신규 (`GET /oauth2/applications/@me`). `fetchBotIdentity` 가 `appId = (await fetchDiscordApplicationId(token)) ?? body.id` 로 해석 (봇 user id 폴백). `promptHandleSelection` 에 Discord Application(Client) ID 확인 prompt 신설 — 감지값 default Enter 수락, 실패 시 Developer Portal 붙여넣기 안내, `/^\d{17,20}$/` 검증.
+- `src/cli/doctor-discord.ts` — `fetchApplicationId` helper 신규. Hop 2 `liveAppId = (await fetchApplicationId(token)) ?? me.id`. 죽은 `UsersMeBody.application_id` 필드 제거. → Hop 3 `bot_application_id missing` 경고 + Hop 4 invite URL 힌트 실작동.
+
+**의도적 결정**:
+- *봇 user id 폴백* — Discord 봇은 봇 User id == Application id (동일 snowflake)라는 불변식 활용. `/oauth2/applications/@me` 호출이 네트워크/auth 로 실패해도 invite URL 합성이 죽지 않음.
+- *자동 감지 + 명시적 prompt 병행* — PRD §3.1 이 원래 의도한 prompt 를 부활시키되, 감지값을 default 로 채워 Enter 1회로 끝나게. 자동 감지 실패 케이스(잘못된 토큰 / 오프라인)에서만 사용자가 직접 입력.
+
+**v1.2.x 흐름 정합** — v1.2.6 의 invite URL 1-click 은 *설계로만* 존재했고 (`buildInviteUrl` 순수 함수는 정상), 입력값 source(`appId`)가 죽어 흐름 전체가 무력화돼 있었음. v1.2.9 가 source 를 고쳐 v1.2.6 의 약속(*init 완주 → click 1회 → 5분 내 채널 자동 생성*)을 비로소 실현.
+
+자세히: `CHANGELOG.md` §[1.2.9], `docs/prd/v1.2.9-discord-app-id-and-invite-url-fix.md`
+
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
 > **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.

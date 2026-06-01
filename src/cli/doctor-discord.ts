@@ -84,7 +84,10 @@ export async function doctorDiscordCommand(
       });
     } else {
       liveBotUserId = me.id;
-      liveAppId = me.application_id ?? null;
+      // `/users/@me` does not return the application id — resolve it from the
+      // dedicated endpoint, falling back to the bot user id (identical
+      // snowflake for Discord bots) so invite-URL hints below always work.
+      liveAppId = (await fetchApplicationId(token)) ?? me.id;
       results.push({
         ok: true,
         label: "2. REST /users/@me",
@@ -267,7 +270,6 @@ function isDiscordTokenShape(token: string): boolean {
 
 interface UsersMeBody {
   id: string;
-  application_id?: string;
 }
 
 async function fetchUsersMe(token: string): Promise<UsersMeBody | null> {
@@ -278,7 +280,27 @@ async function fetchUsersMe(token: string): Promise<UsersMeBody | null> {
     if (!res.ok) return null;
     const body = (await res.json()) as Partial<UsersMeBody>;
     if (!body.id) return null;
-    return { id: body.id, application_id: body.application_id };
+    return { id: body.id };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the Discord application (client) id from a bot token. The only
+ * endpoint that returns it for a bot token is `/oauth2/applications/@me` —
+ * `/users/@me` carries just the bot user object. Returns null on failure;
+ * callers fall back to the bot user id (identical snowflake for bots).
+ */
+async function fetchApplicationId(token: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      "https://discord.com/api/v10/oauth2/applications/@me",
+      { headers: { Authorization: `Bot ${token}` } },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as { id?: string };
+    return typeof body.id === "string" && body.id.length > 0 ? body.id : null;
   } catch {
     return null;
   }
