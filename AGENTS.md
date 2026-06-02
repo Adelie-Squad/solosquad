@@ -169,7 +169,7 @@ than going through router resolution.
 
 ## Automated Routines + Memory Storage (v0.2.4+)
 
-Two messenger channels: `#owner-command` (user input + reply) and `#workflow`
+Three messenger channels: `#command-<handle>` (user input + reply), `#works-<handle>` and `#git-<handle>`
 (briefs at channel root, background routines in system threads, per-workflow threads).
 
 Default schedule (all times in workspace.yaml `timezone`, default `Asia/Seoul`):
