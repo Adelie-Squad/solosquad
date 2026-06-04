@@ -27,6 +27,15 @@ export interface UserYaml {
   channels: {
     command: string;
     works: string;
+    /**
+     * v1.2.9 Part B — VCS event feed channel (`git-<handle>`). Carries
+     * agent-driven push notifications, separated from command(input) /
+     * works(output cards). Optional for back-compat: pre-v1.2.9 yamls
+     * (schema_version 1) lack it; the 1.2.8→1.2.9 migration injects it and
+     * bumps schema_version to 2. Readers fall back to `git-<handle>` when
+     * absent.
+     */
+    git?: string;
   };
 }
 
@@ -158,21 +167,25 @@ export function listAllUsers(
 export function deriveChannelNames(handle: string): {
   command: string;
   works: string;
+  git: string;
 } {
   return {
     command: `command-${handle}`,
     works: `works-${handle}`,
+    // v1.2.9 Part B — VCS event feed channel.
+    git: `git-${handle}`,
   };
 }
 
 /**
  * v0.8 §3.5 — Channel name parser used by author-guard and routing.
  * Returns null for unrelated channels (broadcast, system, etc.).
+ * v1.2.9 Part B — recognizes the `git-<handle>` kind.
  */
 export function parseChannelName(
   channelName: string,
-): { kind: "command" | "works"; handle: string } | null {
-  const m = channelName.match(/^(command|works)-(.+)$/);
+): { kind: "command" | "works" | "git"; handle: string } | null {
+  const m = channelName.match(/^(command|works|git)-(.+)$/);
   if (!m) return null;
-  return { kind: m[1] as "command" | "works", handle: m[2] };
+  return { kind: m[1] as "command" | "works" | "git", handle: m[2] };
 }

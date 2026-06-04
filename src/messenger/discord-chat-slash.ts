@@ -104,6 +104,7 @@ async function handleChat(
 
   const msgCtx: MessageContext = {
     _agentLabel: "",
+    source: "discord",
     userId: interaction.user.id,
     async reply(reply: string): Promise<void> {
       const chunks = reply.match(/.{1,1900}/gs) ?? [reply];

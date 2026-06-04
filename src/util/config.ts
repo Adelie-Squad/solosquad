@@ -106,6 +106,12 @@ export interface MessengerWorkspaceConfig {
   discord?: DiscordWorkspaceConfig;
   /** v1.2.x — Slack-specific policies (mirror of discord). */
   slack?: SlackWorkspaceConfig;
+  /**
+   * v1.2.9 Part B — `git-<handle>` VCS event feed. Default ON. When
+   * `enabled === false`, the push-notification sink is a no-op (the channel
+   * is still created by `ensureChannels`, just stays quiet).
+   */
+  git_events?: { enabled?: boolean };
 }
 
 export interface DiscordWorkspaceConfig {

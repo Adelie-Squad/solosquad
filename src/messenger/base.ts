@@ -1,9 +1,25 @@
 import type { Product } from "../util/config.js";
 
+/**
+ * v1.2.9 §D — surface the message originates from, threaded from the
+ * adapter all the way into Chief's system prompt so Chief knows whether
+ * it is talking through a chat messenger (Discord/Slack) or the terminal
+ * (`solosquad chat`). Messenger adapters set their own `platform` value;
+ * the CLI chat command constructs a `ChiefCall` with `"cli"` directly.
+ */
+export type ChiefSource = "discord" | "slack" | "cli";
+
 export interface MessageContext {
   reply(text: string): Promise<void>;
   typing(): Promise<void>;
   _agentLabel: string;
+  /**
+   * v1.2.9 §D — which messenger surface this turn came in on. Set by the
+   * adapter (Discord/Slack). The bot dispatcher forwards it into
+   * `ChiefCall.source` so Chief can adapt its formatting (e.g. messenger
+   * = no code-block-wrapped replies, inline questions).
+   */
+  source: ChiefSource;
   /** v0.3.0 — stable per-user identifier from the messenger platform.
    * Used by PM-runner to key session-store: (userId, orgSlug) → session-id.
    * Discord: message.author.id. Slack: event.user. */

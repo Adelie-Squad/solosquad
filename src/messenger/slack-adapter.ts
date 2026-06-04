@@ -10,6 +10,7 @@ import {
   type MessengerAdapter,
   type MessageContext,
   type CommandHandler,
+  type ChiefSource,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
@@ -19,6 +20,7 @@ const THREAD_STARTER_PREFIX = "🧵";
 
 class SlackMessageContext implements MessageContext {
   _agentLabel = "";
+  readonly source: ChiefSource = "slack";
   constructor(
     private sayFn: (text: string) => Promise<void>,
     private product: Product,
@@ -30,7 +32,9 @@ class SlackMessageContext implements MessageContext {
     const chunks = text.match(/.{1,3000}/gs) || [text];
     for (let i = 0; i < chunks.length; i++) {
       const header = i === 0 ? prefix : "";
-      await this.sayFn(`${header}\`\`\`\n${chunks[i]}\n\`\`\``);
+      // v1.2.9 §D — plain mrkdwn, not a ``` code block (parity with the
+      // Discord adapter). Code fences are reserved for actual code.
+      await this.sayFn(`${header}${chunks[i]}`);
     }
   }
 

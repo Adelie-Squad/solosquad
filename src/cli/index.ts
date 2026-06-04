@@ -98,6 +98,17 @@ program
   });
 
 program
+  .command("chat")
+  .description("Interactive terminal chat with Chief (v1.2.9)")
+  .argument("[message...]", "One-shot message; omit for an interactive session")
+  .option("--org <slug>", "Organization slug (auto-picked when only one exists)")
+  .option("--user <id>", "Session user id (default: cli-user)")
+  .action(async (message: string[], opts: { org?: string; user?: string }) => {
+    const { chatCommand } = await import("./chat.js");
+    await chatCommand(message, opts);
+  });
+
+program
   .command("schedule")
   .description("Start automated scheduler")
   .action(async () => {

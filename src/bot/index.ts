@@ -128,6 +128,9 @@ async function handleCommandInner(
       orgSlug: product.slug,
       orgCwd,
       userText: forwardText,
+      // v1.2.9 §D — forward the messenger surface so Chief knows it's
+      // talking through Discord/Slack (drives no-code-block formatting).
+      source: ctx.source,
     });
 
     // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply

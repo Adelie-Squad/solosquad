@@ -20,6 +20,7 @@ import {
 import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js";
 import { loadWorkspaceYaml, loadOrgYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
+import type { ChiefSource } from "../messenger/base.js";
 import {
   emit as emitChiefStage,
   type ChiefStage,
@@ -57,11 +58,34 @@ function resolveChiefIdentityHint(orgCwd: string): string {
     const name = org?.chief_name?.trim();
     if (!org || !name) return "";
     return (
-      `\n\n[identity] You are **${name}** — the org-level Chief / supervisor for "${org.name}". Refer to yourself by this name when you sign off, narrate progress, or describe your role. The user picked it specifically; honor it.`
+      // v1.2.9 §D — keep the identity (refer to yourself by this name when
+      // it's natural), but explicitly DROP the sign-off instruction. The
+      // user does not want replies ending with a `-${name}` signature line.
+      `\n\n[identity] You are **${name}** — the org-level Chief / supervisor for "${org.name}". The user picked this name specifically; use it if you need to refer to yourself. Do NOT append a signature / sign-off line such as "— ${name}" or "-${name}" to the end of your replies — just answer.`
     );
   } catch {
     return "";
   }
+}
+
+/**
+ * v1.2.9 §D — tell Chief which surface the turn arrived on so it can
+ * adapt formatting. Messenger surfaces (Discord/Slack) get the
+ * no-code-block-wrap + inline-batched-questions + concise rules; the
+ * terminal CLI gets a lighter hint. An unset source defaults to the
+ * messenger guidance (back-compat: every pre-v1.2.9 caller is messenger).
+ * Pure string build — cache-friendly (same source → same string).
+ */
+function resolveSourceHint(source: ChiefSource | undefined): string {
+  if (source === "cli") {
+    return (
+      `\n\n[surface] You are talking to the user through the **terminal CLI** (\`solosquad chat\`), not a chat messenger. Answer in plain text; keep it concise and to the point.`
+    );
+  }
+  const platform = source === "slack" ? "Slack" : "Discord";
+  return (
+    `\n\n[surface] You are talking to the user through **${platform}**, a chat messenger. Formatting rules: do NOT wrap your whole reply in a code block — use code fences only for actual code or commands. When you need to ask the user something, ask inline as plain text (never as a separate widget/embed), and if you have several questions combine them into one message. Keep replies concise — answer the core point clearly without padding.`
+  );
 }
 
 /**
@@ -209,6 +233,13 @@ export interface ChiefCall {
   orgSlug: string;
   orgCwd: string;
   userText: string;
+  /**
+   * v1.2.9 §D — surface this turn came in on. Omitted ⇒ defaults to a
+   * messenger surface in the prompt hint (back-compat with callers that
+   * predate the field). The CLI chat command passes `"cli"`; messenger
+   * adapters pass their `platform` value.
+   */
+  source?: ChiefSource;
 }
 
 /**
@@ -442,6 +473,10 @@ export class ChiefRunner {
     // org → same prompt → same cache hit.
     const chiefIdentity = resolveChiefIdentityHint(call.orgCwd);
 
+    // v1.2.9 §D — inject the surface (discord/slack/cli) so Chief adapts
+    // its reply formatting. Cache-friendly: same source → same string.
+    const sourceHint = resolveSourceHint(call.source);
+
     // v1.2.7 §A.6 — pass every registered repo's absolute path via
     // `--add-dir` so Chief can read/write files in repos that live
     // outside the org cwd (the v1.0+ path-reference model never moves
@@ -482,7 +517,7 @@ export class ChiefRunner {
       maxBudgetUsd: this.deps.maxBudgetUsd ?? 5,
       timeoutMs: this.deps.timeoutMs ?? 300_000,
       appendSystemPrompt:
-        (chiefIdentity + focusHint + cloneHint) || undefined,
+        (chiefIdentity + sourceHint + focusHint + cloneHint) || undefined,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
 
