@@ -222,6 +222,16 @@ export class FakeClaudeProcessFactory implements ClaudeProcessFactory {
       lines: linesIter,
       abort: () => {
         aborted = true;
+        // v1.2.9 §D — mirror the real claude CLI: abort sends SIGTERM, which
+        // surfaces as exit code 143. This lets cancel tests exercise
+        // chief-runner's "cancelled → aborted result (no throw)" path, which
+        // the previous always-exit-0 fake hid (the bug found in dogfood).
+        exitInfo = {
+          exitCode: 143,
+          signal: "SIGTERM",
+          stderr: "",
+          unparsedStdout: "",
+        };
         try {
           complete();
         } catch {

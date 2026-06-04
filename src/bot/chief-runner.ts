@@ -610,6 +610,23 @@ export class ChiefRunner {
 
     const exit = await stream.done;
 
+    // v1.2.9 §D — the user cancelled this turn (cancelTurn → stream.abort()).
+    // The resulting SIGTERM exit (code 143 / signal SIGTERM) is EXPECTED, not
+    // a failure — return an aborted result so the messenger/CLI suppresses it
+    // cleanly instead of surfacing "Claude Code exited with code 143". Must be
+    // checked before the non-zero-exit throw below. (The Fake process exits 0
+    // on abort, so this path is only exercised against the real claude CLI.)
+    if (inflightEntry.cancelled) {
+      return {
+        text: "",
+        costUsd,
+        rateLimited,
+        spawnCount,
+        sessionRotated: false,
+        aborted: true,
+      };
+    }
+
     if (NOT_LOGGED_IN_PATTERN.test(exit.unparsedStdout)) {
       sink.append({
         ts: nowIso(),
