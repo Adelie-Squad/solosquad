@@ -560,6 +560,7 @@ export class ChiefRunner {
       permissionMode: perms.permissionMode,
       allowedTools: perms.allowedTools,
       disallowedTools: perms.disallowedTools,
+      settingsPath: perms.settingsPath,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
     // v1.2.9 §D — register this turn's stream so `/cancel` can abort it.

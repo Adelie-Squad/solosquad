@@ -166,6 +166,13 @@ export interface ClaudeInvocation {
    */
   permissionMode?: "default" | "acceptEdits" | "plan" | "bypassPermissions";
   /**
+   * v1.2.9 §E — path to a Claude Code settings file (`--settings`). Used to
+   * inject the PreToolUse Bash deny hook in dev-ON mode (blocks git push /
+   * pr-merge / pr-close even in compound commands, which CLI deny can't).
+   * Merges with the user's own settings as an additive layer.
+   */
+  settingsPath?: string;
+  /**
    * v1.2.7 §A.6 — additional working directories the Claude session can
    * read/write outside of `cwd`. Maps to `claude --add-dir <path1>
    * <path2> ...`. Used by chief-runner to grant the bot's spawn access
@@ -259,6 +266,9 @@ function buildArgs(inv: ClaudeInvocation): string[] {
   }
   if (inv.permissionMode) {
     args.push("--permission-mode", inv.permissionMode);
+  }
+  if (inv.settingsPath) {
+    args.push("--settings", inv.settingsPath);
   }
   if (inv.allowedTools && inv.allowedTools.length > 0) {
     args.push("--allowed-tools", inv.allowedTools.join(","));

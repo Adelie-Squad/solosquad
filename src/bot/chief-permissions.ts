@@ -1,4 +1,10 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { loadDevCapabilityConfig } from "../util/config.js";
+import { getWorkspaceDir } from "../util/paths.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * v1.2.9 §E — translate the workspace dev-capability master toggle into the
@@ -66,6 +72,43 @@ export interface ChiefSpawnPermissions {
   permissionMode?: "acceptEdits";
   allowedTools?: string[];
   disallowedTools?: string[];
+  /**
+   * v1.2.9 §E — path to a Claude Code settings file registering the
+   * PreToolUse Bash deny hook (→ `--settings`). The hook blocks `git push` /
+   * `gh pr merge` / `gh pr close` even inside compound commands
+   * (`cd <repo> && git push`), which the CLI `--disallowed-tools` rule can't.
+   * Only set in dev-ON mode. Undefined when the settings file can't be written
+   * (falls back to deny-only — single-segment push still blocked).
+   */
+  settingsPath?: string;
+}
+
+/**
+ * v1.2.9 §E — write (idempotently) the settings file that registers the
+ * PreToolUse Bash deny hook, returning its path for `--settings`. Lives under
+ * `<workspace>/.solosquad/`. Best-effort: returns undefined if it can't write.
+ */
+function ensureDevDenySettings(workspace: string): string | undefined {
+  const hookScript = path.join(__dirname, "bash-deny-hook.js");
+  const settings = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: "Bash",
+          hooks: [{ type: "command", command: `node "${hookScript}"` }],
+        },
+      ],
+    },
+  };
+  const dir = path.join(workspace, ".solosquad");
+  const file = path.join(dir, "dev-deny-settings.json");
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(settings, null, 2));
+    return file;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -82,6 +125,7 @@ export function resolveChiefSpawnPermissions(
       permissionMode: "acceptEdits",
       allowedTools: [...DEV_ON_ALLOWED_TOOLS],
       disallowedTools: [...DEV_ON_DISALLOWED_TOOLS],
+      settingsPath: ensureDevDenySettings(workspace ?? getWorkspaceDir()),
     };
   }
   return {

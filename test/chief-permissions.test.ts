@@ -41,6 +41,12 @@ test("dev ON → acceptEdits + write/git allow-list, push denied", () => {
   assert.ok(p.allowedTools?.includes("Task"));
   assert.ok(p.disallowedTools?.some((d) => d.includes("git push")));
   assert.ok(p.disallowedTools?.some((d) => d.includes("gh pr merge")));
+  // v1.2.9 §E — dev ON also writes a PreToolUse-hook settings file (catches
+  // compound `cd repo && git push` that CLI deny misses).
+  assert.ok(p.settingsPath, "dev ON should write a deny-hook settings file");
+  assert.ok(fs.existsSync(p.settingsPath!));
+  const s = JSON.parse(fs.readFileSync(p.settingsPath!, "utf-8"));
+  assert.ok(Array.isArray(s.hooks?.PreToolUse), "settings has PreToolUse hook");
 });
 
 test("dev OFF → no permission mode, Bash/Edit/Write denied (no hang)", () => {
@@ -50,6 +56,7 @@ test("dev OFF → no permission mode, Bash/Edit/Write denied (no hang)", () => {
   assert.equal(p.permissionMode, undefined);
   assert.equal(p.allowedTools, undefined);
   assert.deepEqual(p.disallowedTools, [...DEV_OFF_DISALLOWED_TOOLS]);
+  assert.equal(p.settingsPath, undefined); // no hook needed; Bash is denied
 });
 
 test("no dev_capability section → defaults ON (master toggle default true)", () => {
