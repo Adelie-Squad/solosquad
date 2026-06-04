@@ -48,6 +48,15 @@ The same dead field lived in `src/cli/doctor-discord.ts` Hop 2 (`liveAppId = me.
 - `docs-check` is string-matching only — outside the realm of API response shape.
 - Manual repro requires running `init` all the way to the invite-URL block; most manual passes stop at the token/handle step. `appId` had never been populated since the v1.2.6 publish.
 
+### Also in 1.2.9 (Parts B–E)
+
+The same publish slot bundles four more scopes (see `docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md`):
+
+- **Part B — `git-<handle>` VCS event channel.** A per-user channel for agent push notifications, split out from command/works. Channel wiring + `git_events` config + the 1.2.8→1.2.9 migration are live; the push notification itself is built (`git-event-notify.ts` + a `createDevConfirm` `onApproved` hook) but **inert** until the dev-confirm gate goes live (designed in `docs/prd/v1.3.0-dev-confirm-gate-live.md`).
+- **Part C — Chief surface awareness + terminal chat + voice.** Chief now knows whether it's talking over Discord/Slack/CLI (adapter → `ChiefCall.source` → system prompt). New `solosquad chat` for terminal conversations. Messenger replies are no longer wrapped in a code block, the `-name` sign-off is dropped, and questions are asked inline (not as widgets), batched into one message.
+- **Part D — `/cancel`.** Abort in-flight Chief work from Discord/terminal. Previously a second message just queued behind the first; the spawned claude is now killed via the stream abort handle, and the partial reply is suppressed.
+- **Part E — dev permission toggle (`/grant` · `/revoke`).** Fixes specialists hanging on Write/git in headless mode — the bot spawned `claude --print` with no `--permission-mode`, so an unapproved tool prompt hung forever with no TTY to answer it. Dev mode ON injects `acceptEdits` + an allow-list (Write/Edit/Bash/Task…) with `git push` / `gh pr merge` / `gh pr close` denied; OFF denies Bash/Edit/Write so they refuse instead of hang. Default ON at onboarding. **Manual bot verification required before publish — spawn permission behavior depends on the live `claude` CLI and isn't unit-testable.**
+
 ---
 
 ## [1.2.8] — 2026-05-29 (fix ESM `require()` bug that broke v1.2.7 `--add-dir`)

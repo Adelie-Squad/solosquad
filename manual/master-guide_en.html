@@ -696,6 +696,8 @@ Chief: Wrote the PRD → broke it into stages → registered it in the #works ch
       <tr><td><code>/build</code></td><td>Execute the prepared stages</td></tr>
       <tr><td><code>/review</code></td><td>Summarize completed stages + report blocking issues</td></tr>
       <tr><td><code>/ship</code></td><td>Trigger the release/deploy stage</td></tr>
+      <tr><td><code>/cancel</code> <span class="badge now">v1.2.9</span></td><td>Abort the work Chief is currently running</td></tr>
+      <tr><td><code>/grant</code> · <code>/revoke</code> <span class="badge now">v1.2.9</span></td><td>Enable / disable dev mode (file writes + git, push excluded)</td></tr>
     </tbody>
   </table>
   <p>Adding <code>@&lt;repo&gt;</code> to a request lets you target a specific repository (e.g. "<code>@my-api</code> add a signup endpoint").</p>
@@ -707,6 +709,7 @@ Chief: Wrote the PRD → broke it into stages → registered it in the #works ch
     <tbody>
       <tr><td><code>solosquad init</code></td><td>The workspace setup wizard</td></tr>
       <tr><td><code>solosquad bot</code> / <code>schedule</code></td><td>Start the messenger bot / automated routines</td></tr>
+      <tr><td><code>solosquad chat</code> <span class="badge now">v1.2.9</span></td><td>Talk to Chief directly from the terminal (no messenger)</td></tr>
       <tr><td><code>solosquad status</code></td><td>Dashboard — organizations, workflows, recent activity</td></tr>
       <tr><td><code>solosquad doctor</code> / <code>doctor --discord</code></td><td>Environment diagnostics / Discord 5-step diagnostics</td></tr>
       <tr><td><code>solosquad update</code> / <code>migrate</code></td><td>Refresh the CLI / reconcile the workspace structure</td></tr>
@@ -1137,14 +1140,17 @@ solosquad sync                                      # reconcile repositories/ �
 
   <h3 id="s9-1">9.1 Released (npm-published)</h3>
 
-  <h4>v1.2.9 (2026-06-01) <span class="badge now">latest</span> — Discord Application ID auto-detect + invite-URL 1-click restored</h4>
+  <h4>v1.2.9 (2026-06-01) <span class="badge now">latest</span> — Discord app-ID auto-detect + invite-URL restored · git channel · chat UX · cancel · permission toggle</h4>
   <ul>
     <li><strong>Fixes "onboarding never asks for the app ID / never generates the invite URL"</strong> — the v1.2.6 <em>OAuth invite-URL 1-click</em> flow never worked, defeated by a single non-existent API field. <code>fetchBotIdentity</code> read <code>application_id</code> from <code>GET /users/@me</code> (the bot User object), but that object has no such field → <code>appId</code> was always <code>undefined</code> → init's invite-URL block was always skipped, no app-ID prompt existed, and a later <code>discord invite-url</code> failed.</li>
     <li><strong>Correct endpoint</strong> — <code>GET /oauth2/applications/@me</code> (the only endpoint that returns the application id for a bot token), falling back to the bot user id (identical snowflake for Discord bots) on any failure.</li>
     <li><strong>Explicit Application ID confirmation prompt</strong> — <code>init</code> Step 3.5 surfaces the detected id with Enter-to-accept; on detection failure the user pastes it from Developer Portal → General Information → Application ID (17-20 digit validation).</li>
     <li><strong><code>solosquad doctor --discord</code> Hop 2</strong> — now populates the live app id via the same endpoint, so the Hop 3 "bot_application_id missing" warning and the Hop 4 invite-URL hint actually fire.</li>
     <li><strong>Net effect</strong> — finishing <code>init</code> on the Discord path now auto-detects the app ID, confirms it with one Enter, and prints + opens the invite URL at the end — finally delivering the v1.2.6 "finish init → click once → channels auto-create in under 5 minutes" promise.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.9], <code>docs/prd/v1.2.9-discord-app-id-and-invite-url-fix.md</code></li>
+    <li><strong>git event channel + chat UX (Part B·C)</strong> — new <code>git-&lt;handle&gt;</code> channel (agent push-notification feed — channel + config live; the notification itself goes live in v1.3.0). Chief now knows its surface (Discord/Slack/CLI), stops wrapping whole replies in code blocks, and drops the trailing <code>-name</code> sign-off. <code>solosquad chat</code> lets you talk to Chief from the terminal.</li>
+    <li><strong>cancel <code>/cancel</code> (Part D)</strong> — abort in-flight work from Discord/terminal. Previously a second message just queued behind the first.</li>
+    <li><strong>dev permission toggle <code>/grant</code>·<code>/revoke</code> (Part E)</strong> — fixes agents hanging when they lacked file-write/git permission. Dev mode ON injects <code>acceptEdits</code> + an allow-list into the spawn (file writes + git add/commit/checkout/branch + npm; <strong>push / PR-merge excluded</strong>). Default ON at onboarding; <code>/revoke</code> drops to read-only.</li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.2.9], <code>docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md</code> (+ <code>v1.3.0-dev-confirm-gate-live.md</code> design)</li>
   </ul>
 
   <h4>v1.2.8 (2026-05-29) — Bot restart automation + ESM/CJS fix</h4>

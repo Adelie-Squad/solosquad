@@ -696,6 +696,8 @@ Chief: PRD 작성 → 단계 분해 → #works 채널에 등록했습니다.</co
       <tr><td><code>/build</code></td><td>준비된 단계 실행</td></tr>
       <tr><td><code>/review</code></td><td>완료 단계 종합 + 차단 이슈 보고</td></tr>
       <tr><td><code>/ship</code></td><td>릴리스/배포 단계 트리거</td></tr>
+      <tr><td><code>/cancel</code> <span class="badge now">v1.2.9</span></td><td>진행 중인 작업을 즉시 중단</td></tr>
+      <tr><td><code>/grant</code> · <code>/revoke</code> <span class="badge now">v1.2.9</span></td><td>dev 권한(파일 쓰기·git, push 제외) 켜기 / 끄기</td></tr>
     </tbody>
   </table>
   <p>요청에 <code>@&lt;repo&gt;</code> 를 붙이면 특정 저장소를 대상으로 지정할 수 있습니다 (예: "<code>@my-api</code> 회원가입 엔드포인트 추가해줘").</p>
@@ -707,6 +709,7 @@ Chief: PRD 작성 → 단계 분해 → #works 채널에 등록했습니다.</co
     <tbody>
       <tr><td><code>solosquad init</code></td><td>워크스페이스 초기화 마법사</td></tr>
       <tr><td><code>solosquad bot</code> / <code>schedule</code></td><td>메신저 봇 / 자동 루틴 기동</td></tr>
+      <tr><td><code>solosquad chat</code> <span class="badge now">v1.2.9</span></td><td>터미널에서 Chief 와 직접 대화 (메신저 없이)</td></tr>
       <tr><td><code>solosquad status</code></td><td>대시보드 — 조직·워크플로·최근 활동</td></tr>
       <tr><td><code>solosquad doctor</code> / <code>doctor --discord</code></td><td>환경 진단 / Discord 5단계 진단</td></tr>
       <tr><td><code>solosquad update</code> / <code>migrate</code></td><td>CLI 갱신 / 워크스페이스 구조 정합</td></tr>
@@ -1171,14 +1174,17 @@ solosquad sync                                      # repositories/ ↔ .org.yam
 
   <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
-  <h4>v1.2.9 (2026-06-01) <span class="badge now">최신</span> — Discord Application ID 자동 감지 + Invite URL 1-click 복구</h4>
+  <h4>v1.2.9 (2026-06-01) <span class="badge now">최신</span> — Discord App ID 자동 감지 + Invite URL 복구 · git 채널 · 대화 UX · 작업취소 · 권한토글</h4>
   <ul>
     <li><strong>온보딩에서 앱 ID 를 안 묻고 / 초대 URL 이 자동 생성 안 되던 결함 정정</strong> — v1.2.6 가 설계한 <em>OAuth Invite URL 1-click</em> 흐름이 <strong>존재하지 않는 API 필드 1개</strong> 때문에 출시 이래 한 번도 작동 안 함. <code>fetchBotIdentity</code> 가 <code>GET /users/@me</code> (봇 User 객체) 에서 <code>application_id</code> 를 읽었으나 그 필드가 없음 → <code>appId</code> 영구 <code>undefined</code> → init 종료 시 invite URL 블록 항상 skip + 앱 ID prompt 부재 + 후속 <code>discord invite-url</code> 실패</li>
     <li><strong>정식 엔드포인트로 자동 감지</strong> — <code>GET /oauth2/applications/@me</code> 로 application id 조회 (봇 토큰 auth). 실패 시 봇 user id 로 폴백 (Discord 봇은 봇 user id == application id 동일 snowflake)</li>
     <li><strong>Application ID 확인 prompt 신설</strong> — <code>init</code> Step 3.5 에서 자동 감지값을 기본으로 표시, Enter 1회 수락. 감지 실패 시 <em>Developer Portal → General Information → Application ID</em> 붙여넣기 안내 (17~20자리 검증)</li>
     <li><strong><code>solosquad doctor --discord</code> Hop 2 동반 수정</strong> — app id 를 같은 엔드포인트로 채워 Hop 3 <code>bot_application_id missing</code> 경고 + Hop 4 invite URL 힌트가 실작동</li>
     <li><strong>순효과</strong> — Discord 경로 <code>init</code> 완주 → 앱 ID 자동 감지 + Enter 확인 → 종료 시 invite URL 출력 + 브라우저 자동 open. v1.2.6 의 <em>"완주 → click 1회 → 5분 내 채널 자동 생성"</em> 약속 비로소 실현</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.9], <code>docs/prd/v1.2.9-discord-app-id-and-invite-url-fix.md</code></li>
+    <li><strong>git 이벤트 채널 + 대화 UX (Part B·C)</strong> — <code>git-&lt;handle&gt;</code> 채널 신설(에이전트 push 알림 피드 — 채널·설정은 작동, 알림 실작동은 v1.3.0). Chief 가 대화 surface(Discord/Slack/CLI)를 인지하고, 메신저 응답을 통째로 코드블록으로 감싸지 않으며 말끝 <code>-이름</code> 서명을 제거. <code>solosquad chat</code> 으로 터미널에서도 Chief 와 대화</li>
+    <li><strong>작업 취소 <code>/cancel</code> (Part D)</strong> — 진행 중인 작업을 디스코드/터미널에서 즉시 중단. 기존엔 두 번째 메시지가 큐에 쌓여 대기만 했음</li>
+    <li><strong>dev 권한 토글 <code>/grant</code>·<code>/revoke</code> (Part E)</strong> — 에이전트가 파일 쓰기·git 권한에 막혀 멈추던(hang) 문제 해결. dev 모드 ON 이면 spawn 에 <code>acceptEdits</code> + 허용 도구를 주입(파일쓰기·git add/commit/checkout/branch·npm, <strong>push·PR merge 제외</strong>). 온보딩 기본 ON, <code>/revoke</code> 로 read-only 전환</li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.2.9], <code>docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md</code> (+ <code>v1.3.0-dev-confirm-gate-live.md</code> 설계)</li>
   </ul>
 
   <h4>v1.2.8 (2026-05-29) — Bot 재기동 자동화 + ESM/CJS fix</h4>
