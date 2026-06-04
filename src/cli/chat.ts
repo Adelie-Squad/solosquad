@@ -5,7 +5,11 @@ import { ChiefRunner } from "../bot/chief-runner.js";
 import { SessionStore } from "../bot/session-store.js";
 import { FileEventSink, pmEventsPath } from "../bot/events.js";
 import { getWorkspaceDir, getOrgDir } from "../util/paths.js";
-import { listOrganizations, loadOrgYaml } from "../util/config.js";
+import {
+  listOrganizations,
+  loadOrgYaml,
+  setDevCapabilityEnabled,
+} from "../util/config.js";
 
 /**
  * v1.2.9 §D — `solosquad chat`: talk to Chief from the terminal, without
@@ -121,6 +125,26 @@ export async function chatCommand(
       console.log(
         ok ? "🛑 진행 중인 작업을 취소했습니다." : "취소할 진행 중인 작업이 없습니다.",
       );
+      if (!busy) rl.prompt();
+      return;
+    }
+    // v1.2.9 §E — toggle dev mode (file write + git) from the terminal.
+    if (input === "/grant" || input === "/revoke") {
+      const enable = input === "/grant";
+      try {
+        const prev = setDevCapabilityEnabled(enable, workspaceRoot);
+        console.log(
+          enable
+            ? prev
+              ? "✅ dev 권한이 이미 켜져 있습니다."
+              : "✅ dev 권한을 켰습니다 — 파일 쓰기·git(push 제외) 가능. 다시 요청해 주세요."
+            : prev
+              ? "🔒 dev 권한을 껐습니다 — read-only 로 전환."
+              : "🔒 dev 권한이 이미 꺼져 있습니다.",
+        );
+      } catch (e) {
+        console.log(`권한 변경 실패: ${e instanceof Error ? e.message : e}`);
+      }
       if (!busy) rl.prompt();
       return;
     }

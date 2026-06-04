@@ -22,6 +22,8 @@ import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js
 import { loadWorkspaceYaml, loadOrgYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
 import type { ChiefSource } from "../messenger/base.js";
+import { resolveChiefSpawnPermissions } from "./chief-permissions.js";
+import { getWorkspaceDir } from "../util/paths.js";
 import {
   emit as emitChiefStage,
   type ChiefStage,
@@ -539,6 +541,11 @@ export class ChiefRunner {
         })()
       : "";
 
+    // v1.2.9 §E — translate the workspace dev-capability toggle into spawn
+    // permission flags. dev ON ⇒ acceptEdits + write/git allow-list (push
+    // denied); dev OFF ⇒ deny Bash/Edit/Write so they can't prompt-and-hang.
+    const perms = resolveChiefSpawnPermissions(getWorkspaceDir());
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -550,6 +557,9 @@ export class ChiefRunner {
       timeoutMs: this.deps.timeoutMs ?? 300_000,
       appendSystemPrompt:
         (chiefIdentity + sourceHint + focusHint + cloneHint) || undefined,
+      permissionMode: perms.permissionMode,
+      allowedTools: perms.allowedTools,
+      disallowedTools: perms.disallowedTools,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
     // v1.2.9 §D — register this turn's stream so `/cancel` can abort it.

@@ -1082,6 +1082,9 @@ export async function initCommand(): Promise<void> {
       },
       created_at: new Date().toISOString(),
       last_migrated_to: SOLOSQUAD_VERSION,
+      // v1.2.9 §E — dev mode ON by default: agents may write files + run git
+      // (push / pr-merge excluded). Toggle later via /grant · /revoke.
+      dev_capability: { enabled: true },
     },
     workspace
   );
@@ -1323,6 +1326,12 @@ export async function initCommand(): Promise<void> {
   console.log("  3. Review AI outputs before deploying to production");
   console.log("  4. Keep bot scopes minimal");
   console.log("  5. Run `solosquad doctor` regularly");
+  console.log(
+    `\n  ${chalk.bold("dev 모드:")} ${chalk.green("ON")} — 에이전트가 파일 작성·git(push 제외)을 수행합니다.`,
+  );
+  console.log(
+    chalk.dim("  디스코드/터미널에서 /revoke 로 끄고, /grant 로 다시 켤 수 있습니다."),
+  );
 
   // Step 7.5: Onboarding track (v0.6 §2.6; renumbered from 6.5 in v1.0.2)
   //

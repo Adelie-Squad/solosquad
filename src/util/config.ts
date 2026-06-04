@@ -230,6 +230,28 @@ export function resolveDevCapabilityConfig(
   };
 }
 
+/** v1.2.9 §E — read the dev-capability master toggle (default ON). */
+export function isDevCapabilityEnabled(workspace?: string): boolean {
+  return loadDevCapabilityConfig(workspace).enabled;
+}
+
+/**
+ * v1.2.9 §E — flip the dev-capability master toggle in workspace.yaml and
+ * persist it. Returns the PREVIOUS value (so callers can report "already on").
+ * Backs the `/grant` (enabled=true) and `/revoke` (enabled=false) commands.
+ */
+export function setDevCapabilityEnabled(
+  enabled: boolean,
+  workspace?: string,
+): boolean {
+  const ws = loadWorkspaceYaml(workspace);
+  if (!ws) throw new Error("workspace.yaml not found");
+  const prev = resolveDevCapabilityConfig(ws.dev_capability).enabled;
+  ws.dev_capability = { ...(ws.dev_capability ?? {}), enabled };
+  saveWorkspaceYaml(ws, workspace);
+  return prev;
+}
+
 /**
  * v0.6 §10.5 — fs.watch reload policy. The watcher itself lives in v0.6 S6.A
  * (`src/bot/fs-watcher.ts` / `reload-policy.ts`); the migration only ensures

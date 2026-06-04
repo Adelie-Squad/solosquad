@@ -52,6 +52,15 @@ test("handleSlashIfAny flags /cancel for bot-side abort (not forwarded to PM)", 
   assert.equal(r.directReply, undefined);
 });
 
+test("handleSlashIfAny flags /grant + /revoke for bot-side dev toggle", () => {
+  const g = handleSlashIfAny("/grant");
+  assert.equal(g.grant, true);
+  assert.equal(g.shortCircuit, true);
+  const r = handleSlashIfAny("/revoke");
+  assert.equal(r.grant, false);
+  assert.equal(r.shortCircuit, true);
+});
+
 test("handleSlashIfAny rejects unknown slashes with a hint", () => {
   const r = handleSlashIfAny("/banana foo");
   assert.equal(r.shortCircuit, true);

@@ -19,6 +19,7 @@ import {
   loadMessengerConfig,
   loadOrgYaml,
   listOrganizations,
+  setDevCapabilityEnabled,
   type Product,
 } from "../util/config.js";
 import { getOrgDir } from "../util/paths.js";
@@ -101,6 +102,28 @@ async function handleCommandInner(
     );
     return;
   }
+  // v1.2.9 §E — /grant + /revoke flip the workspace dev-capability toggle so
+  // agents can (or can't) write files + run git. Bot-side config write; takes
+  // effect on the next spawn (current turn's permission flags are already set).
+  if (slashHandling.grant !== undefined) {
+    const enable = slashHandling.grant;
+    try {
+      const prev = setDevCapabilityEnabled(enable, workspaceRoot);
+      await ctx.reply(
+        enable
+          ? prev
+            ? "✅ dev 권한이 이미 켜져 있습니다."
+            : "✅ dev 권한을 켰습니다 — 이제 에이전트가 파일 쓰기·git(push 제외)을 할 수 있습니다. 멈췄던 작업이 있으면 다시 요청해 주세요."
+          : prev
+            ? "🔒 dev 권한을 껐습니다 — 에이전트가 read-only 로 전환됩니다."
+            : "🔒 dev 권한이 이미 꺼져 있습니다.",
+      );
+    } catch (e) {
+      await ctx.reply(`권한 변경 실패: ${e instanceof Error ? e.message : e}`);
+    }
+    return;
+  }
+
   if (slashHandling.shortCircuit) {
     if (slashHandling.directReply) await ctx.reply(slashHandling.directReply);
     return;

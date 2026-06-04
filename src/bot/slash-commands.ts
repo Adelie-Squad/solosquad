@@ -52,6 +52,12 @@ export interface SlashHandlingResult {
    * very turn it means to cancel.
    */
   cancel?: boolean;
+  /**
+   * v1.2.9 §E — `/grant` (true) / `/revoke` (false): flip the workspace
+   * dev-capability master toggle so agents can (or can't) write files + run
+   * git. Handled bot-side (config write), never forwarded to PM.
+   */
+  grant?: boolean;
 }
 
 /**
@@ -80,6 +86,15 @@ export function handleSlashIfAny(input: string): SlashHandlingResult {
     };
   }
 
+  // v1.2.9 §E — /grant + /revoke flip the dev-capability toggle. Bot-side.
+  if (slash.command === "/grant" || slash.command === "/revoke") {
+    return {
+      forwardText: input,
+      shortCircuit: true,
+      grant: slash.command === "/grant",
+    };
+  }
+
   if (!KNOWN_SLASHES.has(slash.command)) {
     return {
       forwardText: input,
@@ -105,6 +120,8 @@ function helpText(): string {
     "/review            — synthesize completed stages, flag blockers.",
     "/ship              — release / deploy routine (v0.4 autonomous engine).",
     "/cancel            — abort the work Chief is currently running for you.",
+    "/grant             — enable dev mode (agents may write files + run git).",
+    "/revoke            — disable dev mode (agents go read-only).",
     "",
     "Any other message goes through PM as natural language.",
   ].join("\n");
