@@ -45,6 +45,19 @@ export interface SlashHandlingResult {
   directReply?: string;
   /** If true, do not forward to PM (only directReply matters). */
   shortCircuit?: boolean;
+  /**
+   * v1.2.9 §D — `/cancel`: abort the in-flight Chief turn for this session.
+   * Handled bot-side (calls `chiefRunner.cancelTurn`), never forwarded to PM.
+   * Must be checked BEFORE the session mutex so it isn't queued behind the
+   * very turn it means to cancel.
+   */
+  cancel?: boolean;
+  /**
+   * v1.2.9 §E — `/grant` (true) / `/revoke` (false): flip the workspace
+   * dev-capability master toggle so agents can (or can't) write files + run
+   * git. Handled bot-side (config write), never forwarded to PM.
+   */
+  grant?: boolean;
 }
 
 /**
@@ -61,6 +74,24 @@ export function handleSlashIfAny(input: string): SlashHandlingResult {
       forwardText: input,
       shortCircuit: true,
       directReply: helpText(),
+    };
+  }
+
+  // v1.2.9 §D — /cancel aborts the in-flight turn. Bot-side, not forwarded.
+  if (slash.command === "/cancel") {
+    return {
+      forwardText: input,
+      shortCircuit: true,
+      cancel: true,
+    };
+  }
+
+  // v1.2.9 §E — /grant + /revoke flip the dev-capability toggle. Bot-side.
+  if (slash.command === "/grant" || slash.command === "/revoke") {
+    return {
+      forwardText: input,
+      shortCircuit: true,
+      grant: slash.command === "/grant",
     };
   }
 
@@ -88,6 +119,9 @@ function helpText(): string {
     "/build [stage-id]  — spawn the next ready stage (or the named one).",
     "/review            — synthesize completed stages, flag blockers.",
     "/ship              — release / deploy routine (v0.4 autonomous engine).",
+    "/cancel            — abort the work Chief is currently running for you.",
+    "/grant             — enable dev mode (agents may write files + run git).",
+    "/revoke            — disable dev mode (agents go read-only).",
     "",
     "Any other message goes through PM as natural language.",
   ].join("\n");

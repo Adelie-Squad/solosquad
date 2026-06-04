@@ -106,6 +106,12 @@ export interface MessengerWorkspaceConfig {
   discord?: DiscordWorkspaceConfig;
   /** v1.2.x — Slack-specific policies (mirror of discord). */
   slack?: SlackWorkspaceConfig;
+  /**
+   * v1.2.9 Part B — `git-<handle>` VCS event feed. Default ON. When
+   * `enabled === false`, the push-notification sink is a no-op (the channel
+   * is still created by `ensureChannels`, just stays quiet).
+   */
+  git_events?: { enabled?: boolean };
 }
 
 export interface DiscordWorkspaceConfig {
@@ -222,6 +228,28 @@ export function resolveDevCapabilityConfig(
     require_push_confirmation: true,
     bash_denylist: denylist,
   };
+}
+
+/** v1.2.9 §E — read the dev-capability master toggle (default ON). */
+export function isDevCapabilityEnabled(workspace?: string): boolean {
+  return loadDevCapabilityConfig(workspace).enabled;
+}
+
+/**
+ * v1.2.9 §E — flip the dev-capability master toggle in workspace.yaml and
+ * persist it. Returns the PREVIOUS value (so callers can report "already on").
+ * Backs the `/grant` (enabled=true) and `/revoke` (enabled=false) commands.
+ */
+export function setDevCapabilityEnabled(
+  enabled: boolean,
+  workspace?: string,
+): boolean {
+  const ws = loadWorkspaceYaml(workspace);
+  if (!ws) throw new Error("workspace.yaml not found");
+  const prev = resolveDevCapabilityConfig(ws.dev_capability).enabled;
+  ws.dev_capability = { ...(ws.dev_capability ?? {}), enabled };
+  saveWorkspaceYaml(ws, workspace);
+  return prev;
 }
 
 /**

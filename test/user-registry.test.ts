@@ -73,15 +73,25 @@ test("isValidHandle rejects empty / mixed-case / special characters", () => {
   assert.equal(isValidHandle("a".repeat(65)), false);
 });
 
-test("parseChannelName extracts command/works kind + handle, returns null otherwise", () => {
+test("parseChannelName extracts command/works/git kind + handle, returns null otherwise", () => {
   assert.deepEqual(parseChannelName("command-alice"), {
     kind: "command",
     handle: "alice",
   });
   assert.deepEqual(parseChannelName("works-bob"), { kind: "works", handle: "bob" });
+  // v1.2.9 Part B — git channel kind.
+  assert.deepEqual(parseChannelName("git-carol"), { kind: "git", handle: "carol" });
   assert.equal(parseChannelName("owner-command"), null);
   assert.equal(parseChannelName("solosquad-broadcast"), null);
   assert.equal(parseChannelName("random"), null);
+});
+
+test("deriveChannelNames returns the command/works/git triple (v1.2.9 Part B)", () => {
+  assert.deepEqual(deriveChannelNames("alice"), {
+    command: "command-alice",
+    works: "works-alice",
+    git: "git-alice",
+  });
 });
 
 test("saveUserYaml + loadUserYaml round-trip", () => {

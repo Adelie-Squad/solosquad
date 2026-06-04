@@ -4,6 +4,61 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.9] — 2026-06-01 (fix the Discord Application ID source that broke invite-URL 1-click since v1.2.6)
+
+**v1.2.6 shipped an OAuth "invite URL 1-click" onboarding flow that never once worked — a single non-existent API field defeated the whole thing.** Dogfood reported that `solosquad init` (a) never asks for the Application ID and (b) never prints/opens the server invite URL at the end. Both symptoms trace to the same root cause.
+
+### Root cause
+
+`src/cli/init.ts` `fetchBotIdentity()` read the application id from the wrong place:
+
+```ts
+const res = await fetch("https://discord.com/api/v10/users/@me", { ... });
+const body = (await res.json()) as { id?; username?; application_id? };
+return { handle, botUserId: body.id, appId: body.application_id }; // always undefined
+```
+
+Discord's `GET /users/@me` returns the bot **User** object — which has **no `application_id` field**. So `appId` was always `undefined`, and:
+
+- `init` Step 4's invite-URL block is gated on `if (... && identityChoice?.bot.appId)` → **always skipped** → no URL printed, no browser opened.
+- `user.yaml.bot_application_id` was saved as `undefined`.
+- A later `solosquad discord invite-url` then fails with "No bot_application_id found".
+- There was **no prompt fallback** either, so when auto-detection silently failed there was simply no step that asked the user — hence "it never asks for the app id".
+
+The same dead field lived in `src/cli/doctor-discord.ts` Hop 2 (`liveAppId = me.application_id ?? null`), so the doctor's "bot_application_id missing" warning and its invite-URL hint were also permanently dark.
+
+### Fixed
+
+- **Correct endpoint** — new `fetchDiscordApplicationId(token)` calls `GET /oauth2/applications/@me` (the only endpoint that returns the application id for a bot token) and reads `.id`. `fetchBotIdentity` now resolves `appId = (await fetchDiscordApplicationId(token)) ?? body.id`, falling back to the bot user id — for Discord bots the bot user id and the application id are the same snowflake, so the fallback is always correct.
+
+- **Explicit Application ID confirmation prompt** (PRD §3.1) — `promptHandleSelection` now surfaces the detected app id for confirmation (Enter accepts the default). On detection failure it lets the user paste it from Developer Portal → General Information → Application ID, validated as a 17-20 digit snowflake. Discord-only; Slack derives its invite differently. This is the prompt the v1.2.6 PRD always specified but was never implemented.
+
+- **`doctor --discord` Hop 2** — now populates `liveAppId` via the same endpoint (fallback to the bot user id), so the Hop 3 "bot_application_id missing" surfacing and the Hop 4 invite-URL hint actually fire.
+
+- **Owner User ID auto-prefill** — the same `/oauth2/applications/@me` call also returns `owner.id`, the Developer Portal account that owns the app. For a solo founder this is the person who will command the bot, so the owner-only-gate prompt now pre-fills with it (Enter accepts). Skipped for team-owned apps (where `owner` is a synthetic team user) — those still type it manually or skip for first-message hydration. The only id that genuinely can't be derived from a bot token is the *human operator's* user id, and this covers the common solo case.
+
+### Net effect
+
+`solosquad init` on the Discord path now (1) auto-detects the Application ID from your bot token, (2) asks you to confirm it (one Enter), and (3) prints + opens the invite URL at the end — restoring the v1.2.6 promise of "finish init → click once → channels auto-create in under 5 minutes".
+
+### Why it slipped past every gate
+
+- `npx tsc --noEmit` clean — `body.application_id` is a *type-valid* optional field access; that Discord doesn't actually send it is a runtime fact outside the type system.
+- `npm test` green — `discord-invite-url.test.ts` only exercises `buildInviteUrl()` (a pure function, *given* an app id). Where the app id *comes from* (`fetchBotIdentity`) is a network call and isn't unit-tested.
+- `docs-check` is string-matching only — outside the realm of API response shape.
+- Manual repro requires running `init` all the way to the invite-URL block; most manual passes stop at the token/handle step. `appId` had never been populated since the v1.2.6 publish.
+
+### Also in 1.2.9 (Parts B–E)
+
+The same publish slot bundles four more scopes (see `docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md`):
+
+- **Part B — `git-<handle>` VCS event channel.** A per-user channel for agent push notifications, split out from command/works. Channel wiring + `git_events` config + the 1.2.8→1.2.9 migration are live; the push notification itself is built (`git-event-notify.ts` + a `createDevConfirm` `onApproved` hook) but **inert** until the dev-confirm gate goes live (designed in `docs/prd/v1.3.0-dev-confirm-gate-live.md`).
+- **Part C — Chief surface awareness + terminal chat + voice.** Chief now knows whether it's talking over Discord/Slack/CLI (adapter → `ChiefCall.source` → system prompt). New `solosquad chat` for terminal conversations. Messenger replies are no longer wrapped in a code block, the `-name` sign-off is dropped, and questions are asked inline (not as widgets), batched into one message.
+- **Part D — `/cancel`.** Abort in-flight Chief work from Discord/terminal. Previously a second message just queued behind the first; the spawned claude is now killed via the stream abort handle, and the partial reply is suppressed.
+- **Part E — dev permission toggle (`/grant` · `/revoke`).** Fixes specialists hanging on Write/git in headless mode — the bot spawned `claude --print` with no `--permission-mode`, so an unapproved tool prompt hung forever with no TTY to answer it. Dev mode ON injects `acceptEdits` + an allow-list (Write/Edit/Bash/Task…) with `git push` / `gh pr merge` / `gh pr close` denied; OFF denies Bash/Edit/Write so they refuse instead of hang. Default ON at onboarding. **Manual bot verification required before publish — spawn permission behavior depends on the live `claude` CLI and isn't unit-testable.**
+
+---
+
 ## [1.2.8] — 2026-05-29 (fix ESM `require()` bug that broke v1.2.7 `--add-dir`)
 
 **v1.2.7 was published with a hidden ESM/CommonJS bug that defeated the entire `--add-dir` wiring.** After install + migrate, dogfood reported that Chief *still* said "haven't granted it yet" for every external repo path — the exact problem v1.2.7 claimed to fix. Direct CLI tests proved `claude --add-dir` itself worked; the v1.2.6 trust grants in `~/.claude.json` were correct; the registered repo yamls were intact. But `addDirs` somehow came back empty in the actual spawn.

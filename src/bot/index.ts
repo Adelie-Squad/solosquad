@@ -19,6 +19,7 @@ import {
   loadMessengerConfig,
   loadOrgYaml,
   listOrganizations,
+  setDevCapabilityEnabled,
   type Product,
 } from "../util/config.js";
 import { getOrgDir } from "../util/paths.js";
@@ -89,6 +90,40 @@ async function handleCommandInner(
   // reply from the bot (no PM call). Known slashes are wrapped in a
   // [SLASH /xyz] marker so the PM SKILL.md can parse them deterministically.
   const slashHandling = handleSlashIfAny(userInput);
+  // v1.2.9 §D — /cancel aborts the in-flight Chief turn for this user. Handled
+  // here (before the session mutex inside handleUserMessage) so it isn't queued
+  // behind the very turn it means to cancel.
+  if (slashHandling.cancel) {
+    const cancelled = chiefRunner.cancelTurn(product.slug, ctx.userId);
+    await ctx.reply(
+      cancelled
+        ? "🛑 진행 중인 작업을 취소했습니다."
+        : "취소할 진행 중인 작업이 없습니다.",
+    );
+    return;
+  }
+  // v1.2.9 §E — /grant + /revoke flip the workspace dev-capability toggle so
+  // agents can (or can't) write files + run git. Bot-side config write; takes
+  // effect on the next spawn (current turn's permission flags are already set).
+  if (slashHandling.grant !== undefined) {
+    const enable = slashHandling.grant;
+    try {
+      const prev = setDevCapabilityEnabled(enable, workspaceRoot);
+      await ctx.reply(
+        enable
+          ? prev
+            ? "✅ dev 권한이 이미 켜져 있습니다."
+            : "✅ dev 권한을 켰습니다 — 이제 에이전트가 파일 쓰기·git(push 제외)을 할 수 있습니다. 멈췄던 작업이 있으면 다시 요청해 주세요."
+          : prev
+            ? "🔒 dev 권한을 껐습니다 — 에이전트가 read-only 로 전환됩니다."
+            : "🔒 dev 권한이 이미 꺼져 있습니다.",
+      );
+    } catch (e) {
+      await ctx.reply(`권한 변경 실패: ${e instanceof Error ? e.message : e}`);
+    }
+    return;
+  }
+
   if (slashHandling.shortCircuit) {
     if (slashHandling.directReply) await ctx.reply(slashHandling.directReply);
     return;
@@ -128,7 +163,23 @@ async function handleCommandInner(
       orgSlug: product.slug,
       orgCwd,
       userText: forwardText,
+      // v1.2.9 §D — forward the messenger surface so Chief knows it's
+      // talking through Discord/Slack (drives no-code-block formatting).
+      source: ctx.source,
     });
+
+    // v1.2.9 §D — turn aborted via /cancel. The cancel handler already told
+    // the user it stopped; suppress the partial reply + task card. Still
+    // snapshot since a partial spawn may have touched files.
+    if (reply.aborted) {
+      console.log(`[Bot] Chief turn aborted by /cancel: user=${ctx.userId}`);
+      try {
+        commitSnapshot(workspaceRoot, product.slug, `after-cancel: ${ctx.userId}`);
+      } catch (e) {
+        console.log(`[Bot] snapshot (after-cancel) skipped: ${e instanceof Error ? e.message : e}`);
+      }
+      return;
+    }
 
     // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply
     // in the command channel; `workflow` / `schedule` / `goal` post a

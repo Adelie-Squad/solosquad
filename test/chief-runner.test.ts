@@ -57,6 +57,36 @@ function makeRig(orgSlug = "test-org"): TestRig {
   return { workspace, orgSlug, orgCwd, fake, sessions, pm, events };
 }
 
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+test("cancelTurn returns false when no turn is in flight (v1.2.9 §D)", () => {
+  const rig = makeRig();
+  assert.equal(rig.pm.cancelTurn(rig.orgSlug, "nobody"), false);
+});
+
+test("cancelTurn aborts an in-flight turn and marks the reply aborted (v1.2.9 §D)", async () => {
+  const rig = makeRig();
+  rig.fake.setDefaultScenario({
+    lines: [
+      initLine("placeholder", rig.orgCwd, []),
+      textAssistantLine("placeholder", "working..."),
+      textAssistantLine("placeholder", "still working..."),
+      resultLine("placeholder", "done", { costUsd: 0.01 }),
+    ],
+    delayMsPerLine: 50,
+  });
+  const p = rig.pm.handleUserMessage({
+    userId: "U1",
+    orgSlug: rig.orgSlug,
+    orgCwd: rig.orgCwd,
+    userText: "long running task",
+  });
+  await sleep(60); // let the turn register as in-flight
+  assert.equal(rig.pm.cancelTurn(rig.orgSlug, "U1"), true);
+  const reply = await p;
+  assert.equal(reply.aborted, true);
+});
+
 test("PM happy path — fresh session, single turn, message_in/out recorded", async () => {
   const rig = makeRig();
   rig.fake.setDefaultScenario({

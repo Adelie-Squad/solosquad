@@ -400,6 +400,10 @@ interface BotIdentity {
   handle: string;       // bot's username, normalized to handle charset
   botUserId: string;
   appId?: string;
+  /** v1.2.9 — Developer Portal app owner's user id (`application.owner.id`).
+   *  Used as the *default* for the owner-only gate prompt. Undefined for
+   *  team-owned apps (where `owner` is a team, not an individual). */
+  ownerUserId?: string;
 }
 
 interface IdentityChoice {
@@ -409,6 +413,45 @@ interface IdentityChoice {
    *  gate. Optional — Step 3.5 prompt allows skip + first-message
    *  hydration fallback captures it on first owner message. */
   messengerUserId?: string;
+}
+
+/**
+ * Resolve the Discord application from a bot token via
+ * `GET /oauth2/applications/@me`. This is the only endpoint that returns the
+ * application id for a bot token — `/users/@me` returns the bot *user* object
+ * which has no such field. Returns null on any network/auth failure; callers
+ * fall back to the bot user id (identical snowflake for Discord bots).
+ *
+ * Also surfaces `owner.id` — the Developer Portal account that owns the app,
+ * usually the solo founder who will command the bot. Skipped for team-owned
+ * apps (`team` populated): there `owner` is a synthetic team user, not the
+ * person, so we don't want to seed the owner-only gate with it.
+ */
+async function fetchDiscordApplication(
+  token: string,
+): Promise<{ id: string; ownerUserId?: string } | null> {
+  try {
+    const res = await fetch(
+      "https://discord.com/api/v10/oauth2/applications/@me",
+      { headers: { Authorization: `Bot ${token}` } },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as {
+      id?: string;
+      owner?: { id?: string };
+      team?: unknown;
+    };
+    if (typeof body.id !== "string" || body.id.length === 0) return null;
+    const ownerUserId =
+      body.team == null &&
+      typeof body.owner?.id === "string" &&
+      /^\d{17,20}$/.test(body.owner.id)
+        ? body.owner.id
+        : undefined;
+    return { id: body.id, ownerUserId };
+  } catch {
+    return null;
+  }
 }
 
 async function fetchBotIdentity(
@@ -424,13 +467,21 @@ async function fetchBotIdentity(
       const body = (await res.json()) as {
         id?: string;
         username?: string;
-        application_id?: string;
       };
       if (!body.id || !body.username) return null;
+      // The `/users/@me` User object carries only the bot's *user* id — it
+      // has no `application_id` field. (Reading a non-existent field is why
+      // appId was always undefined pre-v1.2.9, silently skipping invite-URL
+      // synthesis.) Resolve the canonical application (client) id from the
+      // dedicated endpoint, falling back to the bot user id — for Discord
+      // bots the two snowflakes are identical. The same call also yields the
+      // app owner's user id, used to pre-fill the owner-only gate prompt.
+      const app = await fetchDiscordApplication(token);
       return {
         handle: normalizeHandle(body.username),
         botUserId: body.id,
-        appId: body.application_id,
+        appId: app?.id ?? body.id,
+        ownerUserId: app?.ownerUserId,
       };
     }
     // slack
@@ -521,6 +572,49 @@ async function promptHandleSelection(args: {
     },
   ]);
 
+  // v1.2.9 §3.1 — explicit Discord Application (Client) ID confirmation.
+  // Auto-detected from the bot token above; we still surface it because it
+  // is the load-bearing value for the OAuth invite URL. Enter accepts the
+  // detected default. On detection failure (network down / wrong token) the
+  // prompt lets the user paste it from Developer Portal → General
+  // Information → Application ID, so the invite URL is no longer silently
+  // skipped. Discord-only — Slack derives the invite differently.
+  if (args.messenger === "discord") {
+    console.log(
+      chalk.bold(
+        "\n  💡 Your Discord Application (Client) ID — used to build the server invite URL",
+      ),
+    );
+    console.log(
+      chalk.dim(
+        extracted.appId
+          ? `  - Auto-detected from your bot token: ${chalk.cyan(extracted.appId)}.\n` +
+              `    Press Enter to accept, or override if you pasted the wrong app's token.`
+          : `  - Developer Portal → General Information → "Application ID" → Copy.\n` +
+              `    17~20-digit number. Without it I can't synthesize the invite URL.`,
+      ),
+    );
+    const { appIdInput } = await inquirer.prompt([
+      {
+        name: "appIdInput",
+        message: extracted.appId
+          ? `Application ID (Enter = "${extracted.appId}"):`
+          : "Application ID (Enter = skip, set later via `solosquad doctor --discord`):",
+        type: "input",
+        default: extracted.appId ?? "",
+        validate: (v: string) => {
+          const trimmed = v.trim();
+          if (!trimmed) return true; // skip allowed
+          return /^\d{17,20}$/.test(trimmed)
+            ? true
+            : "Discord Application ID is a 17~20 digit number (Developer Portal → General Information → Application ID).";
+        },
+      },
+    ]);
+    const chosenAppId = (appIdInput as string).trim();
+    extracted.appId = chosenAppId || extracted.appId;
+  }
+
   // v1.2.4 §A.2 — owner messenger user id prompt. Required for §4.5
   // owner-only gate (default ON for fresh installs). Pre-v1.2.4 the field
   // was never populated → gate fell open + warned at every bot start.
@@ -533,23 +627,36 @@ async function promptHandleSelection(args: {
   // captures author.id from the first owner-eligible message and persists
   // to user.yaml). Manual prompt is preferred because hydration assumes
   // the first message is from the owner, which fails in noisy channels.
+  //
+  // v1.2.9 — for Discord we pre-fill this from the app owner's user id
+  // (`application.owner.id`, fetched alongside the app id). For a solo
+  // founder the Developer Portal account is the same person who commands
+  // the bot, so Enter accepts. Detection is skipped for team-owned apps,
+  // where the user still types it (or skips for first-message hydration).
+  const detectedOwnerId =
+    args.messenger === "discord" ? extracted.ownerUserId : undefined;
   console.log(
     chalk.bold("\n  💡 Your Discord User ID (for the owner-only command gate)"),
   );
   console.log(
     chalk.dim(
-      `  - Discord: enable Developer Mode (Settings → Advanced → Developer Mode)\n` +
-        `    then right-click your own avatar → "Copy User ID". 18~19-digit number.\n` +
-        `  - Slack: profile → More menu → "Copy member ID" (Uxxxxxxxxx).\n` +
-        `  - Press Enter to skip — the bot will capture it from your first message.`,
+      detectedOwnerId
+        ? `  - Auto-detected from your app's owner: ${chalk.cyan(detectedOwnerId)}.\n` +
+            `    Press Enter to accept, or override if someone else will command the bot.`
+        : `  - Discord: enable Developer Mode (Settings → Advanced → Developer Mode)\n` +
+            `    then right-click your own avatar → "Copy User ID". 18~19-digit number.\n` +
+            `  - Slack: profile → More menu → "Copy member ID" (Uxxxxxxxxx).\n` +
+            `  - Press Enter to skip — the bot will capture it from your first message.`,
     ),
   );
   const { messengerUserId } = await inquirer.prompt([
     {
       name: "messengerUserId",
-      message: `Your ${args.messenger} User ID (Enter = capture on first message):`,
+      message: detectedOwnerId
+        ? `Your ${args.messenger} User ID (Enter = "${detectedOwnerId}"):`
+        : `Your ${args.messenger} User ID (Enter = capture on first message):`,
       type: "input",
-      default: "",
+      default: detectedOwnerId ?? "",
       validate: (v: string) => {
         const trimmed = v.trim();
         if (!trimmed) return true; // skip allowed
@@ -975,6 +1082,9 @@ export async function initCommand(): Promise<void> {
       },
       created_at: new Date().toISOString(),
       last_migrated_to: SOLOSQUAD_VERSION,
+      // v1.2.9 §E — dev mode ON by default: agents may write files + run git
+      // (push / pr-merge excluded). Toggle later via /grant · /revoke.
+      dev_capability: { enabled: true },
     },
     workspace
   );
@@ -1216,6 +1326,12 @@ export async function initCommand(): Promise<void> {
   console.log("  3. Review AI outputs before deploying to production");
   console.log("  4. Keep bot scopes minimal");
   console.log("  5. Run `solosquad doctor` regularly");
+  console.log(
+    `\n  ${chalk.bold("dev 모드:")} ${chalk.green("ON")} — 에이전트가 파일 작성·git(push 제외)을 수행합니다.`,
+  );
+  console.log(
+    chalk.dim("  디스코드/터미널에서 /revoke 로 끄고, /grant 로 다시 켤 수 있습니다."),
+  );
 
   // Step 7.5: Onboarding track (v0.6 §2.6; renumbered from 6.5 in v1.0.2)
   //

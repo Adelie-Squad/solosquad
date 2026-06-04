@@ -22,6 +22,7 @@ import {
   type CommandHandler,
   type TaskCardInput,
   type TaskCardResult,
+  type ChiefSource,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
@@ -34,6 +35,7 @@ import { registerChatSlash } from "./discord-chat-slash.js";
 
 class DiscordMessageContext implements MessageContext {
   _agentLabel = "";
+  readonly source: ChiefSource = "discord";
   readonly userId: string;
   constructor(
     private message: Message,
@@ -73,7 +75,12 @@ class DiscordMessageContext implements MessageContext {
     for (let i = 0; i < chunks.length; i++) {
       const prefix = i === 0 ? `**[${prefixLabel}]**\n` : "";
       try {
-        await this.message.reply(`${prefix}\`\`\`\n${chunks[i]}\n\`\`\``);
+        // v1.2.9 §D — send the reply as plain markdown text, NOT wrapped
+        // in a ``` code block. Code-block-wrapping the whole conversation
+        // killed Discord's native markdown (links, bold, inline code) and
+        // made Chief read like a log dump. Chief now emits code fences only
+        // for actual code/commands (see chief SKILL.md voice rules).
+        await this.message.reply(`${prefix}${chunks[i]}`);
       } catch (e) {
         console.log(`[Discord] Failed to reply: ${e}`);
       }
@@ -372,6 +379,22 @@ export class DiscordAdapter implements MessengerAdapter {
 
   // -- Internal --
 
+  /**
+   * v1.2.9 Part B — the per-user channel triple this bot owns once bound to
+   * a handle: `command-<handle>` / `works-<handle>` / `git-<handle>`. Empty
+   * when unbound (legacy path falls back to DEFAULT_CHANNELS). Single source
+   * of truth for both channel creation (`ensureChannels`) and config
+   * persistence (`syncGuildProductMapping`).
+   */
+  private boundChannelNames(): string[] {
+    if (!this.ownHandle) return [];
+    return [
+      `command-${this.ownHandle}`,
+      `works-${this.ownHandle}`,
+      `git-${this.ownHandle}`,
+    ];
+  }
+
   private async ensureChannels(guild: Guild): Promise<string[]> {
     const existing = new Set(guild.channels.cache.map((ch) => ch.name));
 
@@ -396,12 +419,12 @@ export class DiscordAdapter implements MessengerAdapter {
     const created: string[] = [];
 
     // v0.8 §3.5 — when this bot has been bound to a handle, create the per-user
-    // channel pair `command-<handle>` / `works-<handle>`. Otherwise fall back
-    // to the legacy DEFAULT_CHANNELS list (no-op once migrated workspaces
-    // never reach this branch).
-    const targets = this.ownHandle
-      ? [`command-${this.ownHandle}`, `works-${this.ownHandle}`]
-      : this.channelNames;
+    // channel triple `command-<handle>` / `works-<handle>` / `git-<handle>`
+    // (v1.2.9 Part B added git). Otherwise fall back to the legacy
+    // DEFAULT_CHANNELS list (no-op once migrated workspaces never reach this
+    // branch).
+    const bound = this.boundChannelNames();
+    const targets = bound.length > 0 ? bound : this.channelNames;
 
     for (const chName of targets) {
       if (!existing.has(chName)) {
@@ -512,8 +535,16 @@ export class DiscordAdapter implements MessengerAdapter {
       config.guild_id = guild.id;
       dirty = true;
     }
+    // v1.2.9 Part B — persist both the legacy DEFAULT_CHANNELS and the bound
+    // per-user triple (command/works/git) so `sendToChannel` can resolve
+    // `git-<handle>` → `git_<handle>` config key. Union keeps full
+    // back-compat with pre-bound installs.
+    const scanNames = new Set<string>([
+      ...this.channelNames,
+      ...this.boundChannelNames(),
+    ]);
     for (const ch of guild.channels.cache.values()) {
-      if (this.channelNames.includes(ch.name) && channels[ch.name.replace(/-/g, "_")] !== ch.id) {
+      if (scanNames.has(ch.name) && channels[ch.name.replace(/-/g, "_")] !== ch.id) {
         channels[ch.name.replace(/-/g, "_")] = ch.id;
         dirty = true;
       }

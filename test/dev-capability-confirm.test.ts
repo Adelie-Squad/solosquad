@@ -130,6 +130,81 @@ test("createDevConfirm.abort() resolves with `pm-aborted`", async () => {
   assert.equal(row.decision, "pm-aborted");
 });
 
+test("v1.2.9 Part B — onApproved fires once on `y` with the request (git-feed hook)", async () => {
+  const seen: string[] = [];
+  const ctrl = createDevConfirm(
+    {
+      id: "abc",
+      user: "alice",
+      skill: "backend-developer",
+      cmd: "git push origin feat/x",
+      ts: "2026-06-04T12:00:00Z",
+      workspace: "/tmp/unused",
+      orgSlug: "demo",
+      timeoutMs: 60_000,
+    },
+    {
+      writeAudit: () => {}, // don't touch fs
+      onApproved: (req) => seen.push(req.cmd),
+    },
+  );
+  ctrl.resolve("y");
+  await ctrl.promise;
+  assert.deepEqual(seen, ["git push origin feat/x"]);
+});
+
+test("v1.2.9 Part B — onApproved does NOT fire on `n` / timeout / abort", async () => {
+  for (const outcome of ["n", "abort"] as const) {
+    let fired = false;
+    const ctrl = createDevConfirm(
+      {
+        id: "abc",
+        user: "bob",
+        skill: "api-developer",
+        cmd: "git push origin main",
+        ts: "2026-06-04T12:01:00Z",
+        workspace: "/tmp/unused",
+        orgSlug: "demo",
+        timeoutMs: 60_000,
+      },
+      {
+        writeAudit: () => {},
+        onApproved: () => {
+          fired = true;
+        },
+      },
+    );
+    if (outcome === "n") ctrl.resolve("n");
+    else ctrl.abort();
+    await ctrl.promise;
+    assert.equal(fired, false, `onApproved must not fire on ${outcome}`);
+  }
+});
+
+test("v1.2.9 Part B — a throwing onApproved never poisons the gate decision", async () => {
+  const ctrl = createDevConfirm(
+    {
+      id: "abc",
+      user: "carol",
+      skill: "fde",
+      cmd: "git push origin main",
+      ts: "2026-06-04T12:02:00Z",
+      workspace: "/tmp/unused",
+      orgSlug: "demo",
+      timeoutMs: 60_000,
+    },
+    {
+      writeAudit: () => {},
+      onApproved: () => {
+        throw new Error("sink down");
+      },
+    },
+  );
+  ctrl.resolve("y");
+  const decision = await ctrl.promise;
+  assert.equal(decision, "y");
+});
+
 test("createDevConfirm.resolve called twice is a no-op (idempotent)", async () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "ss-confirm-"));
   const orgSlug = "demo";

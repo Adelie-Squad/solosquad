@@ -3,6 +3,7 @@ import {
   SESSION_NOT_FOUND_PATTERN,
   singleUserMessage,
   type ClaudeProcessFactory,
+  type ClaudeStreamingResult,
   type StreamJsonOutputLine,
 } from "./claude-process.js";
 import { SessionStore } from "./session-store.js";
@@ -20,6 +21,9 @@ import {
 import { checkAgentBudget, type CheckAgentBudgetResult } from "./agent-budget.js";
 import { loadWorkspaceYaml, loadOrgYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
+import type { ChiefSource } from "../messenger/base.js";
+import { resolveChiefSpawnPermissions } from "./chief-permissions.js";
+import { getWorkspaceDir } from "../util/paths.js";
 import {
   emit as emitChiefStage,
   type ChiefStage,
@@ -57,11 +61,34 @@ function resolveChiefIdentityHint(orgCwd: string): string {
     const name = org?.chief_name?.trim();
     if (!org || !name) return "";
     return (
-      `\n\n[identity] You are **${name}** — the org-level Chief / supervisor for "${org.name}". Refer to yourself by this name when you sign off, narrate progress, or describe your role. The user picked it specifically; honor it.`
+      // v1.2.9 §D — keep the identity (refer to yourself by this name when
+      // it's natural), but explicitly DROP the sign-off instruction. The
+      // user does not want replies ending with a `-${name}` signature line.
+      `\n\n[identity] You are **${name}** — the org-level Chief / supervisor for "${org.name}". The user picked this name specifically; use it if you need to refer to yourself. Do NOT append a signature / sign-off line such as "— ${name}" or "-${name}" to the end of your replies — just answer.`
     );
   } catch {
     return "";
   }
+}
+
+/**
+ * v1.2.9 §D — tell Chief which surface the turn arrived on so it can
+ * adapt formatting. Messenger surfaces (Discord/Slack) get the
+ * no-code-block-wrap + inline-batched-questions + concise rules; the
+ * terminal CLI gets a lighter hint. An unset source defaults to the
+ * messenger guidance (back-compat: every pre-v1.2.9 caller is messenger).
+ * Pure string build — cache-friendly (same source → same string).
+ */
+function resolveSourceHint(source: ChiefSource | undefined): string {
+  if (source === "cli") {
+    return (
+      `\n\n[surface] You are talking to the user through the **terminal CLI** (\`solosquad chat\`), not a chat messenger. Answer in plain text; keep it concise and to the point.`
+    );
+  }
+  const platform = source === "slack" ? "Slack" : "Discord";
+  return (
+    `\n\n[surface] You are talking to the user through **${platform}**, a chat messenger. Formatting rules: do NOT wrap your whole reply in a code block — use code fences only for actual code or commands. When you need to ask the user something, ask inline as plain text (never as a separate widget/embed), and if you have several questions combine them into one message. Keep replies concise — answer the core point clearly without padding.`
+  );
 }
 
 /**
@@ -209,6 +236,13 @@ export interface ChiefCall {
   orgSlug: string;
   orgCwd: string;
   userText: string;
+  /**
+   * v1.2.9 §D — surface this turn came in on. Omitted ⇒ defaults to a
+   * messenger surface in the prompt hint (back-compat with callers that
+   * predate the field). The CLI chat command passes `"cli"`; messenger
+   * adapters pass their `platform` value.
+   */
+  source?: ChiefSource;
 }
 
 /**
@@ -237,6 +271,12 @@ export interface ChiefReply {
   sessionRotated: boolean;
   rateLimited: boolean;
   spawnCount: number;
+  /**
+   * v1.2.9 §D — true when this turn was aborted by the user via `/cancel`.
+   * The messenger dispatcher suppresses the (partial) reply in this case —
+   * the cancel handler already told the user it stopped.
+   */
+  aborted?: boolean;
 }
 
 const KIND_MARKER_RE = /^\s*\[kind:(chat|workflow|schedule|goal)\]\s*\n?/i;
@@ -330,12 +370,36 @@ export class SessionMutex {
 
 export class ChiefRunner {
   private readonly mutex = new SessionMutex();
+  /**
+   * v1.2.9 §D — in-flight turns keyed by `${orgSlug}:${userId}`, so a
+   * `/cancel` from the same user can abort the spawned claude process.
+   */
+  private readonly inflight = new Map<string, InflightTurn>();
 
   constructor(private readonly deps: ChiefRunnerDeps) {}
 
   async handleUserMessage(call: ChiefCall): Promise<ChiefReply> {
     const key = `${call.orgSlug}:${call.userId}`;
     return this.mutex.acquire(key, () => this.runTurn(call));
+  }
+
+  /**
+   * v1.2.9 §D — abort the in-flight turn for (orgSlug, userId), if any.
+   * Kills the spawned claude process via the stream's abort handle and marks
+   * the turn cancelled so its partial reply gets suppressed downstream.
+   * Returns true when a turn was actually in flight. Mutex-independent: the
+   * cancel must NOT queue behind the turn it cancels.
+   */
+  cancelTurn(orgSlug: string, userId: string): boolean {
+    const entry = this.inflight.get(`${orgSlug}:${userId}`);
+    if (!entry) return false;
+    entry.cancelled = true;
+    try {
+      entry.stream.abort();
+    } catch {
+      // best-effort — abort must never throw out of the cancel path
+    }
+    return true;
   }
 
   async resetSession(
@@ -413,6 +477,7 @@ export class ChiefRunner {
       sessionRotated: result.sessionRotated,
       rateLimited: result.rateLimited,
       spawnCount: result.spawnCount,
+      aborted: result.aborted ?? false,
     };
   }
 
@@ -441,6 +506,10 @@ export class ChiefRunner {
     // "Claude"). Pure read from <org>/.org.yaml — cache-friendly: same
     // org → same prompt → same cache hit.
     const chiefIdentity = resolveChiefIdentityHint(call.orgCwd);
+
+    // v1.2.9 §D — inject the surface (discord/slack/cli) so Chief adapts
+    // its reply formatting. Cache-friendly: same source → same string.
+    const sourceHint = resolveSourceHint(call.source);
 
     // v1.2.7 §A.6 — pass every registered repo's absolute path via
     // `--add-dir` so Chief can read/write files in repos that live
@@ -472,6 +541,11 @@ export class ChiefRunner {
         })()
       : "";
 
+    // v1.2.9 §E — translate the workspace dev-capability toggle into spawn
+    // permission flags. dev ON ⇒ acceptEdits + write/git allow-list (push
+    // denied); dev OFF ⇒ deny Bash/Edit/Write so they can't prompt-and-hang.
+    const perms = resolveChiefSpawnPermissions(getWorkspaceDir());
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -482,10 +556,20 @@ export class ChiefRunner {
       maxBudgetUsd: this.deps.maxBudgetUsd ?? 5,
       timeoutMs: this.deps.timeoutMs ?? 300_000,
       appendSystemPrompt:
-        (chiefIdentity + focusHint + cloneHint) || undefined,
+        (chiefIdentity + sourceHint + focusHint + cloneHint) || undefined,
+      permissionMode: perms.permissionMode,
+      allowedTools: perms.allowedTools,
+      disallowedTools: perms.disallowedTools,
+      settingsPath: perms.settingsPath,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
+    // v1.2.9 §D — register this turn's stream so `/cancel` can abort it.
+    // Released in the `finally` below regardless of how the turn ends.
+    const inflightKey = `${call.orgSlug}:${call.userId}`;
+    const inflightEntry: InflightTurn = { stream, cancelled: false };
+    this.inflight.set(inflightKey, inflightEntry);
 
+    try {
     let costUsd = 0;
     let rateLimited = false;
     let spawnCount = 0;
@@ -526,6 +610,23 @@ export class ChiefRunner {
     }
 
     const exit = await stream.done;
+
+    // v1.2.9 §D — the user cancelled this turn (cancelTurn → stream.abort()).
+    // The resulting SIGTERM exit (code 143 / signal SIGTERM) is EXPECTED, not
+    // a failure — return an aborted result so the messenger/CLI suppresses it
+    // cleanly instead of surfacing "Claude Code exited with code 143". Must be
+    // checked before the non-zero-exit throw below. (The Fake process exits 0
+    // on abort, so this path is only exercised against the real claude CLI.)
+    if (inflightEntry.cancelled) {
+      return {
+        text: "",
+        costUsd,
+        rateLimited,
+        spawnCount,
+        sessionRotated: false,
+        aborted: true,
+      };
+    }
 
     if (NOT_LOGGED_IN_PATTERN.test(exit.unparsedStdout)) {
       sink.append({
@@ -598,7 +699,11 @@ export class ChiefRunner {
       rateLimited,
       spawnCount,
       sessionRotated: false,
+      aborted: inflightEntry.cancelled,
     };
+    } finally {
+      this.inflight.delete(inflightKey);
+    }
   }
 
   private processLine(
@@ -703,6 +808,14 @@ interface InternalTurnResult {
   rateLimited: boolean;
   spawnCount: number;
   sessionRotated: boolean;
+  /** v1.2.9 §D — set when the user aborted this turn via `/cancel`. */
+  aborted?: boolean;
+}
+
+/** v1.2.9 §D — an in-flight Chief turn, tracked so `/cancel` can abort it. */
+interface InflightTurn {
+  stream: ClaudeStreamingResult;
+  cancelled: boolean;
 }
 
 // ---------- helpers exported for tests + caller convenience ----------
