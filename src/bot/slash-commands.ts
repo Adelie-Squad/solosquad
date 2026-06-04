@@ -45,6 +45,13 @@ export interface SlashHandlingResult {
   directReply?: string;
   /** If true, do not forward to PM (only directReply matters). */
   shortCircuit?: boolean;
+  /**
+   * v1.2.9 §D — `/cancel`: abort the in-flight Chief turn for this session.
+   * Handled bot-side (calls `chiefRunner.cancelTurn`), never forwarded to PM.
+   * Must be checked BEFORE the session mutex so it isn't queued behind the
+   * very turn it means to cancel.
+   */
+  cancel?: boolean;
 }
 
 /**
@@ -61,6 +68,15 @@ export function handleSlashIfAny(input: string): SlashHandlingResult {
       forwardText: input,
       shortCircuit: true,
       directReply: helpText(),
+    };
+  }
+
+  // v1.2.9 §D — /cancel aborts the in-flight turn. Bot-side, not forwarded.
+  if (slash.command === "/cancel") {
+    return {
+      forwardText: input,
+      shortCircuit: true,
+      cancel: true,
     };
   }
 
@@ -88,6 +104,7 @@ function helpText(): string {
     "/build [stage-id]  — spawn the next ready stage (or the named one).",
     "/review            — synthesize completed stages, flag blockers.",
     "/ship              — release / deploy routine (v0.4 autonomous engine).",
+    "/cancel            — abort the work Chief is currently running for you.",
     "",
     "Any other message goes through PM as natural language.",
   ].join("\n");

@@ -3,6 +3,7 @@ import {
   SESSION_NOT_FOUND_PATTERN,
   singleUserMessage,
   type ClaudeProcessFactory,
+  type ClaudeStreamingResult,
   type StreamJsonOutputLine,
 } from "./claude-process.js";
 import { SessionStore } from "./session-store.js";
@@ -268,6 +269,12 @@ export interface ChiefReply {
   sessionRotated: boolean;
   rateLimited: boolean;
   spawnCount: number;
+  /**
+   * v1.2.9 §D — true when this turn was aborted by the user via `/cancel`.
+   * The messenger dispatcher suppresses the (partial) reply in this case —
+   * the cancel handler already told the user it stopped.
+   */
+  aborted?: boolean;
 }
 
 const KIND_MARKER_RE = /^\s*\[kind:(chat|workflow|schedule|goal)\]\s*\n?/i;
@@ -361,12 +368,36 @@ export class SessionMutex {
 
 export class ChiefRunner {
   private readonly mutex = new SessionMutex();
+  /**
+   * v1.2.9 §D — in-flight turns keyed by `${orgSlug}:${userId}`, so a
+   * `/cancel` from the same user can abort the spawned claude process.
+   */
+  private readonly inflight = new Map<string, InflightTurn>();
 
   constructor(private readonly deps: ChiefRunnerDeps) {}
 
   async handleUserMessage(call: ChiefCall): Promise<ChiefReply> {
     const key = `${call.orgSlug}:${call.userId}`;
     return this.mutex.acquire(key, () => this.runTurn(call));
+  }
+
+  /**
+   * v1.2.9 §D — abort the in-flight turn for (orgSlug, userId), if any.
+   * Kills the spawned claude process via the stream's abort handle and marks
+   * the turn cancelled so its partial reply gets suppressed downstream.
+   * Returns true when a turn was actually in flight. Mutex-independent: the
+   * cancel must NOT queue behind the turn it cancels.
+   */
+  cancelTurn(orgSlug: string, userId: string): boolean {
+    const entry = this.inflight.get(`${orgSlug}:${userId}`);
+    if (!entry) return false;
+    entry.cancelled = true;
+    try {
+      entry.stream.abort();
+    } catch {
+      // best-effort — abort must never throw out of the cancel path
+    }
+    return true;
   }
 
   async resetSession(
@@ -444,6 +475,7 @@ export class ChiefRunner {
       sessionRotated: result.sessionRotated,
       rateLimited: result.rateLimited,
       spawnCount: result.spawnCount,
+      aborted: result.aborted ?? false,
     };
   }
 
@@ -520,7 +552,13 @@ export class ChiefRunner {
         (chiefIdentity + sourceHint + focusHint + cloneHint) || undefined,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
     });
+    // v1.2.9 §D — register this turn's stream so `/cancel` can abort it.
+    // Released in the `finally` below regardless of how the turn ends.
+    const inflightKey = `${call.orgSlug}:${call.userId}`;
+    const inflightEntry: InflightTurn = { stream, cancelled: false };
+    this.inflight.set(inflightKey, inflightEntry);
 
+    try {
     let costUsd = 0;
     let rateLimited = false;
     let spawnCount = 0;
@@ -633,7 +671,11 @@ export class ChiefRunner {
       rateLimited,
       spawnCount,
       sessionRotated: false,
+      aborted: inflightEntry.cancelled,
     };
+    } finally {
+      this.inflight.delete(inflightKey);
+    }
   }
 
   private processLine(
@@ -738,6 +780,14 @@ interface InternalTurnResult {
   rateLimited: boolean;
   spawnCount: number;
   sessionRotated: boolean;
+  /** v1.2.9 §D — set when the user aborted this turn via `/cancel`. */
+  aborted?: boolean;
+}
+
+/** v1.2.9 §D — an in-flight Chief turn, tracked so `/cancel` can abort it. */
+interface InflightTurn {
+  stream: ClaudeStreamingResult;
+  cancelled: boolean;
 }
 
 // ---------- helpers exported for tests + caller convenience ----------

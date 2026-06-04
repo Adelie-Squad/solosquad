@@ -45,6 +45,13 @@ test("handleSlashIfAny short-circuits /help with usage text", () => {
   assert.match(r.directReply!, /\/plan/);
 });
 
+test("handleSlashIfAny flags /cancel for bot-side abort (not forwarded to PM)", () => {
+  const r = handleSlashIfAny("/cancel");
+  assert.equal(r.cancel, true);
+  assert.equal(r.shortCircuit, true);
+  assert.equal(r.directReply, undefined);
+});
+
 test("handleSlashIfAny rejects unknown slashes with a hint", () => {
   const r = handleSlashIfAny("/banana foo");
   assert.equal(r.shortCircuit, true);

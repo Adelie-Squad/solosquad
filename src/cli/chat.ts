@@ -84,6 +84,9 @@ export async function chatCommand(
         userText: trimmed,
         source: "cli",
       });
+      // v1.2.9 §D — turn aborted via /cancel: the cancel handler already
+      // printed the notice; don't echo the partial reply.
+      if (reply.aborted) return;
       console.log(`\n${chiefName}: ${reply.text}\n`);
     } catch (e) {
       console.log(`\n[error] ${e instanceof Error ? e.message : e}\n`);
@@ -105,10 +108,26 @@ export async function chatCommand(
     input: process.stdin,
     output: process.stdout,
   });
+  // v1.2.9 §D — non-blocking REPL: input stays live while Chief works so the
+  // user can type `/cancel` mid-turn. `busy` gates ordinary input (one turn at
+  // a time); only `/cancel` is honored while busy.
+  let busy = false;
   rl.setPrompt("you> ");
   rl.prompt();
   rl.on("line", async (line) => {
     const input = line.trim();
+    if (input === "/cancel") {
+      const ok = chiefRunner.cancelTurn(orgSlug, userId);
+      console.log(
+        ok ? "🛑 진행 중인 작업을 취소했습니다." : "취소할 진행 중인 작업이 없습니다.",
+      );
+      if (!busy) rl.prompt();
+      return;
+    }
+    if (busy) {
+      console.log("작업 중입니다 — /cancel 로 취소할 수 있습니다.");
+      return;
+    }
     if (input === "exit" || input === "quit") {
       rl.close();
       return;
@@ -117,11 +136,9 @@ export async function chatCommand(
       rl.prompt();
       return;
     }
-    // Pause input while Chief thinks so the prompt doesn't interleave with
-    // the streamed reply, then resume for the next turn.
-    rl.pause();
+    busy = true;
     await ask(input);
-    rl.resume();
+    busy = false;
     rl.prompt();
   });
   await new Promise<void>((resolve) => rl.on("close", () => resolve()));

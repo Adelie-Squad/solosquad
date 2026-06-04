@@ -89,6 +89,18 @@ async function handleCommandInner(
   // reply from the bot (no PM call). Known slashes are wrapped in a
   // [SLASH /xyz] marker so the PM SKILL.md can parse them deterministically.
   const slashHandling = handleSlashIfAny(userInput);
+  // v1.2.9 §D — /cancel aborts the in-flight Chief turn for this user. Handled
+  // here (before the session mutex inside handleUserMessage) so it isn't queued
+  // behind the very turn it means to cancel.
+  if (slashHandling.cancel) {
+    const cancelled = chiefRunner.cancelTurn(product.slug, ctx.userId);
+    await ctx.reply(
+      cancelled
+        ? "🛑 진행 중인 작업을 취소했습니다."
+        : "취소할 진행 중인 작업이 없습니다.",
+    );
+    return;
+  }
   if (slashHandling.shortCircuit) {
     if (slashHandling.directReply) await ctx.reply(slashHandling.directReply);
     return;
@@ -132,6 +144,19 @@ async function handleCommandInner(
       // talking through Discord/Slack (drives no-code-block formatting).
       source: ctx.source,
     });
+
+    // v1.2.9 §D — turn aborted via /cancel. The cancel handler already told
+    // the user it stopped; suppress the partial reply + task card. Still
+    // snapshot since a partial spawn may have touched files.
+    if (reply.aborted) {
+      console.log(`[Bot] Chief turn aborted by /cancel: user=${ctx.userId}`);
+      try {
+        commitSnapshot(workspaceRoot, product.slug, `after-cancel: ${ctx.userId}`);
+      } catch (e) {
+        console.log(`[Bot] snapshot (after-cancel) skipped: ${e instanceof Error ? e.message : e}`);
+      }
+      return;
+    }
 
     // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply
     // in the command channel; `workflow` / `schedule` / `goal` post a
