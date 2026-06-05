@@ -112,7 +112,7 @@ test("PM happy path — fresh session, single turn, message_in/out recorded", as
 
   const sink = rig.events.get(`${rig.orgSlug}:U1`)!;
   const kinds = sink.history.map((e) => e.kind);
-  assert.deepEqual(kinds, ["pm.message_in", "pm.message_out"]);
+  assert.deepEqual(kinds, ["chief.message_in", "chief.message_out"]);
 
   assert.equal(rig.fake.invocations.length, 1);
   assert.equal(rig.fake.invocations[0].resume, false);
@@ -183,7 +183,7 @@ test("PM throws AuthExpiredError when claude prints 'Not logged in'", async () =
 
   const sink = rig.events.get(`${rig.orgSlug}:U1`)!;
   const kinds = sink.history.map((e) => e.kind);
-  assert.ok(kinds.includes("pm.auth_expired"));
+  assert.ok(kinds.includes("chief.auth_expired"));
 });
 
 test("PM rotates session-id on 'No conversation found' and retries once", async () => {
@@ -228,7 +228,7 @@ test("PM rotates session-id on 'No conversation found' and retries once", async 
 
   const sink = rig.events.get(`${rig.orgSlug}:U1`)!;
   const kinds = sink.history.map((e) => e.kind);
-  assert.ok(kinds.includes("pm.session_lost"));
+  assert.ok(kinds.includes("chief.session_lost"));
 });
 
 test("PM records spawn.start + spawn.complete from task_started/task_notification", async () => {

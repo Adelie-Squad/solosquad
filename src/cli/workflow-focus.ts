@@ -13,9 +13,9 @@ export interface FocusOpts {
 
 /**
  * `solosquad workflow focus <workflow-id>` — set the active workflow for a
- * user's PM session. The next PM turn will get a system-prompt hint telling
- * it which workflow context is current. PM can also override at runtime by
- * emitting [focus:<wf-id>] in its reply.
+ * user's Chief session. The next Chief turn will get a system-prompt hint
+ * telling it which workflow context is current. The Chief can also override at
+ * runtime by emitting [focus:<wf-id>] in its reply.
  */
 export async function workflowFocusCommand(
   workflowId: string | undefined,
@@ -53,7 +53,7 @@ export async function workflowFocusCommand(
   const records = sessions.listForOrg(orgSlug);
   if (!userId) {
     if (records.length === 0) {
-      console.log(chalk.yellow(`No PM sessions for org ${orgSlug}.`));
+      console.log(chalk.yellow(`No Chief sessions for org ${orgSlug}.`));
       return;
     }
     if (records.length === 1) userId = records[0].userId;

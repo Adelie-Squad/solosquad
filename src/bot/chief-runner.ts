@@ -190,14 +190,14 @@ function safeEmitStage(
  *
  * Wraps the long-lived Claude Code session that talks to the user. Per
  * v1.1 PRD §5 (Chief Sub-System), this driver hosts the Chief — the
- * org-level supervisor — not PM. PM is a separate workspace-bundle main
- * bot (`agents/main/pm/`) that Chief dispatches to via the Task tool for
- * autonomous deep work; PM never talks to the user directly.
+ * org-level supervisor that decomposes the user's request and delegates to
+ * the 25 specialists via Claude Code's native Task tool. (Historically the
+ * role shipped as "PM mode" in v0.3 and was rebranded Chief in v1.1.)
  *
- * Event names ("pm.message_in", "pm.rate_limit", "pm.error",
- * "pm.message_out") are intentionally retained for backward-compat with
- * existing archive.sqlite consumers and dashboards. Treat the "pm." prefix
- * as the legacy *session-driver* namespace, not as the v1.1 "PM" agent.
+ * Event names were `pm.*` through v1.2.9 and are renamed `chief.*` in
+ * v1.2.10 to match the rebrand. archive.sqlite never indexed these kinds;
+ * the only on-disk reader (`workflow-reconciler`) accepts both the legacy
+ * `pm.*` and the new `chief.*` forms, so pre-v1.2.10 logs stay readable.
  *
  * The flow (per docs/plan/v0.3-pm-mode-orchestration.md §4.2):
  *
@@ -205,20 +205,20 @@ function safeEmitStage(
  *     1. Acquire session-id mutex (per PoC #1 §1.5 — concurrent --resume
  *        creates interleaved jsonl that garbles future resumes)
  *     2. SessionStore.ensure -> sessionId + fresh? flag
- *     3. Emit pm.message_in
+ *     3. Emit chief.message_in
  *     4. claude.invokeStreaming({ sessionId, resume: !fresh, ... })
  *     5. Loop stream-json lines:
  *          - assistant text       -> accumulate, forward to messenger
  *          - task_started         -> spawn.start event
  *          - task_notification    -> spawn.complete (status=completed)
  *                                    or spawn.fail (status=failed)
- *          - rate_limit_event !=allowed -> pm.rate_limit
+ *          - rate_limit_event !=allowed -> chief.rate_limit
  *          - result               -> final cost/text capture
  *     6. Exit/stderr branch:
  *          - "Not logged in"      -> AuthExpiredError
  *          - "No conversation found" -> rotate session-id, retry once
- *          - else exit!=0         -> pm.error
- *     7. Emit pm.message_out
+ *          - else exit!=0         -> chief.error
+ *     7. Emit chief.message_out
  *     8. SessionStore.recordTurn (cost accumulate)
  *     9. Release mutex
  */
@@ -421,7 +421,7 @@ export class ChiefRunner {
 
     sink.append({
       ts: nowIso(),
-      kind: "pm.message_in",
+      kind: "chief.message_in",
       text: call.userText,
       userId: call.userId,
     });
@@ -451,7 +451,7 @@ export class ChiefRunner {
 
     sink.append({
       ts: nowIso(),
-      kind: "pm.message_out",
+      kind: "chief.message_out",
       text: result.text,
       costUsd: result.costUsd,
       durationMs,
@@ -631,7 +631,7 @@ export class ChiefRunner {
     if (NOT_LOGGED_IN_PATTERN.test(exit.unparsedStdout)) {
       sink.append({
         ts: nowIso(),
-        kind: "pm.auth_expired",
+        kind: "chief.auth_expired",
         userId: call.userId,
       });
       throw new AuthExpiredError();
@@ -641,7 +641,7 @@ export class ChiefRunner {
       if (rotatedAlready) {
         sink.append({
           ts: nowIso(),
-          kind: "pm.error",
+          kind: "chief.error",
           reason: "session-lost-after-rotate",
           exitCode: exit.exitCode,
           stderrTail: exit.stderr.slice(-200),
@@ -656,7 +656,7 @@ export class ChiefRunner {
       );
       sink.append({
         ts: nowIso(),
-        kind: "pm.session_lost",
+        kind: "chief.session_lost",
         oldSessionId: sessionId,
         newSessionId: next,
         userId: call.userId,
@@ -668,7 +668,7 @@ export class ChiefRunner {
     if (exit.exitCode !== 0 && exit.exitCode !== null) {
       sink.append({
         ts: nowIso(),
-        kind: "pm.error",
+        kind: "chief.error",
         reason: "non-zero-exit",
         exitCode: exit.exitCode,
         signal: exit.signal,
@@ -785,7 +785,7 @@ export class ChiefRunner {
         handlers.onRateLimit();
         sink.append({
           ts: nowIso(),
-          kind: "pm.rate_limit",
+          kind: "chief.rate_limit",
           resetsAt: info.resetsAt,
           rateLimitType: info.rateLimitType,
           userId: handlers.userId,

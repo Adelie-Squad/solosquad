@@ -4,6 +4,39 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.10] — 2026-06-05 (Chief consolidation: finish the PM → Chief rename + open the orchestration-session-management track)
+
+v1.2.10 bundles two strands under one banner — **Chief**. See `docs/prd/v1.2.10-chief-session-orchestration.md`.
+
+- **Part A (shipped here): finish the v1.1 PM → Chief rename.** The rename was only half-applied — user-facing output said "Chief" while the CLI verb (`solosquad pm`), the event namespace (`pm.*`), the `PmConfig` type, and crucially the orchestrator's own SKILL identity ("You are the PM") still read "pm". Part A finishes it, drawing a hard line between three distinct meanings of "pm" so the cleanup doesn't break persisted data.
+- **Part B (designed here, staged): orchestration session management.** Grounded in `docs/ideation/260605-ochestrator-session.md` (long-horizon session/memory + Codex/Qwen references) and the current architecture: how a Chief session is split, where it runs, and how it's controlled across multiple repos. v1.2.10 implements the low-risk single-session groundwork (B-1…B-3: external-path repo cwd resolution, token-threshold handover/rotation, `_log.md` durable-md + memory tiers); the per-repo detached worker-session model (M2/M3) is fully specified but gated to v1.3.x. See PRD §B.
+
+### Part A — Taxonomy: "pm" was three things
+
+- **(A) session driver / user surface** = the Chief itself → **renamed**.
+- **(B) persisted contracts** (on-disk event kinds, `workspace.yaml` `pm:` key, `pm-compaction` routine id, `system-pm-compaction` thread) → renamed only where a read-compat shim or compile-time-only change made it safe; the rest kept with a documented rationale + deferred to a future migration.
+- **(C) a "separate PM agent" at `agents/main/pm/`** referenced by a chief-runner comment → **a ghost** (no such agent on disk); the stale comment was corrected.
+
+### Renamed
+
+- **CLI**: `solosquad chief status / reset / compact` is now canonical. `solosquad pm …` is kept as a hidden, deprecated alias (it's documented in the immutable `AGENTS.md` and protects existing muscle-memory/scripts) — it prints a one-line deprecation notice and dispatches to the same implementation. `src/cli/pm.ts` → `src/cli/chief.ts`; `pm{Status,Reset,Compact}Command` → `chief*Command`.
+- **Event namespace**: `pm.*` → `chief.*` (`chief.message_in/out`, `chief.error`, `chief.auth_expired`, `chief.session_lost`, `chief.session_rotated`, `chief.rate_limit`); interfaces `Pm*Event` → `Chief*Event`. `WorkflowReconciler` accepts **both** the legacy `pm.*` and new `chief.*` kinds when scanning pre-v1.2.10 `events.jsonl`, so a turn that straddled the upgrade is still recovered. archive.sqlite never indexed these kinds, so no external consumer breaks. `pmEventsPath` → `chiefEventsPath` (on-disk path unchanged); a deprecated `pmEventsPath` alias is retained so the **immutable** `src/engine/**` keeps compiling.
+- **Orchestrator identity**: `assets/orchestrator/SKILL.md` no longer says "You are the PM" — it's the Chief. Only identity nouns changed; every behavioral instruction (PRD/stages/Task/handoff/dev-confirm) is preserved.
+- **Config type**: `PmConfig` → `ChiefConfig` (compile-time only). The `workspace.yaml` property key stays `pm`.
+
+### Kept (persisted contracts — see PRD §7)
+
+- `workspace.yaml` `pm:` key, the `pm-compaction` routine id + `system-pm-compaction` thread + `memory/pm-skills/` path. Renaming these requires migrating every existing workspace / live Discord thread, deferred to a dedicated migration. The human-readable routine label was updated `"PM Compaction"` → `"Chief Compaction"`.
+
+### cwd default — documented (was a recurring support question)
+
+- `getWorkspaceRoot()` walks **up from the launch cwd** for `.solosquad/`; `solosquad bot`/`chat`/`chief reset` must be run from inside the workspace.
+- A Chief conversation spawns with cwd = **`<workspace>/<orgSlug>/`** (`getReposBase()` returns the workspace when `.solosquad/` exists). Registered repos live at external absolute paths and are reachable only via `--add-dir`, not because they're under cwd.
+
+### Tests
+
+- 759 pass (was 758). Added `test/chief-cli.test.ts` (`chiefResetCommand` rotates the session + logs `chief.session_rotated`) and reworked `workflow-reconciler.test.ts` to assert legacy `pm.*` read-compat → new `chief.*` write.
+
 ## [1.2.9] — 2026-06-01 (fix the Discord Application ID source that broke invite-URL 1-click since v1.2.6)
 
 **v1.2.6 shipped an OAuth "invite URL 1-click" onboarding flow that never once worked — a single non-existent API field defeated the whole thing.** Dogfood reported that `solosquad init` (a) never asks for the Application ID and (b) never prints/opens the server invite URL at the end. Both symptoms trace to the same root cause.

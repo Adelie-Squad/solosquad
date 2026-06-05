@@ -3,14 +3,14 @@ import inquirer from "inquirer";
 import { getWorkspaceRoot } from "../util/paths.js";
 import { listOrganizations } from "../util/config.js";
 import { SessionStore } from "../bot/session-store.js";
-import { FileEventSink, pmEventsPath } from "../bot/events.js";
+import { FileEventSink, chiefEventsPath } from "../bot/events.js";
 
-export interface PmStatusOpts {
+export interface ChiefStatusOpts {
   org?: string;
 }
 
-/** `solosquad pm status` — list active sessions + cost + activity. */
-export async function pmStatusCommand(opts: PmStatusOpts): Promise<void> {
+/** `solosquad chief status` — list active sessions + cost + activity. */
+export async function chiefStatusCommand(opts: ChiefStatusOpts): Promise<void> {
   const ws = getWorkspaceRoot();
   const sessions = new SessionStore(ws);
   const orgs = listOrganizations(ws).filter((o) => !opts.org || o.slug === opts.org);
@@ -50,15 +50,15 @@ export async function pmStatusCommand(opts: PmStatusOpts): Promise<void> {
   console.log();
 }
 
-export interface PmResetOpts {
+export interface ChiefResetOpts {
   org?: string;
   user?: string;
   reason?: string;
   yes?: boolean;
 }
 
-/** `solosquad pm reset` — archive existing session, mint a new id. */
-export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
+/** `solosquad chief reset` — archive existing session, mint a new id. */
+export async function chiefResetCommand(opts: ChiefResetOpts): Promise<void> {
   const ws = getWorkspaceRoot();
   const sessions = new SessionStore(ws);
   const orgs = listOrganizations(ws);
@@ -134,11 +134,11 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
 
   const { previous, next } = sessions.rotate(orgSlug, userId, reason);
 
-  // Record the rotation in the PM events log too.
-  const sink = new FileEventSink(pmEventsPath(ws, orgSlug, userId));
+  // Record the rotation in the Chief events log too.
+  const sink = new FileEventSink(chiefEventsPath(ws, orgSlug, userId));
   sink.append({
     ts: new Date().toISOString(),
-    kind: "pm.session_rotated",
+    kind: "chief.session_rotated",
     oldSessionId: previous ?? "(none)",
     newSessionId: next,
     reason,
@@ -150,13 +150,15 @@ export async function pmResetCommand(opts: PmResetOpts): Promise<void> {
   console.log(chalk.dim(`  next:     ${next}`));
 }
 
-/** `solosquad pm compact` — manual trigger for the pm-compaction routine. */
-export async function pmCompactCommand(_opts: { org?: string }): Promise<void> {
+/** `solosquad chief compact` — manual trigger for the pm-compaction routine. */
+export async function chiefCompactCommand(_opts: { org?: string }): Promise<void> {
   // Phase B placeholder — full routine ships with `pm-compaction.md` integration.
-  // For 0.3.0 we just point users at the routine command.
+  // For 0.3.0 we just point users at the routine command. (The routine id
+  // `pm-compaction` is an on-disk/scheduler contract and is intentionally kept
+  // — see docs/prd/v1.2.10-chief-session-orchestration.md §A.3.)
   console.log(
     chalk.yellow(
-      "pm-compaction is delivered as a scheduled routine. To trigger it manually now, run:"
+      "Chief compaction is delivered as a scheduled routine. To trigger it manually now, run:"
     )
   );
   console.log(chalk.cyan("  solosquad run-routine pm-compaction"));

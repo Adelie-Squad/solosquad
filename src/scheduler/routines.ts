@@ -56,7 +56,7 @@ export const ROUTINES: RoutineConfig[] = [
   },
   {
     id: "pm-compaction",
-    name: "PM Compaction",
+    name: "Chief Compaction",
     kind: "background",
     channel: "workflow",
     threadName: "system-pm-compaction",

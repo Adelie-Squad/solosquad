@@ -7,7 +7,7 @@ import yaml from "js-yaml";
 
 import { WorkflowReconciler } from "../src/bot/workflow-reconciler.js";
 import { SessionStore } from "../src/bot/session-store.js";
-import { FileEventSink, pmEventsPath, workflowEventsPath } from "../src/bot/events.js";
+import { FileEventSink, chiefEventsPath, workflowEventsPath } from "../src/bot/events.js";
 
 function tempWorkspace(orgSlug = "test-org"): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solosquad-recon-"));
@@ -68,7 +68,7 @@ test("reconcileAll flips orphaned in_progress stages to needs_revision", async (
   assert.ok(ev);
 });
 
-test("reconcileAll surfaces a fallback notice when no pm.message_out follows pm.message_in", async () => {
+test("reconcileAll read-compat: legacy pm.message_in (no out) → fallback + writes chief.message_out", async () => {
   const ws = tempWorkspace();
   const orgSlug = "test-org";
   const userId = "U_pending";
@@ -76,14 +76,22 @@ test("reconcileAll surfaces a fallback notice when no pm.message_out follows pm.
   const sessions = new SessionStore(ws);
   sessions.ensure(orgSlug, userId);
 
-  const sink = new FileEventSink(pmEventsPath(ws, orgSlug, userId));
-  sink.append({
-    ts: "2026-05-12T10:00:00Z",
-    kind: "pm.message_in",
-    text: "unanswered message",
-    userId,
-  });
-  // No matching pm.message_out — bot crashed mid-turn.
+  // Simulate a log written by a pre-v1.2.10 bot: the on-disk kind is the
+  // legacy `pm.message_in`. We write the raw JSONL line directly (the typed
+  // sink no longer accepts the retired `pm.*` literal) to authentically
+  // reproduce an old file. The reconciler must still pair/recover it.
+  const eventsFile = chiefEventsPath(ws, orgSlug, userId);
+  fs.mkdirSync(path.dirname(eventsFile), { recursive: true });
+  fs.writeFileSync(
+    eventsFile,
+    JSON.stringify({
+      ts: "2026-05-12T10:00:00Z",
+      kind: "pm.message_in",
+      text: "unanswered message",
+      userId,
+    }) + "\n"
+  );
+  // No matching message_out (of either kind) — bot crashed mid-turn.
 
   const reconciler = new WorkflowReconciler(ws, sessions);
   const report = await reconciler.reconcileAll();
@@ -94,9 +102,9 @@ test("reconcileAll surfaces a fallback notice when no pm.message_out follows pm.
   assert.equal(d.source, "fallback-notice");
   assert.match(d.text, /bot restarted/i);
 
-  // Reconciler should have written a pm.message_out so it doesn't re-notify
-  const events = sink.list();
-  assert.ok(events.some((e) => e.kind === "pm.message_out"));
+  // Recovery writes the NEW kind so it doesn't re-notify on the next boot.
+  const events = new FileEventSink(eventsFile).list();
+  assert.ok(events.some((e) => e.kind === "chief.message_out"));
 });
 
 test("reconcileAll uses stage_id mapping — completed spawn for stage keeps it in_progress untouched", async () => {
@@ -159,16 +167,16 @@ test("reconcileAll is a no-op when last message_in already has a message_out", a
   const sessions = new SessionStore(ws);
   sessions.ensure(orgSlug, userId);
 
-  const sink = new FileEventSink(pmEventsPath(ws, orgSlug, userId));
+  const sink = new FileEventSink(chiefEventsPath(ws, orgSlug, userId));
   sink.append({
     ts: "2026-05-12T10:00:00Z",
-    kind: "pm.message_in",
+    kind: "chief.message_in",
     text: "hi",
     userId,
   });
   sink.append({
     ts: "2026-05-12T10:00:05Z",
-    kind: "pm.message_out",
+    kind: "chief.message_out",
     text: "hi back",
     costUsd: 0.02,
     durationMs: 5000,

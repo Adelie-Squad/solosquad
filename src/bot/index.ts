@@ -3,7 +3,7 @@ import { createAdapters } from "../messenger/index.js";
 import { RealClaudeProcessFactory } from "./claude-process.js";
 import { ChiefRunner, AuthExpiredError } from "./chief-runner.js";
 import { SessionStore } from "./session-store.js";
-import { FileEventSink, pmEventsPath } from "./events.js";
+import { FileEventSink, chiefEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
 import { handleSlashIfAny } from "./slash-commands.js";
 import { parseMentions } from "./mention-parser.js";
@@ -48,7 +48,7 @@ const chiefRunner = new ChiefRunner({
   claude,
   sessions,
   events: (orgSlug, userId) =>
-    new FileEventSink(pmEventsPath(workspaceRoot, orgSlug, userId)),
+    new FileEventSink(chiefEventsPath(workspaceRoot, orgSlug, userId)),
 });
 
 async function handleCommand(

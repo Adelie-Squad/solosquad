@@ -35,10 +35,17 @@ export interface GoalConfig {
   dedicated_session_prefix?: string;
 }
 
-export interface PmConfig {
+/**
+ * Chief session configuration. v1.2.10 renamed the TS type `PmConfig` →
+ * `ChiefConfig` to match the Chief rebrand. The `workspace.yaml` property key
+ * stays `pm` (see {@link WorkspaceYaml.pm}) — it's a persisted contract across
+ * every existing workspace, so renaming the key is deferred to a dedicated
+ * migration (docs/prd/v1.2.10-chief-session-orchestration.md §A.3).
+ */
+export interface ChiefConfig {
   /** Cap per claude --print call. Workspace default. */
   max_budget_usd?: number;
-  /** Hard timeout per PM invocation. */
+  /** Hard timeout per Chief invocation. */
   invoke_timeout_seconds?: number;
   /** Real-time partial reply streaming (--include-partial-messages). */
   include_partial_messages?: boolean;
@@ -46,7 +53,7 @@ export interface PmConfig {
   exclude_dynamic_system_prompt_sections?: boolean;
   /** Per-session in-process mutex queue depth (chief-runner). */
   mutex_queue_depth?: number;
-  /** v0.3.0+: daily pm-compaction trigger time (HH:MM). */
+  /** v0.3.0+: daily compaction-routine trigger time (HH:MM). */
   compaction_time?: string;
 }
 
@@ -67,8 +74,11 @@ export interface WorkspaceYaml {
     experiment_check?: BriefingConfig;
     weekly_review?: WeeklyRoutineConfig;
   };
-  /** v0.3.0+: PM mode configuration. */
-  pm?: PmConfig;
+  /**
+   * v0.3.0+: Chief session configuration. Property key kept as `pm` for
+   * back-compat with existing workspace.yaml files (v1.2.10 §4.2/§7).
+   */
+  pm?: ChiefConfig;
   /** v0.4.0+: autonomous goal engine configuration. */
   goal?: GoalConfig;
   /** v0.5.0+: 3-tier skill loader ordering. */

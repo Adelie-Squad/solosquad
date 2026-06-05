@@ -117,7 +117,7 @@ export async function rollbackCommand(opts: RollbackOpts): Promise<void> {
   }
   console.log(
     chalk.dim(
-      "  Note: PM session is unchanged — start the next message with context about the rollback."
+      "  Note: Chief session is unchanged — start the next message with context about the rollback."
     )
   );
 }
