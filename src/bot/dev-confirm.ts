@@ -83,12 +83,13 @@ export interface DevConfirmDeps {
   /** Override the audit write path (mostly tests). */
   writeAudit?: (entry: DevConfirmAuditEntry, target: string) => void;
   /**
-   * v1.2.9 Part B — fired exactly once when the decision is `"y"` (approved),
-   * after the audit write. The live wiring (v1.3.0, when the gate goes live)
-   * passes a sink that emits a push notification to the `git-<handle>`
-   * channel via `notifyGitPush`. Best-effort: errors are swallowed so the
-   * gate's resolved decision is never affected. Dormant in v1.2.9 — no
-   * production code constructs a gate yet, so this never fires until then.
+   * Generic post-approval sink — fired exactly once when the decision is
+   * `"y"` (approved), after the audit write. Best-effort: errors are swallowed
+   * so the gate's resolved decision is never affected. Dormant until the gate
+   * goes live (v1.3.0); no production code constructs a gate yet. (v1.2.9 Part
+   * B originally used this for a `git-<handle>` push notification; that feed
+   * was dropped in v1.2.10 — push notifications are now the user's own
+   * GitHub→messenger webhook. The hook stays as a neutral extension point.)
    */
   onApproved?: (request: DevConfirmRequest) => void;
 }
@@ -184,9 +185,9 @@ export function createDevConfirm(
     } catch {
       // Audit logging is best-effort — never throw out of the gate.
     }
-    // v1.2.9 Part B — notify the git-<handle> feed on approval. Best-effort,
-    // after audit. Swallow errors so a sink failure can't change the gate
-    // decision the caller awaits.
+    // Generic post-approval sink, fired after the audit write. Best-effort:
+    // swallow errors so a sink failure can't change the gate decision the
+    // caller awaits.
     if (decision === "y" && deps.onApproved) {
       try {
         deps.onApproved(request);

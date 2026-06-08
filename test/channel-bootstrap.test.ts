@@ -63,11 +63,10 @@ function userDoc(handle: string, botUserId: string): UserYaml {
   };
 }
 
-test("expectedChannelNamesFor derives the canonical triple (v1.2.9 Part B adds git)", () => {
+test("expectedChannelNamesFor derives the canonical command/works pair", () => {
   assert.deepEqual(expectedChannelNamesFor("alice"), {
     command: "command-alice",
     works: "works-alice",
-    git: "git-alice",
   });
 });
 
@@ -108,18 +107,6 @@ test("listKnownChannels enumerates every (org, handle, command, works) tuple", (
   assert.equal(map.alice.orgSlug, "alpha");
   assert.equal(map.alice.command, "command-alice");
   assert.equal(map.bob.works, "works-bob");
-  // v1.2.9 Part B — git channel is derived even for pre-migration yamls
-  // (userDoc here has no channels.git → fallback to git-<handle>).
-  assert.equal(map.alice.git, "git-alice");
-  assert.equal(map.bob.git, "git-bob");
-});
-
-test("resolveBotIdentity falls back to git-<handle> for pre-v1.2.9 yamls (no channels.git)", () => {
-  const ws = tempWorkspace("alpha");
-  saveUserYaml("alpha", userDoc("alice", "id-1"), ws);
-  const identity = resolveBotIdentity({ workspace: ws, botUserId: "id-1" });
-  assert.ok(identity);
-  assert.equal(identity!.channels.git, "git-alice");
 });
 
 test("broadcast defaults are off — isDesignatedBroadcaster returns false", () => {

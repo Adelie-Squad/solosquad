@@ -4,12 +4,13 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.2.10] — 2026-06-05 (Chief consolidation: finish the PM → Chief rename + open the orchestration-session-management track)
+## [1.2.10] — 2026-06-08 (Chief consolidation: finish the PM → Chief rename + roll back the git-<handle> channel)
 
-v1.2.10 bundles two strands under one banner — **Chief**. See `docs/prd/v1.2.10-chief-session-orchestration.md`.
+v1.2.10 bundles two strands. See `docs/prd/v1.2.10-chief-rename-and-git-channel-removal.md`.
 
-- **Part A (shipped here): finish the v1.1 PM → Chief rename.** The rename was only half-applied — user-facing output said "Chief" while the CLI verb (`solosquad pm`), the event namespace (`pm.*`), the `PmConfig` type, and crucially the orchestrator's own SKILL identity ("You are the PM") still read "pm". Part A finishes it, drawing a hard line between three distinct meanings of "pm" so the cleanup doesn't break persisted data.
-- **Part B (designed here, staged): orchestration session management.** Grounded in `docs/ideation/260605-ochestrator-session.md` (long-horizon session/memory + Codex/Qwen references) and the current architecture: how a Chief session is split, where it runs, and how it's controlled across multiple repos. v1.2.10 implements the low-risk single-session groundwork (B-1…B-3: external-path repo cwd resolution, token-threshold handover/rotation, `_log.md` durable-md + memory tiers); the per-repo detached worker-session model (M2/M3) is fully specified but gated to v1.3.x. See PRD §B.
+- **Part A: finish the v1.1 PM → Chief rename.** The rename was only half-applied — user-facing output said "Chief" while the CLI verb (`solosquad pm`), the event namespace (`pm.*`), the `PmConfig` type, and crucially the orchestrator's own SKILL identity ("You are the PM") still read "pm". Part A finishes it, drawing a hard line between three distinct meanings of "pm" so the cleanup doesn't break persisted data.
+- **Part C: roll back the `git-<handle>` VCS channel (v1.2.9 Part B).** SoloSquad no longer creates or notifies a git channel. The only thing actually needed is **push approval** (the dev-confirm gate, designed in `docs/prd/v1.3.0-dev-confirm-gate-live.md`); push *notifications* are better delegated to the user's own native **GitHub→Discord webhook**. Removed `git-event-notify.ts` + `git_events` config + the `git` channel-creation/derivation paths. Code-only removal — existing `git-<handle>` channels and `channels.git` yaml fields (shipped in v1.2.9) are left orphaned (no cleanup migration); the field is retained as a deprecated/inert shim so the released 1.2.8→1.2.9 migration keeps compiling.
+- **Moved out:** the orchestration session-management design (single-session handover, per-repo worker sessions M1–M3) was split into its own doc → `docs/prd/v1.4.0-session-orchestration.md`. No session code ships in v1.2.10.
 
 ### Part A — Taxonomy: "pm" was three things
 
@@ -35,7 +36,7 @@ v1.2.10 bundles two strands under one banner — **Chief**. See `docs/prd/v1.2.1
 
 ### Tests
 
-- 759 pass (was 758). Added `test/chief-cli.test.ts` (`chiefResetCommand` rotates the session + logs `chief.session_rotated`) and reworked `workflow-reconciler.test.ts` to assert legacy `pm.*` read-compat → new `chief.*` write.
+- 749 pass. Added `test/chief-cli.test.ts` (`chiefResetCommand` rotates the session + logs `chief.session_rotated`) and reworked `workflow-reconciler.test.ts` to assert legacy `pm.*` read-compat → new `chief.*` write. Part C removed `test/git-event-notify.test.ts` (~10 cases) and dropped the `git` assertions from `user-registry`/`channel-bootstrap` tests.
 
 ## [1.2.9] — 2026-06-01 (fix the Discord Application ID source that broke invite-URL 1-click since v1.2.6)
 

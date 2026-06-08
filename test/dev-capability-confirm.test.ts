@@ -130,7 +130,7 @@ test("createDevConfirm.abort() resolves with `pm-aborted`", async () => {
   assert.equal(row.decision, "pm-aborted");
 });
 
-test("v1.2.9 Part B — onApproved fires once on `y` with the request (git-feed hook)", async () => {
+test("onApproved (generic post-approval sink) fires once on `y` with the request", async () => {
   const seen: string[] = [];
   const ctrl = createDevConfirm(
     {

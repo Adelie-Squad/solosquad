@@ -40,7 +40,7 @@ export interface GoalConfig {
  * `ChiefConfig` to match the Chief rebrand. The `workspace.yaml` property key
  * stays `pm` (see {@link WorkspaceYaml.pm}) — it's a persisted contract across
  * every existing workspace, so renaming the key is deferred to a dedicated
- * migration (docs/prd/v1.2.10-chief-session-orchestration.md §A.3).
+ * migration (docs/prd/v1.2.10-chief-rename-and-git-channel-removal.md §A.3).
  */
 export interface ChiefConfig {
   /** Cap per claude --print call. Workspace default. */
@@ -116,12 +116,6 @@ export interface MessengerWorkspaceConfig {
   discord?: DiscordWorkspaceConfig;
   /** v1.2.x — Slack-specific policies (mirror of discord). */
   slack?: SlackWorkspaceConfig;
-  /**
-   * v1.2.9 Part B — `git-<handle>` VCS event feed. Default ON. When
-   * `enabled === false`, the push-notification sink is a no-op (the channel
-   * is still created by `ensureChannels`, just stays quiet).
-   */
-  git_events?: { enabled?: boolean };
 }
 
 export interface DiscordWorkspaceConfig {

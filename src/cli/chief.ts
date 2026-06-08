@@ -155,7 +155,7 @@ export async function chiefCompactCommand(_opts: { org?: string }): Promise<void
   // Phase B placeholder — full routine ships with `pm-compaction.md` integration.
   // For 0.3.0 we just point users at the routine command. (The routine id
   // `pm-compaction` is an on-disk/scheduler contract and is intentionally kept
-  // — see docs/prd/v1.2.10-chief-session-orchestration.md §A.3.)
+  // — see docs/prd/v1.2.10-chief-rename-and-git-channel-removal.md §A.3.)
   console.log(
     chalk.yellow(
       "Chief compaction is delivered as a scheduled routine. To trigger it manually now, run:"
