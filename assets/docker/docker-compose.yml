@@ -1,9 +1,22 @@
+# SoloSquad user Docker stack — run from your workspace root:
+#   docker compose up -d --build
+# `solosquad init` copies this file (+ Dockerfile) into the workspace root,
+# so `build: .` and the `.:/workspace` mount resolve to your workspace.
+#
+# v1.2.8 migration restart flow:
+#   `solosquad migrate --apply` reads the bot PID (<workspace>/.solosquad/bot.pid),
+#   sends SIGTERM → the bot graceful-drains (replies in-flight Chief turn, up to
+#   120s) → exits 0 → Docker `restart: unless-stopped` respawns it automatically.
+#   No need to run `docker compose restart bot` by hand.
+
 services:
   bot:
     build: .
     image: solosquad:latest
     container_name: solosquad-bot
     restart: unless-stopped
+    # v1.2.8 §A.12 graceful drain (default 120s) 보다 여유 있게.
+    stop_grace_period: 130s
     env_file: .env
     working_dir: /workspace
     environment:
@@ -18,6 +31,9 @@ services:
       # macOS/Linux default: ${HOME}/.claude
       # Override via CLAUDE_AUTH_DIR in .env if creds live elsewhere.
       - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
+      # v0.5 — user-global SKILL override (3-tier tier 2) + workspace backups.
+      - ${HOME}/.solosquad:/root/.solosquad
+      - ${HOME}/.solosquad-backups:/root/.solosquad-backups
     command: ["solosquad", "bot"]
 
   scheduler:
@@ -25,6 +41,7 @@ services:
     image: solosquad:latest
     container_name: solosquad-scheduler
     restart: unless-stopped
+    stop_grace_period: 130s
     env_file: .env
     working_dir: /workspace
     environment:
@@ -34,4 +51,6 @@ services:
       - .:/workspace
       - ${REPOS_BASE_PATH:-./repos}:/repos
       - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
+      - ${HOME}/.solosquad:/root/.solosquad
+      - ${HOME}/.solosquad-backups:/root/.solosquad-backups
     command: ["solosquad", "schedule"]

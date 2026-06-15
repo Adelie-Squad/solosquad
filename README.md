@@ -79,7 +79,7 @@ solosquad doctor --discord                        # focused 5-hop Discord diagno
 # 3. Start the bot
 solosquad bot                                     # foreground
 # or
-cd deploy/docker && docker compose up -d --build  # background + auto-restart
+docker compose up -d --build                      # background + auto-restart (from workspace root; init dropped the compose file here)
 ```
 
 When you invite the bot to a guild, the **guildCreate onboarding embed** appears in the system channel. Click **Auto-create channels** → the bot creates `#command-<handle>` and `#works-<handle>`, posts a first greeting in the command channel, and you're ready. Send a message — the Chief responds.
@@ -271,7 +271,7 @@ v0.6 layers five more pieces over the v0.3–v0.5 base:
 - **Stop-hook** — v0.5's `loop_mode.spec-gate` SKILL field is now executable through `src/engine/stop-hook-adapter.ts`. The DSL accepts three forms (`command` / `metric` / `natural`), runs with a 5-second timeout, and on ambiguity defaults to *continue* (conservative). Every evaluation is appended to `<org>/memory/stop-hook-events.jsonl` and threaded back into the v0.4 goal-runner.
 
 For production-grade always-on, choose one of:
-- Docker Compose (recommended, background + auto-restart) — see [`deploy/docker/README.md`](deploy/docker/README.md)
+- Docker Compose (recommended, background + auto-restart) — `solosquad init` drops `docker-compose.yml` + `Dockerfile` in your workspace root; run `docker compose up -d --build` there. See [master-guide §Docker](manual/master-guide_en.html).
 - macOS `launchd` plist / Windows NSSM service
 - VPS + systemd (see [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
 

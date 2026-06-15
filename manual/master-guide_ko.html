@@ -1060,11 +1060,11 @@ solosquad sync                                      # repositories/ ↔ .org.yam
     <dt>routine-logs/*.jsonl</dt>
     <dd>routine 실행 전체 로그. 디버깅·회고에 사용.</dd>
 
-    <dt>Dockerfile (deploy/docker/Dockerfile)</dt>
-    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때. v0.5부터 <code>deploy/docker/</code>로 이동.</dd>
+    <dt>Dockerfile (워크스페이스 루트)</dt>
+    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때. v1.2.10부터 <code>solosquad init</code> 이 워크스페이스 루트로 복사(소스 템플릿은 <code>assets/docker/</code>).</dd>
 
-    <dt>docker-compose.yml (deploy/docker/docker-compose.yml)</dt>
-    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정. v0.5부터 <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code>도 마운트 — user-global SKILL override와 backup 호환.</dd>
+    <dt>docker-compose.yml (워크스페이스 루트)</dt>
+    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정. 워크스페이스 루트에서 <code>docker compose up -d --build</code> 로 기동. <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> 도 마운트 — user-global SKILL override와 backup 호환. v1.2.10: 메인테이너용 <code>deploy/docker/</code> repo-self-hosting 스택 제거, 사용자 Docker 자산을 <code>assets/docker/</code> 단일 홈으로 정리.</dd>
 
     <dt>README.md</dt>
     <dd>프로젝트 첫인상 문서. npm/GitHub에 표시되는 메인 설명. SoloSquad의 README는 설치·빠른 사용법.</dd>
