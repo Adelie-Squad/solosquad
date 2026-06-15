@@ -3,7 +3,7 @@ import * as readline from "readline";
 import { RealClaudeProcessFactory } from "../bot/claude-process.js";
 import { ChiefRunner } from "../bot/chief-runner.js";
 import { SessionStore } from "../bot/session-store.js";
-import { FileEventSink, pmEventsPath } from "../bot/events.js";
+import { FileEventSink, chiefEventsPath } from "../bot/events.js";
 import { getWorkspaceDir, getOrgDir } from "../util/paths.js";
 import {
   listOrganizations,
@@ -74,7 +74,7 @@ export async function chatCommand(
     claude,
     sessions,
     events: (slug, uid) =>
-      new FileEventSink(pmEventsPath(workspaceRoot, slug, uid)),
+      new FileEventSink(chiefEventsPath(workspaceRoot, slug, uid)),
   });
 
   const ask = async (text: string): Promise<void> => {

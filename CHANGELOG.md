@@ -4,6 +4,41 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.2.10] — 2026-06-16 (Consolidation cleanup: finish the PM → Chief rename, roll back the git-<handle> channel, remove the repo-self-hosting Docker stack)
+
+v1.2.10 is a **consolidation cleanup** release: it removes the half-finished and speculative artifacts left by v1.1 and v1.2.9 to reach a clean baseline — no new features. The three parts share one through-line: *"clean up what a prior version only half-finished or shipped speculatively."* See `docs/prd/v1.2.10-consolidation-cleanup.md`.
+
+- **Part A: finish the v1.1 PM → Chief rename.** The rename was only half-applied — user-facing output said "Chief" while the CLI verb (`solosquad pm`), the event namespace (`pm.*`), the `PmConfig` type, and crucially the orchestrator's own SKILL identity ("You are the PM") still read "pm". Part A finishes it, drawing a hard line between three distinct meanings of "pm" so the cleanup doesn't break persisted data.
+- **Part C: roll back the `git-<handle>` VCS channel (v1.2.9 Part B).** SoloSquad no longer creates or notifies a git channel. The only thing actually needed is **push approval** (the dev-confirm gate, designed in `docs/prd/v1.3.0-dev-confirm-gate-live.md`); push *notifications* are better delegated to the user's own native **GitHub→Discord webhook**. Removed `git-event-notify.ts` + `git_events` config + the `git` channel-creation/derivation paths. Code-only removal — existing `git-<handle>` channels and `channels.git` yaml fields (shipped in v1.2.9) are left orphaned (no cleanup migration); the field is retained as a deprecated/inert shim so the released 1.2.8→1.2.9 migration keeps compiling.
+- **Part D: remove the repo-self-hosting Docker stack + consolidate user Docker assets.** `deploy/docker/` existed to spin the repo root up as a Docker workspace, but the container installs the npm-published `solosquad` (not local `src/`), so "run the repo in Docker" was never real — it was a maintainer dogfood stack that only caused confusion. Removed `deploy/docker/**`. User Docker stays a first-class, regression-free feature: moved `assets/{Dockerfile,docker-compose.yml}` → `assets/docker/` (a single home) and merged the three maintainer-only features into the user compose (`stop_grace_period: 130s`, `~/.solosquad` and `~/.solosquad-backups` mounts) — without porting the `SOLOSQUAD_WORKSPACE=../..` repo-root override (the removed assumption). `solosquad init` now copies from `assets/docker/` (destination stays the workspace root). README ko/en + manual ko/en hosting guidance corrected to "run `docker compose up -d --build` from the workspace root."
+- **Moved out:** the orchestration session-management design (single-session handover, per-repo worker sessions M1–M3) was split into its own doc → `docs/prd/v1.4.0-session-orchestration.md`. No session code ships in v1.2.10.
+
+### Part A — Taxonomy: "pm" was three things
+
+- **(A) session driver / user surface** = the Chief itself → **renamed**.
+- **(B) persisted contracts** (on-disk event kinds, `workspace.yaml` `pm:` key, `pm-compaction` routine id, `system-pm-compaction` thread) → renamed only where a read-compat shim or compile-time-only change made it safe; the rest kept with a documented rationale + deferred to a future migration.
+- **(C) a "separate PM agent" at `agents/main/pm/`** referenced by a chief-runner comment → **a ghost** (no such agent on disk); the stale comment was corrected.
+
+### Renamed
+
+- **CLI**: `solosquad chief status / reset / compact` is now canonical. `solosquad pm …` is kept as a hidden, deprecated alias (it's documented in the immutable `AGENTS.md` and protects existing muscle-memory/scripts) — it prints a one-line deprecation notice and dispatches to the same implementation. `src/cli/pm.ts` → `src/cli/chief.ts`; `pm{Status,Reset,Compact}Command` → `chief*Command`.
+- **Event namespace**: `pm.*` → `chief.*` (`chief.message_in/out`, `chief.error`, `chief.auth_expired`, `chief.session_lost`, `chief.session_rotated`, `chief.rate_limit`); interfaces `Pm*Event` → `Chief*Event`. `WorkflowReconciler` accepts **both** the legacy `pm.*` and new `chief.*` kinds when scanning pre-v1.2.10 `events.jsonl`, so a turn that straddled the upgrade is still recovered. archive.sqlite never indexed these kinds, so no external consumer breaks. `pmEventsPath` → `chiefEventsPath` (on-disk path unchanged); a deprecated `pmEventsPath` alias is retained so the **immutable** `src/engine/**` keeps compiling.
+- **Orchestrator identity**: `assets/orchestrator/SKILL.md` no longer says "You are the PM" — it's the Chief. Only identity nouns changed; every behavioral instruction (PRD/stages/Task/handoff/dev-confirm) is preserved.
+- **Config type**: `PmConfig` → `ChiefConfig` (compile-time only). The `workspace.yaml` property key stays `pm`.
+
+### Kept (persisted contracts — see PRD §7)
+
+- `workspace.yaml` `pm:` key, the `pm-compaction` routine id + `system-pm-compaction` thread + `memory/pm-skills/` path. Renaming these requires migrating every existing workspace / live Discord thread, deferred to a dedicated migration. The human-readable routine label was updated `"PM Compaction"` → `"Chief Compaction"`.
+
+### cwd default — documented (was a recurring support question)
+
+- `getWorkspaceRoot()` walks **up from the launch cwd** for `.solosquad/`; `solosquad bot`/`chat`/`chief reset` must be run from inside the workspace.
+- A Chief conversation spawns with cwd = **`<workspace>/<orgSlug>/`** (`getReposBase()` returns the workspace when `.solosquad/` exists). Registered repos live at external absolute paths and are reachable only via `--add-dir`, not because they're under cwd.
+
+### Tests
+
+- 749 pass. Added `test/chief-cli.test.ts` (`chiefResetCommand` rotates the session + logs `chief.session_rotated`) and reworked `workflow-reconciler.test.ts` to assert legacy `pm.*` read-compat → new `chief.*` write. Part C removed `test/git-event-notify.test.ts` (~10 cases) and dropped the `git` assertions from `user-registry`/`channel-bootstrap` tests.
+
 ## [1.2.9] — 2026-06-01 (fix the Discord Application ID source that broke invite-URL 1-click since v1.2.6)
 
 **v1.2.6 shipped an OAuth "invite URL 1-click" onboarding flow that never once worked — a single non-existent API field defeated the whole thing.** Dogfood reported that `solosquad init` (a) never asks for the Application ID and (b) never prints/opens the server invite URL at the end. Both symptoms trace to the same root cause.

@@ -1,13 +1,13 @@
 import { execFile, spawn, type ChildProcess } from "child_process";
 
 /**
- * v0.3.0 (PM mode) — typed wrapper around `claude --print` subprocess.
+ * v0.3.0 — typed wrapper around `claude --print` subprocess.
  *
- * Replaces the single-shot `claude-runner.ts` for PM session use. The scheduler
- * still uses `claude-runner.ts` for stateless routine prompts.
+ * Replaces the single-shot `claude-runner.ts` for Chief session use. The
+ * scheduler still uses `claude-runner.ts` for stateless routine prompts.
  *
  * Design (per docs/plan/v0.3-pm-mode-orchestration.md §3.2 + PoC #1/#2):
- *   - PM session uses pre-generated `--session-id <uuid>` + `--resume`
+ *   - Chief session uses pre-generated `--session-id <uuid>` + `--resume`
  *   - Always `--output-format stream-json --verbose --input-format stream-json`
  *   - `ClaudeProcessFactory` interface lets us swap a Fake impl for unit tests
  *   - Real impl handles Windows shell quoting (DEP0190-safe)

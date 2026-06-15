@@ -22,8 +22,6 @@ export interface BotIdentity {
   channels: {
     command: string;
     works: string;
-    /** v1.2.9 Part B — VCS event feed channel (`git-<handle>`). */
-    git: string;
   };
 }
 
@@ -55,9 +53,6 @@ export function resolveBotIdentity(
         channels: {
           command: found.channels.command,
           works: found.channels.works,
-          // v1.2.9 Part B — fall back to the derived name for pre-v1.2.9
-          // yamls (schema_version 1) that predate the field.
-          git: found.channels.git ?? `git-${found.handle}`,
         },
       };
     }
@@ -75,14 +70,12 @@ export function listKnownChannels(workspace: string): Array<{
   handle: string;
   command: string;
   works: string;
-  git: string;
 }> {
   const out: Array<{
     orgSlug: string;
     handle: string;
     command: string;
     works: string;
-    git: string;
   }> = [];
   for (const o of listOrganizations(workspace)) {
     for (const u of listUserYamls(o.slug, workspace)) {
@@ -91,8 +84,6 @@ export function listKnownChannels(workspace: string): Array<{
         handle: u.handle,
         command: u.channels.command,
         works: u.channels.works,
-        // v1.2.9 Part B — derive when absent (pre-migration yamls).
-        git: u.channels.git ?? `git-${u.handle}`,
       });
     }
   }
@@ -103,7 +94,6 @@ export function listKnownChannels(workspace: string): Array<{
 export function expectedChannelNamesFor(handle: string): {
   command: string;
   works: string;
-  git: string;
 } {
   return deriveChannelNames(handle);
 }

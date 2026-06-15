@@ -9,7 +9,7 @@
 //   - Mask .env:       user-edited or `solosquad uninstall --archive-only`,
 //                      which writes the same REVOKE-CHECKLIST.md.
 //   - Archive sessions: `<org>/.solosquad/sessions/_archived/` (manual move)
-//                       or `solosquad pm reset --user <id>` for new IDs.
+//                       or `solosquad chief reset --user <id>` for new IDs.
 //
 // This file is kept (instead of deleted) so existing tags / SBOMs that
 // referenced `dist/src/cli/logout.js` still resolve to a no-op rather than

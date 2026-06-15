@@ -888,9 +888,9 @@ export async function initCommand(): Promise<void> {
     console.log(` ${chalk.green("✓")} .solosquad/.env`);
   }
 
-  // docker-compose.yml and Dockerfile at workspace root
+  // docker-compose.yml and Dockerfile at workspace root (sourced from assets/docker/)
   for (const f of ["docker-compose.yml", "Dockerfile"]) {
-    const src = path.join(assetsDir, f);
+    const src = path.join(assetsDir, "docker", f);
     const dst = path.join(workspace, f);
     if (fs.existsSync(src) && !fs.existsSync(dst)) {
       fs.copyFileSync(src, dst);

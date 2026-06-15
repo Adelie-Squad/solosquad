@@ -6,22 +6,29 @@ import { getOrgDir } from "../util/paths.js";
  * v0.3.0 — `_events.jsonl` append/query.
  *
  * Two scopes:
- *   - PM session events:    <workspace>/<org>/.solosquad/sessions/<user>.events.jsonl
+ *   - Chief session events: <workspace>/<org>/.solosquad/sessions/<user>.events.jsonl
  *   - Per-workflow events:  <workspace>/<org>/workflows/<wf-id>/_events.jsonl
  *
  * Per docs/plan/v0.3-pm-mode-orchestration.md §4.4 + PoC #2 (auth, rate-limit,
  * mid-stream kill scenarios all surface here). task_id-based dedup so a
  * task_notification line that re-arrives across a retry isn't double-counted.
+ *
+ * v1.2.10 — the session-driver event namespace was renamed `pm.*` → `chief.*`
+ * to match the v1.1 Chief rebrand. New events emit `chief.*`; readers that scan
+ * pre-v1.2.10 logs (`workflow-reconciler`) accept BOTH the legacy `pm.*` and the
+ * new `chief.*` kinds. The on-disk file path (`<user>.events.jsonl`) is
+ * unchanged, and archive.sqlite never indexed these kinds — so no external
+ * consumer breaks.
  */
 
 export type EventKind =
-  | "pm.message_in"
-  | "pm.message_out"
-  | "pm.error"
-  | "pm.auth_expired"
-  | "pm.session_lost"
-  | "pm.session_rotated"
-  | "pm.rate_limit"
+  | "chief.message_in"
+  | "chief.message_out"
+  | "chief.error"
+  | "chief.auth_expired"
+  | "chief.session_lost"
+  | "chief.session_rotated"
+  | "chief.rate_limit"
   | "spawn.start"
   | "spawn.complete"
   | "spawn.fail"
@@ -34,22 +41,22 @@ export interface BaseEvent {
   kind: EventKind;
 }
 
-export interface PmMessageInEvent extends BaseEvent {
-  kind: "pm.message_in";
+export interface ChiefMessageInEvent extends BaseEvent {
+  kind: "chief.message_in";
   text: string;
   userId: string;
 }
 
-export interface PmMessageOutEvent extends BaseEvent {
-  kind: "pm.message_out";
+export interface ChiefMessageOutEvent extends BaseEvent {
+  kind: "chief.message_out";
   text: string;
   costUsd: number;
   durationMs: number;
   userId: string;
 }
 
-export interface PmErrorEvent extends BaseEvent {
-  kind: "pm.error";
+export interface ChiefErrorEvent extends BaseEvent {
+  kind: "chief.error";
   reason: string;
   exitCode?: number | null;
   signal?: string | null;
@@ -57,28 +64,28 @@ export interface PmErrorEvent extends BaseEvent {
   userId: string;
 }
 
-export interface PmAuthExpiredEvent extends BaseEvent {
-  kind: "pm.auth_expired";
+export interface ChiefAuthExpiredEvent extends BaseEvent {
+  kind: "chief.auth_expired";
   userId: string;
 }
 
-export interface PmSessionLostEvent extends BaseEvent {
-  kind: "pm.session_lost";
+export interface ChiefSessionLostEvent extends BaseEvent {
+  kind: "chief.session_lost";
   oldSessionId: string;
   newSessionId: string;
   userId: string;
 }
 
-export interface PmSessionRotatedEvent extends BaseEvent {
-  kind: "pm.session_rotated";
+export interface ChiefSessionRotatedEvent extends BaseEvent {
+  kind: "chief.session_rotated";
   oldSessionId: string;
   newSessionId: string;
   reason: string;
   userId: string;
 }
 
-export interface PmRateLimitEvent extends BaseEvent {
-  kind: "pm.rate_limit";
+export interface ChiefRateLimitEvent extends BaseEvent {
+  kind: "chief.rate_limit";
   resetsAt?: number;
   rateLimitType?: string;
   userId: string;
@@ -90,9 +97,9 @@ export interface SpawnStartEvent extends BaseEvent {
   toolUseId: string;
   agent: string;
   description: string;
-  /** v0.3.0+: workflow stage this spawn belongs to (parsed from PM's [stage:<id>] marker). */
+  /** v0.3.0+: workflow stage this spawn belongs to (parsed from Chief's [stage:<id>] marker). */
   stageId?: string;
-  /** v0.3.0+: workflow id (parsed from PM's [stage:<id> wf:<wf-id>] marker). */
+  /** v0.3.0+: workflow id (parsed from Chief's [stage:<id> wf:<wf-id>] marker). */
   workflowId?: string;
 }
 
@@ -123,13 +130,13 @@ export interface WorkflowStageEvent extends BaseEvent {
 }
 
 export type AnyEvent =
-  | PmMessageInEvent
-  | PmMessageOutEvent
-  | PmErrorEvent
-  | PmAuthExpiredEvent
-  | PmSessionLostEvent
-  | PmSessionRotatedEvent
-  | PmRateLimitEvent
+  | ChiefMessageInEvent
+  | ChiefMessageOutEvent
+  | ChiefErrorEvent
+  | ChiefAuthExpiredEvent
+  | ChiefSessionLostEvent
+  | ChiefSessionRotatedEvent
+  | ChiefRateLimitEvent
   | SpawnStartEvent
   | SpawnCompleteEvent
   | SpawnFailEvent
@@ -140,10 +147,18 @@ export interface EventSink {
   list(): AnyEvent[];
 }
 
-export function pmEventsPath(workspace: string, orgSlug: string, userId: string): string {
+export function chiefEventsPath(workspace: string, orgSlug: string, userId: string): string {
   const dir = path.join(getOrgDir(orgSlug, workspace), ".solosquad", "sessions");
   return path.join(dir, `${safeFileName(userId)}.events.jsonl`);
 }
+
+/**
+ * @deprecated v1.2.10 — renamed to {@link chiefEventsPath}. Retained as an
+ * alias so the immutable autonomous-engine module (`src/engine/**`, which must
+ * not be edited per AGENTS.md) keeps compiling against the old symbol. New
+ * call sites should import `chiefEventsPath`.
+ */
+export const pmEventsPath = chiefEventsPath;
 
 export function workflowEventsPath(
   workspace: string,

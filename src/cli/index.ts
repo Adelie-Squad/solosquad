@@ -238,39 +238,66 @@ program
     await syncCommand(opts);
   });
 
-const pmGroup = program
-  .command("pm")
-  .description("Manage PM sessions (v0.3.0+)");
+const chiefGroup = program
+  .command("chief")
+  .description("Manage Chief sessions (status / reset / compact)");
 
-pmGroup
-  .command("status")
-  .description("Show active PM sessions, cumulative cost, and activity")
-  .option("--org <slug>", "Filter to a specific organization")
-  .action(async (opts) => {
-    const { pmStatusCommand } = await import("./pm.js");
-    await pmStatusCommand(opts);
-  });
+// v1.2.10 — `pm` is the pre-v1.1 name for the Chief session driver. The verb
+// is kept as a hidden, deprecated alias (it's still documented in AGENTS.md,
+// which is immutable) so existing muscle-memory + scripts keep working. Both
+// groups dispatch to the same implementation in ./chief.js.
+const pmAliasGroup = program
+  .command("pm", { hidden: true })
+  .description("[deprecated alias for `chief`] Manage Chief sessions");
 
-pmGroup
-  .command("reset")
-  .description("Archive a user's PM session and mint a new one")
-  .option("--org <slug>", "Organization slug (auto-picked if only one)")
-  .option("--user <id>", "User id to reset (interactive picker if omitted)")
-  .option("--reason <text>", "Reason for the rotation", "user-requested")
-  .option("-y, --yes", "Skip confirmation prompt")
-  .action(async (opts) => {
-    const { pmResetCommand } = await import("./pm.js");
-    await pmResetCommand(opts);
-  });
+function warnPmAlias(sub: string): void {
+  console.error(
+    chalk.yellow(
+      `⚠ \`solosquad pm ${sub}\` is deprecated — use \`solosquad chief ${sub}\`. ` +
+        `The \`pm\` alias still works but may be removed in a future major.`
+    )
+  );
+}
 
-pmGroup
-  .command("compact")
-  .description("Run pm-compaction routine to externalize completed workflows")
-  .option("--org <slug>", "Filter to a specific organization")
-  .action(async (opts) => {
-    const { pmCompactCommand } = await import("./pm.js");
-    await pmCompactCommand(opts);
-  });
+/** Register the status/reset/compact subcommands on a group. `alias` groups
+ *  emit a one-line deprecation notice before dispatching. */
+function registerChiefSubcommands(group: Command, opts: { alias: boolean }): void {
+  group
+    .command("status")
+    .description("Show active Chief sessions, cumulative cost, and activity")
+    .option("--org <slug>", "Filter to a specific organization")
+    .action(async (o) => {
+      if (opts.alias) warnPmAlias("status");
+      const { chiefStatusCommand } = await import("./chief.js");
+      await chiefStatusCommand(o);
+    });
+
+  group
+    .command("reset")
+    .description("Archive a user's Chief session and mint a new one")
+    .option("--org <slug>", "Organization slug (auto-picked if only one)")
+    .option("--user <id>", "User id to reset (interactive picker if omitted)")
+    .option("--reason <text>", "Reason for the rotation", "user-requested")
+    .option("-y, --yes", "Skip confirmation prompt")
+    .action(async (o) => {
+      if (opts.alias) warnPmAlias("reset");
+      const { chiefResetCommand } = await import("./chief.js");
+      await chiefResetCommand(o);
+    });
+
+  group
+    .command("compact")
+    .description("Run the compaction routine to externalize completed workflows")
+    .option("--org <slug>", "Filter to a specific organization")
+    .action(async (o) => {
+      if (opts.alias) warnPmAlias("compact");
+      const { chiefCompactCommand } = await import("./chief.js");
+      await chiefCompactCommand(o);
+    });
+}
+
+registerChiefSubcommands(chiefGroup, { alias: false });
+registerChiefSubcommands(pmAliasGroup, { alias: true });
 
 const workflowGroup = program
   .command("workflow")
@@ -298,7 +325,7 @@ workflowGroup
 
 workflowGroup
   .command("focus")
-  .description("Set the active workflow for a user's PM session (or --clear)")
+  .description("Set the active workflow for a user's Chief session (or --clear)")
   .argument("[workflow-id]", "Workflow id to focus on; omit when using --clear")
   .option("--org <slug>", "Organization slug (auto-picked if only one)")
   .option("--user <id>", "User id (interactive picker if omitted)")

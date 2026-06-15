@@ -1125,6 +1125,18 @@ Get-CimInstance Win32_Process |
 
 자세히: `CHANGELOG.md` §[1.2.9], `docs/prd/v1.2.9-discord-app-id-and-invite-url-fix.md`
 
+#### 13.6.22 v1.2.10 — Chief 리네임 정착 + git 채널 롤백 + Docker 자산 정리 (2026-06-08)
+
+**핵심 변화 (3 Part)** — patch 성격, hot-path 무변경.
+
+- **Part A — PM→Chief 리네임 정착.** v1.1 의 org-level supervisor 리브랜딩 잔재 정리. `pm` 의 세 의미 (세션 드라이버 / 영속 데이터 계약 / 유령 PM 에이전트) 를 구분해 블라인드 치환 회피: CLI `chief status/reset/compact` 정규화 (`pm …` 은 숨김 deprecated alias), 이벤트 `pm.*`→`chief.*` (`WorkflowReconciler` read-compat), `assets/orchestrator/SKILL.md` 정체성 갱신, `PmConfig`→`ChiefConfig`. yaml `pm:` 키 · `pm-compaction` 루틴 id · `system-pm-compaction` 스레드 · `memory/pm-skills/` 는 영속 계약이라 KEEP (후속 마이그레이션).
+- **Part C — git-`<handle>` VCS 채널 제거 (롤백).** v1.2.9 Part B 가 깔았던 자체 push 알림 파이프 (`git-event-notify.ts`) 폐기. 결정: SoloSquad 는 알림 기능에 관여하지 않는다 — 필요한 건 push **승인 게이트** (→v1.3.0) 뿐이고, 완료 알림은 GitHub→Discord 네이티브 webhook 이 우월. 코드만 제거하고 기존 `channels.git` yaml 필드 · 채널은 inert 로 방치 (마이그레이션 없음 — 데이터 삭제 위험 회피). dev-confirm 게이트는 KEEP (v1.3.0 토대).
+- **Part D — 루트 repo Docker 스택 제거 + 사용자 Docker 자산 단일 홈화.** `deploy/docker/` (repo root 를 Docker 워크스페이스로 띄우던 메인테이너 dogfood 스택) 제거 — 컨테이너가 도는 코드는 로컬 `src/` 가 아니라 npm published 버전이라 "repo 를 도커로 돌린다"는 멘탈 모델이 허상. 사용자 Docker 경험은 1급 기능으로 무손상 유지: `assets/{Dockerfile,docker-compose.yml}` → **`assets/docker/`** 단일 홈으로 이동 + `deploy/docker` 에만 있던 3기능 (`stop_grace_period: 130s` · `~/.solosquad` · `~/.solosquad-backups` 마운트) 병합 (퇴행 0). `solosquad init` 은 이 둘을 워크스페이스 루트로 복사 (목적지 불변), 사용자는 루트에서 `docker compose up -d --build`. `SOLOSQUAD_WORKSPACE=../..` repo-root override 는 이식 안 함 (제거 대상 가정).
+
+**v1.2.x 흐름 정합** — v1.2.9 의 git 채널 인프라를 본 버전에서 롤백, 안전 기능 (push 승인) 은 v1.3.0 으로 분리. 세션 오케스트레이션 (구 Part B) 은 `docs/prd/v1.4.0-session-orchestration.md` 로 승격.
+
+자세히: `docs/prd/v1.2.10-consolidation-cleanup.md`
+
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
 > **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.

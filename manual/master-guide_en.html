@@ -1054,11 +1054,11 @@ solosquad sync                                      # reconcile repositories/ �
     <dt>routine-logs/*.jsonl</dt>
     <dd>Full execution logs for routines. Used for debugging / retro.</dd>
 
-    <dt>Dockerfile (deploy/docker/Dockerfile)</dt>
-    <dd>Docker image build recipe. For containerizing SoloSquad bot/scheduler. Moved to <code>deploy/docker/</code> in v0.5.</dd>
+    <dt>Dockerfile (workspace root)</dt>
+    <dd>Docker image build recipe. For containerizing SoloSquad bot/scheduler. Since v1.2.10, <code>solosquad init</code> copies it to the workspace root (source template lives in <code>assets/docker/</code>).</dd>
 
-    <dt>docker-compose.yml (deploy/docker/docker-compose.yml)</dt>
-    <dd>Settings for running multiple containers (bot + scheduler) together. v0.5+ also mounts <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> — user-global SKILL override and backups compatible.</dd>
+    <dt>docker-compose.yml (workspace root)</dt>
+    <dd>Settings for running multiple containers (bot + scheduler) together. Run <code>docker compose up -d --build</code> from the workspace root. Also mounts <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> — user-global SKILL override and backups compatible. v1.2.10: removed the maintainer-only <code>deploy/docker/</code> repo-self-hosting stack and consolidated user Docker assets into a single home at <code>assets/docker/</code>.</dd>
 
     <dt>README.md</dt>
     <dd>First-impression document. Shown on npm/GitHub. SoloSquad's README covers install + quick start.</dd>

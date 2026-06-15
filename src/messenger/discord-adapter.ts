@@ -380,18 +380,22 @@ export class DiscordAdapter implements MessengerAdapter {
   // -- Internal --
 
   /**
-   * v1.2.9 Part B — the per-user channel triple this bot owns once bound to
-   * a handle: `command-<handle>` / `works-<handle>` / `git-<handle>`. Empty
-   * when unbound (legacy path falls back to DEFAULT_CHANNELS). Single source
-   * of truth for both channel creation (`ensureChannels`) and config
-   * persistence (`syncGuildProductMapping`).
+   * v0.8 §3.5 — the per-user channel pair this bot owns once bound to a
+   * handle: `command-<handle>` / `works-<handle>`. Empty when unbound (legacy
+   * path falls back to DEFAULT_CHANNELS). Single source of truth for both
+   * channel creation (`ensureChannels`) and config persistence
+   * (`syncGuildProductMapping`).
+   *
+   * v1.2.10 — the `git-<handle>` feed (v1.2.9 Part B) was dropped; SoloSquad
+   * does not create or notify a git channel. Push approval lives in the
+   * dev-confirm gate (v1.3.0); push notifications are the user's own
+   * GitHub→messenger webhook.
    */
   private boundChannelNames(): string[] {
     if (!this.ownHandle) return [];
     return [
       `command-${this.ownHandle}`,
       `works-${this.ownHandle}`,
-      `git-${this.ownHandle}`,
     ];
   }
 
@@ -419,10 +423,9 @@ export class DiscordAdapter implements MessengerAdapter {
     const created: string[] = [];
 
     // v0.8 §3.5 — when this bot has been bound to a handle, create the per-user
-    // channel triple `command-<handle>` / `works-<handle>` / `git-<handle>`
-    // (v1.2.9 Part B added git). Otherwise fall back to the legacy
-    // DEFAULT_CHANNELS list (no-op once migrated workspaces never reach this
-    // branch).
+    // channel pair `command-<handle>` / `works-<handle>`. Otherwise fall back
+    // to the legacy DEFAULT_CHANNELS list (no-op once migrated workspaces never
+    // reach this branch).
     const bound = this.boundChannelNames();
     const targets = bound.length > 0 ? bound : this.channelNames;
 
@@ -535,10 +538,10 @@ export class DiscordAdapter implements MessengerAdapter {
       config.guild_id = guild.id;
       dirty = true;
     }
-    // v1.2.9 Part B — persist both the legacy DEFAULT_CHANNELS and the bound
-    // per-user triple (command/works/git) so `sendToChannel` can resolve
-    // `git-<handle>` → `git_<handle>` config key. Union keeps full
-    // back-compat with pre-bound installs.
+    // v0.8 §3.5 — persist both the legacy DEFAULT_CHANNELS and the bound
+    // per-user pair (command/works) so `sendToChannel` can resolve each
+    // channel name → config key. Union keeps full back-compat with pre-bound
+    // installs.
     const scanNames = new Set<string>([
       ...this.channelNames,
       ...this.boundChannelNames(),

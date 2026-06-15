@@ -4,6 +4,7 @@
 
 | 일자 | 종류 | 주제 | 파일 |
 |---|---|---|---|
+| 2026-06-16 | Event Record | 커스터마이즈↔upstream reconciliation: 4패턴 (Claude Code 플러그인 / copier 3-way / oh-my-zsh custom) | [2026-06-16-customization-upstream-reconciliation.md](./2026-06-16-customization-upstream-reconciliation.md) |
 | 2026-05-13 | Event Record | Tier 1 확장: paperclip / claw3d / Ralphathon (#8–#10) | [2026-05-13-tier1-expansion.md](./2026-05-13-tier1-expansion.md) |
 | 2026-05-11 | Baseline Survey | 7개 레퍼런스 × 3축 진단 (최초 베이스라인) | [2026-05-11-baseline-survey.md](./2026-05-11-baseline-survey.md) |
 
@@ -22,11 +23,11 @@
 
 | # | 레퍼런스 | 카테고리 | 마지막 스캔 |
 |---|---|---|---|
-| 1 | Anthropic | 모델/하네스 | 2026-05-11 |
-| 2 | OpenClaw | 하네스 | 2026-05-11 |
-| 3 | Hermes (Nous Research) | 멀티에이전트 | 2026-05-11 |
-| 4 | gstack (Garry Tan) | 멀티에이전트 | 2026-05-11 |
-| 5 | phuryn/pm-skills | 멀티에이전트 | 2026-05-11 |
+| 1 | Anthropic | 모델/하네스 | 2026-06-16 |
+| 2 | OpenClaw | 하네스 | 2026-06-16 |
+| 3 | Hermes (Nous Research) | 멀티에이전트 | 2026-06-16 |
+| 4 | gstack (Garry Tan) | 멀티에이전트 | 2026-06-16 |
+| 5 | phuryn/pm-skills | 멀티에이전트 | 2026-06-16 |
 | 6 | karpathy/autoresearch | 24/7 자동화 | 2026-05-11 |
 | 7 | MiroFish | 멀티에이전트 (관찰) | 2026-05-11 |
 | 8 | paperclipai/paperclip | 멀티에이전트 / 24-7 | 2026-05-13 |

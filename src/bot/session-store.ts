@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { getOrgDir } from "../util/paths.js";
 
 /**
- * v0.3.0 — PM session-id store.
+ * v0.3.0 — Chief session-id store (named "PM session" pre-v1.1).
  *
  * Maps (userId, orgSlug) → Claude Code session-id. The actual conversation
  * transcript lives in `~/.claude/projects/<cwd-encoded>/<session-id>.jsonl`

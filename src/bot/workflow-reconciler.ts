@@ -6,7 +6,7 @@ import { listOrganizations } from "../util/config.js";
 import { SessionStore } from "./session-store.js";
 import {
   FileEventSink,
-  pmEventsPath,
+  chiefEventsPath,
   workflowEventsPath,
   nowIso,
   type AnyEvent,
@@ -24,8 +24,9 @@ import { readLastAssistantTurn, sessionJsonlPath } from "./cc-jsonl-reader.js";
  *    `needs_revision` so the PM (on next user message) asks the user how
  *    to proceed. Append a workflow.stage_needs_revision event.
  *
- * 2. **Undelivered PM messages** — if the PM session's `events.jsonl` has
- *    a `pm.message_in` without a paired `pm.message_out`, the assistant
+ * 2. **Undelivered Chief messages** — if the Chief session's `events.jsonl`
+ *    has a `chief.message_in` without a paired `chief.message_out` (legacy
+ *    `pm.*` logs are accepted too), the assistant
  *    reply may exist inside Claude Code's session jsonl (Claude Code
  *    writes it to disk independent of our stdout pipe — see PoC #2 §1.2).
  *    Read it and surface via the `pendingDeliveries` array so the bot can
@@ -193,21 +194,25 @@ export class WorkflowReconciler {
     userId: string,
     sessionId: string
   ): PendingDelivery | null {
-    const sinkPath = pmEventsPath(this.workspace, orgSlug, userId);
+    const sinkPath = chiefEventsPath(this.workspace, orgSlug, userId);
     if (!fs.existsSync(sinkPath)) return null;
     const events = new FileEventSink(sinkPath).list();
     if (events.length === 0) return null;
 
     // Pair message_in <-> message_out chronologically. If the last
     // message_in has no subsequent message_out, treat it as undelivered.
+    // v1.2.10 read-compat: accept both the legacy `pm.*` kinds (logs written
+    // by pre-v1.2.10 bots) and the new `chief.*` kinds, so a turn that
+    // straddled the upgrade is still paired correctly.
     let lastIn: AnyEvent | null = null;
     let lastInIdx = -1;
     let lastOutIdx = -1;
     for (let i = 0; i < events.length; i++) {
-      if (events[i].kind === "pm.message_in") {
+      const kind = events[i].kind as string;
+      if (kind === "chief.message_in" || kind === "pm.message_in") {
         lastIn = events[i];
         lastInIdx = i;
-      } else if (events[i].kind === "pm.message_out") {
+      } else if (kind === "chief.message_out" || kind === "pm.message_out") {
         lastOutIdx = i;
       }
     }
@@ -221,7 +226,7 @@ export class WorkflowReconciler {
       // Record an out event so we don't try again next boot.
       new FileEventSink(sinkPath).append({
         ts: nowIso(),
-        kind: "pm.message_out",
+        kind: "chief.message_out",
         text: turn.text,
         costUsd: 0,
         durationMs: 0,
@@ -237,7 +242,7 @@ export class WorkflowReconciler {
       "I might not have saved everything. Could you resend?";
     new FileEventSink(sinkPath).append({
       ts: nowIso(),
-      kind: "pm.message_out",
+      kind: "chief.message_out",
       text: fallback,
       costUsd: 0,
       durationMs: 0,

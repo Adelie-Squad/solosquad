@@ -89,7 +89,7 @@ solosquad doctor --discord                        # v1.2 — Discord 5-hop diagn
 # 3. 봇 기동
 solosquad bot                                     # 포그라운드
 # 또는
-cd deploy/docker && docker compose up -d --build  # 백그라운드 + 자동 재시작
+docker compose up -d --build                      # 백그라운드 + 자동 재시작 (워크스페이스 루트에서 — init이 compose 파일을 여기 복사)
 ```
 
 봇을 길드에 초대하면 **guildCreate onboarding embed** 가 system 채널에 표시됩니다. **Auto-create channels** 버튼을 누르면 `#command-<handle>` / `#works-<handle>` 자동 생성 + command 채널에서 Chief 첫 인사 → 메시지 한 번 보내면 Chief 가 답합니다.
@@ -356,7 +356,7 @@ v0.7 + v0.8 패치 시리즈가 위에 얹은 라이프사이클 + 멀티 유저
 - **v0.8.3 Onboarding UX + Observability** — `add repo --dry-run`/`--inspect`/`--keep-original` 으로 기존 리포 마이그레이션 UX 강화. logger 확장 + `solosquad logs` CLI + `log-rotate` routine (14일 retention). doctor CLI↔workspace version mismatch 감지. trajectory 자동 등록 ROI 측정 스크립트 박제.
 
 24/7 항상-가동 운영은 다음 중 택1:
-- Docker Compose (권장, 백그라운드 + 자동 재시작) — [`deploy/docker/README.md`](deploy/docker/README.md)
+- Docker Compose (권장, 백그라운드 + 자동 재시작) — `solosquad init` 이 `docker-compose.yml` + `Dockerfile` 을 워크스페이스 루트에 복사하니, 거기서 `docker compose up -d --build` 실행. [master-guide §Docker](manual/master-guide_ko.html) 참고.
 - macOS `launchd` plist / Windows NSSM 서비스
 - VPS + systemd (자세히는 [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
 
