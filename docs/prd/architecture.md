@@ -1135,7 +1135,7 @@ Get-CimInstance Win32_Process |
 
 **v1.2.x 흐름 정합** — v1.2.9 의 git 채널 인프라를 본 버전에서 롤백, 안전 기능 (push 승인) 은 v1.3.0 으로 분리. 세션 오케스트레이션 (구 Part B) 은 `docs/prd/v1.4.0-session-orchestration.md` 로 승격.
 
-자세히: `docs/prd/v1.2.10-chief-rename-and-git-channel-removal.md`
+자세히: `docs/prd/v1.2.10-consolidation-cleanup.md`
 
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 

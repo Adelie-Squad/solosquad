@@ -40,7 +40,7 @@ export interface GoalConfig {
  * `ChiefConfig` to match the Chief rebrand. The `workspace.yaml` property key
  * stays `pm` (see {@link WorkspaceYaml.pm}) — it's a persisted contract across
  * every existing workspace, so renaming the key is deferred to a dedicated
- * migration (docs/prd/v1.2.10-chief-rename-and-git-channel-removal.md §A.3).
+ * migration (docs/prd/v1.2.10-consolidation-cleanup.md §A.3).
  */
 export interface ChiefConfig {
   /** Cap per claude --print call. Workspace default. */
