@@ -35,6 +35,11 @@ Retires free-text `y/n`. Built on the proven onboarding/turn-controls component 
 
 - 790 pass; `tsc` + `npm run build` clean. New coverage: push-branch parsing (incl. whitespace + `+force` refspec bypass guards), the hook decision matrix + fail-open/closed, the bridge file-IPC + audit mapping, component id parse/recovery rows, the artifact store, and `pm.git` config defaults.
 
+### Infra
+
+- **`engines.node` `>=18` → `>=20`** + CI matrix drops Node 18. `better-sqlite3` 12.x (FTS5 archive) requires Node 20+, so Node 18 was already de-facto unsupported — the manifest now states it honestly. CI also sets `fail-fast: false` so a single failing combo no longer cancels (and masks) the others.
+- **`npm audit fix`** cleared the high-severity advisories the CI gate enforces (esbuild / form-data / ws), within existing semver ranges — direct dependencies unchanged.
+
 ### Out of scope (follow-up)
 
 - P3 token edit-streaming, reaction-toggle voting (recovery ④), Slack Block Kit parity, commit-trailer workflow stamp (§A.4.5), and the dedicated `artifacts-<handle>` archive channel (P2).
