@@ -7,6 +7,13 @@ import { FileEventSink, chiefEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
 import { handleSlashIfAny } from "./slash-commands.js";
 import { parseMentions } from "./mention-parser.js";
+import { DevConfirmBridge } from "./dev-confirm-bridge.js";
+import type { PendingConfirmFile } from "./dev-confirm-paths.js";
+import { DiscordAdapter } from "../messenger/discord-adapter.js";
+import {
+  isArtifactWorthy,
+  deriveArtifactTitle,
+} from "../messenger/artifact-store.js";
 import { listOrgRepoSlugs } from "./repo-registry.js";
 import { rebuildRoutes } from "./agent-router.js";
 import { commitSnapshot } from "./git-snapshot.js";
@@ -20,6 +27,7 @@ import {
   loadOrgYaml,
   listOrganizations,
   setDevCapabilityEnabled,
+  loadChiefGitConfig,
   type Product,
 } from "../util/config.js";
 import { getOrgDir } from "../util/paths.js";
@@ -27,6 +35,8 @@ import type {
   MessageContext,
   MessengerAdapter,
   LiveTaskCardHandle,
+  TurnControls,
+  ApprovalRequest,
 } from "../messenger/base.js";
 import type { ChiefStageEvent } from "../util/chief-stage-events.js";
 
@@ -298,7 +308,25 @@ async function handleCommandInner(
         await ctx.reply(`📋 [${reply.kind}] ${reply.text}`);
       }
     } else if (reply.text) {
-      await ctx.reply(reply.text);
+      // v1.3.0 Part C (P1) — a long chat reply is filed under <org>/artifacts/
+      // and surfaced as a card + attachment instead of a wall of chunked text.
+      // Short replies post inline as before. Falls back to a plain reply if the
+      // adapter can't attach or filing fails.
+      if (ctx.attachArtifact && isArtifactWorthy(reply.text)) {
+        try {
+          await ctx.attachArtifact({
+            title: deriveArtifactTitle(reply.text),
+            content: reply.text,
+          });
+        } catch (artErr) {
+          console.log(
+            `[Bot] artifact filing failed: ${artErr instanceof Error ? artErr.message : String(artErr)} — falling back to inline reply`,
+          );
+          await ctx.reply(reply.text);
+        }
+      } else {
+        await ctx.reply(reply.text);
+      }
     } else {
       await ctx.reply("(no reply generated — please try again or check `solosquad doctor`)");
     }
@@ -395,12 +423,37 @@ export async function startBot(): Promise<void> {
       `stages_flipped=${report.recoveredStages.length} pending_deliveries=${report.pendingDeliveries.length}`
   );
 
-  // v1.3.0 Part B — give adapters a turn-control hook so the live card's 🛑
-  // button (and later approval buttons) can abort the in-flight turn, the GUI
-  // equivalent of `/cancel`.
-  const turnControls = {
+  // v1.3.0 Part A/B — give adapters a turn-control hook so the live card's 🛑
+  // button can abort the in-flight turn (the GUI equivalent of `/cancel`), and
+  // start the dev-confirm approval bridge once the Discord adapter binds to its
+  // org + handle (onBound fires post gateway-ready, avoiding the bind race).
+  const discord = adapters.find(
+    (a): a is DiscordAdapter => a instanceof DiscordAdapter,
+  );
+  let devConfirmBridge: DevConfirmBridge | null = null;
+  const turnControls: TurnControls = {
     cancelTurn: (orgSlug: string, userId: string) =>
       chiefRunner.cancelTurn(orgSlug, userId),
+    onBound: ({ orgSlug, handle }) => {
+      if (!discord || devConfirmBridge) return; // no Discord / already started
+      const gitCfg = loadChiefGitConfig(workspaceRoot);
+      const timeoutMs = gitCfg.approval_timeout_minutes * 60 * 1000;
+      devConfirmBridge = new DevConfirmBridge({
+        workspace: workspaceRoot,
+        orgSlug,
+        timeoutMs,
+        postApproval: (req) =>
+          discord.postApprovalToCommandChannel(
+            handle,
+            toApprovalRequest(req),
+            timeoutMs,
+          ),
+      });
+      devConfirmBridge.start();
+      console.log(
+        `[Bot] dev-confirm bridge active for org=${orgSlug} (command-${handle})`,
+      );
+    },
   };
   await Promise.all(adapters.map((a) => a.startBot(handleCommand, turnControls)));
 
@@ -425,7 +478,30 @@ export async function startBot(): Promise<void> {
     `[Bot] SKILL fs.watch active (mode=${fsWatchCfg.mode}${fsWatchCfg.git_only ? ", git_only" : ""})`,
   );
 
-  installGracefulShutdown(unwatch);
+  installGracefulShutdown(unwatch, () => devConfirmBridge?.stop());
+}
+
+/**
+ * v1.3.0 Part A — render a pending dev-confirm request as an approval card.
+ * Surfaces the branch / repo / workflow / commit range so the user has the
+ * context to approve or reject the push.
+ */
+function toApprovalRequest(req: PendingConfirmFile): ApprovalRequest {
+  const details: string[] = [];
+  if (req.branch) details.push(`브랜치: \`${req.branch}\``);
+  if (req.repoSlug) details.push(`repo: \`${req.repoSlug}\``);
+  if (req.workflowId) details.push(`workflow: \`${req.workflowId}\``);
+  if (req.commits.length > 0) {
+    const head = req.commits.slice(0, 3).join(" · ");
+    const more = req.commits.length > 3 ? ` 외 ${req.commits.length - 3}개` : "";
+    details.push(`커밋(${req.commits.length}): ${head}${more}`);
+  }
+  return {
+    id: req.id,
+    title: "git push 승인 요청",
+    command: req.cmd,
+    details,
+  };
 }
 
 async function onSkillChange(
@@ -475,7 +551,7 @@ let shutdownInstalled = false;
  * (Ctrl-C in the terminal) and SIGTERM (orchestrator stop signal) both
  * close the watcher before letting the default handler exit the process.
  */
-function installGracefulShutdown(unwatch: Unwatch): void {
+function installGracefulShutdown(unwatch: Unwatch, onStop?: () => void): void {
   if (shutdownInstalled) return;
   shutdownInstalled = true;
   let stopping = false;
@@ -516,6 +592,15 @@ function installGracefulShutdown(unwatch: Unwatch): void {
     } catch (err) {
       console.log(
         `[Bot] drain wait failed (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // v1.3.0 Part A — stop the dev-confirm bridge watcher.
+    try {
+      onStop?.();
+    } catch (err) {
+      console.log(
+        `[Bot] dev-confirm bridge stop error (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
       );
     }
 

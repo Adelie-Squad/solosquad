@@ -181,6 +181,13 @@ export interface ClaudeInvocation {
    * repos at `C:\Dev\<repo>` etc.
    */
   addDirs?: string[];
+  /**
+   * v1.3.0 Part A — extra environment variables merged into the spawned
+   * `claude` process env (on top of `process.env`). Carries the dev-confirm
+   * gate context (pending dir, org, user, timeout, protected branches) that the
+   * PreToolUse hook reads. Empty/undefined ⇒ child inherits the bot env as-is.
+   */
+  extraEnv?: Record<string, string>;
 }
 
 export interface ClaudeInvocationResult {
@@ -369,7 +376,7 @@ export class RealClaudeProcessFactory implements ClaudeProcessFactory {
 
   invokeStreaming(inv: ClaudeInvocation): ClaudeStreamingResult {
     const args = buildArgs(inv);
-    const child = spawnClaude(args, inv.cwd);
+    const child = spawnClaude(args, inv.cwd, inv.extraEnv);
 
     void streamInput(child, inv.input).catch(() => {});
 
@@ -524,12 +531,23 @@ export class RealClaudeProcessFactory implements ClaudeProcessFactory {
   }
 }
 
-function spawnClaude(args: string[], cwd: string): ChildProcess {
+function spawnClaude(
+  args: string[],
+  cwd: string,
+  extraEnv?: Record<string, string>,
+): ChildProcess {
+  // v1.3.0 Part A — merge dev-confirm gate context onto the inherited env so
+  // the PreToolUse hook (which runs as a child of the claude process) can read
+  // it. Undefined extraEnv ⇒ pass the parent env unchanged.
+  const env =
+    extraEnv && Object.keys(extraEnv).length > 0
+      ? { ...process.env, ...extraEnv }
+      : undefined;
   if (IS_WINDOWS) {
     const cmd = `claude ${args.map((a) => quoteWindowsArg(a)).join(" ")}`;
-    return spawn(cmd, [], { cwd, shell: true });
+    return spawn(cmd, [], env ? { cwd, shell: true, env } : { cwd, shell: true });
   }
-  return spawn("claude", args, { cwd });
+  return spawn("claude", args, env ? { cwd, env } : { cwd });
 }
 
 function quoteWindowsArg(a: string): string {

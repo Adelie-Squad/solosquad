@@ -1,10 +1,13 @@
 import {
+  AttachmentBuilder,
   Client,
+  EmbedBuilder,
   Events,
   GatewayIntentBits,
   ChannelType,
   type Message,
   type Guild,
+  type SendableChannels,
   type TextChannel,
   type ThreadChannel,
 } from "discord.js";
@@ -26,7 +29,15 @@ import {
   type LiveTaskCardHandle,
   type TurnControls,
   type ChiefSource,
+  type ApprovalRequest,
+  type ApprovalVerdict,
+  type ChoiceRequest,
+  type ArtifactInput,
+  type ArtifactRef,
 } from "./base.js";
+import { awaitApproval } from "./discord-approval.js";
+import { awaitChoice } from "./discord-choice.js";
+import { saveArtifact } from "./artifact-store.js";
 import { parseChannelName } from "../bot/user-registry.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
 import { getWorkspaceRoot, getOrgDir } from "../util/paths.js";
@@ -134,7 +145,59 @@ class DiscordMessageContext implements MessageContext {
       stopButtonId: buildStopButtonId(this.ownOrgSlug, this.userId),
     });
   }
+
+  /** v1.3.0 Part B — in-turn approval via ✅/❌ buttons in the same channel. */
+  async askApproval(req: ApprovalRequest): Promise<ApprovalVerdict> {
+    const channel = this.message.channel;
+    if (!channel.isSendable()) return "n";
+    return awaitApproval(channel, req, { timeoutMs: DEFAULT_APPROVAL_TIMEOUT_MS });
+  }
+
+  /** v1.3.0 Part B — in-turn single-select via buttons / select menu. */
+  async askChoice(req: ChoiceRequest): Promise<string> {
+    const channel = this.message.channel;
+    if (!channel.isSendable()) {
+      throw new Error("askChoice: channel is not sendable");
+    }
+    return awaitChoice(channel, req, { timeoutMs: DEFAULT_APPROVAL_TIMEOUT_MS });
+  }
+
+  /**
+   * v1.3.0 Part C (P1) — file a long output under `<org>/artifacts/` and post a
+   * card + the file as an attachment, instead of chunking the whole body into
+   * the channel. Throws if the bot is unbound or the channel can't take a file;
+   * the caller (index.ts) falls back to a plain reply.
+   */
+  async attachArtifact(input: ArtifactInput): Promise<ArtifactRef> {
+    if (!this.ownOrgSlug) {
+      throw new Error("attachArtifact requires a bound org");
+    }
+    const channel = this.message.channel;
+    if (!channel.isSendable()) {
+      throw new Error("attachArtifact: channel is not sendable");
+    }
+    const orgCwd = getOrgDir(this.ownOrgSlug, this.workspace);
+    const saved = saveArtifact(orgCwd, input);
+
+    const preview = input.content.slice(0, 280).trimEnd();
+    const embed = new EmbedBuilder()
+      .setTitle(`📄 ${input.title}`)
+      .setColor(0x5865f2)
+      .setDescription(
+        `${preview}${input.content.length > 280 ? "…" : ""}\n\n전문은 첨부 파일 \`${saved.fileName}\` 참조.`,
+      )
+      .setFooter({ text: `${this.chiefLabel()} · 산출물` });
+
+    const file = new AttachmentBuilder(Buffer.from(input.content, "utf-8"), {
+      name: saved.fileName,
+    });
+    await channel.send({ embeds: [embed], files: [file] });
+    return { fileName: saved.fileName, absPath: saved.absPath };
+  }
 }
+
+/** v1.3.0 Part B — default wait for a component decision (30 min). */
+const DEFAULT_APPROVAL_TIMEOUT_MS = 30 * 60 * 1000;
 
 export class DiscordAdapter implements MessengerAdapter {
   readonly platform = "discord";
@@ -222,6 +285,15 @@ export class DiscordAdapter implements MessengerAdapter {
 
       // v1.3.0 Part B — live-card 🛑 button → cancel the in-flight turn.
       registerTurnControls(client, () => this.turnControls);
+
+      // v1.3.0 Part A — now that the bot is bound to an org + handle, let the
+      // bot process start the dev-confirm bridge for this org's pending dir.
+      if (this.ownOrgSlug && this.ownHandle) {
+        this.turnControls?.onBound?.({
+          orgSlug: this.ownOrgSlug,
+          handle: this.ownHandle,
+        });
+      }
 
       // v1.2 §7.4 — register `/chat` slash command as a fallback for
       // MESSAGE_CONTENT intent denial. Idempotent + safe to call after
@@ -408,6 +480,37 @@ export class DiscordAdapter implements MessengerAdapter {
 
   getClient(): Client | null {
     return this.client;
+  }
+
+  /** v1.3.0 Part A/B — the handle this bot is bound to (command-<handle>). */
+  getOwnHandle(): string | null {
+    return this.ownHandle;
+  }
+
+  /**
+   * v1.3.0 Part A — post a dev-confirm approval card to `command-<handle>` and
+   * resolve with the user's verdict. Called out-of-turn by the dev-confirm
+   * bridge (not tied to an inbound message). Returns "n" when the channel can't
+   * be resolved (fail-safe: no approval surface ⇒ block).
+   */
+  async postApprovalToCommandChannel(
+    handle: string,
+    req: ApprovalRequest,
+    timeoutMs: number,
+  ): Promise<ApprovalVerdict> {
+    const channel = this.findCommandChannel(handle);
+    if (!channel) return "n";
+    return awaitApproval(channel, req, { timeoutMs });
+  }
+
+  private findCommandChannel(handle: string): SendableChannels | null {
+    if (!this.client) return null;
+    const name = `command-${handle}`;
+    const ch = this.client.channels.cache.find(
+      (c) => c.type === ChannelType.GuildText && (c as TextChannel).name === name,
+    );
+    if (!ch || !("isSendable" in ch) || !ch.isSendable()) return null;
+    return ch;
   }
 
   // -- Internal --

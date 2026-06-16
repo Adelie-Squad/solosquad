@@ -43,6 +43,99 @@ export interface MessageContext {
    * batch `postTaskCard` path instead — no behaviour change for them.
    */
   openLiveTaskCard?: (input: LiveTaskCardOpen) => Promise<LiveTaskCardHandle>;
+  /**
+   * v1.3.0 Part B — ask the user to approve/reject an action via message
+   * components (Discord buttons), resolving with their verdict. Used for
+   * in-turn approvals; the dev-confirm gate (Part A) posts to command-<handle>
+   * out-of-turn via the adapter directly. Adapters that don't render components
+   * (Slack today) leave it undefined — callers fall back to a text prompt.
+   */
+  askApproval?: (req: ApprovalRequest) => Promise<ApprovalVerdict>;
+  /**
+   * v1.3.0 Part B — ask the user to pick one option via buttons (≤5) or a
+   * select menu (6+), resolving with the chosen option's value. Undefined on
+   * adapters without component support (text fallback).
+   */
+  askChoice?: (req: ChoiceRequest) => Promise<string>;
+  /**
+   * v1.3.0 Part C (P1) — file a long Chief output to `<org>/artifacts/` and
+   * surface it in chat as a card + file attachment instead of a wall of
+   * chunked text. Adapters without file upload leave it undefined — callers
+   * fall back to a plain chunked `reply`.
+   */
+  attachArtifact?: (input: ArtifactInput) => Promise<ArtifactRef>;
+}
+
+/** v1.3.0 Part C (P1) — an output to persist + surface as an attachment. */
+export interface ArtifactInput {
+  /** Human title (drives the filename slug + card heading). */
+  title: string;
+  /** Full content to file. */
+  content: string;
+  /** File extension without the dot. Default "md". */
+  ext?: string;
+}
+
+/** v1.3.0 Part C (P1) — where a filed artifact landed. */
+export interface ArtifactRef {
+  /** Bare filename of the saved artifact. */
+  fileName: string;
+  /** Absolute path on disk. */
+  absPath: string;
+}
+
+/** v1.3.0 Part B — the user's verdict on an approval request. */
+export type ApprovalVerdict = "y" | "n";
+
+/**
+ * v1.3.0 Part B — an action awaiting the user's ✅/❌. `command` is the literal
+ * thing being approved (e.g. the git push); `details` render as extra lines on
+ * the card (branch, repo, commit range).
+ */
+export interface ApprovalRequest {
+  /** Stable correlation id (the dev-confirm id) — encoded into the button. */
+  id: string;
+  /** Short card title, e.g. "git push 승인 요청". */
+  title: string;
+  /** The command/action text being approved. */
+  command: string;
+  /** Optional context lines rendered under the command. */
+  details?: string[];
+}
+
+/** v1.3.0 Part B — one selectable option in an `askChoice` request. */
+export interface ChoiceOption {
+  /** Value returned by `askChoice` when this option is chosen. */
+  value: string;
+  /** Display label (button text / menu row title). */
+  label: string;
+  /** Optional emoji prefix. */
+  emoji?: string;
+  /** Optional one-line description (shown in select menus). */
+  description?: string;
+  /**
+   * When true, choosing this option is irreversible (delete/deploy/reject) →
+   * the adapter asks a 2-step ephemeral confirmation before resolving
+   * (misfire-recovery ①). Reversible options instead get an undo grace window
+   * (misfire-recovery ②).
+   */
+  irreversible?: boolean;
+}
+
+/** v1.3.0 Part B — a single-select question posed to the user. */
+export interface ChoiceRequest {
+  /** Stable correlation id — encoded into component customIds. */
+  id: string;
+  /** The question prompt. */
+  question: string;
+  /** 2–25 options. ≤5 render as buttons; 6+ as a select menu. */
+  options: ChoiceOption[];
+  /**
+   * Undo grace window (ms) offered after a reversible choice (recovery ②).
+   * 0/undefined disables it. Ignored for `irreversible` options (those use the
+   * 2-step confirm instead).
+   */
+  undoGraceMs?: number;
 }
 
 export interface LiveTaskCardOpen {
@@ -117,6 +210,13 @@ export interface TurnControls {
    * turn was actually in flight. Mirrors `ChiefRunner.cancelTurn`.
    */
   cancelTurn(orgSlug: string, userId: string): boolean;
+  /**
+   * v1.3.0 Part A — fired once when the adapter binds to its org + handle
+   * (after gateway-ready), so the bot can start the dev-confirm bridge for the
+   * right org's pending-confirms dir. Adapters that never bind (Slack today,
+   * unbound legacy) leave it uncalled.
+   */
+  onBound?: (info: { orgSlug: string; handle: string }) => void;
 }
 
 export interface MessengerAdapter {

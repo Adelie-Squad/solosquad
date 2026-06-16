@@ -6,9 +6,10 @@ import { getOrgDir } from "../util/paths.js";
 /**
  * v0.3.0 — automatic git snapshots around subagent spawns.
  *
- * Scope: only the `memory/` and `workflows/` trees under each org. The user's
- * actual code repos live under `<org>/repositories/<repo>/` with their own
- * `.git` — we deliberately do NOT touch those.
+ * Scope: the `memory/`, `workflows/`, and `artifacts/` (v1.3.0 Part C P1)
+ * trees under each org. The user's actual code repos live under
+ * `<org>/repositories/<repo>/` with their own `.git` — we deliberately do NOT
+ * touch those.
  *
  * On `solosquad bot` startup, we ensure each org has an internal git repo at
  * `<org>/.solosquad/snapshot.git` (bare) plus a working-tree config that
@@ -18,6 +19,9 @@ import { getOrgDir } from "../util/paths.js";
  *
  * Per docs/plan/v0.3-pm-mode-orchestration.md §5.2 (sufurry guardrail).
  */
+
+/** Trees the snapshot repo tracks (v1.3.0 P1 added `artifacts`). */
+const TRACKED_TREES = ["memory", "workflows", "artifacts"] as const;
 
 export interface SnapshotPaths {
   gitDir: string;
@@ -82,8 +86,8 @@ export function commitSnapshot(
   ensureSnapshotRepo(workspace, orgSlug);
   const paths = snapshotPaths(workspace, orgSlug);
 
-  // Add only the two trees we care about.
-  for (const tree of ["memory", "workflows"]) {
+  // Add only the trees we care about.
+  for (const tree of TRACKED_TREES) {
     const treePath = path.join(paths.workTree, tree);
     if (fs.existsSync(treePath)) {
       runGit(paths, ["add", "--", tree]);
@@ -138,11 +142,12 @@ export function listSnapshots(
 }
 
 /**
- * Revert the snapshot tree to a specific commit. Affects only memory/ and
- * workflows/, leaving the user's actual repos untouched.
+ * Revert the snapshot tree to a specific commit. Affects only the tracked
+ * trees (memory/, workflows/, artifacts/), leaving the user's actual repos
+ * untouched.
  *
- * Implementation: `git checkout <sha> -- memory workflows` then a follow-up
- * commit recording the revert.
+ * Implementation: `git checkout <sha> -- <tree>` per tracked tree then a
+ * follow-up commit recording the revert.
  */
 export function revertToSnapshot(
   workspace: string,
@@ -162,7 +167,7 @@ export function revertToSnapshot(
   // Checkout each tracked tree separately so that an empty (never-committed)
   // tree doesn't cause "pathspec did not match" on the whole revert.
   let anyCheckedOut = false;
-  for (const tree of ["memory", "workflows"]) {
+  for (const tree of TRACKED_TREES) {
     // Check if the tree exists in the target commit
     const lsTree = runGit(paths, ["ls-tree", "--name-only", targetSha, "--", tree]);
     if (lsTree.code !== 0 || !lsTree.out.trim()) continue;

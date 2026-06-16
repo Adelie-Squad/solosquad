@@ -55,6 +55,32 @@ export interface ChiefConfig {
   mutex_queue_depth?: number;
   /** v0.3.0+: daily compaction-routine trigger time (HH:MM). */
   compaction_time?: string;
+  /** v1.3.0 Part A: git push approval-gate policy. */
+  git?: ChiefGitConfig;
+}
+
+/**
+ * v1.3.0 Part A — git push approval-gate policy. Lives under `pm.git` in
+ * workspace.yaml (the `pm` key is the persisted Chief-config contract, kept for
+ * back-compat per v1.2.10 §4.2). Read at spawn time by the dev-confirm hook
+ * (via env) and the bridge.
+ */
+export interface ChiefGitConfig {
+  /**
+   * Branches that may NEVER be pushed to directly — the hook blocks these
+   * before the approval flow even starts (fail-closed, regardless of hook
+   * error policy). Default `["main", "master", "develop"]`.
+   */
+  protected_branches?: string[];
+  /**
+   * When true, only feature branches reach the approval card; protected
+   * branches are auto-blocked. Default true. (When false the protected list is
+   * still honored, but the gate is otherwise advisory — reserved for future
+   * relaxation; the hook treats it as true today.)
+   */
+  require_feature_branch?: boolean;
+  /** Minutes the approval card waits before timing out (= block). Default 30. */
+  approval_timeout_minutes?: number;
 }
 
 export interface WorkspaceYaml {
@@ -237,6 +263,53 @@ export function resolveDevCapabilityConfig(
 /** v1.2.9 §E — read the dev-capability master toggle (default ON). */
 export function isDevCapabilityEnabled(workspace?: string): boolean {
   return loadDevCapabilityConfig(workspace).enabled;
+}
+
+/** v1.3.0 Part A — protected branches the push gate never lets through. */
+export const DEFAULT_PROTECTED_BRANCHES: readonly string[] = [
+  "main",
+  "master",
+  "develop",
+];
+
+export const DEFAULT_CHIEF_GIT_CONFIG: Required<ChiefGitConfig> = {
+  protected_branches: [...DEFAULT_PROTECTED_BRANCHES],
+  require_feature_branch: true,
+  approval_timeout_minutes: 30,
+};
+
+/**
+ * v1.3.0 Part A — resolve the git push approval-gate policy from
+ * `workspace.yaml.pm.git`, applying defaults when absent. Used by the
+ * dev-confirm bridge + hook (the hook receives the resolved values via spawn
+ * env, so it never re-reads yaml on its hot path).
+ */
+export function loadChiefGitConfig(
+  workspace?: string,
+): Required<ChiefGitConfig> {
+  const ws = loadWorkspaceYaml(workspace);
+  return resolveChiefGitConfig(ws?.pm?.git);
+}
+
+/** Pure resolver — exposed so callers can resolve without re-reading yaml. */
+export function resolveChiefGitConfig(
+  partial: ChiefGitConfig | undefined,
+): Required<ChiefGitConfig> {
+  const p = partial ?? {};
+  const protectedBranches =
+    Array.isArray(p.protected_branches) && p.protected_branches.length > 0
+      ? p.protected_branches.slice()
+      : [...DEFAULT_PROTECTED_BRANCHES];
+  return {
+    protected_branches: protectedBranches,
+    require_feature_branch:
+      p.require_feature_branch ?? DEFAULT_CHIEF_GIT_CONFIG.require_feature_branch,
+    approval_timeout_minutes:
+      typeof p.approval_timeout_minutes === "number" &&
+      p.approval_timeout_minutes > 0
+        ? p.approval_timeout_minutes
+        : DEFAULT_CHIEF_GIT_CONFIG.approval_timeout_minutes,
+  };
 }
 
 /**

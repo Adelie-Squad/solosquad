@@ -23,6 +23,8 @@ import { loadWorkspaceYaml, loadOrgYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
 import type { ChiefSource } from "../messenger/base.js";
 import { resolveChiefSpawnPermissions } from "./chief-permissions.js";
+import { loadChiefGitConfig } from "../util/config.js";
+import { pendingConfirmsDir } from "./dev-confirm-paths.js";
 import { getWorkspaceDir } from "../util/paths.js";
 import {
   emit as emitChiefStage,
@@ -161,6 +163,32 @@ function collectRegisteredRepoPaths(orgCwd: string): string[] {
     /* skip on any infrastructure failure */
   }
   return out;
+}
+
+/**
+ * v1.3.0 Part A — assemble the env the PreToolUse approve hook reads. Resolves
+ * the gate policy (protected branches, timeout) from workspace.yaml and the
+ * per-org pending-confirms directory. Only called in dev-ON spawns.
+ */
+function buildDevConfirmEnv(
+  orgSlug: string,
+  userId: string,
+  workflowId: string | undefined,
+): Record<string, string> {
+  const workspace = getWorkspaceDir();
+  const gitCfg = loadChiefGitConfig(workspace);
+  const env: Record<string, string> = {
+    SOLOSQUAD_DEV_CONFIRM_DIR: pendingConfirmsDir(workspace, orgSlug),
+    SOLOSQUAD_DEV_CONFIRM_ORG: orgSlug,
+    SOLOSQUAD_DEV_CONFIRM_USER: userId,
+    SOLOSQUAD_DEV_CONFIRM_WORKSPACE: workspace,
+    SOLOSQUAD_DEV_CONFIRM_TIMEOUT_MS: String(
+      gitCfg.approval_timeout_minutes * 60 * 1000,
+    ),
+    SOLOSQUAD_DEV_CONFIRM_PROTECTED: gitCfg.protected_branches.join(","),
+  };
+  if (workflowId) env.SOLOSQUAD_DEV_CONFIRM_WORKFLOW = workflowId;
+  return env;
 }
 
 /**
@@ -584,6 +612,13 @@ export class ChiefRunner {
     // denied); dev OFF ⇒ deny Bash/Edit/Write so they can't prompt-and-hang.
     const perms = resolveChiefSpawnPermissions(getWorkspaceDir());
 
+    // v1.3.0 Part A — when dev mode is ON (settingsPath wired = the PreToolUse
+    // approve hook is active), hand the hook its gate context via env. dev OFF
+    // leaves extraEnv undefined (Bash is denied wholesale, no gate needed).
+    const devConfirmEnv = perms.settingsPath
+      ? buildDevConfirmEnv(call.orgSlug, call.userId, record.activeWorkflowId)
+      : undefined;
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -600,6 +635,7 @@ export class ChiefRunner {
       disallowedTools: perms.disallowedTools,
       settingsPath: perms.settingsPath,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
+      extraEnv: devConfirmEnv,
     });
     // v1.2.9 §D — register this turn's stream so `/cancel` can abort it.
     // Released in the `finally` below regardless of how the turn ends.
