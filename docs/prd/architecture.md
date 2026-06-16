@@ -1137,6 +1137,20 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.2.10-consolidation-cleanup.md`
 
+#### 13.6.23 v1.3.0 — 메신저 UX 대개편: dev-confirm 승인 게이트 + 인터랙션 컴포넌트 + 산출물 파일화 (2026-06-16)
+
+**핵심 변화 (3 축, 안전망 합류)** — "누르기 전 확인(A) → 누른 직후 되돌리기(B) → 작업 중 🛑 중단(C P0)". 🛑 중단 + 실시간 stage narration (Part C P0) 은 선행 머지, 본 릴리스가 게이트·컴포넌트·산출물을 추가.
+
+- **Part A — dev-confirm 승인 게이트 라이브화.** v0.8.2 에서 정의만 깔린 채 한 번도 발사 안 된 게이트를 spawn 경로에 연결. v1.2.9 §E deny-hook 을 **approve 흐름**으로 승격. PreToolUse(Bash) hook (`src/bot/dev-confirm-hook.ts`) 가 spawn 된 `claude` 서브프로세스 안에서 `git push`/`gh pr merge|close` 가로채 — 보호 브랜치(main/master/develop) 직 push 는 즉시 차단, feature 브랜치는 `<org>/memory/pending-confirms/<id>.json` 작성 후 `<id>.decision` polling (순수 파일 IPC, 네트워크 0). 봇 측 bridge (`src/bot/dev-confirm-bridge.ts`) 가 pending 감지 → `command-<handle>` 에 ✅승인/❌거절 카드 게시 → 클릭 결과를 decision 파일로 회신 + `dev-confirmations.jsonl` 에 커밋해시·workflow-id 매핑. **실패정책** — timeout=차단(fail-closed), hook 자체 오류=통과(fail-open) 로 버그난 hook 이 전체 push 를 영구 차단하지 않게 하되 보호 브랜치 가드는 항상 fail-closed. hook 이 단독 게이트가 되도록 dev-ON 의 정적 push deny 를 제거 (승인된 push 가 deny 에 막히는 자기모순 방지) — settings 작성 실패 시에만 deny fallback. config: `workspace.yaml` `pm.git` (`protected_branches`/`require_feature_branch`/`approval_timeout_minutes`). spawn env (`SOLOSQUAD_DEV_CONFIRM_*`) 로 hook 에 컨텍스트 전달. push **알림**은 영구 비범위 — GitHub→메신저 네이티브 webhook 위임.
+- **Part B — 인터랙션 UX (버튼/메뉴 + 오발복구).** 텍스트 `y/n` 퇴출. 검증된 온보딩/turn-controls 컴포넌트 패턴 위에 per-message collector 로 구현. `discord-approval.ts` (✅/❌ 카드 + ① 2단계 거절 확인 + ③ 클릭 후 비활성화), `discord-choice.ts` (버튼 ≤5 / StringSelect 6+ + ② 되돌리기 유예). `MessageContext.askApproval`/`askChoice` (Discord) + bridge 용 `postApprovalToCommandChannel`. Slack 은 optional 미구현 → 텍스트 폴백.
+- **Part C P1 — 산출물 파일화.** 긴 Chief 답변(≥1500자)을 `<org>/artifacts/<ts>-<slug>.md` 에 저장 + Discord 첨부 파일·미리보기 카드로 게시 (1900자 chunk 도배 대신). git-snapshot 이 `artifacts/` 추적 → 버전 관리.
+
+**테스트** — 790 pass, `tsc`+`build` clean. push 브랜치 파싱(공백·`+force` refspec 우회 가드 포함), hook 결정 매트릭스 + fail-open/closed, bridge 파일 IPC + 감사 매핑, 컴포넌트 id 파싱/복구 row, artifact store, `pm.git` config 신규 커버.
+
+**비범위(후속)** — P3 토큰 edit-스트리밍 · 리액션 토글④ · Slack Block Kit 패리티 · 커밋 trailer 스탬프(§A.4.5) · 전용 `artifacts-<handle>` 아카이브 채널(P2).
+
+자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
+
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
 > **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.
