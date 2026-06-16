@@ -18,6 +18,12 @@ jobs:
         # prebuilt → source build fails on runners without a toolchain). Matches
         # package.json engines `>=20`.
         node: [20, 22]
+        exclude:
+          # better-sqlite3 12.x ships no Windows prebuilt for Node 20 (ABI 115),
+          # and the GitHub Windows runner has no Visual Studio toolchain for a
+          # source build. Windows stays covered on Node 22 (prebuilt present).
+          - os: windows-latest
+            node: 20
     runs-on: ${{ matrix.os }}
 
     steps:
