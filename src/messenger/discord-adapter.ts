@@ -22,6 +22,8 @@ import {
   type CommandHandler,
   type TaskCardInput,
   type TaskCardResult,
+  type LiveTaskCardOpen,
+  type LiveTaskCardHandle,
   type ChiefSource,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
@@ -30,7 +32,7 @@ import { getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 import { loadOrgYaml } from "../util/config.js";
 import { decideOwnerGate } from "./discord-owner-gate.js";
 import { registerOnboarding, sendOnboardingEmbed } from "./discord-onboarding.js";
-import { postTaskCard } from "./discord-task-card.js";
+import { postTaskCard, LiveTaskCard } from "./discord-task-card.js";
 import { registerChatSlash } from "./discord-chat-slash.js";
 
 class DiscordMessageContext implements MessageContext {
@@ -108,6 +110,21 @@ class DiscordMessageContext implements MessageContext {
       guild: this.message.guild,
       handle: this.ownHandle,
       orgCwd,
+    });
+  }
+
+  /** v1.3.0 Part C (P0) — open a live works card for streaming narration. */
+  async openLiveTaskCard(input: LiveTaskCardOpen): Promise<LiveTaskCardHandle> {
+    if (!this.message.guild || !this.ownHandle || !this.ownOrgSlug) {
+      throw new Error("openLiveTaskCard requires a bound bot in a guild");
+    }
+    const orgCwd = getOrgDir(this.ownOrgSlug, this.workspace);
+    return LiveTaskCard.open({
+      guild: this.message.guild,
+      handle: this.ownHandle,
+      orgCwd,
+      userRequest: input.userRequest,
+      chiefName: input.chiefName,
     });
   }
 }

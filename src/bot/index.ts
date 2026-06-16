@@ -23,7 +23,12 @@ import {
   type Product,
 } from "../util/config.js";
 import { getOrgDir } from "../util/paths.js";
-import type { MessageContext, MessengerAdapter } from "../messenger/base.js";
+import type {
+  MessageContext,
+  MessengerAdapter,
+  LiveTaskCardHandle,
+} from "../messenger/base.js";
+import type { ChiefStageEvent } from "../util/chief-stage-events.js";
 
 /**
  * v1.2 — resolve the org's Chief display name (org.yaml.chief_name)
@@ -157,6 +162,42 @@ async function handleCommandInner(
     console.log(`[Bot] snapshot (before) skipped: ${e instanceof Error ? e.message : e}`);
   }
 
+  // v1.3.0 Part C (P0) — live works card. On the first projectable stage
+  // (DECOMPOSE/DISPATCH/AWAIT) we open a grey ⏳ card + thread and stream
+  // narration into it as later stages fire, instead of dumping everything
+  // after the turn. The runner calls `onStage` synchronously, so we serialize
+  // the async Discord work through a promise chain to keep posts ordered
+  // without ever blocking the runner's stream loop. Adapters without
+  // `openLiveTaskCard` (Slack, slash fallback) leave `onStage` undefined and
+  // fall through to the batch `postTaskCard` path below.
+  const chiefName = resolveChiefDisplayName(product.slug);
+  let liveCard: LiveTaskCardHandle | null = null;
+  let liveCardChain: Promise<void> = Promise.resolve();
+  let onStage: ((event: ChiefStageEvent) => void) | undefined;
+  if (ctx.openLiveTaskCard) {
+    const narrationMod = await import("../messenger/discord-narration.js");
+    onStage = (event) => {
+      const lines = narrationMod.formatStageEvent(event);
+      if (lines.length === 0) return;
+      liveCardChain = liveCardChain.then(async () => {
+        try {
+          if (!liveCard) {
+            liveCard = await ctx.openLiveTaskCard!({
+              userRequest: forwardText,
+              chiefName,
+            });
+          }
+          const card = liveCard;
+          for (const line of lines) await card.appendNarration(line.text);
+        } catch (e) {
+          console.log(
+            `[Bot] live task-card narration failed: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      });
+    };
+  }
+
   try {
     const reply = await chiefRunner.handleUserMessage({
       userId: ctx.userId,
@@ -166,6 +207,8 @@ async function handleCommandInner(
       // v1.2.9 §D — forward the messenger surface so Chief knows it's
       // talking through Discord/Slack (drives no-code-block formatting).
       source: ctx.source,
+      // v1.3.0 Part C (P0) — live stage stream (undefined for batch adapters).
+      onStage,
     });
 
     // v1.2.9 §D — turn aborted via /cancel. The cancel handler already told
@@ -173,6 +216,10 @@ async function handleCommandInner(
     // snapshot since a partial spawn may have touched files.
     if (reply.aborted) {
       console.log(`[Bot] Chief turn aborted by /cancel: user=${ctx.userId}`);
+      // Flush any in-flight live narration so we don't leave a dangling post
+      // promise. The live card stays as-is (grey ⏳); Part B's 🛑 cancel will
+      // mark it cancelled explicitly.
+      await liveCardChain.catch(() => {});
       try {
         commitSnapshot(workspaceRoot, product.slug, `after-cancel: ${ctx.userId}`);
       } catch (e) {
@@ -181,6 +228,13 @@ async function handleCommandInner(
       return;
     }
 
+    // v1.3.0 Part C (P0) — flush pending live narration before we either
+    // finalize the live card or fall through to the batch path. The re-typed
+    // snapshot defeats control-flow narrowing — `liveCard` is only ever
+    // assigned inside the onStage closure, so TS otherwise treats it as `null`.
+    await liveCardChain.catch(() => {});
+    const activeLiveCard = liveCard as LiveTaskCardHandle | null;
+
     // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply
     // in the command channel; `workflow` / `schedule` / `goal` post a
     // task card embed in `works-<handle>` + thread carrying the full
@@ -188,11 +242,35 @@ async function handleCommandInner(
     // with the thread link. Adapters that haven't implemented
     // `postTaskCard` (Slack v1.2.x) fall back to a `📋` prefix so the
     // routing intent stays visible.
-    if (
+    if (activeLiveCard) {
+      // v1.3.0 Part C (P0) — a live card was opened mid-turn (the turn
+      // decomposed/dispatched). Finalize it: recolour the embed to the
+      // resolved kind + post the Chief reply into the thread that already
+      // streamed the narration. A card-worthy turn that somehow classified as
+      // `chat` still dispatched work, so treat it as a workflow.
+      const finalKind = reply.kind === "chat" ? "workflow" : reply.kind;
+      try {
+        const card = await activeLiveCard.finalize({
+          kind: finalKind,
+          chiefReply: reply.text,
+        });
+        await ctx.reply(`📋 작업 등록됨 → ${card.threadUrl}`);
+      } catch (cardErr) {
+        console.log(
+          `[Bot] live task-card finalize failed (${reply.kind}): ${
+            cardErr instanceof Error ? cardErr.message : String(cardErr)
+          } — falling back to flat reply`,
+        );
+        await ctx.reply(reply.text || `📋 [${reply.kind}]`);
+      }
+    } else if (
       reply.kind !== "chat" &&
       reply.text.trim().length > 0 &&
       ctx.postTaskCard
     ) {
+      // Batch path — no live card was opened (a non-spawning workflow turn, or
+      // an adapter without openLiveTaskCard). Build the narration from the
+      // jsonl and post the card after the fact, as before.
       try {
         // v1.2 §8 — fetch the stage events emitted during this turn
         // and project DECOMPOSE/DISPATCH/AWAIT into the thread. Pure
@@ -207,7 +285,7 @@ async function handleCommandInner(
           kind: reply.kind,
           userRequest: forwardText,
           chiefReply: reply.text,
-          chiefName: resolveChiefDisplayName(product.slug),
+          chiefName,
           narrationLines: narration,
         });
         await ctx.reply(`📋 작업 등록됨 → ${card.threadUrl}`);

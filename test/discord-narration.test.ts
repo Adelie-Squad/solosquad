@@ -6,6 +6,7 @@ import path from "node:path";
 
 import {
   buildStageNarration,
+  formatStageEvent,
   narrationLinesAsStrings,
 } from "../src/messenger/discord-narration.js";
 import {
@@ -116,4 +117,31 @@ test("buildStageNarration — filters by turn_id (other turns ignored)", () => {
 test("buildStageNarration — returns [] when the jsonl doesn't exist yet (no events emitted)", () => {
   const orgRoot = tempOrg();
   assert.deepEqual(buildStageNarration(orgRoot, "t-missing"), []);
+});
+
+// v1.3.0 Part C (P0) — the live path calls formatStageEvent per event directly
+// (not via the file-reading buildStageNarration). Lock the single-event
+// contract so live narration renders identically to the batch projection.
+test("formatStageEvent — projects DISPATCH + skills_used follow-on, drops non-projected stages", () => {
+  const dispatch: ChiefStageEvent = {
+    ts: "2026-06-16T00:00:00Z",
+    turn_id: "t1",
+    stage: "DISPATCH",
+    dispatched: ["pm", "engineer"],
+    skills_used: ["discovery-synthesis"],
+  };
+  assert.deepEqual(
+    formatStageEvent(dispatch).map((l) => l.text),
+    ["📤 dispatch: pm, engineer (병렬 2)", "  ↳ discovery-synthesis"],
+  );
+
+  // Non-projected stages and a no-open-question AWAIT yield nothing.
+  assert.deepEqual(
+    formatStageEvent({ ts: "x", turn_id: "t1", stage: "SYNTHESIZE" }),
+    [],
+  );
+  assert.deepEqual(
+    formatStageEvent({ ts: "x", turn_id: "t1", stage: "AWAIT", detail: "spawn_count=2" }),
+    [],
+  );
 });

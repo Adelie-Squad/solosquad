@@ -34,6 +34,36 @@ export interface MessageContext {
    * visible to the user.
    */
   postTaskCard?: (input: TaskCardInput) => Promise<TaskCardResult>;
+  /**
+   * v1.3.0 Part C (P0) — open a *live* works card mid-turn. The dispatcher
+   * calls this on the first projectable stage event (DECOMPOSE/DISPATCH/AWAIT),
+   * streams narration into the returned handle as later stages fire, and calls
+   * `finalize` once the turn returns. Adapters that don't implement it (Slack
+   * today, the slash fallback) leave it undefined and the dispatcher uses the
+   * batch `postTaskCard` path instead — no behaviour change for them.
+   */
+  openLiveTaskCard?: (input: LiveTaskCardOpen) => Promise<LiveTaskCardHandle>;
+}
+
+export interface LiveTaskCardOpen {
+  /** Short user request — drives the embed title + workflow id. */
+  userRequest: string;
+  /** Chief display name (org.yaml.chief_name or "Chief"). */
+  chiefName: string;
+}
+
+export interface LiveTaskCardHandle {
+  /** Stream one already-formatted narration line into the card's thread. */
+  appendNarration(line: string): Promise<void>;
+  /**
+   * Close the card: recolour to the resolved TRIAGE kind + post the Chief
+   * reply into the thread. Returns the same shape as `postTaskCard` so the
+   * dispatcher can announce the thread url identically.
+   */
+  finalize(input: {
+    kind: TaskCardInput["kind"];
+    chiefReply: string;
+  }): Promise<TaskCardResult>;
 }
 
 export interface TaskCardInput {
