@@ -215,11 +215,11 @@ async function handleCommandInner(
     // the user it stopped; suppress the partial reply + task card. Still
     // snapshot since a partial spawn may have touched files.
     if (reply.aborted) {
-      console.log(`[Bot] Chief turn aborted by /cancel: user=${ctx.userId}`);
-      // Flush any in-flight live narration so we don't leave a dangling post
-      // promise. The live card stays as-is (grey ⏳); Part B's 🛑 cancel will
-      // mark it cancelled explicitly.
+      console.log(`[Bot] Chief turn aborted (/cancel or 🛑): user=${ctx.userId}`);
+      // Flush any in-flight live narration, then mark the card cancelled (🛑 red
+      // + button dropped) so it doesn't sit at grey ⏳ forever.
       await liveCardChain.catch(() => {});
+      await (liveCard as LiveTaskCardHandle | null)?.cancel().catch(() => {});
       try {
         commitSnapshot(workspaceRoot, product.slug, `after-cancel: ${ctx.userId}`);
       } catch (e) {
@@ -395,7 +395,14 @@ export async function startBot(): Promise<void> {
       `stages_flipped=${report.recoveredStages.length} pending_deliveries=${report.pendingDeliveries.length}`
   );
 
-  await Promise.all(adapters.map((a) => a.startBot(handleCommand)));
+  // v1.3.0 Part B — give adapters a turn-control hook so the live card's 🛑
+  // button (and later approval buttons) can abort the in-flight turn, the GUI
+  // equivalent of `/cancel`.
+  const turnControls = {
+    cancelTurn: (orgSlug: string, userId: string) =>
+      chiefRunner.cancelTurn(orgSlug, userId),
+  };
+  await Promise.all(adapters.map((a) => a.startBot(handleCommand, turnControls)));
 
   // Deliver any recovered messages now that adapters are connected.
   if (report.pendingDeliveries.length > 0) {

@@ -24,6 +24,7 @@ import {
   type TaskCardResult,
   type LiveTaskCardOpen,
   type LiveTaskCardHandle,
+  type TurnControls,
   type ChiefSource,
 } from "./base.js";
 import { parseChannelName } from "../bot/user-registry.js";
@@ -33,6 +34,10 @@ import { loadOrgYaml } from "../util/config.js";
 import { decideOwnerGate } from "./discord-owner-gate.js";
 import { registerOnboarding, sendOnboardingEmbed } from "./discord-onboarding.js";
 import { postTaskCard, LiveTaskCard } from "./discord-task-card.js";
+import {
+  buildStopButtonId,
+  registerTurnControls,
+} from "./discord-turn-controls.js";
 import { registerChatSlash } from "./discord-chat-slash.js";
 
 class DiscordMessageContext implements MessageContext {
@@ -125,6 +130,8 @@ class DiscordMessageContext implements MessageContext {
       orgCwd,
       userRequest: input.userRequest,
       chiefName: input.chiefName,
+      // v1.3.0 Part B — 🛑 button targets this turn (orgSlug, userId).
+      stopButtonId: buildStopButtonId(this.ownOrgSlug, this.userId),
     });
   }
 }
@@ -136,8 +143,14 @@ export class DiscordAdapter implements MessengerAdapter {
   /** v0.8 §3.5 — resolved bot user's handle. Null until `clientReady` fires. */
   private ownHandle: string | null = null;
   private ownOrgSlug: string | null = null;
+  /** v1.3.0 Part B — turn-control hook (🛑 button → cancelTurn). */
+  private turnControls: TurnControls | null = null;
 
-  async startBot(onCommand: CommandHandler): Promise<void> {
+  async startBot(
+    onCommand: CommandHandler,
+    controls?: TurnControls,
+  ): Promise<void> {
+    this.turnControls = controls ?? null;
     const token = process.env.DISCORD_TOKEN;
     if (!token) {
       console.log("[Discord] Cannot start — DISCORD_TOKEN is not set.");
@@ -206,6 +219,9 @@ export class DiscordAdapter implements MessengerAdapter {
         ownHandle: this.ownHandle,
         ensureChannels: (g) => this.ensureChannels(g),
       }));
+
+      // v1.3.0 Part B — live-card 🛑 button → cancel the in-flight turn.
+      registerTurnControls(client, () => this.turnControls);
 
       // v1.2 §7.4 — register `/chat` slash command as a fallback for
       // MESSAGE_CONTENT intent denial. Idempotent + safe to call after

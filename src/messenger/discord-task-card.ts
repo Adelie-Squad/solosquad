@@ -9,6 +9,7 @@ import {
   type ThreadChannel,
 } from "discord.js";
 import type { TaskCardInput, TaskCardResult } from "./base.js";
+import { stopButtonRow } from "./discord-turn-controls.js";
 
 /**
  * v1.2 §6.2 — task card embed in `works-<handle>` + thread on that embed.
@@ -126,10 +127,12 @@ function kstTimestamp(): string {
   });
 }
 
-type CardStatus = "in_progress" | "completed";
+type CardStatus = "in_progress" | "completed" | "cancelled";
 
 /** Grey while a turn is still running; kind colour once it completes. */
 const COLOR_IN_PROGRESS = 0x9b9ba1;
+/** Red when the turn was stopped via the 🛑 button or `/cancel`. */
+const COLOR_CANCELLED = 0xed4245;
 
 /**
  * Single source of truth for the works task-card embed. The batch path
@@ -146,16 +149,33 @@ function cardEmbed(opts: {
   status: CardStatus;
 }): EmbedBuilder {
   const title = firstLine(opts.userRequest, 80) || opts.workflowId;
-  const running = opts.status === "in_progress";
+  const icon =
+    opts.status === "in_progress"
+      ? "⏳"
+      : opts.status === "cancelled"
+        ? "🛑"
+        : "📋";
+  const color =
+    opts.status === "in_progress"
+      ? COLOR_IN_PROGRESS
+      : opts.status === "cancelled"
+        ? COLOR_CANCELLED
+        : COLOR_BY_KIND[opts.kind];
+  const statusText =
+    opts.status === "in_progress"
+      ? "⏳ 진행 중…"
+      : opts.status === "cancelled"
+        ? "🛑 중단됨"
+        : "✅ 완료";
   return new EmbedBuilder()
-    .setTitle(`${running ? "⏳" : "📋"} ${LABEL_BY_KIND[opts.kind]}: ${title}`)
-    .setColor(running ? COLOR_IN_PROGRESS : COLOR_BY_KIND[opts.kind])
+    .setTitle(`${icon} ${LABEL_BY_KIND[opts.kind]}: ${title}`)
+    .setColor(color)
     .setDescription(
       [
         `**요청** — ${firstLine(opts.userRequest, 200)}`,
         `**workflow_id** — \`${opts.workflowId}\``,
         `**시작** — ${opts.kstStarted} KST`,
-        `**상태** — ${running ? "⏳ 진행 중…" : "✅ 완료"}`,
+        `**상태** — ${statusText}`,
       ].join("\n"),
     )
     .setFooter({ text: `${opts.chiefName} · Chief` });
@@ -220,6 +240,12 @@ export interface OpenLiveTaskCardInput {
   orgCwd: string;
   userRequest: string;
   chiefName: string;
+  /**
+   * v1.3.0 Part B — customId for the 🛑 button (see `buildStopButtonId`).
+   * Encodes (orgSlug, userId) so the InteractionCreate handler can cancel the
+   * right turn.
+   */
+  stopButtonId: string;
 }
 
 export class LiveTaskCard {
@@ -253,7 +279,10 @@ export class LiveTaskCard {
       chiefName: input.chiefName,
       status: "in_progress",
     });
-    const cardMessage = await worksChannel.send({ embeds: [embed] });
+    const cardMessage = await worksChannel.send({
+      embeds: [embed],
+      components: [stopButtonRow(input.stopButtonId)],
+    });
     const thread = await cardMessage.startThread({
       name: threadNameFor("workflow", workflowId),
       autoArchiveDuration: 10080, // 7 days
@@ -299,6 +328,7 @@ export class LiveTaskCard {
             status: "completed",
           }),
         ],
+        components: [], // turn is done — drop the 🛑 button
       });
     } catch (err) {
       // Best-effort — a failed embed edit must not drop the reply below.
@@ -327,6 +357,35 @@ export class LiveTaskCard {
       threadUrl: threadUrlOf(this.thread),
       workflowId: this.workflowId,
     };
+  }
+
+  /**
+   * v1.3.0 Part B — the turn was aborted (🛑 button or `/cancel`). Recolour the
+   * embed to the cancelled state and drop the button. Best-effort; never
+   * throws (the abort path must not fail on a Discord edit).
+   */
+  async cancel(): Promise<void> {
+    try {
+      await this.cardMessage.edit({
+        embeds: [
+          cardEmbed({
+            kind: "workflow",
+            userRequest: this.userRequest,
+            workflowId: this.workflowId,
+            kstStarted: this.kstStarted,
+            chiefName: this.chiefName,
+            status: "cancelled",
+          }),
+        ],
+        components: [],
+      });
+    } catch (err) {
+      console.log(
+        `[Discord task-card] live embed cancel failed for ${this.workflowId}: ${
+          (err as Error).message
+        }`,
+      );
+    }
   }
 }
 

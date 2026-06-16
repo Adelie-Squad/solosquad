@@ -64,6 +64,11 @@ export interface LiveTaskCardHandle {
     kind: TaskCardInput["kind"];
     chiefReply: string;
   }): Promise<TaskCardResult>;
+  /**
+   * v1.3.0 Part B — the turn was aborted (🛑 button / `/cancel`). Recolour the
+   * card to the cancelled state and drop the button. Best-effort, never throws.
+   */
+  cancel(): Promise<void>;
 }
 
 export interface TaskCardInput {
@@ -100,12 +105,30 @@ export type CommandHandler = (
   ctx: MessageContext
 ) => Promise<void>;
 
+/**
+ * v1.3.0 Part B — turn-control hooks the bot wires into an adapter so message
+ * components (the live card's 🛑 button, later approval buttons) can drive the
+ * runner without the adapter importing chief-runner. The GUI equivalent of the
+ * `/cancel` slash.
+ */
+export interface TurnControls {
+  /**
+   * Abort the in-flight Chief turn for (orgSlug, userId). Returns true when a
+   * turn was actually in flight. Mirrors `ChiefRunner.cancelTurn`.
+   */
+  cancelTurn(orgSlug: string, userId: string): boolean;
+}
+
 export interface MessengerAdapter {
   readonly platform: string;
   readonly channelNames: string[];
 
-  /** Start listening for commands. */
-  startBot(onCommand: CommandHandler): Promise<void>;
+  /**
+   * Start listening for commands. `controls` (v1.3.0 Part B) lets the adapter
+   * wire interactive components back to the runner; adapters that don't render
+   * components may ignore it.
+   */
+  startBot(onCommand: CommandHandler, controls?: TurnControls): Promise<void>;
 
   /** Connect for sending only (scheduler mode). */
   startNotifier(): Promise<void>;
