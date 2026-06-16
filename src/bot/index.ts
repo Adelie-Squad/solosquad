@@ -7,6 +7,13 @@ import { FileEventSink, chiefEventsPath } from "./events.js";
 import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.js";
 import { handleSlashIfAny } from "./slash-commands.js";
 import { parseMentions } from "./mention-parser.js";
+import { DevConfirmBridge } from "./dev-confirm-bridge.js";
+import type { PendingConfirmFile } from "./dev-confirm-paths.js";
+import { DiscordAdapter } from "../messenger/discord-adapter.js";
+import {
+  isArtifactWorthy,
+  deriveArtifactTitle,
+} from "../messenger/artifact-store.js";
 import { listOrgRepoSlugs } from "./repo-registry.js";
 import { rebuildRoutes } from "./agent-router.js";
 import { commitSnapshot } from "./git-snapshot.js";
@@ -20,10 +27,18 @@ import {
   loadOrgYaml,
   listOrganizations,
   setDevCapabilityEnabled,
+  loadChiefGitConfig,
   type Product,
 } from "../util/config.js";
 import { getOrgDir } from "../util/paths.js";
-import type { MessageContext, MessengerAdapter } from "../messenger/base.js";
+import type {
+  MessageContext,
+  MessengerAdapter,
+  LiveTaskCardHandle,
+  TurnControls,
+  ApprovalRequest,
+} from "../messenger/base.js";
+import type { ChiefStageEvent } from "../util/chief-stage-events.js";
 
 /**
  * v1.2 — resolve the org's Chief display name (org.yaml.chief_name)
@@ -157,6 +172,42 @@ async function handleCommandInner(
     console.log(`[Bot] snapshot (before) skipped: ${e instanceof Error ? e.message : e}`);
   }
 
+  // v1.3.0 Part C (P0) — live works card. On the first projectable stage
+  // (DECOMPOSE/DISPATCH/AWAIT) we open a grey ⏳ card + thread and stream
+  // narration into it as later stages fire, instead of dumping everything
+  // after the turn. The runner calls `onStage` synchronously, so we serialize
+  // the async Discord work through a promise chain to keep posts ordered
+  // without ever blocking the runner's stream loop. Adapters without
+  // `openLiveTaskCard` (Slack, slash fallback) leave `onStage` undefined and
+  // fall through to the batch `postTaskCard` path below.
+  const chiefName = resolveChiefDisplayName(product.slug);
+  let liveCard: LiveTaskCardHandle | null = null;
+  let liveCardChain: Promise<void> = Promise.resolve();
+  let onStage: ((event: ChiefStageEvent) => void) | undefined;
+  if (ctx.openLiveTaskCard) {
+    const narrationMod = await import("../messenger/discord-narration.js");
+    onStage = (event) => {
+      const lines = narrationMod.formatStageEvent(event);
+      if (lines.length === 0) return;
+      liveCardChain = liveCardChain.then(async () => {
+        try {
+          if (!liveCard) {
+            liveCard = await ctx.openLiveTaskCard!({
+              userRequest: forwardText,
+              chiefName,
+            });
+          }
+          const card = liveCard;
+          for (const line of lines) await card.appendNarration(line.text);
+        } catch (e) {
+          console.log(
+            `[Bot] live task-card narration failed: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      });
+    };
+  }
+
   try {
     const reply = await chiefRunner.handleUserMessage({
       userId: ctx.userId,
@@ -166,13 +217,19 @@ async function handleCommandInner(
       // v1.2.9 §D — forward the messenger surface so Chief knows it's
       // talking through Discord/Slack (drives no-code-block formatting).
       source: ctx.source,
+      // v1.3.0 Part C (P0) — live stage stream (undefined for batch adapters).
+      onStage,
     });
 
     // v1.2.9 §D — turn aborted via /cancel. The cancel handler already told
     // the user it stopped; suppress the partial reply + task card. Still
     // snapshot since a partial spawn may have touched files.
     if (reply.aborted) {
-      console.log(`[Bot] Chief turn aborted by /cancel: user=${ctx.userId}`);
+      console.log(`[Bot] Chief turn aborted (/cancel or 🛑): user=${ctx.userId}`);
+      // Flush any in-flight live narration, then mark the card cancelled (🛑 red
+      // + button dropped) so it doesn't sit at grey ⏳ forever.
+      await liveCardChain.catch(() => {});
+      await (liveCard as LiveTaskCardHandle | null)?.cancel().catch(() => {});
       try {
         commitSnapshot(workspaceRoot, product.slug, `after-cancel: ${ctx.userId}`);
       } catch (e) {
@@ -181,6 +238,13 @@ async function handleCommandInner(
       return;
     }
 
+    // v1.3.0 Part C (P0) — flush pending live narration before we either
+    // finalize the live card or fall through to the batch path. The re-typed
+    // snapshot defeats control-flow narrowing — `liveCard` is only ever
+    // assigned inside the onStage closure, so TS otherwise treats it as `null`.
+    await liveCardChain.catch(() => {});
+    const activeLiveCard = liveCard as LiveTaskCardHandle | null;
+
     // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply
     // in the command channel; `workflow` / `schedule` / `goal` post a
     // task card embed in `works-<handle>` + thread carrying the full
@@ -188,11 +252,35 @@ async function handleCommandInner(
     // with the thread link. Adapters that haven't implemented
     // `postTaskCard` (Slack v1.2.x) fall back to a `📋` prefix so the
     // routing intent stays visible.
-    if (
+    if (activeLiveCard) {
+      // v1.3.0 Part C (P0) — a live card was opened mid-turn (the turn
+      // decomposed/dispatched). Finalize it: recolour the embed to the
+      // resolved kind + post the Chief reply into the thread that already
+      // streamed the narration. A card-worthy turn that somehow classified as
+      // `chat` still dispatched work, so treat it as a workflow.
+      const finalKind = reply.kind === "chat" ? "workflow" : reply.kind;
+      try {
+        const card = await activeLiveCard.finalize({
+          kind: finalKind,
+          chiefReply: reply.text,
+        });
+        await ctx.reply(`📋 작업 등록됨 → ${card.threadUrl}`);
+      } catch (cardErr) {
+        console.log(
+          `[Bot] live task-card finalize failed (${reply.kind}): ${
+            cardErr instanceof Error ? cardErr.message : String(cardErr)
+          } — falling back to flat reply`,
+        );
+        await ctx.reply(reply.text || `📋 [${reply.kind}]`);
+      }
+    } else if (
       reply.kind !== "chat" &&
       reply.text.trim().length > 0 &&
       ctx.postTaskCard
     ) {
+      // Batch path — no live card was opened (a non-spawning workflow turn, or
+      // an adapter without openLiveTaskCard). Build the narration from the
+      // jsonl and post the card after the fact, as before.
       try {
         // v1.2 §8 — fetch the stage events emitted during this turn
         // and project DECOMPOSE/DISPATCH/AWAIT into the thread. Pure
@@ -207,7 +295,7 @@ async function handleCommandInner(
           kind: reply.kind,
           userRequest: forwardText,
           chiefReply: reply.text,
-          chiefName: resolveChiefDisplayName(product.slug),
+          chiefName,
           narrationLines: narration,
         });
         await ctx.reply(`📋 작업 등록됨 → ${card.threadUrl}`);
@@ -220,7 +308,25 @@ async function handleCommandInner(
         await ctx.reply(`📋 [${reply.kind}] ${reply.text}`);
       }
     } else if (reply.text) {
-      await ctx.reply(reply.text);
+      // v1.3.0 Part C (P1) — a long chat reply is filed under <org>/artifacts/
+      // and surfaced as a card + attachment instead of a wall of chunked text.
+      // Short replies post inline as before. Falls back to a plain reply if the
+      // adapter can't attach or filing fails.
+      if (ctx.attachArtifact && isArtifactWorthy(reply.text)) {
+        try {
+          await ctx.attachArtifact({
+            title: deriveArtifactTitle(reply.text),
+            content: reply.text,
+          });
+        } catch (artErr) {
+          console.log(
+            `[Bot] artifact filing failed: ${artErr instanceof Error ? artErr.message : String(artErr)} — falling back to inline reply`,
+          );
+          await ctx.reply(reply.text);
+        }
+      } else {
+        await ctx.reply(reply.text);
+      }
     } else {
       await ctx.reply("(no reply generated — please try again or check `solosquad doctor`)");
     }
@@ -317,7 +423,39 @@ export async function startBot(): Promise<void> {
       `stages_flipped=${report.recoveredStages.length} pending_deliveries=${report.pendingDeliveries.length}`
   );
 
-  await Promise.all(adapters.map((a) => a.startBot(handleCommand)));
+  // v1.3.0 Part A/B — give adapters a turn-control hook so the live card's 🛑
+  // button can abort the in-flight turn (the GUI equivalent of `/cancel`), and
+  // start the dev-confirm approval bridge once the Discord adapter binds to its
+  // org + handle (onBound fires post gateway-ready, avoiding the bind race).
+  const discord = adapters.find(
+    (a): a is DiscordAdapter => a instanceof DiscordAdapter,
+  );
+  let devConfirmBridge: DevConfirmBridge | null = null;
+  const turnControls: TurnControls = {
+    cancelTurn: (orgSlug: string, userId: string) =>
+      chiefRunner.cancelTurn(orgSlug, userId),
+    onBound: ({ orgSlug, handle }) => {
+      if (!discord || devConfirmBridge) return; // no Discord / already started
+      const gitCfg = loadChiefGitConfig(workspaceRoot);
+      const timeoutMs = gitCfg.approval_timeout_minutes * 60 * 1000;
+      devConfirmBridge = new DevConfirmBridge({
+        workspace: workspaceRoot,
+        orgSlug,
+        timeoutMs,
+        postApproval: (req) =>
+          discord.postApprovalToCommandChannel(
+            handle,
+            toApprovalRequest(req),
+            timeoutMs,
+          ),
+      });
+      devConfirmBridge.start();
+      console.log(
+        `[Bot] dev-confirm bridge active for org=${orgSlug} (command-${handle})`,
+      );
+    },
+  };
+  await Promise.all(adapters.map((a) => a.startBot(handleCommand, turnControls)));
 
   // Deliver any recovered messages now that adapters are connected.
   if (report.pendingDeliveries.length > 0) {
@@ -340,7 +478,30 @@ export async function startBot(): Promise<void> {
     `[Bot] SKILL fs.watch active (mode=${fsWatchCfg.mode}${fsWatchCfg.git_only ? ", git_only" : ""})`,
   );
 
-  installGracefulShutdown(unwatch);
+  installGracefulShutdown(unwatch, () => devConfirmBridge?.stop());
+}
+
+/**
+ * v1.3.0 Part A — render a pending dev-confirm request as an approval card.
+ * Surfaces the branch / repo / workflow / commit range so the user has the
+ * context to approve or reject the push.
+ */
+function toApprovalRequest(req: PendingConfirmFile): ApprovalRequest {
+  const details: string[] = [];
+  if (req.branch) details.push(`브랜치: \`${req.branch}\``);
+  if (req.repoSlug) details.push(`repo: \`${req.repoSlug}\``);
+  if (req.workflowId) details.push(`workflow: \`${req.workflowId}\``);
+  if (req.commits.length > 0) {
+    const head = req.commits.slice(0, 3).join(" · ");
+    const more = req.commits.length > 3 ? ` 외 ${req.commits.length - 3}개` : "";
+    details.push(`커밋(${req.commits.length}): ${head}${more}`);
+  }
+  return {
+    id: req.id,
+    title: "git push 승인 요청",
+    command: req.cmd,
+    details,
+  };
 }
 
 async function onSkillChange(
@@ -390,7 +551,7 @@ let shutdownInstalled = false;
  * (Ctrl-C in the terminal) and SIGTERM (orchestrator stop signal) both
  * close the watcher before letting the default handler exit the process.
  */
-function installGracefulShutdown(unwatch: Unwatch): void {
+function installGracefulShutdown(unwatch: Unwatch, onStop?: () => void): void {
   if (shutdownInstalled) return;
   shutdownInstalled = true;
   let stopping = false;
@@ -431,6 +592,15 @@ function installGracefulShutdown(unwatch: Unwatch): void {
     } catch (err) {
       console.log(
         `[Bot] drain wait failed (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // v1.3.0 Part A — stop the dev-confirm bridge watcher.
+    try {
+      onStop?.();
+    } catch (err) {
+      console.log(
+        `[Bot] dev-confirm bridge stop error (continuing exit): ${err instanceof Error ? err.message : String(err)}`,
       );
     }
 

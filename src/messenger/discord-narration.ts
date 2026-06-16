@@ -49,6 +49,32 @@ export interface StageNarrationLine {
 }
 
 /**
+ * Project a single stage event into 0..n narration lines. Returns `[]` for
+ * non-projected stages (TRIAGE / SYNTHESIZE / DECIDE / RETROSPECT — the Chief
+ * reply already covers them) and for projected stages whose formatter declines
+ * (e.g. an AWAIT with no open_questions). `skills_used` becomes a `↳ …`
+ * follow-on bullet.
+ *
+ * v1.3.0 Part C (P0) — this is the single source of truth for stage → line
+ * formatting, shared by the batch path (`buildStageNarration`) and the live
+ * path (the dispatcher's `onStage` callback). Both MUST render identically.
+ */
+export function formatStageEvent(event: ChiefStageEvent): StageNarrationLine[] {
+  const formatter = STAGE_FORMATTERS[event.stage];
+  if (!formatter) return [];
+  const text = formatter(event);
+  if (text === null) return [];
+  const lines: StageNarrationLine[] = [{ stage: event.stage, text }];
+  if (event.skills_used && event.skills_used.length > 0) {
+    lines.push({
+      stage: event.stage,
+      text: `  ↳ ${event.skills_used.join(", ")}`,
+    });
+  }
+  return lines;
+}
+
+/**
  * Build the narration line list for a turn. Skips stages we don't
  * project (TRIAGE / SYNTHESIZE / DECIDE / RETROSPECT — these are
  * already represented by the Chief reply itself), and silently drops
@@ -62,17 +88,7 @@ export function buildStageNarration(
   const events = readEvents({ orgRoot }, { turn_id: turnId });
   const lines: StageNarrationLine[] = [];
   for (const event of events) {
-    const formatter = STAGE_FORMATTERS[event.stage];
-    if (!formatter) continue;
-    const text = formatter(event);
-    if (text === null) continue;
-    lines.push({ stage: event.stage, text });
-    if (event.skills_used && event.skills_used.length > 0) {
-      lines.push({
-        stage: event.stage,
-        text: `  ↳ ${event.skills_used.join(", ")}`,
-      });
-    }
+    lines.push(...formatStageEvent(event));
   }
   return lines;
 }

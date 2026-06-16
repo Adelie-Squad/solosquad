@@ -4,6 +4,46 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-06-16 (Messenger UX overhaul: dev-confirm push-approval gate + interaction components + artifact filing)
+
+v1.3.0 lifts the whole way you interact with Chief in the messenger. It pairs a **safety net** — approve before a push runs, recover from a mis-tap, watch and stop work in flight — built from three axes that ship together. The 🛑 stop button + live stage narration landed first; this release adds the approval gate, the interaction components, and artifact filing. See `docs/prd/v1.3.0-dev-confirm-gate-live.md`.
+
+### Part A — dev-confirm push-approval gate (live)
+
+The dev-confirm gate was defined in v0.8.2 but never wired to a spawn — it had never fired. v1.3.0 makes it live by turning the v1.2.9 §E deny-hook into an **approve flow**.
+
+- **`git push` / `gh pr merge` / `gh pr close` now require explicit approval.** A PreToolUse(Bash) hook (`src/bot/dev-confirm-hook.ts`) runs inside the spawned `claude` subprocess: it hard-blocks a direct push to a **protected branch** (`main`/`master`/`develop`), and for a feature branch writes a `pending-confirms/<id>.json` request then polls for the decision — pure file IPC, zero network.
+- **A ✅승인 / ❌거절 card** is posted to `command-<handle>` by the bot-side bridge (`src/bot/dev-confirm-bridge.ts`); clicking approves/rejects, and the verdict is written back for the hook to read. The approval is recorded in `<org>/memory/dev-confirmations.jsonl` with the commit-hash + workflow-id mapping.
+- **Failure policy:** approval timeout = blocked (fail-closed); a hook error = allowed (fail-open) so a buggy hook never bricks every push — but the protected-branch guard stays fail-closed regardless. The hook is the sole gate when wired (the static `--disallowed-tools` push deny is dropped in dev-ON so an *approved* push isn't blocked; it's kept only as a fail-closed fallback when the hook settings can't be written).
+- **Config:** `workspace.yaml` `pm.git` — `protected_branches` (default `["main","master","develop"]`), `require_feature_branch` (default true), `approval_timeout_minutes` (default 30).
+- **No push notifications.** SoloSquad never sends a push feed — that stays the user's own GitHub→messenger webhook (the commit stamp surfaces attribution there).
+
+### Part B — interaction UX (buttons/menus + misfire recovery)
+
+Retires free-text `y/n`. Built on the proven onboarding/turn-controls component pattern, resolved via per-message component collectors.
+
+- **`discord-approval.ts`** — the approval card primitive with **2-step reject confirm** (an ephemeral "정말?" before a destructive reject) and **disable-after-click** (no double-submit).
+- **`discord-choice.ts`** — single-select via buttons (≤5) or a select menu (6+) with an **undo grace window** for reversible choices.
+- **`MessageContext.askApproval` / `askChoice`** (Discord) + `postApprovalToCommandChannel` for the bridge. Slack keeps the text fallback (the methods are optional).
+- The 🛑 stop button + live stage narration (Part C P0) shipped earlier in the v1.3.0 line.
+
+### Part C P1 — artifact filing
+
+- **Long Chief replies (≥1500 chars) are saved to `<org>/artifacts/`** and posted as a Discord file attachment + preview card instead of a wall of chunked text. The file is git-versioned (the per-turn snapshot now tracks `artifacts/`).
+
+### Tests
+
+- 790 pass; `tsc` + `npm run build` clean. New coverage: push-branch parsing (incl. whitespace + `+force` refspec bypass guards), the hook decision matrix + fail-open/closed, the bridge file-IPC + audit mapping, component id parse/recovery rows, the artifact store, and `pm.git` config defaults.
+
+### Infra
+
+- **`engines.node` `>=18` → `>=20`** + CI matrix drops Node 18. `better-sqlite3` 12.x (FTS5 archive) requires Node 20+, so Node 18 was already de-facto unsupported — the manifest now states it honestly. CI also sets `fail-fast: false` so a single failing combo no longer cancels (and masks) the others.
+- **`npm audit fix`** cleared the high-severity advisories the CI gate enforces (esbuild / form-data / ws), within existing semver ranges — direct dependencies unchanged.
+
+### Out of scope (follow-up)
+
+- P3 token edit-streaming, reaction-toggle voting (recovery ④), Slack Block Kit parity, commit-trailer workflow stamp (§A.4.5), and the dedicated `artifacts-<handle>` archive channel (P2).
+
 ## [1.2.10] — 2026-06-16 (Consolidation cleanup: finish the PM → Chief rename, roll back the git-<handle> channel, remove the repo-self-hosting Docker stack)
 
 v1.2.10 is a **consolidation cleanup** release: it removes the half-finished and speculative artifacts left by v1.1 and v1.2.9 to reach a clean baseline — no new features. The three parts share one through-line: *"clean up what a prior version only half-finished or shipped speculatively."* See `docs/prd/v1.2.10-consolidation-cleanup.md`.

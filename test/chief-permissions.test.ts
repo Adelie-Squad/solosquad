@@ -39,14 +39,21 @@ test("dev ON → acceptEdits + write/git allow-list, push denied", () => {
   assert.ok(p.allowedTools?.includes("Edit"));
   assert.ok(p.allowedTools?.includes("Bash"));
   assert.ok(p.allowedTools?.includes("Task"));
-  assert.ok(p.disallowedTools?.some((d) => d.includes("git push")));
-  assert.ok(p.disallowedTools?.some((d) => d.includes("gh pr merge")));
-  // v1.2.9 §E — dev ON also writes a PreToolUse-hook settings file (catches
-  // compound `cd repo && git push` that CLI deny misses).
-  assert.ok(p.settingsPath, "dev ON should write a deny-hook settings file");
+  // v1.3.0 Part A — destructive commands stay denied...
+  assert.ok(p.disallowedTools?.some((d) => d.includes("rm -rf")));
+  // ...but push/PR are NOT statically denied when the approve-hook is wired:
+  // the hook is the sole gate (a static deny would block even approved pushes).
+  assert.ok(p.settingsPath, "dev ON should write the approve-hook settings file");
+  assert.ok(
+    !p.disallowedTools?.some((d) => d.includes("git push")),
+    "git push must not be statically denied when the hook is the gate",
+  );
   assert.ok(fs.existsSync(p.settingsPath!));
   const s = JSON.parse(fs.readFileSync(p.settingsPath!, "utf-8"));
   assert.ok(Array.isArray(s.hooks?.PreToolUse), "settings has PreToolUse hook");
+  // The hook points at the v1.3.0 approve-flow script, not the deny-only one.
+  const cmd = s.hooks.PreToolUse[0].hooks[0].command as string;
+  assert.ok(cmd.includes("dev-confirm-hook"), "wired to approve-flow hook");
 });
 
 test("dev OFF → no permission mode, Bash/Edit/Write denied (no hang)", () => {

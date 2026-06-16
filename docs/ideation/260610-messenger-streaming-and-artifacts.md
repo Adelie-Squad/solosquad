@@ -119,6 +119,81 @@ Discord 엔 Slack `startStream` 같은 게 없다. 커뮤니티가 쓰는 우회
 > **②(단계 단위 append) + 최종 응답만 텍스트 스트리밍**이 메신저에 맞다. 즉
 > *"thinking 은 카드로, 결론은 글로"*.
 
+### 2.4 실증 레퍼런스 — 실제로 Discord 에 구현한 OSS (조사: 2026-06-16)
+
+§2.3 은 "커뮤니티 우회 2가지"라고만 적고 **실제 구현체는 비워뒀다.** 실측해보니
+**OSS 들은 거의 다 패턴 ①(한 메시지를 계속 edit 하는 토큰 스트리밍)을 1급으로** 구현했고,
+그중 `llmcord` 가 사실상 레퍼런스다. 막연한 "750ms~1s" 가 아니라 **실제 상수**가 나온다.
+
+**① `llmcord` (jakobdylanc, Python 단일 파일) — Discord 스트리밍의 정석**
+
+| 항목 | 실제 코드 값 | 메모 |
+|---|---|---|
+| edit 쓰로틀 | `EDIT_DELAY_SECONDS = 1` | 1초마다만 edit → rate-limit 회피 (우리 추정과 일치) |
+| 진행 표시 | `STREAMING_INDICATOR = " ⚪"` | 스트리밍 중 본문 끝에 ⚪, 완료 시 제거 |
+| 상태 색 | 진행 `orange()` → 완료 `dark_green()` | **embed color 가 곧 상태 머신** |
+| 길이 제한 | `4096 - len(indicator)` | **plain 2000자가 아니라 embed description 4096자 기준** |
+| 타이핑 | `async with channel.typing():` 로 스트림 전체를 감쌈 | stuck-indicator 자동 정리 |
+
+```python
+ready_to_edit = (now - last_task_time) >= EDIT_DELAY_SECONDS   # 1초 디바운스
+msg_split_incoming = finish_reason is None and len > max_message_length  # 넘치면 새 메시지
+is_final_edit = finish_reason is not None or msg_split_incoming
+# → edit는 (1초 경과 OR 마지막)일 때만, 4096자 초과 시 새 메시지로 분기, 끝나면 초록색
+```
+
+**② `js-llmcord` (stanley2058) — 위의 TS + discord.js + Vercel AI SDK 포팅 → 우리 스택에 가장 근접**
+- `use_plain_responses` 토글(embed 스트리밍 vs plain) — 우리 v1.2.9 §D(plain 전환)와 직접 충돌점.
+- `max_steps: 10`(툴콜 루프 = 우리 DISPATCH 반복), `include_summary`(툴콜 요약 덧붙임 = 우리가
+  원하는 "중간보고"의 OSS 등가물).
+
+**③ Vercel AI SDK / Chat SDK — step·tool-call 이벤트의 SDK 레벨 메커니즘**
+- `fullStream`(≠`textStream`)을 써야 tool-calling step 사이 단락이 보존됨 → `"tool-call"` delta 를
+  체크해 **툴 실행 시점을 단계별로 흘림**(= 우리 DISPATCH 를 실시간 카드로).
+- **Vercel 공식 Chat SDK 의 Discord 어댑터조차** Slack 네이티브 스트리밍과 달리 **"post-then-edit +
+  쓰로틀"** 로 폴백하고 `streamingUpdateIntervalMs` 로 간격 조절 → 우리 결론(Discord 엔 1급 API
+  없음, edit 쓰로틀이 정답)이 **상용 SDK 에서도 동일 채택**됨을 실증.
+
+> **이 조사가 §2.3 추천을 부분 수정한다.** §2.3 은 "토큰 스트리밍 ①은 ROI 낮으니 P3" 라 했지만,
+> **실제 OSS 는 ①을 1급으로** 만든다. 차이의 핵심:
+> 1. **embed vs plain.** llmcord 가 스트리밍을 매끄럽게 하는 건 embed(4096자 + color 상태)로 **한
+>    메시지를 live-edit** 하기 때문. 우리는 v1.2.9 에서 plain 1900자 청크(`discord-adapter.ts:73`)로
+>    갔는데, **스트리밍하려면 "살아 움직이는 단일 메시지"** 가 필요 → 현행 `reply()` 와 별개의 송신
+>    경로(또는 embed 복귀)가 선행 과제.
+> 2. **우리만의 강점.** llmcord 엔 없는 `chief-stage-events.jsonl`(의미 단위 이벤트)이 우리에겐
+>    이미 있다. 그래서 **토큰 edit 없이도 ②(단계 카드)를 더 깔끔하게** 갈 수 있다. ①이 필요하면
+>    위 상수(`EDIT_DELAY_SECONDS=1` 등)를 그대로 차용하면 된다.
+
+**참고 링크:** [jakobdylanc/llmcord](https://github.com/jakobdylanc/llmcord) ·
+[stanley2058/js-llmcord](https://github.com/stanley2058/js-llmcord) ·
+[Vercel: AI agent for Slack (Chat SDK + AI SDK)](https://vercel.com/kb/guide/how-to-build-an-ai-agent-for-slack-with-chat-sdk-and-ai-sdk) ·
+[QwenPaw #1296 — streaming via message edit](https://github.com/agentscope-ai/QwenPaw/issues/1296)
+
+---
+
+## 결론 한눈에 + 사용자 경험
+
+**결론(엔지니어용 한 줄):** *"중간보고는 새 인프라가 아니라, **이미 있는 `chief-stage-events.jsonl`
+이벤트 스트림을 턴 종료 후가 아니라 진행 중에 흘리는 문제**다. OSS 정답은 1초 디바운스 edit
+스트리밍이고, 우리는 단계 이벤트가 있으니 거기에 얹기만 하면 된다."*
+
+**왜 지금 모습이 답답한가 (Before):** Chief 에게 시키면 Discord 는 **타이핑 점만 깜빡이다가,
+작업이 다 끝난 한참 뒤 긴 글 한 덩어리가 툭** 떨어진다. 그동안 뭘 하는지, 방향이 맞는지 알 수
+없고, **틀렸어도 끝나기 전엔 못 멈춘다.**
+
+**사용자 입장에서 달라지는 경험 (After):**
+
+| 시점 | 지금 (Before) | 이 기능 후 (After) |
+|---|---|---|
+| 작업 시작 직후 | 타이핑 점만 | "🔍 계획 수립 중… (3단계로 분해)" 카드 즉시 |
+| 작업 진행 중 | (침묵) | "⚙️ Engineer 출동 → `auth.ts`" / "⏳ 결과 대기" 가 **실시간으로 한 줄씩** |
+| 방향이 틀렸을 때 | 끝날 때까지 못 멈춤 | **중간에 보고 보고 바로 멈춰서 교정** ← 진짜 가치 |
+| 결과물(보고서/이미지) | 채팅에 긴 텍스트로 묻힘 | **파일로 저장 + 카드 링크**, 나중에 다시 찾기 쉬움 |
+| 최종 답 | 긴 글 한 덩어리 | 단계 카드는 접힌 채 남고, **결론만 깔끔한 글로** |
+
+한 문장: **"비서가 일하는 걸 어깨너머로 보는" 느낌** — 무슨 일을 어떤 순서로 하는지 보이고,
+아니다 싶으면 중간에 끊을 수 있고, 결과물은 대화에 묻히지 않고 따로 쌓인다.
+
 ---
 
 ## 3. (B) 산출물 아카이브 — 웹은 어떻게 하나

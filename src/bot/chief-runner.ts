@@ -23,10 +23,13 @@ import { loadWorkspaceYaml, loadOrgYaml } from "../util/config.js";
 import { loadAgentProfile } from "../util/agent-profile.js";
 import type { ChiefSource } from "../messenger/base.js";
 import { resolveChiefSpawnPermissions } from "./chief-permissions.js";
+import { loadChiefGitConfig } from "../util/config.js";
+import { pendingConfirmsDir } from "./dev-confirm-paths.js";
 import { getWorkspaceDir } from "../util/paths.js";
 import {
   emit as emitChiefStage,
   type ChiefStage,
+  type ChiefStageEvent,
 } from "../util/chief-stage-events.js";
 // v1.2.8 §A.9 — Top-level ESM imports for fs / path / js-yaml.
 // Pre-v1.2.8 these were lazy `require()` calls inside helper functions
@@ -162,26 +165,73 @@ function collectRegisteredRepoPaths(orgCwd: string): string[] {
   return out;
 }
 
+/**
+ * v1.3.0 Part A — assemble the env the PreToolUse approve hook reads. Resolves
+ * the gate policy (protected branches, timeout) from workspace.yaml and the
+ * per-org pending-confirms directory. Only called in dev-ON spawns.
+ */
+function buildDevConfirmEnv(
+  orgSlug: string,
+  userId: string,
+  workflowId: string | undefined,
+): Record<string, string> {
+  const workspace = getWorkspaceDir();
+  const gitCfg = loadChiefGitConfig(workspace);
+  const env: Record<string, string> = {
+    SOLOSQUAD_DEV_CONFIRM_DIR: pendingConfirmsDir(workspace, orgSlug),
+    SOLOSQUAD_DEV_CONFIRM_ORG: orgSlug,
+    SOLOSQUAD_DEV_CONFIRM_USER: userId,
+    SOLOSQUAD_DEV_CONFIRM_WORKSPACE: workspace,
+    SOLOSQUAD_DEV_CONFIRM_TIMEOUT_MS: String(
+      gitCfg.approval_timeout_minutes * 60 * 1000,
+    ),
+    SOLOSQUAD_DEV_CONFIRM_PROTECTED: gitCfg.protected_branches.join(","),
+  };
+  if (workflowId) env.SOLOSQUAD_DEV_CONFIRM_WORKFLOW = workflowId;
+  return env;
+}
+
+/**
+ * v1.3.0 Part C (P0) — `onStage` is the live narration channel. The jsonl
+ * append is the durable record (replayed by RETROSPECT/buildStageNarration);
+ * `onStage` fires the same event synchronously so the messenger dispatcher can
+ * stream DECOMPOSE/DISPATCH/AWAIT into the works card *during* the turn instead
+ * of waiting until it ends. Implementations MUST be non-blocking (fire-and-
+ * forget) — the runner's stream loop awaits nothing here.
+ */
 function safeEmitStage(
   orgRoot: string,
   turnId: string,
   stage: ChiefStage,
   detail?: string,
-  extra?: { dispatched?: string[]; skills_used?: string[] }
+  opts?: {
+    dispatched?: string[];
+    skills_used?: string[];
+    onStage?: (event: ChiefStageEvent) => void;
+  }
 ): void {
+  let event: ChiefStageEvent | null = null;
   try {
-    emitChiefStage(
+    event = emitChiefStage(
       { orgRoot },
       {
         turn_id: turnId,
         stage,
         detail,
-        dispatched: extra?.dispatched,
-        skills_used: extra?.skills_used,
+        dispatched: opts?.dispatched,
+        skills_used: opts?.skills_used,
       }
     );
   } catch {
     // Diagnostic-only — never gate a user turn on jsonl I/O.
+  }
+  if (event && opts?.onStage) {
+    try {
+      opts.onStage(event);
+    } catch {
+      // Live narration is best-effort — a callback fault must not poison
+      // the turn any more than a jsonl write fault does.
+    }
   }
 }
 
@@ -243,6 +293,15 @@ export interface ChiefCall {
    * adapters pass their `platform` value.
    */
   source?: ChiefSource;
+  /**
+   * v1.3.0 Part C (P0) — live stage callback. Fired synchronously each time
+   * the runner emits a 6+1 stage event (TRIAGE → … → RETROSPECT) *during* the
+   * turn, so the messenger dispatcher can stream progress into the works card
+   * as it happens rather than after the turn returns. Optional and back-compat:
+   * CLI/Slack callers that omit it get the unchanged batch behaviour. The
+   * callback MUST NOT block — it runs inside the runner's stream loop.
+   */
+  onStage?: (event: ChiefStageEvent) => void;
 }
 
 /**
@@ -417,7 +476,9 @@ export class ChiefRunner {
     // RETROSPECT/skill-refinement can replay it later. The turn_id is the
     // start timestamp + user id; uniqueness inside an org is sufficient.
     const turnId = `turn-${startedAt}-${call.userId}`;
-    safeEmitStage(call.orgCwd, turnId, "TRIAGE", "user_message_in");
+    safeEmitStage(call.orgCwd, turnId, "TRIAGE", "user_message_in", {
+      onStage: call.onStage,
+    });
 
     sink.append({
       ts: nowIso(),
@@ -438,12 +499,15 @@ export class ChiefRunner {
     // reply) and then DECIDE (the reply itself is the decision). We emit
     // both unconditionally — even a discussion-only turn passes through
     // both, just with a tiny SYNTHESIZE.
-    safeEmitStage(call.orgCwd, turnId, "SYNTHESIZE", `spawns=${result.spawnCount}`);
+    safeEmitStage(call.orgCwd, turnId, "SYNTHESIZE", `spawns=${result.spawnCount}`, {
+      onStage: call.onStage,
+    });
     safeEmitStage(
       call.orgCwd,
       turnId,
       "DECIDE",
-      result.rateLimited ? "rate_limited" : "ok"
+      result.rateLimited ? "rate_limited" : "ok",
+      { onStage: call.onStage }
     );
 
     const durationMs = Date.now() - startedAt;
@@ -460,7 +524,9 @@ export class ChiefRunner {
 
     // RETROSPECT closes the turn. Future work (chief retrospective skill)
     // reads chief-stage-events.jsonl per turn_id to learn from the cycle.
-    safeEmitStage(call.orgCwd, turnId, "RETROSPECT", `duration_ms=${durationMs}`);
+    safeEmitStage(call.orgCwd, turnId, "RETROSPECT", `duration_ms=${durationMs}`, {
+      onStage: call.onStage,
+    });
 
     // v1.2 §6.2 — strip the `[kind:...]` marker before handing back to
     // the messenger. Fallback to user-text heuristics when Chief didn't
@@ -546,6 +612,13 @@ export class ChiefRunner {
     // denied); dev OFF ⇒ deny Bash/Edit/Write so they can't prompt-and-hang.
     const perms = resolveChiefSpawnPermissions(getWorkspaceDir());
 
+    // v1.3.0 Part A — when dev mode is ON (settingsPath wired = the PreToolUse
+    // approve hook is active), hand the hook its gate context via env. dev OFF
+    // leaves extraEnv undefined (Bash is denied wholesale, no gate needed).
+    const devConfirmEnv = perms.settingsPath
+      ? buildDevConfirmEnv(call.orgSlug, call.userId, record.activeWorkflowId)
+      : undefined;
+
     const stream = this.deps.claude.invokeStreaming({
       sessionId,
       cwd: call.orgCwd,
@@ -562,6 +635,7 @@ export class ChiefRunner {
       disallowedTools: perms.disallowedTools,
       settingsPath: perms.settingsPath,
       addDirs: addDirs.length > 0 ? addDirs : undefined,
+      extraEnv: devConfirmEnv,
     });
     // v1.2.9 §D — register this turn's stream so `/cancel` can abort it.
     // Released in the `finally` below regardless of how the turn ends.
@@ -587,10 +661,14 @@ export class ChiefRunner {
             // once, then a DISPATCH per spawn so downstream count is
             // exactly the spawn fan-out.
             if (!decomposeEmitted) {
-              safeEmitStage(call.orgCwd, turnId, "DECOMPOSE", "first_spawn");
+              safeEmitStage(call.orgCwd, turnId, "DECOMPOSE", "first_spawn", {
+                onStage: call.onStage,
+              });
               decomposeEmitted = true;
             }
-            safeEmitStage(call.orgCwd, turnId, "DISPATCH", `spawn=${spawnCount}`);
+            safeEmitStage(call.orgCwd, turnId, "DISPATCH", `spawn=${spawnCount}`, {
+              onStage: call.onStage,
+            });
           }
         },
         onRateLimit: () => (rateLimited = true),
@@ -606,7 +684,9 @@ export class ChiefRunner {
     // once so the trace shows the full TRIAGE→…→DECIDE arc rather than a
     // gap where AWAIT belongs.
     if (turnId && spawnCount > 0) {
-      safeEmitStage(call.orgCwd, turnId, "AWAIT", `spawn_count=${spawnCount}`);
+      safeEmitStage(call.orgCwd, turnId, "AWAIT", `spawn_count=${spawnCount}`, {
+        onStage: call.onStage,
+      });
     }
 
     const exit = await stream.done;

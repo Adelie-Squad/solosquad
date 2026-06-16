@@ -312,3 +312,76 @@ test("v1.1 §5.2 — Chief stage events emit TRIAGE → SYNTHESIZE → DECIDE �
   const turnIds = new Set(events.map((e) => e.turn_id));
   assert.equal(turnIds.size, 1, "all stages in one turn share a turn_id");
 });
+
+test("v1.3.0 Part C P0 — onStage fires live, in parity with the jsonl record (discussion turn)", async () => {
+  const rig = makeRig();
+  rig.fake.setDefaultScenario({
+    lines: [
+      initLine("placeholder", rig.orgCwd, ["desk-researcher"]),
+      textAssistantLine("placeholder", "Acknowledged."),
+      resultLine("placeholder", "Acknowledged.", { costUsd: 0.01 }),
+    ],
+  });
+
+  const live: string[] = [];
+  await rig.pm.handleUserMessage({
+    userId: "U1",
+    orgSlug: rig.orgSlug,
+    orgCwd: rig.orgCwd,
+    userText: "Just checking in.",
+    onStage: (e) => live.push(e.stage),
+  });
+
+  assert.deepEqual(
+    live,
+    ["TRIAGE", "SYNTHESIZE", "DECIDE", "RETROSPECT"],
+    "onStage delivers the closing arc live, in order"
+  );
+
+  // Parity: the live callback sees exactly what the durable jsonl recorded.
+  const { readEvents } = await import("../src/util/chief-stage-events.js");
+  const persisted = readEvents({ orgRoot: rig.orgCwd }).map((e) => e.stage);
+  assert.deepEqual(live, persisted, "live onStage stages == persisted jsonl stages");
+});
+
+test("v1.3.0 Part C P0 — onStage streams DECOMPOSE/DISPATCH/AWAIT during a spawn turn", async () => {
+  const rig = makeRig();
+  const taskId = "task-abc-123";
+  const toolUseId = "toolu_xyz";
+  rig.fake.setDefaultScenario({
+    lines: [
+      initLine("placeholder", rig.orgCwd, ["desk-researcher"]),
+      taskStartedLine("placeholder", taskId, toolUseId, "desk-researcher", "Find 3 refs"),
+      taskNotificationLine("placeholder", taskId, toolUseId, "completed", {
+        total_tokens: 22300,
+        tool_uses: 1,
+        duration_ms: 9500,
+      }),
+      textAssistantLine("placeholder", "Found 3 references."),
+      resultLine("placeholder", "Found 3 references.", { costUsd: 0.05 }),
+    ],
+  });
+
+  const live: { stage: string; turnId: string }[] = [];
+  const reply = await rig.pm.handleUserMessage({
+    userId: "U1",
+    orgSlug: rig.orgSlug,
+    orgCwd: rig.orgCwd,
+    userText: "find references",
+    onStage: (e) => live.push({ stage: e.stage, turnId: e.turn_id }),
+  });
+
+  assert.equal(reply.spawnCount, 1);
+  const stages = live.map((l) => l.stage);
+  assert.deepEqual(
+    stages,
+    ["TRIAGE", "DECOMPOSE", "DISPATCH", "AWAIT", "SYNTHESIZE", "DECIDE", "RETROSPECT"],
+    "spawn turn streams the full arc including DECOMPOSE/DISPATCH/AWAIT live"
+  );
+
+  // Every live event carries the same turn_id, and matches the jsonl record.
+  assert.equal(new Set(live.map((l) => l.turnId)).size, 1);
+  const { readEvents } = await import("../src/util/chief-stage-events.js");
+  const persisted = readEvents({ orgRoot: rig.orgCwd }).map((e) => e.stage);
+  assert.deepEqual(stages, persisted, "live onStage stages == persisted jsonl stages");
+});

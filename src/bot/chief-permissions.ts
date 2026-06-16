@@ -41,22 +41,42 @@ export const DEV_ON_ALLOWED_TOOLS: readonly string[] = [
 ];
 
 /**
- * Denied even when dev is ON. Push / PR-merge / PR-close are external-effect
- * (gated separately in v1.3.0); the rest are destructive. Deny always beats
- * allow, so these win over `Bash` in the allow-list.
+ * Always denied when dev is ON — destructive commands with no approval path.
+ * Deny beats allow, so these win over `Bash` in the allow-list.
  *
  * Specifier syntax (`Bash(<prefix>:*)`) follows Claude Code's tool-rule form;
  * verify against the live CLI during manual QA — the exact matcher is not
  * fully documented.
  */
-export const DEV_ON_DISALLOWED_TOOLS: readonly string[] = [
-  "Bash(git push:*)",
-  "Bash(gh pr merge:*)",
-  "Bash(gh pr close:*)",
+export const DEV_ON_DESTRUCTIVE_DISALLOWED_TOOLS: readonly string[] = [
   "Bash(rm -rf:*)",
   "Bash(sudo:*)",
   "Bash(mkfs:*)",
   "Bash(dd:*)",
+];
+
+/**
+ * External-effect commands (push / PR-merge / PR-close). These are gated by the
+ * v1.3.0 dev-confirm approval hook, NOT a static deny — a static deny would
+ * block even an *approved* push (the hook's exit-0 "allow" cannot override an
+ * explicit `--disallowed-tools` deny rule). They are added to the deny list
+ * ONLY as a fail-closed fallback when the approve-hook settings file could not
+ * be written (no hook ⇒ block outright, matching pre-v1.3.0 behavior).
+ */
+export const DEV_ON_EXTERNAL_EFFECT_DISALLOWED_TOOLS: readonly string[] = [
+  "Bash(git push:*)",
+  "Bash(gh pr merge:*)",
+  "Bash(gh pr close:*)",
+];
+
+/**
+ * @deprecated v1.3.0 — kept for back-compat with callers/tests that referenced
+ * the combined list. New code uses the split constants above: destructive are
+ * always denied; external-effect are denied only when the hook isn't wired.
+ */
+export const DEV_ON_DISALLOWED_TOOLS: readonly string[] = [
+  ...DEV_ON_EXTERNAL_EFFECT_DISALLOWED_TOOLS,
+  ...DEV_ON_DESTRUCTIVE_DISALLOWED_TOOLS,
 ];
 
 /** dev OFF: deny write/exec tools so they can't prompt (→ no hang). */
@@ -84,12 +104,21 @@ export interface ChiefSpawnPermissions {
 }
 
 /**
- * v1.2.9 §E — write (idempotently) the settings file that registers the
- * PreToolUse Bash deny hook, returning its path for `--settings`. Lives under
- * `<workspace>/.solosquad/`. Best-effort: returns undefined if it can't write.
+ * v1.2.9 §E / v1.3.0 Part A — write (idempotently) the settings file that
+ * registers the PreToolUse Bash hook, returning its path for `--settings`.
+ * Lives under `<workspace>/.solosquad/`. Best-effort: returns undefined if it
+ * can't write.
+ *
+ * v1.3.0 Part A repoints the hook from the deny-only `bash-deny-hook.js` to the
+ * approve-flow `dev-confirm-hook.js`: that hook still BLOCKS protected-branch
+ * pushes (fail-closed guard), but feature-branch `git push` / `gh pr merge` /
+ * `gh pr close` now route through the per-command approval card instead of an
+ * unconditional deny. `bash-deny-hook.js` stays in the tree (unwired) as the
+ * pure-deny fallback. The CLI `--disallowed-tools` deny rules in
+ * DEV_ON_DISALLOWED_TOOLS remain as a redundant first-segment guard.
  */
 function ensureDevDenySettings(workspace: string): string | undefined {
-  const hookScript = path.join(__dirname, "bash-deny-hook.js");
+  const hookScript = path.join(__dirname, "dev-confirm-hook.js");
   const settings = {
     hooks: {
       PreToolUse: [
@@ -120,12 +149,20 @@ export function resolveChiefSpawnPermissions(
 ): ChiefSpawnPermissions {
   const cfg = loadDevCapabilityConfig(workspace);
   if (cfg.enabled) {
+    const settingsPath = ensureDevDenySettings(workspace ?? getWorkspaceDir());
+    // When the approve-hook is wired (settingsPath written), the hook is the
+    // sole gate for push/PR commands — a static deny would block even approved
+    // pushes. If the settings file couldn't be written, fall back to denying
+    // them outright (fail-closed: no hook ⇒ no push).
+    const disallowedTools = settingsPath
+      ? [...DEV_ON_DESTRUCTIVE_DISALLOWED_TOOLS]
+      : [...DEV_ON_DISALLOWED_TOOLS];
     return {
       devEnabled: true,
       permissionMode: "acceptEdits",
       allowedTools: [...DEV_ON_ALLOWED_TOOLS],
-      disallowedTools: [...DEV_ON_DISALLOWED_TOOLS],
-      settingsPath: ensureDevDenySettings(workspace ?? getWorkspaceDir()),
+      disallowedTools,
+      settingsPath,
     };
   }
   return {
