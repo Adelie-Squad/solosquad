@@ -376,7 +376,7 @@ Layer 2  Repository (code)    The actual product code — separated per repo</di
   </ul>
   <div class="callout info">
     <strong>The version this document covers</strong>
-    The current npm release is <span class="badge now">v1.3.0</span>. Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see Chapter 9, CHANGELOG.
+    The current npm release is <span class="badge now">v1.3.1</span>. Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see Chapter 9, CHANGELOG.
   </div>
 </section>
 
@@ -1140,7 +1140,15 @@ solosquad sync                                      # reconcile repositories/ �
 
   <h3 id="s9-1">9.1 Released (npm-published)</h3>
 
-  <h4>v1.3.0 (2026-06-16) <span class="badge now">latest</span> — Messenger UX overhaul: dev-confirm push-approval gate + interaction components + artifact filing</h4>
+  <h4>v1.3.1 (2026-06-18) <span class="badge now">latest</span> — Stabilization: empty the v1.1-leftover <code>assets/</code> + CI/deps hardening</h4>
+  <ul>
+    <li><strong>No user-facing features</strong> — internal stabilization release; behavior and tarball unchanged. Finishes the half-done v1.1 reorg by emptying the old <code>assets/</code> tree, and closes the CI/dependency issues surfaced while merging v1.3.0.</li>
+    <li><strong>CI / deps</strong> — <code>node-cron</code> 3→4 (TS rewrite drops the <code>uuid</code> dependency → clears 2 moderate advisories); moderate <code>npm audit</code> advisories now surfaced non-blockingly; Node baseline <code>&gt;=20</code>.</li>
+    <li><strong>Legacy <code>assets/</code> cleanup</strong> — removed the stale agent roster (<code>assets/agents/</code>, 25 agents) that <code>init</code> was copying as a second divergent roster; wired <code>routines/</code>→<code>schedules/</code>; cleaned <code>knowledge/</code>·<code>core/</code>·<code>orchestrator/</code>; cleared all 22 <code>templates/</code> (15 retired + 7 inlined into their owning code). Result: <code>assets/</code> now holds only <code>docker/</code>.</li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.3.1], <code>docs/prd/v1.3.1-legacy-asset-cleanup.md</code></li>
+  </ul>
+
+  <h4>v1.3.0 (2026-06-16) — Messenger UX overhaul: dev-confirm push-approval gate + interaction components + artifact filing</h4>
   <ul>
     <li><strong>git push approval gate (Part A)</strong> — right before an agent runs <code>git push</code> / <code>gh pr merge</code> / <code>gh pr close</code>, a <strong>✅ approve / ❌ reject card</strong> is posted to your <code>command-&lt;handle&gt;</code> channel. The push proceeds only on approval. A direct push to a protected branch (main/master/develop) is auto-blocked with no card. The approval is recorded with the commit hashes in <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>. Failure policy: no answer in 30 min = blocked; a hook error = allowed (protected branches stay blocked regardless). Config: <code>workspace.yaml</code> <code>pm.git</code> (protected branch list, timeout). SoloSquad sends no push <em>notifications</em> — register your own GitHub→Discord native webhook for that.</li>
     <li><strong>Button/menu interactions (Part B)</strong> — approvals and choices come as buttons / select menus instead of free-text <code>y/n</code>. Misfire recovery: ❌ reject asks a 2-step ephemeral confirm, buttons disable after a confirmed click, and reversible choices get an undo grace window. (The 🛑 stop button + live progress narration shipped earlier in the v1.3.0 line.)</li>

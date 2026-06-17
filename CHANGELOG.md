@@ -4,6 +4,16 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] — 2026-06-18 (Legacy asset cleanup: empty the v1.1-leftover `assets/` + post-release CI/deps hardening)
+
+v1.3.1 is a stabilization release — no user-facing features. It finishes the v1.1 reorg that only got halfway: the old `assets/` tree (left behind when the canonical roster/skills/teams moved to top-level bundle dirs) is now emptied, and the post-release CI/dependency issues surfaced while merging v1.3.0 are closed. See `docs/prd/v1.3.1-legacy-asset-cleanup.md`.
+
+- **CI / deps hardening.** `node-cron` 3→4 (TS rewrite drops the `uuid` dependency → clears 2 moderate advisories without an override); CI now surfaces moderate `npm audit` advisories non-blockingly after the high-severity gate; Node baseline `>=20`, matrix `[20,22]`, `fail-fast: false`.
+- **`assets/agents/` removed.** The stale team-nested roster (old taxonomy, 25 agents) was never deleted after v1.1 moved the canonical roster to top-level `agents/` (main + specialists). `init` no longer copies two divergent rosters into a fresh workspace. The dead `collab_pattern` test + inject script were retired with it.
+- **`assets/` legacy cleanup.** `routines/` wired to top-level `schedules/` (the v1.1 `getSchedulesDir` was dead code); `knowledge/`/`core/` resolver fallbacks repointed to the bundle; the v0.3 `orchestrator/` Chief-identity doc (superseded by `agents/main/chief/SKILL.md`) removed; all 22 `templates/` cleared — 15 retired (pre-v1.1 workflow scaffolds) and 7 live ones inlined as string constants in their owning code (which also removes the npm-bundle-whitelist regression risk that a file move would carry). `assets/` now holds only `docker/` + `.env.example`.
+- **Planning (docs-only).** SKILL.md authoring cross-vendor study (`docs/ideation/260617-skill-md-authoring-best-practices.md`) and the v1.3.2 domain-lifecycle-managers PRD (skill · workflow · goal · schedule).
+- 782 tests green. tarball behavior unchanged from 1.3.0 (cleanup is internal/dev-facing).
+
 ## [1.3.0] — 2026-06-16 (Messenger UX overhaul: dev-confirm push-approval gate + interaction components + artifact filing)
 
 v1.3.0 lifts the whole way you interact with Chief in the messenger. It pairs a **safety net** — approve before a push runs, recover from a mis-tap, watch and stop work in flight — built from three axes that ship together. The 🛑 stop button + live stage narration landed first; this release adds the approval gate, the interaction components, and artifact filing. See `docs/prd/v1.3.0-dev-confirm-gate-live.md`.
