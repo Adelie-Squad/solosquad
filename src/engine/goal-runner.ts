@@ -151,8 +151,8 @@ export class GoalRunner {
       );
 
       // Execute pipeline via PM Task tool — single PM invocation that walks
-      // all stages. The PM SKILL (goal-md-spec.md) is responsible for chaining
-      // Task calls in pipeline order. The runner just builds the prompt and
+      // all stages. The Chief SKILL (agents/main/chief/SKILL.md) is responsible
+      // for chaining Task calls in pipeline order. The runner just builds the prompt and
       // accumulates task_ids/cost from stream-json events.
       const pipelinePrompt = buildPipelinePrompt(goal, guide, cycle, preCycleCommit);
       const turnEvents: AnyEvent[] = [];

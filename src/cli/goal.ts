@@ -2,7 +2,7 @@ import chalk from "chalk";
 import fs from "fs";
 import path from "path";
 import inquirer from "inquirer";
-import { getAssetsDir, getOrgDir, getWorkspaceRoot } from "../util/paths.js";
+import { getOrgDir, getWorkspaceRoot } from "../util/paths.js";
 import { listOrganizations } from "../util/config.js";
 import { parseGoalFile, GoalParseError, type GoalSpec } from "../engine/goal-parser.js";
 import { loadAgentsMd } from "../engine/agents-md-loader.js";
@@ -12,6 +12,73 @@ import { GoalRunner } from "../engine/goal-runner.js";
 import { RealClaudeProcessFactory } from "../bot/claude-process.js";
 import { SessionStore } from "../bot/session-store.js";
 import type { MetricMeasurer } from "../engine/evaluator.js";
+
+// v1.3.1 §9 — goal.md scaffold, inlined from the former
+// assets/templates/goal.md (template-concept retirement). Placeholders
+// {{goal-id-kebab}}/{{org-slug}} are substituted in goalNewCommand.
+const GOAL_TEMPLATE = `---
+schema_version: 1
+goal_id: "{{goal-id-kebab}}"
+org: "{{org-slug}}"
+target_repo: null            # or "{{repo-slug}}" — single repo focus
+cycle_unit: pipeline_pass
+---
+
+# Goal: {{1-line statement of what you're trying to achieve}}
+
+{{1–3 lines: Acceptance criteria / Stop rule. What's "done"?}}
+
+## Metrics
+
+<!--
+Each metric needs provenance (formula + source path).
+Re-running evaluator on the same commit + same provenance must yield the
+same value. Changing the formula requires a new metric name.
+direction: maximize (keep iff value >= threshold) | minimize (keep iff value <= threshold)
+-->
+
+metrics:
+  - name: "{{metric_name}}"
+    formula: "{{one-line formula}}"
+    source: "{{path/to/source.tsv | url}}"
+    threshold: 0.7
+    direction: maximize
+
+## Pipeline
+
+<!--
+Static ordered list. Stage order is fixed within a cycle.
+Each Task call in the PM session is one stage. Only the *prompt variation*
+of each stage is dynamically proposed by the PM.
+agent format: "<team>/<agent>" — e.g. "experience/desk-researcher".
+-->
+
+1. experience/desk-researcher: {{what stage 1 does — high-level instruction}}
+2. growth/content-writer: {{what stage 2 does}}
+3. engineering/creative-frontend: {{what stage 3 does}}
+
+## Budget
+
+time:
+  hours: 8                   # or \`cycles: 20\`
+cost:
+  per_cycle_usd: 0.50
+  total_usd: 5.00
+
+## Termination
+
+- All metrics reach threshold for 3 consecutive cycles (CONVERGED → ship candidate)
+- Time / cost budget exhausted
+- 5 consecutive discards (deadlock break)
+
+## Modifiable Paths Override
+# Optional — narrow AGENTS.md's modifiable_paths for THIS goal only.
+# Leave the section absent to inherit AGENTS.md defaults.
+#
+# Example:
+# - <org>/workflows/wf-{{goal-id}}-cycle-*/
+# - <org>/memory/
+`;
 
 /**
  * v0.4 — `solosquad goal` CLI group.
@@ -55,9 +122,7 @@ export async function goalNewCommand(goalId: string | undefined, opts: GoalNewOp
     return;
   }
   fs.mkdirSync(dir, { recursive: true });
-  const tpl = path.join(getAssetsDir(), "templates", "goal.md");
-  let body = fs.readFileSync(tpl, "utf-8");
-  body = body.replace("{{goal-id-kebab}}", goalId).replace("{{org-slug}}", orgSlug);
+  let body = GOAL_TEMPLATE.replace("{{goal-id-kebab}}", goalId).replace("{{org-slug}}", orgSlug);
   fs.writeFileSync(path.join(dir, "goal.md"), body, "utf-8");
 
   console.log(chalk.green(`✓ Created ${dir}/goal.md`));

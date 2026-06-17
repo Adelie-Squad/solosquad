@@ -1,5 +1,0 @@
-# schema_version=1
-# v0.4 autonomous engine experiment tracker. append-only.
-# task_id is foreign key to <org>/workflows/<wf-id>/_events.jsonl spawn events.
-# Do NOT edit by hand during a run. Engine writes; humans review.
-cycle	timestamp	agent	metric	value	status	commit	provenance	task_id	description

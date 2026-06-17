@@ -8,7 +8,7 @@
  * reused by the 0.8.0 → 0.8.1 migration. This file is a thin CLI shim.
  *
  * Run with `npx tsx scripts/inject-skill-schema-version.ts [dir] [--dry-run]`.
- * Default directory is `assets/agents/`. The script is idempotent — files
+ * Default directory is `agents/` (v1.3.1: was assets/agents/). The script is idempotent — files
  * that already declare `schema_version` are left untouched.
  */
 
@@ -25,7 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function main(): void {
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith("--"));
-  const root = positional[0] ?? path.resolve(__dirname, "..", "assets", "agents");
+  const root = positional[0] ?? path.resolve(__dirname, "..", "agents");
   const dryRun = args.includes("--dry-run");
 
   console.log(`scanning ${root}${dryRun ? " (DRY-RUN)" : ""}`);

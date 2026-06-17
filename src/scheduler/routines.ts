@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { getRoutinesDir } from "../util/paths.js";
+import { getSchedulesDir } from "../util/paths.js";
 
 export type RoutineKind = "user-brief" | "background";
 
@@ -79,13 +79,14 @@ export const ROUTINES: RoutineConfig[] = [
   },
 ];
 
-/** Load routine prompt from routines/{id}.md */
+/** Load routine prompt from schedules/{id}.md (v1.1 rename; resolver
+ *  preserves legacy `.solosquad/routines/` overrides — see getSchedulesDir). */
 export function loadRoutinePrompt(routineId: string): string {
-  const promptFile = path.join(getRoutinesDir(), `${routineId}.md`);
+  const promptFile = path.join(getSchedulesDir(), `${routineId}.md`);
   if (fs.existsSync(promptFile)) {
     return fs.readFileSync(promptFile, "utf-8");
   }
-  return `# ${routineId}\n\nPrompt file missing: routines/${routineId}.md`;
+  return `# ${routineId}\n\nPrompt file missing: schedules/${routineId}.md`;
 }
 
 /** Convert "HH:MM" into a node-cron expression for daily execution. */

@@ -376,7 +376,7 @@ function scaffoldV06WorkspaceKnowledge(workspace: string): void {
       `# Workspace knowledge\n\n` +
         `<!-- v0.6 §2.3 — User-accumulated craft, decision frameworks, glossary. -->\n` +
         `<!-- Files here are keyword-selected at spawn time (8-layer JIT [1]). -->\n` +
-        `<!-- See assets/knowledge/README.md for the authoring guide. -->\n`,
+        `<!-- See the bundled knowledge/README.md for the authoring guide. -->\n`,
     );
   }
 }
@@ -845,16 +845,14 @@ export async function initCommand(): Promise<void> {
   }
 
   // Copy system config into .solosquad/
+  // NOTE: v1.3.1 §8/§9 emptied the legacy `assets/<dir>` seed copy entirely —
+  // agents/routines/core/orchestrator/templates were all removed from assets/.
+  // The roster/skills/teams/schedules/knowledge now come from the v1.1 bundle
+  // block below; former templates are inlined as constants in their owning
+  // code (goal.ts, skill-author.ts, migration scripts). Only `.env.example`
+  // and docker/ remain under assets/ (handled separately below).
   const assetsDir = getAssetsDir();
-  const assetDirs = ["agents", "routines", "core", "templates", "orchestrator"];
   fs.mkdirSync(solosquadDir, { recursive: true });
-  for (const dir of assetDirs) {
-    const src = path.join(assetsDir, dir);
-    if (fs.existsSync(src)) {
-      copyDirSync(src, path.join(solosquadDir, dir));
-      console.log(` ${chalk.green("✓")} .solosquad/${dir}/`);
-    }
-  }
 
   // v1.1 bundle dirs (live at <bundle>/<dir>/, not under assets/). Copy
   // them into .solosquad/ so the workspace has the v1.1 layout
@@ -1373,7 +1371,7 @@ export async function initCommand(): Promise<void> {
   console.log(chalk.dim("    .solosquad/"));
   console.log(chalk.dim("      workspace.yaml"));
   console.log(chalk.dim("      .env"));
-  console.log(chalk.dim("      agents/ routines/ core/ templates/ orchestrator/"));
+  console.log(chalk.dim("      agents/ skills/ teams/ schedules/ knowledge/ user/"));
   if (orgSlug) {
     console.log(chalk.dim(`    ${orgSlug}/              (org)`));
     console.log(chalk.dim("      .org.yaml"));

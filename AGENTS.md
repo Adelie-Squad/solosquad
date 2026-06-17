@@ -60,16 +60,28 @@ src/
   util/                             → Config, paths, logger, cost
   engine/                           → v0.4 autonomous engine + stop-hook-adapter (v0.6 §5b)
   migrations/scripts/               → 0.5.0-to-0.6.0.ts (dry-run + apply)
-assets/                             → Bundled assets (copied on `solosquad init`)
-  agents/{team}/SKILL.md            → Agent definitions (25 — v0.6: KNOWLEDGE.md co-located,
-                                       _teams/ 폐지)
-  agents/{team}/KNOWLEDGE.md        → Team(=domain) shared knowledge (v0.6 §2.1)
+agents/                             → Agent definitions (v1.1 flat layout — canonical bundle)
+  main/{agent}/SKILL.md             → 5 main bots: chief, pm, engineer, designer, marketer
+  specialists/{agent}/SKILL.md      → 20 specialists, flat (no team folder nesting)
+teams/{team}/                       → 4 teams (product/engineering/design/marketing)
+  composition.yaml                  → Team membership (= data, not folders) + main supervisor
+  KNOWLEDGE.md                      → Team(=domain) shared knowledge (v0.6 §2.1)
+  OKR.md                            → Quarterly OKR (Chief-authored)
+skills/{skill}/SKILL.md             → Reusable skills (PM Tier-1/2 + Chief-invoked)
+assets/                             → Bundled defaults (copied into .solosquad/ on `solosquad init`)
   knowledge/                        → Bundled workspace knowledge starter (v0.6 §2.3)
   core/                             → Owner profile, principles, writing style
   routines/                         → Routine prompts (editable) — archive-rotate 신설 (v0.6 §4)
   orchestrator/SKILL.md             → PM (orchestrator) role definition
   templates/                        → PRD, handoff(×3 변형), status, goal.md, AGENTS.md
+  docker/                           → Dockerfile + docker-compose.yml (v1.2.10)
 ```
+
+> **Agent layout (v1.1):** specialists live flat at `agents/specialists/{name}/`;
+> team membership is *data* in `teams/{team}/composition.yaml`, not folder nesting.
+> The old team-nested `assets/agents/{team}/` roster was removed in v1.3.1.
+> Path resolution (`util/paths.ts getAgentsDir`): `.solosquad/agents/` →
+> top-level `agents/` → bundle.
 
 ## 3-Layer Context (v0.6 topology)
 
@@ -79,10 +91,10 @@ Layer 0: Workspace / Universal
 ├── .solosquad/core/           → Owner profile, principles, voice
 ├── .solosquad/knowledge/      → User accumulated craft, decision frameworks (v0.6 §2.3)
 ├── .solosquad/agents/         → Per-user agent overrides (3-tier search)
-└── assets/                    → Bundled defaults (read-only)
-    ├── agents/{team}/SKILL.md
-    └── agents/{team}/KNOWLEDGE.md   → team(=domain) shared knowledge (v0.6 §2.1
-                                          — _teams/ 폐지)
+├── agents/{main,specialists}/{agent}/SKILL.md → bundle agent definitions (v1.1 flat)
+├── teams/{team}/{composition.yaml,KNOWLEDGE.md,OKR.md} → team membership = data
+└── assets/                    → Bundled defaults (read-only: core, knowledge, routines,
+                                  templates, orchestrator, docker)
 
 Layer 1: Organization (<workspace>/<org>/)
 ├── .org.yaml                  → Org metadata (schema_version: 1 — v0.6 §6 forward-compat)
@@ -117,8 +129,8 @@ Layer 2: Repository (<workspace>/<org>/repositories/<repo>/)
 order, with token cap + priority drop per v0.6 §2.2 P1):
 
 [1] `assets/knowledge/` + `.solosquad/knowledge/` (selective by keyword)
-[2] `agents/{team}/KNOWLEDGE.md` (only if same team)
-[3] `agents/{team}/{agent}/SKILL.md` (agent identity, immutable, workspace) — never drop
+[2] `teams/{team}/KNOWLEDGE.md` (only if same team — membership via composition.yaml)
+[3] `agents/{main,specialists}/{agent}/SKILL.md` (agent identity, immutable, workspace) — never drop
 [4] `<org>/core/` (org philosophy) — never drop
 [5] `<org>/agent-profile.yaml` (defaults + this agent's section) — never drop
 [6] `<org>/domain/`

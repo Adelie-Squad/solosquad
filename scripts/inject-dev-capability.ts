@@ -1,7 +1,7 @@
 /**
  * v0.8.2 §3.2 — one-shot helper that adds `dev_capability` (+
  * `dev_permissions` for true entries) to every bundled
- * `assets/agents/{team}/{agent}/SKILL.md` frontmatter.
+ * `agents/{main,specialists}/{agent}/SKILL.md` frontmatter.
  *
  * Idempotent: re-running on an already-injected file leaves it untouched.
  *
@@ -30,7 +30,8 @@ import { normalizeLine } from "../src/util/platform.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ASSETS_AGENTS_DIR = path.resolve(__dirname, "..", "assets", "agents");
+// v1.3.1: canonical bundle roster moved to top-level agents/ (flat).
+const BUNDLE_AGENTS_DIR = path.resolve(__dirname, "..", "agents");
 
 /**
  * Engineering SKILLs allowed to perform end-to-end dev actions. Order is the
@@ -133,8 +134,8 @@ function keyFor(team: string, agent: string): string {
 }
 
 function main(): void {
-  if (!fs.existsSync(ASSETS_AGENTS_DIR)) {
-    console.error(`assets/agents directory not found at ${ASSETS_AGENTS_DIR}`);
+  if (!fs.existsSync(BUNDLE_AGENTS_DIR)) {
+    console.error(`agents directory not found at ${BUNDLE_AGENTS_DIR}`);
     process.exit(1);
   }
 
@@ -145,11 +146,11 @@ function main(): void {
     errors: [],
   };
 
-  for (const teamEntry of fs.readdirSync(ASSETS_AGENTS_DIR, { withFileTypes: true })) {
+  for (const teamEntry of fs.readdirSync(BUNDLE_AGENTS_DIR, { withFileTypes: true })) {
     if (!teamEntry.isDirectory()) continue;
     // `_meta/` is the workflow-maker meta-skill — out of the 25-SKILL matrix.
     if (teamEntry.name.startsWith("_")) continue;
-    const teamDir = path.join(ASSETS_AGENTS_DIR, teamEntry.name);
+    const teamDir = path.join(BUNDLE_AGENTS_DIR, teamEntry.name);
 
     for (const agentEntry of fs.readdirSync(teamDir, { withFileTypes: true })) {
       if (!agentEntry.isDirectory()) continue;

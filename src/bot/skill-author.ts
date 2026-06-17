@@ -14,7 +14,7 @@ import {
   recordAuthorCost,
   type OnCapAction,
 } from "./author-budget.js";
-import { getAssetsDir, getOrgDir } from "../util/paths.js";
+import { getOrgDir } from "../util/paths.js";
 import { normalizeLine } from "../util/platform.js";
 import { usdFromUsage, type CostModel, type UsageBreakdown } from "../util/cost.js";
 
@@ -706,8 +706,53 @@ function goalIdForDraft(draft: AuthorDraft): string {
   return draft.slug;
 }
 
+// v1.3.1 §9 — goal-from-skill scaffold, inlined from the former
+// assets/templates/goal-from-skill.md (template-concept retirement).
+// Placeholders {goal_id}/{org_slug}/{title}/{spec_path}/{stop_when}/{pipeline}
+// are substituted in renderGoalFromSkill.
+const GOAL_FROM_SKILL_TEMPLATE = `---
+schema_version: 1
+goal_id: "{goal_id}"
+org: "{org_slug}"
+target_repo: null
+cycle_unit: pipeline_pass
+---
+
+# Goal: {title}
+
+Auto-generated from a spec-gate SKILL. Stop rule: {stop_when}.
+
+## Metrics
+metrics:
+  - name: "spec_gate_pass"
+    formula: "1.0 if spec_gate_satisfied else 0.0"
+    source: "{spec_path}"
+    threshold: 1.0
+    direction: maximize
+
+## Pipeline
+1. {pipeline}
+
+## Budget
+time:
+  hours: 8
+cost:
+  per_cycle_usd: 0.50
+  total_usd: 5.00
+
+## Termination
+- {stop_when}
+- spec_gate_pass reaches 1.0 for 3 consecutive cycles
+- Time / cost budget exhausted
+- 5 consecutive discards (deadlock break)
+
+## Signal Trigger
+auto: false
+match_keywords: []
+`;
+
 /**
- * Render `<org>/goals/<goal-id>/goal.md` from the bundled template.
+ * Render `<org>/goals/<goal-id>/goal.md` from the inlined template.
  *
  * Placeholders: `{goal_id}` `{org_slug}` `{title}` `{spec_path}` `{stop_when}`
  * `{pipeline}` (single-step pipeline calling the new SKILL).
@@ -720,15 +765,7 @@ function renderGoalFromSkill(draft: AuthorDraft, orgSlug: string): string {
   if (!draft.spec_gate) {
     throw new Error("renderGoalFromSkill called on a non-spec-gate draft");
   }
-  const templatePath = path.join(getAssetsDir(), "templates", "goal-from-skill.md");
-  let template: string;
-  try {
-    template = fs.readFileSync(templatePath, "utf-8");
-  } catch (e) {
-    throw new Error(
-      `Cannot read goal-from-skill template at ${templatePath}: ${(e as Error).message}`,
-    );
-  }
+  const template = GOAL_FROM_SKILL_TEMPLATE;
   const goalId = goalIdForDraft(draft);
   // The pipeline reference must match goal-parser's `<team>/<agent>` form.
   // `draft.team` and `draft.slug` are both kebab-case per slugify().

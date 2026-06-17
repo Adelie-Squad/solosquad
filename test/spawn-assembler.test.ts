@@ -267,7 +267,7 @@ test("missing org folders (core/domain/handoff) yield empty layers — no crash"
     // No orgCore, agentProfileYaml, orgDomain, workspaceKnowledge, handoff.
   });
 
-  // Force an empty .solosquad/knowledge/ so the bundled assets/knowledge/
+  // Force an empty .solosquad/knowledge/ so the bundled knowledge/
   // fallback isn't picked up — we're testing the missing-folder path.
   fs.mkdirSync(path.join(workspace, ".solosquad", "knowledge"), { recursive: true });
 

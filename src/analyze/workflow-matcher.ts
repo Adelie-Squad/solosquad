@@ -5,9 +5,10 @@ import type { Classification } from "./classifier.js";
  * classifications, score how well each of the 4 SoloSquad templates is
  * "covered" by the skills present.
  *
- * The mapping below is keyword-driven (per-template signal words drawn from
- * the actual templates in `assets/templates/prd-*.md` plus the AGENTS.md
- * §"Workflow Types" stage descriptions). cover_rate = (skills whose
+ * The mapping below is keyword-driven (per-template signal words originally
+ * derived from the v0.5 `prd-*.md` scaffolds — since removed in v1.3.1 §9 —
+ * plus the AGENTS.md §"Workflow Types" stage descriptions; the keyword lists
+ * are now self-contained in TEMPLATES below). cover_rate = (skills whose
  * classification label *and* keyword signal both align with a template) /
  * (total classifications considered — i.e. excluding `codebase-fact` since
  * those are tied to a repo, not a workflow).
@@ -36,8 +37,8 @@ interface TemplateSpec {
 
 /**
  * One row per SoloSquad workflow template. Keywords are inclusive (any
- * match counts toward cover_rate). Drawn from `prd-pmf.md`, `prd-feature.md`,
- * `prd-experiment.md` + AGENTS.md "Workflow Types" descriptions.
+ * match counts toward cover_rate). Originally derived from the v0.5 prd-*.md
+ * scaffolds + AGENTS.md "Workflow Types" descriptions; now self-contained.
  */
 const TEMPLATES: TemplateSpec[] = [
   {

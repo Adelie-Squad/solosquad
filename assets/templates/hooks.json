@@ -1,7 +1,0 @@
-{
-  "_comment": "v0.6 §5b.1 — Anthropic 2025-12 stop-hook plugin config example. Copy this file into your own workspace's `.claude/hooks.json`. SoloSquad's `src/engine/stop-hook-adapter.ts` reads the SKILL frontmatter's `loop_mode.stop_when` field and decides whether each cycle should stop (exit 1) or continue (exit 0). The 5s timeout matches §5b.3 — any longer and the goal-runner treats it as a conservative continue.",
-  "stop": {
-    "command": "solosquad goal verify-stop",
-    "timeoutSec": 5
-  }
-}

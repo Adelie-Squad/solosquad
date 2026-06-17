@@ -1151,6 +1151,30 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.24 v1.3.1 — Legacy asset cleanup + post-release CI/deps 하드닝 (2026-06-18)
+
+사용자 대면 기능 0 의 안정화 릴리스. v1.1 리오그가 절반만 끝내고 남긴 구 `assets/` 트리를 비우고,
+v1.3.0 머지 중 드러난 CI·의존성 문제를 마감.
+
+- **CI/deps** — `node-cron` 3→4 (TS 재작성으로 `uuid` 의존 제거 → moderate 2건 소멸, override 불요);
+  `npm audit` moderate 비차단 가시화 (high 게이트는 유지); Node baseline `>=20`, matrix `[20,22]`, `fail-fast:false`.
+- **`assets/agents/` 제거** — v1.1 이 캐노니컬 로스터를 top-level `agents/`(main+specialists)로 옮긴 뒤
+  미삭제된 구 taxonomy(25개)를 삭제, `init` 이 `.solosquad/agents/` 에 로스터 2벌을 복사하던 오염 해소.
+  죽은 `collab_pattern` 테스트·inject 스크립트 은퇴(v0.6 §2.4 invariant 동반 폐기).
+- **구 `assets/` 정리 (5종)** — `routines/`→top-level `schedules/` 배선(`getSchedulesDir` 가 죽은 함수였음,
+  `loadRoutinePrompt` 를 거기로 승격, 기존 워크스페이스 override 보존 우선순위); `knowledge/`·`core/`
+  resolver fallback 을 `getBundleRoot()` 로; v0.3 `orchestrator/SKILL.md`(→`agents/main/chief/SKILL.md`
+  로 대체된 전신, 런타임 read 0) 제거 + stale JSDoc 포인터 repoint; `templates/` 22개 전부 정리 —
+  15개 은퇴(pre-v1.1 세션/handoff/워크플로 스캐폴드), 7개 live 는 owning 코드(goal.ts·skill-author.ts·
+  migration)에 문자열 상수로 인라인(인라인은 `dist/*.js` 에 컴파일돼 번들 항상 포함 → 파일 이동이
+  동반하는 번들 화이트리스트 회귀를 원천 차단). 결과: `assets/` = `docker/`+`.env.example` 만 잔존,
+  v1.1 §1.2 "assets/ → 분산 완료" 체크박스 종료.
+- **기획(docs-only)** — SKILL.md 작성법 크로스벤더 조사(`docs/ideation/260617-…`) + v1.3.2
+  도메인 매니저 PRD(skill·workflow·goal·schedule).
+- 782 test green. tarball 동작 무변(정리는 내부/dev-facing).
+
+자세히: `docs/prd/v1.3.1-legacy-asset-cleanup.md`
+
 ### 13.7 v1.1 — Multi-Agent Team Architecture (예고 — 구 plan, 이제 §13.6.18 에서 실현)
 
 > **시너지/역할/구조/비전 박제.** 상세 작업은 `docs/prd/v1.1-multi-agent-team-architecture.md` (§21 amendment 2026-05-27 포함). v1.0.x patch 시리즈와 *narrative 단절* — *작업 흐름 + 디렉토리 + 명명 자체의 재설계*.

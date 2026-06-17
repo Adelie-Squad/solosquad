@@ -376,7 +376,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
   </ul>
   <div class="callout info">
     <strong>이 문서의 버전</strong>
-    현재 npm 최신은 <span class="badge now">v1.3.0</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
+    현재 npm 최신은 <span class="badge now">v1.3.1</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
   </div>
 </section>
 
@@ -1174,7 +1174,15 @@ solosquad sync                                      # repositories/ ↔ .org.yam
 
   <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
-  <h4>v1.3.0 (2026-06-16) <span class="badge now">최신</span> — 메신저 UX 대개편: dev-confirm 승인 게이트 + 인터랙션 컴포넌트 + 산출물 파일화</h4>
+  <h4>v1.3.1 (2026-06-18) <span class="badge now">최신</span> — 정리 릴리스: v1.1 잔재 구 <code>assets/</code> 비우기 + CI/의존성 하드닝</h4>
+  <ul>
+    <li><strong>사용자 대면 기능 0</strong> — 내부 안정화 릴리스. 동작·tarball 변화 없음. v1.1 리오그가 절반만 끝낸 구 <code>assets/</code> 트리를 비우고, v1.3.0 머지 중 드러난 CI·의존성 문제를 마감.</li>
+    <li><strong>CI/의존성</strong> — <code>node-cron</code> 3→4 (TS 재작성으로 <code>uuid</code> 의존 제거 → moderate 취약점 2건 소멸); <code>npm audit</code> moderate 비차단 가시화; Node 기준 <code>&gt;=20</code>.</li>
+    <li><strong>구 <code>assets/</code> 정리</strong> — 미삭제된 구 에이전트 로스터(<code>assets/agents/</code>, 25개) 제거(<code>init</code> 이 로스터 2벌 복사하던 오염 해소); <code>routines/</code>→<code>schedules/</code> 배선; <code>knowledge/</code>·<code>core/</code>·<code>orchestrator/</code> 정리; <code>templates/</code> 22개 전부 제거(15개 은퇴 + 7개는 코드에 인라인). 결과: <code>assets/</code> 에는 <code>docker/</code> 만 남음.</li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.3.1], <code>docs/prd/v1.3.1-legacy-asset-cleanup.md</code></li>
+  </ul>
+
+  <h4>v1.3.0 (2026-06-16) — 메신저 UX 대개편: dev-confirm 승인 게이트 + 인터랙션 컴포넌트 + 산출물 파일화</h4>
   <ul>
     <li><strong>git push 승인 게이트 (Part A)</strong> — 에이전트가 <code>git push</code>·<code>gh pr merge</code>·<code>gh pr close</code> 를 실행하기 직전, <code>command-&lt;handle&gt;</code> 채널에 <strong>✅승인 / ❌거절 카드</strong>가 뜹니다. 승인해야 push 가 진행됩니다. 보호 브랜치(main/master/develop) 직 push 는 카드 없이 자동 차단. 승인 기록은 커밋 해시와 함께 <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code> 에 남습니다. 실패정책: 미응답 30분 = 차단, hook 오류 = 통과(보호 브랜치는 항상 차단). 설정 <code>workspace.yaml</code> <code>pm.git</code> (보호 브랜치 목록·타임아웃). push <em>알림</em>은 SoloSquad 가 하지 않습니다 — GitHub→Discord 네이티브 webhook 을 직접 등록하세요.</li>
     <li><strong>버튼/메뉴 인터랙션 (Part B)</strong> — 텍스트 <code>y/n</code> 대신 버튼·셀렉트 메뉴로 승인·선택. 잘못 눌렀을 때 복구: ❌거절은 2단계 확인(ephemeral), 확정 후 버튼 비활성화, 일반 선택은 되돌리기 유예창. (🛑 작업 중단 버튼·실시간 진행 보고는 v1.3.0 라인에서 선행 제공.)</li>

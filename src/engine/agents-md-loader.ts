@@ -44,8 +44,8 @@ export interface PersistentGuide {
 export const DEFAULT_GUIDE: Omit<PersistentGuide, "exists" | "source_path" | "raw_body"> = {
   immutable_paths: [
     "src/engine/**",
-    "assets/templates/results.tsv",
-    "assets/templates/goal.md",
+    // v1.3.1 §9 — dropped stale `assets/templates/{results.tsv,goal.md}`
+    // (template-concept files removed; schemas now live in engine/CLI code).
     "AGENTS.md",
   ],
   modifiable_paths: ["<org>/workflows/<wf-id>/", "<org>/memory/"],

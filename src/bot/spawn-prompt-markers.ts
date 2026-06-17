@@ -1,7 +1,7 @@
 /**
  * v0.3.0 — parse stage/workflow markers PM embeds in its Task tool prompts.
  *
- * Convention (documented in assets/orchestrator/SKILL.md): when PM
+ * Convention (documented in agents/main/chief/SKILL.md): when PM
  * delegates work to a specialist, it prefixes the Task prompt with:
  *
  *   [stage:stage-N-name wf:wf-YYYY-MM-DD-slug]

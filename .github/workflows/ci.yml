@@ -41,6 +41,12 @@ jobs:
         # warning so a new advisory doesn't block deploys before we triage it.
         run: npm audit --audit-level=high
 
+      - name: npm audit (v1.3.1 — moderate visibility, non-blocking)
+        # v1.3.1 §6③ — surface moderate advisories in the log without gating
+        # (|| true). Keeps the triage-before-block policy of the high gate while
+        # making a new moderate (e.g. the uuid/node-cron one) visible early.
+        run: npm audit --audit-level=moderate || true
+
       - name: Validate bundled SKILL.md frontmatter (v0.5)
         run: npm run validate-skills
 
