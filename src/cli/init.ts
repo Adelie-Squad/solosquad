@@ -845,8 +845,12 @@ export async function initCommand(): Promise<void> {
   }
 
   // Copy system config into .solosquad/
+  // NOTE: "agents" is intentionally NOT here — the v1.1 bundle block below
+  // copies the canonical top-level agents/ (main/ + specialists/). The old
+  // assets/agents/ team-nested roster was removed (v1.3.1 cleanup); copying
+  // both used to pollute .solosquad/agents/ with two divergent taxonomies.
   const assetsDir = getAssetsDir();
-  const assetDirs = ["agents", "routines", "core", "templates", "orchestrator"];
+  const assetDirs = ["routines", "core", "templates", "orchestrator"];
   fs.mkdirSync(solosquadDir, { recursive: true });
   for (const dir of assetDirs) {
     const src = path.join(assetsDir, dir);
