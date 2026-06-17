@@ -82,15 +82,12 @@ export function getRoutinesDir(): string {
   return path.join(getBundleRoot(), "schedules");
 }
 
-/** Core dir — owner profile, principles, voice. */
-export function getCoreDir(): string {
-  const root = getWorkspaceRoot();
-  const solosquad = path.join(root, ".solosquad", "core");
-  if (fs.existsSync(solosquad)) return solosquad;
-  const legacy = path.join(root, "core");
-  if (fs.existsSync(legacy)) return legacy;
-  return path.join(getAssetsDir(), "core");
-}
+// v1.3.1 §9 — getCoreDir() removed. The bundled `assets/core/` was a v0.x
+// workspace-level persona default that nothing read after v1.1: the owner
+// profile moved to `user/profile.md`/`user/voice.md`, and the live org persona
+// is `<org>/core/{PRINCIPLES,VOICE}.md` (scaffolded fresh by init/migration and
+// read directly by the spawn-assembler [4] layer). The resolver had zero
+// callers, so the function and `assets/core/` were both deleted.
 
 /**
  * v0.6 §2.3 — Workspace knowledge layer.

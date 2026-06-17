@@ -845,14 +845,14 @@ export async function initCommand(): Promise<void> {
   }
 
   // Copy system config into .solosquad/
-  // NOTE: "agents" and "routines" are intentionally NOT here. "agents" → the
-  // v1.1 bundle block below copies the canonical top-level agents/ (the old
-  // assets/agents/ team-nested roster was removed, v1.3.1 §8). "routines" →
-  // renamed to top-level schedules/ and copied via the v1.1 bundle block;
-  // assets/routines/ was removed in v1.3.1 §9. Copying both used to pollute
-  // .solosquad/ with divergent copies.
+  // NOTE: "agents", "routines", "core" are intentionally NOT here (all removed
+  // from assets/ in v1.3.1 §8/§9):
+  //   - agents   → v1.1 bundle block below copies canonical top-level agents/.
+  //   - routines → renamed to top-level schedules/, copied via bundle block.
+  //   - core     → vestigial workspace persona; owner moved to user/, live org
+  //                persona is <org>/core/ scaffolded by scaffoldV06OrgLayer.
   const assetsDir = getAssetsDir();
-  const assetDirs = ["core", "templates", "orchestrator"];
+  const assetDirs = ["templates", "orchestrator"];
   fs.mkdirSync(solosquadDir, { recursive: true });
   for (const dir of assetDirs) {
     const src = path.join(assetsDir, dir);
