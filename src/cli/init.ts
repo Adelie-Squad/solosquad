@@ -376,7 +376,7 @@ function scaffoldV06WorkspaceKnowledge(workspace: string): void {
       `# Workspace knowledge\n\n` +
         `<!-- v0.6 §2.3 — User-accumulated craft, decision frameworks, glossary. -->\n` +
         `<!-- Files here are keyword-selected at spawn time (8-layer JIT [1]). -->\n` +
-        `<!-- See assets/knowledge/README.md for the authoring guide. -->\n`,
+        `<!-- See the bundled knowledge/README.md for the authoring guide. -->\n`,
     );
   }
 }
@@ -845,12 +845,14 @@ export async function initCommand(): Promise<void> {
   }
 
   // Copy system config into .solosquad/
-  // NOTE: "agents" is intentionally NOT here — the v1.1 bundle block below
-  // copies the canonical top-level agents/ (main/ + specialists/). The old
-  // assets/agents/ team-nested roster was removed (v1.3.1 cleanup); copying
-  // both used to pollute .solosquad/agents/ with two divergent taxonomies.
+  // NOTE: "agents" and "routines" are intentionally NOT here. "agents" → the
+  // v1.1 bundle block below copies the canonical top-level agents/ (the old
+  // assets/agents/ team-nested roster was removed, v1.3.1 §8). "routines" →
+  // renamed to top-level schedules/ and copied via the v1.1 bundle block;
+  // assets/routines/ was removed in v1.3.1 §9. Copying both used to pollute
+  // .solosquad/ with divergent copies.
   const assetsDir = getAssetsDir();
-  const assetDirs = ["routines", "core", "templates", "orchestrator"];
+  const assetDirs = ["core", "templates", "orchestrator"];
   fs.mkdirSync(solosquadDir, { recursive: true });
   for (const dir of assetDirs) {
     const src = path.join(assetsDir, dir);

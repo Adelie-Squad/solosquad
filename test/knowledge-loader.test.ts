@@ -4,15 +4,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { getKnowledgeDir, getAssetsDir } from "../src/util/paths.js";
+import { getKnowledgeDir, getBundleRoot } from "../src/util/paths.js";
 import { assembleSpawnContext } from "../src/bot/spawn-assembler.js";
 
 /**
  * v0.6 §2.3 — Workspace Knowledge Layer.
  *
  * getKnowledgeDir() walks: `.solosquad/knowledge/` → `knowledge/` → bundled
- * assets/knowledge/. The spawn assembler keyword-matches the loaded files
- * against the user query and drops zero-hit ones at gather time.
+ * top-level knowledge/ (v1.1; assets/knowledge/ removed in v1.3.1 §9). The
+ * spawn assembler keyword-matches the loaded files against the user query and
+ * drops zero-hit ones at gather time.
  */
 
 function mkTempDir(prefix: string): string {
@@ -28,11 +29,11 @@ test("getKnowledgeDir picks .solosquad/knowledge/ when present", () => {
   assert.equal(resolved, dir);
 });
 
-test("getKnowledgeDir falls back to legacy /knowledge/ then to bundled assets", () => {
+test("getKnowledgeDir falls back to legacy /knowledge/ then to bundled knowledge/", () => {
   const ws = mkTempDir("ss-knowledge-");
-  // Neither .solosquad/knowledge nor /knowledge — should land in assets.
+  // Neither .solosquad/knowledge nor /knowledge — should land in the bundle.
   const resolved = getKnowledgeDir(ws);
-  assert.equal(resolved, path.join(getAssetsDir(), "knowledge"));
+  assert.equal(resolved, path.join(getBundleRoot(), "knowledge"));
 
   // Now create /knowledge legacy folder.
   const legacy = path.join(ws, "knowledge");

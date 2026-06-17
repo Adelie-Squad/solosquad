@@ -66,14 +66,20 @@ export function getAgentsDir(): string {
   return path.join(getAssetsDir(), "agents");
 }
 
-/** Routines dir — mirrors getAgentsDir layout. */
+/**
+ * Routines dir — legacy v1.0.x layout resolver. v1.1 renamed this to
+ * `schedules/`; prefer `getSchedulesDir()`. Kept for back-compat with
+ * workspaces that still hold a `.solosquad/routines/` override. The bundle
+ * fallback now points at the canonical top-level `schedules/` (the old
+ * `assets/routines/` source was removed in v1.3.1 §9).
+ */
 export function getRoutinesDir(): string {
   const root = getWorkspaceRoot();
   const solosquad = path.join(root, ".solosquad", "routines");
   if (fs.existsSync(solosquad)) return solosquad;
   const legacy = path.join(root, "routines");
   if (fs.existsSync(legacy)) return legacy;
-  return path.join(getAssetsDir(), "routines");
+  return path.join(getBundleRoot(), "schedules");
 }
 
 /** Core dir — owner profile, principles, voice. */
@@ -94,10 +100,11 @@ export function getCoreDir(): string {
  * and `getCoreDir()`:
  *   1. `<workspace>/.solosquad/knowledge/` (user-authored, top priority)
  *   2. `<workspace>/knowledge/` (legacy out-of-config-dir layout, defensive)
- *   3. `<assets>/knowledge/` (bundled starter guide)
+ *   3. `<bundle>/knowledge/` (bundled starter guide — top-level since v1.1;
+ *      the old `assets/knowledge/` source was removed in v1.3.1 §9)
  *
  * Always returns *some* path so callers can `fs.existsSync` without an extra
- * undefined check — the bundled assets dir is the last-resort fallback.
+ * undefined check — the bundled dir is the last-resort fallback.
  */
 export function getKnowledgeDir(workspace?: string): string {
   const root = workspace ?? getWorkspaceRoot();
@@ -105,7 +112,7 @@ export function getKnowledgeDir(workspace?: string): string {
   if (fs.existsSync(solosquad)) return solosquad;
   const legacy = path.join(root, "knowledge");
   if (fs.existsSync(legacy)) return legacy;
-  return path.join(getAssetsDir(), "knowledge");
+  return path.join(getBundleRoot(), "knowledge");
 }
 
 /**
@@ -190,18 +197,25 @@ export function getUserDir(): string {
 
 /**
  * v1.1 — `schedules/` (workspace bundle). Renamed from `routines/`. Each
- * `.md` file = scheduled prompt run via node-cron.
+ * `.md` file = scheduled prompt run via node-cron. This is the canonical
+ * resolver the scheduler reads (v1.3.1 §9 wired `loadRoutinePrompt` here).
+ *
+ * Priority preserves existing-workspace customizations across the rename:
+ *   1. `<workspace>/.solosquad/schedules/` (v1.1 user override)
+ *   2. `<workspace>/.solosquad/routines/` (v1.0.x user override — legacy
+ *      name; checked before the bundle so prior customizations still win)
+ *   3. `<workspace>/schedules/` (legacy out-of-config layout, defensive)
+ *   4. `<bundle>/schedules/` (bundled canonical, last resort)
  */
 export function getSchedulesDir(): string {
   const root = getWorkspaceRoot();
   const userOverride = path.join(root, ".solosquad", "schedules");
   if (fs.existsSync(userOverride)) return userOverride;
+  const legacyRoutines = path.join(root, ".solosquad", "routines");
+  if (fs.existsSync(legacyRoutines)) return legacyRoutines;
   const legacy = path.join(root, "schedules");
   if (fs.existsSync(legacy)) return legacy;
-  const bundleNew = path.join(getBundleRoot(), "schedules");
-  if (fs.existsSync(bundleNew)) return bundleNew;
-  // Defensive fallback to the v1.0.x `routines/` layout during transition.
-  return getRoutinesDir();
+  return path.join(getBundleRoot(), "schedules");
 }
 
 /** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */
