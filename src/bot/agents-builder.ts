@@ -7,8 +7,8 @@ import { normalizeLine } from "../util/platform.js";
  * v0.3.0 — `.claude/agents/` synchronizer.
  *
  * Claude Code discovers custom subagents from `<cwd>/.claude/agents/<name>.md`.
- * SoloSquad ships agent SKILL.md files at `assets/agents/{team}/{agent}/SKILL.md`
- * (`<workspace>/.solosquad/agents/...` after init). This module mirrors them
+ * SoloSquad ships agent SKILL.md files at `agents/{main,specialists}/{agent}/SKILL.md`
+ * (v1.1 flat layout; `<workspace>/.solosquad/agents/...` after init). This module mirrors them
  * into `<org>/.claude/agents/<agent>.md` with the YAML frontmatter Claude Code
  * expects (`name`, `description`, optional `tools`, `model`).
  *

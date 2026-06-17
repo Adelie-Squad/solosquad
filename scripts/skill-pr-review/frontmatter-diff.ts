@@ -25,7 +25,7 @@ export interface FieldChange {
 }
 
 export interface FrontmatterDiff {
-  /** Source path the diff is attributed to (relative, e.g. assets/agents/strategy/foo/SKILL.md). */
+  /** Source path the diff is attributed to (relative, e.g. agents/specialists/feature-planner/SKILL.md). */
   path: string;
   /** True when before === undefined (file added in this PR). */
   added: boolean;

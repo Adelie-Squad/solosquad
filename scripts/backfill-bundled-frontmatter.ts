@@ -1,6 +1,6 @@
 /**
  * v0.5 S5 — one-shot helper that prepends YAML frontmatter to the 25 bundled
- * `assets/agents/{team}/{agent}/SKILL.md` files.
+ * `agents/{main,specialists}/{agent}/SKILL.md` files.
  *
  * Idempotent: if a SKILL.md already starts with `---\n`, the file is skipped.
  * The migration script (`src/migrations/scripts/0.4.0-to-0.5.0.ts`) reuses the
@@ -26,7 +26,9 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ASSETS_AGENTS_DIR = path.resolve(__dirname, "..", "assets", "agents");
+// v1.3.1: canonical bundle roster moved to top-level agents/ (main/ +
+// specialists/, flat). The old team-nested assets/agents/ was removed.
+const BUNDLE_AGENTS_DIR = path.resolve(__dirname, "..", "agents");
 
 interface BackfillReport {
   skipped: string[];
@@ -35,17 +37,17 @@ interface BackfillReport {
 }
 
 function main(): void {
-  if (!fs.existsSync(ASSETS_AGENTS_DIR)) {
-    console.error(`assets/agents directory not found at ${ASSETS_AGENTS_DIR}`);
+  if (!fs.existsSync(BUNDLE_AGENTS_DIR)) {
+    console.error(`agents directory not found at ${BUNDLE_AGENTS_DIR}`);
     process.exit(1);
   }
 
   const report: BackfillReport = { skipped: [], backfilled: [], errors: [] };
 
-  for (const teamEntry of fs.readdirSync(ASSETS_AGENTS_DIR, { withFileTypes: true })) {
+  for (const teamEntry of fs.readdirSync(BUNDLE_AGENTS_DIR, { withFileTypes: true })) {
     if (!teamEntry.isDirectory()) continue;
     if (teamEntry.name.startsWith("_")) continue;
-    const teamDir = path.join(ASSETS_AGENTS_DIR, teamEntry.name);
+    const teamDir = path.join(BUNDLE_AGENTS_DIR, teamEntry.name);
 
     for (const agentEntry of fs.readdirSync(teamDir, { withFileTypes: true })) {
       if (!agentEntry.isDirectory()) continue;
