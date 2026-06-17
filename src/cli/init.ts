@@ -845,14 +845,16 @@ export async function initCommand(): Promise<void> {
   }
 
   // Copy system config into .solosquad/
-  // NOTE: "agents", "routines", "core" are intentionally NOT here (all removed
-  // from assets/ in v1.3.1 §8/§9):
-  //   - agents   → v1.1 bundle block below copies canonical top-level agents/.
-  //   - routines → renamed to top-level schedules/, copied via bundle block.
-  //   - core     → vestigial workspace persona; owner moved to user/, live org
-  //                persona is <org>/core/ scaffolded by scaffoldV06OrgLayer.
+  // NOTE: "agents", "routines", "core", "orchestrator" are intentionally NOT
+  // here (all removed from assets/ in v1.3.1 §8/§9):
+  //   - agents       → v1.1 bundle block below copies canonical top-level agents/.
+  //   - routines     → renamed to top-level schedules/, copied via bundle block.
+  //   - core         → vestigial workspace persona; owner moved to user/, live
+  //                    org persona is <org>/core/ scaffolded by scaffoldV06OrgLayer.
+  //   - orchestrator → v0.3 Chief identity doc; superseded by the canonical
+  //                    agents/main/chief/SKILL.md (nothing read it at runtime).
   const assetsDir = getAssetsDir();
-  const assetDirs = ["templates", "orchestrator"];
+  const assetDirs = ["templates"];
   fs.mkdirSync(solosquadDir, { recursive: true });
   for (const dir of assetDirs) {
     const src = path.join(assetsDir, dir);
@@ -1379,7 +1381,7 @@ export async function initCommand(): Promise<void> {
   console.log(chalk.dim("    .solosquad/"));
   console.log(chalk.dim("      workspace.yaml"));
   console.log(chalk.dim("      .env"));
-  console.log(chalk.dim("      agents/ routines/ core/ templates/ orchestrator/"));
+  console.log(chalk.dim("      agents/ skills/ teams/ schedules/ knowledge/ user/ templates/"));
   if (orgSlug) {
     console.log(chalk.dim(`    ${orgSlug}/              (org)`));
     console.log(chalk.dim("      .org.yaml"));

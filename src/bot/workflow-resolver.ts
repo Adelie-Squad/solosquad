@@ -101,7 +101,7 @@ function pickDefaultRepoSlug(orgDir: string): string | null {
  * session cwd is fixed at org root and target_repo is decided inside
  * the spawn prompt — by `@<slug>` mention (mention-parser.ts), workflow
  * stage `target_repo`, or PM clarifying question. See `src/bot/index.ts`
- * and `assets/orchestrator/SKILL.md`.
+ * and `agents/main/chief/SKILL.md`.
  */
 export function resolveOrgCwd(orgDir: string): {
   cwd: string;
