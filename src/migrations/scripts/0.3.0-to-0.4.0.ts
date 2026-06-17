@@ -11,7 +11,6 @@ import {
   loadWorkspaceYaml,
   saveWorkspaceYaml,
 } from "../../util/config.js";
-import { getAssetsDir } from "../../util/paths.js";
 
 const TARGET = "0.4.0";
 
@@ -128,8 +127,7 @@ export const migration: Migration = {
 
     const agentsMd = path.join(workspace, "AGENTS.md");
     const claudeMd = path.join(workspace, "CLAUDE.md");
-    const templatePath = path.join(getAssetsDir(), "templates", "AGENTS.md");
-    const v04Section = extractV04Section(templatePath);
+    const v04Section = AGENTS_V04_SECTION;
 
     if (!fs.existsSync(agentsMd)) {
       let body: string;
@@ -146,9 +144,10 @@ export const migration: Migration = {
           stripLeadingH1(claude) +
           "\n\n" +
           v04Section;
-      } else if (fs.existsSync(templatePath)) {
-        body = fs.readFileSync(templatePath, "utf-8");
       } else {
+        // v1.3.1 §9 — no CLAUDE.md to migrate and the former
+        // assets/templates/AGENTS.md seed was removed; build a minimal
+        // canonical guide carrying the v0.4 conventions section.
         body =
           "# AGENTS.md\n\n> Canonical workspace guide. Human-edited only.\n\n" +
           v04Section;
@@ -213,15 +212,46 @@ export const migration: Migration = {
 
 // ---------- helpers ----------
 
-function extractV04Section(templatePath: string): string {
-  if (!fs.existsSync(templatePath)) {
-    return "## SoloSquad v0.4 — Autonomous Goal Conventions\n\n(template missing — refer to docs/plan/v0.4-autonomous-engine.md §4.2)";
-  }
-  const body = fs.readFileSync(templatePath, "utf-8");
-  const idx = body.indexOf("## SoloSquad v0.4");
-  if (idx < 0) return body;
-  return body.slice(idx).trim();
-}
+// v1.3.1 §9 — v0.4 autonomous-goal conventions section, inlined from the
+// former assets/templates/AGENTS.md (template-concept retirement). The stale
+// `assets/templates/{results.tsv,goal.md}` immutable-path lines were dropped
+// to match IMMUTABLE_PATH_DEFAULTS (those template files were removed).
+const AGENTS_V04_SECTION = `## SoloSquad v0.4 — Autonomous Goal Conventions
+
+These rules apply when SoloSquad runs an autonomous goal via
+\`solosquad goal run <goal-id>\`. The engine enforces them; agents cannot
+relax them mid-run.
+
+### Immutable paths
+<!-- Paths under here will NOT be modified by any autonomous spawn. -->
+- \`src/engine/**\`
+- \`AGENTS.md\`
+- \`<org>/goals/<goal-id>/goal.md\`
+- \`<org>/goals/<goal-id>/results.tsv\`
+
+### Modifiable paths
+<!-- Paths under here MAY be modified by autonomous spawns. Each goal.md
+     may further narrow this set with a "Modifiable Paths Override" section. -->
+- \`<org>/workflows/<wf-id>/\`
+- \`<org>/memory/\`
+
+### External side-effects
+<!-- Forbidden during autonomous runs. Listed entries match by substring
+     in the spawn event trail. -->
+- messenger direct send (results flow through morning-brief routine, not direct DM)
+- email
+- payment
+- external API mutating call
+
+<!-- Whitelist for outbound HTTP: comma- or space-separated hosts after the
+     "external HTTP whitelist:" prefix. Empty whitelist means external HTTP is
+     blocked entirely. -->
+- external HTTP whitelist:
+
+### Guardrail thresholds
+- stage_timeout_seconds: 600
+- consecutive_discard_limit: 5
+- cost_cap_warning: 90%`;
 
 function stripLeadingH1(s: string): string {
   const lines = s.split(/\r?\n/);

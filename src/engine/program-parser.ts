@@ -90,8 +90,10 @@ export class ProgramParseError extends Error {
  */
 export const IMMUTABLE_PATH_DEFAULTS: readonly string[] = [
   "src/engine/**",
-  "assets/templates/results.tsv",
-  "assets/templates/program.md",
+  // v1.3.1 §9 — dropped stale `assets/templates/{results.tsv,program.md}`
+  // entries: the template-concept files were removed (results.tsv schema now
+  // lives in src/engine/tracker.ts; program.md never existed). Runtime
+  // results.tsv lives per-goal at <org>/goals/<id>/results.tsv.
 ];
 
 const KEBAB_CASE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
