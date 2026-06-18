@@ -290,27 +290,10 @@ async function registerRepoInline(
     /* trust grant is best-effort */
   }
 
-  // v1.3.2 §10.5 — surface adoptable assets discovered in the just-registered
-  // repo. Scan-only (no validation) so init stays fast; the full
-  // validate-then-adopt is the explicit `solosquad adopt` command. Mirrors the
-  // same hook in `add repo` (src/cli/add-repo.ts).
-  try {
-    const { scanRepoAssets } = await import("../analyze/asset-scanner.js");
-    const assets = scanRepoAssets(src);
-    if (assets.length > 0) {
-      const by = (k: string): number => assets.filter((a) => a.kind === k).length;
-      console.log(
-        chalk.cyan(
-          `  📦 Found ${assets.length} adoptable asset(s): ` +
-            `skill=${by("skill")} agent=${by("agent")} workflow=${by("workflow")} schedule=${by("schedule")}`,
-        ),
-      );
-      console.log(chalk.dim(`     Review:  solosquad adopt ${src}`));
-      console.log(chalk.dim(`     Adopt:   solosquad adopt ${src} --apply`));
-    }
-  } catch {
-    /* best-effort discovery */
-  }
+  // v1.3.2 §10.5 — surface adoptable assets and (interactively) walk the
+  // dry-run → confirm → apply flow inline. Mirrors `add repo`. See offerAdoption.
+  const { offerAdoption } = await import("./adopt-offer.js");
+  await offerAdoption(src, "  ");
 
   return { slug, role };
 }

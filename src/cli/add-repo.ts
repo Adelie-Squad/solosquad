@@ -370,26 +370,11 @@ async function registerPathReference(
     /* best-effort */
   }
 
-  // v1.3.2 §10.5 — surface adoptable assets right after registration. Scan-only
-  // (no validation), so it stays fast; the full validate-then-adopt is the
-  // explicit `solosquad adopt` command.
-  try {
-    const { scanRepoAssets } = await import("../analyze/asset-scanner.js");
-    const assets = scanRepoAssets(externalPath);
-    if (assets.length > 0) {
-      const by = (k: string): number => assets.filter((a) => a.kind === k).length;
-      console.log(
-        chalk.cyan(
-          `\n📦 Found ${assets.length} adoptable asset(s): ` +
-            `skill=${by("skill")} agent=${by("agent")} workflow=${by("workflow")} schedule=${by("schedule")}`,
-        ),
-      );
-      console.log(chalk.dim(`  Review:  solosquad adopt ${externalPath}`));
-      console.log(chalk.dim(`  Adopt:   solosquad adopt ${externalPath} --apply`));
-    }
-  } catch {
-    /* best-effort discovery */
-  }
+  // v1.3.2 §10.5 — surface adoptable assets and (interactively) walk the
+  // dry-run → confirm → apply flow inline. See offerAdoption.
+  console.log();
+  const { offerAdoption } = await import("./adopt-offer.js");
+  await offerAdoption(externalPath);
 }
 
 // v1.0 — copyDirRecursive removed (was used by --keep-original which is
