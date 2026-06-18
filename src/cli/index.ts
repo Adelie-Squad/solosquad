@@ -116,6 +116,26 @@ program
     await startScheduler();
   });
 
+const schedulesGroup = program
+  .command("schedules")
+  .description("Manage user-defined schedules (schedules/<id>.yaml) — list / validate");
+
+schedulesGroup
+  .command("list")
+  .description("List built-in routines + user-defined schedules")
+  .action(async () => {
+    const { scheduleListCommand } = await import("./schedule.js");
+    await scheduleListCommand();
+  });
+
+schedulesGroup
+  .command("validate")
+  .description("Validate user schedule definitions (cron, kind, channel, prompt)")
+  .action(async () => {
+    const { scheduleValidateCommand } = await import("./schedule.js");
+    await scheduleValidateCommand();
+  });
+
 program
   .command("status")
   .description("Show project dashboard")

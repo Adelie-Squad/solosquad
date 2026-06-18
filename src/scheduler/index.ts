@@ -18,6 +18,9 @@ import {
   timeToDailyCron,
   type RoutineConfig,
 } from "./routines.js";
+import { loadScheduleDefs } from "./schedule-def.js";
+import { validateScheduleDef } from "./schedule-validate.js";
+import { getSchedulesDir } from "../util/paths.js";
 import { saveRoutineMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
 import { loadArchiveConfig } from "../util/config.js";
@@ -141,6 +144,16 @@ async function runRoutine(routineId: string): Promise<void> {
   await Promise.all(products.map((p) => runRoutineForProduct(routine, p)));
 }
 
+/** Run a user-defined schedule (not in ROUTINES) across all products. */
+async function runRoutineDef(def: RoutineConfig): Promise<void> {
+  const products = loadProducts();
+  if (!products.length) {
+    console.log("[Scheduler] No products registered");
+    return;
+  }
+  await Promise.all(products.map((p) => runRoutineForProduct(def, p)));
+}
+
 interface ResolvedSchedule {
   routine: RoutineConfig;
   cron: string;
@@ -238,6 +251,29 @@ export async function startScheduler(): Promise<void> {
       timezone: workspaceTimezone,
     });
     console.log(`[Scheduler] Registered: ${s.routine.name} (${s.cron})`);
+  }
+
+  // v1.3.2 §8 — additive user-defined schedules (schedules/<id>.yaml). Built-in
+  // routines above are untouched; these register on top. Only valid + enabled
+  // defs whose id doesn't collide with a built-in are wired.
+  const builtinIds = new Set(ROUTINES.map((r) => r.id));
+  for (const def of loadScheduleDefs(getSchedulesDir())) {
+    const result = validateScheduleDef(def, {
+      reservedIds: builtinIds,
+      promptExists: (id) => fs.existsSync(path.join(getSchedulesDir(), `${id}.md`)),
+    });
+    if (!result.ok) {
+      console.log(
+        `[Scheduler] Skipped user schedule "${def.id}" — ${result.errors.map((e) => e.code).join(", ")}`
+      );
+      continue;
+    }
+    if (!def.enabled) {
+      console.log(`[Scheduler] Skipped: ${def.name} (disabled)`);
+      continue;
+    }
+    cron.schedule(def.cron, () => runRoutineDef(def), { timezone: workspaceTimezone });
+    console.log(`[Scheduler] Registered user schedule: ${def.name} (${def.cron})`);
   }
 
   console.log("[Scheduler] Scheduler started");
