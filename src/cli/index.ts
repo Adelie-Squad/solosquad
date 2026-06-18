@@ -168,6 +168,38 @@ schedulesGroup
     await scheduleValidateCommand();
   });
 
+const assetGroup = program
+  .command("asset")
+  .description("Unified front door for assets (skill·agent·workflow·schedule): list / show / validate");
+
+assetGroup
+  .command("list")
+  .description("List assets (all kinds, or one)")
+  .argument("[kind]", "skill | agent | workflow | schedule (omit for all)")
+  .action(async (kind) => {
+    const { assetListCommand } = await import("./asset.js");
+    await assetListCommand(kind);
+  });
+
+assetGroup
+  .command("show")
+  .description("Show one asset")
+  .argument("<kind>", "skill | agent | workflow | schedule")
+  .argument("<id>", "Asset id")
+  .action(async (kind, id) => {
+    const { assetShowCommand } = await import("./asset.js");
+    await assetShowCommand(kind, id);
+  });
+
+assetGroup
+  .command("validate")
+  .description("Validate assets (all kinds, or one) — the deterministic gate")
+  .argument("[kind]", "skill | agent | workflow | schedule (omit for all)")
+  .action(async (kind) => {
+    const { assetValidateCommand } = await import("./asset.js");
+    await assetValidateCommand(kind);
+  });
+
 program
   .command("commands")
   .description("List every SoloSquad command with a one-line description")
@@ -293,6 +325,15 @@ analyzeGroup
   .option("--force", "Re-classify every file (drop existing ledger cache)")
   .option("--prune-orphans", "Remove ledger entries whose files have disappeared")
   .action(async (repoPath, opts) => {
+    // v1.3.2 — `analyze repo` (skill-only scan → markdown report) is a subset of
+    // `adopt` (5 asset kinds + validate + apply). Steer users to the superset.
+    const { warnDeprecated } = await import("../util/deprecation.js");
+    warnDeprecated({
+      oldName: "analyze repo",
+      newName: "adopt <repo>",
+      removalVersion: "v1.4",
+      hint: "`solosquad adopt <repo>` discovers skill/agent/workflow/schedule (not just skills), validates them, and can --apply.",
+    });
     const { analyzeRepoCli } = await import("./analyze.js");
     await analyzeRepoCli(repoPath, opts);
   });
