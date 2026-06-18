@@ -163,6 +163,55 @@ channels:
 - 메시지에서 키워드 탐지 → 해당 에이전트의 SKILL.md 로드 → 프롬프트에 주입
 - 매칭 없으면 일반 모드로 폴백
 
+### 5.1 에이전트 토폴로지 (계층형 supervisor)
+
+SoloSquad 는 **hierarchical orchestrator-workers** 토폴로지다 — 중앙 Chief 가 동적으로 분해·위임하되
+**제어권을 끝까지 쥔다(agents-as-tools; spawn 후 SYNTHESIZE 를 Chief 가 소유)**. swarm(탈중앙 handoff)
+이 아니다. 3계층: Chief(org 총괄) → 4 main leader(도메인 팀장) → specialist(worker).
+
+```mermaid
+flowchart TD
+    User([👤 User · Discord/터미널])
+    User -->|handleUserMessage| Chief
+
+    Chief["Chief<br/>tier: leader · team: chief<br/>소통·과제화·오케스트레이션·회고"]
+
+    Chief -->|DECOMPOSE → DISPATCH| PM["pm<br/>leader · product"]
+    Chief --> ENG["engineer<br/>leader · engineering"]
+    Chief --> DES["designer<br/>leader · design"]
+    Chief --> MKT["marketer<br/>leader · marketing"]
+
+    %% pm 은 2차 오케스트레이터: engineer/designer/marketer.used_by = [chief, pm]
+    PM -.->|used_by| ENG
+    PM -.-> DES
+    PM -.-> MKT
+
+    PM --> Pspec["product specialists<br/>pmf-planner · feature-planner · idea-scoper<br/>business-strategist · policy-architect · data-analyst"]
+    ENG --> Espec["engineering specialists<br/>backend-engineer · architect · fde<br/>creative-frontend · data-engineer · qa · cloud-admin · security"]
+    DES --> Dspec["design specialists<br/>researcher · ux-designer · ui-designer"]
+    MKT --> Mspec["marketing specialists<br/>gtm-strategist · brand-marketer · performance-marketer"]
+```
+
+**계층/tier:**
+
+| 계층 | 멤버 | tier | 역할 |
+|---|---|---|---|
+| Chief | chief | leader | org 총괄 supervisor. `handleUserMessage`→DECOMPOSE→DISPATCH→SYNTHESIZE |
+| Main 4 | pm·engineer·designer·marketer | leader | 도메인 팀장(team: product·engineering·design·marketing) |
+| Specialists | architect·backend-engineer·researcher 등 20여 개 | member | bounded worker, 산출물 생산 |
+
+**위임 그래프 디테일:** 순수 트리가 아니라 **DAG** 다. `pm.used_by=[chief]` 이지만
+`engineer/designer/marketer.used_by=[chief, pm]` → **pm 이 다른 3 리더를 호출하는 2차
+오케스트레이터**(기획→전달 흐름). 이 교차 때문에 위임 그래프의 **순환·참조 무결성 검증**이 필요
+(v1.3.2 §5 `agent-manager` 의 `validate`).
+
+**control-locus:** 거시(Chief)=동적·LLM 결정(agent 진영, 가드레일=agent-profile budget cap),
+미시(specialist 노드 내부)=역할로 bounded. spawn 마다 **독립 context window**(메인 컨텍스트 오염 방지).
+
+> §9 의 stage→팀 표는 v1.1 이전 워크플로 매핑(Experience/Growth/Strategy 명칭·`backend-developer`
+> 등 구명)이며, 현재 actor 디렉터리 구조(`agents/main/` + `agents/specialists/`, team =
+> product/engineering/design/marketing)는 본 절(5.1)이 정본이다.
+
 ---
 
 ## 6. CLI 런타임 해석 (resolveOrgCwd)
