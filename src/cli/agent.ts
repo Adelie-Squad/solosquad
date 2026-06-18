@@ -188,6 +188,10 @@ export interface AddAgentOpts {
   workspace?: string;
   /** Skip rebuilding the route index (useful for tests). */
   skipRouterReload?: boolean;
+  /** §P1 — one-line brief; when set, the LLM drafts the body (validated, falls back to scaffold). */
+  assist?: string;
+  /** Injectable assist caller (tests). Defaults to the Claude-backed caller. */
+  assistCaller?: import("../bot/create-assist.js").AssistCaller;
 }
 
 export interface AddAgentResult {
@@ -211,9 +215,14 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
     throw new Error("missing --name or --team");
   }
 
+  // Non-org path honors an explicit `workspace` override (the JSDoc promises it
+  // — "mostly for tests"); production (no override) keeps getAgentsDir()'s
+  // .solosquad/agents resolution unchanged.
   const baseDir = opts.org
     ? path.join(getOrgDir(opts.org, opts.workspace ?? getWorkspaceRoot()), ".agents")
-    : getAgentsDir();
+    : opts.workspace
+      ? path.join(opts.workspace, "agents")
+      : getAgentsDir();
   const agentDir = path.join(baseDir, team, name);
   const skillPath = path.join(agentDir, "SKILL.md");
 
@@ -225,11 +234,33 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
 
   const description = (opts.description ?? `${name} — TODO: describe what this agent does`).trim();
 
-  const content = renderScaffold(name, team, description);
+  let content = renderScaffold(name, team, description);
+  let assisted = false;
+  if (opts.assist) {
+    const { createClaudeAssistCaller } = await import("../bot/create-assist.js");
+    const caller = opts.assistCaller ?? createClaudeAssistCaller(opts.workspace ?? getWorkspaceRoot());
+    try {
+      const body = await caller.draft({ kind: "agent", name, brief: opts.assist });
+      if (body) {
+        const candidate = renderScaffoldWithBody(name, team, description, body);
+        // validate-then-write: a mangled draft must never produce an invalid SKILL.md
+        const spec = parseSkillMd(candidate, skillPath);
+        const r = validateSkill(spec, { dir_name: name, strict_name: true });
+        if (r.ok) {
+          content = candidate;
+          assisted = true;
+        } else {
+          console.log(chalk.yellow("△ assisted draft failed validation — using the plain scaffold"));
+        }
+      }
+    } catch (e) {
+      console.log(chalk.yellow(`△ assist unavailable (${(e as Error).message}) — using the plain scaffold`));
+    }
+  }
   fs.mkdirSync(agentDir, { recursive: true });
   fs.writeFileSync(skillPath, content, "utf-8");
 
-  console.log(chalk.green(`✓ scaffolded ${skillPath}`));
+  console.log(chalk.green(`✓ scaffolded ${skillPath}${assisted ? chalk.dim(" (LLM-assisted body)") : ""}`));
   console.log(
     chalk.dim(
       "  Edit the SKILL.md to fill in triggers, inputs, outputs, and the process body.",
@@ -254,6 +285,60 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
   }
 
   return { skillPath };
+}
+
+// ---------------------------------------------------------------------------
+// `solosquad agent list` / `agent show` — §9.6 lifecycle CLI (mirrors goal/workflow)
+// ---------------------------------------------------------------------------
+
+export interface AgentListOpts {
+  /** List the workspace's actors instead of the shipped bundle. */
+  workspace?: boolean;
+}
+
+/** List actors (bundled by default; workspace with --workspace), grouped by team. */
+export async function agentListCommand(opts: AgentListOpts = {}): Promise<void> {
+  const dir = opts.workspace ? getAgentsDir() : getBundledAgentsDir();
+  const specs = loadAgentSpecs(dir);
+  if (specs.length === 0) {
+    console.log(chalk.yellow(`△ no actors found under ${dir}`));
+    return;
+  }
+  console.log(chalk.bold(`${specs.length} actor(s) — ${opts.workspace ? "workspace" : "bundle"} (${dir})`));
+  const byTeam = new Map<string, typeof specs>();
+  for (const s of specs) {
+    const arr = byTeam.get(s.team) ?? [];
+    arr.push(s);
+    byTeam.set(s.team, arr);
+  }
+  for (const team of [...byTeam.keys()].sort()) {
+    console.log(chalk.bold(`\n${team}`));
+    for (const s of byTeam.get(team)!.sort((a, b) => a.name.localeCompare(b.name))) {
+      const tier = s.tier === "leader" ? chalk.magenta("leader") : chalk.dim("member");
+      console.log(`  ${chalk.cyan(s.name)} ${tier}`);
+    }
+  }
+}
+
+/** Show one actor's spec + its delegation edges. */
+export async function agentShowCommand(idOrName: string, opts: AgentListOpts = {}): Promise<void> {
+  const dir = opts.workspace ? getAgentsDir() : getBundledAgentsDir();
+  const specs = loadAgentSpecs(dir);
+  const spec = specs.find((s) => s.id === idOrName || s.name === idOrName);
+  if (!spec) {
+    console.log(chalk.red(`✗ no actor "${idOrName}". Try \`solosquad agent list\`.`));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(chalk.bold(`🤖 ${spec.id}`));
+  console.log(`  team:         ${spec.team}`);
+  console.log(`  tier:         ${spec.tier ?? "member"}`);
+  if (spec.category) console.log(`  category:     ${spec.category}`);
+  console.log(`  dev-capable:  ${spec.devCapability ? "yes" : "no"}`);
+  if (spec.collaborators.length) console.log(`  collaborators: ${spec.collaborators.join(", ")}`);
+  if (spec.usedBy.length) console.log(`  used-by:      ${spec.usedBy.join(", ")}`);
+  if (spec.skillsUsed.length) console.log(`  skills-used:  ${spec.skillsUsed.join(", ")}`);
+  console.log(chalk.dim(`  ${spec.skillPath}`));
 }
 
 // ---------------------------------------------------------------------------
@@ -315,6 +400,23 @@ export async function agentReloadCommand(
   );
 
   return result;
+}
+
+/** Scaffold frontmatter + an LLM-drafted body (§P1 create assist). */
+function renderScaffoldWithBody(name: string, team: string, description: string, body: string): string {
+  const frontmatter = [
+    `name: "${name}"`,
+    `description: "${description}"`,
+    `team: ${team}`,
+    "stateful: false",
+    "triggers:",
+    "  explicit: true",
+    "  keyword: []",
+    "scope: agent",
+    "confidence: 1.0",
+    `source: cli-scaffold-assisted`,
+  ].join("\n");
+  return `---\n${frontmatter}\n---\n\n${body.trim()}\n`;
 }
 
 function renderScaffold(name: string, team: string, description: string): string {

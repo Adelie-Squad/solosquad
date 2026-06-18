@@ -19,6 +19,80 @@ function promptExists(id: string): boolean {
   return fs.existsSync(path.join(getSchedulesDir(), `${id}.md`));
 }
 
+export interface ScheduleNewOpts {
+  cron?: string;
+  kind?: string;
+  channel?: string;
+  /** §P1 — one-line brief; when set, the LLM drafts the prompt .md (falls back to a stub). */
+  assist?: string;
+  assistCaller?: import("../bot/create-assist.js").AssistCaller;
+}
+
+/**
+ * §P1 — `schedules new <id>`: scaffold `schedules/<id>.yaml` + `<id>.md`. The
+ * schedule domain previously had no create path (users hand-wrote both files).
+ * With `--assist <brief>` the prompt body is LLM-drafted; the yaml stays
+ * machine-generated and the result is validated before reporting success.
+ */
+export async function scheduleNewCommand(id: string | undefined, opts: ScheduleNewOpts = {}): Promise<void> {
+  const { isKebabCase } = await import("../util/naming.js");
+  if (!id || !isKebabCase(id)) {
+    console.error(chalk.red(`error: provide a kebab-case id — \`solosquad schedules new <id>\``));
+    process.exitCode = 2;
+    return;
+  }
+  const dir = getSchedulesDir();
+  const yamlPath = path.join(dir, `${id}.yaml`);
+  const mdPath = path.join(dir, `${id}.md`);
+  if (fs.existsSync(yamlPath)) {
+    console.error(chalk.red(`✗ ${yamlPath} already exists — edit it directly`));
+    process.exitCode = 1;
+    return;
+  }
+
+  const kind = opts.kind === "user-brief" ? "user-brief" : "background";
+  const cron = opts.cron ?? "0 9 * * 1";
+  const channel = opts.channel ?? "workflow";
+  const yamlBody =
+    `id: ${id}\nname: ${id}\nkind: ${kind}\ncron: "${cron}"\nchannel: ${channel}\nenabled: true\n`;
+
+  let promptBody = `# ${id}\n\nTODO: describe what this scheduled run should do.\n`;
+  let assisted = false;
+  if (opts.assist) {
+    const { createClaudeAssistCaller } = await import("../bot/create-assist.js");
+    const caller = opts.assistCaller ?? createClaudeAssistCaller(process.cwd());
+    try {
+      const body = await caller.draft({ kind: "schedule", name: id, brief: opts.assist });
+      if (body) {
+        promptBody = `${body.trim()}\n`;
+        assisted = true;
+      }
+    } catch {
+      /* fall back to the stub prompt */
+    }
+  }
+
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(yamlPath, yamlBody, "utf-8");
+  fs.writeFileSync(mdPath, promptBody, "utf-8");
+
+  // validate-then-report
+  const def = loadScheduleDefs(dir).find((d) => d.id === id);
+  const result = def
+    ? validateScheduleDef(def, { reservedIds: new Set(ROUTINES.map((r) => r.id)), promptExists })
+    : { ok: false, errors: [{ code: "LOAD", message: "could not reload", id }], warnings: [] };
+
+  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md${assisted ? chalk.dim(" (LLM-assisted prompt)") : ""}`));
+  if (!result.ok) {
+    console.log(chalk.red(`  ✗ ${result.errors.length} validation error(s):`));
+    for (const e of result.errors) printIssue(e, "error");
+    process.exitCode = 1;
+  } else {
+    if (result.warnings.length) for (const w of result.warnings) printIssue(w, "warn");
+    console.log(chalk.dim(`  Next: edit the prompt, then \`solosquad schedules validate\``));
+  }
+}
+
 export async function scheduleListCommand(): Promise<void> {
   const dir = getSchedulesDir();
   const defs = loadScheduleDefs(dir);
@@ -34,6 +108,45 @@ export async function scheduleListCommand(): Promise<void> {
   for (const d of defs) {
     const flag = d.enabled ? chalk.green("on") : chalk.dim("off");
     console.log(`  ${d.emoji} ${chalk.cyan(d.id)} — ${d.name} [${flag}] cron="${d.cron}" (${d.kind})`);
+  }
+}
+
+export async function scheduleShowCommand(id: string): Promise<void> {
+  // §9.6 — homogeneous `show <id>`, matching `goal show` / `workflow show`.
+  const builtin = ROUTINES.find((r) => r.id === id);
+  if (builtin) {
+    console.log(chalk.bold(`${builtin.emoji} ${builtin.id}`) + chalk.dim("  (built-in routine)"));
+    console.log(`  name:    ${builtin.name}`);
+    console.log(`  kind:    ${builtin.kind}`);
+    console.log(chalk.dim(`  cron:    resolved at scheduler startup from workspace.yaml`));
+    return;
+  }
+  const dir = getSchedulesDir();
+  const def = loadScheduleDefs(dir).find((d) => d.id === id);
+  if (!def) {
+    console.log(chalk.red(`✗ no schedule "${id}" (built-in or user-defined). Try \`solosquad schedules list\`.`));
+    process.exitCode = 1;
+    return;
+  }
+  const flag = def.enabled ? chalk.green("on") : chalk.dim("off");
+  console.log(chalk.bold(`${def.emoji} ${def.id}`) + `  [${flag}]`);
+  console.log(`  name:    ${def.name}`);
+  console.log(`  kind:    ${def.kind}`);
+  console.log(`  cron:    ${def.cron}`);
+  if (def.channel) console.log(`  channel: ${def.channel}`);
+  const prompt = path.join(dir, `${def.id}.md`);
+  console.log(`  prompt:  ${promptExists(def.id) ? prompt : chalk.red(`${prompt} (missing)`)}`);
+
+  // surface validation state inline (validate-then-trust)
+  const result = validateScheduleDef(def, { reservedIds: new Set(ROUTINES.map((r) => r.id)), promptExists });
+  if (!result.ok) {
+    console.log(chalk.red(`\n  ✗ ${result.errors.length} error(s):`));
+    for (const e of result.errors) printIssue(e, "error");
+  } else if (result.warnings.length) {
+    console.log(chalk.yellow(`\n  △ ${result.warnings.length} warning(s):`));
+    for (const w of result.warnings) printIssue(w, "warn");
+  } else {
+    console.log(chalk.green(`\n  ✓ valid`));
   }
 }
 
