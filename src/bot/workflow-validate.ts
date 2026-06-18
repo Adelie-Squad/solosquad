@@ -43,6 +43,8 @@ interface RawStage {
   exit_criteria?: unknown;
   hard_gate?: unknown;
   target_repo?: unknown;
+  mode?: unknown;
+  guardrails?: unknown;
 }
 
 const ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -159,6 +161,30 @@ export function validateWorkflow(
 
     if (st.hard_gate !== undefined && typeof st.hard_gate !== "boolean") {
       warnings.push({ code: "WF_HARD_GATE_TYPE", stage: id, field: "hard_gate", message: `hard_gate must be a boolean` });
+    }
+
+    // control-locus (§6): mode declares who decides the work — `fixed` (tools
+    // pinned, deterministic) vs `agentic` (LLM picks tools/loops). An agentic
+    // stage must carry guardrails (the autonomy needs a brake).
+    if (st.mode !== undefined) {
+      if (st.mode !== "fixed" && st.mode !== "agentic") {
+        warnings.push({ code: "WF_MODE_UNKNOWN", stage: id, field: "mode", message: `mode "${String(st.mode)}" must be "fixed" or "agentic"` });
+      } else if (st.mode === "agentic") {
+        const g = st.guardrails;
+        const hasGuard =
+          !!g &&
+          typeof g === "object" &&
+          !Array.isArray(g) &&
+          ["max_iterations", "budget_usd", "loop_detection"].some((k) => k in (g as object));
+        if (!hasGuard) {
+          warnings.push({
+            code: "WF_AGENTIC_NO_GUARDRAILS",
+            stage: id,
+            field: "guardrails",
+            message: `mode:agentic stage should declare guardrails (max_iterations / budget_usd / loop_detection)`,
+          });
+        }
+      }
     }
   }
 

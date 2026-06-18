@@ -107,3 +107,24 @@ test("non-object input is rejected", () => {
   assert.equal(validateWorkflow(null).ok, false);
   assert.ok(codes(validateWorkflow("nope").errors).includes("WF_NOT_AN_OBJECT"));
 });
+
+test("mode:agentic without guardrails warns; with guardrails passes", () => {
+  const bad = validateWorkflow({
+    schema_version: 2,
+    id: "m",
+    stages: [{ id: "s", agent: "x/y", handoff_to: null, mode: "agentic" }],
+  });
+  assert.ok(codes(bad.warnings).includes("WF_AGENTIC_NO_GUARDRAILS"));
+
+  const good = validateWorkflow({
+    schema_version: 2,
+    id: "m",
+    stages: [{ id: "s", agent: "x/y", handoff_to: null, mode: "agentic", guardrails: { max_iterations: 8 } }],
+  });
+  assert.ok(!codes(good.warnings).includes("WF_AGENTIC_NO_GUARDRAILS"));
+});
+
+test("unknown mode warns; fixed mode is fine", () => {
+  assert.ok(codes(validateWorkflow({ id: "m", stages: [{ id: "s", agent: "x/y", mode: "weird" }] }).warnings).includes("WF_MODE_UNKNOWN"));
+  assert.ok(!codes(validateWorkflow({ id: "m", stages: [{ id: "s", agent: "x/y", mode: "fixed" }] }).warnings).includes("WF_AGENTIC_NO_GUARDRAILS"));
+});
