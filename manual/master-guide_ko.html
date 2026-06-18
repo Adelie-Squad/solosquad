@@ -321,26 +321,27 @@ solosquad init</code></pre>
 
   <h4>① 에이전트 팀 — Chief 한 명과 대화하면 팀 전체가 움직입니다</h4>
   <p>당신은 <strong>Chief</strong> 한 명하고만 대화합니다. Chief 가 요청의 의도를 파악해 <strong>PM</strong>(오케스트레이터)에게 넘기고, PM 이 4개 팀의 전문가를 필요한 만큼 불러 결과를 모아 옵니다. 사용자가 20여 명을 일일이 호출할 필요가 없습니다.</p>
+  <p><strong>토폴로지 — 탈중앙 swarm 이 아니라 계층형 supervisor.</strong> Chief 가 동적으로 분해·위임하되 제어권을 끝까지 쥡니다(최종 SYNTHESIZE 를 Chief 가 소유). 3계층: <strong>Chief</strong>(조직 총괄) → <strong>4 팀장</strong>(pm · engineer · designer · marketer) → <strong>전문가</strong>(bounded worker). 위임 그래프는 <em>순수 트리가 아니라 DAG</em> — PM 이 engineer/designer/marketer 팀장도 호출(기획→전달)하므로 참조 무결성·순환을 검증합니다(<code>solosquad agent validate --graph</code>). spawn 마다 독립 컨텍스트 윈도우를 갖습니다.</p>
   <div class="tree">                   당신 (솔로 파운더)
                        │   Discord #command-&lt;handle&gt; 에서 대화
                        ▼
               ┌──────────────────┐
-              │       Chief       │   조직 대표 · 당신과 대화하는 유일한 창구
-              │  (이름은 자유 —    │   요청 의도 파악 → 작업 유형 분류
+              │       Chief       │   tier: leader · 당신과 대화하는 유일한 창구
+              │  (이름은 자유 —    │   의도 파악 → 분류 → DECOMPOSE → DISPATCH → SYNTHESIZE
               │   예: 솔로스쿼드)   │
               └─────────┬────────┘
-                        │  위임
+                        │  위임 (DAG)
                         ▼
               ┌──────────────────┐
-              │        PM         │   오케스트레이터 · 단계 분해 + 전문가 호출
+              │        PM         │   leader · product · 2차 오케스트레이터 (eng/des/mkt 도 호출)
               └─────────┬────────┘
           ┌─────────────┼─────────────┬──────────────┐
           ▼             ▼             ▼              ▼
-       Strategy      Growth       Experience    Engineering
-       전략 팀       그로스 팀     경험 팀        엔지니어링 팀
-       PMF·기획·     마케팅·       리서치·        프론트·백엔드·
-       전략·분석     콘텐츠·       UX·UI          API·데이터·
-                     브랜딩                       인프라·품질·보안</div>
+       Product       Engineering   Design        Marketing
+       제품 팀       엔지니어링 팀  디자인 팀      마케팅 팀
+       PMF·기획·     프론트·백엔드· 리서치·        GTM·콘텐츠·
+       전략·분석     API·데이터·    UX·UI          브랜드·퍼포먼스
+                     품질·보안</div>
 
   <h4>② 3가지 작업 유형 — 모든 요청은 셋 중 하나로 처리됩니다</h4>
   <p>Chief 는 들어온 요청을 <strong>workflow · goal · schedule</strong> 세 가지 중 하나로 분류합니다 (가벼운 대화는 그 자리에서 바로 답합니다). 이 세 가지가 SoloSquad 작업의 전부입니다.</p>
@@ -452,7 +453,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
     <tbody>
       <tr><td><strong>Chief</strong></td><td>조직 대표. 사용자 요청을 받아 의도를 분류하고, 작업을 PM 에게 위임한 뒤 결과를 사용자에게 보고합니다. 이름은 자유롭게 정합니다 (예: 솔로스쿼드, Hermes, Atlas).</td><td><strong>예</strong> — 유일한 창구</td></tr>
       <tr><td><strong>PM</strong></td><td>오케스트레이터. Chief 가 넘긴 일을 단계로 분해하고, 어떤 전문가를 부를지 정해 실행을 조율합니다.</td><td>아니오 (내부)</td></tr>
-      <tr><td><strong>전문가 (4팀)</strong></td><td>실제 작업 수행. Strategy(전략·기획·분석) · Growth(마케팅·콘텐츠·브랜딩) · Experience(리서치·UX·UI) · Engineering(프론트·백엔드·API·데이터·인프라·품질·보안).</td><td>아니오 (PM 이 호출)</td></tr>
+      <tr><td><strong>전문가 (4팀)</strong></td><td>실제 작업 수행. Product(PMF·기획·전략·분석) · Engineering(프론트·백엔드·API·데이터·인프라·품질·보안) · Design(리서치·UX·UI) · Marketing(GTM·콘텐츠·브랜드·퍼포먼스).</td><td>아니오 (PM 이 호출)</td></tr>
     </tbody>
   </table>
   <p>각 전문가의 역할·작동 방식은 <code>SKILL.md</code> 라는 파일에 정의되어 있고(→ 3.4), 사용자가 일일이 호출할 필요 없이 Chief·PM 이 알아서 적합한 전문가를 붙입니다.</p>
