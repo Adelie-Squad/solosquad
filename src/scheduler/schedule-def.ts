@@ -24,7 +24,7 @@ export interface ScheduleDef extends RoutineConfig {
   enabled: boolean;
 }
 
-function coerce(raw: Record<string, unknown>, fallbackId: string): ScheduleDef {
+export function coerceScheduleDef(raw: Record<string, unknown>, fallbackId: string): ScheduleDef {
   const id = typeof raw.id === "string" && raw.id.length > 0 ? raw.id : fallbackId;
   const kind: RoutineKind = raw.kind === "user-brief" ? "user-brief" : "background";
   return {
@@ -55,7 +55,7 @@ export function loadScheduleDefs(schedulesDir: string = getSchedulesDir()): Sche
     try {
       const parsed = yaml.load(normalizeLine(fs.readFileSync(full, "utf-8")));
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        out.push(coerce(parsed as Record<string, unknown>, path.basename(file).replace(/\.ya?ml$/, "")));
+        out.push(coerceScheduleDef(parsed as Record<string, unknown>, path.basename(file).replace(/\.ya?ml$/, "")));
       }
     } catch {
       // skip unparsable — validate pass reports the absence

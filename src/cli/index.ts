@@ -116,6 +116,16 @@ program
     await startScheduler();
   });
 
+program
+  .command("adopt")
+  .description("Discover + validate a repo's assets (skill/agent/workflow/schedule) — dry-run (v1.3.2 §10)")
+  .argument("[repo]", "Path to the repository to scan")
+  .option("--apply", "(not yet) write adopted assets into the org layer")
+  .action(async (repo, opts) => {
+    const { adoptCommand } = await import("./adopt.js");
+    await adoptCommand(repo, opts);
+  });
+
 const schedulesGroup = program
   .command("schedules")
   .description("Manage user-defined schedules (schedules/<id>.yaml) — list / validate");
