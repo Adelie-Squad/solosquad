@@ -1,6 +1,8 @@
 import chalk from "chalk";
 import fs from "fs";
-import { getWorkspaceRoot } from "../util/paths.js";
+import path from "path";
+import yaml from "js-yaml";
+import { getWorkspaceRoot, getSkillsDir } from "../util/paths.js";
 import { listOrganizations } from "../util/config.js";
 import {
   latestHandoffPath,
@@ -9,6 +11,8 @@ import {
   prdPath,
   readEvents,
 } from "../bot/workspace-meta.js";
+import { validateWorkflow, type WorkflowFinding } from "../bot/workflow-validate.js";
+import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
 
 const STATUS_COLORS: Record<string, (s: string) => string> = {
   pending: chalk.dim,
@@ -117,6 +121,86 @@ export async function workflowShowCommand(
     console.log(chalk.red(`\nWorkflow not found: ${workflowId}`));
     process.exit(1);
   }
+}
+
+/**
+ * `solosquad workflow validate [path] [--all]` — §6 validateWorkflow surface.
+ * `--all` scans the bundled workflow-maker templates; agent refs resolve
+ * against the actor registry.
+ */
+function bundledWorkflowFiles(): string[] {
+  const dir = path.join(getSkillsDir(), "workflow-maker", "assets", "workflows");
+  if (!fs.existsSync(dir)) return [];
+  const out: string[] = [];
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!e.isDirectory()) continue;
+    const f = path.join(dir, e.name, "workflow.yaml");
+    if (fs.existsSync(f)) out.push(f);
+  }
+  return out;
+}
+
+export async function workflowValidateCommand(
+  filePath: string | undefined,
+  opts: { all?: boolean },
+): Promise<void> {
+  if (!filePath && !opts.all) {
+    console.error(chalk.red("error: provide a path or use --all"));
+    process.exitCode = 2;
+    return;
+  }
+
+  const known = agentRefAliases(loadAgentSpecs());
+  const files = filePath ? [path.resolve(filePath)] : bundledWorkflowFiles();
+  let checked = 0;
+  let failed = 0;
+
+  for (const f of files) {
+    checked++;
+    if (!fs.existsSync(f)) {
+      console.log(chalk.red(`✗ ${f} — not found`));
+      failed++;
+      continue;
+    }
+    let doc: unknown;
+    try {
+      doc = yaml.load(fs.readFileSync(f, "utf-8"));
+    } catch (e) {
+      console.log(chalk.red(`✗ ${f} — yaml error: ${(e as Error).message}`));
+      failed++;
+      continue;
+    }
+    const label = `${path.basename(path.dirname(f))}/workflow.yaml`;
+    const r = validateWorkflow(doc, { knownAgents: known });
+    if (r.ok && r.warnings.length === 0) {
+      console.log(chalk.green(`✓ ${label}`));
+      continue;
+    }
+    if (r.ok) {
+      console.log(chalk.yellow(`△ ${label} — ${r.warnings.length} warning(s)`));
+      for (const w of r.warnings) printWfIssue(w, "warn");
+      continue;
+    }
+    failed++;
+    console.log(chalk.red(`✗ ${label} — ${r.errors.length} error(s)`));
+    for (const e of r.errors) printWfIssue(e, "error");
+    for (const w of r.warnings) printWfIssue(w, "warn");
+  }
+
+  console.log();
+  if (failed === 0) {
+    console.log(chalk.green(`✓ ${checked} workflow(s) validated, 0 failed`));
+    process.exitCode = 0;
+  } else {
+    console.log(chalk.red(`✗ ${failed} failed (of ${checked})`));
+    process.exitCode = 1;
+  }
+}
+
+function printWfIssue(issue: WorkflowFinding, kind: "error" | "warn"): void {
+  const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
+  const where = issue.stage ? chalk.dim(` ${issue.stage}`) : "";
+  console.log(`    ${tag} ${issue.code}${where}: ${issue.message}`);
 }
 
 function shortPayload(ev: Record<string, unknown>): string {

@@ -35,6 +35,7 @@
     "test": "node --test --import tsx test/*.test.ts",
     "test:corpus": "node --test --import tsx test/validator-corpus.test.ts",
     "validate-skills": "node dist/bin/solosquad.js agent validate --all && npm run test:corpus",
+    "validate-bundled": "node dist/bin/solosquad.js agent validate --all && node dist/bin/solosquad.js workflow validate --all && node dist/bin/solosquad.js schedules validate && npm run test:corpus",
     "docs-check": "tsx scripts/check-docs-freshness.ts",
     "esm-check": "tsx scripts/check-esm-purity.ts",
     "prepublishOnly": "npm run build && npm run docs-check && npm run esm-check"
