@@ -4,7 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { buildAdoptionReport } from "../src/analyze/adoption-report.js";
+import { buildAdoptionReport, refineAgentMappings } from "../src/analyze/adoption-report.js";
+import type { AgentTeamCaller } from "../src/analyze/agent-map.js";
 
 function tempRepo(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ss-adopt-"));
@@ -48,4 +49,38 @@ test("buildAdoptionReport: empty repo yields no items", () => {
   const report = buildAdoptionReport(dir);
   assert.equal(report.items.length, 0);
   assert.equal(report.errorCount, 0);
+});
+
+test("refineAgentMappings: only escalates default-source agents (§10.3)", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ss-adopt-cls-"));
+  const w = (rel: string, body: string): void => {
+    const full = path.join(dir, rel);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, body);
+  };
+  // confident agent (frontmatter team) — must NOT be escalated
+  w(".claude/agents/known.md", "---\nname: known\nteam: design\ndescription: ui work\n---\n# x");
+  // ambiguous agent (opaque name + desc) — heuristic lands at 'default' → escalated
+  w(".claude/agents/zzz.md", "---\nname: zzz\ndescription: does opaque things\n---\n# x");
+
+  const report = buildAdoptionReport(dir);
+  const caller: AgentTeamCaller & { seen: string[] } = {
+    call_count: 0,
+    seen: [],
+    async classify(input) {
+      caller.call_count!++;
+      caller.seen.push(input.name);
+      return { team: "marketing" };
+    },
+  };
+  await refineAgentMappings(report, caller);
+
+  // only the ambiguous one reached the caller
+  assert.deepEqual(caller.seen, ["zzz"]);
+  const known = report.items.find((i) => i.id === "known");
+  const zzz = report.items.find((i) => i.id === "zzz");
+  assert.equal(known!.mapping!.team, "design");
+  assert.equal(known!.mapping!.source, "frontmatter");
+  assert.equal(zzz!.mapping!.team, "marketing");
+  assert.equal(zzz!.mapping!.source, "llm");
 });

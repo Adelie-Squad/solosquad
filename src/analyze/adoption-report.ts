@@ -7,10 +7,10 @@ import { validateWorkflow } from "../bot/workflow-validate.js";
 import { validateScheduleDef } from "../scheduler/schedule-validate.js";
 import { coerceScheduleDef } from "../scheduler/schedule-def.js";
 import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
-import { mapAgentToTaxonomy, type AgentMapping } from "./agent-map.js";
+import { mapAgentToTaxonomy, mapAgentTeam, type AgentMapping, type AgentTeamCaller } from "./agent-map.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
 import { ROUTINES } from "../scheduler/routines.js";
-import { getSkillsDir, getAgentsDir } from "../util/paths.js";
+import { getBundledSkillsDir, getBundledAgentsDir } from "../util/paths.js";
 
 /**
  * v1.3.2 §10.5 — adoption dry-run report. READ-ONLY: scans a registered repo
@@ -74,18 +74,22 @@ function readAgentFrontmatter(
 
 function bundledSkillIds(): Set<string> {
   const ids = new Set<string>();
-  for (const a of scanRepoAssets(getSkillsDir(), { maxFiles: 10_000 })) {
+  for (const a of scanRepoAssets(getBundledSkillsDir(), { maxFiles: 10_000 })) {
     if (a.kind === "skill") ids.add(a.id);
   }
   return ids;
 }
 
+// §10.4 — the collision roster is the *shipped bundle*, resolved
+// deterministically from the package root (getBundled*Dir), NOT the cwd-walked
+// workspace. This is what keeps the dry-run identical on CI, on a dev machine
+// whose checkout sits inside an unrelated workspace, and in a real install.
 function bundledIds(): Record<AssetKind, Set<string>> {
-  const agents = new Set(loadAgentSpecs().map((s) => s.name));
+  const agents = new Set(loadAgentSpecs(getBundledAgentsDir()).map((s) => s.name));
   // also accept the flat-bucket layout for safety
-  for (const { agent } of listSourceAgents(getAgentsDir())) agents.add(agent);
+  for (const { agent } of listSourceAgents(getBundledAgentsDir())) agents.add(agent);
   const workflows = new Set<string>();
-  for (const a of scanRepoAssets(getSkillsDir(), { maxFiles: 10_000 })) {
+  for (const a of scanRepoAssets(getBundledSkillsDir(), { maxFiles: 10_000 })) {
     if (a.kind === "workflow") workflows.add(a.id);
   }
   return {
@@ -139,10 +143,20 @@ function validateOne(
   }
 }
 
-export function buildAdoptionReport(repoRoot: string): AdoptionReport {
+/** §10 — optional scope overrides. Default resolution is the shipped bundle
+ *  (deterministic, cwd-independent); callers may inject a wider/narrower set
+ *  (e.g. bundle + the destination workspace's already-adopted actors). */
+export interface AdoptionScopeOpts {
+  /** Override the known-actor set used to resolve workflow `agent:` refs. */
+  knownAgents?: Set<string>;
+  /** Override the collision roster keyed by asset kind. */
+  bundledIds?: Record<AssetKind, Set<string>>;
+}
+
+export function buildAdoptionReport(repoRoot: string, opts: AdoptionScopeOpts = {}): AdoptionReport {
   const assets = scanRepoAssets(repoRoot);
-  const bundled = bundledIds();
-  const knownAgents = new Set(agentRefAliases(loadAgentSpecs()));
+  const bundled = opts.bundledIds ?? bundledIds();
+  const knownAgents = new Set(opts.knownAgents ?? agentRefAliases(loadAgentSpecs(getBundledAgentsDir())));
   // discovered agents are also valid ref targets for discovered workflows
   for (const a of assets) if (a.kind === "agent") knownAgents.add(a.id);
 
@@ -165,4 +179,27 @@ export function buildAdoptionReport(repoRoot: string): AdoptionReport {
   }
 
   return { repoRoot, items, counts, errorCount, conflictCount };
+}
+
+/**
+ * §10.3 — opt-in second pass: escalate the agents the heuristic left at
+ * `default` (genuine ambiguity) to the injected LLM caller. Mutates the
+ * report's agent items in place and returns it. Read-only otherwise; the
+ * caller decides whether to consult a model (the dry-run never does). Agents
+ * the heuristic already placed confidently are skipped, so the model is asked
+ * at most once per unknown actor.
+ */
+export async function refineAgentMappings(
+  report: AdoptionReport,
+  caller: AgentTeamCaller,
+): Promise<AdoptionReport> {
+  for (const item of report.items) {
+    if (item.kind !== "agent" || item.mapping?.source !== "default") continue;
+    const fm = readAgentFrontmatter(
+      path.join(report.repoRoot, item.path.split("/").join(path.sep)),
+      item.id,
+    );
+    item.mapping = await mapAgentTeam(fm, { caller });
+  }
+  return report;
 }

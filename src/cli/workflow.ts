@@ -2,7 +2,7 @@ import chalk from "chalk";
 import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
-import { getWorkspaceRoot, getSkillsDir } from "../util/paths.js";
+import { getWorkspaceRoot, getSkillsDir, getBundledSkillsDir, getBundledAgentsDir } from "../util/paths.js";
 import { listOrganizations } from "../util/config.js";
 import {
   latestHandoffPath,
@@ -129,7 +129,9 @@ export async function workflowShowCommand(
  * against the actor registry.
  */
 function bundledWorkflowFiles(): string[] {
-  const dir = path.join(getSkillsDir(), "workflow-maker", "assets", "workflows");
+  // Deterministic bundle scope — see getBundledSkillsDir. Avoids an ancestor
+  // workspace's `.solosquad/skills` shadowing the shipped workflow templates.
+  const dir = path.join(getBundledSkillsDir(), "workflow-maker", "assets", "workflows");
   if (!fs.existsSync(dir)) return [];
   const out: string[] = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -150,7 +152,7 @@ export async function workflowValidateCommand(
     return;
   }
 
-  const known = agentRefAliases(loadAgentSpecs());
+  const known = agentRefAliases(loadAgentSpecs(getBundledAgentsDir()));
   const files = filePath ? [path.resolve(filePath)] : bundledWorkflowFiles();
   let checked = 0;
   let failed = 0;

@@ -10,7 +10,7 @@ import {
 import { listSourceAgents } from "../bot/agents-builder.js";
 import { loadAgentSpecs } from "../bot/agent-spec.js";
 import { validateAgents, type AgentFinding } from "../bot/agent-validate.js";
-import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
+import { getAgentsDir, getBundledAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 /**
  * v0.5 — `solosquad agent` CLI group.
@@ -50,7 +50,11 @@ export async function agentValidateCommand(
   }
 
   if (opts.all) {
-    const sources = listSourceAgents(getAgentsDir());
+    // §5 / CI `validate-bundled` — scope is the shipped bundle, resolved
+    // deterministically from the package root (not cwd-walked). See
+    // getBundledAgentsDir: this is what prevents an ancestor workspace from
+    // shadowing the bundle when the checkout lives inside one.
+    const sources = listSourceAgents(getBundledAgentsDir());
     if (sources.length === 0) {
       console.log(chalk.yellow("△ no SKILL.md files discovered under agents dir"));
     }
@@ -145,7 +149,7 @@ function printIssue(issue: SkillValidationError, kind: "error" | "warn"): void {
  * true on failure (≥1 error). Scope = the bundled actor set.
  */
 function validateAgentGraph(): boolean {
-  const specs = loadAgentSpecs();
+  const specs = loadAgentSpecs(getBundledAgentsDir());
   const result = validateAgents(specs);
   const label = `agent graph (${specs.length} actors)`;
   if (result.ok && result.warnings.length === 0) {
