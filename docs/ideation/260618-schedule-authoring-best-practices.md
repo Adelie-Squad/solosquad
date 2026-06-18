@@ -1,7 +1,7 @@
 # schedule 정의의 모든 것 — 스케줄링 시스템·프로액티브 에이전트 전수 분석과 SoloSquad 전략
 
 > **청자:** SoloSquad 개발자(본인). dev 워크플로·내부 구현 관점의 설계 메모이며,
-> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `schedule-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §7) 의 근거 문서.
+> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `schedule-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §8) 의 근거 문서.
 >
 > **문서 목적.** "좋은 schedule 란 무엇인가"의 단일 레퍼런스. SoloSquad 에서 schedule =
 > `schedules/<id>.md`(프롬프트) + cron 시간, node-cron 이 워크스페이스 timezone 으로 routine

@@ -1,7 +1,7 @@
 # workflow 정의의 모든 것 — 워크플로 엔진·멀티에이전트 오케스트레이션 전수 분석과 SoloSquad 전략
 
 > **청자:** SoloSquad 개발자(본인). dev 워크플로·내부 구현 관점의 설계 메모이며,
-> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `workflow-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §5) 의 근거 문서.
+> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `workflow-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §6) 의 근거 문서.
 >
 > **문서 목적.** "좋은 workflow 란 무엇인가"의 단일 레퍼런스. 우리는 workflow 를 두 방향으로
 > 다룬다 — ⑴ `skills/workflow-maker/assets/workflows/*/workflow.yaml`(번들 템플릿)처럼 직접 *쓰는*

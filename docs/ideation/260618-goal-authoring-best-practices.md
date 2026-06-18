@@ -1,7 +1,7 @@
 # goal 정의의 모든 것 — 자율 목표지향 에이전트·메트릭 루프 전수 분석과 SoloSquad 전략
 
 > **청자:** SoloSquad 개발자(본인). dev 워크플로·내부 구현 관점의 설계 메모이며,
-> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `goal-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §6) 의 근거 문서.
+> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `goal-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §7) 의 근거 문서.
 >
 > **문서 목적.** "좋은 goal 이란 무엇인가"의 단일 레퍼런스. SoloSquad 에서 goal =
 > `goal.md`(frontmatter + `## Metrics` name/formula/source/threshold/direction + `## Pipeline`
