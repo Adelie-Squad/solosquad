@@ -102,7 +102,10 @@ function validateOne(filePath: string): boolean {
 
   try {
     const spec = parseSkillMd(raw, filePath);
-    const result = validateSkill(spec);
+    // dir-match (§4): a SKILL.md lives at <name>/SKILL.md, so the parent dir
+    // name is the expected `name`.
+    const dirName = path.basename(path.dirname(abs));
+    const result = validateSkill(spec, { dir_name: dirName, strict_name: true });
     if (result.ok && result.warnings.length === 0) {
       console.log(chalk.green(`✓ ${filePath}`));
       return true;
