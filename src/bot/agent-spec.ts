@@ -94,3 +94,25 @@ export function loadAgentSpecs(agentsDir: string = getAgentsDir()): AgentSpec[] 
     return parseAgentSpec(skillPath, bucket, team || agent);
   });
 }
+
+/**
+ * Every accepted reference form for the given actors — for resolving refs that
+ * appear in *other* artifacts (e.g. `workflow.yaml` `agent:` fields):
+ *   - "<team>/<name>"      canonical              (chief/chief)
+ *   - "<bucket>/<name>"    flat bucket            (main/chief, specialists/architect)
+ *   - "_main/<name>"       main-bot sentinel      (_main/chief)
+ *   - "<name>"             bare                   (chief)
+ *
+ * `_skill/<name>` refs are intentionally *not* included — those denote a skill
+ * stage, not an actor, and the caller resolves them against the skill registry.
+ */
+export function agentRefAliases(specs: AgentSpec[]): Set<string> {
+  const out = new Set<string>();
+  for (const s of specs) {
+    out.add(s.id);
+    out.add(`${s.bucket}/${s.name}`);
+    out.add(s.name);
+    if (s.bucket === "main") out.add(`_main/${s.name}`);
+  }
+  return out;
+}
