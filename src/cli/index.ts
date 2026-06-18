@@ -120,7 +120,8 @@ program
   .command("adopt")
   .description("Discover + validate a repo's assets (skill/agent/workflow/schedule) — dry-run (v1.3.2 §10)")
   .argument("[repo]", "Path to the repository to scan")
-  .option("--apply", "(not yet) write adopted assets into the org layer")
+  .option("--apply", "write the valid assets into this workspace (.solosquad/*) — additive, namespaced on collision")
+  .option("--classify", "use the LLM to map agents the heuristic could not place (§10.3)")
   .action(async (repo, opts) => {
     const { adoptCommand } = await import("./adopt.js");
     await adoptCommand(repo, opts);

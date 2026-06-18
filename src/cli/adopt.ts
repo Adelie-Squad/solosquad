@@ -1,8 +1,9 @@
 import path from "path";
 import fs from "fs";
 import chalk from "chalk";
-import { buildAdoptionReport, type AdoptionItem } from "../analyze/adoption-report.js";
+import { buildAdoptionReport, refineAgentMappings, type AdoptionItem } from "../analyze/adoption-report.js";
 import { applyAdoption } from "../analyze/adopt-apply.js";
+import { createClaudeAgentTeamCaller } from "../analyze/agent-map.js";
 import { getWorkspaceRoot, getAgentsDir, getSkillsDir, getSchedulesDir } from "../util/paths.js";
 
 /**
@@ -15,6 +16,8 @@ import { getWorkspaceRoot, getAgentsDir, getSkillsDir, getSchedulesDir } from ".
 export interface AdoptOpts {
   /** Reserved for the future write path; today every run is a dry-run. */
   apply?: boolean;
+  /** §10.3 — escalate ambiguous (heuristic-`default`) agents to the LLM for team/tier mapping. */
+  classify?: boolean;
 }
 
 const KIND_EMOJI: Record<string, string> = {
@@ -51,6 +54,16 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
   }
 
   const report = buildAdoptionReport(repoRoot);
+
+  // §10.3 — opt-in LLM refinement for agents the heuristic could not place.
+  if (opts.classify) {
+    const ambiguous = report.items.filter((i) => i.kind === "agent" && i.mapping?.source === "default").length;
+    if (ambiguous > 0) {
+      console.log(chalk.dim(`Classifying ${ambiguous} ambiguous agent(s) with the LLM…`));
+      await refineAgentMappings(report, createClaudeAgentTeamCaller(repoRoot));
+    }
+  }
+
   const total = report.items.length;
 
   console.log(chalk.bold(`\nAdoption dry-run — ${repoRoot}`));
@@ -74,7 +87,11 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
     const map = item.mapping
       ? chalk.blue(
           `  → ${item.mapping.team}/${item.mapping.tier}` +
-            (item.mapping.confidence === "low" ? chalk.dim(" (low-confidence, review)") : ""),
+            (item.mapping.source === "llm"
+              ? chalk.dim(" (llm-suggested, review)")
+              : item.mapping.confidence === "low"
+                ? chalk.dim(" (low-confidence, review)")
+                : ""),
         )
       : "";
     console.log(`${statusTag(item)} ${emoji} ${chalk.cyan(item.kind)}/${item.id}${map}${conflict}  ${chalk.dim(item.path)}`);
