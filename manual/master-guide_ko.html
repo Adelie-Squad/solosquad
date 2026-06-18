@@ -376,7 +376,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
   </ul>
   <div class="callout info">
     <strong>이 문서의 버전</strong>
-    현재 npm 최신은 <span class="badge now">v1.3.1</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
+    현재 npm 최신은 <span class="badge now">v1.3.2</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
   </div>
 </section>
 
@@ -1174,7 +1174,17 @@ solosquad sync                                      # repositories/ ↔ .org.yam
 
   <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
-  <h4>v1.3.1 (2026-06-18) <span class="badge now">최신</span> — 정리 릴리스: v1.1 잔재 구 <code>assets/</code> 비우기 + CI/의존성 하드닝</h4>
+  <h4>v1.3.2 (2026-06-19) <span class="badge now">최신</span> — 에셋 생애주기 매니저(skill·agent·workflow·goal·schedule) + 에셋 채택</h4>
+  <ul>
+    <li><strong>에셋 매니저</strong> — 5개 자산이 동일 인터페이스 공유: <code>validate</code>(정적 게이트), <code>list</code>/<code>show</code>(조회). 통합 입구 <code>solosquad asset list|show|validate &lt;kind&gt;</code> 신설, 전체 CLI 일람 <code>solosquad commands</code> 추가.</li>
+    <li><strong>agent 매니저</strong>(신규, 5번째) — <code>agent validate --graph</code> 가 에이전트 간 위임 그래프(참조 무결성·순환·고아) 검증.</li>
+    <li><strong>에셋 채택</strong> — <code>solosquad adopt &lt;repo&gt; [--apply] [--classify]</code> 가 외부 repo 의 skill/agent/workflow/schedule 을 발견·검증하고 워크스페이스로 additive 채택(충돌 시 namespace). <code>init</code>/<code>add repo</code> 시 채택 가능 자산 자동 안내.</li>
+    <li><strong>schedules</strong> — 사용자 정의 스케줄 생성 경로 신설: <code>schedules new|list|show|validate</code> (<code>schedules/&lt;id&gt;.yaml</code>).</li>
+    <li><strong>대화형 우선</strong> — LLM 판단 동사(review·생성 보조)는 CLI 가 아니라 <code>solosquad chat</code> 안에서 <code>asset-review</code> 스킬로. CLI 는 결정적·스크립트 가능 표면만 유지.</li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.3.2], <code>docs/prd/v1.3.2-domain-lifecycle-managers.md</code></li>
+  </ul>
+
+  <h4>v1.3.1 (2026-06-18) — 정리 릴리스: v1.1 잔재 구 <code>assets/</code> 비우기 + CI/의존성 하드닝</h4>
   <ul>
     <li><strong>사용자 대면 기능 0</strong> — 내부 안정화 릴리스. 동작·tarball 변화 없음. v1.1 리오그가 절반만 끝낸 구 <code>assets/</code> 트리를 비우고, v1.3.0 머지 중 드러난 CI·의존성 문제를 마감.</li>
     <li><strong>CI/의존성</strong> — <code>node-cron</code> 3→4 (TS 재작성으로 <code>uuid</code> 의존 제거 → moderate 취약점 2건 소멸); <code>npm audit</code> moderate 비차단 가시화; Node 기준 <code>&gt;=20</code>.</li>

@@ -4,6 +4,16 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] — 2026-06-19 (Asset lifecycle managers + asset adoption)
+
+v1.3.2 gives the five first-class assets (skill · agent · workflow · goal · schedule) a shared **manager abstraction** — the same `validate` / `list` / `show` interface plus shared validation, graph, guardrail and naming cores — and completes an **asset adoption** pipeline that pulls a repo's existing AI assets into the workspace. CLI sprawl is reined in under a **conversational-first** principle. See `docs/prd/v1.3.2-domain-lifecycle-managers.md`.
+
+- **Domain validators (P0, CI gate).** Stronger `validateSkill` (naming/description hygiene), new **agent manager** with `agent validate --graph` (reference integrity, delegation cycles, orphans), `validateWorkflow` (cycle = error), and `schedules validate` over dynamic `schedules/<id>.yaml`. All wired into `npm run validate-bundled` in CI.
+- **Shared cores (§9).** `src/util/graph.ts` (Kahn cycle/reachability, reused by agent + workflow), `validation.ts` (Findings collector), `guardrails.ts` (`iterationCapReached` / `budgetStatus` / `LoopDetector`), `naming.ts` (`KEBAB_RE` / `checkId` / `normalizeToKebab` — removes the kebab regex duplicated across 4 validators). Renamed `skill-author.ts → skill-manager.ts`.
+- **Asset adoption (§10).** `solosquad adopt <repo> [--apply] [--classify]` discovers a repo's skill/agent/workflow/schedule assets, validates them (validate-then-adopt), and additively adopts them into the workspace (namespaced on collision, idempotent) with heuristic + optional LLM team mapping. `init` / `add repo` surface adoptable assets automatically. The bundled scope now resolves deterministically via `getBundled{Agents,Skills}Dir()` (cwd-independent) — fixes a footgun where a checkout nested inside another workspace validated that ancestor's stale assets. `analyze repo` is deprecated in favor of `adopt`.
+- **CLI cleanup (conversational-first).** New unified front door `solosquad asset list|show|validate <kind>` and `solosquad commands` (full CLI tree at a glance). LLM-judgment verbs (review, create-assist) were removed from the CLI and now live in `solosquad chat` via the `asset-review` skill + the existing author/maker loops — matching how leading agent CLIs (Claude Code, Codex, OpenCode) keep LLM verbs in the session and the CLI deterministic.
+- 870 tests green. `validate-bundled` green.
+
 ## [1.3.1] — 2026-06-18 (Legacy asset cleanup: empty the v1.1-leftover `assets/` + post-release CI/deps hardening)
 
 v1.3.1 is a stabilization release — no user-facing features. It finishes the v1.1 reorg that only got halfway: the old `assets/` tree (left behind when the canonical roster/skills/teams moved to top-level bundle dirs) is now emptied, and the post-release CI/dependency issues surfaced while merging v1.3.0 are closed. See `docs/prd/v1.3.1-legacy-asset-cleanup.md`.

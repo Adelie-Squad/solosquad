@@ -1200,6 +1200,32 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.25 v1.3.2 — Asset lifecycle managers + 에셋 채택 (2026-06-19)
+
+5개 1급 자산(skill·agent·workflow·goal·schedule)에 **공통 매니저 추상**(validate/list/show + 공유
+검증·그래프·가드레일·naming 코어)을 입히고, 외부 repo 자산을 워크스페이스로 끌어오는 **채택 파이프라인**을
+완성. CLI 비대화는 **conversational-first** 원칙으로 정리.
+
+- **도메인 validator (P0, CI 게이트)** — `validateSkill` 강화(naming/description hygiene),
+  `agent validate --graph`(신설 5번째 매니저; 참조 무결성·위임 순환·orphan), `validateWorkflow`
+  (순환=error), `schedules validate`(동적 `schedules/<id>.yaml`). `npm run validate-bundled` 로
+  `.github/workflows/ci.yml` 에 합류.
+- **공유 코어 (§9)** — `src/util/graph.ts`(Kahn 순환·도달성, agent·workflow 재사용),
+  `validation.ts`(Findings collector), `guardrails.ts`(iterationCap·budgetStatus·LoopDetector),
+  `naming.ts`(KEBAB_RE·checkId·normalizeToKebab — 4 validator 중복 제거). `skill-author.ts →
+  skill-manager.ts` 개명.
+- **에셋 채택 (§10)** — `adopt <repo> [--apply] [--classify]`: Discover(멀티에셋 스캐너) →
+  validate-then-adopt → additive 쓰기(namespace 충돌해소, 멱등) + heuristic/LLM team 매핑. 번들 스코프는
+  `getBundled{Agents,Skills}Dir()` 로 **cwd-독립** 결정적 해석(상위 워크스페이스 shadowing footgun 정정).
+  `init`/`add repo` 가 채택 가능 자산 자동 안내. `analyze repo` 는 deprecate(→`adopt`).
+- **CLI 정리 (conversational-first)** — 통합 입구 `solosquad asset list|show|validate <kind>` +
+  전체 일람 `solosquad commands`. LLM 판단 동사(review·생성 보조)는 CLI 에서 제거하고 대화형
+  `asset-review` 스킬 + 기존 author/maker 루프로 이관(레퍼런스 에이전트 CLI 패턴 정합). CLI 는 결정적·
+  스크립트 가능 표면만 유지.
+- 870 test green. validate-bundled green.
+
+자세히: `docs/prd/v1.3.2-domain-lifecycle-managers.md`
+
 #### 13.6.24 v1.3.1 — Legacy asset cleanup + post-release CI/deps 하드닝 (2026-06-18)
 
 사용자 대면 기능 0 의 안정화 릴리스. v1.1 리오그가 절반만 끝내고 남긴 구 `assets/` 트리를 비우고,
