@@ -2,6 +2,8 @@ import path from "path";
 import fs from "fs";
 import chalk from "chalk";
 import { buildAdoptionReport, type AdoptionItem } from "../analyze/adoption-report.js";
+import { applyAdoption } from "../analyze/adopt-apply.js";
+import { getWorkspaceRoot, getAgentsDir, getSkillsDir, getSchedulesDir } from "../util/paths.js";
 
 /**
  * v1.3.2 §10 — `solosquad adopt <repo>`. Currently dry-run only: scans the
@@ -87,10 +89,37 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
     `${report.errorCount === 0 ? chalk.green("✓") : chalk.red("✗")} ` +
       `${report.errorCount} blocking error(s), ${report.conflictCount} collision(s)`,
   );
-  if (opts.apply) {
-    console.log(chalk.yellow("\n△ --apply (write into the org layer) is not implemented yet — dry-run only (§10 follow-up)."));
-  } else {
-    console.log(chalk.dim("\nDry-run only. Adoption writes are a follow-up; re-run when --apply ships."));
+
+  if (!opts.apply) {
+    console.log(chalk.dim("\nDry-run. Re-run with --apply to copy the valid assets into this workspace."));
+    process.exitCode = report.errorCount === 0 ? 0 : 1;
+    return;
   }
+
+  // --apply — additive write into the workspace override dirs. Guard: must be an
+  // initialized workspace (.solosquad exists) so we never write into the bundle.
+  const ws = getWorkspaceRoot();
+  if (!fs.existsSync(path.join(ws, ".solosquad"))) {
+    console.error(chalk.red("\nerror: --apply needs an initialized workspace (.solosquad/). Run `solosquad init` first."));
+    process.exitCode = 2;
+    return;
+  }
+
+  const result = applyAdoption(repoRoot, report, {
+    agentsDir: getAgentsDir(),
+    skillsDir: getSkillsDir(),
+    schedulesDir: getSchedulesDir(),
+  });
+
+  console.log(chalk.bold(`\nApplied (${result.writtenCount} written, ${result.skippedCount} skipped):`));
+  for (const o of result.outcomes) {
+    if (o.action === "skipped") {
+      console.log(`  ${chalk.dim("∅")} ${o.kind}/${o.id} — ${chalk.dim(o.reason ?? "skipped")}`);
+    } else {
+      const ns = o.action === "namespaced" ? chalk.magenta(` (namespaced → ${o.finalId})`) : "";
+      console.log(`  ${chalk.green("+")} ${o.kind}/${o.finalId}${ns}`);
+    }
+  }
+  console.log(chalk.dim("\nRun `solosquad agent validate --graph` to re-check the graph after adoption."));
   process.exitCode = report.errorCount === 0 ? 0 : 1;
 }
