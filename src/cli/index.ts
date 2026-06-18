@@ -502,9 +502,10 @@ const agentGroup = program
 
 agentGroup
   .command("validate")
-  .description("Validate a SKILL.md against the v0.5 schema")
-  .argument("[path]", "Path to a SKILL.md file (omit when using --all)")
-  .option("--all", "Validate every bundled + workspace SKILL.md")
+  .description("Validate SKILL.md files (--all) + the cross-agent graph (--graph)")
+  .argument("[path]", "Path to a SKILL.md file (omit when using --all/--graph)")
+  .option("--all", "Validate every bundled + workspace SKILL.md (implies --graph)")
+  .option("--graph", "Validate the cross-agent delegation/collaboration graph")
   .action(async (filePath, opts) => {
     const { agentValidateCommand } = await import("./agent.js");
     await agentValidateCommand(filePath, opts);

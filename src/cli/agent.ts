@@ -8,6 +8,8 @@ import {
   type SkillValidationError,
 } from "../bot/skill-parser.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
+import { loadAgentSpecs } from "../bot/agent-spec.js";
+import { validateAgents, type AgentFinding } from "../bot/agent-validate.js";
 import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 /**
@@ -24,14 +26,16 @@ import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 interface ValidateOpts {
   all?: boolean;
+  /** Also run cross-agent graph validation (refs, cycles, orphans). */
+  graph?: boolean;
 }
 
 export async function agentValidateCommand(
   filePath: string | undefined,
   opts: ValidateOpts
 ): Promise<void> {
-  if (!filePath && !opts.all) {
-    console.error(chalk.red("error: provide a path or use --all"));
+  if (!filePath && !opts.all && !opts.graph) {
+    console.error(chalk.red("error: provide a path, or use --all / --graph"));
     process.exitCode = 2;
     return;
   }
@@ -55,6 +59,13 @@ export async function agentValidateCommand(
       totalChecked++;
       if (!result) totalFailed++;
     }
+  }
+
+  // Cross-agent graph validation — refs/cycles/orphans the per-file
+  // validateSkill pass cannot see (it only sees one SKILL.md at a time).
+  if (opts.all || opts.graph) {
+    totalChecked++;
+    if (validateAgentGraph()) totalFailed++;
   }
 
   if ((opts as { corpus?: unknown }).corpus !== undefined) {
@@ -123,6 +134,36 @@ function printIssue(issue: SkillValidationError, kind: "error" | "warn"): void {
   const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
   const field = issue.field ? chalk.dim(` (${issue.field})`) : "";
   console.log(`    ${tag} ${issue.code}${field}: ${issue.message}`);
+}
+
+/**
+ * Cross-actor graph validation (§5 agent-manager): referential integrity of
+ * collaborators/used_by, peer-mesh cycles, orphans, name/dir/tier. Returns
+ * true on failure (≥1 error). Scope = the bundled actor set.
+ */
+function validateAgentGraph(): boolean {
+  const specs = loadAgentSpecs();
+  const result = validateAgents(specs);
+  const label = `agent graph (${specs.length} actors)`;
+  if (result.ok && result.warnings.length === 0) {
+    console.log(chalk.green(`✓ ${label}`));
+    return false;
+  }
+  if (result.ok) {
+    console.log(chalk.yellow(`△ ${label} — ${result.warnings.length} warning(s)`));
+    for (const w of result.warnings) printGraphIssue(w, "warn");
+    return false;
+  }
+  console.log(chalk.red(`✗ ${label} — ${result.errors.length} error(s)`));
+  for (const e of result.errors) printGraphIssue(e, "error");
+  for (const w of result.warnings) printGraphIssue(w, "warn");
+  return true;
+}
+
+function printGraphIssue(issue: AgentFinding, kind: "error" | "warn"): void {
+  const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
+  const scope = issue.agent ? chalk.dim(` ${issue.agent}`) : "";
+  console.log(`    ${tag} ${issue.code}${scope}: ${issue.message}`);
 }
 
 // ---------------------------------------------------------------------------
