@@ -1,24 +1,19 @@
 import cron from "node-cron";
 import type { ScheduleDef } from "./schedule-def.js";
+import { Findings, type BaseFinding, type ValidationResult } from "../util/validation.js";
 
 /**
  * v1.3.2 §8 — static validation of a user schedule definition. Pure (no fs):
  * the caller supplies `promptExists` + `reservedIds` so this stays testable.
- * Finding shape mirrors the other managers ({code, message, field}).
+ * Finding shape mirrors the other managers ({code, message, field}); the
+ * accumulation is the shared §9.1 `Findings` collector.
  */
 
-export interface ScheduleFinding {
-  code: string;
-  message: string;
+export interface ScheduleFinding extends BaseFinding {
   id?: string;
-  field?: string;
 }
 
-export interface ScheduleValidationResult {
-  ok: boolean;
-  errors: ScheduleFinding[];
-  warnings: ScheduleFinding[];
-}
+export type ScheduleValidationResult = ValidationResult<ScheduleFinding>;
 
 export interface ValidateScheduleOptions {
   /** Does the backing `schedules/<id>.md` prompt exist? */
@@ -34,36 +29,23 @@ export function validateScheduleDef(
   def: ScheduleDef,
   opts: ValidateScheduleOptions = {},
 ): ScheduleValidationResult {
-  const errors: ScheduleFinding[] = [];
-  const warnings: ScheduleFinding[] = [];
+  const f = new Findings<ScheduleFinding>();
   const id = def.id;
 
-  if (!id || !ID_RE.test(id)) {
-    errors.push({ code: "SCHED_ID_MALFORMED", id, field: "id", message: `id "${id}" must be kebab-case` });
-  }
-  if (opts.reservedIds?.has(id)) {
-    errors.push({ code: "SCHED_ID_COLLISION", id, field: "id", message: `id "${id}" collides with an existing routine` });
-  }
+  f.errorIf(!id || !ID_RE.test(id), { code: "SCHED_ID_MALFORMED", id, field: "id", message: `id "${id}" must be kebab-case` });
+  f.errorIf(!!opts.reservedIds?.has(id), { code: "SCHED_ID_COLLISION", id, field: "id", message: `id "${id}" collides with an existing routine` });
 
   if (!def.cron || typeof def.cron !== "string") {
-    errors.push({ code: "SCHED_CRON_MISSING", id, field: "cron", message: "cron expression is required" });
+    f.error({ code: "SCHED_CRON_MISSING", id, field: "cron", message: "cron expression is required" });
   } else if (!cron.validate(def.cron)) {
-    errors.push({ code: "SCHED_CRON_INVALID", id, field: "cron", message: `cron "${def.cron}" is not a valid node-cron expression` });
+    f.error({ code: "SCHED_CRON_INVALID", id, field: "cron", message: `cron "${def.cron}" is not a valid node-cron expression` });
   } else if (EVERY_MINUTE.test(def.cron.trim())) {
-    warnings.push({ code: "SCHED_TOO_FREQUENT", id, field: "cron", message: "every-minute schedule — confirm this is intended (min-interval guard)" });
+    f.warn({ code: "SCHED_TOO_FREQUENT", id, field: "cron", message: "every-minute schedule — confirm this is intended (min-interval guard)" });
   }
 
-  if (def.kind !== "user-brief" && def.kind !== "background") {
-    errors.push({ code: "SCHED_KIND_UNKNOWN", id, field: "kind", message: `kind "${def.kind}" must be "user-brief" or "background"` });
-  }
+  f.errorIf(def.kind !== "user-brief" && def.kind !== "background", { code: "SCHED_KIND_UNKNOWN", id, field: "kind", message: `kind "${def.kind}" must be "user-brief" or "background"` });
+  f.errorIf(!def.channel || def.channel.length === 0, { code: "SCHED_CHANNEL_MISSING", id, field: "channel", message: "channel is required" });
+  f.errorIf(!!opts.promptExists && !opts.promptExists(id), { code: "SCHED_PROMPT_MISSING", id, field: "prompt", message: `prompt file schedules/${id}.md not found` });
 
-  if (!def.channel || def.channel.length === 0) {
-    errors.push({ code: "SCHED_CHANNEL_MISSING", id, field: "channel", message: "channel is required" });
-  }
-
-  if (opts.promptExists && !opts.promptExists(id)) {
-    errors.push({ code: "SCHED_PROMPT_MISSING", id, field: "prompt", message: `prompt file schedules/${id}.md not found` });
-  }
-
-  return { ok: errors.length === 0, errors, warnings };
+  return f.result();
 }

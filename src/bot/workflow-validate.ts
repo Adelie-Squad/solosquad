@@ -4,6 +4,7 @@ import {
   type GraphEdge,
   type GraphNode,
 } from "../util/graph.js";
+import { GUARDRAIL_KEYS, hasAnyGuardrail } from "../util/guardrails.js";
 
 /**
  * v1.3.2 §6 — `validateWorkflow`: static validation of a `workflow.yaml`
@@ -169,21 +170,13 @@ export function validateWorkflow(
     if (st.mode !== undefined) {
       if (st.mode !== "fixed" && st.mode !== "agentic") {
         warnings.push({ code: "WF_MODE_UNKNOWN", stage: id, field: "mode", message: `mode "${String(st.mode)}" must be "fixed" or "agentic"` });
-      } else if (st.mode === "agentic") {
-        const g = st.guardrails;
-        const hasGuard =
-          !!g &&
-          typeof g === "object" &&
-          !Array.isArray(g) &&
-          ["max_iterations", "budget_usd", "loop_detection"].some((k) => k in (g as object));
-        if (!hasGuard) {
-          warnings.push({
-            code: "WF_AGENTIC_NO_GUARDRAILS",
-            stage: id,
-            field: "guardrails",
-            message: `mode:agentic stage should declare guardrails (max_iterations / budget_usd / loop_detection)`,
-          });
-        }
+      } else if (st.mode === "agentic" && !hasAnyGuardrail(st.guardrails)) {
+        warnings.push({
+          code: "WF_AGENTIC_NO_GUARDRAILS",
+          stage: id,
+          field: "guardrails",
+          message: `mode:agentic stage should declare guardrails (${GUARDRAIL_KEYS.join(" / ")})`,
+        });
       }
     }
   }
