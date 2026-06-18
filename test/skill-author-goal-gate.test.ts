@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { applyDraft, type AuthorDraft } from "../src/bot/skill-author.js";
+import { applyDraft, type AuthorDraft } from "../src/bot/skill-manager.js";
 import { installRoutes } from "../src/bot/agent-router.js";
 import { parseGoalFile } from "../src/engine/goal-parser.js";
 
