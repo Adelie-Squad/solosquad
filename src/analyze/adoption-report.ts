@@ -7,6 +7,7 @@ import { validateWorkflow } from "../bot/workflow-validate.js";
 import { validateScheduleDef } from "../scheduler/schedule-validate.js";
 import { coerceScheduleDef } from "../scheduler/schedule-def.js";
 import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
+import { mapAgentToTaxonomy, type AgentMapping } from "./agent-map.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
 import { ROUTINES } from "../scheduler/routines.js";
 import { getSkillsDir, getAgentsDir } from "../util/paths.js";
@@ -32,6 +33,8 @@ export interface AdoptionItem {
   status: ItemStatus;
   conflict: boolean;
   findings: { code: string; message: string }[];
+  /** §10.3 — for agents only: the proposed team/tier mapping. */
+  mapping?: AgentMapping;
 }
 
 export interface AdoptionReport {
@@ -40,6 +43,33 @@ export interface AdoptionReport {
   counts: Record<AssetKind, number>;
   errorCount: number;
   conflictCount: number;
+}
+
+function readAgentFrontmatter(
+  full: string,
+  fallbackId: string,
+): { name: string; frontmatterTeam?: string; frontmatterTier?: string; description?: string } {
+  try {
+    const raw = fs.readFileSync(full, "utf-8");
+    if (raw.startsWith("---")) {
+      const end = raw.indexOf("\n---", 3);
+      if (end > 0) {
+        const fm = yaml.load(raw.slice(3, end));
+        if (fm && typeof fm === "object" && !Array.isArray(fm)) {
+          const o = fm as Record<string, unknown>;
+          return {
+            name: typeof o.name === "string" ? o.name : fallbackId,
+            frontmatterTeam: typeof o.team === "string" ? o.team : undefined,
+            frontmatterTier: typeof o.tier === "string" ? o.tier : undefined,
+            description: typeof o.description === "string" ? o.description : undefined,
+          };
+        }
+      }
+    }
+  } catch {
+    // fall through to fallback
+  }
+  return { name: fallbackId };
 }
 
 function bundledSkillIds(): Set<string> {
@@ -127,7 +157,11 @@ export function buildAdoptionReport(repoRoot: string): AdoptionReport {
     const conflict = bundled[a.kind].has(a.id);
     if (conflict) conflictCount++;
     if (status === "error") errorCount++;
-    items.push({ kind: a.kind, id: a.id, path: a.path, status, conflict, findings });
+    const mapping =
+      a.kind === "agent"
+        ? mapAgentToTaxonomy(readAgentFrontmatter(path.join(repoRoot, a.path.split("/").join(path.sep)), a.id))
+        : undefined;
+    items.push({ kind: a.kind, id: a.id, path: a.path, status, conflict, findings, mapping });
   }
 
   return { repoRoot, items, counts, errorCount, conflictCount };

@@ -69,7 +69,13 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
   for (const item of report.items) {
     const emoji = KIND_EMOJI[item.kind] ?? "•";
     const conflict = item.conflict ? chalk.magenta("  [collision → would namespace]") : "";
-    console.log(`${statusTag(item)} ${emoji} ${chalk.cyan(item.kind)}/${item.id}${conflict}  ${chalk.dim(item.path)}`);
+    const map = item.mapping
+      ? chalk.blue(
+          `  → ${item.mapping.team}/${item.mapping.tier}` +
+            (item.mapping.confidence === "low" ? chalk.dim(" (low-confidence, review)") : ""),
+        )
+      : "";
+    console.log(`${statusTag(item)} ${emoji} ${chalk.cyan(item.kind)}/${item.id}${map}${conflict}  ${chalk.dim(item.path)}`);
     for (const f of item.findings) {
       const c = item.status === "error" ? chalk.red : chalk.yellow;
       console.log(`     ${c(f.code)}: ${f.message}`);
