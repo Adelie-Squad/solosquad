@@ -17,6 +17,8 @@ function tempSourceRepo(): string {
   w(".claude/skills/my-skill/SKILL.md", "---\nname: my-skill\ndescription: does a thing\nschema_version: 1\n---\n# x");
   w("schedules/digest.yaml", "id: digest\nname: Digest\nkind: background\ncron: '0 9 * * 1'\n");
   w("schedules/digest.md", "# digest prompt");
+  // a valid workflow (real bundled agent refs) → should be written
+  w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: null\n");
   // a cyclic workflow → error → must be skipped by apply
   w("flows/loopy/workflow.yaml", "id: loopy\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: b\n  - id: b\n    agent: product/data-analyst\n    handoff_to: a\n");
   return dir;
@@ -30,6 +32,7 @@ function tempTargets(): { dir: string; targets: ApplyTargets } {
       agentsDir: path.join(dir, "agents"),
       skillsDir: path.join(dir, "skills"),
       schedulesDir: path.join(dir, "schedules"),
+      workflowsDir: path.join(dir, "workflows"),
     },
   };
 }
@@ -48,6 +51,10 @@ test("applyAdoption copies valid assets, skips errored ones", () => {
   // cyclic workflow skipped (error)
   const wf = result.outcomes.find((o) => o.kind === "workflow" && o.id === "loopy");
   assert.equal(wf?.action, "skipped");
+  // valid workflow written
+  assert.ok(fs.existsSync(path.join(targets.workflowsDir, "good", "workflow.yaml")));
+  const good = result.outcomes.find((o) => o.kind === "workflow" && o.id === "good");
+  assert.notEqual(good?.action, "skipped");
 });
 
 test("re-apply is idempotent (identical content → skipped)", () => {

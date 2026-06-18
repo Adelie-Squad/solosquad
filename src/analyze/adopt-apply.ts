@@ -19,6 +19,8 @@ export interface ApplyTargets {
   agentsDir: string;
   skillsDir: string;
   schedulesDir: string;
+  /** workflow templates live alongside the workflow-maker skill assets. */
+  workflowsDir: string;
 }
 
 export interface ApplyOutcome {
@@ -67,6 +69,10 @@ function sourceUnit(
     const files = [full, ...(fs.existsSync(promptMd) ? [promptMd] : [])];
     return { kind: "files", primary: full, files };
   }
+  // workflow — copy the <id>/ dir containing workflow.yaml.
+  if (item.kind === "workflow") {
+    return { kind: "dir", primary: full, dir: path.dirname(full) };
+  }
   // skill / agent — SKILL.md (or a single .md). Copy its parent dir if the file
   // is the conventional <id>/SKILL.md, else just the file.
   if (path.basename(full) === "SKILL.md") {
@@ -92,11 +98,6 @@ export function applyAdoption(
       outcomes.push({ kind: item.kind, id: item.id, finalId: item.id, dest: "", action: "skipped", reason: "validation error" });
       continue;
     }
-    if (item.kind === "workflow") {
-      outcomes.push({ kind: item.kind, id: item.id, finalId: item.id, dest: "", action: "skipped", reason: "workflow target is org-scoped (deferred)" });
-      continue;
-    }
-
     const unit = sourceUnit(repoRoot, item);
     const srcHash = hashFile(unit.primary);
 
@@ -106,13 +107,16 @@ export function applyAdoption(
         ? targets.skillsDir
         : item.kind === "schedule"
           ? targets.schedulesDir
-          : path.join(targets.agentsDir, agentBucket(item));
+          : item.kind === "workflow"
+            ? targets.workflowsDir
+            : path.join(targets.agentsDir, agentBucket(item));
 
     const destFor = (id: string): { destDir: string; primaryDest: string } => {
       if (item.kind === "schedule") {
         return { destDir: baseDir, primaryDest: path.join(baseDir, `${id}.yaml`) };
       }
-      return { destDir: path.join(baseDir, id), primaryDest: path.join(baseDir, id, "SKILL.md") };
+      const primaryName = item.kind === "workflow" ? "workflow.yaml" : "SKILL.md";
+      return { destDir: path.join(baseDir, id), primaryDest: path.join(baseDir, id, primaryName) };
     };
 
     const candidates = [item.id, `${label}-${item.id}`];

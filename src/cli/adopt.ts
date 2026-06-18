@@ -109,6 +109,7 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
     agentsDir: getAgentsDir(),
     skillsDir: getSkillsDir(),
     schedulesDir: getSchedulesDir(),
+    workflowsDir: path.join(getSkillsDir(), "workflow-maker", "assets", "workflows"),
   });
 
   console.log(chalk.bold(`\nApplied (${result.writtenCount} written, ${result.skippedCount} skipped):`));
