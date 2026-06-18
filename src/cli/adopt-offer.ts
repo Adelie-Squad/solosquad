@@ -64,22 +64,24 @@ export async function offerAdoption(repoPath: string, indent = ""): Promise<void
     return;
   }
 
-  // Guard: apply writes into the workspace override dirs, which only exist in an
-  // initialized workspace. If there's no .solosquad/, fall back to the hint.
-  const { getWorkspaceRoot, getAgentsDir, getSkillsDir, getSchedulesDir } = await import("../util/paths.js");
-  if (!fs.existsSync(path.join(getWorkspaceRoot(), ".solosquad"))) return hint();
+  // Guard: apply writes into the workspace's `.solosquad/`, which only exists in
+  // an initialized workspace. If there's none, fall back to the hint.
+  const { getWorkspaceRoot } = await import("../util/paths.js");
+  const dot = path.join(getWorkspaceRoot(), ".solosquad");
+  if (!fs.existsSync(dot)) return hint();
 
   const { apply } = await inquirer.prompt([
     { type: "confirm", name: "apply", message: `Adopt ${adoptable} valid asset(s) into this workspace?`, default: false },
   ]);
   if (!apply) return hint();
 
+  // Pin targets under `.solosquad/` (see adopt.ts) — never fall back to the bundle.
   const { applyAdoption } = await import("../analyze/adopt-apply.js");
   const result = applyAdoption(repoPath, report, {
-    agentsDir: getAgentsDir(),
-    skillsDir: getSkillsDir(),
-    schedulesDir: getSchedulesDir(),
-    workflowsDir: path.join(getSkillsDir(), "workflow-maker", "assets", "workflows"),
+    agentsDir: path.join(dot, "agents"),
+    skillsDir: path.join(dot, "skills"),
+    schedulesDir: path.join(dot, "schedules"),
+    workflowsDir: path.join(dot, "skills", "workflow-maker", "assets", "workflows"),
   });
   console.log(chalk.green(`${indent}✓ adopted ${result.writtenCount}, skipped ${result.skippedCount}`));
   for (const o of result.outcomes) {

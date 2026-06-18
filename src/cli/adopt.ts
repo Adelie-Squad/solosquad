@@ -4,7 +4,7 @@ import chalk from "chalk";
 import { buildAdoptionReport, refineAgentMappings, type AdoptionItem } from "../analyze/adoption-report.js";
 import { applyAdoption } from "../analyze/adopt-apply.js";
 import { createClaudeAgentTeamCaller } from "../analyze/agent-map.js";
-import { getWorkspaceRoot, getAgentsDir, getSkillsDir, getSchedulesDir } from "../util/paths.js";
+import { getWorkspaceRoot } from "../util/paths.js";
 
 /**
  * v1.3.2 §10 — `solosquad adopt <repo>`. Currently dry-run only: scans the
@@ -113,20 +113,27 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
     return;
   }
 
-  // --apply — additive write into the workspace override dirs. Guard: must be an
-  // initialized workspace (.solosquad exists) so we never write into the bundle.
+  // --apply — additive write into the workspace's `.solosquad/`. Guard: must be
+  // an initialized workspace so we never write into the bundle.
   const ws = getWorkspaceRoot();
-  if (!fs.existsSync(path.join(ws, ".solosquad"))) {
+  const dot = path.join(ws, ".solosquad");
+  if (!fs.existsSync(dot)) {
     console.error(chalk.red("\nerror: --apply needs an initialized workspace (.solosquad/). Run `solosquad init` first."));
     process.exitCode = 2;
     return;
   }
 
+  // Pin every write target under the resolved workspace's `.solosquad/` — do NOT
+  // use getAgentsDir()/getSkillsDir()/getSchedulesDir() here: those each fall
+  // back to the bundle when a given override dir is absent, so on a workspace
+  // missing (say) `.solosquad/skills` the targets would diverge and adopted
+  // skills/workflows could land in the installed package. Pinning to `dot`
+  // keeps the guard and the targets consistent and bundle-safe.
   const result = applyAdoption(repoRoot, report, {
-    agentsDir: getAgentsDir(),
-    skillsDir: getSkillsDir(),
-    schedulesDir: getSchedulesDir(),
-    workflowsDir: path.join(getSkillsDir(), "workflow-maker", "assets", "workflows"),
+    agentsDir: path.join(dot, "agents"),
+    skillsDir: path.join(dot, "skills"),
+    schedulesDir: path.join(dot, "schedules"),
+    workflowsDir: path.join(dot, "skills", "workflow-maker", "assets", "workflows"),
   });
 
   console.log(chalk.bold(`\nApplied (${result.writtenCount} written, ${result.skippedCount} skipped):`));
