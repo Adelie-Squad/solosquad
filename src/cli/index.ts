@@ -140,11 +140,42 @@ schedulesGroup
   });
 
 schedulesGroup
+  .command("new")
+  .description("Scaffold a new user schedule (schedules/<id>.yaml + <id>.md)")
+  .argument("<id>", "Kebab-case schedule id")
+  .option("--cron <expr>", "Cron expression (default: '0 9 * * 1')")
+  .option("--kind <kind>", "user-brief | background (default: background)")
+  .option("--channel <name>", "Target channel (default: workflow)")
+  .option("--assist <brief>", "Let the LLM draft the prompt body from a one-line brief")
+  .action(async (id, opts) => {
+    const { scheduleNewCommand } = await import("./schedule.js");
+    await scheduleNewCommand(id, opts);
+  });
+
+schedulesGroup
+  .command("show")
+  .description("Show one schedule (built-in routine or user-defined) + its validation state")
+  .argument("<id>", "Schedule id")
+  .action(async (id) => {
+    const { scheduleShowCommand } = await import("./schedule.js");
+    await scheduleShowCommand(id);
+  });
+
+schedulesGroup
   .command("validate")
   .description("Validate user schedule definitions (cron, kind, channel, prompt)")
   .action(async () => {
     const { scheduleValidateCommand } = await import("./schedule.js");
     await scheduleValidateCommand();
+  });
+
+schedulesGroup
+  .command("review")
+  .description("LLM quality review of a user schedule (cadence vs prompt fit)")
+  .argument("<id>", "User schedule id")
+  .action(async (id) => {
+    const { reviewCommand } = await import("./review.js");
+    await reviewCommand("schedule", id, {});
   });
 
 program
@@ -365,6 +396,15 @@ workflowGroup
   });
 
 workflowGroup
+  .command("review")
+  .description("LLM quality review of a workflow template (beyond static validate)")
+  .argument("<id-or-path>", "Bundled workflow id or path to a workflow.yaml")
+  .action(async (idOrPath) => {
+    const { reviewCommand } = await import("./review.js");
+    await reviewCommand("workflow", idOrPath, {});
+  });
+
+workflowGroup
   .command("focus")
   .description("Set the active workflow for a user's Chief session (or --clear)")
   .argument("[workflow-id]", "Workflow id to focus on; omit when using --clear")
@@ -385,6 +425,7 @@ goalGroup
   .description("Scaffold a new goal.md from the template")
   .argument("[goal-id]", "Kebab-case goal id (e.g. landing-cvr-optim)")
   .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .option("--assist <brief>", "Let the LLM draft a goal.draft.md companion from a one-line brief")
   .action(async (goalId, opts) => {
     const { goalNewCommand } = await import("./goal.js");
     await goalNewCommand(goalId, opts);
@@ -430,6 +471,15 @@ goalGroup
   .action(async (goalId, opts) => {
     const { goalStatusCommand } = await import("./goal.js");
     await goalStatusCommand(goalId, opts);
+  });
+
+goalGroup
+  .command("review")
+  .description("LLM quality review of a goal.md (metric objectivity, guardrail fit)")
+  .argument("<path>", "Path to a goal.md")
+  .action(async (p) => {
+    const { reviewCommand } = await import("./review.js");
+    await reviewCommand("goal", p, {});
   });
 
 goalGroup
@@ -559,6 +609,7 @@ agentGroup
   .requiredOption("--team <team>", "Team folder (strategy, growth, experience, engineering, …)")
   .option("--org <org>", "Write under <org>/.agents/ instead of workspace agents dir")
   .option("--description <text>", "Short description for frontmatter")
+  .option("--assist <brief>", "Let the LLM draft the body from a one-line brief (validated; falls back to scaffold)")
   .action(async (opts) => {
     const { agentAddCommand } = await import("./agent.js");
     try {
@@ -566,6 +617,35 @@ agentGroup
     } catch {
       // Error already printed by agentAddCommand; exit code set there.
     }
+  });
+
+agentGroup
+  .command("list")
+  .description("List actors grouped by team (bundle by default; --workspace for yours)")
+  .option("--workspace", "List the workspace's actors instead of the shipped bundle")
+  .action(async (opts) => {
+    const { agentListCommand } = await import("./agent.js");
+    await agentListCommand(opts);
+  });
+
+agentGroup
+  .command("show")
+  .description("Show an actor's spec + delegation edges")
+  .argument("<id>", "Actor id (<team>/<name>) or bare name")
+  .option("--workspace", "Resolve against the workspace instead of the bundle")
+  .action(async (id, opts) => {
+    const { agentShowCommand } = await import("./agent.js");
+    await agentShowCommand(id, opts);
+  });
+
+agentGroup
+  .command("review")
+  .description("LLM quality review of an actor (beyond static validate)")
+  .argument("<id>", "Actor id (<team>/<name>) or bare name")
+  .option("--workspace", "Resolve against the workspace instead of the bundle")
+  .action(async (id, opts) => {
+    const { reviewCommand } = await import("./review.js");
+    await reviewCommand("agent", id, opts);
   });
 
 agentGroup
