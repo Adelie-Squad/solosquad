@@ -91,30 +91,23 @@ test("scheduleShowCommand: built-in routine prints, unknown id exits 1", async (
   }
 });
 
-// §P1 — `schedules new` scaffolds yaml+md; --assist drafts the prompt via a caller.
-test("scheduleNewCommand: scaffolds valid files; --assist drafts the prompt", async () => {
+// §9.6 — `schedules new` scaffolds a valid yaml + stub prompt (no LLM).
+test("scheduleNewCommand: scaffolds valid files", async () => {
   const { scheduleNewCommand } = await import("../src/cli/schedule.js");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ss-sched-new-"));
-  // point the schedules dir resolver at our temp workspace
+  // getSchedulesDir walks from cwd; create a .solosquad/schedules under dir and chdir
   const prevCwd = process.cwd();
   const origLog = console.log;
   const prevExit = process.exitCode;
   console.log = () => {};
-  // getSchedulesDir walks from cwd; create a .solosquad/schedules under dir and chdir
   fs.mkdirSync(path.join(dir, ".solosquad", "schedules"), { recursive: true });
   fs.writeFileSync(path.join(dir, ".solosquad", "workspace.yaml"), "version: 1.3.1\n");
   process.chdir(dir);
-  const caller = {
-    call_count: 0,
-    async draft() { (caller as { call_count: number }).call_count++; return "# digest\n\nGather merged PRs and post a summary."; },
-  };
   try {
-    await scheduleNewCommand("weekly-digest", { assist: "summarize PRs weekly", assistCaller: caller as never });
+    await scheduleNewCommand("weekly-digest", { cron: "0 9 * * 1", kind: "background" });
     const base = path.join(dir, ".solosquad", "schedules");
     assert.ok(fs.existsSync(path.join(base, "weekly-digest.yaml")));
-    const md = fs.readFileSync(path.join(base, "weekly-digest.md"), "utf-8");
-    assert.match(md, /Gather merged PRs/);
-    assert.equal((caller as { call_count: number }).call_count, 1);
+    assert.ok(fs.existsSync(path.join(base, "weekly-digest.md")));
   } finally {
     process.chdir(prevCwd);
     console.log = origLog;

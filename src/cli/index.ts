@@ -146,7 +146,6 @@ schedulesGroup
   .option("--cron <expr>", "Cron expression (default: '0 9 * * 1')")
   .option("--kind <kind>", "user-brief | background (default: background)")
   .option("--channel <name>", "Target channel (default: workflow)")
-  .option("--assist <brief>", "Let the LLM draft the prompt body from a one-line brief")
   .action(async (id, opts) => {
     const { scheduleNewCommand } = await import("./schedule.js");
     await scheduleNewCommand(id, opts);
@@ -169,13 +168,21 @@ schedulesGroup
     await scheduleValidateCommand();
   });
 
-schedulesGroup
-  .command("review")
-  .description("LLM quality review of a user schedule (cadence vs prompt fit)")
-  .argument("<id>", "User schedule id")
-  .action(async (id) => {
-    const { reviewCommand } = await import("./review.js");
-    await reviewCommand("schedule", id, {});
+program
+  .command("commands")
+  .description("List every SoloSquad command with a one-line description")
+  .action(() => {
+    const print = (cmd: Command, prefix: string): void => {
+      for (const c of cmd.commands) {
+        const name = c.name();
+        if (name === "help") continue;
+        console.log("  " + chalk.cyan((prefix + name).padEnd(30)) + chalk.dim(c.description() || ""));
+        if (c.commands.length) print(c, prefix + name + " ");
+      }
+    };
+    console.log(chalk.bold(`\nsolosquad v${pkg.version} — all commands\n`));
+    print(program, "");
+    console.log(chalk.dim("\nRun `solosquad <command> --help` for options.\n"));
   });
 
 program
@@ -396,15 +403,6 @@ workflowGroup
   });
 
 workflowGroup
-  .command("review")
-  .description("LLM quality review of a workflow template (beyond static validate)")
-  .argument("<id-or-path>", "Bundled workflow id or path to a workflow.yaml")
-  .action(async (idOrPath) => {
-    const { reviewCommand } = await import("./review.js");
-    await reviewCommand("workflow", idOrPath, {});
-  });
-
-workflowGroup
   .command("focus")
   .description("Set the active workflow for a user's Chief session (or --clear)")
   .argument("[workflow-id]", "Workflow id to focus on; omit when using --clear")
@@ -425,7 +423,6 @@ goalGroup
   .description("Scaffold a new goal.md from the template")
   .argument("[goal-id]", "Kebab-case goal id (e.g. landing-cvr-optim)")
   .option("--org <slug>", "Organization slug (auto-picked if only one)")
-  .option("--assist <brief>", "Let the LLM draft a goal.draft.md companion from a one-line brief")
   .action(async (goalId, opts) => {
     const { goalNewCommand } = await import("./goal.js");
     await goalNewCommand(goalId, opts);
@@ -471,15 +468,6 @@ goalGroup
   .action(async (goalId, opts) => {
     const { goalStatusCommand } = await import("./goal.js");
     await goalStatusCommand(goalId, opts);
-  });
-
-goalGroup
-  .command("review")
-  .description("LLM quality review of a goal.md (metric objectivity, guardrail fit)")
-  .argument("<path>", "Path to a goal.md")
-  .action(async (p) => {
-    const { reviewCommand } = await import("./review.js");
-    await reviewCommand("goal", p, {});
   });
 
 goalGroup
@@ -609,7 +597,6 @@ agentGroup
   .requiredOption("--team <team>", "Team folder (strategy, growth, experience, engineering, …)")
   .option("--org <org>", "Write under <org>/.agents/ instead of workspace agents dir")
   .option("--description <text>", "Short description for frontmatter")
-  .option("--assist <brief>", "Let the LLM draft the body from a one-line brief (validated; falls back to scaffold)")
   .action(async (opts) => {
     const { agentAddCommand } = await import("./agent.js");
     try {
@@ -636,16 +623,6 @@ agentGroup
   .action(async (id, opts) => {
     const { agentShowCommand } = await import("./agent.js");
     await agentShowCommand(id, opts);
-  });
-
-agentGroup
-  .command("review")
-  .description("LLM quality review of an actor (beyond static validate)")
-  .argument("<id>", "Actor id (<team>/<name>) or bare name")
-  .option("--workspace", "Resolve against the workspace instead of the bundle")
-  .action(async (id, opts) => {
-    const { reviewCommand } = await import("./review.js");
-    await reviewCommand("agent", id, opts);
   });
 
 agentGroup

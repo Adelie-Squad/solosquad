@@ -188,10 +188,6 @@ export interface AddAgentOpts {
   workspace?: string;
   /** Skip rebuilding the route index (useful for tests). */
   skipRouterReload?: boolean;
-  /** §P1 — one-line brief; when set, the LLM drafts the body (validated, falls back to scaffold). */
-  assist?: string;
-  /** Injectable assist caller (tests). Defaults to the Claude-backed caller. */
-  assistCaller?: import("../bot/create-assist.js").AssistCaller;
 }
 
 export interface AddAgentResult {
@@ -234,33 +230,11 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
 
   const description = (opts.description ?? `${name} — TODO: describe what this agent does`).trim();
 
-  let content = renderScaffold(name, team, description);
-  let assisted = false;
-  if (opts.assist) {
-    const { createClaudeAssistCaller } = await import("../bot/create-assist.js");
-    const caller = opts.assistCaller ?? createClaudeAssistCaller(opts.workspace ?? getWorkspaceRoot());
-    try {
-      const body = await caller.draft({ kind: "agent", name, brief: opts.assist });
-      if (body) {
-        const candidate = renderScaffoldWithBody(name, team, description, body);
-        // validate-then-write: a mangled draft must never produce an invalid SKILL.md
-        const spec = parseSkillMd(candidate, skillPath);
-        const r = validateSkill(spec, { dir_name: name, strict_name: true });
-        if (r.ok) {
-          content = candidate;
-          assisted = true;
-        } else {
-          console.log(chalk.yellow("△ assisted draft failed validation — using the plain scaffold"));
-        }
-      }
-    } catch (e) {
-      console.log(chalk.yellow(`△ assist unavailable (${(e as Error).message}) — using the plain scaffold`));
-    }
-  }
+  const content = renderScaffold(name, team, description);
   fs.mkdirSync(agentDir, { recursive: true });
   fs.writeFileSync(skillPath, content, "utf-8");
 
-  console.log(chalk.green(`✓ scaffolded ${skillPath}${assisted ? chalk.dim(" (LLM-assisted body)") : ""}`));
+  console.log(chalk.green(`✓ scaffolded ${skillPath}`));
   console.log(
     chalk.dim(
       "  Edit the SKILL.md to fill in triggers, inputs, outputs, and the process body.",
@@ -400,23 +374,6 @@ export async function agentReloadCommand(
   );
 
   return result;
-}
-
-/** Scaffold frontmatter + an LLM-drafted body (§P1 create assist). */
-function renderScaffoldWithBody(name: string, team: string, description: string, body: string): string {
-  const frontmatter = [
-    `name: "${name}"`,
-    `description: "${description}"`,
-    `team: ${team}`,
-    "stateful: false",
-    "triggers:",
-    "  explicit: true",
-    "  keyword: []",
-    "scope: agent",
-    "confidence: 1.0",
-    `source: cli-scaffold-assisted`,
-  ].join("\n");
-  return `---\n${frontmatter}\n---\n\n${body.trim()}\n`;
 }
 
 function renderScaffold(name: string, team: string, description: string): string {

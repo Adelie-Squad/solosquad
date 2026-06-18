@@ -23,16 +23,14 @@ export interface ScheduleNewOpts {
   cron?: string;
   kind?: string;
   channel?: string;
-  /** §P1 — one-line brief; when set, the LLM drafts the prompt .md (falls back to a stub). */
-  assist?: string;
-  assistCaller?: import("../bot/create-assist.js").AssistCaller;
 }
 
 /**
- * §P1 — `schedules new <id>`: scaffold `schedules/<id>.yaml` + `<id>.md`. The
+ * §9.6 — `schedules new <id>`: scaffold `schedules/<id>.yaml` + `<id>.md`. The
  * schedule domain previously had no create path (users hand-wrote both files).
- * With `--assist <brief>` the prompt body is LLM-drafted; the yaml stays
- * machine-generated and the result is validated before reporting success.
+ * The yaml is machine-generated and the result is validated before reporting
+ * success. Authoring the prompt body from intent is a conversational job —
+ * ask Chief in `solosquad chat` (the asset-review / author skills).
  */
 export async function scheduleNewCommand(id: string | undefined, opts: ScheduleNewOpts = {}): Promise<void> {
   const { isKebabCase } = await import("../util/naming.js");
@@ -56,21 +54,7 @@ export async function scheduleNewCommand(id: string | undefined, opts: ScheduleN
   const yamlBody =
     `id: ${id}\nname: ${id}\nkind: ${kind}\ncron: "${cron}"\nchannel: ${channel}\nenabled: true\n`;
 
-  let promptBody = `# ${id}\n\nTODO: describe what this scheduled run should do.\n`;
-  let assisted = false;
-  if (opts.assist) {
-    const { createClaudeAssistCaller } = await import("../bot/create-assist.js");
-    const caller = opts.assistCaller ?? createClaudeAssistCaller(process.cwd());
-    try {
-      const body = await caller.draft({ kind: "schedule", name: id, brief: opts.assist });
-      if (body) {
-        promptBody = `${body.trim()}\n`;
-        assisted = true;
-      }
-    } catch {
-      /* fall back to the stub prompt */
-    }
-  }
+  const promptBody = `# ${id}\n\nTODO: describe what this scheduled run should do.\n`;
 
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(yamlPath, yamlBody, "utf-8");
@@ -82,7 +66,7 @@ export async function scheduleNewCommand(id: string | undefined, opts: ScheduleN
     ? validateScheduleDef(def, { reservedIds: new Set(ROUTINES.map((r) => r.id)), promptExists })
     : { ok: false, errors: [{ code: "LOAD", message: "could not reload", id }], warnings: [] };
 
-  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md${assisted ? chalk.dim(" (LLM-assisted prompt)") : ""}`));
+  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
   if (!result.ok) {
     console.log(chalk.red(`  ✗ ${result.errors.length} validation error(s):`));
     for (const e of result.errors) printIssue(e, "error");

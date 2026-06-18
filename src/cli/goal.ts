@@ -94,12 +94,7 @@ cost:
  * Per docs/plan/v0.4-autonomous-engine.md §6.
  */
 
-export interface GoalNewOpts {
-  org?: string;
-  /** §P1 — one-line brief; writes a non-authoritative goal.draft.md the user folds in. */
-  assist?: string;
-  assistCaller?: import("../bot/create-assist.js").AssistCaller;
-}
+export interface GoalNewOpts { org?: string }
 export interface GoalListOpts { org?: string }
 export interface GoalShowOpts { org?: string; events?: number }
 export interface GoalRunOpts { org?: string; hours?: string; cycles?: string }
@@ -131,26 +126,6 @@ export async function goalNewCommand(goalId: string | undefined, opts: GoalNewOp
   fs.writeFileSync(path.join(dir, "goal.md"), body, "utf-8");
 
   console.log(chalk.green(`✓ Created ${dir}/goal.md`));
-
-  // §P1 — optional LLM draft. Written to a *companion* goal.draft.md, never the
-  // authoritative goal.md: a mangled draft must not break `goal run` (which
-  // parses goal.md strictly). The user folds the draft in by hand.
-  if (opts.assist) {
-    const { createClaudeAssistCaller } = await import("../bot/create-assist.js");
-    const caller = opts.assistCaller ?? createClaudeAssistCaller(ws);
-    try {
-      const draft = await caller.draft({ kind: "goal", name: goalId, brief: opts.assist });
-      if (draft) {
-        fs.writeFileSync(path.join(dir, "goal.draft.md"), `${draft.trim()}\n`, "utf-8");
-        console.log(chalk.green(`✓ Wrote ${dir}/goal.draft.md`) + chalk.dim(" (LLM draft — fold into goal.md)"));
-      } else {
-        console.log(chalk.yellow("△ assist unavailable — goal.md scaffold only"));
-      }
-    } catch (e) {
-      console.log(chalk.yellow(`△ assist failed (${(e as Error).message}) — goal.md scaffold only`));
-    }
-  }
-
   console.log(chalk.dim("  1. Open goal.md and fill the {{...}} placeholders."));
   console.log(chalk.dim(`  2. solosquad goal run ${goalId}`));
 }
