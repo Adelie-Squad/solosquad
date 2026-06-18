@@ -5,6 +5,7 @@ import {
   type GraphEdge,
   type GraphNode,
 } from "../util/graph.js";
+import { KEBAB_RE } from "../util/naming.js";
 import type { AgentSpec } from "./agent-spec.js";
 
 /**
@@ -52,7 +53,7 @@ export interface ValidateAgentsOptions {
   roots?: string[];
 }
 
-const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const NAME_RE = KEBAB_RE;
 
 export function validateAgents(
   specs: AgentSpec[],

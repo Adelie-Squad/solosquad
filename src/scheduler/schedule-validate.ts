@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import type { ScheduleDef } from "./schedule-def.js";
 import { Findings, type BaseFinding, type ValidationResult } from "../util/validation.js";
+import { isKebabCase } from "../util/naming.js";
 
 /**
  * v1.3.2 §8 — static validation of a user schedule definition. Pure (no fs):
@@ -22,7 +23,6 @@ export interface ValidateScheduleOptions {
   reservedIds?: ReadonlySet<string>;
 }
 
-const ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EVERY_MINUTE = /^(\*|\*\/1)(\s+\*){4}$/;
 
 export function validateScheduleDef(
@@ -32,7 +32,7 @@ export function validateScheduleDef(
   const f = new Findings<ScheduleFinding>();
   const id = def.id;
 
-  f.errorIf(!id || !ID_RE.test(id), { code: "SCHED_ID_MALFORMED", id, field: "id", message: `id "${id}" must be kebab-case` });
+  f.errorIf(!id || !isKebabCase(id), { code: "SCHED_ID_MALFORMED", id, field: "id", message: `id "${id}" must be kebab-case` });
   f.errorIf(!!opts.reservedIds?.has(id), { code: "SCHED_ID_COLLISION", id, field: "id", message: `id "${id}" collides with an existing routine` });
 
   if (!def.cron || typeof def.cron !== "string") {

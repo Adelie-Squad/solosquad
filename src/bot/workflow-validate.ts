@@ -5,6 +5,7 @@ import {
   type GraphNode,
 } from "../util/graph.js";
 import { GUARDRAIL_KEYS, hasAnyGuardrail } from "../util/guardrails.js";
+import { KEBAB_RE } from "../util/naming.js";
 
 /**
  * v1.3.2 §6 — `validateWorkflow`: static validation of a `workflow.yaml`
@@ -48,7 +49,7 @@ interface RawStage {
   guardrails?: unknown;
 }
 
-const ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ID_RE = KEBAB_RE;
 const AGENT_REF_RE = /^[a-z0-9_-]+\/[a-z0-9_-]+$/;
 /** measurable ⇒ has a comparison operator or a standalone number. */
 const MEASURABLE_RE = /(<=|>=|==|!=|[<>=])|(\b\d+(?:\.\d+)?\b)/;

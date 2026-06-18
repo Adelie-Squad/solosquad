@@ -1,5 +1,6 @@
 import yaml from "js-yaml";
 import { normalizeLine } from "../util/platform.js";
+import { isKebabCase, DEFAULT_NAME_MAX } from "../util/naming.js";
 
 /**
  * v0.5 — SKILL.md frontmatter parser + validator.
@@ -35,10 +36,11 @@ export const RESERVED_SLASHES: ReadonlySet<string> = new Set([
 /** Per-workspace cap on freq-enabled SKILLs (v0.5 §13). */
 export const FREQ_SKILL_CAP = 20;
 
-/** v1.3.2 §4 — Anthropic Agent Skills naming/description limits. */
-export const SKILL_NAME_MAX = 64;
+/** v1.3.2 §4 — Anthropic Agent Skills naming/description limits.
+ *  The kebab id rule + length ceiling are the shared §9.5 convention
+ *  (util/naming); SKILL_NAME_MAX is re-exported as the canonical alias. */
+export const SKILL_NAME_MAX = DEFAULT_NAME_MAX;
 export const SKILL_DESCRIPTION_MAX = 1024;
-const SKILL_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export type SkillScope = "agent" | "workspace" | "org" | "repo";
 export type LoopModeKind = "spec-gate";
@@ -608,7 +610,7 @@ export function validateSkill(
           message: `name is ${spec.name.length} chars (max ${SKILL_NAME_MAX})`,
         });
       }
-      if (!SKILL_NAME_RE.test(spec.name)) {
+      if (!isKebabCase(spec.name)) {
         errors.push({
           code: "NAME_MALFORMED",
           field: "name",
