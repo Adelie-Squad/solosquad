@@ -12,7 +12,7 @@ import {
   type ClaudeCallInput,
   type ClaudeCallResult,
   type AuthorDraft,
-} from "../src/bot/skill-author.js";
+} from "../src/bot/skill-manager.js";
 import { installRoutes, getCurrentRoutes } from "../src/bot/agent-router.js";
 import { parseSkillMd, validateSkill } from "../src/bot/skill-parser.js";
 

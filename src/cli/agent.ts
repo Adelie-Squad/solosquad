@@ -8,7 +8,9 @@ import {
   type SkillValidationError,
 } from "../bot/skill-parser.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
-import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
+import { loadAgentSpecs } from "../bot/agent-spec.js";
+import { validateAgents, type AgentFinding } from "../bot/agent-validate.js";
+import { getAgentsDir, getBundledAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 /**
  * v0.5 — `solosquad agent` CLI group.
@@ -24,14 +26,16 @@ import { getAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 interface ValidateOpts {
   all?: boolean;
+  /** Also run cross-agent graph validation (refs, cycles, orphans). */
+  graph?: boolean;
 }
 
 export async function agentValidateCommand(
   filePath: string | undefined,
   opts: ValidateOpts
 ): Promise<void> {
-  if (!filePath && !opts.all) {
-    console.error(chalk.red("error: provide a path or use --all"));
+  if (!filePath && !opts.all && !opts.graph) {
+    console.error(chalk.red("error: provide a path, or use --all / --graph"));
     process.exitCode = 2;
     return;
   }
@@ -46,7 +50,11 @@ export async function agentValidateCommand(
   }
 
   if (opts.all) {
-    const sources = listSourceAgents(getAgentsDir());
+    // §5 / CI `validate-bundled` — scope is the shipped bundle, resolved
+    // deterministically from the package root (not cwd-walked). See
+    // getBundledAgentsDir: this is what prevents an ancestor workspace from
+    // shadowing the bundle when the checkout lives inside one.
+    const sources = listSourceAgents(getBundledAgentsDir());
     if (sources.length === 0) {
       console.log(chalk.yellow("△ no SKILL.md files discovered under agents dir"));
     }
@@ -55,6 +63,13 @@ export async function agentValidateCommand(
       totalChecked++;
       if (!result) totalFailed++;
     }
+  }
+
+  // Cross-agent graph validation — refs/cycles/orphans the per-file
+  // validateSkill pass cannot see (it only sees one SKILL.md at a time).
+  if (opts.all || opts.graph) {
+    totalChecked++;
+    if (validateAgentGraph()) totalFailed++;
   }
 
   if ((opts as { corpus?: unknown }).corpus !== undefined) {
@@ -91,7 +106,10 @@ function validateOne(filePath: string): boolean {
 
   try {
     const spec = parseSkillMd(raw, filePath);
-    const result = validateSkill(spec);
+    // dir-match (§4): a SKILL.md lives at <name>/SKILL.md, so the parent dir
+    // name is the expected `name`.
+    const dirName = path.basename(path.dirname(abs));
+    const result = validateSkill(spec, { dir_name: dirName, strict_name: true });
     if (result.ok && result.warnings.length === 0) {
       console.log(chalk.green(`✓ ${filePath}`));
       return true;
@@ -123,6 +141,36 @@ function printIssue(issue: SkillValidationError, kind: "error" | "warn"): void {
   const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
   const field = issue.field ? chalk.dim(` (${issue.field})`) : "";
   console.log(`    ${tag} ${issue.code}${field}: ${issue.message}`);
+}
+
+/**
+ * Cross-actor graph validation (§5 agent-manager): referential integrity of
+ * collaborators/used_by, peer-mesh cycles, orphans, name/dir/tier. Returns
+ * true on failure (≥1 error). Scope = the bundled actor set.
+ */
+function validateAgentGraph(): boolean {
+  const specs = loadAgentSpecs(getBundledAgentsDir());
+  const result = validateAgents(specs);
+  const label = `agent graph (${specs.length} actors)`;
+  if (result.ok && result.warnings.length === 0) {
+    console.log(chalk.green(`✓ ${label}`));
+    return false;
+  }
+  if (result.ok) {
+    console.log(chalk.yellow(`△ ${label} — ${result.warnings.length} warning(s)`));
+    for (const w of result.warnings) printGraphIssue(w, "warn");
+    return false;
+  }
+  console.log(chalk.red(`✗ ${label} — ${result.errors.length} error(s)`));
+  for (const e of result.errors) printGraphIssue(e, "error");
+  for (const w of result.warnings) printGraphIssue(w, "warn");
+  return true;
+}
+
+function printGraphIssue(issue: AgentFinding, kind: "error" | "warn"): void {
+  const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
+  const scope = issue.agent ? chalk.dim(` ${issue.agent}`) : "";
+  console.log(`    ${tag} ${issue.code}${scope}: ${issue.message}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -163,9 +211,14 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
     throw new Error("missing --name or --team");
   }
 
+  // Non-org path honors an explicit `workspace` override (the JSDoc promises it
+  // — "mostly for tests"); production (no override) keeps getAgentsDir()'s
+  // .solosquad/agents resolution unchanged.
   const baseDir = opts.org
     ? path.join(getOrgDir(opts.org, opts.workspace ?? getWorkspaceRoot()), ".agents")
-    : getAgentsDir();
+    : opts.workspace
+      ? path.join(opts.workspace, "agents")
+      : getAgentsDir();
   const agentDir = path.join(baseDir, team, name);
   const skillPath = path.join(agentDir, "SKILL.md");
 
@@ -206,6 +259,60 @@ export async function agentAddCommand(opts: AddAgentOpts): Promise<AddAgentResul
   }
 
   return { skillPath };
+}
+
+// ---------------------------------------------------------------------------
+// `solosquad agent list` / `agent show` — §9.6 lifecycle CLI (mirrors goal/workflow)
+// ---------------------------------------------------------------------------
+
+export interface AgentListOpts {
+  /** List the workspace's actors instead of the shipped bundle. */
+  workspace?: boolean;
+}
+
+/** List actors (bundled by default; workspace with --workspace), grouped by team. */
+export async function agentListCommand(opts: AgentListOpts = {}): Promise<void> {
+  const dir = opts.workspace ? getAgentsDir() : getBundledAgentsDir();
+  const specs = loadAgentSpecs(dir);
+  if (specs.length === 0) {
+    console.log(chalk.yellow(`△ no actors found under ${dir}`));
+    return;
+  }
+  console.log(chalk.bold(`${specs.length} actor(s) — ${opts.workspace ? "workspace" : "bundle"} (${dir})`));
+  const byTeam = new Map<string, typeof specs>();
+  for (const s of specs) {
+    const arr = byTeam.get(s.team) ?? [];
+    arr.push(s);
+    byTeam.set(s.team, arr);
+  }
+  for (const team of [...byTeam.keys()].sort()) {
+    console.log(chalk.bold(`\n${team}`));
+    for (const s of byTeam.get(team)!.sort((a, b) => a.name.localeCompare(b.name))) {
+      const tier = s.tier === "leader" ? chalk.magenta("leader") : chalk.dim("member");
+      console.log(`  ${chalk.cyan(s.name)} ${tier}`);
+    }
+  }
+}
+
+/** Show one actor's spec + its delegation edges. */
+export async function agentShowCommand(idOrName: string, opts: AgentListOpts = {}): Promise<void> {
+  const dir = opts.workspace ? getAgentsDir() : getBundledAgentsDir();
+  const specs = loadAgentSpecs(dir);
+  const spec = specs.find((s) => s.id === idOrName || s.name === idOrName);
+  if (!spec) {
+    console.log(chalk.red(`✗ no actor "${idOrName}". Try \`solosquad agent list\`.`));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(chalk.bold(`🤖 ${spec.id}`));
+  console.log(`  team:         ${spec.team}`);
+  console.log(`  tier:         ${spec.tier ?? "member"}`);
+  if (spec.category) console.log(`  category:     ${spec.category}`);
+  console.log(`  dev-capable:  ${spec.devCapability ? "yes" : "no"}`);
+  if (spec.collaborators.length) console.log(`  collaborators: ${spec.collaborators.join(", ")}`);
+  if (spec.usedBy.length) console.log(`  used-by:      ${spec.usedBy.join(", ")}`);
+  if (spec.skillsUsed.length) console.log(`  skills-used:  ${spec.skillsUsed.join(", ")}`);
+  console.log(chalk.dim(`  ${spec.skillPath}`));
 }
 
 // ---------------------------------------------------------------------------

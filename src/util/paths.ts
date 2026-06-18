@@ -56,14 +56,35 @@ export function getEnvPath(workspace?: string): string {
   return path.join(getSolosquadConfigDir(workspace), ".env");
 }
 
-/** Agents dir — v0.2.2 looks in .solosquad/agents; falls back to workspace-root agents/ for legacy, then assets/. */
+/** Agents dir — v0.2.2 looks in .solosquad/agents; falls back to workspace-root agents/ for legacy, then the bundle. */
 export function getAgentsDir(): string {
   const root = getWorkspaceRoot();
   const solosquad = path.join(root, ".solosquad", "agents");
   if (fs.existsSync(solosquad)) return solosquad;
   const legacy = path.join(root, "agents");
   if (fs.existsSync(legacy)) return legacy;
-  return path.join(getAssetsDir(), "agents");
+  // v1.3.2 — the last-resort fallback is the bundled roster at the package
+  // root (`<bundle>/agents`), NOT `assets/agents` (which never existed: the
+  // v1.1 flat layout ships agents at the bundle top level). Mirrors how
+  // getSkillsDir/getSchedulesDir fall back to getBundleRoot().
+  return getBundledAgentsDir();
+}
+
+/**
+ * v1.3.2 — the bundled actor roster, resolved *deterministically* from the
+ * installed package root (via getBundleRoot → __dirname), independent of the
+ * current working directory.
+ *
+ * Use this (not getAgentsDir) wherever the intended scope is "the canonical
+ * actors SoloSquad ships" — e.g. `agent validate --graph`, `workflow validate`
+ * agent-ref resolution, and the adoption collision roster (§10.4). getAgentsDir
+ * walks *up from cwd* to find a workspace, so when the package checkout itself
+ * lives inside an unrelated SoloSquad workspace (a dev machine, or a user who
+ * cloned the repo into their workspace tree), it would otherwise validate that
+ * ancestor workspace's — possibly stale — agents instead of the shipped bundle.
+ */
+export function getBundledAgentsDir(): string {
+  return path.join(getBundleRoot(), "agents");
 }
 
 /**
@@ -165,6 +186,17 @@ export function getSkillsDir(): string {
   if (fs.existsSync(userOverride)) return userOverride;
   const legacy = path.join(root, "skills");
   if (fs.existsSync(legacy)) return legacy;
+  return getBundledSkillsDir();
+}
+
+/**
+ * v1.3.2 — the bundled skills dir, resolved deterministically from the package
+ * root (cwd-independent). The skill-manager counterpart to
+ * getBundledAgentsDir(): use it wherever the scope is "the skills SoloSquad
+ * ships" (the adoption collision roster, bundled workflow templates), so an
+ * ancestor workspace's `.solosquad/skills` override can never shadow the bundle.
+ */
+export function getBundledSkillsDir(): string {
   return path.join(getBundleRoot(), "skills");
 }
 

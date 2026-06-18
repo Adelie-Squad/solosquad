@@ -1,0 +1,259 @@
+# agent 정의의 모든 것 — 멀티에이전트 오케스트레이션·actor 정의 전수 분석과 SoloSquad 전략
+
+> **청자:** SoloSquad 개발자(본인). dev 워크플로·내부 구현 관점의 설계 메모이며,
+> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `agent-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §5) 의 근거 문서.
+>
+> **문서 목적.** "좋은 agent(actor) 정의란 무엇인가"의 단일 레퍼런스. SoloSquad 에서 agent =
+> `agents/{main,specialists}/<name>/SKILL.md`(frontmatter: name/description/tier/team/category/
+> collaborators/skills_used/used_by/dev_capability + 본문 역할 프롬프트) + `agent-profile.yaml`
+> (org 단위 tone/priorities/budget 수정자, 3-tier 상속, budget narrower-only invariant). main =
+> 오케스트레이션 actor(Chief 가 DECOMPOSE→DISPATCH 로 동적 위임), specialist = bounded worker.
+> agent 정의 포맷 6종(Claude Code subagent·OpenAI Agents SDK·CrewAI·AutoGen·A2A AgentCard·Copilot)
+> + 오케스트레이션 토폴로지(supervisor·swarm·hierarchical·orchestrator-workers) + 역할 설계 원칙
+> (SRP·right-altitude·least-privilege) + 실패 모드(MAST 14종·cascading error·무한 위임) 를 전수
+> 조사해 **객관적 현황 → 인사이트 → SoloSquad 전략** 순으로 정리한다.
+>
+> **호출 층 정정(중요).** agent 는 ⓪ 직접 대화 디스패치(사용자→Chief→spawn, 휘발·동적·기본),
+> ① workflow ② goal ③ schedule 네 가지로 호출된다. ①②③ 은 ⓪ 을 *박제·자동화*한 형태일 뿐
+> — agent 가 호출보다 근본적이며, 어떤 호출이든 결국 actor 를 깨운다.
+>
+> **조사 방법 주의.** 병렬 리서치 에이전트의 웹 조사(2026-06-18). 1차 출처 다수 직접 fetch
+> (Anthropic·OpenAI·CrewAI·A2A·MCP·MAST arXiv). 일부(LangGraph concepts JS-redirect, OWASP
+> genai 원문, Cursor modes 스키마)는 2차 교차. 본문 [미검증]/[2차] 표기.
+
+---
+
+## 목차
+
+- **Part A** — TL;DR
+- **Part B** — 객관적 현황: agent 정의 포맷 6종 + 오케스트레이션 토폴로지
+- **Part C** — 역할/페르소나 설계 원칙 (SRP·right-altitude·least-privilege·tier)
+- **Part D** — 오케스트레이션 패턴 (supervisor vs swarm·handoff vs agents-as-tools·멀티에이전트 득실)
+- **Part E** — 실패 모드 & 가드레일 (MAST 14종·cascading·무한위임·HITL·budget)
+- **Part F** — 인사이트 (수렴점·차이점)
+- **Part G** — SoloSquad 적용 전략 (`agent-manager` 매핑)
+- **Part H** — 궁극의 체크리스트
+- **출처**
+
+---
+
+# Part A — TL;DR
+
+1. **모든 프레임워크에 반복되는 agent 정의 = 4요소: 정체성(name·description) + 역량(tools·skills·model) + 경계(scope·clear task boundaries) + 위임 관계(handoffs·collaborators).** Google **A2A AgentCard** 가 이를 가장 명시적 표준으로 박제(name·description·capabilities·skills·provider·securitySchemes). Claude Code subagent·OpenAI SDK·Copilot 은 모두 **Markdown+YAML frontmatter 의 `name`/`description`/`tools`/`model` 4필드를 공유**.
+2. **SoloSquad 의 agent `SKILL.md` frontmatter(name·description·tier·team·collaborators·skills_used·used_by·dev_capability)는 이미 이 슈퍼셋에 정렬**돼 있고, `agent-profile.yaml`(budget narrower-only)이 자율 오케스트레이션의 1차 가드레일 층. **빠진 건 그래프 무결성·순환 검증 + 생성 경로.**
+3. **최대 분기축 둘:** ⑴ control-locus(workflow=개발자 고정 vs agent=LLM 동적 — Anthropic), ⑵ topology(supervisor 중앙집중 vs swarm 탈중앙 vs hierarchical). **SoloSquad Chief = orchestrator-workers/supervisor**(중앙 lead 가 동적 분해·위임·합성). specialist 는 bounded worker.
+4. **"specialist > generalist" 가 보편 합의.** CrewAI "specialized roles", Anthropic "clear task boundaries", Claude Code "each subagent should excel at one specific task". 역할 중첩(role overlap)은 1급 안티패턴 — Anthropic 사례: 모호한 지시 시 subagent 들이 "**performed the exact same searches**".
+5. **최대 갭 / 신호:** ⑴ frontmatter 그래프(collaborators·skills_used·used_by)의 **참조 무결성·순환 검증 부재** — workflow `depends_on` 과 동일한 Kahn 으로 해결. ⑵ **위임 budget(turn/depth)이 자식에 상속 안 되는 함정**(LangGraph SubAgentMiddleware 버그가 대표 사례 — 자체 harness 도 동일 리스크). ⑶ **역할 중첩 탐지 부재**(두 specialist 가 같은 일). ⑷ 무한 위임 루프 가드(recursion/depth cap) 부재.
+
+---
+
+# Part B — 객관적 현황: agent 정의 포맷 6종 + 오케스트레이션 토폴로지
+
+## B.1 정의 포맷 한눈에
+
+| 시스템 | 정의 단위 | 정체성 필드 | 역량 필드 | 위임 필드 | 가드레일 필드 |
+|---|---|---|---|---|---|
+| **Claude Code subagent** | `.md`+YAML frontmatter | `name`(소문자-하이픈)·`description` | `tools`(생략 시 전부 상속)·`disallowedTools`·`model`(기본 `inherit`)·`skills`·`mcpServers` | (description 기반 자동 위임) | `maxTurns`·`permissionMode`·`background`·`isolation` |
+| **OpenAI Agents SDK** | Python `Agent(...)` | `name`·`instructions`·`handoff_description` | `tools`·`mcp_servers`·`model`·`model_settings` | `handoffs`(→`transfer_to_<name>`) | `input/output_guardrails`(tripwire)·`max_turns`(기본 10) |
+| **CrewAI** | `Agent(role,goal,backstory)` | `role`·`goal`·`backstory` | `tools`·`llm` | `allow_delegation`(기본 False) | `max_iter`(기본 20)·`max_rpm`·`max_execution_time` |
+| **AutoGen** | `AssistantAgent` | `name`·`system_message` | `tools`·`model_client` | `HandoffMessage`(Swarm) | team `max_turns`·11종 termination |
+| **A2A AgentCard** | discovery JSON | `name`·`description`·`provider`·`version` | `capabilities`·`skills[]`(id/name/desc/tags)·`defaultInput/OutputModes` | (peer 통신 via url) | `securitySchemes`·`security` |
+| **GitHub Copilot** | `.agent.md` | `name`·`description` | `tools[]`·`model` | `handoffs`·`agents`(하위) | `argument-hint` |
+
+**핵심 관찰:** 6종이 **name/description/tools/model 4필드로 수렴**. A2A 만 "discovery 명함"(누가·무엇을·어디서·어떻게 인증)으로 한 단계 더 추상화. **description 은 단순 설명이 아니라 *위임 트리거*** — Claude Code 는 "include phrases like **'use proactively'**", OpenAI 는 `handoff_description`, 이 필드 품질이 자동 라우팅 정확도를 좌우.
+
+## B.2 오케스트레이션 토폴로지
+
+| 토폴로지 | 정의 | 누가 다음 actor 결정 | 대표 |
+|---|---|---|---|
+| **Orchestrator-Workers** | 중앙 LLM 이 동적 분해·위임·합성 | orchestrator(LLM) | Anthropic, Claude Code lead |
+| **Supervisor** | 중앙 supervisor 가 모든 통신·위임 통제 | supervisor | LangGraph supervisor, CrewAI hierarchical |
+| **Swarm (탈중앙)** | actor 들이 서로 직접 제어권 이양 | 현재 활성 actor | OpenAI handoffs, LangGraph swarm, AutoGen Swarm |
+| **Hierarchical** | supervisor 의 supervisor (다층) | 각 층 supervisor | LangGraph hierarchical, MetaGPT |
+| **Network** | many-to-many, 각자 다음 호출 결정 | 임의 actor | LangGraph network [미검증, 2차] |
+
+- **Anthropic multi-agent research** — lead 가 complex query 에 보통 **3–5개** subagent 동시 spawn(독립 context, 병렬). 토큰 ≈ chat 의 **15×**, "**token usage alone explains ~80% of performance variance**". (1차)
+- **Magentic-One Orchestrator** — Task Ledger(facts/guesses/plan, 외부루프) + Progress Ledger(매 step 5질문, 내부루프) + **stall counter(>2 면 break→re-plan)**. (1차 arXiv)
+- **CrewAI Hierarchical** — `manager_llm`/`manager_agent` 가 역할·능력 기반 task 할당 + 결과 검증, manager 는 worker 풀(`agents`)과 분리.
+- **MetaGPT** — SOP 를 프롬프트 시퀀스로("Code = SOP(Team)"), 5역할(PM/Architect/PM/Engineer/QA), **shared message pool + publish-subscribe**(역할 profile 로 관련 정보만 구독, overload 방지).
+
+## B.3 위임 메커니즘 — 제어권 이양 vs 유지
+
+두 갈래(OpenAI 가 가장 명확히 대비):
+- **Handoff(제어권 *이양*, swarm)** — "new agent owns the conversation". `transfer_to_<name>` tool. 탈중앙.
+- **Agents-as-tools(제어권 *유지*, 중앙)** — `agent.as_tool()`, "orchestrate a network **instead of handing off control**". orchestrator 가 계속 핸들 쥠.
+
+→ SoloSquad Chief 는 **agents-as-tools 형(제어권 유지)** 에 가깝다 — spawn 후에도 Chief 가 합성(SYNTHESIZE)을 소유. 단 spawn 된 specialist 는 독립 context(Claude Code subagent 와 동일 격리).
+
+## B.4 2층 패턴 종합
+
+| 시스템 | 영속(누가·무엇을) | 휘발(현재 위임) |
+|---|---|---|
+| Claude Code | `.claude/agents/*.md`(name·tools·model) | 런타임 자동 위임(description 매칭) |
+| OpenAI SDK | `Agent` 정의 | `handoffs` 그래프 순회 |
+| A2A | AgentCard(영속 명함) | task 단위 peer 통신 |
+| **SoloSquad** | **`agents/**/SKILL.md` frontmatter 그래프 + `agent-profile.yaml`** | **Chief DECOMPOSE→DISPATCH→spawn** |
+
+---
+
+# Part C — 역할/페르소나 설계 원칙
+
+- **Single Responsibility — "한 actor 한 역할".** CrewAI: "Agents perform significantly better when given **specialized roles rather than general ones**"; 작명도 "Writer" 금지 → "Technical Documentation Specialist". Claude Code: "each subagent should excel at **one specific task**". Anthropic subagent 필수 4요소: "an objective, an output format, guidance on tools/sources, and **clear task boundaries**".
+- **Right altitude(Goldilocks).** 너무 낮으면 "hardcoding complex, brittle logic in prompts", 너무 높으면 "vague, high-level guidance" → subagent 중복 탐색. 최적 = "specific enough to guide, flexible enough". (Anthropic context engineering)
+- **Generalist 함정 — tool overload.** 도메인 늘면 "generalist's prompt becomes overloaded with tool definitions → confusion"; 툴 8–12개 초과 시 저하, "structural limitation, not a prompt engineering issue". [2차]
+- **Least-privilege tools.** "each tool needs a distinct purpose and a clear description"; "prefer specialized tools over generic ones"; tool 정의에 "프롬프트만큼의 엔지니어링 주의". Claude Code 베스트프랙티스: "**Limit tool access**". OWASP ASI02(Tool Misuse) 도 동일 — 도구별 strict least privilege.
+- **Tier/hierarchy.** orchestrator-workers(중앙 동적 분해) / supervisor(통신 통제) / manager 분리(CrewAI manager 는 worker 풀 밖). **SoloSquad `tier: leader`(main) vs `tier: member`(specialist)** 가 정확히 이 모델.
+- **역할 중첩 = 안티패턴.** Anthropic 사례(모호한 지시→동일 검색 중복), "Anti-Patterns" 글: role collision = "vague, redundant, or **overlapping responsibilities**" → "No clear ownership of outputs". 해법 = Agent Role Design Template(scope/IO/access/escalation 명시).
+
+---
+
+# Part D — 오케스트레이션 패턴
+
+- **Supervisor vs Swarm.** supervisor = 중앙 통제·예측가능·디버그 쉬움(SoloSquad Chief). swarm = 탈중앙·유연하나 추적 어려움. LangGraph 팀조차 "use the supervisor pattern directly **via tools** rather than [the] library"(context engineering 통제력) 권장.
+- **Magentic ledger(진행 추적의 정본).** 외부 Task Ledger(계획) + 내부 Progress Ledger(매 step "task complete? / looping? / progress? / who next? / what instruction?") + **stall counter > 2 → re-plan**. SoloSquad Chief 6+1 stage 머신의 직접 대응물.
+- **멀티에이전트가 *해로울* 때(Cognition "Don't Build Multi-Agents").** 2원칙: ①"**Share context, and share full agent traces, not just individual messages**" ②"**Actions carry implicit decisions, and conflicting decisions carry bad results**". 병렬 subagent 가 context 공유 못 해 불일치(Flappy Bird 가 Mario 배경). 권장 = single-threaded linear agent + context compression.
+- **멀티에이전트가 *도움될* 때(Anthropic, 반대편).** 적합 = "breadth-first queries pursuing multiple independent directions" / "info exceeds single context". 부적합 = "domains that require all agents to **share the same context** or involve **many dependencies**" — 즉 대부분 coding.
+- **종합(분기 기준):** 두 입장은 모순이 아니라 **task coupling 차이**. 강결합·write-heavy·공유컨텍스트(coding)=단일 스레드; 약결합·read-heavy·독립방향(research)=멀티에이전트. **SoloSquad 함의:** Chief 가 spawn 하는 specialist 들이 *독립* 작업이면 병렬 OK, *상호의존*이면 단일 스레드/순차(=workflow `depends_on`)로.
+
+---
+
+# Part E — 실패 모드 & 가드레일
+
+## E.1 MAST 14종 (UC Berkeley, arXiv 2503.13657 — 7 프레임워크·kappa 0.88·1600+ traces)
+
+| 카테고리 | failure modes |
+|---|---|
+| **① Specification & System Design** | FM-1.1 task spec 위반 · FM-1.2 **role spec 위반** · FM-1.3 **step repetition** · FM-1.4 대화이력 손실 · FM-1.5 종료조건 인지실패 |
+| **② Inter-Agent Misalignment** | FM-2.1 대화 reset · FM-2.2 clarification 미요청 · FM-2.3 task derailment · FM-2.4 정보 은닉 · FM-2.5 타 agent 입력 무시 · FM-2.6 reasoning-action 불일치 |
+| **③ Task Verification & Termination** | FM-3.1 조기 종료 · FM-3.2 검증 부재/불완전 · FM-3.3 잘못된 검증 |
+
+카테고리별 % 는 [미검증](primary abstract 미기재, 2차 충돌 — ~42/37/21 수준으로만). "no single category dominates".
+
+## E.2 무한 위임 / handoff 루프 — 프레임워크 기본 가드(EXACT)
+
+- **LangGraph `recursion_limit` 기본 = 25.** 초과 시 `GraphRecursionError`. 병렬 노드는 1 super-step. **함정:** `SubAgentMiddleware` 가 한도를 자식에 전파 안 함 → 하위가 조용히 기본 25 사용.
+- **OpenAI `max_turns` 기본 = 10.** 초과 시 `MaxTurnsExceeded`(None=무제한). handoff/tool call 마다 turn 1 소모 = circular handoff safety net.
+- **Claude Code subagent depth limit = 5** (depth 5 의 background subagent 는 Agent tool 미수령 → 더 못 spawn, "fixed and not configurable").
+
+## E.3 Cascading error (arXiv 2603.04474 "From Spark to Fire")
+
+- 단일 atomic error seed → ① **Cascade Amplification**: reviewer 역할 있어도 6개 중 **5개가 100% infection** · ② **Topological Fragility**: LangGraph hub vs leaf **10.31× Impact Factor** · ③ Consensus Inertia. governance 방어로 Benign Infection Control 0.32→0.89.
+- 완화: **circuit breaker**(N연속 실패 trip) + downstream 전달 전 **LLM 출력 schema 검증**.
+
+## E.4 가드레일 종합 (OWASP Agentic + 프레임워크)
+
+- **Least privilege** — ASI02/ASI03. 도구·자격증명 스코핑, "bounded identity + short-lived task-scoped credentials".
+- **HITL / 비가역 액션** — "pause for human feedback at checkpoints"; "require explicit confirmation for destructive actions". **주의(LangGraph `interrupt()`):** side-effect 를 승인 *앞*에 두면 재개 시 중복 — 승인 *이후* 단계로 분리(idempotency).
+- **Budget cap** — "stopping conditions (max iterations)"; "autonomous nature means higher costs, compounding errors". OpenAI blocking guardrail 은 시작 *전* 완료 → tripwire 시 "preventing token consumption and tool execution".
+- **Delegation depth cap** — ASI08 Cascading Failures → blast-radius caps·circuit breaker.
+
+---
+
+# Part F — 인사이트
+
+## F.1 강한 수렴 (1차 출처)
+1. **agent 정의 = name/description/tools/model 4필드 + 경계**; Markdown+frontmatter 가 사실상 표준(Claude Code·Copilot·AGENTS.md).
+2. **specialist > generalist**; 역할 중첩은 보편 안티패턴.
+3. **orchestrator/supervisor 가 중앙 통제 토폴로지의 정본**; 동적 분해·위임·합성.
+4. **위임에는 반드시 종료 가드**(max_turns/recursion_limit/depth/stall counter) — 모든 프레임워크가 기본값 보유.
+5. **least-privilege tool + 비가역 액션 HITL + budget cap** = 자율 actor 3대 가드레일.
+6. **멀티에이전트 득실은 task coupling 으로 갈린다**(약결합=병렬, 강결합=단일).
+
+## F.2 의미있는 분기 (명시적 선택 필요)
+1. **제어권 — handoff(이양) vs agents-as-tools(유지).** SoloSquad = 유지(Chief 가 합성 소유).
+2. **토폴로지 — supervisor vs swarm vs hierarchical.** SoloSquad = supervisor/orchestrator-workers.
+3. **정의 위치 — 코드(OpenAI/CrewAI) vs 선언 파일(Claude Code/Copilot/A2A).** SoloSquad = 선언(`SKILL.md`).
+4. **위임 그래프 — 단방향(트리) vs 상호(네트워크).** SoloSquad `collaborators` 는 현재 상호 — 순환 위험.
+
+**SoloSquad 포지셔닝:** 합의 측에 정확히 위치 — 선언적 actor 정의(`SKILL.md` frontmatter ≈ AgentCard 계보), supervisor 토폴로지(Chief), specialist 분리, tier 모델. 분기축 선택: **제어권 유지(agents-as-tools)** + **supervisor**. 대부분 시스템보다 *약한* 지점: **위임 그래프 가드(순환·depth) 부재** + **위임 budget 자식 상속 미보장** — 정확히 v1.3.2 `agent-manager` 가 메울 곳.
+
+---
+
+# Part G — SoloSquad 적용 전략
+
+현재 코드(`src/bot/agents-builder.ts`·`src/engine/agents-md-loader.ts`·`src/util/agent-profile.ts`
++ `agents/{main,specialists}/<name>/SKILL.md` 30여 개 번들):
+actor 정의·customize·spawn 은 동작하나 **생성 경로·그래프 검증·refine 부재**. v1.3.2 §5 매핑:
+
+## G1. validate — frontmatter 그래프 무결성 (P0 — 최대 갭)
+frontmatter 는 그래프다. `validateAgent`:
+- `collaborators`·`used_by` 가 **실존 actor 참조**(`<team>/<agent>` 해소) — 참조 무결성.
+- `skills_used` 가 **실존 skill 참조**(skill-manager 레지스트리 교차).
+- **collaborator/delegation 순환·도달성 — workflow `depends_on` 과 동일 Kahn O(V+E)**(§9.2 공유 코어). 무한 위임 루프 차단. 최소 **depth 제한** 강제(LangGraph 25·Claude 5·OpenAI 10 선례).
+- `tier`↔`team` 정합, `name` kebab-case·dir-match·예약어(skill validate 동형).
+- `agent-profile.yaml` budget narrower-only invariant **사전 표면화**(현재 로드 시 warning 만).
+
+## G2. review — 역할 중첩 탐지 (P1)
+MAST FM-1.2(role spec 위반)·역할 중첩 안티패턴 대응: **두 specialist 가 같은 일을 하나**
+(skill domain-overlap 과 동형 메커니즘), 역할 명확성, `dev_capability` 적정성(design-only actor 가
+write 권한 요구 X), description 이 *위임 트리거*로 충분히 구체적인가("use proactively" 류).
+
+## G3. create — actor scaffold (P1)
+새 specialist/main 생성(frontmatter+body+CUSTOMIZATION_GUIDE). description 공식·3인칭은
+skill-manager 와 공유. **번들 30여 개 불변, 사용자 actor 는 org 레이어(`<org>/agents/`)** — v1.5.0
+upstream 재조정 충돌 회피. AgentCard 의 명시적 scope/boundary/skills 모델을 frontmatter 가이드로.
+
+## G4. 위임 가드레일 — budget 자식 상속 (P1 — 대표 함정)
+LangGraph SubAgentMiddleware 버그(한도 자식 미전파)가 자체 harness 의 직접 리스크. Chief→specialist
+spawn 시 **turn/depth budget 을 자식에 명시적 상속** + circuit breaker(연속 실패 trip) + downstream
+전달 전 출력 schema 검증(cascading error 방어). §9.4 가드레일 코어 공유.
+
+## G5. refine + lifecycle (P2 / P1)
+- refine — §9.3 bounded-edit 루프를 SKILL.md body(역할 프롬프트)/agent-profile tone 에. protected-section
+  으로 frontmatter 그래프 보호(refine 은 산문만).
+- lifecycle — `solosquad agent list/show/validate/enable/disable` + **org 위임 그래프 시각화**
+  (mermaid/DOT). workflow `<team>/<agent>` 노드 실존성의 **단일 진실원**.
+
+## G6. 비범위 (v1.4+)
+런타임 동적 actor 생성(spawn-time), actor 버전 히스토리, per-agent 메모리 스코프, agent 단위
+termination policy, swarm 식 탈중앙 handoff(현재 supervisor 유지).
+
+---
+
+# Part H — 궁극의 체크리스트
+
+좋은 agent(`SKILL.md`) 정의·검증 시:
+
+- [ ] **정체성** — `name`(kebab-case·dir-match·예약어 회피) + `description`(3인칭, *위임 트리거*로 구체적)
+- [ ] **역량** — `skills_used` 가 실존 skill 참조, `dev_capability` 가 역할에 맞는 최소 권한
+- [ ] **경계** — 역할이 **하나로 명확**(SRP), 기존 actor 와 책임 중첩 없음(generalist 함정 회피)
+- [ ] **right altitude** — 너무 brittle(하드코딩)도 너무 vague(모호 지시)도 아닌가
+- [ ] **위임 그래프** — `collaborators`·`used_by` 가 실존 actor 참조(참조 무결성)
+- [ ] **순환 없음** — 위임 그래프에 무한 루프 없음(Kahn), depth 제한 있는가
+- [ ] **tier 정합** — `tier`(leader/member) ↔ `team` 일치, supervisor/worker 역할 분명
+- [ ] **budget 가드** — `agent-profile.yaml` cap 이 narrower-only, spawn 시 자식에 turn/depth 상속
+- [ ] **비가역 액션** — push 등에 HITL 게이트, side-effect 가 승인 *이후*(idempotent)
+- [ ] **cascading 방어** — downstream 전달 전 출력 검증, circuit breaker
+
+---
+
+## 출처
+
+### agent 정의 / 오케스트레이션 프레임워크
+- Anthropic Building Effective Agents — https://www.anthropic.com/engineering/building-effective-agents · Multi-Agent Research System https://www.anthropic.com/engineering/multi-agent-research-system · context engineering https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+- Claude Code Subagents — https://code.claude.com/docs/en/sub-agents
+- OpenAI Agents SDK — https://openai.github.io/openai-agents-python/ · agents · handoffs · guardrails · running_agents (max_turns 기본 10: https://github.com/openai/openai-agents-python)
+- CrewAI — https://docs.crewai.com/concepts/agents · /concepts/processes · /en/learn/hierarchical-process · /en/guides/agents/crafting-effective-agents
+- AutoGen — https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/tutorial/teams.html · termination · Magentic-One arXiv https://arxiv.org/html/2411.04468v1
+- MetaGPT — https://arxiv.org/abs/2308.00352 · https://github.com/geekan/MetaGPT
+- Microsoft Agent Framework / Semantic Kernel — https://learn.microsoft.com/en-us/agent-framework/workflows/orchestrations/ · https://learn.microsoft.com/en-us/semantic-kernel/frameworks/agent/agent-orchestration/
+
+### 정의 포맷 / 상호운용
+- A2A AgentCard — https://a2a-protocol.org/latest/specification/ · skills https://a2a-protocol.org/latest/tutorials/python/3-agent-skills-and-card/ · discovery https://agent2agent.info/docs/concepts/agentcard/
+- MCP — https://modelcontextprotocol.io/docs/learn/architecture
+- GitHub Copilot custom agents — https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes
+- AGENTS.md — https://agents.md
+
+### 역할 설계 / 실패 모드 / 가드레일
+- MAST taxonomy — https://arxiv.org/abs/2503.13657 · https://arxiv.org/html/2503.13657v1
+- Cognition "Don't Build Multi-Agents" — https://cognition.ai/blog/dont-build-multi-agents
+- Cascading failure "From Spark to Fire" — https://arxiv.org/html/2603.04474v1
+- LangGraph recursion_limit — https://docs.langchain.com/oss/python/langgraph/errors/GRAPH_RECURSION_LIMIT · supervisor https://github.com/langchain-ai/langgraph-supervisor-py · swarm https://github.com/langchain-ai/langgraph-swarm-py
+- OWASP Agentic Top 10 — https://goteleport.com/blog/owasp-top-10-agentic-applications/ [2차]
+- specialist vs generalist — https://www.kubiya.ai/blog/why-should-ai-agents-be-specialists-not-generalists-moe-in-practice [2차]
+
+## 레포 내 관련 코드
+- `agents/main/<name>/SKILL.md`(chief·pm·engineer·designer·marketer, `tier: leader`) · `agents/specialists/<name>/SKILL.md`(20여 개, `tier: member`)
+- `src/util/agent-profile.ts`(3-tier 상속·budget narrower-only invariant) · `src/bot/agents-builder.ts` · `src/engine/agents-md-loader.ts`
+- `src/bot/chief-runner.ts`(`handleUserMessage`→DECOMPOSE→DISPATCH→spawn, orchestrator-workers) · `src/bot/spawn-assembler.ts` · `src/bot/spawn-prompt-markers.ts`
+- `src/analyze/workflow-matcher.ts`(`<team>/<agent>` ref) · `agents/main/chief/SKILL.md`(stage 머신)

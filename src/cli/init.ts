@@ -290,6 +290,11 @@ async function registerRepoInline(
     /* trust grant is best-effort */
   }
 
+  // v1.3.2 §10.5 — surface adoptable assets and (interactively) walk the
+  // dry-run → confirm → apply flow inline. Mirrors `add repo`. See offerAdoption.
+  const { offerAdoption } = await import("./adopt-offer.js");
+  await offerAdoption(src, "  ");
+
   return { slug, role };
 }
 

@@ -321,26 +321,27 @@ solosquad init</code></pre>
 
   <h4>① 에이전트 팀 — Chief 한 명과 대화하면 팀 전체가 움직입니다</h4>
   <p>당신은 <strong>Chief</strong> 한 명하고만 대화합니다. Chief 가 요청의 의도를 파악해 <strong>PM</strong>(오케스트레이터)에게 넘기고, PM 이 4개 팀의 전문가를 필요한 만큼 불러 결과를 모아 옵니다. 사용자가 20여 명을 일일이 호출할 필요가 없습니다.</p>
+  <p><strong>토폴로지 — 탈중앙 swarm 이 아니라 계층형 supervisor.</strong> Chief 가 동적으로 분해·위임하되 제어권을 끝까지 쥡니다(최종 SYNTHESIZE 를 Chief 가 소유). 3계층: <strong>Chief</strong>(조직 총괄) → <strong>4 팀장</strong>(pm · engineer · designer · marketer) → <strong>전문가</strong>(bounded worker). 위임 그래프는 <em>순수 트리가 아니라 DAG</em> — PM 이 engineer/designer/marketer 팀장도 호출(기획→전달)하므로 참조 무결성·순환을 검증합니다(<code>solosquad agent validate --graph</code>). spawn 마다 독립 컨텍스트 윈도우를 갖습니다.</p>
   <div class="tree">                   당신 (솔로 파운더)
                        │   Discord #command-&lt;handle&gt; 에서 대화
                        ▼
               ┌──────────────────┐
-              │       Chief       │   조직 대표 · 당신과 대화하는 유일한 창구
-              │  (이름은 자유 —    │   요청 의도 파악 → 작업 유형 분류
+              │       Chief       │   tier: leader · 당신과 대화하는 유일한 창구
+              │  (이름은 자유 —    │   의도 파악 → 분류 → DECOMPOSE → DISPATCH → SYNTHESIZE
               │   예: 솔로스쿼드)   │
               └─────────┬────────┘
-                        │  위임
+                        │  위임 (DAG)
                         ▼
               ┌──────────────────┐
-              │        PM         │   오케스트레이터 · 단계 분해 + 전문가 호출
+              │        PM         │   leader · product · 2차 오케스트레이터 (eng/des/mkt 도 호출)
               └─────────┬────────┘
           ┌─────────────┼─────────────┬──────────────┐
           ▼             ▼             ▼              ▼
-       Strategy      Growth       Experience    Engineering
-       전략 팀       그로스 팀     경험 팀        엔지니어링 팀
-       PMF·기획·     마케팅·       리서치·        프론트·백엔드·
-       전략·분석     콘텐츠·       UX·UI          API·데이터·
-                     브랜딩                       인프라·품질·보안</div>
+       Product       Engineering   Design        Marketing
+       제품 팀       엔지니어링 팀  디자인 팀      마케팅 팀
+       PMF·기획·     프론트·백엔드· 리서치·        GTM·콘텐츠·
+       전략·분석     API·데이터·    UX·UI          브랜드·퍼포먼스
+                     품질·보안</div>
 
   <h4>② 3가지 작업 유형 — 모든 요청은 셋 중 하나로 처리됩니다</h4>
   <p>Chief 는 들어온 요청을 <strong>workflow · goal · schedule</strong> 세 가지 중 하나로 분류합니다 (가벼운 대화는 그 자리에서 바로 답합니다). 이 세 가지가 SoloSquad 작업의 전부입니다.</p>
@@ -376,7 +377,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
   </ul>
   <div class="callout info">
     <strong>이 문서의 버전</strong>
-    현재 npm 최신은 <span class="badge now">v1.3.1</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
+    현재 npm 최신은 <span class="badge now">v1.3.2</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
   </div>
 </section>
 
@@ -452,7 +453,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
     <tbody>
       <tr><td><strong>Chief</strong></td><td>조직 대표. 사용자 요청을 받아 의도를 분류하고, 작업을 PM 에게 위임한 뒤 결과를 사용자에게 보고합니다. 이름은 자유롭게 정합니다 (예: 솔로스쿼드, Hermes, Atlas).</td><td><strong>예</strong> — 유일한 창구</td></tr>
       <tr><td><strong>PM</strong></td><td>오케스트레이터. Chief 가 넘긴 일을 단계로 분해하고, 어떤 전문가를 부를지 정해 실행을 조율합니다.</td><td>아니오 (내부)</td></tr>
-      <tr><td><strong>전문가 (4팀)</strong></td><td>실제 작업 수행. Strategy(전략·기획·분석) · Growth(마케팅·콘텐츠·브랜딩) · Experience(리서치·UX·UI) · Engineering(프론트·백엔드·API·데이터·인프라·품질·보안).</td><td>아니오 (PM 이 호출)</td></tr>
+      <tr><td><strong>전문가 (4팀)</strong></td><td>실제 작업 수행. Product(PMF·기획·전략·분석) · Engineering(프론트·백엔드·API·데이터·인프라·품질·보안) · Design(리서치·UX·UI) · Marketing(GTM·콘텐츠·브랜드·퍼포먼스).</td><td>아니오 (PM 이 호출)</td></tr>
     </tbody>
   </table>
   <p>각 전문가의 역할·작동 방식은 <code>SKILL.md</code> 라는 파일에 정의되어 있고(→ 3.4), 사용자가 일일이 호출할 필요 없이 Chief·PM 이 알아서 적합한 전문가를 붙입니다.</p>
@@ -1174,7 +1175,17 @@ solosquad sync                                      # repositories/ ↔ .org.yam
 
   <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
 
-  <h4>v1.3.1 (2026-06-18) <span class="badge now">최신</span> — 정리 릴리스: v1.1 잔재 구 <code>assets/</code> 비우기 + CI/의존성 하드닝</h4>
+  <h4>v1.3.2 (2026-06-19) <span class="badge now">최신</span> — 에셋 생애주기 매니저(skill·agent·workflow·goal·schedule) + 에셋 채택</h4>
+  <ul>
+    <li><strong>에셋 매니저</strong> — 5개 자산이 동일 인터페이스 공유: <code>validate</code>(정적 게이트), <code>list</code>/<code>show</code>(조회). 통합 입구 <code>solosquad asset list|show|validate &lt;kind&gt;</code> 신설, 전체 CLI 일람 <code>solosquad commands</code> 추가.</li>
+    <li><strong>agent 매니저</strong>(신규, 5번째) — <code>agent validate --graph</code> 가 에이전트 간 위임 그래프(참조 무결성·순환·고아) 검증.</li>
+    <li><strong>에셋 채택</strong> — <code>solosquad adopt &lt;repo&gt; [--apply] [--classify]</code> 가 외부 repo 의 skill/agent/workflow/schedule 을 발견·검증하고 워크스페이스로 additive 채택(충돌 시 namespace). <code>init</code>/<code>add repo</code> 시 채택 가능 자산 자동 안내.</li>
+    <li><strong>schedules</strong> — 사용자 정의 스케줄 생성 경로 신설: <code>schedules new|list|show|validate</code> (<code>schedules/&lt;id&gt;.yaml</code>).</li>
+    <li><strong>대화형 우선</strong> — LLM 판단 동사(review·생성 보조)는 CLI 가 아니라 <code>solosquad chat</code> 안에서 <code>asset-review</code> 스킬로. CLI 는 결정적·스크립트 가능 표면만 유지.</li>
+    <li>상세: <code>CHANGELOG.md</code> §[1.3.2], <code>docs/prd/v1.3.2-domain-lifecycle-managers.md</code></li>
+  </ul>
+
+  <h4>v1.3.1 (2026-06-18) — 정리 릴리스: v1.1 잔재 구 <code>assets/</code> 비우기 + CI/의존성 하드닝</h4>
   <ul>
     <li><strong>사용자 대면 기능 0</strong> — 내부 안정화 릴리스. 동작·tarball 변화 없음. v1.1 리오그가 절반만 끝낸 구 <code>assets/</code> 트리를 비우고, v1.3.0 머지 중 드러난 CI·의존성 문제를 마감.</li>
     <li><strong>CI/의존성</strong> — <code>node-cron</code> 3→4 (TS 재작성으로 <code>uuid</code> 의존 제거 → moderate 취약점 2건 소멸); <code>npm audit</code> moderate 비차단 가시화; Node 기준 <code>&gt;=20</code>.</li>

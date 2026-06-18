@@ -4,7 +4,7 @@ import { getOrgDir } from "../util/paths.js";
 import { normalizeLine } from "../util/platform.js";
 import { searchArchive } from "../memory/archive-search.js";
 import { getSinkPath } from "../memory/route-event-sink.js";
-import { applyDraft, type AuthorDraft } from "../bot/skill-author.js";
+import { applyDraft, type AuthorDraft } from "../bot/skill-manager.js";
 
 /**
  * v0.6 §3.2 — Trajectory → SKILL pattern extraction (P0 #3).

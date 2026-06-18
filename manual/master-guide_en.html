@@ -321,26 +321,27 @@ solosquad init</code></pre>
 
   <h4>1. An agent team &mdash; talk to one Chief and the whole team moves</h4>
   <p>You only ever talk to a single agent, the <strong>Chief</strong>. The Chief reads the intent behind your request and hands it to the <strong>PM</strong> (the orchestrator), who then calls in as many specialists across the four teams as the job needs and gathers their results. You never have to summon the twenty-some agents yourself.</p>
+  <p><strong>Topology — a hierarchical supervisor, not a swarm.</strong> The Chief dynamically decomposes and delegates but keeps control to the end (it owns the final SYNTHESIZE step). Three tiers: <strong>Chief</strong> (org supervisor) → <strong>4 team leaders</strong> (pm · engineer · designer · marketer) → <strong>specialists</strong> (bounded workers). The delegation graph is a <em>DAG, not a pure tree</em> — the PM also routes to the engineer/designer/marketer leaders (plan→hand-off), so SoloSquad validates the graph for reference integrity and cycles (<code>solosquad agent validate --graph</code>). Each spawned agent gets its own context window.</p>
   <div class="tree">                   You (the solo founder)
                        │   Chat in Discord #command-&lt;handle&gt;
                        ▼
               ┌──────────────────┐
-              │       Chief       │   The org's lead &middot; the one and only channel you talk to
-              │  (name is free —  │   Reads intent → classifies the work type
+              │       Chief       │   tier: leader · the one and only channel you talk to
+              │  (name is free —  │   Reads intent → classifies → DECOMPOSE → DISPATCH → SYNTHESIZE
               │   e.g. SoloSquad)  │
               └─────────┬────────┘
-                        │  delegates
+                        │  delegates (DAG)
                         ▼
               ┌──────────────────┐
-              │        PM         │   Orchestrator &middot; breaks work into steps + calls specialists
+              │        PM         │   leader · product · 2nd-tier orchestrator (also calls eng/des/mkt)
               └─────────┬────────┘
           ┌─────────────┼─────────────┬──────────────┐
           ▼             ▼             ▼              ▼
-       Strategy      Growth       Experience    Engineering
-       team          team         team          team
-       PMF, planning marketing,   research,     frontend, backend,
-       strategy,     content,     UX, UI        API, data, infra,
-       analysis      branding                   quality, security</div>
+       Product       Engineering   Design        Marketing
+       team          team          team          team
+       PMF, planning, frontend,    research,     GTM, content,
+       strategy,     backend, API, UX, UI        brand,
+       analysis      data, QA, sec               performance</div>
 
   <h4>2. Three work types &mdash; every request becomes one of three things</h4>
   <p>The Chief sorts each incoming request into one of three categories &mdash; <strong>workflow</strong>, <strong>goal</strong>, or <strong>schedule</strong> (light chit-chat is simply answered on the spot). These three types cover everything SoloSquad does.</p>
@@ -376,7 +377,7 @@ Layer 2  Repository (code)    The actual product code — separated per repo</di
   </ul>
   <div class="callout info">
     <strong>The version this document covers</strong>
-    The current npm release is <span class="badge now">v1.3.1</span>. Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see Chapter 9, CHANGELOG.
+    The current npm release is <span class="badge now">v1.3.2</span>. Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see Chapter 9, CHANGELOG.
   </div>
 </section>
 
@@ -452,7 +453,7 @@ Layer 2  Repository (code)    The actual product code — separated per repo</di
     <tbody>
       <tr><td><strong>Chief</strong></td><td>The organization's lead. It receives your requests, classifies their intent, delegates the work to the PM, and then reports the results back to you. You're free to choose its name (e.g. SoloSquad, Hermes, Atlas).</td><td><strong>Yes</strong> &mdash; the only channel</td></tr>
       <tr><td><strong>PM</strong></td><td>The orchestrator. It breaks the work the Chief hands over into stages, decides which specialists to call, and coordinates their execution.</td><td>No (internal)</td></tr>
-      <tr><td><strong>Specialists (4 teams)</strong></td><td>They do the actual work: Strategy (strategy, planning, analysis), Growth (marketing, content, branding), Experience (research, UX, UI), and Engineering (frontend, backend, API, data, infrastructure, quality, security).</td><td>No (called by the PM)</td></tr>
+      <tr><td><strong>Specialists (4 teams)</strong></td><td>They do the actual work: Product (PMF, planning, strategy, analysis), Engineering (frontend, backend, API, data, infrastructure, quality, security), Design (research, UX, UI), and Marketing (GTM, content, brand, performance).</td><td>No (called by the PM)</td></tr>
     </tbody>
   </table>
   <p>Each specialist's role and operating procedure is defined in a file called <code>SKILL.md</code> (see 3.4), and you don't have to summon them one by one &mdash; the Chief and the PM attach the right specialist for you.</p>
@@ -1140,7 +1141,17 @@ solosquad sync                                      # reconcile repositories/ �
 
   <h3 id="s9-1">9.1 Released (npm-published)</h3>
 
-  <h4>v1.3.1 (2026-06-18) <span class="badge now">latest</span> — Stabilization: empty the v1.1-leftover <code>assets/</code> + CI/deps hardening</h4>
+  <h4>v1.3.2 (2026-06-19) <span class="badge now">latest</span> — Asset lifecycle managers (skill·agent·workflow·goal·schedule) + asset adoption</h4>
+  <ul>
+    <li><strong>Asset managers</strong> — the five asset kinds share one interface: <code>validate</code> (static gate), <code>list</code>/<code>show</code> (inspection). New unified front door <code>solosquad asset list|show|validate &lt;kind&gt;</code>, plus <code>solosquad commands</code> to see the whole CLI at a glance.</li>
+    <li><strong>agent manager</strong> (new, 5th) — <code>agent validate --graph</code> checks the cross-agent delegation graph (reference integrity, cycles, orphans).</li>
+    <li><strong>Asset adoption</strong> — <code>solosquad adopt &lt;repo&gt; [--apply] [--classify]</code> discovers a repo's skill/agent/workflow/schedule assets, validates them, and additively adopts them into the workspace (namespaced on collision). <code>init</code>/<code>add repo</code> surface adoptable assets automatically.</li>
+    <li><strong>schedules</strong> — user-defined schedules are now a first-class create path: <code>schedules new|list|show|validate</code> over <code>schedules/&lt;id&gt;.yaml</code>.</li>
+    <li><strong>Conversational-first</strong> — LLM-judgment verbs (review, create-assist) live in <code>solosquad chat</code> via the <code>asset-review</code> skill, not as CLI verbs; the CLI stays deterministic/scriptable.</li>
+    <li>Details: <code>CHANGELOG.md</code> §[1.3.2], <code>docs/prd/v1.3.2-domain-lifecycle-managers.md</code></li>
+  </ul>
+
+  <h4>v1.3.1 (2026-06-18) — Stabilization: empty the v1.1-leftover <code>assets/</code> + CI/deps hardening</h4>
   <ul>
     <li><strong>No user-facing features</strong> — internal stabilization release; behavior and tarball unchanged. Finishes the half-done v1.1 reorg by emptying the old <code>assets/</code> tree, and closes the CI/dependency issues surfaced while merging v1.3.0.</li>
     <li><strong>CI / deps</strong> — <code>node-cron</code> 3→4 (TS rewrite drops the <code>uuid</code> dependency → clears 2 moderate advisories); moderate <code>npm audit</code> advisories now surfaced non-blockingly; Node baseline <code>&gt;=20</code>.</li>

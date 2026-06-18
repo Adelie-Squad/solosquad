@@ -163,6 +163,55 @@ channels:
 - 메시지에서 키워드 탐지 → 해당 에이전트의 SKILL.md 로드 → 프롬프트에 주입
 - 매칭 없으면 일반 모드로 폴백
 
+### 5.1 에이전트 토폴로지 (계층형 supervisor)
+
+SoloSquad 는 **hierarchical orchestrator-workers** 토폴로지다 — 중앙 Chief 가 동적으로 분해·위임하되
+**제어권을 끝까지 쥔다(agents-as-tools; spawn 후 SYNTHESIZE 를 Chief 가 소유)**. swarm(탈중앙 handoff)
+이 아니다. 3계층: Chief(org 총괄) → 4 main leader(도메인 팀장) → specialist(worker).
+
+```mermaid
+flowchart TD
+    User([👤 User · Discord/터미널])
+    User -->|handleUserMessage| Chief
+
+    Chief["Chief<br/>tier: leader · team: chief<br/>소통·과제화·오케스트레이션·회고"]
+
+    Chief -->|DECOMPOSE → DISPATCH| PM["pm<br/>leader · product"]
+    Chief --> ENG["engineer<br/>leader · engineering"]
+    Chief --> DES["designer<br/>leader · design"]
+    Chief --> MKT["marketer<br/>leader · marketing"]
+
+    %% pm 은 2차 오케스트레이터: engineer/designer/marketer.used_by = [chief, pm]
+    PM -.->|used_by| ENG
+    PM -.-> DES
+    PM -.-> MKT
+
+    PM --> Pspec["product specialists<br/>pmf-planner · feature-planner · idea-scoper<br/>business-strategist · policy-architect · data-analyst"]
+    ENG --> Espec["engineering specialists<br/>backend-engineer · architect · fde<br/>creative-frontend · data-engineer · qa · cloud-admin · security"]
+    DES --> Dspec["design specialists<br/>researcher · ux-designer · ui-designer"]
+    MKT --> Mspec["marketing specialists<br/>gtm-strategist · brand-marketer · performance-marketer"]
+```
+
+**계층/tier:**
+
+| 계층 | 멤버 | tier | 역할 |
+|---|---|---|---|
+| Chief | chief | leader | org 총괄 supervisor. `handleUserMessage`→DECOMPOSE→DISPATCH→SYNTHESIZE |
+| Main 4 | pm·engineer·designer·marketer | leader | 도메인 팀장(team: product·engineering·design·marketing) |
+| Specialists | architect·backend-engineer·researcher 등 20여 개 | member | bounded worker, 산출물 생산 |
+
+**위임 그래프 디테일:** 순수 트리가 아니라 **DAG** 다. `pm.used_by=[chief]` 이지만
+`engineer/designer/marketer.used_by=[chief, pm]` → **pm 이 다른 3 리더를 호출하는 2차
+오케스트레이터**(기획→전달 흐름). 이 교차 때문에 위임 그래프의 **순환·참조 무결성 검증**이 필요
+(v1.3.2 §5 `agent-manager` 의 `validate`).
+
+**control-locus:** 거시(Chief)=동적·LLM 결정(agent 진영, 가드레일=agent-profile budget cap),
+미시(specialist 노드 내부)=역할로 bounded. spawn 마다 **독립 context window**(메인 컨텍스트 오염 방지).
+
+> §9 의 stage→팀 표는 v1.1 이전 워크플로 매핑(Experience/Growth/Strategy 명칭·`backend-developer`
+> 등 구명)이며, 현재 actor 디렉터리 구조(`agents/main/` + `agents/specialists/`, team =
+> product/engineering/design/marketing)는 본 절(5.1)이 정본이다.
+
 ---
 
 ## 6. CLI 런타임 해석 (resolveOrgCwd)
@@ -1150,6 +1199,32 @@ Get-CimInstance Win32_Process |
 **비범위(후속)** — P3 토큰 edit-스트리밍 · 리액션 토글④ · Slack Block Kit 패리티 · 커밋 trailer 스탬프(§A.4.5) · 전용 `artifacts-<handle>` 아카이브 채널(P2).
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
+
+#### 13.6.25 v1.3.2 — Asset lifecycle managers + 에셋 채택 (2026-06-19)
+
+5개 1급 자산(skill·agent·workflow·goal·schedule)에 **공통 매니저 추상**(validate/list/show + 공유
+검증·그래프·가드레일·naming 코어)을 입히고, 외부 repo 자산을 워크스페이스로 끌어오는 **채택 파이프라인**을
+완성. CLI 비대화는 **conversational-first** 원칙으로 정리.
+
+- **도메인 validator (P0, CI 게이트)** — `validateSkill` 강화(naming/description hygiene),
+  `agent validate --graph`(신설 5번째 매니저; 참조 무결성·위임 순환·orphan), `validateWorkflow`
+  (순환=error), `schedules validate`(동적 `schedules/<id>.yaml`). `npm run validate-bundled` 로
+  `.github/workflows/ci.yml` 에 합류.
+- **공유 코어 (§9)** — `src/util/graph.ts`(Kahn 순환·도달성, agent·workflow 재사용),
+  `validation.ts`(Findings collector), `guardrails.ts`(iterationCap·budgetStatus·LoopDetector),
+  `naming.ts`(KEBAB_RE·checkId·normalizeToKebab — 4 validator 중복 제거). `skill-author.ts →
+  skill-manager.ts` 개명.
+- **에셋 채택 (§10)** — `adopt <repo> [--apply] [--classify]`: Discover(멀티에셋 스캐너) →
+  validate-then-adopt → additive 쓰기(namespace 충돌해소, 멱등) + heuristic/LLM team 매핑. 번들 스코프는
+  `getBundled{Agents,Skills}Dir()` 로 **cwd-독립** 결정적 해석(상위 워크스페이스 shadowing footgun 정정).
+  `init`/`add repo` 가 채택 가능 자산 자동 안내. `analyze repo` 는 deprecate(→`adopt`).
+- **CLI 정리 (conversational-first)** — 통합 입구 `solosquad asset list|show|validate <kind>` +
+  전체 일람 `solosquad commands`. LLM 판단 동사(review·생성 보조)는 CLI 에서 제거하고 대화형
+  `asset-review` 스킬 + 기존 author/maker 루프로 이관(레퍼런스 에이전트 CLI 패턴 정합). CLI 는 결정적·
+  스크립트 가능 표면만 유지.
+- 870 test green. validate-bundled green.
+
+자세히: `docs/prd/v1.3.2-domain-lifecycle-managers.md`
 
 #### 13.6.24 v1.3.1 — Legacy asset cleanup + post-release CI/deps 하드닝 (2026-06-18)
 

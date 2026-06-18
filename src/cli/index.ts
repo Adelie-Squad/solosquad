@@ -117,6 +117,107 @@ program
   });
 
 program
+  .command("adopt")
+  .description("Discover + validate a repo's assets (skill/agent/workflow/schedule) — dry-run (v1.3.2 §10)")
+  .argument("[repo]", "Path to the repository to scan")
+  .option("--apply", "write the valid assets into this workspace (.solosquad/*) — additive, namespaced on collision")
+  .option("--classify", "use the LLM to map agents the heuristic could not place (§10.3)")
+  .action(async (repo, opts) => {
+    const { adoptCommand } = await import("./adopt.js");
+    await adoptCommand(repo, opts);
+  });
+
+const schedulesGroup = program
+  .command("schedules")
+  .description("Manage user-defined schedules (schedules/<id>.yaml) — list / validate");
+
+schedulesGroup
+  .command("list")
+  .description("List built-in routines + user-defined schedules")
+  .action(async () => {
+    const { scheduleListCommand } = await import("./schedule.js");
+    await scheduleListCommand();
+  });
+
+schedulesGroup
+  .command("new")
+  .description("Scaffold a new user schedule (schedules/<id>.yaml + <id>.md)")
+  .argument("<id>", "Kebab-case schedule id")
+  .option("--cron <expr>", "Cron expression (default: '0 9 * * 1')")
+  .option("--kind <kind>", "user-brief | background (default: background)")
+  .option("--channel <name>", "Target channel (default: workflow)")
+  .action(async (id, opts) => {
+    const { scheduleNewCommand } = await import("./schedule.js");
+    await scheduleNewCommand(id, opts);
+  });
+
+schedulesGroup
+  .command("show")
+  .description("Show one schedule (built-in routine or user-defined) + its validation state")
+  .argument("<id>", "Schedule id")
+  .action(async (id) => {
+    const { scheduleShowCommand } = await import("./schedule.js");
+    await scheduleShowCommand(id);
+  });
+
+schedulesGroup
+  .command("validate")
+  .description("Validate user schedule definitions (cron, kind, channel, prompt)")
+  .action(async () => {
+    const { scheduleValidateCommand } = await import("./schedule.js");
+    await scheduleValidateCommand();
+  });
+
+const assetGroup = program
+  .command("asset")
+  .description("Unified front door for assets (skill·agent·workflow·schedule): list / show / validate");
+
+assetGroup
+  .command("list")
+  .description("List assets (all kinds, or one)")
+  .argument("[kind]", "skill | agent | workflow | schedule (omit for all)")
+  .action(async (kind) => {
+    const { assetListCommand } = await import("./asset.js");
+    await assetListCommand(kind);
+  });
+
+assetGroup
+  .command("show")
+  .description("Show one asset")
+  .argument("<kind>", "skill | agent | workflow | schedule")
+  .argument("<id>", "Asset id")
+  .action(async (kind, id) => {
+    const { assetShowCommand } = await import("./asset.js");
+    await assetShowCommand(kind, id);
+  });
+
+assetGroup
+  .command("validate")
+  .description("Validate assets (all kinds, or one) — the deterministic gate")
+  .argument("[kind]", "skill | agent | workflow | schedule (omit for all)")
+  .action(async (kind) => {
+    const { assetValidateCommand } = await import("./asset.js");
+    await assetValidateCommand(kind);
+  });
+
+program
+  .command("commands")
+  .description("List every SoloSquad command with a one-line description")
+  .action(() => {
+    const print = (cmd: Command, prefix: string): void => {
+      for (const c of cmd.commands) {
+        const name = c.name();
+        if (name === "help") continue;
+        console.log("  " + chalk.cyan((prefix + name).padEnd(30)) + chalk.dim(c.description() || ""));
+        if (c.commands.length) print(c, prefix + name + " ");
+      }
+    };
+    console.log(chalk.bold(`\nsolosquad v${pkg.version} — all commands\n`));
+    print(program, "");
+    console.log(chalk.dim("\nRun `solosquad <command> --help` for options.\n"));
+  });
+
+program
   .command("status")
   .description("Show project dashboard")
   .action(async () => {
@@ -224,6 +325,15 @@ analyzeGroup
   .option("--force", "Re-classify every file (drop existing ledger cache)")
   .option("--prune-orphans", "Remove ledger entries whose files have disappeared")
   .action(async (repoPath, opts) => {
+    // v1.3.2 — `analyze repo` (skill-only scan → markdown report) is a subset of
+    // `adopt` (5 asset kinds + validate + apply). Steer users to the superset.
+    const { warnDeprecated } = await import("../util/deprecation.js");
+    warnDeprecated({
+      oldName: "analyze repo",
+      newName: "adopt <repo>",
+      removalVersion: "v1.4",
+      hint: "`solosquad adopt <repo>` discovers skill/agent/workflow/schedule (not just skills), validates them, and can --apply.",
+    });
     const { analyzeRepoCli } = await import("./analyze.js");
     await analyzeRepoCli(repoPath, opts);
   });
@@ -321,6 +431,16 @@ workflowGroup
   .action(async (workflowId, opts) => {
     const { workflowShowCommand } = await import("./workflow.js");
     await workflowShowCommand(workflowId, opts);
+  });
+
+workflowGroup
+  .command("validate")
+  .description("Validate workflow.yaml templates (cycle, refs, exit_criteria)")
+  .argument("[path]", "Path to a workflow.yaml (omit when using --all)")
+  .option("--all", "Validate all bundled workflow-maker templates")
+  .action(async (filePath, opts) => {
+    const { workflowValidateCommand } = await import("./workflow.js");
+    await workflowValidateCommand(filePath, opts);
   });
 
 workflowGroup
@@ -502,9 +622,10 @@ const agentGroup = program
 
 agentGroup
   .command("validate")
-  .description("Validate a SKILL.md against the v0.5 schema")
-  .argument("[path]", "Path to a SKILL.md file (omit when using --all)")
-  .option("--all", "Validate every bundled + workspace SKILL.md")
+  .description("Validate SKILL.md files (--all) + the cross-agent graph (--graph)")
+  .argument("[path]", "Path to a SKILL.md file (omit when using --all/--graph)")
+  .option("--all", "Validate every bundled + workspace SKILL.md (implies --graph)")
+  .option("--graph", "Validate the cross-agent delegation/collaboration graph")
   .action(async (filePath, opts) => {
     const { agentValidateCommand } = await import("./agent.js");
     await agentValidateCommand(filePath, opts);
@@ -524,6 +645,25 @@ agentGroup
     } catch {
       // Error already printed by agentAddCommand; exit code set there.
     }
+  });
+
+agentGroup
+  .command("list")
+  .description("List actors grouped by team (bundle by default; --workspace for yours)")
+  .option("--workspace", "List the workspace's actors instead of the shipped bundle")
+  .action(async (opts) => {
+    const { agentListCommand } = await import("./agent.js");
+    await agentListCommand(opts);
+  });
+
+agentGroup
+  .command("show")
+  .description("Show an actor's spec + delegation edges")
+  .argument("<id>", "Actor id (<team>/<name>) or bare name")
+  .option("--workspace", "Resolve against the workspace instead of the bundle")
+  .action(async (id, opts) => {
+    const { agentShowCommand } = await import("./agent.js");
+    await agentShowCommand(id, opts);
   });
 
 agentGroup

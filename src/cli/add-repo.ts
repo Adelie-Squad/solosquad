@@ -369,6 +369,12 @@ async function registerPathReference(
   } catch {
     /* best-effort */
   }
+
+  // v1.3.2 §10.5 — surface adoptable assets and (interactively) walk the
+  // dry-run → confirm → apply flow inline. See offerAdoption.
+  console.log();
+  const { offerAdoption } = await import("./adopt-offer.js");
+  await offerAdoption(externalPath);
 }
 
 // v1.0 — copyDirRecursive removed (was used by --keep-original which is

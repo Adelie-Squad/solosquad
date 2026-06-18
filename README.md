@@ -10,6 +10,27 @@ Running a company alone doesn't mean working alone. SoloSquad gives you a virtua
 Output ≠ Goal. Output = Means to achieve the goal.
 ```
 
+### Topology — hierarchical supervisor (orchestrator-workers)
+
+SoloSquad is a **hierarchical orchestrator-workers** system, not a decentralized swarm: a central **Chief** dynamically decomposes and delegates but keeps control to the end (agents-as-tools — Chief owns the SYNTHESIZE step). Three tiers:
+
+```
+👤 User (Discord / terminal)
+        │ handleUserMessage
+        ▼
+   Chief  (tier: leader · team: chief)          ── org-level supervisor
+        │ DECOMPOSE → DISPATCH
+        ├──▶ pm         (leader · product)      ── also a 2nd-tier orchestrator
+        ├──▶ engineer   (leader · engineering)     (pm.used_by routes to eng/des/mkt too)
+        ├──▶ designer   (leader · design)
+        └──▶ marketer   (leader · marketing)
+                  │
+                  ▼
+             specialists (member) ── 20 bounded workers across the 4 teams
+```
+
+The delegation graph is a **DAG, not a pure tree** — `pm` calls the other three leaders (plan→hand-off), so reference-integrity + cycle validation matters (`solosquad agent validate --graph`). Each spawn gets an independent context window. Full detail: [`docs/prd/architecture.md` §5.1](docs/prd/architecture.md).
+
 **Platforms:** Windows · macOS · Linux (cross-platform CLI, CI-tested)
 **Messenger:** Discord — one per workspace. Slack adapter code ships but is **not part of the v1.0 SemVer promise** (post-v1.0 slot). Telegram support removed in v0.2.4.
 **Stack:** TypeScript + Node.js 18+ · Claude Code as the AI engine · file-based memory (JSONL)
@@ -33,7 +54,7 @@ It covers, in ten menu-divided sections:
 | 5 | Messenger Setup | 8-step Discord token walkthrough (Slack walkthrough retained as a post-v1.0 reference) |
 | 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
-| 8 | Version Differences | v1.2.6 (npm-published) vs upcoming releases |
+| 8 | Version Differences | v1.3.2 (npm-published) vs upcoming releases |
 | 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
 | 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
 
@@ -43,22 +64,19 @@ For internal architecture, release planning, and decision history, see [`docs/pr
 
 ---
 
-## What's new in v1.2.6 (2026-05-28)
+## What's new in v1.3.2 (2026-06-19)
 
-**Messenger Connection — Chief on Discord, auto-connect first.** Layered onto v1.1.0's internal agent architecture, v1.2 ships the external user-visible UX:
+**Asset lifecycle managers + asset adoption.** The five first-class assets — **skill · agent · workflow · goal · schedule** — now share one manager interface, and a repo's existing AI assets can be pulled into your workspace.
 
-- **One Chief bot per org** — give it a name (`solosquad add org --chief-name Hermes`) and use the same name when you create the Discord Developer Portal Bot. The Chief's name surfaces in the welcome embed, narration, and `doctor` output.
-- **OAuth Invite URL 1-click** — `solosquad discord invite-url` synthesizes the URL from your app's client_id + the recommended 10-permission bitfield (verification-trigger perms deliberately excluded), opens it in the default browser, falls back to clipboard.
-- **Handle-based channel portability** — `command-<handle>` / `works-<handle>` is the same pair across every Discord guild you invite the bot to, and across future Slack workspaces.
-- **Owner-only gate** (default ON for fresh installs, OFF for upgrades for backward compat) — Chief only processes messages whose author is the workspace owner.
-- **TRIAGE kind branch** — short chats reply flat in the command channel; `workflow` / `schedule` / `goal` requests post a task card embed in `works-<handle>` and start a thread, with sub-agent activity (DECOMPOSE / DISPATCH / AWAIT) projected into that thread. The command channel only sees `📋 작업 등록됨 → <thread URL>`.
-- **`solosquad add org`** now bootstraps a fully working org — Chief name + the entire v1.1.0 hierarchy + a `problem-definition` workflow seed + inline Discord connect.
-- **`solosquad doctor --discord` 5-hop diagnostic** — token shape → REST `/users/@me` → bot_user_id match → guild membership → command channel ID. Every failure is attributable and actionable.
-- **guildCreate onboarding embed + 2 buttons** (Auto-create / Manual choose) + `/chat` slash fallback for MESSAGE_CONTENT-intent denial.
+- **Unified asset manager** — every asset kind shares the same verbs: `solosquad asset validate|list|show <kind>` is one front door over them, and `solosquad commands` prints the whole CLI tree at a glance. New **agent** manager: `solosquad agent validate --graph` checks the cross-agent delegation graph (reference integrity, cycles, orphans).
+- **Asset adoption** — `solosquad adopt <repo> [--apply] [--classify]` discovers a repo's skill/agent/workflow/schedule assets, validates them, and additively adopts them into your workspace (namespaced on collision, idempotent). `solosquad init` and `solosquad add repo` now offer to adopt discovered assets interactively.
+- **schedules as a first-class create path** — `solosquad schedules new|list|show|validate` over `schedules/<id>.yaml`.
+- **Conversational-first CLI** — LLM-judgment verbs (review, authoring) live in `solosquad chat` (the `asset-review` skill + author loops), not as CLI verbs — matching how leading agent CLIs keep LLM work in the session and the CLI deterministic.
+- **Shared cores** — graph (cycle/reachability), validation, guardrail, and naming modules are now reused across the managers; the bundled-asset scope resolves deterministically (cwd-independent).
 
-53 new tests; 728/728 pass. Migration `1.1.0 → 1.2.6` is idempotent; existing users land on `owner_only: false` for a neutral upgrade.
+872 tests pass. Additive migration — no breaking changes.
 
-Full release notes: [CHANGELOG.md §1.2.6](CHANGELOG.md#122--2026-05-28).
+Full release notes: [CHANGELOG.md §1.3.2](CHANGELOG.md).
 
 ---
 
@@ -190,8 +208,19 @@ solosquad goal verify <goal-id> --cycle N         # re-run evaluator, check dete
 solosquad agent validate <path>                   # validate one SKILL.md against v0.5 schema
 solosquad agent validate --all [--corpus]         # validate every bundled + workspace SKILL.md
 solosquad agent add --name <slug> --team <team>   # scaffold a new SKILL.md (no LLM)
+solosquad agent list [--workspace]                # v1.3.2 — actors grouped by team
+solosquad agent show <id> [--workspace]           # v1.3.2 — spec + delegation edges
 solosquad agent reload [--org <slug>]             # v0.6 — manual router rebuild (manual fs.watch mode)
 npm run validate-skills                           # CI gate (= agent validate --all --corpus)
+
+# Asset managers + adoption (v1.3.2)
+solosquad commands                                # full CLI tree + one-line descriptions
+solosquad asset list [kind]                       # list assets (skill|agent|workflow|schedule, or all)
+solosquad asset show <kind> <id>                  # show one asset
+solosquad asset validate [kind]                   # deterministic validation gate (all kinds, or one)
+solosquad adopt <repo> [--apply] [--classify]     # discover + validate + adopt a repo's assets
+solosquad schedules new <id> [--cron …]           # scaffold schedules/<id>.yaml + <id>.md
+solosquad schedules list|show|validate            # manage user-defined schedules
 
 # Memory archive (v0.6)
 solosquad readiness check [--target v0.6]         # v0.5 data + 4 default workflows + author SKILL counts → pass/short
@@ -281,7 +310,7 @@ Full details in master-guide §9.
 
 ## Versions
 
-Current npm release: **v1.2.6** (npm registry: `1.2.6`).
+Current npm release: **v1.3.2** (npm registry: `1.3.2`).
 
 v1.0 marked the formal release with stable API guarantees. Shipped + planned milestones (full history in [`CHANGELOG.md`](CHANGELOG.md), decision log in [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6):
 
@@ -300,6 +329,9 @@ v1.0 marked the formal release with stable API guarantees. Shipped + planned mil
 | v1.0.1 – v1.0.4 (released) | **Discord robustness patch chain** | discord.js v15 deprecation · `@<slug>` mention · author-guard 정합 · guild-org binding · category rename · config.yaml load-or-empty + 5-hop diagnostic + Slack author-guard cleanup |
 | **v1.1.0 (released)** | **Multi-Agent Team Architecture** | Single PM session → Team-Centric. **Chief** (org-level supervisor, 사용자 대면) + **PM** (workspace-bundle, 자율 product manager) 분리. 4 main bot + 20 specialist + 18 skill + 4 team. 9-layer JIT (team OKR Layer 4a). Chief 6+1 stage state machine. open_questions[] async-batch protocol. Goal queue (1-active-per-org). 4 workflow templates. 외부 reference: Hermes V2 + gstack (Garry Tan) + RO-PNA pna-builders + phuryn pm-skills |
 | **v1.2.6 (released)** | **Messenger Connection (Chief on Discord, auto-connect first)** | 조직 1개당 1 Chief 봇 (`OrgYaml.chief_name`) · OAuth Invite URL 1-click (`solosquad discord invite-url`) · handle 기반 채널 멀티-메신저 portable · owner-only 게이트 (v1.0.2 reversal, default ON 신규 / OFF 업그레이드) · TRIAGE kind 분기 → `works-<handle>` task card + thread + stage narration · `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 · `solosquad doctor --discord` 5-hop diagnostic · guildCreate onboarding embed + 2 button · `/chat` slash fallback. 53 신규 test (728/728 pass) |
+| **v1.3.0 (released)** | **Messenger UX overhaul** | dev-confirm push-approval 게이트 · 인터랙션 컴포넌트 · 🛑 stop 버튼 + 라이브 stage narration · 산출물 filing |
+| **v1.3.1 (released)** | **Legacy asset cleanup** | v1.1 리오그가 절반만 끝낸 구 `assets/` 비우기 + CI/deps 하드닝 (사용자 대면 기능 0) |
+| **v1.3.2 (released)** | **Asset lifecycle managers + asset adoption** | 5개 1급 자산(skill·agent·workflow·goal·schedule) 공통 매니저 추상(validate/list/show + 공유 graph·validation·guardrail·naming 코어) · **agent 매니저 신설**(`validate --graph`) · **에셋 채택** `adopt <repo>`(discover→validate→additive apply, init/add-repo 인터랙티브 오퍼) · 통합 입구 `asset` + 일람 `commands` · conversational-first(LLM 동사는 `asset-review` 스킬로) · `skill-author→skill-manager`. 872 test pass |
 | v1.2.1 (planned) | Messenger thread continuity | referencedMessage chain + LRU cache + thread token budget guard. messageCreate가 thread 메시지 수신 + thread→workflow_id reverse lookup. Slack adapter 동일 슬롯 |
 | v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes |
 | v1.x (planned) | Dashboard interaction | Companion web dashboard (별도 리포 `solopreneur-dashboard` + `solopreneur-api`) |

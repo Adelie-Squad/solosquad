@@ -19,7 +19,9 @@ import { normalizeLine } from "../util/platform.js";
 import { usdFromUsage, type CostModel, type UsageBreakdown } from "../util/cost.js";
 
 /**
- * v0.5 §5 — Author loop entrypoint.
+ * v0.5 §5 — Author loop entrypoint. (v1.3.2 §9: renamed skill-author →
+ * skill-manager as the skill domain's lifecycle home; the messenger author
+ * loop is its `create` surface. Public behavior unchanged.)
  *
  * Multi-turn state machine that drives a messenger conversation through the
  * five steps in §5.2-5.6: CLARIFY → DRAFT → SANDBOX_PROMPT (optional) →

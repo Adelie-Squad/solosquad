@@ -1,5 +1,6 @@
 import yaml from "js-yaml";
 import { normalizeLine } from "../util/platform.js";
+import { isKebabCase, DEFAULT_NAME_MAX } from "../util/naming.js";
 
 /**
  * v0.5 — SKILL.md frontmatter parser + validator.
@@ -34,6 +35,12 @@ export const RESERVED_SLASHES: ReadonlySet<string> = new Set([
 
 /** Per-workspace cap on freq-enabled SKILLs (v0.5 §13). */
 export const FREQ_SKILL_CAP = 20;
+
+/** v1.3.2 §4 — Anthropic Agent Skills naming/description limits.
+ *  The kebab id rule + length ceiling are the shared §9.5 convention
+ *  (util/naming); SKILL_NAME_MAX is re-exported as the canonical alias. */
+export const SKILL_NAME_MAX = DEFAULT_NAME_MAX;
+export const SKILL_DESCRIPTION_MAX = 1024;
 
 export type SkillScope = "agent" | "workspace" | "org" | "repo";
 export type LoopModeKind = "spec-gate";
@@ -158,6 +165,16 @@ export interface WorkspaceValidationContext {
   freq_skill_count?: number;
   /** Override reserved slashes (mostly for tests). */
   reserved_slashes?: ReadonlySet<string>;
+  /** Expected directory name — when set, `name` must equal it (dir-match, §4). */
+  dir_name?: string;
+  /** Reserved skill names that may not be used (workspace pass supplies these). */
+  reserved_names?: ReadonlySet<string>;
+  /**
+   * Enforce SoloSquad naming convention (kebab-case ≤64, reserved names) as
+   * errors. Off by default so *external/adopted* skills (Anthropic corpus,
+   * §10 adopted repos) aren't rejected for style — the SoloSquad CLI sets it.
+   */
+  strict_name?: boolean;
 }
 
 export class SkillParseError extends Error {
@@ -579,6 +596,58 @@ export function validateSkill(
       message:
         "dev_permissions declared but dev_capability is not true — permissions will be ignored at spawn time",
     });
+  }
+
+  // v1.3.2 §4 — name / description hygiene. Kebab-case + length + reserved are
+  // SoloSquad conventions (strict_name); description length is the universal
+  // Anthropic limit. dir-match fires whenever a dir_name is supplied.
+  if (typeof spec.name === "string") {
+    if (ctx.strict_name) {
+      if (spec.name.length > SKILL_NAME_MAX) {
+        errors.push({
+          code: "NAME_TOO_LONG",
+          field: "name",
+          message: `name is ${spec.name.length} chars (max ${SKILL_NAME_MAX})`,
+        });
+      }
+      if (!isKebabCase(spec.name)) {
+        errors.push({
+          code: "NAME_MALFORMED",
+          field: "name",
+          message: `name "${spec.name}" must be kebab-case (^[a-z0-9]+(-[a-z0-9]+)*$)`,
+        });
+      }
+      if (ctx.reserved_names?.has(spec.name)) {
+        errors.push({
+          code: "NAME_RESERVED",
+          field: "name",
+          message: `name "${spec.name}" is reserved`,
+        });
+      }
+    }
+    if (ctx.dir_name !== undefined && spec.name !== ctx.dir_name) {
+      errors.push({
+        code: "NAME_DIR_MISMATCH",
+        field: "name",
+        message: `name "${spec.name}" does not match directory "${ctx.dir_name}"`,
+      });
+    }
+  }
+  if (typeof spec.description === "string") {
+    if (spec.description.length > SKILL_DESCRIPTION_MAX) {
+      errors.push({
+        code: "DESCRIPTION_TOO_LONG",
+        field: "description",
+        message: `description is ${spec.description.length} chars (max ${SKILL_DESCRIPTION_MAX})`,
+      });
+    }
+    if (/\bI\s+(?:will|can|am|have|need|do|use)\b/.test(spec.description)) {
+      warnings.push({
+        code: "DESCRIPTION_FIRST_PERSON",
+        field: "description",
+        message: `description reads first-person — prefer third-person ("Use when…", "Generates…")`,
+      });
+    }
   }
 
   return { ok: errors.length === 0, errors, warnings };
