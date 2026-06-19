@@ -180,6 +180,15 @@ cronGroup
   });
 
 cronGroup
+  .command("freq")
+  .description("Review freq-miner keyword-routing suggestions (suggest-only; --apply to confirm one)")
+  .option("--apply <id>", "Apply a specific suggestion by id (explicit opt-in)")
+  .action(async (opts) => {
+    const { cronFreqCommand } = await import("./cron.js");
+    await cronFreqCommand(opts);
+  });
+
+cronGroup
   .command("runs")
   .description("Recent run history (status / when / duration) — all crons or one")
   .argument("[ref]", "Cron id or name (omit for all)")

@@ -134,6 +134,28 @@ export async function mineFrequentKeywords(opts: MineOpts): Promise<KeywordSugge
   return out;
 }
 
+/**
+ * v1.3.3 §4.3 — a one-line, suggest-only summary of pending keyword-routing
+ * suggestions, for inlining into the morning brief. Returns null when there's
+ * nothing to suggest (or the miner can't run). NEVER auto-applies — the user
+ * acts via `solosquad cron freq [--apply <id>]`.
+ */
+export async function freqSuggestionLine(workspace: string, orgSlug: string): Promise<string | null> {
+  let suggestions: KeywordSuggestion[];
+  try {
+    suggestions = await mineFrequentKeywords({ workspace, orgSlug });
+  } catch {
+    return null;
+  }
+  if (suggestions.length === 0) return null;
+  const top = suggestions[0];
+  const more = suggestions.length > 1 ? ` (+${suggestions.length - 1} more)` : "";
+  return (
+    `💡 Routing suggestion${suggestions.length > 1 ? "s" : ""}: "${top.keyword}" → ${top.target_skill_name}` +
+    `${more}. Review/apply with \`solosquad cron freq\` (never auto-applied).`
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Public entrypoint — apply
 // ---------------------------------------------------------------------------

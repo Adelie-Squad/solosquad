@@ -8,6 +8,7 @@ import {
   mineFrequentKeywords,
   applyKeywordSuggestion,
   recordKeywordRejection,
+  freqSuggestionLine,
   type KeywordSuggestion,
 } from "../src/scheduler/freq-keyword-miner.js";
 import { recordRouteMiss } from "../src/memory/route-event-sink.js";
@@ -236,4 +237,15 @@ test("freq: does not re-suggest a keyword that is already in triggers.keyword", 
   // No suggestion should point at "deploy pipeline" since it already exists.
   const dupe = suggestions.find((s) => s.keyword === "deploy pipeline");
   assert.equal(dupe, undefined, "must not propose a keyword that already exists");
+});
+
+test("freqSuggestionLine returns null when there's nothing to suggest (brief stays clean)", async () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), "sq-freqline-"));
+  try {
+    fs.mkdirSync(path.join(ws, "demo", ".solosquad"), { recursive: true });
+    fs.writeFileSync(path.join(ws, "demo", ".org.yaml"), "slug: demo\nname: Demo\n");
+    assert.equal(await freqSuggestionLine(ws, "demo"), null);
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
 });

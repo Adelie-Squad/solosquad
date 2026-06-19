@@ -406,6 +406,49 @@ export async function cronRunsCommand(ref: string | undefined, opts: { limit?: s
   }
 }
 
+/**
+ * v1.3.3 §4.3 — `cron freq [--apply <id>]`: review (and optionally apply) the
+ * freq miner's keyword-routing suggestions. Suggest-only: nothing is applied
+ * without an explicit `--apply`.
+ */
+export async function cronFreqCommand(opts: { apply?: string } = {}): Promise<void> {
+  const { loadProducts } = await import("../util/config.js");
+  const { getReposBase } = await import("../util/paths.js");
+  const { mineFrequentKeywords, applyKeywordSuggestion } = await import("../scheduler/freq-keyword-miner.js");
+  const base = getReposBase();
+  const products = loadProducts();
+  if (!products.length) {
+    console.log(chalk.red("No products registered. Run: solosquad init"));
+    return;
+  }
+
+  let any = false;
+  for (const p of products) {
+    const suggestions = await mineFrequentKeywords({ workspace: base, orgSlug: p.slug });
+    if (suggestions.length === 0) continue;
+    any = true;
+    if (opts.apply) {
+      const hit = suggestions.find((s) => s.suggestion_id === opts.apply);
+      if (!hit) continue;
+      await applyKeywordSuggestion({ workspace: base, orgSlug: p.slug, suggestion: hit });
+      console.log(chalk.green(`✓ applied: "${hit.keyword}" → ${hit.target_skill_name} (${p.slug})`));
+      return;
+    }
+    console.log(chalk.bold(`\n${p.name} — ${suggestions.length} routing suggestion(s):`));
+    for (const s of suggestions) {
+      console.log(`  ${chalk.cyan(s.keyword)} → ${s.target_skill_name}  ${chalk.dim(`(${s.miss_count} misses, id=${s.suggestion_id})`)}`);
+    }
+  }
+  if (opts.apply) {
+    console.log(chalk.red(`✗ no suggestion with id "${opts.apply}"`));
+    process.exitCode = 1;
+  } else if (!any) {
+    console.log(chalk.dim("(no routing suggestions — nothing missed ≥3× in 30 days)"));
+  } else {
+    console.log(chalk.dim(`\nApply one with \`solosquad cron freq --apply <id>\` (never auto-applied).`));
+  }
+}
+
 function printIssue(issue: CronFinding, kind: "error" | "warn"): void {
   const tag = kind === "error" ? chalk.red("[error]") : chalk.yellow("[warn ]");
   const field = issue.field ? chalk.dim(` (${issue.field})`) : "";

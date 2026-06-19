@@ -64,19 +64,20 @@ For internal architecture, release planning, and decision history, see [`docs/pr
 
 ---
 
-## What's new in v1.3.2 (2026-06-19)
+## What's new in v1.3.3 (2026-06-19)
 
-**Asset lifecycle managers + asset adoption.** The five first-class assets — **skill · agent · workflow · goal · cron** — now share one manager interface, and a repo's existing AI assets can be pulled into your workspace.
+**Cron terminology unification + a full cron lifecycle.** The two interchangeable names for scheduled jobs — *routine* (built-in) and *schedule* (user-authored) — are unified into one noun: **cron**, and crons gain a complete create/operate/observe lifecycle (referencing the OpenClaw + Hermes cron UX).
 
-- **Unified asset manager** — every asset kind shares the same verbs: `solosquad asset validate|list|show <kind>` is one front door over them, and `solosquad commands` prints the whole CLI tree at a glance. New **agent** manager: `solosquad agent validate --graph` checks the cross-agent delegation graph (reference integrity, cycles, orphans).
-- **Asset adoption** — `solosquad adopt <repo> [--apply] [--classify]` discovers a repo's skill/agent/workflow/cron assets, validates them, and additively adopts them into your workspace (namespaced on collision, idempotent). `solosquad init` and `solosquad add repo` now offer to adopt discovered assets interactively.
-- **crons with a full lifecycle** — `solosquad cron new|edit|enable|disable|delete|list|show|validate` over `crons/<id>.yaml` (id-or-name refs, friendly schedules like `@daily`/`every 1h`, live hot-reload).
-- **Conversational-first CLI** — LLM-judgment verbs (review, authoring) live in `solosquad chat` (the `asset-review` skill + author loops), not as CLI verbs — matching how leading agent CLIs keep LLM work in the session and the CLI deterministic.
-- **Shared cores** — graph (cycle/reachability), validation, guardrail, and naming modules are now reused across the managers; the bundled-asset scope resolves deterministically (cwd-independent).
+- **One `cron` command group (breaking)** — `solosquad cron start | run | list | new | edit | enable | disable | delete | runs | freq | show | validate` replaces the old `schedule` / `schedules` / `run-routine`. References take an **id or name**; friendly schedules (`@daily`, `every 1h`); a **next-run preview** on create/edit.
+- **Operate without restarts** — the daemon **hot-reloads** crons on file change (chokidar); `enable`/`disable` is pause ≠ delete; `delete` archives by default.
+- **Observe** — every run is recorded; `cron runs` shows status/when/duration, and a **dead-man's-switch** alerts on silently-missed crons. `[SILENT]`/empty output is logged but not posted.
+- **One-shot** — `cron new <id> --at "20m"` (or an ISO time) runs once then auto-deletes.
+- **Personal briefs** — set `timezone` + a `crons` block in a user's yaml to get briefs in their own `works-<handle>` channel at their own timezone. **`/create`** captures recent work as a reusable SKILL; `cron freq` surfaces (suggest-only) keyword-routing suggestions.
+- **Migration** — `1.3.2 → 1.3.3` moves `.solosquad/{schedules,routines} → crons` and `memory/routine-logs → cron-logs` (idempotent; legacy dirs still read until then).
 
-872 tests pass. Additive migration — no breaking changes.
+911 tests pass.
 
-Full release notes: [CHANGELOG.md §1.3.2](CHANGELOG.md).
+Full release notes: [CHANGELOG.md §1.3.3](CHANGELOG.md).
 
 ---
 
@@ -225,6 +226,7 @@ solosquad cron edit <ref> [--cron|--name|…]       # patch fields, then re-vali
 solosquad cron enable|disable <ref>               # resume / pause (pause ≠ delete)
 solosquad cron delete <ref> [--hard]              # archive (default) or hard-remove
 solosquad cron runs [ref] [-n N]                  # recent run history (status / when / duration)
+solosquad cron freq [--apply <id>]                # freq-miner routing suggestions (suggest-only)
 
 # Memory archive (v0.6)
 solosquad readiness check [--target v0.6]         # v0.5 data + 4 default workflows + author SKILL counts → pass/short

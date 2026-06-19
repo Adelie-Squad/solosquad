@@ -27,6 +27,7 @@ import { recordCronRun, lastSuccessfulRun } from "./cron-runlog.js";
 import { isOverdue } from "./cron-schedule.js";
 import { resolveUserCrons } from "./user-crons.js";
 import { listUserYamls } from "../bot/user-registry.js";
+import { freqSuggestionLine } from "./freq-keyword-miner.js";
 import { getCronsWriteDir } from "../util/paths.js";
 import { saveCronMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
@@ -159,6 +160,13 @@ async function runCronForProduct(
   if (isSilentResult(result)) {
     console.log(`[Scheduler] ${product.name} - ${cron.name} → silent (not posted)`);
     return;
+  }
+
+  // v1.3.3 §4.3 — freq miner suggestion (suggest-only) inlined into the
+  // morning brief. Never auto-applies; the user acts via `cron freq`.
+  if (cron.id === "morning-brief") {
+    const line = await freqSuggestionLine(getReposBase(), product.slug);
+    if (line) result = `${result}\n\n---\n${line}`;
   }
 
   // v0.2.4+: route to #workflow channel; background crons target a system
