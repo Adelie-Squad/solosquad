@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
+import { watch as chokidarWatch } from "chokidar";
 import { createAdapters } from "../messenger/index.js";
 import { runClaude } from "../bot/claude-runner.js";
 import { resolveOrgCwd } from "../bot/workflow-resolver.js";
@@ -20,7 +22,7 @@ import {
 } from "./crons.js";
 import { loadCronDefs } from "./cron-def.js";
 import { validateCronDef } from "./cron-validate.js";
-import { getCronsDir } from "../util/paths.js";
+import { getCronsWriteDir } from "../util/paths.js";
 import { saveCronMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
 import { loadArchiveConfig } from "../util/config.js";
@@ -255,31 +257,77 @@ export async function startScheduler(): Promise<void> {
   }
 
   // v1.3.2 §8 — additive user-defined crons (crons/<id>.yaml). Built-in
-  // crons above are untouched; these register on top. Only valid + enabled
-  // defs whose id doesn't collide with a built-in are wired.
-  const builtinIds = new Set(CRONS.map((r) => r.id));
-  for (const def of loadCronDefs(getCronsDir())) {
-    const result = validateCronDef(def, {
-      reservedIds: builtinIds,
-      promptExists: (id) => fs.existsSync(path.join(getCronsDir(), `${id}.md`)),
-    });
-    if (!result.ok) {
-      console.log(
-        `[Scheduler] Skipped user cron "${def.id}" — ${result.errors.map((e) => e.code).join(", ")}`
-      );
-      continue;
-    }
-    if (!def.enabled) {
-      console.log(`[Scheduler] Skipped: ${def.name} (disabled)`);
-      continue;
-    }
-    cron.schedule(def.cron, () => runCronDef(def), { timezone: workspaceTimezone });
-    console.log(`[Scheduler] Registered user cron: ${def.name} (${def.cron})`);
-  }
+  // crons above are untouched; these register on top. v1.3.3 §C — registration
+  // is reconcilable + live: an fs-watcher re-applies on create/edit/enable/
+  // disable/delete so `solosquad cron …` takes effect without a daemon restart.
+  reconcileUserCrons();
+  startCronWatcher();
 
   console.log("[Scheduler] Scheduler started");
   await sendStartupNotification(crons);
 
   // Keep alive
   await new Promise<void>(() => {});
+}
+
+/** Live handles for user-defined cron tasks, keyed by cron id. */
+const userCronTasks = new Map<string, ScheduledTask>();
+
+/**
+ * v1.3.3 §C — (re)apply the on-disk user crons to the live scheduler. Idempotent:
+ * destroys every currently-registered user task, then registers the valid +
+ * enabled defs afresh. Built-in crons are never touched. Safe to call repeatedly
+ * (startup + every fs change).
+ */
+export function reconcileUserCrons(): void {
+  for (const [, task] of userCronTasks) {
+    try { void task.destroy(); } catch { /* ignore */ }
+  }
+  userCronTasks.clear();
+
+  const builtinIds = new Set(CRONS.map((r) => r.id));
+  const cronsDir = getCronsWriteDir();
+  for (const def of loadCronDefs(cronsDir)) {
+    const result = validateCronDef(def, {
+      reservedIds: builtinIds,
+      promptExists: (id) => fs.existsSync(path.join(cronsDir, `${id}.md`)),
+    });
+    if (!result.ok) {
+      console.log(`[Scheduler] Skipped user cron "${def.id}" — ${result.errors.map((e) => e.code).join(", ")}`);
+      continue;
+    }
+    if (!def.enabled) {
+      console.log(`[Scheduler] Paused: ${def.name} (disabled)`);
+      continue;
+    }
+    const task = cron.schedule(def.cron, () => runCronDef(def), {
+      name: `user:${def.id}`,
+      noOverlap: true,
+      timezone: workspaceTimezone,
+    });
+    userCronTasks.set(def.id, task);
+    console.log(`[Scheduler] Registered user cron: ${def.name} (${def.cron})`);
+  }
+  console.log(`[Scheduler] User crons live: ${userCronTasks.size}`);
+}
+
+let cronWatcher: import("chokidar").FSWatcher | null = null;
+
+/** Watch `crons/` and reconcile on any change (debounced). */
+function startCronWatcher(): void {
+  if (cronWatcher) return;
+  const dir = getCronsWriteDir();
+  let timer: NodeJS.Timeout | null = null;
+  const debounced = () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      console.log("[Scheduler] crons/ changed — reconciling user crons");
+      reconcileUserCrons();
+    }, 300);
+  };
+  cronWatcher = chokidarWatch(dir, { ignoreInitial: true, depth: 0 })
+    .on("add", debounced)
+    .on("change", debounced)
+    .on("unlink", debounced);
+  console.log(`[Scheduler] Watching ${dir} for live cron changes`);
 }

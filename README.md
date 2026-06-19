@@ -70,7 +70,7 @@ For internal architecture, release planning, and decision history, see [`docs/pr
 
 - **Unified asset manager** — every asset kind shares the same verbs: `solosquad asset validate|list|show <kind>` is one front door over them, and `solosquad commands` prints the whole CLI tree at a glance. New **agent** manager: `solosquad agent validate --graph` checks the cross-agent delegation graph (reference integrity, cycles, orphans).
 - **Asset adoption** — `solosquad adopt <repo> [--apply] [--classify]` discovers a repo's skill/agent/workflow/cron assets, validates them, and additively adopts them into your workspace (namespaced on collision, idempotent). `solosquad init` and `solosquad add repo` now offer to adopt discovered assets interactively.
-- **crons as a first-class create path** — `solosquad cron new|list|show|validate` over `crons/<id>.yaml`.
+- **crons with a full lifecycle** — `solosquad cron new|edit|enable|disable|delete|list|show|validate` over `crons/<id>.yaml` (id-or-name refs, friendly schedules like `@daily`/`every 1h`, live hot-reload).
 - **Conversational-first CLI** — LLM-judgment verbs (review, authoring) live in `solosquad chat` (the `asset-review` skill + author loops), not as CLI verbs — matching how leading agent CLIs keep LLM work in the session and the CLI deterministic.
 - **Shared cores** — graph (cycle/reachability), validation, guardrail, and naming modules are now reused across the managers; the bundled-asset scope resolves deterministically (cwd-independent).
 
@@ -219,8 +219,11 @@ solosquad asset list [kind]                       # list assets (skill|agent|wor
 solosquad asset show <kind> <id>                  # show one asset
 solosquad asset validate [kind]                   # deterministic validation gate (all kinds, or one)
 solosquad adopt <repo> [--apply] [--classify]     # discover + validate + adopt a repo's assets
-solosquad cron new <id> [--cron …]                # scaffold crons/<id>.yaml + <id>.md
-solosquad cron list|show|validate                 # manage user-defined crons
+solosquad cron new <id> [--cron …]                # scaffold crons/<id>.yaml + <id>.md (--cron "@daily" | "every 1h")
+solosquad cron list|show|validate                 # inspect user-defined crons
+solosquad cron edit <ref> [--cron|--name|…]       # patch fields, then re-validate
+solosquad cron enable|disable <ref>               # resume / pause (pause ≠ delete)
+solosquad cron delete <ref> [--hard]              # archive (default) or hard-remove
 
 # Memory archive (v0.6)
 solosquad readiness check [--target v0.6]         # v0.5 data + 4 default workflows + author SKILL counts → pass/short

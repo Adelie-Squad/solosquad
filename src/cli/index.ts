@@ -178,6 +178,48 @@ cronGroup
     await cronValidateCommand();
   });
 
+cronGroup
+  .command("edit")
+  .description("Edit a user cron's fields (then re-validate)")
+  .argument("<ref>", "Cron id or name")
+  .option("--cron <expr>", "New schedule: cron expr, @daily, or 'every 1h'")
+  .option("--name <name>", "New display name")
+  .option("--kind <kind>", "user-brief | background")
+  .option("--channel <name>", "Target channel")
+  .action(async (ref, opts) => {
+    const { cronEditCommand } = await import("./cron.js");
+    await cronEditCommand(ref, opts);
+  });
+
+cronGroup
+  .command("enable")
+  .description("Resume a paused cron (pause ≠ delete)")
+  .argument("<ref>", "Cron id or name")
+  .action(async (ref) => {
+    const { cronSetEnabledCommand } = await import("./cron.js");
+    await cronSetEnabledCommand(ref, true);
+  });
+
+cronGroup
+  .command("disable")
+  .description("Pause a cron (keeps its definition; stops triggering)")
+  .argument("<ref>", "Cron id or name")
+  .action(async (ref) => {
+    const { cronSetEnabledCommand } = await import("./cron.js");
+    await cronSetEnabledCommand(ref, false);
+  });
+
+cronGroup
+  .command("delete")
+  .description("Delete a user cron (archives by default; --hard removes)")
+  .argument("<ref>", "Cron id or name")
+  .option("--hard", "Permanently remove instead of archiving to crons/_archived/")
+  .option("-y, --yes", "Skip the confirmation prompt")
+  .action(async (ref, opts) => {
+    const { cronDeleteCommand } = await import("./cron.js");
+    await cronDeleteCommand(ref, opts);
+  });
+
 const assetGroup = program
   .command("asset")
   .description("Unified front door for assets (skill·agent·workflow·cron): list / show / validate");

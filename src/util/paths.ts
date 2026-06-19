@@ -241,6 +241,17 @@ export function getCronsDir(): string {
   return path.join(getBundleRoot(), "crons");
 }
 
+/**
+ * v1.3.3 §C — canonical WRITE target for user cron defs/prompts. Unlike
+ * getCronsDir() (a read-resolver that falls back to the bundle when no override
+ * exists), this is always `<workspace>/.solosquad/crons` so `cron new/edit/
+ * delete` can never write into the installed package. Mirrors the v1.3.2 §10
+ * adopt write-target pinning. The dir is created lazily by the writer.
+ */
+export function getCronsWriteDir(): string {
+  return path.join(getWorkspaceRoot(), ".solosquad", "crons");
+}
+
 /** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */
 export function getProductsFile(): string {
   const root = getWorkspaceRoot();

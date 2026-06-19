@@ -1,13 +1,62 @@
 import fs from "fs";
 import path from "path";
 import chalk from "chalk";
-import { getCronsDir } from "../util/paths.js";
-import { loadCronDefs } from "../scheduler/cron-def.js";
+import { getCronsWriteDir } from "../util/paths.js";
+import {
+  loadCronDefs,
+  writeCronDef,
+  patchCronDef,
+  setCronEnabled,
+  deleteCronFiles,
+  resolveCronRef,
+  cronMdPath,
+  type CronDef,
+} from "../scheduler/cron-def.js";
 import {
   validateCronDef,
   type CronFinding,
 } from "../scheduler/cron-validate.js";
+import { normalizeSchedule, describeSchedule, nextRun } from "../scheduler/cron-schedule.js";
 import { CRONS } from "../scheduler/crons.js";
+
+const BUILTIN_IDS = new Set(CRONS.map((r) => r.id));
+
+/** Resolve an id-or-name ref to a user-cron id, printing the right error and
+ *  setting exitCode on failure. Returns null if unresolved/built-in. */
+function resolveOrFail(ref: string, verb: string): string | null {
+  if (BUILTIN_IDS.has(ref)) {
+    console.error(chalk.red(`✗ "${ref}" is a built-in cron — it can't be ${verb} (edit workspace.yaml for its time).`));
+    process.exitCode = 2;
+    return null;
+  }
+  const r = resolveCronRef(ref);
+  if (r.kind === "ok") return r.id;
+  if (r.kind === "ambiguous") {
+    console.error(chalk.red(`✗ "${ref}" is ambiguous — matches: ${r.matches.join(", ")}. Use the exact id.`));
+    process.exitCode = 2;
+    return null;
+  }
+  console.error(chalk.red(`✗ no user cron "${ref}". Try \`solosquad cron list\`.`));
+  process.exitCode = 1;
+  return null;
+}
+
+/** Validate a def + print its findings; returns true if error-free. */
+function reportValidation(def: CronDef): boolean {
+  const result = validateCronDef(def, { reservedIds: builtinIdsExcept(def.id), promptExists });
+  if (!result.ok) {
+    console.log(chalk.red(`  ✗ ${result.errors.length} error(s):`));
+    for (const e of result.errors) printIssue(e, "error");
+  } else if (result.warnings.length) {
+    for (const w of result.warnings) printIssue(w, "warn");
+  }
+  return result.ok;
+}
+
+/** Built-in ids minus the def's own id (so re-saving a def isn't a self-collision). */
+function builtinIdsExcept(_id: string): ReadonlySet<string> {
+  return BUILTIN_IDS;
+}
 
 /**
  * v1.3.2 §8 (v1.3.x cron rename) — backs the `solosquad cron` command group
@@ -17,7 +66,7 @@ import { CRONS } from "../scheduler/crons.js";
  */
 
 function promptExists(id: string): boolean {
-  return fs.existsSync(path.join(getCronsDir(), `${id}.md`));
+  return fs.existsSync(path.join(getCronsWriteDir(), `${id}.md`));
 }
 
 export interface CronNewOpts {
@@ -40,7 +89,7 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
     process.exitCode = 2;
     return;
   }
-  const dir = getCronsDir();
+  const dir = getCronsWriteDir();
   const yamlPath = path.join(dir, `${id}.yaml`);
   const mdPath = path.join(dir, `${id}.md`);
   if (fs.existsSync(yamlPath)) {
@@ -50,36 +99,138 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
   }
 
   const kind = opts.kind === "user-brief" ? "user-brief" : "background";
-  const cron = opts.cron ?? "0 9 * * 1";
   const channel = opts.channel ?? "workflow";
-  const yamlBody =
-    `id: ${id}\nname: ${id}\nkind: ${kind}\ncron: "${cron}"\nchannel: ${channel}\nenabled: true\n`;
 
-  const promptBody = `# ${id}\n\nTODO: describe what this scheduled run should do.\n`;
+  // Friendly schedule input (cron expr | @daily | "every 1h") → cron expression.
+  const norm = normalizeSchedule(opts.cron ?? "0 9 * * 1");
+  if (norm.error || !norm.cron) {
+    console.error(chalk.red(`✗ schedule: ${norm.error ?? "could not parse"}`));
+    process.exitCode = 2;
+    return;
+  }
 
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(yamlPath, yamlBody, "utf-8");
-  fs.writeFileSync(mdPath, promptBody, "utf-8");
-
-  // validate-then-report
-  const def = loadCronDefs(dir).find((d) => d.id === id);
-  const result = def
-    ? validateCronDef(def, { reservedIds: new Set(CRONS.map((r) => r.id)), promptExists })
-    : { ok: false, errors: [{ code: "LOAD", message: "could not reload", id }], warnings: [] };
+  const def: CronDef = {
+    id, name: id, kind, cron: norm.cron, channel,
+    emoji: "⏰", memoryTargets: [], enabled: true,
+  };
+  writeCronDef(def, dir, /* scaffoldPrompt */ true);
 
   console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
-  if (!result.ok) {
-    console.log(chalk.red(`  ✗ ${result.errors.length} validation error(s):`));
-    for (const e of result.errors) printIssue(e, "error");
-    process.exitCode = 1;
+  console.log(chalk.dim(`  schedule: ${norm.describe} ("${norm.cron}")`));
+  printNextRun(norm.cron);
+
+  if (reportValidation(def)) {
+    console.log(chalk.dim(`  Next: edit ${mdPath} (the prompt), then \`solosquad cron validate\``));
   } else {
-    if (result.warnings.length) for (const w of result.warnings) printIssue(w, "warn");
-    console.log(chalk.dim(`  Next: edit the prompt, then \`solosquad cron validate\``));
+    process.exitCode = 1;
   }
 }
 
+/** Print the next fire time as preview/validation feedback. */
+function printNextRun(expr: string): void {
+  const next = nextRun(expr);
+  if (next) console.log(chalk.dim(`  next run: ${next.toLocaleString()}`));
+}
+
+export interface CronEditOpts {
+  cron?: string;
+  name?: string;
+  kind?: string;
+  channel?: string;
+}
+
+/** `cron edit <ref>` — patch fields of an existing user cron, then re-validate. */
+export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Promise<void> {
+  const id = resolveOrFail(ref, "edited");
+  if (!id) return;
+  const patch: Partial<CronDef> = {};
+  if (opts.name) patch.name = opts.name;
+  if (opts.channel) patch.channel = opts.channel;
+  if (opts.kind) {
+    if (opts.kind !== "user-brief" && opts.kind !== "background") {
+      console.error(chalk.red(`✗ --kind must be "user-brief" or "background"`));
+      process.exitCode = 2;
+      return;
+    }
+    patch.kind = opts.kind;
+  }
+  if (opts.cron) {
+    const norm = normalizeSchedule(opts.cron);
+    if (norm.error || !norm.cron) {
+      console.error(chalk.red(`✗ schedule: ${norm.error ?? "could not parse"}`));
+      process.exitCode = 2;
+      return;
+    }
+    patch.cron = norm.cron;
+  }
+  if (Object.keys(patch).length === 0) {
+    console.log(chalk.yellow(`△ nothing to change — pass --cron / --name / --kind / --channel`));
+    return;
+  }
+  const def = patchCronDef(id, patch);
+  if (!def) {
+    console.error(chalk.red(`✗ could not read cron "${id}"`));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(chalk.green(`✓ updated ${id}`));
+  if (patch.cron) {
+    console.log(chalk.dim(`  schedule: ${describeSchedule(def.cron)} ("${def.cron}")`));
+    printNextRun(def.cron);
+  }
+  if (!reportValidation(def)) process.exitCode = 1;
+}
+
+/** `cron enable <ref>` / `cron disable <ref>` — pause ≠ delete. */
+export async function cronSetEnabledCommand(ref: string, enabled: boolean): Promise<void> {
+  const id = resolveOrFail(ref, enabled ? "enabled" : "disabled");
+  if (!id) return;
+  const def = setCronEnabled(id, enabled);
+  if (!def) {
+    console.error(chalk.red(`✗ could not read cron "${id}"`));
+    process.exitCode = 1;
+    return;
+  }
+  const state = enabled ? chalk.green("enabled") : chalk.yellow("disabled (paused)");
+  console.log(`✓ ${id} → ${state}`);
+  console.log(chalk.dim(`  Definition kept; a running daemon picks up the change on next reload.`));
+}
+
+export interface CronDeleteOpts {
+  hard?: boolean;
+  yes?: boolean;
+}
+
+/** `cron delete <ref>` — archive (default) or hard-remove the backing files. */
+export async function cronDeleteCommand(ref: string, opts: CronDeleteOpts = {}): Promise<void> {
+  const id = resolveOrFail(ref, "deleted");
+  if (!id) return;
+  if (!opts.yes) {
+    const inquirer = (await import("inquirer")).default;
+    const { ok } = await inquirer.prompt([{
+      name: "ok", type: "confirm", default: false,
+      message: opts.hard
+        ? `Permanently delete cron "${id}" (yaml + prompt)?`
+        : `Archive cron "${id}" to crons/_archived/? (recoverable)`,
+    }]);
+    if (!ok) {
+      console.log(chalk.dim("aborted."));
+      return;
+    }
+  }
+  const touched = deleteCronFiles(id, getCronsWriteDir(), { hard: opts.hard });
+  if (touched.length === 0) {
+    console.error(chalk.red(`✗ no files for "${id}"`));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(chalk.green(`✓ ${opts.hard ? "deleted" : "archived"} ${id}`));
+  for (const p of touched) console.log(chalk.dim(`  ${p}`));
+  console.log(chalk.dim(`  A running daemon stops it on next reload.`));
+}
+
 export async function cronListCommand(): Promise<void> {
-  const dir = getCronsDir();
+  const dir = getCronsWriteDir();
   const defs = loadCronDefs(dir);
   console.log(chalk.bold(`Built-in crons (${CRONS.length}):`));
   for (const r of CRONS) {
@@ -106,20 +257,22 @@ export async function cronShowCommand(id: string): Promise<void> {
     console.log(chalk.dim(`  cron:    resolved at scheduler startup from workspace.yaml`));
     return;
   }
-  const dir = getCronsDir();
+  const dir = getCronsWriteDir();
   const def = loadCronDefs(dir).find((d) => d.id === id);
   if (!def) {
     console.log(chalk.red(`✗ no cron "${id}" (built-in or user-defined). Try \`solosquad cron list\`.`));
     process.exitCode = 1;
     return;
   }
-  const flag = def.enabled ? chalk.green("on") : chalk.dim("off");
+  const flag = def.enabled ? chalk.green("on") : chalk.dim("off (paused)");
   console.log(chalk.bold(`${def.emoji} ${def.id}`) + `  [${flag}]`);
   console.log(`  name:    ${def.name}`);
   console.log(`  kind:    ${def.kind}`);
-  console.log(`  cron:    ${def.cron}`);
+  console.log(`  cron:    ${def.cron}  ${chalk.dim(`(${describeSchedule(def.cron)})`)}`);
+  const next = nextRun(def.cron);
+  if (next) console.log(`  next:    ${chalk.dim(next.toLocaleString())}`);
   if (def.channel) console.log(`  channel: ${def.channel}`);
-  const prompt = path.join(dir, `${def.id}.md`);
+  const prompt = cronMdPath(def.id, dir);
   console.log(`  prompt:  ${promptExists(def.id) ? prompt : chalk.red(`${prompt} (missing)`)}`);
 
   // surface validation state inline (validate-then-trust)
@@ -136,7 +289,7 @@ export async function cronShowCommand(id: string): Promise<void> {
 }
 
 export async function cronValidateCommand(): Promise<void> {
-  const defs = loadCronDefs(getCronsDir());
+  const defs = loadCronDefs(getCronsWriteDir());
   if (defs.length === 0) {
     console.log(chalk.yellow("△ no user crons found (crons/<id>.yaml)"));
     process.exitCode = 0;

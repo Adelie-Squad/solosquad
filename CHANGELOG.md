@@ -4,15 +4,16 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.3.3] — 2026-06-19 (Cron terminology unification)
+## [1.3.3] — 2026-06-19 (Cron terminology unification + cron lifecycle)
 
-v1.3.3 unifies the two interchangeable names for scheduled jobs — **routine** (built-in jobs) and **schedule** (user-authored jobs) — into a single noun: **cron**. This is a breaking rename across code, CLI, the bundled asset dir, and on-disk data paths, shipped with a migration that carries existing workspaces along. See `docs/prd/v1.3.3-cron-terminology.md`.
+v1.3.3 unifies the two interchangeable names for scheduled jobs — **routine** (built-in jobs) and **schedule** (user-authored jobs) — into a single noun: **cron**, then gives crons a full create/edit/start-stop/delete lifecycle (referencing the OpenClaw and Hermes cron UX). This is a breaking rename across code, CLI, the bundled asset dir, and on-disk data paths, shipped with a migration that carries existing workspaces along. See `docs/prd/v1.3.3-cron-terminology.md`.
 
 - **Code rename.** `scheduler/routines.ts → crons.ts`, `schedule-def.ts → cron-def.ts`, `schedule-validate.ts → cron-validate.ts`, `cli/schedule.ts → cli/cron.ts`, `cli/run-routine.ts → cli/run-cron.ts`. Identifiers `ROUTINES → CRONS`, `RoutineConfig → CronConfig`, `ScheduleDef → CronDef`, `getSchedulesDir → getCronsDir`, error codes `SCHED_* → CRON_*`.
 - **CLI consolidation (breaking).** The three split entry points — `solosquad schedule` (daemon), `solosquad schedules` (manage), `solosquad run-routine` (manual) — collapse into one `cron` group: `solosquad cron start | run | list | new | show | validate`.
+- **Cron lifecycle (new — OpenClaw + Hermes cron UX).** Full create/edit/start-stop/delete: `cron edit <ref>` (patch fields → auto re-validate), `cron enable`/`cron disable` (pause ≠ delete — the definition is kept), `cron delete <ref>` (archives to `crons/_archived/` by default, `--hard` removes). References accept **id or name** (case-insensitive; ambiguity refused). `cron new`/`edit` take friendly schedules (`@daily`, `every 1h`, raw cron) and print a human readback + **next-run preview**. The daemon **hot-reloads** via a chokidar watcher on `.solosquad/crons` (node-cron v4 task handles), so lifecycle changes apply without restarting `cron start`. Writes are pinned to `<ws>/.solosquad/crons` (never the installed bundle).
 - **Paths.** Bundled `schedules/ → crons/`; data `.solosquad/{schedules,routines} → .solosquad/crons`, `<org>/memory/routine-logs → cron-logs`. The 1.3.2→1.3.3 migration moves these for existing workspaces (idempotent, no-clobber); `getCronsDir()` still reads the legacy override dirs as a fallback so a workspace keeps working even before the migration runs.
 - **Preserved on purpose.** The `scheduler`/`startScheduler` subsystem name (it *runs* crons), the node-cron API, the archive event-type string `routine_log` (stored data contract), and historical migration path literals.
-- 875 tests green (new `migration-v1.3.3-cron.test.ts`). `validate-bundled` green.
+- 886 tests green (new `migration-v1.3.3-cron.test.ts`, `cron-schedule.test.ts`, `cron-lifecycle.test.ts`). `validate-bundled` green.
 
 ## [1.3.2] — 2026-06-19 (Asset lifecycle managers + asset adoption)
 
