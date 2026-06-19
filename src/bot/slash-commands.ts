@@ -21,6 +21,7 @@ export const KNOWN_SLASHES = new Set([
   "/build",
   "/review",
   "/ship",
+  "/create",
   "/help",
 ]);
 
@@ -100,7 +101,7 @@ export function handleSlashIfAny(input: string): SlashHandlingResult {
       forwardText: input,
       shortCircuit: true,
       directReply:
-        `Unknown command: ${slash.command}. Known: /think, /plan, /build, /review, /ship. ` +
+        `Unknown command: ${slash.command}. Known: /think, /plan, /build, /review, /ship, /create. ` +
         `Send /help for usage.`,
     };
   }
@@ -119,6 +120,7 @@ function helpText(): string {
     "/build [stage-id]  — spawn the next ready stage (or the named one).",
     "/review            — synthesize completed stages, flag blockers.",
     "/ship              — release / deploy cron (v0.4 autonomous engine).",
+    "/create [name]     — capture what we just did as a reusable SKILL.",
     "/cancel            — abort the work Chief is currently running for you.",
     "/grant             — enable dev mode (agents may write files + run git).",
     "/revoke            — disable dev mode (agents go read-only).",

@@ -37,6 +37,13 @@ test("handleSlashIfAny wraps known slashes in [SLASH /xyz] marker", () => {
   assert.equal(r.shortCircuit, undefined);
 });
 
+test("handleSlashIfAny wraps /create (forwarded to Chief, not bot-executed)", () => {
+  const r = handleSlashIfAny("/create deploy-checklist");
+  assert.equal(r.forwardText, "[SLASH /create] deploy-checklist");
+  assert.equal(r.shortCircuit, undefined);
+  assert.equal(r.cancel, undefined);
+});
+
 test("handleSlashIfAny short-circuits /help with usage text", () => {
   const r = handleSlashIfAny("/help");
   assert.equal(r.shortCircuit, true);
@@ -68,9 +75,9 @@ test("handleSlashIfAny rejects unknown slashes with a hint", () => {
   assert.match(r.directReply!, /\/help/);
 });
 
-test("KNOWN_SLASHES has exactly the 6 expected entries", () => {
+test("KNOWN_SLASHES has exactly the 7 expected entries", () => {
   assert.deepEqual(
     [...KNOWN_SLASHES].sort(),
-    ["/build", "/help", "/plan", "/review", "/ship", "/think"]
+    ["/build", "/create", "/help", "/plan", "/review", "/ship", "/think"]
   );
 });
