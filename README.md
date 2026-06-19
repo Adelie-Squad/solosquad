@@ -288,7 +288,7 @@ Two long-running processes plus a file-based memory layer:
 | Process | Role |
 |---|---|
 | `solosquad bot` | Receives messenger message → resumes the user's long-lived PM session (`orchestrator/SKILL.md`, v0.3) → 4-channel router resolves which specialist to load (`slash > explicit > keyword > freq`, v0.5) → delegates to a fresh subagent via Claude Code's native `Task` tool → synthesizes the tool result and replies |
-| `solosquad cron start` | Runs scheduled crons (6 default — see table above), appends results to JSONL memory files |
+| `solosquad cron start` | Runs scheduled crons (built-ins + user-defined), appends results to JSONL memory files. Set `timezone` + a `crons` block in a user's `.solosquad/users/<handle>.yaml` to get personalized morning/evening briefs in their own `works-<handle>` channel at their own timezone |
 
 Two additional modes layer on top of the bot:
 

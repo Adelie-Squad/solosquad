@@ -25,6 +25,8 @@ import { loadCronDefs, deleteCronFiles } from "./cron-def.js";
 import { validateCronDef } from "./cron-validate.js";
 import { recordCronRun, lastSuccessfulRun } from "./cron-runlog.js";
 import { isOverdue } from "./cron-schedule.js";
+import { resolveUserCrons } from "./user-crons.js";
+import { listUserYamls } from "../bot/user-registry.js";
 import { getCronsWriteDir } from "../util/paths.js";
 import { saveCronMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
@@ -35,15 +37,18 @@ import type { MessengerAdapter } from "../messenger/base.js";
 let adapters: MessengerAdapter[] = [];
 let workspaceTimezone = "Asia/Seoul";
 
-function nowLabel(): string {
+function nowLabel(tz: string = workspaceTimezone): string {
   return new Date()
-    .toLocaleString("ko-KR", { timeZone: workspaceTimezone })
+    .toLocaleString("ko-KR", { timeZone: tz })
     .slice(5);
 }
 
 async function runCronForProduct(
   cron: CronConfig,
-  product: { name: string; slug: string }
+  product: { name: string; slug: string },
+  /** v1.3.3 §B — per-user override: deliver to a specific channel + label in
+   *  that user's timezone (used by personalized briefs). */
+  overrides: { channel?: string; tz?: string } = {}
 ): Promise<void> {
   // v0.2.0+: product.slug == org slug. Crons always run at org level so
   // memory/cron-logs (org scope) is the persistence target — but the Claude
@@ -156,16 +161,20 @@ async function runCronForProduct(
     return;
   }
 
-  // v0.2.4+: route to #workflow channel; background crons target a system thread
-  const title = `${cron.emoji} [${cron.name}] ${product.name} | ${nowLabel()}`;
+  // v0.2.4+: route to #workflow channel; background crons target a system
+  // thread. v1.3.3 §B — personalized briefs override the channel (works-<handle>)
+  // and label in the user's timezone.
+  const channel = overrides.channel ?? cron.channel;
+  const threadName = overrides.channel ? undefined : cron.threadName;
+  const title = `${cron.emoji} [${cron.name}] ${product.name} | ${nowLabel(overrides.tz)}`;
   for (const adapter of adapters) {
     const config = loadMessengerConfig(orgDir, adapter.platform);
     const sent = await adapter.sendToChannel(
       config,
-      cron.channel,
+      channel,
       result,
       title,
-      cron.threadName
+      threadName
     );
     if (sent) {
       console.log(
@@ -314,11 +323,43 @@ export async function startScheduler(): Promise<void> {
   reconcileUserCrons();
   startCronWatcher();
 
+  // v1.3.3 §B — personalized briefs: opt-in users get their own briefs in
+  // works-<handle> at their own timezone (additive to the org-level briefs).
+  registerUserBriefs(ws ? applyWorkspaceDefaults(ws) : undefined);
+
   console.log("[Scheduler] Scheduler started");
   await sendStartupNotification(crons);
 
   // Keep alive
   await new Promise<void>(() => {});
+}
+
+/**
+ * v1.3.3 §B — register per-user personalized brief crons. Read at startup
+ * (a user.yaml change needs a daemon restart, like the built-in brief times).
+ */
+function registerUserBriefs(ws?: WorkspaceYaml): void {
+  const merged = ws ?? applyWorkspaceDefaults({ version: "0", display_name: "", created_at: "" } as WorkspaceYaml);
+  const defaults = {
+    tz: merged.timezone ?? workspaceTimezone,
+    times: {
+      "morning-brief": merged.briefings?.morning?.time ?? "08:00",
+      "evening-brief": merged.briefings?.evening?.time ?? "18:00",
+    } as Record<string, string>,
+  };
+  const orgs = loadProducts().map((p) => ({ slug: p.slug, users: listUserYamls(p.slug) }));
+  const resolved = resolveUserCrons(orgs, defaults);
+  for (const uc of resolved) {
+    const builtin = CRONS.find((c) => c.id === uc.cronId);
+    if (!builtin) continue;
+    cron.schedule(
+      uc.expr,
+      () => runCronForProduct(builtin, { name: uc.orgSlug, slug: uc.orgSlug }, { channel: uc.channel, tz: uc.timezone }),
+      { name: `userbrief:${uc.orgSlug}:${uc.handle}:${uc.cronId}`, noOverlap: true, timezone: uc.timezone },
+    );
+    console.log(`[Scheduler] Registered user brief: ${uc.handle}/${uc.cronId} → ${uc.channel} (${uc.expr} ${uc.timezone})`);
+  }
+  console.log(`[Scheduler] Personalized briefs: ${resolved.length}`);
 }
 
 /** Live handles for recurring user-cron tasks + one-shot timers, keyed by id. */

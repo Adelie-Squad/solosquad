@@ -24,6 +24,19 @@ export interface UserYaml {
   joined_at: string;
   workspace_path?: string;
   session_id?: string;
+  /**
+   * v1.3.3 §B (cron 개인화) — IANA timezone override for this user's personal
+   * crons (e.g. "America/Los_Angeles"). Falls back to the workspace timezone.
+   */
+  timezone?: string;
+  /**
+   * v1.3.3 §B — opt-in per-user cron settings. When present, the user receives
+   * personalized briefs in their own `works-<handle>` channel at their own
+   * timezone, *in addition to* the org-level #workflow briefs (disable the
+   * org-level one via workspace.yaml.briefings.*.enabled:false if you only want
+   * personal briefs). Keyed by built-in cron id ("morning-brief"/"evening-brief").
+   */
+  crons?: Record<string, { enabled?: boolean; time?: string }>;
   channels: {
     command: string;
     works: string;
