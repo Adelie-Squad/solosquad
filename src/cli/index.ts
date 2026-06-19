@@ -133,9 +133,9 @@ cronGroup
 
 cronGroup
   .command("run")
-  .description("Run a cron manually (formerly `solosquad run-routine`)")
-  .argument("[cron-id]", "Cron ID (e.g. morning-brief)")
-  .option("-a, --all", "Run all crons")
+  .description("Run a cron manually — built-in or user-defined (formerly `solosquad run-routine`)")
+  .argument("[ref]", "Cron id or name (e.g. morning-brief, or a user cron)")
+  .option("-a, --all", "Run all crons (built-ins + enabled user crons)")
   .action(async (cronId, opts) => {
     const { runCronCommand } = await import("./run-cron.js");
     await runCronCommand(cronId, opts.all);
