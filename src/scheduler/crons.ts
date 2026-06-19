@@ -79,6 +79,17 @@ export const CRONS: CronConfig[] = [
   },
 ];
 
+/**
+ * v1.3.3 §C — a run is "silent" when its output is empty or begins with a
+ * `[SILENT]` marker (Hermes `[SILENT]` / OpenClaw `NO_REPLY` pattern). The
+ * scheduler still logs/records a silent run but does not post it to the channel
+ * — lets a cron be a quiet poller that only speaks when it has something to say.
+ */
+export function isSilentResult(result: string): boolean {
+  const t = (result ?? "").trim();
+  return t.length === 0 || /^\[SILENT\]/i.test(t);
+}
+
 /** Load cron prompt from crons/{id}.md (v1.1 rename; resolver
  *  preserves legacy `.solosquad/crons/` overrides — see getCronsDir). */
 export function loadCronPrompt(cronId: string): string {

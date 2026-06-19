@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeSchedule, describeSchedule, nextRun } from "../src/scheduler/cron-schedule.js";
+import { isSilentResult } from "../src/scheduler/crons.js";
 
 test("normalizeSchedule passes through valid cron expressions", () => {
   assert.equal(normalizeSchedule("0 9 * * 1").cron, "0 9 * * 1");
@@ -42,4 +43,14 @@ test("nextRun returns a future Date for a valid expr, null for invalid", () => {
   assert.ok(n instanceof Date);
   assert.ok(n!.getTime() > Date.now());
   assert.equal(nextRun("not a cron"), null);
+});
+
+test("isSilentResult suppresses empty and [SILENT]-prefixed output", () => {
+  assert.equal(isSilentResult(""), true);
+  assert.equal(isSilentResult("   \n  "), true);
+  assert.equal(isSilentResult("[SILENT]"), true);
+  assert.equal(isSilentResult("[SILENT] nothing new today"), true);
+  assert.equal(isSilentResult("[silent]"), true);
+  assert.equal(isSilentResult("Here is your brief"), false);
+  assert.equal(isSilentResult("contains [SILENT] mid-text"), false);
 });

@@ -17,6 +17,7 @@ import { getReposBase } from "../util/paths.js";
 import {
   CRONS,
   loadCronPrompt,
+  isSilentResult,
   timeToDailyCron,
   type CronConfig,
 } from "./crons.js";
@@ -104,6 +105,12 @@ async function runCronForProduct(
     path.join(logDir, `${cron.id}-${timestamp}.md`),
     `# ${cron.name}\n\n${result}`
   );
+
+  // v1.3.3 §C — silent runs (empty / [SILENT]) are logged but not posted.
+  if (isSilentResult(result)) {
+    console.log(`[Scheduler] ${product.name} - ${cron.name} → silent (not posted)`);
+    return;
+  }
 
   // v0.2.4+: route to #workflow channel; background crons target a system thread
   const title = `${cron.emoji} [${cron.name}] ${product.name} | ${nowLabel()}`;
