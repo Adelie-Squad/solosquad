@@ -24,8 +24,14 @@ export type CronRefResult =
  * so it flows straight into the existing `runCronForProduct`.
  */
 export interface CronDef extends CronConfig {
-  /** node-cron expression (5/6-field). Validated by `validateCronDef`. */
+  /** node-cron expression (5/6-field). Empty for one-shot defs (see `at`). */
   cron: string;
+  /**
+   * v1.3.3 §C — one-shot run time (absolute ISO 8601). When set, the cron runs
+   * exactly once at this time then auto-deletes (delete-after-run); `cron` is
+   * ignored. Mutually exclusive with a recurring `cron` expression.
+   */
+  at?: string;
   enabled: boolean;
 }
 
@@ -37,6 +43,7 @@ export function coerceCronDef(raw: Record<string, unknown>, fallbackId: string):
     name: typeof raw.name === "string" && raw.name.length > 0 ? raw.name : id,
     kind,
     cron: typeof raw.cron === "string" ? raw.cron : "",
+    at: typeof raw.at === "string" && raw.at.length > 0 ? raw.at : undefined,
     channel: typeof raw.channel === "string" && raw.channel.length > 0 ? raw.channel : "workflow",
     threadName: typeof raw.threadName === "string" ? raw.threadName : undefined,
     emoji: typeof raw.emoji === "string" ? raw.emoji : "⏰",
@@ -86,10 +93,11 @@ export function serializeCronDef(def: CronDef): string {
     id: def.id,
     name: def.name,
     kind: def.kind,
-    cron: def.cron,
-    channel: def.channel,
-    enabled: def.enabled,
   };
+  if (def.at) obj.at = def.at;
+  else obj.cron = def.cron;
+  obj.channel = def.channel;
+  obj.enabled = def.enabled;
   if (def.threadName) obj.threadName = def.threadName;
   if (def.emoji && def.emoji !== "⏰") obj.emoji = def.emoji;
   if (def.memoryTargets && def.memoryTargets.length) obj.memoryTargets = def.memoryTargets;

@@ -153,7 +153,8 @@ cronGroup
   .command("new")
   .description("Scaffold a new user cron (crons/<id>.yaml + <id>.md)")
   .argument("<id>", "Kebab-case cron id")
-  .option("--cron <expr>", "Cron expression (default: '0 9 * * 1')")
+  .option("--cron <expr>", "Recurring schedule: cron expr, @daily, or 'every 1h' (default '0 9 * * 1')")
+  .option("--at <when>", "One-shot: ISO timestamp or '20m'/'2h' delay (runs once, then auto-deletes)")
   .option("--kind <kind>", "user-brief | background (default: background)")
   .option("--channel <name>", "Target channel (default: workflow)")
   .action(async (id, opts) => {

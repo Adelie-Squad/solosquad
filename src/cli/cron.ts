@@ -16,7 +16,7 @@ import {
   validateCronDef,
   type CronFinding,
 } from "../scheduler/cron-validate.js";
-import { normalizeSchedule, describeSchedule, nextRun } from "../scheduler/cron-schedule.js";
+import { normalizeSchedule, describeSchedule, nextRun, parseWhen } from "../scheduler/cron-schedule.js";
 import { CRONS } from "../scheduler/crons.js";
 
 const BUILTIN_IDS = new Set(CRONS.map((r) => r.id));
@@ -71,6 +71,7 @@ function promptExists(id: string): boolean {
 
 export interface CronNewOpts {
   cron?: string;
+  at?: string;
   kind?: string;
   channel?: string;
 }
@@ -101,23 +102,33 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
   const kind = opts.kind === "user-brief" ? "user-brief" : "background";
   const channel = opts.channel ?? "workflow";
 
-  // Friendly schedule input (cron expr | @daily | "every 1h") → cron expression.
-  const norm = normalizeSchedule(opts.cron ?? "0 9 * * 1");
-  if (norm.error || !norm.cron) {
-    console.error(chalk.red(`✗ schedule: ${norm.error ?? "could not parse"}`));
-    process.exitCode = 2;
-    return;
+  let def: CronDef;
+  if (opts.at) {
+    // One-shot: runs once at `--at <ISO | "20m">` then auto-deletes.
+    const when = parseWhen(opts.at);
+    if (when.error || !when.at) {
+      console.error(chalk.red(`✗ --at: ${when.error ?? "could not parse"}`));
+      process.exitCode = 2;
+      return;
+    }
+    def = { id, name: id, kind, cron: "", at: when.at, channel, emoji: "⏰", memoryTargets: [], enabled: true };
+    writeCronDef(def, dir, /* scaffoldPrompt */ true);
+    console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
+    console.log(chalk.dim(`  one-shot: runs once at ${new Date(when.at).toLocaleString()}, then auto-deletes`));
+  } else {
+    // Friendly recurring schedule (cron expr | @daily | "every 1h") → cron expression.
+    const norm = normalizeSchedule(opts.cron ?? "0 9 * * 1");
+    if (norm.error || !norm.cron) {
+      console.error(chalk.red(`✗ schedule: ${norm.error ?? "could not parse"}`));
+      process.exitCode = 2;
+      return;
+    }
+    def = { id, name: id, kind, cron: norm.cron, channel, emoji: "⏰", memoryTargets: [], enabled: true };
+    writeCronDef(def, dir, /* scaffoldPrompt */ true);
+    console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
+    console.log(chalk.dim(`  schedule: ${norm.describe} ("${norm.cron}")`));
+    printNextRun(norm.cron);
   }
-
-  const def: CronDef = {
-    id, name: id, kind, cron: norm.cron, channel,
-    emoji: "⏰", memoryTargets: [], enabled: true,
-  };
-  writeCronDef(def, dir, /* scaffoldPrompt */ true);
-
-  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
-  console.log(chalk.dim(`  schedule: ${norm.describe} ("${norm.cron}")`));
-  printNextRun(norm.cron);
 
   if (reportValidation(def)) {
     console.log(chalk.dim(`  Next: edit ${mdPath} (the prompt), then \`solosquad cron validate\``));
@@ -130,6 +141,18 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
 function printNextRun(expr: string): void {
   const next = nextRun(expr);
   if (next) console.log(chalk.dim(`  next run: ${next.toLocaleString()}`));
+}
+
+/** Human "in 2h 5m" / "overdue" for a one-shot ISO time. */
+function relativeFromNow(iso: string): string {
+  const ms = Date.parse(iso) - Date.now();
+  if (Number.isNaN(ms)) return "?";
+  if (ms <= 0) return "overdue (will be cleaned up)";
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `in ${mins}m`;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  if (h < 24) return `in ${h}h${m ? ` ${m}m` : ""}`;
+  return `in ${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
 export interface CronEditOpts {
@@ -243,7 +266,8 @@ export async function cronListCommand(): Promise<void> {
   }
   for (const d of defs) {
     const flag = d.enabled ? chalk.green("on") : chalk.dim("off");
-    console.log(`  ${d.emoji} ${chalk.cyan(d.id)} — ${d.name} [${flag}] cron="${d.cron}" (${d.kind})`);
+    const sched = d.at ? `at=${d.at} (one-shot)` : `cron="${d.cron}"`;
+    console.log(`  ${d.emoji} ${chalk.cyan(d.id)} — ${d.name} [${flag}] ${sched} (${d.kind})`);
   }
 }
 
@@ -268,9 +292,14 @@ export async function cronShowCommand(id: string): Promise<void> {
   console.log(chalk.bold(`${def.emoji} ${def.id}`) + `  [${flag}]`);
   console.log(`  name:    ${def.name}`);
   console.log(`  kind:    ${def.kind}`);
-  console.log(`  cron:    ${def.cron}  ${chalk.dim(`(${describeSchedule(def.cron)})`)}`);
-  const next = nextRun(def.cron);
-  if (next) console.log(`  next:    ${chalk.dim(next.toLocaleString())}`);
+  if (def.at) {
+    console.log(`  at:      ${def.at}  ${chalk.dim("(one-shot — runs once, then auto-deletes)")}`);
+    console.log(`  in:      ${chalk.dim(relativeFromNow(def.at))}`);
+  } else {
+    console.log(`  cron:    ${def.cron}  ${chalk.dim(`(${describeSchedule(def.cron)})`)}`);
+    const next = nextRun(def.cron);
+    if (next) console.log(`  next:    ${chalk.dim(next.toLocaleString())}`);
+  }
   const recent = await recentRunsAcrossOrgs(def.id, 1);
   if (recent[0]) {
     const r = recent[0];

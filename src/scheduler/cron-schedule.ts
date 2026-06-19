@@ -82,6 +82,30 @@ export function normalizeSchedule(input: string): NormalizeResult {
   return { error: `"${raw}" is not a valid cron expression, "@shortcut", or "every <n>m|h|d"` };
 }
 
+/**
+ * v1.3.3 §C — parse a one-shot "when" into an absolute ISO timestamp.
+ * Accepts an ISO 8601 timestamp or a relative delay `<n>s|m|h|d` (from now).
+ * Rejects past times and unparseable input.
+ */
+export function parseWhen(input: string, now: number = Date.now()): { at?: string; error?: string } {
+  const raw = (input ?? "").trim();
+  if (!raw) return { error: "time is empty" };
+
+  const rel = raw.match(/^(\d+)\s*(s|sec|seconds?|m|min|minutes?|h|hr|hours?|d|days?)$/i);
+  if (rel) {
+    const n = parseInt(rel[1], 10);
+    const u = rel[2].toLowerCase()[0];
+    const ms = u === "s" ? n * 1000 : u === "m" ? n * 60000 : u === "h" ? n * 3600000 : n * 86400000;
+    if (ms <= 0) return { error: `invalid delay "${raw}"` };
+    return { at: new Date(now + ms).toISOString() };
+  }
+
+  const t = Date.parse(raw);
+  if (Number.isNaN(t)) return { error: `"${raw}" is not an ISO timestamp or a "<n>m|h|d" delay` };
+  if (t <= now) return { error: `"${raw}" is in the past` };
+  return { at: new Date(t).toISOString() };
+}
+
 /** Best-effort human description of a 5-field cron expression. Falls back to
  *  the raw expression when the pattern isn't one of the common shapes. */
 export function describeSchedule(expr: string): string {

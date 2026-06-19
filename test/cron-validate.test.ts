@@ -39,6 +39,28 @@ test("missing prompt file is an error", () => {
   assert.ok(codes(r.errors).includes("CRON_PROMPT_MISSING"));
 });
 
+test("one-shot def (future `at`, empty cron) is valid", () => {
+  const future = new Date(Date.now() + 3600_000).toISOString();
+  const r = validateCronDef(def({ cron: "", at: future }), { promptExists: () => true });
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+});
+
+test("one-shot with a past `at` warns (cleaned up, not run)", () => {
+  const r = validateCronDef(def({ cron: "", at: "2020-01-01T00:00:00.000Z" }), { promptExists: () => true });
+  assert.equal(r.ok, true);
+  assert.ok(codes(r.warnings).includes("CRON_AT_PAST"));
+});
+
+test("one-shot with a malformed `at` is an error", () => {
+  const r = validateCronDef(def({ cron: "", at: "not-a-date" }), { promptExists: () => true });
+  assert.ok(codes(r.errors).includes("CRON_AT_INVALID"));
+});
+
+test("neither cron nor at is a missing-schedule error", () => {
+  const r = validateCronDef(def({ cron: "" }), { promptExists: () => true });
+  assert.ok(codes(r.errors).includes("CRON_CRON_MISSING"));
+});
+
 test("id collision with a built-in is an error", () => {
   const r = validateCronDef(def({ id: "morning-brief" }), {
     reservedIds: new Set(["morning-brief"]),

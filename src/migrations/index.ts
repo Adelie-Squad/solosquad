@@ -28,6 +28,7 @@ import { migration as v123ToV126 } from "./scripts/1.2.3-to-1.2.6.js";
 import { migration as v126ToV128 } from "./scripts/1.2.6-to-1.2.8.js";
 import { migration as v127ToV128 } from "./scripts/1.2.7-to-1.2.8.js";
 import { migration as v128ToV129 } from "./scripts/1.2.8-to-1.2.9.js";
+import { migration as v129ToV132 } from "./scripts/1.2.9-to-1.3.2.js";
 import { migration as v132ToV133 } from "./scripts/1.3.2-to-1.3.3.js";
 import { versionMatches } from "./detect.js";
 
@@ -71,8 +72,32 @@ export const MIGRATIONS: Migration[] = [
   v126ToV128,
   v127ToV128,
   v128ToV129,
+  v129ToV132,
   v132ToV133,
 ];
+
+/**
+ * Registry continuity guard. Every migration whose `to` is not the terminal
+ * (`latest`) version must have a successor whose `from` matches that `to` —
+ * otherwise the chain dead-ends mid-way and `migrate` throws "No migration
+ * found for source version <to>" for every workspace stamped that version.
+ *
+ * This is exactly the v1.3.x footgun: the `1.2.8 → 1.2.9` step landed on
+ * `1.2.9` but no migration declared `from: "1.2.9"`, so every upgraded
+ * workspace dead-ended there. Returns the list of dead-end `to` versions
+ * (empty = continuous chain). Exercised by
+ * test/migration-registry-continuity.test.ts so a future release that forgets
+ * its migration entry fails CI instead of users' upgrades.
+ */
+export function findRegistryGaps(latest: string): string[] {
+  const gaps: string[] = [];
+  for (const m of MIGRATIONS) {
+    if (m.to === latest) continue;
+    const hasSuccessor = MIGRATIONS.some((n) => versionMatches(n.from, m.to));
+    if (!hasSuccessor) gaps.push(m.to);
+  }
+  return gaps;
+}
 
 /**
  * Given a source version and a target version, return the sequence of

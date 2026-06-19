@@ -21,7 +21,7 @@ import {
   timeToDailyCron,
   type CronConfig,
 } from "./crons.js";
-import { loadCronDefs } from "./cron-def.js";
+import { loadCronDefs, deleteCronFiles } from "./cron-def.js";
 import { validateCronDef } from "./cron-validate.js";
 import { recordCronRun, lastSuccessfulRun } from "./cron-runlog.js";
 import { isOverdue } from "./cron-schedule.js";
@@ -321,20 +321,24 @@ export async function startScheduler(): Promise<void> {
   await new Promise<void>(() => {});
 }
 
-/** Live handles for user-defined cron tasks, keyed by cron id. */
+/** Live handles for recurring user-cron tasks + one-shot timers, keyed by id. */
 const userCronTasks = new Map<string, ScheduledTask>();
+const oneShotTimers = new Map<string, NodeJS.Timeout>();
+const MAX_TIMER_MS = 2_147_483_647; // setTimeout ceiling (~24.8 days)
 
 /**
  * v1.3.3 §C — (re)apply the on-disk user crons to the live scheduler. Idempotent:
- * destroys every currently-registered user task, then registers the valid +
- * enabled defs afresh. Built-in crons are never touched. Safe to call repeatedly
- * (startup + every fs change).
+ * tears down every registered task/timer, then re-arms the valid + enabled defs.
+ * Recurring defs use node-cron; one-shot defs (`at`) use a setTimeout that runs
+ * once then deletes the def (delete-after-run). Built-in crons are never touched.
  */
 export function reconcileUserCrons(): void {
   for (const [, task] of userCronTasks) {
     try { void task.destroy(); } catch { /* ignore */ }
   }
   userCronTasks.clear();
+  for (const [, timer] of oneShotTimers) clearTimeout(timer);
+  oneShotTimers.clear();
 
   const builtinIds = new Set(CRONS.map((r) => r.id));
   const cronsDir = getCronsWriteDir();
@@ -351,6 +355,33 @@ export function reconcileUserCrons(): void {
       console.log(`[Scheduler] Paused: ${def.name} (disabled)`);
       continue;
     }
+
+    // One-shot (`at`): run once at the target time, then delete-after-run.
+    if (def.at) {
+      const delay = Date.parse(def.at) - Date.now();
+      if (Number.isNaN(delay)) continue;
+      if (delay <= 0) {
+        // Past one-shot — never ran (or stale def): clean it up, don't fire.
+        console.log(`[Scheduler] One-shot "${def.id}" is past — archiving (not run)`);
+        try { deleteCronFiles(def.id, cronsDir); } catch { /* ignore */ }
+        continue;
+      }
+      if (delay > MAX_TIMER_MS) {
+        console.log(`[Scheduler] One-shot "${def.id}" is >24d out — will arm on a later restart`);
+        continue;
+      }
+      const timer = setTimeout(() => {
+        void (async () => {
+          await runCronDef(def);
+          try { deleteCronFiles(def.id, cronsDir); } catch { /* ignore */ }
+          oneShotTimers.delete(def.id);
+        })();
+      }, delay);
+      oneShotTimers.set(def.id, timer);
+      console.log(`[Scheduler] Armed one-shot: ${def.name} at ${def.at}`);
+      continue;
+    }
+
     const task = cron.schedule(def.cron, () => runCronDef(def), {
       name: `user:${def.id}`,
       noOverlap: true,
@@ -359,7 +390,7 @@ export function reconcileUserCrons(): void {
     userCronTasks.set(def.id, task);
     console.log(`[Scheduler] Registered user cron: ${def.name} (${def.cron})`);
   }
-  console.log(`[Scheduler] User crons live: ${userCronTasks.size}`);
+  console.log(`[Scheduler] User crons live: ${userCronTasks.size} recurring, ${oneShotTimers.size} one-shot`);
 }
 
 let cronWatcher: import("chokidar").FSWatcher | null = null;

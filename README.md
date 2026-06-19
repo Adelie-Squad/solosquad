@@ -219,11 +219,12 @@ solosquad asset list [kind]                       # list assets (skill|agent|wor
 solosquad asset show <kind> <id>                  # show one asset
 solosquad asset validate [kind]                   # deterministic validation gate (all kinds, or one)
 solosquad adopt <repo> [--apply] [--classify]     # discover + validate + adopt a repo's assets
-solosquad cron new <id> [--cron …]                # scaffold crons/<id>.yaml + <id>.md (--cron "@daily" | "every 1h")
+solosquad cron new <id> [--cron …|--at …]         # scaffold a recurring (--cron "@daily"|"every 1h") or one-shot (--at "20m") cron
 solosquad cron list|show|validate                 # inspect user-defined crons
 solosquad cron edit <ref> [--cron|--name|…]       # patch fields, then re-validate
 solosquad cron enable|disable <ref>               # resume / pause (pause ≠ delete)
 solosquad cron delete <ref> [--hard]              # archive (default) or hard-remove
+solosquad cron runs [ref] [-n N]                  # recent run history (status / when / duration)
 
 # Memory archive (v0.6)
 solosquad readiness check [--target v0.6]         # v0.5 data + 4 default workflows + author SKILL counts → pass/short

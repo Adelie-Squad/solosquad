@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSchedule, describeSchedule, nextRun, estimatePeriodMinutes, isOverdue } from "../src/scheduler/cron-schedule.js";
+import { normalizeSchedule, describeSchedule, nextRun, estimatePeriodMinutes, isOverdue, parseWhen } from "../src/scheduler/cron-schedule.js";
 import { isSilentResult } from "../src/scheduler/crons.js";
 
 test("normalizeSchedule passes through valid cron expressions", () => {
@@ -61,6 +61,16 @@ test("isOverdue flags a stale daily cron, not a fresh one", () => {
   assert.equal(isOverdue("2026-06-10T09:00:00.000Z", daily, now), false, "ran 3h ago");
   assert.equal(isOverdue("2026-06-07T09:00:00.000Z", daily, now), true, "3 days stale > 2× daily");
   assert.equal(isOverdue("2026-01-01T00:00:00.000Z", "0 9,17 * * *", now), false, "unknown cadence = can't judge");
+});
+
+test("parseWhen handles relative delays and ISO, rejects past/garbage", () => {
+  const now = Date.parse("2026-06-10T12:00:00.000Z");
+  assert.equal(parseWhen("20m", now).at, "2026-06-10T12:20:00.000Z");
+  assert.equal(parseWhen("2h", now).at, "2026-06-10T14:00:00.000Z");
+  assert.equal(parseWhen("2026-06-11T09:00:00.000Z", now).at, "2026-06-11T09:00:00.000Z");
+  assert.ok(parseWhen("2020-01-01T00:00:00Z", now).error, "past rejected");
+  assert.ok(parseWhen("whenever", now).error);
+  assert.ok(parseWhen("", now).error);
 });
 
 test("isSilentResult suppresses empty and [SILENT]-prefixed output", () => {

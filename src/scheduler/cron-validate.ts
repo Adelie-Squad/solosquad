@@ -35,8 +35,16 @@ export function validateCronDef(
   f.errorIf(!id || !isKebabCase(id), { code: "CRON_ID_MALFORMED", id, field: "id", message: `id "${id}" must be kebab-case` });
   f.errorIf(!!opts.reservedIds?.has(id), { code: "CRON_ID_COLLISION", id, field: "id", message: `id "${id}" collides with an existing cron` });
 
-  if (!def.cron || typeof def.cron !== "string") {
-    f.error({ code: "CRON_CRON_MISSING", id, field: "cron", message: "cron expression is required" });
+  // v1.3.3 §C — a def is either recurring (`cron`) or one-shot (`at`).
+  if (def.at) {
+    const t = Date.parse(def.at);
+    if (Number.isNaN(t)) {
+      f.error({ code: "CRON_AT_INVALID", id, field: "at", message: `at "${def.at}" is not an ISO timestamp` });
+    } else if (t <= Date.now()) {
+      f.warn({ code: "CRON_AT_PAST", id, field: "at", message: `one-shot time "${def.at}" is in the past — it will be cleaned up, not run` });
+    }
+  } else if (!def.cron || typeof def.cron !== "string") {
+    f.error({ code: "CRON_CRON_MISSING", id, field: "cron", message: "a recurring `cron` expression or a one-shot `at` time is required" });
   } else if (!cron.validate(def.cron)) {
     f.error({ code: "CRON_CRON_INVALID", id, field: "cron", message: `cron "${def.cron}" is not a valid node-cron expression` });
   } else if (EVERY_MINUTE.test(def.cron.trim())) {
