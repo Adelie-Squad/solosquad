@@ -15,8 +15,8 @@ function tempSourceRepo(): string {
     fs.writeFileSync(full, body);
   };
   w(".claude/skills/my-skill/SKILL.md", "---\nname: my-skill\ndescription: does a thing\nschema_version: 1\n---\n# x");
-  w("schedules/digest.yaml", "id: digest\nname: Digest\nkind: background\ncron: '0 9 * * 1'\n");
-  w("schedules/digest.md", "# digest prompt");
+  w("crons/digest.yaml", "id: digest\nname: Digest\nkind: background\ncron: '0 9 * * 1'\n");
+  w("crons/digest.md", "# digest prompt");
   // a valid workflow (real bundled agent refs) → should be written
   w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: null\n");
   // a cyclic workflow → error → must be skipped by apply
@@ -31,7 +31,7 @@ function tempTargets(): { dir: string; targets: ApplyTargets } {
     targets: {
       agentsDir: path.join(dir, "agents"),
       skillsDir: path.join(dir, "skills"),
-      schedulesDir: path.join(dir, "schedules"),
+      schedulesDir: path.join(dir, "crons"),
       workflowsDir: path.join(dir, "workflows"),
     },
   };
@@ -45,7 +45,7 @@ test("applyAdoption copies valid assets, skips errored ones", () => {
 
   // skill written
   assert.ok(fs.existsSync(path.join(targets.skillsDir, "my-skill", "SKILL.md")));
-  // schedule yaml + prompt written
+  // cron yaml + prompt written
   assert.ok(fs.existsSync(path.join(targets.schedulesDir, "digest.yaml")));
   assert.ok(fs.existsSync(path.join(targets.schedulesDir, "digest.md")));
   // cyclic workflow skipped (error)

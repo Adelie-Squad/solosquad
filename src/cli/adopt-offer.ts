@@ -26,7 +26,7 @@ export async function offerAdoption(repoPath: string, indent = ""): Promise<void
   console.log(
     chalk.cyan(
       `${indent}📦 Found ${assets.length} adoptable asset(s): ` +
-        `skill=${by("skill")} agent=${by("agent")} workflow=${by("workflow")} schedule=${by("schedule")}`,
+        `skill=${by("skill")} agent=${by("agent")} workflow=${by("workflow")} cron=${by("cron")}`,
     ),
   );
 
@@ -80,7 +80,7 @@ export async function offerAdoption(repoPath: string, indent = ""): Promise<void
   const result = applyAdoption(repoPath, report, {
     agentsDir: path.join(dot, "agents"),
     skillsDir: path.join(dot, "skills"),
-    schedulesDir: path.join(dot, "schedules"),
+    schedulesDir: path.join(dot, "crons"),
     workflowsDir: path.join(dot, "skills", "workflow-maker", "assets", "workflows"),
   });
   console.log(chalk.green(`${indent}✓ adopted ${result.writtenCount}, skipped ${result.skippedCount}`));

@@ -150,16 +150,16 @@ export async function chiefResetCommand(opts: ChiefResetOpts): Promise<void> {
   console.log(chalk.dim(`  next:     ${next}`));
 }
 
-/** `solosquad chief compact` — manual trigger for the pm-compaction routine. */
+/** `solosquad chief compact` — manual trigger for the pm-compaction cron. */
 export async function chiefCompactCommand(_opts: { org?: string }): Promise<void> {
-  // Phase B placeholder — full routine ships with `pm-compaction.md` integration.
-  // For 0.3.0 we just point users at the routine command. (The routine id
+  // Phase B placeholder — full cron ships with `pm-compaction.md` integration.
+  // For 0.3.0 we just point users at the cron command. (The cron id
   // `pm-compaction` is an on-disk/scheduler contract and is intentionally kept
   // — see docs/prd/v1.2.10-consolidation-cleanup.md §A.3.)
   console.log(
     chalk.yellow(
-      "Chief compaction is delivered as a scheduled routine. To trigger it manually now, run:"
+      "Chief compaction is delivered as a scheduled cron. To trigger it manually now, run:"
     )
   );
-  console.log(chalk.cyan("  solosquad run-routine pm-compaction"));
+  console.log(chalk.cyan("  solosquad cron run pm-compaction"));
 }

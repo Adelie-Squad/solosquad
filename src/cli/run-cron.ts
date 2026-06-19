@@ -4,12 +4,12 @@ import inquirer from "inquirer";
 import { runClaude } from "../bot/claude-runner.js";
 import { loadProducts, loadEnv } from "../util/config.js";
 import { getReposBase } from "../util/paths.js";
-import { ROUTINES, loadRoutinePrompt } from "../scheduler/routines.js";
-import { saveRoutineMemory } from "../scheduler/memory.js";
+import { CRONS, loadCronPrompt } from "../scheduler/crons.js";
+import { saveCronMemory } from "../scheduler/memory.js";
 import fs from "fs";
 
-export async function runRoutineCommand(
-  routineId?: string,
+export async function runCronCommand(
+  cronId?: string,
   all?: boolean
 ): Promise<void> {
   const products = loadProducts();
@@ -18,55 +18,55 @@ export async function runRoutineCommand(
     process.exit(1);
   }
 
-  let routines = ROUTINES;
+  let crons = CRONS;
 
   if (all) {
     // Run all
-  } else if (routineId) {
-    const found = ROUTINES.find((r) => r.id === routineId);
+  } else if (cronId) {
+    const found = CRONS.find((r) => r.id === cronId);
     if (!found) {
-      console.log(chalk.red(`Unknown routine: ${routineId}`));
-      console.log(chalk.dim(`Available: ${ROUTINES.map((r) => r.id).join(", ")}`));
+      console.log(chalk.red(`Unknown cron: ${cronId}`));
+      console.log(chalk.dim(`Available: ${CRONS.map((r) => r.id).join(", ")}`));
       process.exit(1);
     }
-    routines = [found];
+    crons = [found];
   } else {
     // Interactive select
     const { selected } = await inquirer.prompt([
       {
         name: "selected",
-        message: "Select routine:",
+        message: "Select cron:",
         type: "list",
-        choices: ROUTINES.map((r) => ({
+        choices: CRONS.map((r) => ({
           name: `${r.emoji} ${r.name} (${r.id})`,
           value: r.id,
         })),
       },
     ]);
-    routines = [ROUTINES.find((r) => r.id === selected)!];
+    crons = [CRONS.find((r) => r.id === selected)!];
   }
 
   const env = loadEnv();
   const reposBase = env.REPOS_BASE_PATH || getReposBase();
 
-  for (const routine of routines) {
+  for (const cron of crons) {
     for (const product of products) {
       const productDir = path.join(reposBase, product.slug);
-      console.log(chalk.dim(`\n${routine.emoji} ${routine.name} — ${product.name}`));
+      console.log(chalk.dim(`\n${cron.emoji} ${cron.name} — ${product.name}`));
       console.log(chalk.dim("Running Claude Code..."));
 
-      const prompt = loadRoutinePrompt(routine.id);
+      const prompt = loadCronPrompt(cron.id);
       const result = await runClaude(prompt, productDir, 180_000);
 
       // Save memory
-      saveRoutineMemory(result, routine, productDir);
+      saveCronMemory(result, cron, productDir);
 
       // Save log
-      const logDir = path.join(productDir, "memory", "routine-logs");
+      const logDir = path.join(productDir, "memory", "cron-logs");
       fs.mkdirSync(logDir, { recursive: true });
       const timestamp = new Date().toISOString().slice(0, 16).replace(/[:-]/g, "").replace("T", "-");
-      const logFile = path.join(logDir, `${routine.id}-${timestamp}.md`);
-      fs.writeFileSync(logFile, `# ${routine.name}\n\n${result}`);
+      const logFile = path.join(logDir, `${cron.id}-${timestamp}.md`);
+      fs.writeFileSync(logFile, `# ${cron.name}\n\n${result}`);
 
       console.log(chalk.green(`✓ Done. Log saved: ${logFile}`));
       console.log(chalk.dim("─".repeat(40)));

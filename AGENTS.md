@@ -6,7 +6,7 @@
 > at the repo root is a thin redirect kept for backward compatibility.)
 
 A 24/7 AI assistant system for solo founders. Powered by Claude Code +
-messenger bot (Discord/Slack) + automated routines + team-based agents.
+messenger bot (Discord/Slack) + automated crons + team-based agents.
 
 ## Core Philosophy
 
@@ -22,11 +22,11 @@ TypeScript + Node.js. Distributed as npm package.
 npm install -g solosquad
 solosquad init          # Setup wizard
 solosquad bot           # Start messenger bot
-solosquad schedule      # Start automated scheduler
+solosquad cron start    # Start automated scheduler
 solosquad status        # Dashboard
 solosquad update        # Self-update (OpenClaw-style)
 solosquad doctor        # Environment diagnostics
-solosquad run-routine   # Manual routine execution
+solosquad cron run      # Manual cron execution
 solosquad migrate       # Upgrade workspace layout across versions
 solosquad add org       # Add another organization to workspace
 solosquad add repo      # Clone (URL) or register (local path) a repository
@@ -44,7 +44,7 @@ package.json                        → npm package config
 tsconfig.json                       → TypeScript config
 bin/solosquad.ts                    → CLI entry point
 src/
-  cli/                              → CLI commands (init, bot, schedule, status, update, doctor,
+  cli/                              → CLI commands (init, bot, cron, status, update, doctor,
                                        agent, workflow, goal, memory, readiness)
   bot/                              → PM runner, claude-process factory, session-store,
                                        events, agents-builder, workflow-reconciler,
@@ -52,7 +52,7 @@ src/
                                        spawn-assembler (v0.6 8-layer JIT),
                                        agent-budget (v0.6 — author-budget 일반화), mention-parser (v1.0.1 — @<slug> multi-repo intent), repo-registry (v1.0.1)
   messenger/                        → Platform adapters (Discord, Slack)
-  scheduler/                        → Cron-based routine execution + memory,
+  scheduler/                        → Cron-based cron execution + memory,
                                        trajectory-extractor (v0.6 §3),
                                        freq-keyword-miner (v0.6 §3.4),
                                        v06-stats-extract (v0.6 §2.5)
@@ -106,7 +106,7 @@ Layer 1: Organization (<workspace>/<org>/)
 ├── domain/                    → Org domain knowledge (market.md, customers.md, …)
 │                                  — v0.6 §2.2
 ├── memory/
-│   ├── routine-logs/*.jsonl   → 최근 7일 hot (v0.6 §4.2)
+│   ├── cron-logs/*.jsonl      → 최근 7일 hot (v0.6 §4.2)
 │   ├── archive.sqlite         → FTS5 cold archive (v0.6 §4 — route_hit/route_miss/
 │   │                              author_turn/spawn_decision 인덱싱)
 │   ├── agent-costs.jsonl      → spawn 비용 누적 (v0.6 §2.2 budget)
@@ -170,7 +170,7 @@ discovered at boot by `buildRoutes()` in `src/bot/agent-router.ts` (v0.5). The
 former hardcoded `AGENT_ROUTES` map is gone. The router scans the 3-tier
 search path (org-local · user-global · workspace-bundled) and resolves
 incoming messages via the 4-channel priority order: slash > explicit > keyword
-> freq. Scheduler routines reference agents by name in their prompts rather
+> freq. Scheduler crons reference agents by name in their prompts rather
 than going through router resolution.
 
 - v0.3.0 covers: workflow reconciler, slash commands (`/think /plan /build /review /ship`), `pm`/`workflow`/`rollback` CLIs, stage_id/focus markers
@@ -179,14 +179,14 @@ than going through router resolution.
 - v0.6 onward: FTS5 archive fallback for past memory recall (`docs/plan/v0.6-default-workflow-tuning.md` §4)
 - v1.0.1 onward: `@<slug>` mention pre-processor for multi-repo intent routing (`src/bot/mention-parser.ts`). Sits between slash and PM dispatch — resolves `@<slug>` tokens against the org's registered repos and injects a `[target_repo:<slug>]` (or `[target_repos:a,b]`) marker into the PM prompt. Zero LLM calls at routing time. See `docs/plan/v1.0.1-discord-ready-deprecation.md` §2.4 and PM SKILL.md §"Multi-Repo Intent (v1.0.1+)".
 
-## Automated Routines + Memory Storage (v0.2.4+)
+## Automated Crons + Memory Storage (v0.2.4+)
 
 Three messenger channels: `#command-<handle>` (user input + reply), `#works-<handle>` and `#git-<handle>`
-(briefs at channel root, background routines in system threads, per-workflow threads).
+(briefs at channel root, background crons in system threads, per-workflow threads).
 
-Default schedule (all times in workspace.yaml `timezone`, default `Asia/Seoul`):
+Default crons (all times in workspace.yaml `timezone`, default `Asia/Seoul`):
 
-| Time (default) | Routine | Kind | Where | Memory |
+| Time (default) | Cron | Kind | Where | Memory |
 |---|---|---|---|---|
 | 08:00 daily | Morning Brief | user-brief | #workflow root | — |
 | 12:00 daily | Signal Scan | background | #workflow → `system-daily-signals` | signals.jsonl |
@@ -197,8 +197,8 @@ Default schedule (all times in workspace.yaml `timezone`, default `Asia/Seoul`):
 
 Times are configurable per workspace in `workspace.yaml` (`briefings.morning.time`,
 `briefings.evening.time`, `background_routines.*`, `pm.compaction_time`). JSON
-blocks from routine results are auto-extracted → appended to JSONL memory.
-All logs in `memory/routine-logs/`.
+blocks from cron results are auto-extracted → appended to JSONL memory.
+All logs in `memory/cron-logs/`.
 
 ## Multi-Session Execution Rules
 

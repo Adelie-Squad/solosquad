@@ -26,7 +26,7 @@ export interface MessageContext {
   userId: string;
   /**
    * v1.2 §6.2 — When Chief's TRIAGE classifies the turn as a work unit
-   * (workflow / schedule / goal), the bot/index.ts dispatcher invokes
+   * (workflow / cron / goal), the bot/index.ts dispatcher invokes
    * this to post a task card embed in `works-<handle>` + start a thread
    * on that embed. Adapters that haven't implemented v1.2 yet can leave
    * this undefined — the dispatcher falls back to a flat reply with a
@@ -166,7 +166,7 @@ export interface LiveTaskCardHandle {
 
 export interface TaskCardInput {
   /** Chief's TRIAGE kind. Drives embed color + label. */
-  kind: "workflow" | "schedule" | "goal";
+  kind: "workflow" | "cron" | "goal";
   /** Short user request (first line of original message, or summary). */
   userRequest: string;
   /** Full Chief reply text — posted as the first thread message. */
@@ -255,12 +255,12 @@ export const DEFAULT_CHANNELS = [
 ];
 
 /**
- * System threads created inside #workflow. Background routines post here.
+ * System threads created inside #workflow. Background crons post here.
  *
  * v0.8.5 — Removed `system-daily-signals`, `system-experiments`,
- * `system-weekly-review` along with their parent analysis routines
+ * `system-weekly-review` along with their parent analysis crons
  * (signal-scan / experiment-check / weekly-review). `system-errors` retained
- * as a generic error sink — independent of any specific routine.
+ * as a generic error sink — independent of any specific cron.
  */
 export const SYSTEM_THREADS = [
   "system-errors",

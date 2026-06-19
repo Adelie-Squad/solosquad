@@ -45,7 +45,8 @@ export function detectWorkspaceVersion(workspace: string): string | null {
     // and parent-walk paths.
   }
 
-  // v0.1.x: config folders at root, no .solosquad/
+  // v0.1.x: config folders at root, no .solosquad/ (historical layout — these
+  // marker names predate the cron rename, so keep the original `routines`).
   const legacyMarkers = ["agents", "routines", "core"];
   if (legacyMarkers.every((m) => fs.existsSync(path.join(workspace, m)))) {
     return "0.1.x";

@@ -20,9 +20,9 @@ function tempRepo(): string {
   w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: b\n  - id: b\n    agent: product/data-analyst\n    handoff_to: null\n");
   // bad workflow (cycle → error)
   w("flows/loopy/workflow.yaml", "id: loopy\nschema_version: 2\nstages:\n  - id: a\n    agent: x/y\n    handoff_to: b\n  - id: b\n    agent: x/y\n    handoff_to: a\n");
-  // valid schedule + prompt
-  w("schedules/digest.yaml", "id: digest\nname: Digest\nkind: background\ncron: '0 9 * * 1'\n");
-  w("schedules/digest.md", "# digest prompt");
+  // valid cron + prompt
+  w("crons/digest.yaml", "id: digest\nname: Digest\nkind: background\ncron: '0 9 * * 1'\n");
+  w("crons/digest.md", "# digest prompt");
   return dir;
 }
 
@@ -32,7 +32,7 @@ test("buildAdoptionReport: validates each asset (validate-then-adopt)", () => {
 
   assert.equal(report.counts.skill, 1);
   assert.equal(report.counts.workflow, 2);
-  assert.equal(report.counts.schedule, 1);
+  assert.equal(report.counts.cron, 1);
 
   const byId = (id: string) => report.items.find((i) => i.id === id);
   assert.equal(byId("my-skill")!.status === "error", false);

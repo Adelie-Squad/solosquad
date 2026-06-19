@@ -92,7 +92,7 @@ export function statusCommand(): void {
   console.log(chalk.dim("─────────────────────────────"));
   console.log(chalk.bold("Commands:"));
   console.log(`  ${chalk.cyan("solosquad bot")}        Start bot`);
-  console.log(`  ${chalk.cyan("solosquad schedule")}   Start scheduler`);
+  console.log(`  ${chalk.cyan("solosquad cron")}   Start scheduler`);
   console.log(`  ${chalk.cyan("solosquad update")}     Check for updates`);
   console.log(`  ${chalk.cyan("solosquad doctor")}     Diagnose issues\n`);
 }

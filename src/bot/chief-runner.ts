@@ -311,9 +311,9 @@ export interface ChiefCall {
  * parsed value so messenger adapters can route accordingly.
  *
  * `chat` (default) → command channel flat reply.
- * `workflow` / `schedule` / `goal` → works-handle task card + thread.
+ * `workflow` / `cron` / `goal` → works-handle task card + thread.
  */
-export type ChiefKind = "chat" | "workflow" | "schedule" | "goal";
+export type ChiefKind = "chat" | "workflow" | "cron" | "goal";
 
 export interface ChiefReply {
   text: string;
@@ -338,10 +338,10 @@ export interface ChiefReply {
   aborted?: boolean;
 }
 
-const KIND_MARKER_RE = /^\s*\[kind:(chat|workflow|schedule|goal)\]\s*\n?/i;
+const KIND_MARKER_RE = /^\s*\[kind:(chat|workflow|cron|goal)\]\s*\n?/i;
 const USER_TEXT_KIND_HEURISTICS: Array<[RegExp, ChiefKind]> = [
   [/^\s*\/?(workflow|워크플로|워크플로우)\b/i, "workflow"],
-  [/^\s*\/?(schedule|스케줄|매일|매주|매월)\b/i, "schedule"],
+  [/^\s*\/?(cron|스케줄|매일|매주|매월)\b/i, "cron"],
   [/^\s*\/?(goal|목표)\b/i, "goal"],
 ];
 
@@ -915,7 +915,7 @@ export function ifEvent<K extends AnyEvent["kind"]>(
 // intercept individual Task calls from the host side. These helpers expose
 // the 8-layer assembly + agent-budget check as *pure functions* so:
 //   - bot-layer adapters can do budget gating before relaying a user message
-//     that would obviously trigger a spawn (e.g. routine-level pre-flight),
+//     that would obviously trigger a spawn (e.g. cron-level pre-flight),
 //   - the messenger reply layer can append the assembled context to the
 //     PM's `--append-system-prompt`,
 //   - tests can verify the 8-layer + budget logic without an end-to-end

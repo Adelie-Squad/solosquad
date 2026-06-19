@@ -10,7 +10,7 @@ test("parseKindMarker — extracts the marker and strips it from the reply", () 
 });
 
 test("parseKindMarker — accepts each documented kind", () => {
-  const kinds: ChiefKind[] = ["chat", "workflow", "schedule", "goal"];
+  const kinds: ChiefKind[] = ["chat", "workflow", "cron", "goal"];
   for (const k of kinds) {
     const r = parseKindMarker(`[kind:${k}]\nbody`);
     assert.equal(r.kind, k);

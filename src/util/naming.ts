@@ -1,12 +1,12 @@
 /**
  * v1.3.2 §9.5 — unified id / naming rules.
  *
- * Every first-class asset (skill · agent · workflow · schedule) shares one id
+ * Every first-class asset (skill · agent · workflow · cron) shares one id
  * convention: lowercase kebab-case, bounded length, no reserved words, no
  * collision with an existing id. Before this module each validator re-declared
  * the same `^[a-z0-9]+(?:-[a-z0-9]+)*$` regex and length/reserved checks. This
  * is the single source of truth; validators keep emitting their own domain
- * codes (SCHED_ID_MALFORMED / WF_ID_MALFORMED / NAME_MALFORMED …) but derive
+ * codes (CRON_ID_MALFORMED / WF_ID_MALFORMED / NAME_MALFORMED …) but derive
  * the verdict here.
  *
  * Pure — no fs, no domain types.
@@ -60,7 +60,7 @@ export interface IdRule {
  * a stable order) so a caller can map each to its own domain code, e.g.:
  *
  *   for (const p of checkId(def.id, { reserved }))
- *     if (p === "malformed") f.error({ code: "SCHED_ID_MALFORMED", ... });
+ *     if (p === "malformed") f.error({ code: "CRON_ID_MALFORMED", ... });
  *
  * `empty` and `malformed` are mutually exclusive; `too_long`/`reserved` may
  * accompany `malformed` (a long reserved non-kebab id reports all three).

@@ -148,7 +148,7 @@ export async function addOrgCommand(
     console.log(chalk.dim(`  synced ${syncedAgents} agents into .claude/agents/`));
   }
   console.log(chalk.dim("  hierarchy: agents/main/chief, teams/{product,engineering,design,marketing},"));
-  console.log(chalk.dim("             memory/{routine-logs,open-questions,ledger},"));
+  console.log(chalk.dim("             memory/{cron-logs,open-questions,ledger},"));
   console.log(chalk.dim("             workflows/problem-definition (default workflow seed)"));
 
   // v1.2 §5.5 Step 4 — optional inline Discord connect. If the workspace

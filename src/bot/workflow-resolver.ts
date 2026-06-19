@@ -67,10 +67,10 @@ export function resolveActiveStage(orgDir: string): { workflowId: string; stage:
 
 /**
  * Pick the default repo slug for *scheduler-driven* cwd resolution
- * (morning brief / signal scan / weekly review — routines that run
+ * (morning brief / signal scan / weekly review — crons that run
  * without user intent and need *some* cwd).
  *
- * v1.0.1: `role=main` lookup removed. Scheduler routines are org-level
+ * v1.0.1: `role=main` lookup removed. Scheduler crons are org-level
  * by nature (briefings + signal scans + weekly reviews) so the choice
  * here is a tie-breaker, not an intent decision. User-driven routing
  * happens at PM level via @<slug> mention + PM SKILL.md clarifying
@@ -90,7 +90,7 @@ function pickDefaultRepoSlug(orgDir: string): string | null {
 
 /**
  * Resolve the cwd to use when spawning Claude for a *scheduler-driven*
- * routine in a given org (morning brief / signal scan / weekly review).
+ * cron in a given org (morning brief / signal scan / weekly review).
  *
  * Priority:
  *   1. Active workflow stage's `target_repo` (if the corresponding folder exists)

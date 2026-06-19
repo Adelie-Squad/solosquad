@@ -1,14 +1,14 @@
-# schedule 정의의 모든 것 — 스케줄링 시스템·프로액티브 에이전트 전수 분석과 SoloSquad 전략
+# cron 정의의 모든 것 — 스케줄링 시스템·프로액티브 에이전트 전수 분석과 SoloSquad 전략
 
 > **청자:** SoloSquad 개발자(본인). dev 워크플로·내부 구현 관점의 설계 메모이며,
-> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `schedule-manager`(`docs/prd/v1.3.2-domain-lifecycle-managers.md` §8) 의 근거 문서.
+> 확정 기획(PRD)이 아니라 방향 탐색이다. v1.3.2 `cron-manager`(`docs/prd/v1.3.2-asset-managers-validate.md` §8) 의 근거 문서.
 >
-> **문서 목적.** "좋은 schedule 란 무엇인가"의 단일 레퍼런스. SoloSquad 에서 schedule =
-> `schedules/<id>.md`(프롬프트) + cron 시간, node-cron 이 워크스페이스 timezone 으로 routine
-> 실행(morning/evening brief·compaction·housekeeping). 현재 `ROUTINES[]` **하드코딩** →
+> **문서 목적.** "좋은 cron 란 무엇인가"의 단일 레퍼런스. SoloSquad 에서 cron =
+> `crons/<id>.md`(프롬프트) + cron 시간, node-cron 이 워크스페이스 timezone 으로 cron
+> 실행(morning/evening brief·compaction·housekeeping). 현재 `CRONS[]` **하드코딩** →
 > **동적·사용자 정의 가능 레지스트리**로 가려는 게 목표. 스케줄링 시스템 10종(cron·Quartz·K8s
 > CronJob·Temporal Schedules·Airflow·GitHub Actions·systemd timer·n8n·RRULE·EventBridge) +
-> 프로액티브 AI 에이전트(ChatGPT Tasks·Claude Routines/loop·Zapier·Make·LangChain ambient) 를
+> 프로액티브 AI 에이전트(ChatGPT Tasks·Claude Crons/loop·Zapier·Make·LangChain ambient) 를
 > 전수 조사해 **객관적 현황 → 인사이트 → SoloSquad 전략** 순으로 정리한다.
 >
 > **조사 방법 주의.** 병렬 리서치 에이전트의 웹 조사(2026-06-18). 일부 제품(ChatGPT Tasks 한도
@@ -23,7 +23,7 @@
 - **Part B** — 객관적 현황: 스케줄링 시스템 10종 (config 모델)
 - **Part C** — 어려운 문제 (timezone/DST·미스드런·중첩·idempotency·지터·드리프트·관측)
 - **Part D** — 프로액티브/앰비언트 AI 에이전트 패턴
-- **Part E** — 사용자 대면 schedule 작성 UX
+- **Part E** — 사용자 대면 cron 작성 UX
 - **Part F** — 인사이트 (수렴점·차이점)
 - **Part G** — SoloSquad 적용 전략 (동적 레지스트리 스키마)
 - **Part H** — 궁극의 체크리스트
@@ -35,10 +35,10 @@
 
 1. **스케줄 프리미티브의 보편 슈퍼셋:** recurrence 표현식 · **IANA timezone 이름** · overlap/동시성 정책 · 미스드런/catch-up 정책 · 지터 · start/end 경계 · enable/pause · 보관/이력.
 2. **timezone 은 절대 offset 아닌 IANA *이름* 으로 저장**(DST 전환규칙은 이름만 보유, 규칙은 정부가 바꿈). K8s `timeZone` 은 IANA 강제, `CRON_TZ` 거부.
-3. **정확히-한번 실행은 불가능.** 모든 스케줄러는 적어도-한번 → routine 프롬프트는 **idempotent** 필수. node-cron 은 in-memory(영속·catch-up 없음, 프로세스 살아있을 때만 발화).
+3. **정확히-한번 실행은 불가능.** 모든 스케줄러는 적어도-한번 → cron 프롬프트는 **idempotent** 필수. node-cron 은 in-memory(영속·catch-up 없음, 프로세스 살아있을 때만 발화).
 4. **catch-up 은 bounded 가 합의.** Airflow 3.x 가 기본을 **off** 로 뒤집음(replay-all 위험). Temporal 은 `catchupWindow` 로 제한. node-cron 은 catch-up **아예 없음**.
 5. **사용자 UX 4동작:** 프리셋 + "Custom" 탈출구 / 입력은 **translate-then-confirm**(cronstrue 영어 readback) / 저장 전 **다음 N회 실행 미리보기**(UTC·Local 토글) / **pause ≠ delete**.
-6. **SoloSquad 의 schedule↔프롬프트 분리는 이미 존재**(`getSchedulesDir()` + `loadRoutinePrompt()`). 빠진 건 **레지스트리의 동적화 + config 프리미티브 명시 + validate**. node-cron v4 가 `noOverlap`·`maxRandomDelay`(지터)를 공짜로 제공 — 활용.
+6. **SoloSquad 의 cron↔프롬프트 분리는 이미 존재**(`getCronsDir()` + `loadCronPrompt()`). 빠진 건 **레지스트리의 동적화 + config 프리미티브 명시 + validate**. node-cron v4 가 `noOverlap`·`maxRandomDelay`(지터)를 공짜로 제공 — 활용.
 
 ---
 
@@ -90,23 +90,23 @@
 
 **시간트리거 vs 이벤트트리거.** Claude Code 문서가 명시 구분: 시간(`/loop`·cron) = "배포 폴링·PR 베이비싯"; 이벤트(Channels/webhook) = "폴링 대신 발생 즉시 반응". SoloSquad brief 는 **시간트리거/digest** 케이스.
 
-**Digest/briefing 이 지배적 프로액티브 유스케이스** — morning brief(Gemini Daily Brief: Gmail+Calendar+Tasks 합성), end-of-day digest, daily standup. Anthropic Routines 예시: 야간 트리거가 "Slack 에 요약 게시 → 팀이 정돈된 큐로 하루 시작". = SoloSquad morning/evening-brief.
+**Digest/briefing 이 지배적 프로액티브 유스케이스** — morning brief(Gemini Daily Brief: Gmail+Calendar+Tasks 합성), end-of-day digest, daily standup. Anthropic Crons 예시: 야간 트리거가 "Slack 에 요약 게시 → 팀이 정돈된 큐로 하루 시작". = SoloSquad morning/evening-brief.
 
 **제품별 recurrence UX + 최소 간격(핵심 차별점):**
 
 | 제품 | recurrence UX | 최소 간격 | 기타 | 비고 |
 |---|---|---|---|---|
 | ChatGPT Tasks | NL + daily/weekly/monthly + Custom | **15분** | ≤10 active·≤4/hr | beta, 복잡 recurrence 오류 [2차] |
-| Zapier Schedule | hourly/day/week/month + 주말토글 | ~플랜 폴링 | "설정시각 수 분 내" | |
+| Zapier Cron | hourly/day/week/month + 주말토글 | ~플랜 폴링 | "설정시각 수 분 내" | |
 | Make.com | interval/day/weekday/dates + CRON | **15분**(플랜) | ~100 run/분 | [2차] |
 | Claude `/loop` | `5m`식 → cron | 1분 | 50 task/세션·**7일 만료**·catch-up 없음 | |
-| Claude Routines(cloud) | 프리셋 + custom cron | **1시간** | 일일 run cap | |
+| Claude Crons(cloud) | 프리셋 + custom cron | **1시간** | 일일 run cap | |
 
 **거의 보편 신뢰성 디스클레이머:** 모두 정확 타이밍을 헤지 — Zapier "수 분 내", Claude 최대 30분 지터+catch-up 없음, ChatGPT beta 오류. **"정확 시각"은 마케팅이지 보장 아님.** [ChatGPT 수치 2차 — help center 봇 403].
 
 ---
 
-# Part E — 사용자 대면 schedule 작성 UX
+# Part E — 사용자 대면 cron 작성 UX
 
 수렴 패턴 4동작:
 1. **프리셋 + "Custom…" 탈출구** — Google/Apple/Outlook 캘린더 모두 Daily/Weekly/Monthly/Custom, **RRULE 을 숨은 직렬화**로(의도적 천장 — 네이티브 UI 가 모든 RRULE 표현 못함). 80% 는 4–5 프리셋, "Custom"은 raw cron 아닌 구조화 빌더.
@@ -116,7 +116,7 @@
 
 **가드레일:** (a) 하드 최소 간격(거부 또는 auto-bump — GitLab 은 sub-hour auto-adjust), (b) 소프트 "빈번하나 허용" 경고, (c) 인라인 문법 검증, (d) 영어 readback + next-runs 의미 검사.
 
-**가장 깊은 교훈 — picker 가 아니라 데이터 모델.** Fowler *Recurring Events for Calendars*: 매 occurrence 를 materialize 하지 말고 **"이 날짜에 이벤트가 발생하는가?"에 답하는 Schedule** 을 조합형 **Temporal Expression** 으로 모델. RRULE 과 프리셋+Custom UI 의 지적 토대.
+**가장 깊은 교훈 — picker 가 아니라 데이터 모델.** Fowler *Recurring Events for Calendars*: 매 occurrence 를 materialize 하지 말고 **"이 날짜에 이벤트가 발생하는가?"에 답하는 Cron** 을 조합형 **Temporal Expression** 으로 모델. RRULE 과 프리셋+Custom UI 의 지적 토대.
 
 ---
 
@@ -143,15 +143,15 @@
 
 # Part G — SoloSquad 적용 전략
 
-현재 코드(`src/scheduler/routines.ts` `ROUTINES[]` 하드코딩 + `src/scheduler/index.ts` `cron.schedule(s.cron, …, { timezone })` workspace tz 기본 `Asia/Seoul`; 프롬프트는 `loadRoutinePrompt()` → `getSchedulesDir()` override 체인). **schedule↔프롬프트 분리는 이미 존재** — 빠진 건 *레지스트리 동적화* + *config 프리미티브 명시* + *validate*.
+현재 코드(`src/scheduler/crons.ts` `CRONS[]` 하드코딩 + `src/scheduler/index.ts` `cron.cron(s.cron, …, { timezone })` workspace tz 기본 `Asia/Seoul`; 프롬프트는 `loadCronPrompt()` → `getCronsDir()` override 체인). **cron↔프롬프트 분리는 이미 존재** — 빠진 건 *레지스트리 동적화* + *config 프리미티브 명시* + *validate*.
 
-## G1. 동적 schedule 레지스트리 (P0 — v1.3.2 §7)
-`ROUTINES[]` 하드코딩 제거 → `schedules/` 디렉터리(또는 `.solosquad/schedules.yaml` manifest)에서 routine 정의 로드. 수렴 슈퍼셋 기반 권장 스키마(각 `schedules/<id>.md` 백킹):
+## G1. 동적 cron 레지스트리 (P0 — v1.3.2 §7)
+`CRONS[]` 하드코딩 제거 → `crons/` 디렉터리(또는 `.solosquad/crons.yaml` manifest)에서 cron 정의 로드. 수렴 슈퍼셋 기반 권장 스키마(각 `crons/<id>.md` 백킹):
 - `id`, `enabled`(pause, delete 아님)
 - `cron`(필드 수 = node-cron 5/6 초-우선 **문서화**) **and/or** preset(`@daily`·`weekday@HH:MM`) — 기존 `timeToDailyCron`/`weeklyToCron` 을 preset 레이어로 유지
 - `timezone` — 워크스페이스 IANA tz 상속, offset 금지
-- `overlap`: `skip`(기본) — node-cron v4 `noOverlap` 공짜, 없으면 routine별 in-flight lock
-- `jitter` — node-cron v4 `maxRandomDelay`; routine 늘면 필수(매 routine 정시 회피)
+- `overlap`: `skip`(기본) — node-cron v4 `noOverlap` 공짜, 없으면 cron별 in-flight lock
+- `jitter` — node-cron v4 `maxRandomDelay`; cron 늘면 필수(매 cron 정시 회피)
 - `catchup`: 기본 **off**(node-cron 현실·Airflow 3.x 일치); 추가 시 bound
 - 옵션 `startAt`/`endAt`, last/next-run 보관(관측)
 
@@ -159,27 +159,27 @@
 cron 표현식 파싱, `kind` enum, `channel` 존재, 프롬프트 파일 존재성. 저장 전 **next-N 미리보기**(워크스페이스 tz) + cronstrue 영어 readback. 최소 간격 가드.
 
 ## G3. idempotency + 조용한 미스 경보 (P1)
-node-cron 은 in-memory(영속·catch-up 없음, 프로세스 살아있을 때만). 따라서 routine 프롬프트는 **idempotent** 해야 하고, **dead-man's-switch**(routine 부재 시 경보)를 둬야 — 성숙 시스템과 동일.
+node-cron 은 in-memory(영속·catch-up 없음, 프로세스 살아있을 때만). 따라서 cron 프롬프트는 **idempotent** 해야 하고, **dead-man's-switch**(cron 부재 시 경보)를 둬야 — 성숙 시스템과 동일.
 
 ## G4. orphan 3개 처리 (P2)
 `trace-rotate` → `system-housekeeping` 에 흡수됨(삭제 후보). `bot-health-check`·`leading-indicator` → 관측 레이어(세션 추적·budget 질의) 의존 → v1.4.0 까지 추적 또는 동적 레지스트리 위 opt-in 배선.
 
 ## G5. 사용자 UX (P1)
-NL/preset → cron, 영어 readback, next-N 미리보기, pause 토글. `solosquad schedule create/list/edit/enable/disable/delete` CLI(현재 `run-routine` 수동 실행 + enable 플래그만).
+NL/preset → cron, 영어 readback, next-N 미리보기, pause 토글. `solosquad cron create/list/edit/enable/disable/delete` CLI(현재 `cron run` 수동 실행 + enable 플래그만).
 
 ---
 
 # Part H — 궁극의 체크리스트
 
-좋은 schedule 정의·검증 시:
+좋은 cron 정의·검증 시:
 
 - [ ] timezone 이 **IANA 이름**인가(offset 아님), 워크스페이스 tz 상속하는가
 - [ ] cron **필드 수/정렬**(node-cron 5/6 초-우선)이 문서화됐고 입력이 거기 맞는가
 - [ ] 저장 전 **next-N 실행 미리보기** + **영어 readback** 을 봤는가
-- [ ] **overlap 정책**(기본 skip)이 있는가 — 긴 routine 이 겹치지 않는가
+- [ ] **overlap 정책**(기본 skip)이 있는가 — 긴 cron 이 겹치지 않는가
 - [ ] **catch-up 기본 off** 인가(필요 시 bounded)
-- [ ] routine 프롬프트가 **idempotent** 한가(중복 발화 안전)
-- [ ] routine 多 시 **지터**가 있는가(정시 thundering herd 회피)
+- [ ] cron 프롬프트가 **idempotent** 한가(중복 발화 안전)
+- [ ] cron 多 시 **지터**가 있는가(정시 thundering herd 회피)
 - [ ] **pause** 가 가역 컨트롤로 있는가(delete 와 구분)
 - [ ] 최소 간격 가드가 있는가
 - [ ] **조용한 미스 경보**(dead-man's-switch)가 있는가
@@ -193,13 +193,13 @@ NL/preset → cron, 영어 readback, next-N 미리보기, pause 토글. `solosqu
 - cron — https://man7.org/linux/man-pages/man5/crontab.5.html
 - Quartz — https://www.quartz-scheduler.org/api/2.3.0/org/quartz/CronTrigger.html · best-practices
 - K8s CronJob — https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
-- Temporal Schedules — https://docs.temporal.io/schedule
+- Temporal Schedules — https://docs.temporal.io/cron
 - Airflow — https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/cron.html
-- GitHub Actions schedule — https://docs.github.com/actions/using-workflows/events-that-trigger-workflows
+- GitHub Actions cron — https://docs.github.com/actions/using-workflows/events-that-trigger-workflows
 - systemd timer — https://man7.org/linux/man-pages/man5/systemd.timer.5.html
-- n8n Schedule Trigger — https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.scheduletrigger/
+- n8n Cron Trigger — https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.scheduletrigger/
 - RFC 5545 (RRULE) — https://www.rfc-editor.org/rfc/rfc5545.txt
-- AWS EventBridge Scheduler — https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html
+- AWS EventBridge Scheduler — https://docs.aws.amazon.com/scheduler/latest/UserGuide/cron-types.html
 
 ### 어려운 문제
 - 지터 — https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/
@@ -207,13 +207,13 @@ NL/preset → cron, 영어 readback, next-N 미리보기, pause 토글. `solosqu
 
 ### 프로액티브 에이전트 / UX
 - LangChain ambient agents — https://www.langchain.com/blog/introducing-ambient-agents
-- Claude Routines — https://code.claude.com/docs/en/routines · scheduled-tasks
+- Claude Crons — https://code.claude.com/docs/en/crons · scheduled-tasks
 - cronstrue — https://github.com/bradymholt/cRonstrue · crontab.guru — https://crontab.guru/
 
 ## 레포 내 관련 코드
-- `src/scheduler/routines.ts`(`ROUTINES[]`·`loadRoutinePrompt`·`timeToDailyCron`/`weeklyToCron`)
-- `src/scheduler/index.ts`(`startScheduler`·`cron.schedule … { timezone }`) · `src/scheduler/memory.ts`
-- `src/util/paths.ts`(`getSchedulesDir` override 체인) · `schedules/*.md`(4 active + 3 orphan)
+- `src/scheduler/crons.ts`(`CRONS[]`·`loadCronPrompt`·`timeToDailyCron`/`weeklyToCron`)
+- `src/scheduler/index.ts`(`startScheduler`·`cron.cron … { timezone }`) · `src/scheduler/memory.ts`
+- `src/util/paths.ts`(`getCronsDir` override 체인) · `crons/*.md`(4 active + 3 orphan)
 - `src/scheduler/freq-keyword-miner.ts` · `trajectory-extractor.ts`(미배선 마이너)
 
 > **node-cron 현실 메모:** v4 는 `noOverlap`·`maxRandomDelay`(지터) 제공, `execution:missed` 이벤트 발화하나 **catch-up 없음·in-memory**. 동적 레지스트리는 이 제약 위에서 설계.

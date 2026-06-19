@@ -24,7 +24,7 @@ const KIND_EMOJI: Record<string, string> = {
   skill: "🔧",
   agent: "🤖",
   workflow: "🔗",
-  schedule: "⏰",
+  cron: "⏰",
 };
 
 function statusTag(item: AdoptionItem): string {
@@ -71,12 +71,12 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
     chalk.dim(
       `discovered ${total} asset(s): ` +
         `skill=${report.counts.skill} agent=${report.counts.agent} ` +
-        `workflow=${report.counts.workflow} schedule=${report.counts.schedule}\n`,
+        `workflow=${report.counts.workflow} cron=${report.counts.cron}\n`,
     ),
   );
 
   if (total === 0) {
-    console.log(chalk.yellow("△ no first-class assets found (.claude/skills, .claude/agents, workflow.yaml, schedules/*.yaml)"));
+    console.log(chalk.yellow("△ no first-class assets found (.claude/skills, .claude/agents, workflow.yaml, crons/*.yaml)"));
     process.exitCode = 0;
     return;
   }
@@ -124,7 +124,7 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
   }
 
   // Pin every write target under the resolved workspace's `.solosquad/` — do NOT
-  // use getAgentsDir()/getSkillsDir()/getSchedulesDir() here: those each fall
+  // use getAgentsDir()/getSkillsDir()/getCronsDir() here: those each fall
   // back to the bundle when a given override dir is absent, so on a workspace
   // missing (say) `.solosquad/skills` the targets would diverge and adopted
   // skills/workflows could land in the installed package. Pinning to `dot`
@@ -132,7 +132,7 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
   const result = applyAdoption(repoRoot, report, {
     agentsDir: path.join(dot, "agents"),
     skillsDir: path.join(dot, "skills"),
-    schedulesDir: path.join(dot, "schedules"),
+    schedulesDir: path.join(dot, "crons"),
     workflowsDir: path.join(dot, "skills", "workflow-maker", "assets", "workflows"),
   });
 

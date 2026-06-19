@@ -1,30 +1,30 @@
 import fs from "fs";
 import path from "path";
-import { getSchedulesDir } from "../util/paths.js";
+import { getCronsDir } from "../util/paths.js";
 
-export type RoutineKind = "user-brief" | "background";
+export type CronKind = "user-brief" | "background";
 
-export interface RoutineConfig {
+export interface CronConfig {
   id: string;
   name: string;
-  kind: RoutineKind;
+  kind: CronKind;
   /** Always "workflow" in v0.2.4+. Kept as field for forward extensibility. */
   channel: string;
-  /** System thread inside #workflow for background routines. user-brief posts to channel root. */
+  /** System thread inside #workflow for background crons. user-brief posts to channel root. */
   threadName?: string;
   emoji: string;
   memoryTargets: string[];
 }
 
 /**
- * v0.8.5 routine layout — four entries total:
+ * v0.8.5 cron layout — four entries total:
  *   - 2 user-facing briefs (morning, evening) post to works-<handle>
  *   - 1 PM-compaction (background, context management)
  *   - 1 system-housekeeping (silent infra — archive rotation + log retention)
  *
  * Removed in v0.8.5 (was v0.2.4 background analysis layer): `signal-scan`,
  * `experiment-check`, `weekly-review`, `v06-retrospective-stats`. They were
- * speculative analysis routines that required the user to author a product
+ * speculative analysis crons that required the user to author a product
  * brief / experiment ledger before producing useful output — friction without
  * payoff. Domain-specific analysis should ship as user-authored workflows or
  * goals, not as default-on cron jobs.
@@ -37,7 +37,7 @@ export interface RoutineConfig {
  * Cron times are resolved at scheduler startup from workspace.yaml
  * (`briefings` for morning/evening).
  */
-export const ROUTINES: RoutineConfig[] = [
+export const CRONS: CronConfig[] = [
   {
     id: "morning-brief",
     name: "Morning Brief",
@@ -79,14 +79,14 @@ export const ROUTINES: RoutineConfig[] = [
   },
 ];
 
-/** Load routine prompt from schedules/{id}.md (v1.1 rename; resolver
- *  preserves legacy `.solosquad/routines/` overrides — see getSchedulesDir). */
-export function loadRoutinePrompt(routineId: string): string {
-  const promptFile = path.join(getSchedulesDir(), `${routineId}.md`);
+/** Load cron prompt from crons/{id}.md (v1.1 rename; resolver
+ *  preserves legacy `.solosquad/crons/` overrides — see getCronsDir). */
+export function loadCronPrompt(cronId: string): string {
+  const promptFile = path.join(getCronsDir(), `${cronId}.md`);
   if (fs.existsSync(promptFile)) {
     return fs.readFileSync(promptFile, "utf-8");
   }
-  return `# ${routineId}\n\nPrompt file missing: schedules/${routineId}.md`;
+  return `# ${cronId}\n\nPrompt file missing: crons/${cronId}.md`;
 }
 
 /** Convert "HH:MM" into a node-cron expression for daily execution. */

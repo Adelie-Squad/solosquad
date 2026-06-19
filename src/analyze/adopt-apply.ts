@@ -6,7 +6,7 @@ import type { AdoptionReport, AdoptionItem } from "./adoption-report.js";
 /**
  * v1.3.2 §10 — apply an adoption (the write half). ADDITIVE: copies each
  * non-error asset into the workspace override dirs (`.solosquad/{agents,skills,
- * schedules}`, already materialized from the bundle by `init`). New ids are
+ * crons}`, already materialized from the bundle by `init`). New ids are
  * added; id collisions are namespaced by source-repo label; re-runs are
  * idempotent (matching content → skip). It never touches the bundle, and never
  * overwrites an existing asset — so it cannot lose the built-in roster.
@@ -64,7 +64,7 @@ function sourceUnit(
   item: AdoptionItem,
 ): { kind: "dir" | "files"; primary: string; dir?: string; files?: string[] } {
   const full = path.join(repoRoot, item.path.split("/").join(path.sep));
-  if (item.kind === "schedule") {
+  if (item.kind === "cron") {
     const promptMd = path.join(path.dirname(full), `${item.id}.md`);
     const files = [full, ...(fs.existsSync(promptMd) ? [promptMd] : [])];
     return { kind: "files", primary: full, files };
@@ -105,14 +105,14 @@ export function applyAdoption(
     const baseDir =
       item.kind === "skill"
         ? targets.skillsDir
-        : item.kind === "schedule"
+        : item.kind === "cron"
           ? targets.schedulesDir
           : item.kind === "workflow"
             ? targets.workflowsDir
             : path.join(targets.agentsDir, agentBucket(item));
 
     const destFor = (id: string): { destDir: string; primaryDest: string } => {
-      if (item.kind === "schedule") {
+      if (item.kind === "cron") {
         return { destDir: baseDir, primaryDest: path.join(baseDir, `${id}.yaml`) };
       }
       const primaryName = item.kind === "workflow" ? "workflow.yaml" : "SKILL.md";
@@ -133,7 +133,7 @@ export function applyAdoption(
         continue; // occupied by something else → try next candidate
       }
       // write into this free candidate
-      if (item.kind === "schedule") {
+      if (item.kind === "cron") {
         fs.mkdirSync(baseDir, { recursive: true });
         for (const f of unit.files ?? []) {
           const ext = path.extname(f);

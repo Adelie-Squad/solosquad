@@ -9,7 +9,7 @@ import { applyDraft, type AuthorDraft } from "../bot/skill-manager.js";
 /**
  * v0.6 §3.2 — Trajectory → SKILL pattern extraction (P0 #3).
  *
- * Nightly hook (pm-compaction routine) that analyzes the cold archive +
+ * Nightly hook (pm-compaction cron) that analyzes the cold archive +
  * recent route-events.jsonl for repeated (agent sequence + workflow template)
  * combinations. When the same trajectory appears 3+ times in a 30-day rolling
  * window, emits a `TrajectorySuggestion`. The user is presented the proposal

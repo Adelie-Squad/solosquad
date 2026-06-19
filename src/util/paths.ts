@@ -66,7 +66,7 @@ export function getAgentsDir(): string {
   // v1.3.2 — the last-resort fallback is the bundled roster at the package
   // root (`<bundle>/agents`), NOT `assets/agents` (which never existed: the
   // v1.1 flat layout ships agents at the bundle top level). Mirrors how
-  // getSkillsDir/getSchedulesDir fall back to getBundleRoot().
+  // getSkillsDir/getCronsDir fall back to getBundleRoot().
   return getBundledAgentsDir();
 }
 
@@ -87,21 +87,10 @@ export function getBundledAgentsDir(): string {
   return path.join(getBundleRoot(), "agents");
 }
 
-/**
- * Routines dir — legacy v1.0.x layout resolver. v1.1 renamed this to
- * `schedules/`; prefer `getSchedulesDir()`. Kept for back-compat with
- * workspaces that still hold a `.solosquad/routines/` override. The bundle
- * fallback now points at the canonical top-level `schedules/` (the old
- * `assets/routines/` source was removed in v1.3.1 §9).
- */
-export function getRoutinesDir(): string {
-  const root = getWorkspaceRoot();
-  const solosquad = path.join(root, ".solosquad", "routines");
-  if (fs.existsSync(solosquad)) return solosquad;
-  const legacy = path.join(root, "routines");
-  if (fs.existsSync(legacy)) return legacy;
-  return path.join(getBundleRoot(), "schedules");
-}
+// v1.3.x cron rename — getRoutinesDir() removed. It was the legacy v1.0.x
+// layout resolver (`.solosquad/routines/`) with zero callers; the canonical
+// resolver is getCronsDir() below, which still reads the old override dirs for
+// back-compat until the cron-rename migration moves them.
 
 // v1.3.1 §9 — getCoreDir() removed. The bundled `assets/core/` was a v0.x
 // workspace-level persona default that nothing read after v1.1: the owner
@@ -136,7 +125,7 @@ export function getKnowledgeDir(workspace?: string): string {
 /**
  * v1.1 — Bundle root (the directory above `assets/`). Used by new
  * top-level bundled folders introduced in v1.1: `agents/`, `skills/`,
- * `teams/`, `user/`, `schedules/`. These supersede the old `assets/*`
+ * `teams/`, `user/`, `crons/`. These supersede the old `assets/*`
  * layout but the migration to `assets/` is gradual — both layouts may
  * coexist during the transition.
  */
@@ -225,26 +214,31 @@ export function getUserDir(): string {
 }
 
 /**
- * v1.1 — `schedules/` (workspace bundle). Renamed from `routines/`. Each
- * `.md` file = scheduled prompt run via node-cron. This is the canonical
- * resolver the scheduler reads (v1.3.1 §9 wired `loadRoutinePrompt` here).
+ * v1.3.x — `crons/` (workspace bundle). Renamed from `schedules/` (v1.1) and
+ * `routines/` (v1.0.x). Each `.md` file = a cron prompt run via node-cron. This
+ * is the canonical resolver the scheduler reads (v1.3.1 §9 wired `loadCronPrompt`
+ * here).
  *
  * Priority preserves existing-workspace customizations across the rename:
- *   1. `<workspace>/.solosquad/schedules/` (v1.1 user override)
- *   2. `<workspace>/.solosquad/routines/` (v1.0.x user override — legacy
- *      name; checked before the bundle so prior customizations still win)
- *   3. `<workspace>/schedules/` (legacy out-of-config layout, defensive)
- *   4. `<bundle>/schedules/` (bundled canonical, last resort)
+ *   1. `<workspace>/.solosquad/crons/` (v1.3.x user override, canonical)
+ *   2. `<workspace>/.solosquad/schedules/` (v1.1 user override — legacy name)
+ *   3. `<workspace>/.solosquad/routines/` (v1.0.x user override — legacy name;
+ *      both legacy dirs are checked before the bundle so prior customizations
+ *      still win until the cron-rename migration moves them)
+ *   4. `<workspace>/crons/` (legacy out-of-config layout, defensive)
+ *   5. `<bundle>/crons/` (bundled canonical, last resort)
  */
-export function getSchedulesDir(): string {
+export function getCronsDir(): string {
   const root = getWorkspaceRoot();
-  const userOverride = path.join(root, ".solosquad", "schedules");
+  const userOverride = path.join(root, ".solosquad", "crons");
   if (fs.existsSync(userOverride)) return userOverride;
+  const legacySchedules = path.join(root, ".solosquad", "schedules");
+  if (fs.existsSync(legacySchedules)) return legacySchedules;
   const legacyRoutines = path.join(root, ".solosquad", "routines");
   if (fs.existsSync(legacyRoutines)) return legacyRoutines;
-  const legacy = path.join(root, "schedules");
+  const legacy = path.join(root, "crons");
   if (fs.existsSync(legacy)) return legacy;
-  return path.join(getBundleRoot(), "schedules");
+  return path.join(getBundleRoot(), "crons");
 }
 
 /** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */

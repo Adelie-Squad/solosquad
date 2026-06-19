@@ -1,10 +1,10 @@
 /**
  * Leading-indicator jsonl writer/reader (v1.1).
  *
- * Per v1.1 PRD §14. The daily `schedules/leading-indicator.md` schedule
+ * Per v1.1 PRD §14. The daily `crons/leading-indicator.md` cron
  * computes 5 indicators over 1d + 7d windows and appends one line to
  * `<org>/memory/leading-indicators.jsonl`. This module is the typed
- * interface for that file — the schedule prompt writes through here,
+ * interface for that file — the cron prompt writes through here,
  * the weekly-retro skill and Chief RETROSPECT stage read from here.
  *
  * Append-only by design: each daily run produces exactly one line. The
@@ -81,7 +81,7 @@ export function readEntries(
       if (!parsed.window_1d || !parsed.window_7d) continue;
       out.push(parsed as LeadingIndicatorEntry);
     } catch {
-      // Skip malformed lines — schedule may have been interrupted.
+      // Skip malformed lines — cron may have been interrupted.
     }
   }
   return out;

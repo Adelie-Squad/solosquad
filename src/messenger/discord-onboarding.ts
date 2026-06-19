@@ -110,7 +110,7 @@ export async function sendOnboardingEmbed(
       [
         "저는 이 조직의 Chief 로, 사용자 ↔ Chief ↔ sub-agent 오케스트레이션을 합니다.",
         `다음 채널을 자동으로 만들까요? \`#command-${handle}\` (지시) + \`#works-${handle}\` (작업 등록 + 진행 thread).`,
-        `짧은 대화는 \`#command-${handle}\` 에서, workflow/schedule/goal 은 \`#works-${handle}\` 에 자동 등록됩니다.`,
+        `짧은 대화는 \`#command-${handle}\` 에서, workflow/cron/goal 은 \`#works-${handle}\` 에 자동 등록됩니다.`,
         `저는 ${ownerMention} 의 지시만 받습니다.`,
         "",
         `_${EMBED_DEDUPE_MARKER}_`,
@@ -233,7 +233,7 @@ async function sendFirstGreetingIfMissing(
     `**${chiefName}** here — ready when you are. Try:\n` +
       "  • 이번 주 PMF 가설 검증 루틴 설계\n" +
       "  • 신규 기능 PRD 초안 만들기\n" +
-      "  • [경쟁사 X] 변화 모니터링 routine 등록",
+      "  • [경쟁사 X] 변화 모니터링 cron 등록",
   );
 }
 

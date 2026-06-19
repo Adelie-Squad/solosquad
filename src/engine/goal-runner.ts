@@ -54,7 +54,7 @@ import {
  *   4. Final summary written to <goal-id>/_last-run.md (morning-brief reads)
  *
  * The runner does NOT post to the messenger directly (Output guard). Results
- * surface via morning-brief routine on the next 08:00 brief.
+ * surface via morning-brief cron on the next 08:00 brief.
  */
 
 export type GoalRunState = "RUNNING" | "CONFIRMING1" | "CONFIRMING2" | "CONVERGED" | "STOPPED";
@@ -226,7 +226,7 @@ export class GoalRunner {
     const endedAt = nowIso();
     const oscillationWarning = detectOscillation(cycleStatuses);
 
-    // Write _last-run.md for morning-brief routine
+    // Write _last-run.md for morning-brief cron
     const summary = summarizeRun(
       this.deps.workspace,
       goal.org,

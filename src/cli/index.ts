@@ -109,16 +109,8 @@ program
   });
 
 program
-  .command("schedule")
-  .description("Start automated scheduler")
-  .action(async () => {
-    const { startScheduler } = await import("../scheduler/index.js");
-    await startScheduler();
-  });
-
-program
   .command("adopt")
-  .description("Discover + validate a repo's assets (skill/agent/workflow/schedule) — dry-run (v1.3.2 §10)")
+  .description("Discover + validate a repo's assets (skill/agent/workflow/cron) — dry-run (v1.3.2 §10)")
   .argument("[repo]", "Path to the repository to scan")
   .option("--apply", "write the valid assets into this workspace (.solosquad/*) — additive, namespaced on collision")
   .option("--classify", "use the LLM to map agents the heuristic could not place (§10.3)")
@@ -127,55 +119,73 @@ program
     await adoptCommand(repo, opts);
   });
 
-const schedulesGroup = program
-  .command("schedules")
-  .description("Manage user-defined schedules (schedules/<id>.yaml) — list / validate");
+const cronGroup = program
+  .command("cron")
+  .description("Cron daemon + user-defined crons (crons/<id>.yaml): start / run / list / new / show / validate");
 
-schedulesGroup
-  .command("list")
-  .description("List built-in routines + user-defined schedules")
+cronGroup
+  .command("start")
+  .description("Start the cron daemon (formerly `solosquad schedule`)")
   .action(async () => {
-    const { scheduleListCommand } = await import("./schedule.js");
-    await scheduleListCommand();
+    const { startScheduler } = await import("../scheduler/index.js");
+    await startScheduler();
   });
 
-schedulesGroup
+cronGroup
+  .command("run")
+  .description("Run a cron manually (formerly `solosquad run-routine`)")
+  .argument("[cron-id]", "Cron ID (e.g. morning-brief)")
+  .option("-a, --all", "Run all crons")
+  .action(async (cronId, opts) => {
+    const { runCronCommand } = await import("./run-cron.js");
+    await runCronCommand(cronId, opts.all);
+  });
+
+cronGroup
+  .command("list")
+  .description("List built-in crons + user-defined crons")
+  .action(async () => {
+    const { cronListCommand } = await import("./cron.js");
+    await cronListCommand();
+  });
+
+cronGroup
   .command("new")
-  .description("Scaffold a new user schedule (schedules/<id>.yaml + <id>.md)")
-  .argument("<id>", "Kebab-case schedule id")
+  .description("Scaffold a new user cron (crons/<id>.yaml + <id>.md)")
+  .argument("<id>", "Kebab-case cron id")
   .option("--cron <expr>", "Cron expression (default: '0 9 * * 1')")
   .option("--kind <kind>", "user-brief | background (default: background)")
   .option("--channel <name>", "Target channel (default: workflow)")
   .action(async (id, opts) => {
-    const { scheduleNewCommand } = await import("./schedule.js");
-    await scheduleNewCommand(id, opts);
+    const { cronNewCommand } = await import("./cron.js");
+    await cronNewCommand(id, opts);
   });
 
-schedulesGroup
+cronGroup
   .command("show")
-  .description("Show one schedule (built-in routine or user-defined) + its validation state")
-  .argument("<id>", "Schedule id")
+  .description("Show one cron (built-in cron or user-defined) + its validation state")
+  .argument("<id>", "Cron id")
   .action(async (id) => {
-    const { scheduleShowCommand } = await import("./schedule.js");
-    await scheduleShowCommand(id);
+    const { cronShowCommand } = await import("./cron.js");
+    await cronShowCommand(id);
   });
 
-schedulesGroup
+cronGroup
   .command("validate")
-  .description("Validate user schedule definitions (cron, kind, channel, prompt)")
+  .description("Validate user cron definitions (cron, kind, channel, prompt)")
   .action(async () => {
-    const { scheduleValidateCommand } = await import("./schedule.js");
-    await scheduleValidateCommand();
+    const { cronValidateCommand } = await import("./cron.js");
+    await cronValidateCommand();
   });
 
 const assetGroup = program
   .command("asset")
-  .description("Unified front door for assets (skill·agent·workflow·schedule): list / show / validate");
+  .description("Unified front door for assets (skill·agent·workflow·cron): list / show / validate");
 
 assetGroup
   .command("list")
   .description("List assets (all kinds, or one)")
-  .argument("[kind]", "skill | agent | workflow | schedule (omit for all)")
+  .argument("[kind]", "skill | agent | workflow | cron (omit for all)")
   .action(async (kind) => {
     const { assetListCommand } = await import("./asset.js");
     await assetListCommand(kind);
@@ -184,7 +194,7 @@ assetGroup
 assetGroup
   .command("show")
   .description("Show one asset")
-  .argument("<kind>", "skill | agent | workflow | schedule")
+  .argument("<kind>", "skill | agent | workflow | cron")
   .argument("<id>", "Asset id")
   .action(async (kind, id) => {
     const { assetShowCommand } = await import("./asset.js");
@@ -194,7 +204,7 @@ assetGroup
 assetGroup
   .command("validate")
   .description("Validate assets (all kinds, or one) — the deterministic gate")
-  .argument("[kind]", "skill | agent | workflow | schedule (omit for all)")
+  .argument("[kind]", "skill | agent | workflow | cron (omit for all)")
   .action(async (kind) => {
     const { assetValidateCommand } = await import("./asset.js");
     await assetValidateCommand(kind);
@@ -263,16 +273,6 @@ readinessGroup
     await readinessCheckCommand({ target: opts.target });
   });
 
-program
-  .command("run-routine")
-  .description("Run a routine manually")
-  .argument("[routine-id]", "Routine ID (e.g. signal-scan)")
-  .option("-a, --all", "Run all routines")
-  .action(async (routineId, opts) => {
-    const { runRoutineCommand } = await import("./run-routine.js");
-    await runRoutineCommand(routineId, opts.all);
-  });
-
 // `solosquad run` (autonomous program runner) lives on the v0.4 branch.
 
 const addGroup = program
@@ -332,7 +332,7 @@ analyzeGroup
       oldName: "analyze repo",
       newName: "adopt <repo>",
       removalVersion: "v1.4",
-      hint: "`solosquad adopt <repo>` discovers skill/agent/workflow/schedule (not just skills), validates them, and can --apply.",
+      hint: "`solosquad adopt <repo>` discovers skill/agent/workflow/cron (not just skills), validates them, and can --apply.",
     });
     const { analyzeRepoCli } = await import("./analyze.js");
     await analyzeRepoCli(repoPath, opts);
@@ -397,7 +397,7 @@ function registerChiefSubcommands(group: Command, opts: { alias: boolean }): voi
 
   group
     .command("compact")
-    .description("Run the compaction routine to externalize completed workflows")
+    .description("Run the compaction cron to externalize completed workflows")
     .option("--org <slug>", "Filter to a specific organization")
     .action(async (o) => {
       if (opts.alias) warnPmAlias("compact");
@@ -593,7 +593,7 @@ const memoryGroup = program
 
 memoryGroup
   .command("search")
-  .description("Full-text search across past routine logs + router/author/spawn events")
+  .description("Full-text search across past cron logs + router/author/spawn events")
   .argument("<query>", "Search query (whitespace-separated terms; quotes/specials stripped)")
   .option("--limit <n>", "Maximum number of hits to print", "10")
   .option(

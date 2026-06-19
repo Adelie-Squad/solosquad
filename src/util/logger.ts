@@ -13,7 +13,7 @@ import chalk from "chalk";
  *   3. Optional file mirror via `SOLOSQUAD_LOG_FILE=1` →
  *      `<workspace>/.solosquad/logs/solosquad-YYYY-MM-DD.log` with date
  *      rolling. Retention (14d) is enforced by the daily log-rotate
- *      routine; the logger itself only writes the current day.
+ *      cron; the logger itself only writes the current day.
  *
  * Env reads happen *per call* (not module load) so tests can flip env
  * vars between scenarios without re-importing.
@@ -201,7 +201,7 @@ export const logger = {
 };
 
 /**
- * v0.8.3 — Retention pass for the daily log-rotate routine.
+ * v0.8.3 — Retention pass for the daily log-rotate cron.
  * Deletes solosquad-YYYY-MM-DD.log files older than `retentionDays`.
  * Returns the list of removed file paths.
  */

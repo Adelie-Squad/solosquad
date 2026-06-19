@@ -84,7 +84,7 @@ export const migration: Migration = {
     return {
       steps,
       warnings: [
-        "After migration, restart `solosquad bot` and `solosquad schedule` so the new channel + threads are created.",
+        "After migration, restart `solosquad bot` and `solosquad cron start` so the new channel + threads are created.",
         "Slack users: add `channels:manage` to the bot token scopes and reinstall the app, otherwise the bot cannot create the #workflow channel.",
       ],
       irreversible_changes: [],

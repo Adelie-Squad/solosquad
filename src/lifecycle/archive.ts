@@ -268,7 +268,7 @@ function renderPiiNotice(): string {
   lines.push("이 archive에는 다음과 같은 **본문 평문 데이터**가 포함될 수 있습니다:");
   lines.push("");
   lines.push("- `orgs/*/workflows/<id>/_events.jsonl` — 사용자 메시지·LLM 응답·도구 호출 인자");
-  lines.push("- `orgs/*/memory/routine-logs/*.jsonl` — routine 결과 전문");
+  lines.push("- `orgs/*/memory/cron-logs/*.jsonl` — cron 결과 전문");
   lines.push("- `orgs/*/memory/pm-skills/*.md` — PM compaction 결과");
   lines.push("- `orgs/*/workflows/<id>/stage-N-*/` — stage 산출물");
   lines.push("- `workspace/AGENTS.md` — 사용자가 손으로 적은 워크스페이스 가이드");

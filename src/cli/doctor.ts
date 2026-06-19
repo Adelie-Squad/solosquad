@@ -211,7 +211,7 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   const workspace = getWorkspaceRoot();
   const solosquadDir = path.join(workspace, ".solosquad");
   const isNew = fs.existsSync(solosquadDir);
-  const legacyMarkers = ["agents", "routines", "core"].every((d) =>
+  const legacyMarkers = ["agents", "crons", "core"].every((d) =>
     fs.existsSync(path.join(workspace, d))
   );
 
@@ -301,11 +301,11 @@ export async function doctorCommand(ci?: boolean, messengerCheck?: boolean): Pro
   console.log(chalk.dim("\nProject structure:"));
   if (isNew) {
     if (!check(".solosquad/agents/", fs.existsSync(path.join(solosquadDir, "agents")), "Run: solosquad init")) issues++;
-    if (!check(".solosquad/routines/", fs.existsSync(path.join(solosquadDir, "routines")), "Run: solosquad init")) issues++;
+    if (!check(".solosquad/crons/", fs.existsSync(path.join(solosquadDir, "crons")), "Run: solosquad init")) issues++;
   } else {
     if (!check("core/products.json", fs.existsSync("core/products.json"), "Run: solosquad init")) issues++;
     if (!check("agents/", fs.existsSync("agents"), "Run: solosquad init")) issues++;
-    if (!check("routines/", fs.existsSync("routines"), "Run: solosquad init")) issues++;
+    if (!check("crons/", fs.existsSync("crons"), "Run: solosquad init")) issues++;
   }
 
   const products = loadProducts();
@@ -385,7 +385,7 @@ async function runLifecycleChecks(workspace: string): Promise<number> {
   const livePids = _precheckInternals.detectLivePids();
   if (livePids.length > 0) {
     warn(
-      `solosquad bot/schedule processes alive (pid ${livePids.join(", ")})`,
+      `solosquad bot/cron processes alive (pid ${livePids.join(", ")})`,
       "Stop these before `solosquad uninstall` to keep archive snapshot consistent",
     );
   }

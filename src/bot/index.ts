@@ -246,7 +246,7 @@ async function handleCommandInner(
     const activeLiveCard = liveCard as LiveTaskCardHandle | null;
 
     // v1.2 §6.2 — TRIAGE kind branch. `chat` keeps the v1.0 flat reply
-    // in the command channel; `workflow` / `schedule` / `goal` post a
+    // in the command channel; `workflow` / `cron` / `goal` post a
     // task card embed in `works-<handle>` + thread carrying the full
     // Chief reply, and the command channel only sees a 1-line announce
     // with the thread link. Adapters that haven't implemented

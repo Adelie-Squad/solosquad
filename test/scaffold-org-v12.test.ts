@@ -22,7 +22,7 @@ test("scaffoldOrg — creates the full v1.1 + v1.2 directory layout", () => {
   });
   const orgDir = path.join(ws, "acme-inc");
   for (const sub of [
-    "memory/routine-logs",
+    "memory/cron-logs",
     "memory/open-questions",
     "memory/ledger",
     "workflows",

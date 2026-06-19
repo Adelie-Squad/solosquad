@@ -5,7 +5,7 @@ import chalk from "chalk";
  * deterministic asset verbs (list / show / validate) that were previously
  * scattered across the per-domain groups. The domain groups still exist for
  * their domain-specific verbs (agent validate --graph, workflow focus,
- * goal run, schedules new); `asset` is the unified, discoverable entry the
+ * goal run, crons new); `asset` is the unified, discoverable entry the
  * "run one manager, distinguish by kind inside" model calls for. LLM verbs
  * (review/create) deliberately live in chat (skills/asset-review), not here.
  *
@@ -13,8 +13,8 @@ import chalk from "chalk";
  * there is exactly one implementation of each behavior.
  */
 
-export type AssetKind = "skill" | "agent" | "workflow" | "schedule";
-const KINDS: AssetKind[] = ["skill", "agent", "workflow", "schedule"];
+export type AssetKind = "skill" | "agent" | "workflow" | "cron";
+const KINDS: AssetKind[] = ["skill", "agent", "workflow", "cron"];
 
 function isKind(s: string | undefined): s is AssetKind {
   return !!s && (KINDS as string[]).includes(s);
@@ -41,7 +41,7 @@ export async function assetListCommand(kind: string | undefined): Promise<void> 
     if (k === "skill") await listSkills();
     else if (k === "agent") (await import("./agent.js")).agentListCommand({});
     else if (k === "workflow") await (await import("./workflow.js")).workflowListCommand({});
-    else if (k === "schedule") await (await import("./schedule.js")).scheduleListCommand();
+    else if (k === "cron") await (await import("./cron.js")).cronListCommand();
   }
 }
 
@@ -54,7 +54,7 @@ export async function assetShowCommand(kind: string | undefined, id: string | un
   }
   if (kind === "agent") await (await import("./agent.js")).agentShowCommand(id, {});
   else if (kind === "workflow") await (await import("./workflow.js")).workflowShowCommand(id, {});
-  else if (kind === "schedule") await (await import("./schedule.js")).scheduleShowCommand(id);
+  else if (kind === "cron") await (await import("./cron.js")).cronShowCommand(id);
   else {
     // skill — resolve the bundled SKILL.md path
     const path = await import("path");
@@ -83,8 +83,8 @@ export async function assetValidateCommand(kind: string | undefined): Promise<vo
   if (kinds.includes("workflow")) {
     runners.push(["workflow", async () => (await import("./workflow.js")).workflowValidateCommand(undefined, { all: true })]);
   }
-  if (kinds.includes("schedule")) {
-    runners.push(["schedule", async () => (await import("./schedule.js")).scheduleValidateCommand()]);
+  if (kinds.includes("cron")) {
+    runners.push(["cron", async () => (await import("./cron.js")).cronValidateCommand()]);
   }
   let anyFail = false;
   for (const [label, run] of runners) {

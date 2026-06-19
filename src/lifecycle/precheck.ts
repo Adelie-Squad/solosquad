@@ -47,7 +47,7 @@ export interface PrecheckResult {
   incompleteStages: string[];
   /** Journal entries (caller may render). */
   journalEntries: JournalEntry[];
-  /** Detected live solosquad bot/schedule PIDs. */
+  /** Detected live solosquad bot/cron PIDs. */
   livePids: number[];
   /** Repos with uncommitted or unpushed changes. */
   reposWithGitDrift: string[];
@@ -107,7 +107,7 @@ export async function precheck(opts: PrecheckOptions): Promise<PrecheckResult> {
   const livePids = opts.livePidsOverride ?? detectLivePids();
   if (livePids.length > 0 && !opts.force) {
     blockers.push(
-      `solosquad bot/schedule appears to be running (pid ${livePids.join(", ")}). ` +
+      `solosquad bot/cron appears to be running (pid ${livePids.join(", ")}). ` +
       `Stop these processes first, or rerun with --force.`,
     );
   } else if (livePids.length > 0) {
@@ -182,11 +182,11 @@ function detectLivePids(): number[] {
     if (IS_WINDOWS) {
       // v0.9.2 hotfix: the Where-Object clause must include `Name -eq 'node.exe'`
       // because the powershell.exe process running this very query has both
-      // 'solosquad' and '(bot|schedule|run-routine)' as literals in its own
+      // 'solosquad' and '(bot|cron)' as literals in its own
       // CommandLine (the -Command argument). Without the Name guard, the query
       // matches itself and returns phantom PIDs that change every invocation.
       const out = execSync(
-        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -match 'solosquad' -and $_.CommandLine -match '(bot|schedule|run-routine)' } | Select-Object -ExpandProperty ProcessId"`,
+        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'node.exe' -and $_.CommandLine -match 'solosquad' -and $_.CommandLine -match '(bot|cron)' } | Select-Object -ExpandProperty ProcessId"`,
         { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] },
       );
       return out
@@ -195,7 +195,7 @@ function detectLivePids(): number[] {
         .filter((n) => Number.isInteger(n) && n > 0 && n !== process.pid);
     } else {
       const out = execSync(
-        `pgrep -f "solosquad (bot|schedule|run-routine)" || true`,
+        `pgrep -f "solosquad (bot|cron)" || true`,
         { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], shell: "/bin/sh" },
       );
       return out

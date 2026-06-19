@@ -13,8 +13,8 @@
  * exiting. Cloud + supervise restarts are unaffected — they just
  * take a few seconds longer when the bot is mid-turn.
  *
- * Goal cycles and scheduler routines run in *different processes*
- * (`solosquad goal run`, `solosquad schedule`) so they're outside
+ * Goal cycles and scheduler crons run in *different processes*
+ * (`solosquad goal run`, `solosquad cron`) so they're outside
  * the bot's drain responsibility — each has its own lifecycle.
  */
 

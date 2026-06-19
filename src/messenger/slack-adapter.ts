@@ -372,7 +372,7 @@ export class SlackAdapter implements MessengerAdapter {
     // Otherwise create a new starter
     const created = await webClient.chat.postMessage({
       channel: channelId,
-      text: `${THREAD_STARTER_PREFIX} [${threadName}] Initialized by SoloSquad. Background routines post here.`,
+      text: `${THREAD_STARTER_PREFIX} [${threadName}] Initialized by SoloSquad. Background crons post here.`,
     });
     const ts = (created.ts as string) || "";
     if (ts) this.threadTsCache.set(cacheKey, ts);

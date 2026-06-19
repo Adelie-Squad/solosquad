@@ -26,13 +26,13 @@ import { stopButtonRow } from "./discord-turn-controls.js";
 
 const COLOR_BY_KIND: Record<TaskCardInput["kind"], number> = {
   workflow: 0x5865f2, // blurple
-  schedule: 0x57f287, // green
+  cron: 0x57f287, // green
   goal: 0xfee75c, // amber
 };
 
 const LABEL_BY_KIND: Record<TaskCardInput["kind"], string> = {
   workflow: "WORKFLOW",
-  schedule: "SCHEDULE",
+  cron: "SCHEDULE",
   goal: "GOAL",
 };
 

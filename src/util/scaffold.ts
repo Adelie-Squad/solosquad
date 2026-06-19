@@ -52,7 +52,7 @@ export interface ScaffoldOrgInput {
 /**
  * Create `<workspace>/<slug>/` with the full v1.1.0 + v1.2 layout:
  *   .org.yaml
- *   memory/{routine-logs,open-questions,ledger}/ + 4 schema JSONLs
+ *   memory/{cron-logs,open-questions,ledger}/ + 4 schema JSONLs
  *   workflows/problem-definition/workflow.yaml  (v1.2 §12 #16)
  *   repositories/
  *   <messenger>/
@@ -69,7 +69,7 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
   const slug = input.slug ?? slugify(input.name);
   const orgDir = path.join(input.workspace, slug);
 
-  fs.mkdirSync(path.join(orgDir, "memory", "routine-logs"), { recursive: true });
+  fs.mkdirSync(path.join(orgDir, "memory", "cron-logs"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "memory", "open-questions"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "memory", "ledger"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "workflows"), { recursive: true });

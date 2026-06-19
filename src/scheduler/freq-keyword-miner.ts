@@ -14,7 +14,7 @@ import { rebuildRoutes } from "../bot/agent-router.js";
 /**
  * v0.6 §3.4 — Freq keyword miner (P1 #6).
  *
- * Nightly hook (pm-compaction routine) that extracts N-gram keywords
+ * Nightly hook (pm-compaction cron) that extracts N-gram keywords
  * (N=1..3, stop-word filtered) from:
  *   - route_miss events (route fallback misses — §4.6)
  *   - author-draft.json clarification questions (PM-side ask history)

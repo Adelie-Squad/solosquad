@@ -22,7 +22,7 @@ export interface BriefingConfig {
   enabled?: boolean;
 }
 
-export interface WeeklyRoutineConfig {
+export interface WeeklyCronConfig {
   day: string; // lowercase day name: sunday, monday, ...
   time: string;
   enabled?: boolean;
@@ -53,7 +53,7 @@ export interface ChiefConfig {
   exclude_dynamic_system_prompt_sections?: boolean;
   /** Per-session in-process mutex queue depth (chief-runner). */
   mutex_queue_depth?: number;
-  /** v0.3.0+: daily compaction-routine trigger time (HH:MM). */
+  /** v0.3.0+: daily compaction-cron trigger time (HH:MM). */
   compaction_time?: string;
   /** v1.3.0 Part A: git push approval-gate policy. */
   git?: ChiefGitConfig;
@@ -94,11 +94,11 @@ export interface WorkspaceYaml {
     morning?: BriefingConfig;
     evening?: BriefingConfig;
   };
-  /** v0.2.4+: background routines that feed into the briefs. */
+  /** v0.2.4+: background crons that feed into the briefs. */
   background_routines?: {
     signal_scan?: BriefingConfig;
     experiment_check?: BriefingConfig;
-    weekly_review?: WeeklyRoutineConfig;
+    weekly_review?: WeeklyCronConfig;
   };
   /**
    * v0.3.0+: Chief session configuration. Property key kept as `pm` for
@@ -442,7 +442,7 @@ export const DEFAULT_WORKSPACE_SETTINGS = {
   },
   /**
    * @deprecated v0.8.5 — `signal-scan`, `experiment-check`, `weekly-review`
-   * routines were removed from the live scheduler. This constant is preserved
+   * crons were removed from the live scheduler. This constant is preserved
    * solely so the historical `0.2.1-to-0.2.4.ts` migration script (immutable
    * per AGENTS.md) continues to compile and reproduce the schema state it was
    * written for. `init.ts` no longer writes these defaults, and

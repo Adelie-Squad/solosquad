@@ -11,10 +11,10 @@ import {
 import { normalizeLine } from "../util/platform.js";
 
 /**
- * v0.6 — JSONL → SQLite (FTS5) rotation routine.
+ * v0.6 — JSONL → SQLite (FTS5) rotation cron.
  *
  * Per docs/plan/v0.6-default-workflow-tuning.md §4.3 + §4.6 + §4.7.
- * Runs nightly (00:00) via `archive-rotate` routine. The hot tier
+ * Runs nightly (00:00) via `archive-rotate` cron. The hot tier
  * (`<org>/memory/*.jsonl`) keeps the last 7 days; everything older is
  * moved into `archive.sqlite` and *deleted from the JSONL* to keep grep
  * cheap.
@@ -22,7 +22,7 @@ import { normalizeLine } from "../util/platform.js";
  * Inputs scanned:
  *   - `<org>/memory/*.jsonl`           (signals.jsonl, decisions.jsonl, …)
  *   - `<org>/memory/route-events.jsonl` (v0.5/v0.6 route + author + spawn)
- *   - `<org>/memory/routine-logs/*.jsonl` (any future jsonl logs there)
+ *   - `<org>/memory/cron-logs/*.jsonl` (any future jsonl logs there)
  *
  * Each archived row gets a normalized `event_type`. Lines that already carry
  * a recognized `event_type` field keep it; otherwise default to
@@ -123,7 +123,7 @@ function collectJsonlFiles(memoryDir: string): string[] {
       if (entry.name.startsWith(".")) continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name === "routine-logs") {
+        if (entry.name === "cron-logs") {
           visit(full);
         }
         continue;

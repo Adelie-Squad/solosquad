@@ -4,12 +4,12 @@ import yaml from "js-yaml";
 import { scanRepoAssets, type AssetKind, type ScannedAsset } from "./asset-scanner.js";
 import { parseSkillMd, validateSkill, SkillParseError } from "../bot/skill-parser.js";
 import { validateWorkflow } from "../bot/workflow-validate.js";
-import { validateScheduleDef } from "../scheduler/schedule-validate.js";
-import { coerceScheduleDef } from "../scheduler/schedule-def.js";
+import { validateCronDef } from "../scheduler/cron-validate.js";
+import { coerceCronDef } from "../scheduler/cron-def.js";
 import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
 import { mapAgentToTaxonomy, mapAgentTeam, type AgentMapping, type AgentTeamCaller } from "./agent-map.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
-import { ROUTINES } from "../scheduler/routines.js";
+import { CRONS } from "../scheduler/crons.js";
 import { getBundledSkillsDir, getBundledAgentsDir } from "../util/paths.js";
 
 /**
@@ -96,7 +96,7 @@ function bundledIds(): Record<AssetKind, Set<string>> {
     skill: bundledSkillIds(),
     agent: agents,
     workflow: workflows,
-    schedule: new Set(ROUTINES.map((r) => r.id)),
+    cron: new Set(CRONS.map((r) => r.id)),
   };
 }
 
@@ -126,13 +126,13 @@ function validateOne(
       const r = validateWorkflow(doc, { knownAgents });
       return finalize(r.errors, r.warnings);
     }
-    if (asset.kind === "schedule") {
+    if (asset.kind === "cron") {
       const raw = yaml.load(fs.readFileSync(full, "utf-8"));
       const obj = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
-      const def = coerceScheduleDef(obj, asset.id);
+      const def = coerceCronDef(obj, asset.id);
       const promptExists = (id: string): boolean =>
         fs.existsSync(path.join(path.dirname(full), `${id}.md`));
-      const r = validateScheduleDef(def, { promptExists });
+      const r = validateCronDef(def, { promptExists });
       return finalize(r.errors, r.warnings);
     }
     // agent — graph validation needs team/tier mapping (§10.3) first
@@ -160,7 +160,7 @@ export function buildAdoptionReport(repoRoot: string, opts: AdoptionScopeOpts = 
   // discovered agents are also valid ref targets for discovered workflows
   for (const a of assets) if (a.kind === "agent") knownAgents.add(a.id);
 
-  const counts: Record<AssetKind, number> = { skill: 0, agent: 0, workflow: 0, schedule: 0 };
+  const counts: Record<AssetKind, number> = { skill: 0, agent: 0, workflow: 0, cron: 0 };
   let errorCount = 0;
   let conflictCount = 0;
   const items: AdoptionItem[] = [];

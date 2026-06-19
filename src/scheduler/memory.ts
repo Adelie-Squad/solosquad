@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { RoutineConfig } from "./routines.js";
+import type { CronConfig } from "./crons.js";
 import { normalizeLine } from "../util/platform.js";
 
 const SENSITIVE_PATTERN = /(?:token|secret|password|api_key|private_key|apikey)\s*[:=]\s*\S+/gi;
@@ -16,7 +16,7 @@ function sanitizeForStorage(item: Record<string, unknown>): Record<string, unkno
   return cleaned;
 }
 
-/** Extract JSON blocks from routine results. */
+/** Extract JSON blocks from cron results. */
 export function extractJsonBlocks(text: string): Record<string, unknown>[] {
   const items: Record<string, unknown>[] = [];
   const regex = /```json\s*\n(.*?)\n\s*```/gs;
@@ -76,13 +76,13 @@ export function appendToJsonl(
   return added;
 }
 
-/** Extract JSON from routine result and append to JSONL memory. */
-export function saveRoutineMemory(
+/** Extract JSON from cron result and append to JSONL memory. */
+export function saveCronMemory(
   result: string,
-  routine: RoutineConfig,
+  cron: CronConfig,
   productDir: string
 ): void {
-  if (!routine.memoryTargets.length) return;
+  if (!cron.memoryTargets.length) return;
 
   const items = extractJsonBlocks(result);
   if (!items.length) return;
@@ -90,7 +90,7 @@ export function saveRoutineMemory(
   const memoryDir = path.join(productDir, "memory");
   let total = 0;
 
-  for (const target of routine.memoryTargets) {
+  for (const target of cron.memoryTargets) {
     const targetPath = path.join(memoryDir, target);
     if (fs.existsSync(targetPath)) {
       total += appendToJsonl(targetPath, items);
@@ -99,7 +99,7 @@ export function saveRoutineMemory(
 
   if (total > 0) {
     console.log(
-      `[Scheduler] Memory saved: ${total} item(s) → ${routine.memoryTargets.join(", ")}`
+      `[Scheduler] Memory saved: ${total} item(s) → ${cron.memoryTargets.join(", ")}`
     );
   }
 }

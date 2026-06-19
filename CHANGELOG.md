@@ -4,9 +4,19 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.3] — 2026-06-19 (Cron terminology unification)
+
+v1.3.3 unifies the two interchangeable names for scheduled jobs — **routine** (built-in jobs) and **schedule** (user-authored jobs) — into a single noun: **cron**. This is a breaking rename across code, CLI, the bundled asset dir, and on-disk data paths, shipped with a migration that carries existing workspaces along. See `docs/prd/v1.3.3-cron-terminology.md`.
+
+- **Code rename.** `scheduler/routines.ts → crons.ts`, `schedule-def.ts → cron-def.ts`, `schedule-validate.ts → cron-validate.ts`, `cli/schedule.ts → cli/cron.ts`, `cli/run-routine.ts → cli/run-cron.ts`. Identifiers `ROUTINES → CRONS`, `RoutineConfig → CronConfig`, `ScheduleDef → CronDef`, `getSchedulesDir → getCronsDir`, error codes `SCHED_* → CRON_*`.
+- **CLI consolidation (breaking).** The three split entry points — `solosquad schedule` (daemon), `solosquad schedules` (manage), `solosquad run-routine` (manual) — collapse into one `cron` group: `solosquad cron start | run | list | new | show | validate`.
+- **Paths.** Bundled `schedules/ → crons/`; data `.solosquad/{schedules,routines} → .solosquad/crons`, `<org>/memory/routine-logs → cron-logs`. The 1.3.2→1.3.3 migration moves these for existing workspaces (idempotent, no-clobber); `getCronsDir()` still reads the legacy override dirs as a fallback so a workspace keeps working even before the migration runs.
+- **Preserved on purpose.** The `scheduler`/`startScheduler` subsystem name (it *runs* crons), the node-cron API, the archive event-type string `routine_log` (stored data contract), and historical migration path literals.
+- 875 tests green (new `migration-v1.3.3-cron.test.ts`). `validate-bundled` green.
+
 ## [1.3.2] — 2026-06-19 (Asset lifecycle managers + asset adoption)
 
-v1.3.2 gives the five first-class assets (skill · agent · workflow · goal · schedule) a shared **manager abstraction** — the same `validate` / `list` / `show` interface plus shared validation, graph, guardrail and naming cores — and completes an **asset adoption** pipeline that pulls a repo's existing AI assets into the workspace. CLI sprawl is reined in under a **conversational-first** principle. See `docs/prd/v1.3.2-domain-lifecycle-managers.md`.
+v1.3.2 gives the five first-class assets (skill · agent · workflow · goal · schedule) a shared **manager abstraction** — the same `validate` / `list` / `show` interface plus shared validation, graph, guardrail and naming cores — and completes an **asset adoption** pipeline that pulls a repo's existing AI assets into the workspace. CLI sprawl is reined in under a **conversational-first** principle. See `docs/prd/v1.3.2-asset-managers-validate.md`.
 
 - **Domain validators (P0, CI gate).** Stronger `validateSkill` (naming/description hygiene), new **agent manager** with `agent validate --graph` (reference integrity, delegation cycles, orphans), `validateWorkflow` (cycle = error), and `schedules validate` over dynamic `schedules/<id>.yaml`. All wired into `npm run validate-bundled` in CI.
 - **Shared cores (§9).** `src/util/graph.ts` (Kahn cycle/reachability, reused by agent + workflow), `validation.ts` (Findings collector), `guardrails.ts` (`iterationCapReached` / `budgetStatus` / `LoopDetector`), `naming.ts` (`KEBAB_RE` / `checkId` / `normalizeToKebab` — removes the kebab regex duplicated across 4 validators). Renamed `skill-author.ts → skill-manager.ts`.

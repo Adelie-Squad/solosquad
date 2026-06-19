@@ -13,15 +13,15 @@ import {
 } from "../util/config.js";
 import { getReposBase } from "../util/paths.js";
 import {
-  ROUTINES,
-  loadRoutinePrompt,
+  CRONS,
+  loadCronPrompt,
   timeToDailyCron,
-  type RoutineConfig,
-} from "./routines.js";
-import { loadScheduleDefs } from "./schedule-def.js";
-import { validateScheduleDef } from "./schedule-validate.js";
-import { getSchedulesDir } from "../util/paths.js";
-import { saveRoutineMemory } from "./memory.js";
+  type CronConfig,
+} from "./crons.js";
+import { loadCronDefs } from "./cron-def.js";
+import { validateCronDef } from "./cron-validate.js";
+import { getCronsDir } from "../util/paths.js";
+import { saveCronMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
 import { loadArchiveConfig } from "../util/config.js";
 import { rotateLogs } from "../util/logger.js";
@@ -36,23 +36,23 @@ function nowLabel(): string {
     .slice(5);
 }
 
-async function runRoutineForProduct(
-  routine: RoutineConfig,
+async function runCronForProduct(
+  cron: CronConfig,
   product: { name: string; slug: string }
 ): Promise<void> {
-  // v0.2.0+: product.slug == org slug. Routines always run at org level so
-  // memory/routine-logs (org scope) is the persistence target — but the Claude
+  // v0.2.0+: product.slug == org slug. Crons always run at org level so
+  // memory/cron-logs (org scope) is the persistence target — but the Claude
   // session still launches in the active repo to give it real code context.
   const orgDir = path.join(getReposBase(), product.slug);
   const { cwd, reason, repoSlug } = resolveOrgCwd(orgDir);
   const repoLabel = reason === "legacy-root" ? "(org root)" : `(repo: ${repoSlug})`;
-  console.log(`[Scheduler] ${product.name} - ${routine.name} starting ${repoLabel}`);
+  console.log(`[Scheduler] ${product.name} - ${cron.name} starting ${repoLabel}`);
 
   // v0.8.5 — Unified deterministic housekeeping (no LLM). Runs archive
   // rotation + log retention sequentially, isolated so one failure can't
   // block the other. Workspace-level log cleanup runs once and is a no-op
   // for subsequent products in the same tick (directory already pruned).
-  if (routine.id === "system-housekeeping") {
+  if (cron.id === "system-housekeeping") {
     try {
       const archiveCfg = loadArchiveConfig();
       const stats = rotateArchive({
@@ -84,14 +84,14 @@ async function runRoutineForProduct(
     return;
   }
 
-  const prompt = loadRoutinePrompt(routine.id);
+  const prompt = loadCronPrompt(cron.id);
   const result = await runClaude(prompt, cwd, 180_000);
 
   // Auto-save to memory (always at org level, regardless of which repo ran the prompt)
-  saveRoutineMemory(result, routine, orgDir);
+  saveCronMemory(result, cron, orgDir);
 
-  // Save routine log
-  const logDir = path.join(orgDir, "memory", "routine-logs");
+  // Save cron log
+  const logDir = path.join(orgDir, "memory", "cron-logs");
   fs.mkdirSync(logDir, { recursive: true });
   const timestamp = new Date()
     .toISOString()
@@ -99,25 +99,25 @@ async function runRoutineForProduct(
     .replace(/[:-]/g, "")
     .replace("T", "-");
   fs.writeFileSync(
-    path.join(logDir, `${routine.id}-${timestamp}.md`),
-    `# ${routine.name}\n\n${result}`
+    path.join(logDir, `${cron.id}-${timestamp}.md`),
+    `# ${cron.name}\n\n${result}`
   );
 
-  // v0.2.4+: route to #workflow channel; background routines target a system thread
-  const title = `${routine.emoji} [${routine.name}] ${product.name} | ${nowLabel()}`;
+  // v0.2.4+: route to #workflow channel; background crons target a system thread
+  const title = `${cron.emoji} [${cron.name}] ${product.name} | ${nowLabel()}`;
   for (const adapter of adapters) {
     const config = loadMessengerConfig(orgDir, adapter.platform);
     const sent = await adapter.sendToChannel(
       config,
-      routine.channel,
+      cron.channel,
       result,
       title,
-      routine.threadName
+      cron.threadName
     );
     if (sent) {
       console.log(
-        `[Scheduler] ${product.name} - ${routine.name} → ${adapter.platform}` +
-          (routine.threadName ? ` (thread: ${routine.threadName})` : "") +
+        `[Scheduler] ${product.name} - ${cron.name} → ${adapter.platform}` +
+          (cron.threadName ? ` (thread: ${cron.threadName})` : "") +
           " sent"
       );
     } else {
@@ -128,10 +128,10 @@ async function runRoutineForProduct(
   }
 }
 
-async function runRoutine(routineId: string): Promise<void> {
-  const routine = ROUTINES.find((r) => r.id === routineId);
-  if (!routine) {
-    console.log(`[Scheduler] Unknown routine: ${routineId}`);
+async function runCron(cronId: string): Promise<void> {
+  const cron = CRONS.find((r) => r.id === cronId);
+  if (!cron) {
+    console.log(`[Scheduler] Unknown cron: ${cronId}`);
     return;
   }
 
@@ -141,50 +141,51 @@ async function runRoutine(routineId: string): Promise<void> {
     return;
   }
 
-  await Promise.all(products.map((p) => runRoutineForProduct(routine, p)));
+  await Promise.all(products.map((p) => runCronForProduct(cron, p)));
 }
 
-/** Run a user-defined schedule (not in ROUTINES) across all products. */
-async function runRoutineDef(def: RoutineConfig): Promise<void> {
+/** Run a user-defined cron (not in CRONS) across all products. */
+async function runCronDef(def: CronConfig): Promise<void> {
   const products = loadProducts();
   if (!products.length) {
     console.log("[Scheduler] No products registered");
     return;
   }
-  await Promise.all(products.map((p) => runRoutineForProduct(def, p)));
+  await Promise.all(products.map((p) => runCronForProduct(def, p)));
 }
 
-interface ResolvedSchedule {
-  routine: RoutineConfig;
-  cron: string;
+interface ResolvedCron {
+  cron: CronConfig;
+  /** node-cron expression resolved from workspace.yaml. */
+  expr: string;
   enabled: boolean;
 }
 
-/** Map each routine to its effective cron expression from workspace.yaml. */
-function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
+/** Map each built-in cron to its effective cron expression from workspace.yaml. */
+function resolveCrons(ws: WorkspaceYaml): ResolvedCron[] {
   const merged = applyWorkspaceDefaults(ws);
   const b = merged.briefings!;
 
-  return ROUTINES.map((routine): ResolvedSchedule => {
-    switch (routine.id) {
+  return CRONS.map((cron): ResolvedCron => {
+    switch (cron.id) {
       case "morning-brief":
         return {
-          routine,
-          cron: timeToDailyCron(b.morning!.time),
+          cron,
+          expr: timeToDailyCron(b.morning!.time),
           enabled: b.morning!.enabled !== false,
         };
       case "evening-brief":
         return {
-          routine,
-          cron: timeToDailyCron(b.evening!.time),
+          cron,
+          expr: timeToDailyCron(b.evening!.time),
           enabled: b.evening!.enabled !== false,
         };
       case "pm-compaction": {
         const pmCfg = merged.pm ?? {};
         const time = pmCfg.compaction_time ?? "23:00";
         return {
-          routine,
-          cron: timeToDailyCron(time),
+          cron,
+          expr: timeToDailyCron(time),
           enabled: true,
         };
       }
@@ -194,23 +195,23 @@ function resolveSchedules(ws: WorkspaceYaml): ResolvedSchedule[] {
         // (retention_days, compress_before_delete); log retention is fixed at
         // 14 days inside `rotateLogs()`.
         return {
-          routine,
-          cron: timeToDailyCron("00:00"),
+          cron,
+          expr: timeToDailyCron("00:00"),
           enabled: true,
         };
       default:
-        // Unknown routine — disable rather than crash
-        return { routine, cron: "0 0 1 1 *", enabled: false };
+        // Unknown cron — disable rather than crash
+        return { cron, expr: "0 0 1 1 *", enabled: false };
     }
   });
 }
 
-async function sendStartupNotification(schedules: ResolvedSchedule[]): Promise<void> {
+async function sendStartupNotification(crons: ResolvedCron[]): Promise<void> {
   const products = loadProducts();
-  const lines = schedules
+  const lines = crons
     .filter((s) => s.enabled)
-    .map((s) => `• ${s.routine.emoji} ${s.routine.name}: ${s.cron} (${workspaceTimezone})`);
-  const msg = `**SoloSquad Started** (tz: ${workspaceTimezone})\nRoutine schedule:\n${lines.join("\n")}`;
+    .map((s) => `• ${s.cron.emoji} ${s.cron.name}: ${s.expr} (${workspaceTimezone})`);
+  const msg = `**SoloSquad Started** (tz: ${workspaceTimezone})\nCron schedule:\n${lines.join("\n")}`;
 
   const workspace = getReposBase();
   for (const adapter of adapters) {
@@ -240,31 +241,31 @@ export async function startScheduler(): Promise<void> {
     console.log(`[Scheduler] ${adapter.platform} notifier started`);
   }
 
-  // Resolve effective schedule from workspace.yaml and register cron jobs
-  const schedules = resolveSchedules(ws ?? ({ version: "0.2.4", display_name: "", created_at: "" } as WorkspaceYaml));
-  for (const s of schedules) {
+  // Resolve effective cron from workspace.yaml and register cron jobs
+  const crons = resolveCrons(ws ?? ({ version: "0.2.4", display_name: "", created_at: "" } as WorkspaceYaml));
+  for (const s of crons) {
     if (!s.enabled) {
-      console.log(`[Scheduler] Skipped: ${s.routine.name} (disabled)`);
+      console.log(`[Scheduler] Skipped: ${s.cron.name} (disabled)`);
       continue;
     }
-    cron.schedule(s.cron, () => runRoutine(s.routine.id), {
+    cron.schedule(s.expr, () => runCron(s.cron.id), {
       timezone: workspaceTimezone,
     });
-    console.log(`[Scheduler] Registered: ${s.routine.name} (${s.cron})`);
+    console.log(`[Scheduler] Registered: ${s.cron.name} (${s.expr})`);
   }
 
-  // v1.3.2 §8 — additive user-defined schedules (schedules/<id>.yaml). Built-in
-  // routines above are untouched; these register on top. Only valid + enabled
+  // v1.3.2 §8 — additive user-defined crons (crons/<id>.yaml). Built-in
+  // crons above are untouched; these register on top. Only valid + enabled
   // defs whose id doesn't collide with a built-in are wired.
-  const builtinIds = new Set(ROUTINES.map((r) => r.id));
-  for (const def of loadScheduleDefs(getSchedulesDir())) {
-    const result = validateScheduleDef(def, {
+  const builtinIds = new Set(CRONS.map((r) => r.id));
+  for (const def of loadCronDefs(getCronsDir())) {
+    const result = validateCronDef(def, {
       reservedIds: builtinIds,
-      promptExists: (id) => fs.existsSync(path.join(getSchedulesDir(), `${id}.md`)),
+      promptExists: (id) => fs.existsSync(path.join(getCronsDir(), `${id}.md`)),
     });
     if (!result.ok) {
       console.log(
-        `[Scheduler] Skipped user schedule "${def.id}" — ${result.errors.map((e) => e.code).join(", ")}`
+        `[Scheduler] Skipped user cron "${def.id}" — ${result.errors.map((e) => e.code).join(", ")}`
       );
       continue;
     }
@@ -272,12 +273,12 @@ export async function startScheduler(): Promise<void> {
       console.log(`[Scheduler] Skipped: ${def.name} (disabled)`);
       continue;
     }
-    cron.schedule(def.cron, () => runRoutineDef(def), { timezone: workspaceTimezone });
-    console.log(`[Scheduler] Registered user schedule: ${def.name} (${def.cron})`);
+    cron.schedule(def.cron, () => runCronDef(def), { timezone: workspaceTimezone });
+    console.log(`[Scheduler] Registered user cron: ${def.name} (${def.cron})`);
   }
 
   console.log("[Scheduler] Scheduler started");
-  await sendStartupNotification(schedules);
+  await sendStartupNotification(crons);
 
   // Keep alive
   await new Promise<void>(() => {});

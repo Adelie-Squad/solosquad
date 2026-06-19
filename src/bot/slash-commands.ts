@@ -118,7 +118,7 @@ function helpText(): string {
     "/plan <topic>      — write a PRD + decompose into stages.",
     "/build [stage-id]  — spawn the next ready stage (or the named one).",
     "/review            — synthesize completed stages, flag blockers.",
-    "/ship              — release / deploy routine (v0.4 autonomous engine).",
+    "/ship              — release / deploy cron (v0.4 autonomous engine).",
     "/cancel            — abort the work Chief is currently running for you.",
     "/grant             — enable dev mode (agents may write files + run git).",
     "/revoke            — disable dev mode (agents go read-only).",

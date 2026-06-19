@@ -14,10 +14,10 @@ import crypto from "crypto";
  *   skill     — `.../.claude/skills/<id>/SKILL.md`  or  `.../skills/<id>/SKILL.md`
  *   agent     — `.../.claude/agents/<id>.md`        or  `.../agents/(main|specialists)/<id>/SKILL.md`
  *   workflow  — any `workflow.yaml` / `workflow.yml`
- *   schedule  — `.../schedules/<id>.yaml|.yml`
+ *   cron  — `.../crons/<id>.yaml|.yml`
  */
 
-export type AssetKind = "skill" | "agent" | "workflow" | "schedule";
+export type AssetKind = "skill" | "agent" | "workflow" | "cron";
 
 export interface ScannedAsset {
   kind: AssetKind;
@@ -74,9 +74,9 @@ export function classifyAssetPath(rel: string): { kind: AssetKind; id: string } 
   if (base.endsWith(".md") && dirs.includes("agents") && dirs.includes(".claude")) {
     return { kind: "agent", id: base.replace(/\.md$/, "") };
   }
-  // schedule — schedules/<id>.yaml
-  if ((base.endsWith(".yaml") || base.endsWith(".yml")) && parent === "schedules") {
-    return { kind: "schedule", id: base.replace(/\.ya?ml$/, "") };
+  // cron — crons/<id>.yaml
+  if ((base.endsWith(".yaml") || base.endsWith(".yml")) && parent === "crons") {
+    return { kind: "cron", id: base.replace(/\.ya?ml$/, "") };
   }
   return null;
 }

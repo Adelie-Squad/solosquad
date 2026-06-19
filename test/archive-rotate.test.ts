@@ -128,7 +128,7 @@ test("rotateArchive: compressBeforeDelete writes archive-<YYYY-MM>.zst snapshots
 
 test("rotateArchive: defaults event_type to routine_log for legacy JSONL rows", () => {
   const { workspace, orgSlug, memoryDir } = makeWorkspace();
-  const file = path.join(memoryDir, "routine-logs", "old-log.jsonl");
+  const file = path.join(memoryDir, "cron-logs", "old-log.jsonl");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const now = "2026-05-14T00:00:00.000Z";
   writeJsonl(file, [

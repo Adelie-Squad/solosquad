@@ -851,8 +851,8 @@ export async function initCommand(): Promise<void> {
 
   // Copy system config into .solosquad/
   // NOTE: v1.3.1 §8/§9 emptied the legacy `assets/<dir>` seed copy entirely —
-  // agents/routines/core/orchestrator/templates were all removed from assets/.
-  // The roster/skills/teams/schedules/knowledge now come from the v1.1 bundle
+  // agents/crons/core/orchestrator/templates were all removed from assets/.
+  // The roster/skills/teams/crons/knowledge now come from the v1.1 bundle
   // block below; former templates are inlined as constants in their owning
   // code (goal.ts, skill-author.ts, migration scripts). Only `.env.example`
   // and docker/ remain under assets/ (handled separately below).
@@ -861,7 +861,7 @@ export async function initCommand(): Promise<void> {
 
   // v1.1 bundle dirs (live at <bundle>/<dir>/, not under assets/). Copy
   // them into .solosquad/ so the workspace has the v1.1 layout
-  // (agents/main/*, agents/specialists/*, skills/*, teams/*, schedules/*,
+  // (agents/main/*, agents/specialists/*, skills/*, teams/*, crons/*,
   // user/*, knowledge/*). Each is optional — the path resolvers in
   // util/paths.ts fall back to the bundle when the workspace copy is
   // absent. copyDirSync is "merge, don't clobber" (skips existing files)
@@ -872,7 +872,7 @@ export async function initCommand(): Promise<void> {
     "agents",
     "skills",
     "teams",
-    "schedules",
+    "crons",
     "user",
     "knowledge",
   ];
@@ -1021,12 +1021,12 @@ export async function initCommand(): Promise<void> {
     envUpdates,
   });
 
-  // Step 4: Timezone and brief schedule (v0.2.4+; renumbered from 3.5 in v1.0.2)
+  // Step 4: Timezone and brief cron (v0.2.4+; renumbered from 3.5 in v1.0.2)
   console.log(chalk.bold("\n-- Step 4: Timezone & Daily Briefs --"));
   console.log(
     chalk.dim(
-      "  Default routines: Morning Brief (08:00) · Evening Brief (18:00) ·\n" +
-        "  PM Compaction (23:00). The timezone applies to all routine schedules.",
+      "  Default crons: Morning Brief (08:00) · Evening Brief (18:00) ·\n" +
+        "  PM Compaction (23:00). The timezone applies to all cron crons.",
     ),
   );
 
@@ -1070,7 +1070,7 @@ export async function initCommand(): Promise<void> {
   ]);
   // Step 5: workspace.yaml (renumbered from 4 in v1.0.2)
   // v0.8.5 — `background_routines` block intentionally omitted. The 4 analysis
-  // routines (signal-scan / experiment-check / weekly-review / v06-retrospective-stats)
+  // crons (signal-scan / experiment-check / weekly-review / v06-retrospective-stats)
   // were removed; the live scheduler now ships only morning/evening brief +
   // PM compaction + infrastructure (archive-rotate / log-rotate).
   saveWorkspaceYaml(
@@ -1376,7 +1376,7 @@ export async function initCommand(): Promise<void> {
   console.log(chalk.dim("    .solosquad/"));
   console.log(chalk.dim("      workspace.yaml"));
   console.log(chalk.dim("      .env"));
-  console.log(chalk.dim("      agents/ skills/ teams/ schedules/ knowledge/ user/"));
+  console.log(chalk.dim("      agents/ skills/ teams/ crons/ knowledge/ user/"));
   if (orgSlug) {
     console.log(chalk.dim(`    ${orgSlug}/              (org)`));
     console.log(chalk.dim("      .org.yaml"));
@@ -1388,7 +1388,7 @@ export async function initCommand(): Promise<void> {
 
   console.log(chalk.bold.green("\n  Setup Complete!\n"));
   console.log(`  ${chalk.cyan("solosquad bot")}        — Start messenger bot`);
-  console.log(`  ${chalk.cyan("solosquad schedule")}   — Start automated scheduler`);
+  console.log(`  ${chalk.cyan("solosquad cron")}   — Start automated scheduler`);
   console.log(`  ${chalk.cyan("solosquad status")}     — Show dashboard`);
   console.log(`  ${chalk.cyan("solosquad update")}     — Check for updates`);
   console.log(`  ${chalk.cyan("solosquad doctor")}     — Diagnose issues`);

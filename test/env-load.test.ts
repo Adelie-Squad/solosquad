@@ -20,7 +20,7 @@ function makeWorkspace(envContent: string): string {
     "utf-8"
   );
   fs.mkdirSync(path.join(dir, "agents"), { recursive: true });
-  fs.mkdirSync(path.join(dir, "routines"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "crons"), { recursive: true });
   return dir;
 }
 

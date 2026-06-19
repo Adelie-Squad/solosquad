@@ -47,7 +47,7 @@ jobs:
         # making a new moderate (e.g. the uuid/node-cron one) visible early.
         run: npm audit --audit-level=moderate || true
 
-      - name: Validate bundled assets (skills + agent graph + workflows + schedules, v1.3.2)
+      - name: Validate bundled assets (skills + agent graph + workflows + crons, v1.3.2)
         run: npm run validate-bundled
 
       - name: Smoke test — global install + doctor

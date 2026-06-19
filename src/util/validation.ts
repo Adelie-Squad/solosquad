@@ -1,7 +1,7 @@
 /**
  * v1.3.2 §9.1 — domain-agnostic validation core.
  *
- * The five managers (skill · agent · workflow · goal · schedule) all emit the
+ * The five managers (skill · agent · workflow · goal · cron) all emit the
  * same shape: an `{ ok, errors[], warnings[] }` result over findings of the
  * form `{ code, message, field? }`, accumulated imperatively. Before this
  * module each validator hand-rolled two arrays and the `ok: errors.length===0`
@@ -9,7 +9,7 @@
  * `runRules` offers a declarative alternative for rule-set–style validators.
  *
  * Pure — no fs, no domain types. Generic over a finding type `F` so each
- * domain keeps its own extra fields (e.g. workflow's `stage`, schedule's `id`).
+ * domain keeps its own extra fields (e.g. workflow's `stage`, cron's `id`).
  */
 
 export interface BaseFinding {

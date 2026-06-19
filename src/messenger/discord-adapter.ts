@@ -603,7 +603,7 @@ export class DiscordAdapter implements MessengerAdapter {
             autoArchiveDuration: 10080, // 7 days
             reason: "SoloSquad system thread",
           });
-          await thread.send(`Initialized: \`${tName}\` thread. Background routines post here.`);
+          await thread.send(`Initialized: \`${tName}\` thread. Background crons post here.`);
           console.log(`[Discord] ${guild.name}: thread created → ${tName}`);
         }
       }
@@ -622,7 +622,7 @@ export class DiscordAdapter implements MessengerAdapter {
     return channel.threads.create({
       name: threadName,
       autoArchiveDuration: 10080,
-      reason: "SoloSquad routine thread",
+      reason: "SoloSquad cron thread",
     });
   }
 

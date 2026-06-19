@@ -4,7 +4,7 @@ import { execFile, spawn, type ChildProcess } from "child_process";
  * v0.3.0 — typed wrapper around `claude --print` subprocess.
  *
  * Replaces the single-shot `claude-runner.ts` for Chief session use. The
- * scheduler still uses `claude-runner.ts` for stateless routine prompts.
+ * scheduler still uses `claude-runner.ts` for stateless cron prompts.
  *
  * Design (per docs/plan/v0.3-pm-mode-orchestration.md §3.2 + PoC #1/#2):
  *   - Chief session uses pre-generated `--session-id <uuid>` + `--resume`

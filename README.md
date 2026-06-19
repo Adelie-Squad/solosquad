@@ -2,9 +2,9 @@
 
 🇰🇷 **한국어 README: [README.kr.md](README.kr.md)**
 
-> A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord bot + scheduled routines + team-based agents, distributed as a single npm package.
+> A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord bot + scheduled crons + team-based agents, distributed as a single npm package.
 
-Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team — **1 Chief** (org-level supervisor, the only user-facing agent), **4 main bots** (pm / engineer / designer / marketer), and **20 specialists** across 4 teams (product, engineering, design, marketing) — reachable from your messenger, with automated daily routines, per-org memory isolation, and a 6+1 stage decision loop (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT).
+Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team — **1 Chief** (org-level supervisor, the only user-facing agent), **4 main bots** (pm / engineer / designer / marketer), and **20 specialists** across 4 teams (product, engineering, design, marketing) — reachable from your messenger, with automated daily crons, per-org memory isolation, and a 6+1 stage decision loop (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT).
 
 ```
 Output ≠ Goal. Output = Means to achieve the goal.
@@ -52,7 +52,7 @@ It covers, in ten menu-divided sections:
 | 3 | Concept Glossary | `SKILL.md`, `KNOWLEDGE.md`, `CLAUDE.md`, `AGENTS.md` comparison; per-layer file inventory; 4-channel routing |
 | 4 | Onboarding | Branches for new users, existing-repo migration, and version upgrades |
 | 5 | Messenger Setup | 8-step Discord token walkthrough (Slack walkthrough retained as a post-v1.0 reference) |
-| 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated routines |
+| 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated crons |
 | 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
 | 8 | Version Differences | v1.3.2 (npm-published) vs upcoming releases |
 | 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
@@ -66,11 +66,11 @@ For internal architecture, release planning, and decision history, see [`docs/pr
 
 ## What's new in v1.3.2 (2026-06-19)
 
-**Asset lifecycle managers + asset adoption.** The five first-class assets — **skill · agent · workflow · goal · schedule** — now share one manager interface, and a repo's existing AI assets can be pulled into your workspace.
+**Asset lifecycle managers + asset adoption.** The five first-class assets — **skill · agent · workflow · goal · cron** — now share one manager interface, and a repo's existing AI assets can be pulled into your workspace.
 
 - **Unified asset manager** — every asset kind shares the same verbs: `solosquad asset validate|list|show <kind>` is one front door over them, and `solosquad commands` prints the whole CLI tree at a glance. New **agent** manager: `solosquad agent validate --graph` checks the cross-agent delegation graph (reference integrity, cycles, orphans).
-- **Asset adoption** — `solosquad adopt <repo> [--apply] [--classify]` discovers a repo's skill/agent/workflow/schedule assets, validates them, and additively adopts them into your workspace (namespaced on collision, idempotent). `solosquad init` and `solosquad add repo` now offer to adopt discovered assets interactively.
-- **schedules as a first-class create path** — `solosquad schedules new|list|show|validate` over `schedules/<id>.yaml`.
+- **Asset adoption** — `solosquad adopt <repo> [--apply] [--classify]` discovers a repo's skill/agent/workflow/cron assets, validates them, and additively adopts them into your workspace (namespaced on collision, idempotent). `solosquad init` and `solosquad add repo` now offer to adopt discovered assets interactively.
+- **crons as a first-class create path** — `solosquad cron new|list|show|validate` over `crons/<id>.yaml`.
 - **Conversational-first CLI** — LLM-judgment verbs (review, authoring) live in `solosquad chat` (the `asset-review` skill + author loops), not as CLI verbs — matching how leading agent CLIs keep LLM work in the session and the CLI deterministic.
 - **Shared cores** — graph (cycle/reachability), validation, guardrail, and naming modules are now reused across the managers; the bundled-asset scope resolves deterministically (cwd-independent).
 
@@ -142,9 +142,9 @@ You: "Design the signup API"          → API Developer (Engineering)
 
 **v0.6 chokidar hot-reload** watches the same 3 tiers (forced polling on Windows + WSL, 300 ms debounce) and atomically swaps the router index — no bot restart on SKILL edits. Reload behaviour is configurable: `auto` (default) / `prompt` / `manual` with an optional `git_only` safe mode (`HEAD ≡ upstream + clean tree` only). `solosquad agent reload` triggers a manual rebuild.
 
-### Six automated routines, runs while you sleep
+### Six automated crons, runs while you sleep
 
-| Default time | Routine | Output channel | Memory |
+| Default time | Cron | Output channel | Memory |
 |---|---|---|---|
 | 08:00 daily | Morning Brief | `#workflow` root | — |
 | 12:00 daily | Signal Scan | `#workflow` → `system-daily-signals` thread | `signals.jsonl` |
@@ -179,12 +179,12 @@ Runs on your Mac Mini, PC, or VPS. Your data stays with you. Only outbound calls
 # Workspace ops (v0.1+)
 solosquad init                                    # workspace setup wizard
 solosquad bot                                     # start messenger bot
-solosquad schedule                                # start automated routine scheduler
+solosquad cron start                              # start automated cron scheduler
 solosquad status                                  # dashboard (orgs, workflows, recent activity)
 solosquad doctor                                  # environment diagnostics
 solosquad doctor --messenger-check                # validate tokens via live API
 solosquad update                                  # check & install latest npm release
-solosquad run-routine [name]                      # manual routine execution
+solosquad cron run [name]                         # manual cron execution
 
 # PM mode (v0.3)
 solosquad pm status                               # active PM sessions, cumulative cost
@@ -215,12 +215,12 @@ npm run validate-skills                           # CI gate (= agent validate --
 
 # Asset managers + adoption (v1.3.2)
 solosquad commands                                # full CLI tree + one-line descriptions
-solosquad asset list [kind]                       # list assets (skill|agent|workflow|schedule, or all)
+solosquad asset list [kind]                       # list assets (skill|agent|workflow|cron, or all)
 solosquad asset show <kind> <id>                  # show one asset
 solosquad asset validate [kind]                   # deterministic validation gate (all kinds, or one)
 solosquad adopt <repo> [--apply] [--classify]     # discover + validate + adopt a repo's assets
-solosquad schedules new <id> [--cron …]           # scaffold schedules/<id>.yaml + <id>.md
-solosquad schedules list|show|validate            # manage user-defined schedules
+solosquad cron new <id> [--cron …]                # scaffold crons/<id>.yaml + <id>.md
+solosquad cron list|show|validate                 # manage user-defined crons
 
 # Memory archive (v0.6)
 solosquad readiness check [--target v0.6]         # v0.5 data + 4 default workflows + author SKILL counts → pass/short
@@ -284,7 +284,7 @@ Two long-running processes plus a file-based memory layer:
 | Process | Role |
 |---|---|
 | `solosquad bot` | Receives messenger message → resumes the user's long-lived PM session (`orchestrator/SKILL.md`, v0.3) → 4-channel router resolves which specialist to load (`slash > explicit > keyword > freq`, v0.5) → delegates to a fresh subagent via Claude Code's native `Task` tool → synthesizes the tool result and replies |
-| `solosquad schedule` | Runs cron-based routines (6 default — see table above), appends results to JSONL memory files |
+| `solosquad cron start` | Runs scheduled crons (6 default — see table above), appends results to JSONL memory files |
 
 Two additional modes layer on top of the bot:
 
@@ -295,7 +295,7 @@ v0.6 layers five more pieces over the v0.3–v0.5 base:
 
 - **Spawn assembly** — `src/bot/spawn-assembler.ts` builds each Task prompt as an 8-layer JIT injection (knowledge → team KNOWLEDGE → SKILL → `<org>/core/` → `agent-profile.yaml` → `<org>/domain/` → handoff + memory recall → target repo) bounded by `workspace.yaml.spawn.max_context_tokens` (default `80000`). When the budget is exceeded, lower-priority layers drop in a fixed order and every decision is recorded to `<org>/memory/spawn-decisions.jsonl` (FTS5-indexed).
 - **Budget envelope** — two separate namespaces: author-loop turns log to `author-costs.jsonl`, spawn calls log to `agent-costs.jsonl`. Per-agent caps in `<org>/agent-profile.yaml` can only *narrow* the workspace defaults, never widen them. Migration LLM fallback costs are isolated in `migration-costs.jsonl` so a misbehaving migration cannot starve the running bot.
-- **FTS5 cold archive** — `src/memory/` rotates `routine-logs/*.jsonl` older than 8 days into `<org>/memory/archive.sqlite` once a day (`assets/routines/archive-rotate.md`, 00:00). Retention defaults to 365 days, with an optional `.zst` compress-before-delete step. Four event types are indexed (`route_hit / route_miss / author_turn / spawn_decision`); on a router miss the bot surfaces a single recall hint to the user.
+- **FTS5 cold archive** — `src/memory/` rotates `cron-logs/*.jsonl` older than 8 days into `<org>/memory/archive.sqlite` once a day (`assets/routines/archive-rotate.md`, 00:00). Retention defaults to 365 days, with an optional `.zst` compress-before-delete step. Four event types are indexed (`route_hit / route_miss / author_turn / spawn_decision`); on a router miss the bot surfaces a single recall hint to the user.
 - **Hot-reload** — `chokidar` 3-tier `fs.watch` (forced polling on Windows + WSL, 300 ms debounce) feeds `src/bot/reload-policy.ts`, which atomically swaps the router index in `auto` / `prompt` / `manual` mode. An optional `git_only` safe mode requires `HEAD ≡ upstream + clean tree` before any reload.
 - **Stop-hook** — v0.5's `loop_mode.spec-gate` SKILL field is now executable through `src/engine/stop-hook-adapter.ts`. The DSL accepts three forms (`command` / `metric` / `natural`), runs with a 5-second timeout, and on ambiguity defaults to *continue* (conservative). Every evaluation is appended to `<org>/memory/stop-hook-events.jsonl` and threaded back into the v0.4 goal-runner.
 
@@ -331,7 +331,7 @@ v1.0 marked the formal release with stable API guarantees. Shipped + planned mil
 | **v1.2.6 (released)** | **Messenger Connection (Chief on Discord, auto-connect first)** | 조직 1개당 1 Chief 봇 (`OrgYaml.chief_name`) · OAuth Invite URL 1-click (`solosquad discord invite-url`) · handle 기반 채널 멀티-메신저 portable · owner-only 게이트 (v1.0.2 reversal, default ON 신규 / OFF 업그레이드) · TRIAGE kind 분기 → `works-<handle>` task card + thread + stage narration · `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 · `solosquad doctor --discord` 5-hop diagnostic · guildCreate onboarding embed + 2 button · `/chat` slash fallback. 53 신규 test (728/728 pass) |
 | **v1.3.0 (released)** | **Messenger UX overhaul** | dev-confirm push-approval 게이트 · 인터랙션 컴포넌트 · 🛑 stop 버튼 + 라이브 stage narration · 산출물 filing |
 | **v1.3.1 (released)** | **Legacy asset cleanup** | v1.1 리오그가 절반만 끝낸 구 `assets/` 비우기 + CI/deps 하드닝 (사용자 대면 기능 0) |
-| **v1.3.2 (released)** | **Asset lifecycle managers + asset adoption** | 5개 1급 자산(skill·agent·workflow·goal·schedule) 공통 매니저 추상(validate/list/show + 공유 graph·validation·guardrail·naming 코어) · **agent 매니저 신설**(`validate --graph`) · **에셋 채택** `adopt <repo>`(discover→validate→additive apply, init/add-repo 인터랙티브 오퍼) · 통합 입구 `asset` + 일람 `commands` · conversational-first(LLM 동사는 `asset-review` 스킬로) · `skill-author→skill-manager`. 872 test pass |
+| **v1.3.2 (released)** | **Asset lifecycle managers + asset adoption** | 5개 1급 자산(skill·agent·workflow·goal·cron) 공통 매니저 추상(validate/list/show + 공유 graph·validation·guardrail·naming 코어) · **agent 매니저 신설**(`validate --graph`) · **에셋 채택** `adopt <repo>`(discover→validate→additive apply, init/add-repo 인터랙티브 오퍼) · 통합 입구 `asset` + 일람 `commands` · conversational-first(LLM 동사는 `asset-review` 스킬로) · `skill-author→skill-manager`. 872 test pass |
 | v1.2.1 (planned) | Messenger thread continuity | referencedMessage chain + LRU cache + thread token budget guard. messageCreate가 thread 메시지 수신 + thread→workflow_id reverse lookup. Slack adapter 동일 슬롯 |
 | v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes |
 | v1.x (planned) | Dashboard interaction | Companion web dashboard (별도 리포 `solopreneur-dashboard` + `solopreneur-api`) |
@@ -366,7 +366,7 @@ bin/solosquad.ts                  → CLI entry point
 AGENTS.md                         → canonical workspace guide (v0.4 — immutable, cross-tool)
 CLAUDE.md                         → 3-line redirect to AGENTS.md (backward-compat)
 src/
-  cli/                            → CLI commands (init, bot, schedule, doctor, doctor-discord,
+  cli/                            → CLI commands (init, bot, cron, doctor, doctor-discord,
                                      pm, workflow, goal, agent, analyze, add, sync, migrate,
                                      rollback, memory, readiness, discord)
   bot/                            → chief-runner, claude-process, session-store, events,
@@ -384,7 +384,7 @@ src/
   analyze/                        → v0.5 repo analyzer — scanner, classifier, ledger,
                                      workflow-matcher, report-writer, applier
   messenger/                      → Discord adapter (v1.0). Slack adapter present but post-v1.0 slot
-  scheduler/                      → Cron-based routines + memory append;
+  scheduler/                      → Cron-based crons + memory append;
                                      trajectory-extractor + freq-keyword-miner (v0.6),
                                      v06-stats-extract (v0.6 retrospective ETL)
   util/                           → Config, paths, logger, platform, cost, agent-profile (v0.6)
@@ -453,7 +453,7 @@ End-user workspace (created by `solosquad init`, evolved through migrations):
     │   ├── stop-hook-events.jsonl       (v0.6 — spec-gate evaluation log)
     │   ├── archive.sqlite               (v0.6 — FTS5 cold archive, 365d retention)
     │   ├── pm-skills/                   (v0.3 — PM compaction externalization)
-    │   └── routine-logs/                (hot tier — rotated into archive.sqlite after 8d)
+    │   └── cron-logs/                   (hot tier — rotated into archive.sqlite after 8d)
     ├── workflows/<wf-id>/               (v0.3 — _status.yaml, _events.jsonl, stages)
     ├── goals/<goal-id>/                 (v0.4 — goal.md, results.tsv, _best.json, _last-run.md)
     ├── .solosquad/

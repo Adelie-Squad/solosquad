@@ -8,10 +8,10 @@ import { _precheckInternals } from "../src/lifecycle/precheck.js";
  *
  * Pre-v0.9.2 bug: on Windows, detectLivePids ran a PowerShell command whose
  * Where-Object clause contained the literals 'solosquad' and
- * '(bot|schedule|run-routine)'. That PowerShell process's CommandLine
+ * '(bot|cron)'. That PowerShell process's CommandLine
  * therefore matched both regexes, and the WMI enumeration returned the
  * PowerShell PID itself. Symptom: `solosquad uninstall` reported phantom
- * "bot/schedule appears to be running (pid X, Y)" with X/Y changing every
+ * "bot/cron appears to be running (pid X, Y)" with X/Y changing every
  * invocation, because each call spawned a fresh powershell.exe.
  *
  * Fix (precheck.ts): added `$_.Name -eq 'node.exe'` to the Where-Object
