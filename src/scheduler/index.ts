@@ -23,6 +23,8 @@ import {
 } from "./crons.js";
 import { loadCronDefs } from "./cron-def.js";
 import { validateCronDef } from "./cron-validate.js";
+import { recordCronRun, lastSuccessfulRun } from "./cron-runlog.js";
+import { isOverdue } from "./cron-schedule.js";
 import { getCronsWriteDir } from "../util/paths.js";
 import { saveCronMemory } from "./memory.js";
 import { rotateArchive } from "../memory/archive-rotate.js";
@@ -84,11 +86,53 @@ async function runCronForProduct(
         (err as Error).message
       );
     }
+    // v1.3.3 §C — dead-man's-switch: report enabled user crons that are overdue
+    // (no successful run within 2× their estimated cadence). Quiet when all healthy.
+    try {
+      const overdue = loadCronDefs()
+        .filter((d) => d.enabled)
+        .filter((d) => isOverdue(lastSuccessfulRun(orgDir, d.id)?.finishedAt ?? null, d.cron));
+      if (overdue.length > 0) {
+        const lines = overdue.map((d) => {
+          const last = lastSuccessfulRun(orgDir, d.id)?.finishedAt;
+          return `• ${d.emoji} ${d.name} (${d.id}) — last ok: ${last ? new Date(last).toLocaleString() : "never"}`;
+        });
+        const msg = `⚠️ **Cron dead-man's-switch** — ${overdue.length} overdue:\n${lines.join("\n")}`;
+        for (const adapter of adapters) {
+          const config = loadMessengerConfig(orgDir, adapter.platform);
+          await adapter.sendToChannel(config, "workflow", msg, undefined, "system-housekeeping");
+        }
+        console.log(`[Scheduler] ${product.name} - dead-man's-switch: ${overdue.length} overdue cron(s)`);
+      }
+    } catch (err) {
+      console.error(`[Scheduler] ${product.name} - dead-man's-switch check failed:`, (err as Error).message);
+    }
     return;
   }
 
   const prompt = loadCronPrompt(cron.id);
-  const result = await runClaude(prompt, cwd, 180_000);
+  const startedAt = new Date();
+  let result: string;
+  try {
+    result = await runClaude(prompt, cwd, 180_000);
+  } catch (err) {
+    const finishedAt = new Date();
+    recordCronRun(orgDir, {
+      id: cron.id, name: cron.name,
+      startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(),
+      status: "error", ms: finishedAt.getTime() - startedAt.getTime(),
+      error: (err as Error).message,
+    });
+    console.error(`[Scheduler] ${product.name} - ${cron.name} → error: ${(err as Error).message}`);
+    return;
+  }
+  const finishedAt = new Date();
+  recordCronRun(orgDir, {
+    id: cron.id, name: cron.name,
+    startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(),
+    status: isSilentResult(result) ? "silent" : "ok",
+    ms: finishedAt.getTime() - startedAt.getTime(),
+  });
 
   // Auto-save to memory (always at org level, regardless of which repo ran the prompt)
   saveCronMemory(result, cron, orgDir);

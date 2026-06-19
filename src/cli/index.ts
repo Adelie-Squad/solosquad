@@ -179,6 +179,16 @@ cronGroup
   });
 
 cronGroup
+  .command("runs")
+  .description("Recent run history (status / when / duration) — all crons or one")
+  .argument("[ref]", "Cron id or name (omit for all)")
+  .option("-n, --limit <n>", "Max rows (default 20)")
+  .action(async (ref, opts) => {
+    const { cronRunsCommand } = await import("./cron.js");
+    await cronRunsCommand(ref, opts);
+  });
+
+cronGroup
   .command("edit")
   .description("Edit a user cron's fields (then re-validate)")
   .argument("<ref>", "Cron id or name")

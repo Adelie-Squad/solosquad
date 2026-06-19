@@ -109,6 +109,51 @@ export function describeSchedule(expr: string): string {
   return `cron: ${expr}`;
 }
 
+/**
+ * Estimate a cron's cadence in minutes for the common shapes `normalizeSchedule`
+ * produces (interval / daily / weekly / monthly). Returns null when the shape
+ * isn't recognised — callers treat null as "can't judge overdue".
+ */
+export function estimatePeriodMinutes(expr: string): number | null {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5 || parts.length > 6) return null;
+  const [min, hr, dom, mon, dow] = parts.length === 6 ? parts.slice(1) : parts;
+  const everyN = (f: string): number | null => {
+    const m = f.match(/^\*\/(\d+)$/);
+    return m ? parseInt(m[1], 10) : null;
+  };
+  const minN = everyN(min);
+  if (minN && hr === "*" && dom === "*" && mon === "*" && dow === "*") return minN;
+  const hrN = everyN(hr);
+  if (min === "0" && hrN && dom === "*" && mon === "*" && dow === "*") return hrN * 60;
+  const domN = everyN(dom);
+  if (min === "0" && hr === "0" && domN && mon === "*" && dow === "*") return domN * 1440;
+  if (/^\d+$/.test(min) && /^\d+$/.test(hr)) {
+    if (dom === "*" && mon === "*" && dow === "*") return 1440; // daily
+    if (dom === "*" && mon === "*" && dow !== "*") return 10080; // weekly
+    if (/^\d+$/.test(dom) && mon === "*" && dow === "*") return 43200; // monthly
+  }
+  return null;
+}
+
+/**
+ * Dead-man's-switch: is a cron overdue? True when its last successful run is
+ * older than `graceFactor` × its estimated period. Returns false when the
+ * period can't be estimated or there's no prior run (nothing to compare).
+ */
+export function isOverdue(
+  lastSuccessIso: string | null,
+  expr: string,
+  now: number = Date.now(),
+  graceFactor = 2,
+): boolean {
+  if (!lastSuccessIso) return false;
+  const period = estimatePeriodMinutes(expr);
+  if (!period) return false;
+  const ageMin = (now - new Date(lastSuccessIso).getTime()) / 60000;
+  return ageMin > period * graceFactor;
+}
+
 /** The next fire time for an expression (authoritative — uses node-cron's own
  *  scheduler). Returns null if the expression is invalid. */
 export function nextRun(expr: string, timezone?: string): Date | null {

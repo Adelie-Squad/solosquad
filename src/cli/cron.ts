@@ -271,6 +271,12 @@ export async function cronShowCommand(id: string): Promise<void> {
   console.log(`  cron:    ${def.cron}  ${chalk.dim(`(${describeSchedule(def.cron)})`)}`);
   const next = nextRun(def.cron);
   if (next) console.log(`  next:    ${chalk.dim(next.toLocaleString())}`);
+  const recent = await recentRunsAcrossOrgs(def.id, 1);
+  if (recent[0]) {
+    const r = recent[0];
+    const tag = r.status === "ok" ? chalk.green("ok") : r.status === "silent" ? chalk.dim("silent") : chalk.red("error");
+    console.log(`  last:    ${tag} ${chalk.dim(new Date(r.finishedAt).toLocaleString())}`);
+  }
   if (def.channel) console.log(`  channel: ${def.channel}`);
   const prompt = cronMdPath(def.id, dir);
   console.log(`  prompt:  ${promptExists(def.id) ? prompt : chalk.red(`${prompt} (missing)`)}`);
@@ -322,6 +328,52 @@ export async function cronValidateCommand(): Promise<void> {
   } else {
     console.log(chalk.red(`✗ ${failed} failed (of ${defs.length})`));
     process.exitCode = 1;
+  }
+}
+
+/** Aggregate run records for an id (or all) across every org, newest-first. */
+async function recentRunsAcrossOrgs(id: string | undefined, limit: number): Promise<import("../scheduler/cron-runlog.js").CronRunRecord[]> {
+  const { loadProducts } = await import("../util/config.js");
+  const { getReposBase } = await import("../util/paths.js");
+  const { readCronRuns } = await import("../scheduler/cron-runlog.js");
+  const base = getReposBase();
+  const all = loadProducts().flatMap((p) => readCronRuns(path.join(base, p.slug), { id }));
+  all.sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
+  return all.slice(0, limit);
+}
+
+/** `cron runs [ref]` — recent run history (status / when / duration). */
+export async function cronRunsCommand(ref: string | undefined, opts: { limit?: string } = {}): Promise<void> {
+  let id: string | undefined;
+  if (ref) {
+    if (BUILTIN_IDS.has(ref)) id = ref;
+    else {
+      const r = resolveCronRef(ref);
+      if (r.kind === "ambiguous") {
+        console.error(chalk.red(`✗ "${ref}" is ambiguous — matches: ${r.matches.join(", ")}`));
+        process.exitCode = 2;
+        return;
+      }
+      if (r.kind === "missing") {
+        console.error(chalk.red(`✗ no cron "${ref}". Try \`solosquad cron list\`.`));
+        process.exitCode = 1;
+        return;
+      }
+      id = r.id;
+    }
+  }
+  const limit = Math.max(1, parseInt(opts.limit ?? "20", 10) || 20);
+  const runs = await recentRunsAcrossOrgs(id, limit);
+  if (runs.length === 0) {
+    console.log(chalk.dim(`(no run history${id ? ` for ${id}` : ""} yet)`));
+    return;
+  }
+  const mark = (s: string) => (s === "ok" ? chalk.green("ok") : s === "silent" ? chalk.dim("silent") : chalk.red("error"));
+  for (const r of runs) {
+    const when = new Date(r.finishedAt).toLocaleString();
+    const dur = `${(r.ms / 1000).toFixed(1)}s`;
+    const idTag = id ? "" : ` ${chalk.cyan(r.id)}`;
+    console.log(`  ${mark(r.status)}${idTag}  ${chalk.dim(when)}  ${chalk.dim(dur)}${r.error ? chalk.red(`  ${r.error}`) : ""}`);
   }
 }
 
