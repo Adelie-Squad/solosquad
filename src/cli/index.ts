@@ -414,62 +414,39 @@ const chiefGroup = program
   .command("chief")
   .description("Manage Chief sessions (status / reset / compact)");
 
-// v1.2.10 — `pm` is the pre-v1.1 name for the Chief session driver. The verb
-// is kept as a hidden, deprecated alias (it's still documented in AGENTS.md,
-// which is immutable) so existing muscle-memory + scripts keep working. Both
-// groups dispatch to the same implementation in ./chief.js.
-const pmAliasGroup = program
-  .command("pm", { hidden: true })
-  .description("[deprecated alias for `chief`] Manage Chief sessions");
+// v1.3.3 — the pre-v1.1 `pm` verb (deprecated hidden alias since v1.2.10) was
+// removed; `chief` is the sole surface for session ops. The session driver,
+// cron id (`pm-compaction`), and on-disk `pm.*` event namespace are separate
+// data contracts and intentionally retained (see v1.2.10 §A.3).
+chiefGroup
+  .command("status")
+  .description("Show active Chief sessions, cumulative cost, and activity")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (o) => {
+    const { chiefStatusCommand } = await import("./chief.js");
+    await chiefStatusCommand(o);
+  });
 
-function warnPmAlias(sub: string): void {
-  console.error(
-    chalk.yellow(
-      `⚠ \`solosquad pm ${sub}\` is deprecated — use \`solosquad chief ${sub}\`. ` +
-        `The \`pm\` alias still works but may be removed in a future major.`
-    )
-  );
-}
+chiefGroup
+  .command("reset")
+  .description("Archive a user's Chief session and mint a new one")
+  .option("--org <slug>", "Organization slug (auto-picked if only one)")
+  .option("--user <id>", "User id to reset (interactive picker if omitted)")
+  .option("--reason <text>", "Reason for the rotation", "user-requested")
+  .option("-y, --yes", "Skip confirmation prompt")
+  .action(async (o) => {
+    const { chiefResetCommand } = await import("./chief.js");
+    await chiefResetCommand(o);
+  });
 
-/** Register the status/reset/compact subcommands on a group. `alias` groups
- *  emit a one-line deprecation notice before dispatching. */
-function registerChiefSubcommands(group: Command, opts: { alias: boolean }): void {
-  group
-    .command("status")
-    .description("Show active Chief sessions, cumulative cost, and activity")
-    .option("--org <slug>", "Filter to a specific organization")
-    .action(async (o) => {
-      if (opts.alias) warnPmAlias("status");
-      const { chiefStatusCommand } = await import("./chief.js");
-      await chiefStatusCommand(o);
-    });
-
-  group
-    .command("reset")
-    .description("Archive a user's Chief session and mint a new one")
-    .option("--org <slug>", "Organization slug (auto-picked if only one)")
-    .option("--user <id>", "User id to reset (interactive picker if omitted)")
-    .option("--reason <text>", "Reason for the rotation", "user-requested")
-    .option("-y, --yes", "Skip confirmation prompt")
-    .action(async (o) => {
-      if (opts.alias) warnPmAlias("reset");
-      const { chiefResetCommand } = await import("./chief.js");
-      await chiefResetCommand(o);
-    });
-
-  group
-    .command("compact")
-    .description("Run the compaction cron to externalize completed workflows")
-    .option("--org <slug>", "Filter to a specific organization")
-    .action(async (o) => {
-      if (opts.alias) warnPmAlias("compact");
-      const { chiefCompactCommand } = await import("./chief.js");
-      await chiefCompactCommand(o);
-    });
-}
-
-registerChiefSubcommands(chiefGroup, { alias: false });
-registerChiefSubcommands(pmAliasGroup, { alias: true });
+chiefGroup
+  .command("compact")
+  .description("Run the compaction cron to externalize completed workflows")
+  .option("--org <slug>", "Filter to a specific organization")
+  .action(async (o) => {
+    const { chiefCompactCommand } = await import("./chief.js");
+    await chiefCompactCommand(o);
+  });
 
 const workflowGroup = program
   .command("workflow")

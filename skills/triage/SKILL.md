@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Chief 의 과제 분류 도구. 사용자 입력을 4-way 분류 (discussion / workflow / schedule / goal) + Educational Nudge (불명확 시 KNOWLEDGE 가이드 선제시).
+description: Chief 의 과제 분류 도구. 사용자 입력을 4-way 분류 (discussion / workflow / cron / goal) + Educational Nudge (불명확 시 KNOWLEDGE 가이드 선제시).
 schema_version: 2
 tier: leader
 team: _skill
@@ -26,7 +26,7 @@ pm_conventions:
 |---|---|---|
 | **discussion** | 대화 자체로 종결. clarification / status check / light reply | "어떻게 지내?", "지금 진행 중인 게 뭐야?" |
 | **workflow** | 일회성 chain (PRD → 분해 → 실행 → 보고) | "X 기능 만들자", "캠페인 준비해줘" |
-| **schedule** | 반복 (cron 등록) | "매일 아침 brief 보여줘", "주간 회고 자동화" |
+| **cron** | 반복 (cron 등록) | "매일 아침 brief 보여줘", "주간 회고 자동화" |
 | **goal** | 자율 실행 (metric 기반 keep/discard) | "Y 지표를 Z 까지 올리는 방법 찾아줘" |
 
 ## Triage Stage 0 — Educational Nudge
@@ -45,7 +45,7 @@ pm_conventions:
 ## 출력
 
 ```yaml
-classification: discussion | workflow | schedule | goal
+classification: discussion | workflow | cron | goal
 confidence: 0-100
 educational_nudge:
   needed: true | false

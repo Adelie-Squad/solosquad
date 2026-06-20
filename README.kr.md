@@ -61,7 +61,7 @@ SoloSquad의 핵심 약속은 **"사용자가 코드를 직접 보지 않고도,
 - **OAuth Invite URL 1-click** — `solosquad discord invite-url` 가 application client_id + 권장 10-perm bitfield (verification trigger 6건은 의도적 배제) 합성 → 브라우저 자동 open → clipboard fallback.
 - **handle 기반 채널 portability** — 한 사용자가 Discord 서버 N개 + 추후 Slack workspace 추가해도 모든 표면이 동일한 `command-<handle>` / `works-<handle>` 페어 자동 재사용.
 - **owner-only 게이트** (신규 설치 default ON, 업그레이드는 OFF — neutral) — Chief 가 워크스페이스 owner 의 메시지만 처리. 미일치 사용자는 silently ignore + 첫 1회 ephemeral 안내.
-- **TRIAGE kind 분기** — 짧은 대화는 command 채널 평탄 응답. `workflow` / `schedule` / `goal` 은 `works-<handle>` 채널에 task card embed + thread 자동 생성, sub-agent 활동(DECOMPOSE / DISPATCH / AWAIT)이 thread 내부에 narration. command 채널엔 `📋 작업 등록됨 → <thread URL>` 1줄.
+- **TRIAGE kind 분기** — 짧은 대화는 command 채널 평탄 응답. `workflow` / `cron` / `goal` 은 `works-<handle>` 채널에 task card embed + thread 자동 생성, sub-agent 활동(DECOMPOSE / DISPATCH / AWAIT)이 thread 내부에 narration. command 채널엔 `📋 작업 등록됨 → <thread URL>` 1줄.
 - **`solosquad add org`** 가 새 조직을 *완전 동작 상태* 로 부트스트랩 — Chief 이름 + v1.1.0 위계 (agents/main/chief, 4 teams, memory/open-questions·ledger, knowledge/) + `problem-definition` workflow 기본 시드 + Discord inline 연결.
 - **`solosquad doctor --discord` 5-hop diagnostic** — token shape → REST `/users/@me` → bot_user_id match → guild membership → command 채널 ID. 매 hop attributable + actionable.
 - **guildCreate onboarding embed + 2 button** (Auto-create / Manual choose) + `/chat` slash command (MESSAGE_CONTENT intent 거부 fallback).
@@ -241,18 +241,18 @@ Mac Mini · PC · VPS 어디서든 동작. 데이터는 사용자 머신에. 외
 solosquad init                                    # 워크스페이스 셋업 wizard (v0.8 polish: 6→4단계)
 solosquad init --verify                           # e2e 셋업 검증 (토큰 ping → 채널 생성 → echo)
 solosquad bot                                     # 메신저 봇 기동
-solosquad schedule                                # 자동 루틴 스케줄러 기동
+solosquad cron start                              # 자동 cron 스케줄러 기동
 solosquad status                                  # 대시보드 (org / 워크플로우 / 최근 활동)
 solosquad doctor                                  # 환경 진단
 solosquad doctor --messenger-check                # 라이브 API 로 토큰 검증
 solosquad doctor --messenger-verify               # v0.8 멀티 유저 메신저 점검
 solosquad update                                  # npm latest 확인 + 설치
-solosquad run-routine [name]                      # 루틴 수동 실행
+solosquad cron run [name]                         # cron 수동 실행
 
-# PM 모드 (v0.3)
-solosquad pm status                               # 활성 PM 세션 / 누적 비용
-solosquad pm reset                                # 사용자 세션 archive + 새로 발급
-solosquad pm compact                              # 완료 워크플로 외부화
+# Chief 세션 운영 (v0.3, v1.1 에서 PM→Chief 리네임)
+solosquad chief status                            # 활성 Chief 세션 / 누적 비용
+solosquad chief reset                             # 사용자 세션 archive + 새로 발급
+solosquad chief compact                           # 완료 워크플로 외부화
 solosquad workflow list                           # 워크플로 목록
 solosquad workflow show <wf-id>                   # 단계 + 최근 이벤트
 solosquad workflow focus <wf-id> [--clear]        # 세션별 active 워크플로 지정/해제
@@ -331,8 +331,8 @@ solosquad sync                                    # repositories/ ↔ .org.yaml 
 
 | 프로세스 | 역할 |
 |---|---|
-| `solosquad bot` | 메신저 메시지 수신 → 사용자의 long-lived PM 세션 (`orchestrator/SKILL.md`, v0.3) 재개 → 4채널 라우터가 어떤 specialist를 로드할지 결정 (`slash > explicit > keyword > freq`, v0.5) → Claude Code 의 native `Task` tool 로 fresh subagent에 위임 → tool 결과를 종합해 응답 |
-| `solosquad schedule` | cron 기반 루틴 (디폴트 3종 — 위 표) 실행, 결과를 JSONL 메모리 파일에 append |
+| `solosquad bot` | 메신저 메시지 수신 → 사용자의 long-lived Chief 세션 (`orchestrator/SKILL.md`, v0.3) 재개 → 4채널 라우터가 어떤 specialist를 로드할지 결정 (`slash > explicit > keyword > freq`, v0.5) → Claude Code 의 native `Task` tool 로 fresh subagent에 위임 → tool 결과를 종합해 응답 |
+| `solosquad cron start` | cron (디폴트 3종 — 위 표) 실행, 결과를 JSONL 메모리 파일에 append |
 
 봇 위에 얹히는 추가 모드 2종:
 
@@ -430,11 +430,11 @@ bin/solosquad.ts                  → CLI 진입점
 AGENTS.md                         → 워크스페이스 정합 가이드 (v0.4 — immutable, cross-tool)
 CLAUDE.md                         → AGENTS.md 로의 3줄 redirect (백워드 호환)
 src/
-  cli/                            → CLI 명령 (init, bot, schedule, doctor, pm, workflow,
+  cli/                            → CLI 명령 (init, bot, cron, doctor, chief, workflow,
                                      goal, agent, analyze, add, sync, migrate, rollback,
                                      memory, readiness, uninstall, import, archive,
                                      add-repo, logs, messenger)
-  bot/                            → pm-runner, claude-process, session-store, events,
+  bot/                            → chief-runner, claude-process, session-store, events,
                                      agents-builder, workflow-reconciler, slash-commands,
                                      git-snapshot, skill-parser, agent-router,
                                      spawn-assembler (v0.6 8-layer JIT),

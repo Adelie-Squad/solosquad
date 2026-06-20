@@ -74,7 +74,7 @@ confidence_score:
 
 ## Per-Contributor Breakdown + Shipping Streak (gstack 차용)
 
-주간 retro 시 (`schedules/weekly-retro.md`):
+주간 retro 시 (`crons/weekly-retro.md`):
 
 ```yaml
 per_contributor:

@@ -43,7 +43,7 @@ pm_conventions:
 2. **과제화 (Triage)** — 입력을 4분류:
    - `discussion` — 대화 자체 (clarification, status check, light reply)
    - `workflow` — 일회성 chain (예: 기능 기획 → 구현 → 배포)
-   - `schedule` — 반복 (예: 매일 morning brief)
+   - `cron` — 반복 (예: 매일 morning brief)
    - `goal` — 자율 실행 (metric 기반 keep/discard)
 3. **에이전트 오케스트레이션** — 4 main bot 에게 dispatch + 결과 종합
 4. **회고 / 자가학습 / Skill·Workflow 개선** — cycle 종료 시 retrospective / skill-refinement / workflow-refinement skill 호출
@@ -58,7 +58,7 @@ TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROS
 
 | Stage | 입력 | 출력 | 사용 skill |
 |---|---|---|---|
-| TRIAGE | 사용자 메시지 | 분류 결과 (**`kind` 명시 — chat/workflow/schedule/goal**) + Educational Nudge | `triage/SKILL.md` |
+| TRIAGE | 사용자 메시지 | 분류 결과 (**`kind` 명시 — chat/workflow/cron/goal**) + Educational Nudge | `triage/SKILL.md` |
 | DECOMPOSE | triage 결과 | 작업 분해 (PM 호출 / 다른 main 직접 / single skill) | — |
 | DISPATCH | 분해 결과 | spawn 명령 | — |
 | AWAIT | dispatch 응답 대기 | open_questions[] 도착 시 사용자에게 batch 질의 | — |
@@ -68,14 +68,14 @@ TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROS
 
 ### TRIAGE 출력 `kind` 마커 (v1.2 §6.2)
 
-매 turn 의 응답 첫 줄에 `[kind:<chat|workflow|schedule|goal>]` 마커를 출력한다. messenger adapter 는 이 마커를 기반으로 라우팅 분기 — chat 은 command 채널 평탄, workflow/schedule/goal 은 works-handle 채널에 task card embed + thread 자동 생성.
+매 turn 의 응답 첫 줄에 `[kind:<chat|workflow|cron|goal>]` 마커를 출력한다. messenger adapter 는 이 마커를 기반으로 라우팅 분기 — chat 은 command 채널 평탄, workflow/cron/goal 은 works-handle 채널에 task card embed + thread 자동 생성.
 
 - `chat` — 단순 논의 / 메모리 lookup / 짧은 응답 (default).
 - `workflow` — 사용자 또는 Chief 가 workflow 실행을 결정 (`<org>/workflows/` 에 등록되거나 새로 만들 단위).
-- `schedule` — 반복 routine 등록 (e.g. 매일 morning brief 보강, 매주 retrospective).
+- `cron` — 반복 cron 등록 (e.g. 매일 morning brief 보강, 매주 retrospective).
 - `goal` — autonomous goal 등록 (`solosquad goal run` 단위).
 
-판단이 애매하면 `chat`. user 가 명시적으로 *"워크플로", "/workflow", "schedule 등록", "/goal"* 등 사용 시 해당 kind 로 분류. 마커는 응답 본문에서 자동 제거되므로 사용자 표면에는 안 보임.
+판단이 애매하면 `chat`. user 가 명시적으로 *"워크플로", "/workflow", "cron 등록", "매일/매주 자동화", "/goal"* 등 사용 시 해당 kind 로 분류. 마커는 응답 본문에서 자동 제거되므로 사용자 표면에는 안 보임.
 
 ## Triage Stage 0 — Educational Nudge
 
@@ -95,13 +95,26 @@ PM 또는 specialist 가 `<org>/memory/open-questions/<task-id>.json` 에 질문
 
 자세한 schema 는 PRD §6.3 + Appendix B 참조.
 
+## Multi-Repo Intent (v1.0.1+)
+
+org 에 repo 가 2개 이상이면 봇 전처리기(`src/bot/mention-parser.ts`)가 사용자 메시지의
+`@<slug>` 멘션을 등록된 repo 와 대조해, 프롬프트 맨 앞에 라우팅 마커를 주입한다 (routing
+단계에서 LLM 호출 0회):
+
+- `[target_repo:<slug>]`     — 단일 repo 대상
+- `[target_repos:<a>,<b>]`   — 복수 repo 대상
+
+이 마커가 보이면 명시된 repo 를 작업 대상으로 **확정**하고, dispatch 하는 sub-agent 프롬프트에
+해당 repo 의 절대경로를 포함한다. 마커가 없으면 메시지 내용으로 target repo 를 추론한다.
+마커는 라우팅 힌트이므로 `[kind:...]` 와 마찬가지로 사용자 응답 본문에는 노출하지 않는다.
+
 ## 의사결정 권한
 
 | 영역 | Chief 결정 | PM 결정 |
 |---|---|---|
 | 분기 OKR | ✅ | — |
 | Task 분류 | ✅ | — |
-| Schedule 등록 | ✅ | — |
+| Cron 등록 | ✅ | — |
 | 사용자 응답 톤 | ✅ | — |
 | 문제 정의 | — | ✅ |
 | 가설/실험 설계 | — | ✅ |

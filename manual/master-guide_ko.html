@@ -1697,7 +1697,7 @@ git push --dry-run        # 워크스페이스 안에서도 인증 동작 확인
   A. 환경변수 <code>SOLOSQUAD_LOG_FILE=1</code>을 설정하면 <code>&lt;workspace&gt;/.solosquad/logs/solosquad-YYYY-MM-DD.log</code>에 일별 rolling. <code>solosquad logs --tail 200 --follow</code>로 실시간 tail. <code>--type costs/spawn/stop-hook/dev-confirm/migration</code>로 4 operational jsonl 직접 조회. 보존은 14일(매일 00:30 log-rotate routine이 자동 정리).</p>
 
   <p><strong>Q. (v0.8.3) <code>solosquad logout</code>은 어디로 갔나요?</strong><br>
-  A. v0.7에서 추가됐다가 v0.8.3에서 제거됐습니다. 사용 가치 < 구현 복잡도 판정. 대체 흐름: 봇 일시 중지는 <strong>Ctrl+C</strong>로 프로세스 종료(다시 시작은 <code>solosquad bot</code>), .env 시크릿 마스킹/REVOKE 체크리스트는 <code>solosquad uninstall --archive-only</code>가 동일하게 제공, sessions 보관은 <code>&lt;org&gt;/.solosquad/sessions/</code>에서 직접 이동 또는 <code>solosquad pm reset --user &lt;id&gt;</code>. 기존 <code>logout.lock</code> 파일은 v0.8.3에서 inert가 되었으므로 수동 삭제 가능.</p>
+  A. v0.7에서 추가됐다가 v0.8.3에서 제거됐습니다. 사용 가치 < 구현 복잡도 판정. 대체 흐름: 봇 일시 중지는 <strong>Ctrl+C</strong>로 프로세스 종료(다시 시작은 <code>solosquad bot</code>), .env 시크릿 마스킹/REVOKE 체크리스트는 <code>solosquad uninstall --archive-only</code>가 동일하게 제공, sessions 보관은 <code>&lt;org&gt;/.solosquad/sessions/</code>에서 직접 이동 또는 <code>solosquad chief reset --user &lt;id&gt;</code>. 기존 <code>logout.lock</code> 파일은 v0.8.3에서 inert가 되었으므로 수동 삭제 가능.</p>
 
   <p><strong>Q. (v0.8.3) trajectory 자동 등록은 언제 활성화되나요?</strong><br>
   A. v0.6에서 정의한 ROI 4지표(① 30일 제안 ≥ 5건 ② 채택률 ≥ 60% ③ 채택 SKILL의 30일 사용률 ≥ 평균 ④ reject cooldown < 30%) 중 모두 통과 시 v0.9에서 <code>workspace.yaml.trajectory.auto_register: true</code>가 기본값이 됩니다. 1개라도 fail이면 "제안만 영구" 잠금. v0.8.3 패치는 측정값을 CHANGELOG에 박제만 합니다 (자동 등록 코드는 v0.9에서 추가).</p>

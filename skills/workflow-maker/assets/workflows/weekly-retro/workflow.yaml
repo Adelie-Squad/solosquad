@@ -1,6 +1,6 @@
 # weekly-retro workflow template (v1.1).
 #
-# gstack /retro + /learn 결합. Chief 가 weekly schedule (schedules/weekly-
+# gstack /retro + /learn 결합. Chief 가 weekly cron (crons/weekly-
 # retro.md) 에서 호출. shipping streak + confidence score 갱신 + skill/
 # workflow refinement 제안 누적.
 #

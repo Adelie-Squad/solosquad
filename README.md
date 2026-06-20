@@ -187,10 +187,10 @@ solosquad doctor --messenger-check                # validate tokens via live API
 solosquad update                                  # check & install latest npm release
 solosquad cron run [name]                         # manual cron execution
 
-# PM mode (v0.3)
-solosquad pm status                               # active PM sessions, cumulative cost
-solosquad pm reset                                # archive a user's session, mint a new one
-solosquad pm compact                              # externalize completed workflows
+# Chief session ops (v0.3, renamed PM→Chief in v1.1)
+solosquad chief status                            # active Chief sessions, cumulative cost
+solosquad chief reset                             # archive a user's session, mint a new one
+solosquad chief compact                           # externalize completed workflows
 solosquad workflow list                           # list workflows
 solosquad workflow show <wf-id>                   # stages + recent events
 solosquad workflow focus <wf-id> [--clear]        # set/clear active workflow per session

@@ -1,6 +1,6 @@
 ---
 name: retrospective
-description: Cycle 종료 시 회고 진행. gstack /retro per-contributor breakdown + RO-PNA Confidence Score 갱신. Chief 가 RETROSPECT stage 에서 호출. weekly schedule 에서도 호출.
+description: Cycle 종료 시 회고 진행. gstack /retro per-contributor breakdown + RO-PNA Confidence Score 갱신. Chief 가 RETROSPECT stage 에서 호출. weekly cron 에서도 호출.
 schema_version: 2
 tier: leader
 team: _skill

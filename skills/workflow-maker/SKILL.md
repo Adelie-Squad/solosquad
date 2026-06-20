@@ -36,7 +36,7 @@ pm_conventions:
 | `discovery-cycle` | PM 자율 문제 정의 ("X 를 어떻게 만들지 분석") |
 | `pmf-validation` | PMF gate 시퀀스 ("이게 진짜 시장에 fit 되는지") |
 | `autoplan-pm` | 다중 PM specialist 빠른 chain ("일단 전체 plan 한번 만들자") |
-| `weekly-retro` | 주간 회고 (cron schedule 호출) |
+| `weekly-retro` | 주간 회고 (weekly cron 호출) |
 
 ## 합성 흐름
 
