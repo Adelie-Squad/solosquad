@@ -77,5 +77,8 @@
     "automation",
     "claude"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "overrides": {
+    "undici": "^6.27.0"
+  }
 }
