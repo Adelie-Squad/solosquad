@@ -216,7 +216,7 @@ SoloSquad 에는 재사용 가능한 자산이 4종 있고, 각각 멀티 repo·
         ▼
    PM (자율 product thinking)
         ▼
-   specialist × 4팀 (Strategy / Growth / Experience / Engineering)
+   specialist × 4팀 (product / design / engineering / marketing)
 ```
 
 - Chief 는 아이디어 → 명확화 질문(≤2) → PRD → `workflows/<id>/_status.yaml` 생성 →
@@ -224,9 +224,10 @@ SoloSquad 에는 재사용 가능한 자산이 4종 있고, 각각 멀티 repo·
 - 각 에이전트는 완료 시 `_handoff.md`(Summary·Artifacts·Key Decisions·Context·Open
   Questions)를 써서 다음 에이전트에 컨텍스트를 넘긴다 (Handoff Protocol).
 
-**24/7 자동 cron** (`AGENTS.md` §Automated Crons): 아침/저녁 브리프, 신호 스캔(12:00),
-실험 체크(16:00), 주간 리뷰(일 20:00), Chief compaction(23:00). cron 결과의 JSON 블록은
-자동 추출되어 JSONL 메모리에 append 된다.
+**24/7 자동 cron** (v1.3.4 빌트인 4종, `src/cron/crons.ts`): 아침 브리프 · 저녁 브리프 ·
+Chief compaction(23:00) · system-housekeeping(00:00). cron 결과의 JSON 블록은 자동 추출되어
+JSONL 메모리에 append 되고, 출력은 `#works-<handle>` 로 배달된다(§12). (구 신호 스캔·실험
+체크·주간 리뷰는 v0.8.5 에서 제거 — 도메인 분석은 user-authored workflow/goal 로.)
 
 > **참가자 적용:** 4종을 다 만들 필요는 없다. 워크샵 MVP 는 **skill 1개(절차) + cron 1개
 > (매일 신호 요약)** 면 충분히 "상주 파트너"가 된다. agent/workflow 는 작업이 복잡해지면 추가.
@@ -243,7 +244,7 @@ SoloSquad 에는 재사용 가능한 자산이 4종 있고, 각각 멀티 repo·
 | **수명** | 세션 단위 — 닫으면 휘발 | org 단위 영속 — hot JSONL + cold FTS5 archive(365일) |
 | **기억** | 컨텍스트 윈도우 + 수동 CLAUDE.md | 8-layer JIT 자동 주입 + spawn-decision 로그 + `decisions.jsonl` 드롭박스 |
 | **접근** | 터미널/IDE 앞에 사람이 있어야 함 | 메신저 대화만으로 운영(conversation-only), 코드 안 봐도 됨 |
-| **시간** | 사람이 칠 때만 동작 | cron 으로 밤새 자율(신호 스캔·실험 체크·brief) |
+| **시간** | 사람이 칠 때만 동작 | cron 으로 밤새 자율(아침/저녁 brief · compaction · housekeeping) |
 | **분업** | 단일 에이전트(+ ad-hoc subagent) | Chief→PM→specialist 4팀 + 핸드오프 프로토콜 |
 | **사고 절차** | 프롬프트 그때그때 | hard_gate·anti-sycophancy·post-labeling·복수접근 *박제* |
 | **멀티 repo** | `--add-dir` 수동 | 매니페스트 자동 주입 + `@slug` 라우팅 + org 공유 메모리 |
