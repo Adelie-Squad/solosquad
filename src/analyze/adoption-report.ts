@@ -4,12 +4,12 @@ import yaml from "js-yaml";
 import { scanRepoAssets, type AssetKind, type ScannedAsset } from "./asset-scanner.js";
 import { parseSkillMd, validateSkill, SkillParseError } from "../bot/skill-parser.js";
 import { validateWorkflow } from "../bot/workflow-validate.js";
-import { validateCronDef } from "../scheduler/cron-validate.js";
-import { coerceCronDef } from "../scheduler/cron-def.js";
+import { validateCronDef } from "../cron/cron-validate.js";
+import { coerceCronDef } from "../cron/cron-def.js";
 import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
 import { mapAgentToTaxonomy, mapAgentTeam, type AgentMapping, type AgentTeamCaller } from "./agent-map.js";
 import { listSourceAgents } from "../bot/agents-builder.js";
-import { CRONS } from "../scheduler/crons.js";
+import { CRONS } from "../cron/crons.js";
 import { getBundledSkillsDir, getBundledAgentsDir } from "../util/paths.js";
 
 /**

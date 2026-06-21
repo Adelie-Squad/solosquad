@@ -12,7 +12,7 @@ import {
   resolveCronRef,
   loadCronDefs,
   type CronDef,
-} from "../src/scheduler/cron-def.js";
+} from "../src/cron/cron-def.js";
 
 function tmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "sq-cronlc-"));

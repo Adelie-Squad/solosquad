@@ -9,7 +9,7 @@ import {
   lastCronRun,
   lastSuccessfulRun,
   type CronRunRecord,
-} from "../src/scheduler/cron-runlog.js";
+} from "../src/cron/cron-runlog.js";
 
 function orgDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "sq-runlog-"));

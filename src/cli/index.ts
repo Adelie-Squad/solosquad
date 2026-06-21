@@ -127,7 +127,7 @@ cronGroup
   .command("start")
   .description("Start the cron daemon (formerly `solosquad schedule`)")
   .action(async () => {
-    const { startScheduler } = await import("../scheduler/index.js");
+    const { startScheduler } = await import("../cron/index.js");
     await startScheduler();
   });
 

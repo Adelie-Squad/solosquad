@@ -4,8 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { validateCronDef } from "../src/scheduler/cron-validate.js";
-import { loadCronDefs, type CronDef } from "../src/scheduler/cron-def.js";
+import { validateCronDef } from "../src/cron/cron-validate.js";
+import { loadCronDefs, type CronDef } from "../src/cron/cron-def.js";
 import { cronShowCommand } from "../src/cli/cron.js";
 
 function def(p: Partial<CronDef>): CronDef {

@@ -10,7 +10,7 @@ import {
   suggestionToDraft,
   recordRejection,
   type TrajectorySuggestion,
-} from "../src/scheduler/trajectory-extractor.js";
+} from "../src/cron/trajectory-extractor.js";
 import {
   recordSpawnDecision,
   getSinkPath,

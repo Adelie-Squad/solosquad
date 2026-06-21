@@ -11,13 +11,13 @@ import {
   resolveCronRef,
   cronMdPath,
   type CronDef,
-} from "../scheduler/cron-def.js";
+} from "../cron/cron-def.js";
 import {
   validateCronDef,
   type CronFinding,
-} from "../scheduler/cron-validate.js";
-import { normalizeSchedule, describeSchedule, nextRun, nextRuns, parseWhen } from "../scheduler/cron-schedule.js";
-import { CRONS } from "../scheduler/crons.js";
+} from "../cron/cron-validate.js";
+import { normalizeSchedule, describeSchedule, nextRun, nextRuns, parseWhen } from "../cron/cron-schedule.js";
+import { CRONS } from "../cron/crons.js";
 
 const BUILTIN_IDS = new Set(CRONS.map((r) => r.id));
 
@@ -411,10 +411,10 @@ export async function cronValidateCommand(): Promise<void> {
 }
 
 /** Aggregate run records for an id (or all) across every org, newest-first. */
-async function recentRunsAcrossOrgs(id: string | undefined, limit: number): Promise<import("../scheduler/cron-runlog.js").CronRunRecord[]> {
+async function recentRunsAcrossOrgs(id: string | undefined, limit: number): Promise<import("../cron/cron-runlog.js").CronRunRecord[]> {
   const { loadProducts } = await import("../util/config.js");
   const { getReposBase } = await import("../util/paths.js");
-  const { readCronRuns } = await import("../scheduler/cron-runlog.js");
+  const { readCronRuns } = await import("../cron/cron-runlog.js");
   const base = getReposBase();
   const all = loadProducts().flatMap((p) => readCronRuns(path.join(base, p.slug), { id }));
   all.sort((a, b) => b.finishedAt.localeCompare(a.finishedAt));
@@ -464,7 +464,7 @@ export async function cronRunsCommand(ref: string | undefined, opts: { limit?: s
 export async function cronFreqCommand(opts: { apply?: string } = {}): Promise<void> {
   const { loadProducts } = await import("../util/config.js");
   const { getReposBase } = await import("../util/paths.js");
-  const { mineFrequentKeywords, applyKeywordSuggestion } = await import("../scheduler/freq-keyword-miner.js");
+  const { mineFrequentKeywords, applyKeywordSuggestion } = await import("../cron/freq-keyword-miner.js");
   const base = getReposBase();
   const products = loadProducts();
   if (!products.length) {

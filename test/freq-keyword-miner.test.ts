@@ -10,7 +10,7 @@ import {
   recordKeywordRejection,
   freqSuggestionLine,
   type KeywordSuggestion,
-} from "../src/scheduler/freq-keyword-miner.js";
+} from "../src/cron/freq-keyword-miner.js";
 import { recordRouteMiss } from "../src/memory/route-event-sink.js";
 import { installRoutes } from "../src/bot/agent-router.js";
 import { parseSkillMd } from "../src/bot/skill-parser.js";

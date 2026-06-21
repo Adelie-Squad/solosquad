@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveUserCrons } from "../src/scheduler/user-crons.js";
+import { resolveUserCrons } from "../src/cron/user-crons.js";
 import type { UserYaml } from "../src/bot/user-registry.js";
 
 function user(handle: string, over: Partial<UserYaml> = {}): UserYaml {

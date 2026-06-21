@@ -4,9 +4,9 @@ import inquirer from "inquirer";
 import { runClaude } from "../bot/claude-runner.js";
 import { loadProducts, loadEnv } from "../util/config.js";
 import { getReposBase } from "../util/paths.js";
-import { CRONS, loadCronPrompt, type CronConfig } from "../scheduler/crons.js";
-import { loadCronDefs, resolveCronRef } from "../scheduler/cron-def.js";
-import { saveCronMemory } from "../scheduler/memory.js";
+import { CRONS, loadCronPrompt, type CronConfig } from "../cron/crons.js";
+import { loadCronDefs, resolveCronRef } from "../cron/cron-def.js";
+import { saveCronMemory } from "../cron/memory.js";
 import fs from "fs";
 
 /**

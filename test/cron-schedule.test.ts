@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSchedule, describeSchedule, nextRun, nextRuns, estimatePeriodMinutes, isOverdue, parseWhen, parseDelaySeconds } from "../src/scheduler/cron-schedule.js";
-import { isSilentResult } from "../src/scheduler/crons.js";
+import { normalizeSchedule, describeSchedule, nextRun, nextRuns, estimatePeriodMinutes, isOverdue, parseWhen, parseDelaySeconds } from "../src/cron/cron-schedule.js";
+import { isSilentResult } from "../src/cron/crons.js";
 
 // v1.3.4 §A — jitter/delay parsing.
 test("parseDelaySeconds handles s/m/h and rejects junk", () => {
