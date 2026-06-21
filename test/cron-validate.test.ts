@@ -164,7 +164,7 @@ test("cronNewCommand: scaffolds valid files", async () => {
   fs.writeFileSync(path.join(dir, ".solosquad", "workspace.yaml"), "version: 1.3.1\n");
   process.chdir(dir);
   try {
-    await cronNewCommand("weekly-digest", { cron: "0 9 * * 1", kind: "background" });
+    await cronNewCommand("weekly-digest", { cron: "0 9 * * 1", kind: "background", yes: true });
     const base = path.join(dir, ".solosquad", "crons");
     assert.ok(fs.existsSync(path.join(base, "weekly-digest.yaml")));
     assert.ok(fs.existsSync(path.join(base, "weekly-digest.md")));

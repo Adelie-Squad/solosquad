@@ -16,7 +16,7 @@ import {
   validateCronDef,
   type CronFinding,
 } from "../scheduler/cron-validate.js";
-import { normalizeSchedule, describeSchedule, nextRun, parseWhen } from "../scheduler/cron-schedule.js";
+import { normalizeSchedule, describeSchedule, nextRun, nextRuns, parseWhen } from "../scheduler/cron-schedule.js";
 import { CRONS } from "../scheduler/crons.js";
 
 const BUILTIN_IDS = new Set(CRONS.map((r) => r.id));
@@ -74,6 +74,8 @@ export interface CronNewOpts {
   at?: string;
   kind?: string;
   channel?: string;
+  timezone?: string;
+  yes?: boolean;
 }
 
 /**
@@ -100,7 +102,18 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
   }
 
   const kind = opts.kind === "user-brief" ? "user-brief" : "background";
-  const channel = opts.channel ?? "workflow";
+  // v1.3.4 §F2 — channel defaults to "" (auto-resolve works-<handle> at runtime).
+  const channel = opts.channel ?? "";
+  // v1.3.4 §C — validate an explicit timezone before we even preview.
+  if (opts.timezone) {
+    const { isValidIanaTimezone, suggestTimezone } = await import("../util/timezone.js");
+    if (!isValidIanaTimezone(opts.timezone)) {
+      const hint = suggestTimezone(opts.timezone);
+      console.error(chalk.red(`✗ --timezone "${opts.timezone}" is not a valid IANA name${hint ? ` — did you mean "${hint}"?` : ""}`));
+      process.exitCode = 2;
+      return;
+    }
+  }
 
   let def: CronDef;
   if (opts.at) {
@@ -111,10 +124,10 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
       process.exitCode = 2;
       return;
     }
-    def = { id, name: id, kind, cron: "", at: when.at, channel, emoji: "⏰", memoryTargets: [], enabled: true };
-    writeCronDef(def, dir, /* scaffoldPrompt */ true);
-    console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
+    def = { id, name: id, kind, cron: "", at: when.at, channel, timezone: opts.timezone, emoji: "⏰", memoryTargets: [], enabled: true };
+    // v1.3.4 §F4 — preview + confirm before writing.
     console.log(chalk.dim(`  one-shot: runs once at ${new Date(when.at).toLocaleString()}, then auto-deletes`));
+    if (!(await confirmOrAbort(`Create one-shot cron "${id}"?`, opts.yes))) return;
   } else {
     // Friendly recurring schedule (cron expr | @daily | "every 1h") → cron expression.
     const norm = normalizeSchedule(opts.cron ?? "0 9 * * 1");
@@ -123,12 +136,15 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
       process.exitCode = 2;
       return;
     }
-    def = { id, name: id, kind, cron: norm.cron, channel, emoji: "⏰", memoryTargets: [], enabled: true };
-    writeCronDef(def, dir, /* scaffoldPrompt */ true);
-    console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
+    def = { id, name: id, kind, cron: norm.cron, channel, timezone: opts.timezone, emoji: "⏰", memoryTargets: [], enabled: true };
+    // v1.3.4 §B/§F4 — preview the schedule + next runs, then confirm.
     console.log(chalk.dim(`  schedule: ${norm.describe} ("${norm.cron}")`));
-    printNextRun(norm.cron);
+    printNextRuns(norm.cron, opts.timezone);
+    if (!(await confirmOrAbort(`Create cron "${id}"?`, opts.yes))) return;
   }
+
+  writeCronDef(def, dir, /* scaffoldPrompt */ true);
+  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
 
   if (reportValidation(def)) {
     console.log(chalk.dim(`  Next: edit ${mdPath} (the prompt), then \`solosquad cron validate\``));
@@ -137,10 +153,25 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
   }
 }
 
-/** Print the next fire time as preview/validation feedback. */
-function printNextRun(expr: string): void {
-  const next = nextRun(expr);
-  if (next) console.log(chalk.dim(`  next run: ${next.toLocaleString()}`));
+/** v1.3.4 §B — print the next N fire times as a save-time preview. */
+function printNextRuns(expr: string, tz?: string, n = 5): void {
+  const runs = nextRuns(expr, n, tz);
+  if (runs.length === 0) {
+    const next = nextRun(expr, tz);
+    if (next) console.log(chalk.dim(`  next run: ${next.toLocaleString()}`));
+    return;
+  }
+  console.log(chalk.dim(`  next ${runs.length} run(s)${tz ? ` (${tz})` : ""}:`));
+  for (const d of runs) console.log(chalk.dim(`    • ${d.toLocaleString("en-US", tz ? { timeZone: tz } : {})}`));
+}
+
+/** v1.3.4 §F4/§E1 — confirm a destructive/creating action unless --yes. */
+async function confirmOrAbort(message: string, yes?: boolean): Promise<boolean> {
+  if (yes) return true;
+  const inquirer = (await import("inquirer")).default;
+  const { ok } = await inquirer.prompt([{ name: "ok", type: "confirm", default: true, message }]);
+  if (!ok) console.log(chalk.dim("aborted."));
+  return ok;
 }
 
 /** Human "in 2h 5m" / "overdue" for a one-shot ISO time. */
@@ -160,6 +191,8 @@ export interface CronEditOpts {
   name?: string;
   kind?: string;
   channel?: string;
+  timezone?: string;
+  yes?: boolean;
 }
 
 /** `cron edit <ref>` — patch fields of an existing user cron, then re-validate. */
@@ -168,7 +201,7 @@ export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Pro
   if (!id) return;
   const patch: Partial<CronDef> = {};
   if (opts.name) patch.name = opts.name;
-  if (opts.channel) patch.channel = opts.channel;
+  if (opts.channel !== undefined) patch.channel = opts.channel;
   if (opts.kind) {
     if (opts.kind !== "user-brief" && opts.kind !== "background") {
       console.error(chalk.red(`✗ --kind must be "user-brief" or "background"`));
@@ -176,6 +209,16 @@ export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Pro
       return;
     }
     patch.kind = opts.kind;
+  }
+  if (opts.timezone) {
+    const { isValidIanaTimezone, suggestTimezone } = await import("../util/timezone.js");
+    if (!isValidIanaTimezone(opts.timezone)) {
+      const hint = suggestTimezone(opts.timezone);
+      console.error(chalk.red(`✗ --timezone "${opts.timezone}" is not a valid IANA name${hint ? ` — did you mean "${hint}"?` : ""}`));
+      process.exitCode = 2;
+      return;
+    }
+    patch.timezone = opts.timezone;
   }
   if (opts.cron) {
     const norm = normalizeSchedule(opts.cron);
@@ -187,9 +230,16 @@ export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Pro
     patch.cron = norm.cron;
   }
   if (Object.keys(patch).length === 0) {
-    console.log(chalk.yellow(`△ nothing to change — pass --cron / --name / --kind / --channel`));
+    console.log(chalk.yellow(`△ nothing to change — pass --cron / --name / --kind / --channel / --timezone`));
     return;
   }
+  // v1.3.4 §B/§F4 — preview the resulting schedule, then confirm before writing.
+  if (patch.cron) {
+    console.log(chalk.dim(`  schedule: ${describeSchedule(patch.cron)} ("${patch.cron}")`));
+    printNextRuns(patch.cron, opts.timezone);
+  }
+  if (!(await confirmOrAbort(`Apply changes to cron "${id}"?`, opts.yes))) return;
+
   const def = patchCronDef(id, patch);
   if (!def) {
     console.error(chalk.red(`✗ could not read cron "${id}"`));
@@ -197,10 +247,6 @@ export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Pro
     return;
   }
   console.log(chalk.green(`✓ updated ${id}`));
-  if (patch.cron) {
-    console.log(chalk.dim(`  schedule: ${describeSchedule(def.cron)} ("${def.cron}")`));
-    printNextRun(def.cron);
-  }
   if (!reportValidation(def)) process.exitCode = 1;
 }
 
@@ -297,8 +343,12 @@ export async function cronShowCommand(id: string): Promise<void> {
     console.log(`  in:      ${chalk.dim(relativeFromNow(def.at))}`);
   } else {
     console.log(`  cron:    ${def.cron}  ${chalk.dim(`(${describeSchedule(def.cron)})`)}`);
-    const next = nextRun(def.cron);
-    if (next) console.log(`  next:    ${chalk.dim(next.toLocaleString())}`);
+    if (def.timezone) console.log(`  tz:      ${def.timezone}`);
+    const upcoming = nextRuns(def.cron, 5, def.timezone);
+    if (upcoming.length) {
+      console.log(`  next:    ${chalk.dim(upcoming[0].toLocaleString())}`);
+      for (const d of upcoming.slice(1)) console.log(`           ${chalk.dim(d.toLocaleString())}`);
+    }
   }
   const recent = await recentRunsAcrossOrgs(def.id, 1);
   if (recent[0]) {

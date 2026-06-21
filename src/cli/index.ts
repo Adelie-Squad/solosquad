@@ -156,7 +156,9 @@ cronGroup
   .option("--cron <expr>", "Recurring schedule: cron expr, @daily, or 'every 1h' (default '0 9 * * 1')")
   .option("--at <when>", "One-shot: ISO timestamp or '20m'/'2h' delay (runs once, then auto-deletes)")
   .option("--kind <kind>", "user-brief | background (default: background)")
-  .option("--channel <name>", "Target channel (default: workflow)")
+  .option("--channel <name>", "Override channel (default: auto → works-<handle>)")
+  .option("--timezone <tz>", "IANA timezone for this cron (default: workspace tz)")
+  .option("-y, --yes", "Skip the create confirmation")
   .action(async (id, opts) => {
     const { cronNewCommand } = await import("./cron.js");
     await cronNewCommand(id, opts);
@@ -205,7 +207,9 @@ cronGroup
   .option("--cron <expr>", "New schedule: cron expr, @daily, or 'every 1h'")
   .option("--name <name>", "New display name")
   .option("--kind <kind>", "user-brief | background")
-  .option("--channel <name>", "Target channel")
+  .option("--channel <name>", "Override channel (empty = auto → works-<handle>)")
+  .option("--timezone <tz>", "IANA timezone for this cron")
+  .option("-y, --yes", "Skip the edit confirmation")
   .action(async (ref, opts) => {
     const { cronEditCommand } = await import("./cron.js");
     await cronEditCommand(ref, opts);
