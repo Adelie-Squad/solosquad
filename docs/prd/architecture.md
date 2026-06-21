@@ -1200,6 +1200,28 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.27 v1.3.4 — Cron reliability: delivery·failure reporting·tz/jitter guards (2026-06-21)
+
+무인 실행 신뢰성 + 대화형 cron-manager.
+
+- **채널 버그 수정** — 빌트인/유저 cron 이 `init` 이 생성하지 않는 `#workflow` 로 post 해 조용히
+  유실(파일만 저장)되던 것을 `works-<handle>`(런타임 해소: broadcast owner→sole/first user)로
+  정정. 하드코딩 `"workflow"` 제거, `CronDef.channel` 기본 빈값(=auto). 개인화 brief 의 opt-in
+  게이트 제거 — 모든 유저가 자기 `works-<handle>` 로 brief 수신.
+- **실행·실패 보고** — 실패 시 `⚠️ [name] 실행 실패 — <사유>` 를 채널에 게시(`[SILENT]` 무관 +
+  연속 실패 노이즈 가드). dead-man's-switch 도 `works-<handle>` 로, "실행 누락 감지"로 순화.
+- **timezone 가드/피커** — `src/util/timezone.ts`(presets·`isValidIanaTimezone`·퍼지
+  `suggestTimezone`·`allTimezones`), `init` 재사용, `cron new/edit --timezone`, `CRON_TZ_INVALID`.
+- **지터+안전장치** — `CronDef.maxRandomDelay`(빌트인 brief 0–120s 기본), `CRON_TOO_FREQUENT`
+  (<5분 확장)·`CRON_DST_WINDOW`·`CRON_JITTER_TOO_LARGE`/`_INVALID`. `CRON_CHANNEL_MISSING` 제거.
+- **미리보기/확인/대화형 CRUD** — `nextRuns()` 로 다음 5회 발화, `cron new/edit` 적용 전 확인
+  (`--yes`), chief SKILL cron-manager 섹션(자산 재사용 우선·없으면 생성+validate).
+- **개명** — 빌트인 cron id `pm-compaction→chief-compaction`(thread·번들 프롬프트 동반, 코드
+  전용 — `pm` config 키는 유지), 디렉토리 `src/scheduler→src/cron`(런타임 식별자는 유지).
+- **deps** — `node-cron` v4 동기화. **마이그레이션** — `1.3.3→1.3.4` 체인 완결(무변환). 927 test green.
+
+자세히: `docs/prd/v1.3.4-cron-mastery.md`
+
 #### 13.6.26 v1.3.3 — Cron terminology unification (2026-06-19)
 
 routine(빌트인 잡)·schedule(사용자 잡) 두 개념을 단일 명사 **cron** 으로 통합. 동일 도메인을 두

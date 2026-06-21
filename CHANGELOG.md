@@ -4,6 +4,22 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.4] — 2026-06-21 (Cron reliability: delivery, failure reporting, timezone/jitter guards)
+
+v1.3.4 makes crons trustworthy to run unattended. It fixes a silent delivery bug, reports failures where you can see them, hardens scheduling, and gives the conversational cron-manager a full CRUD flow. See `docs/prd/v1.3.4-cron-mastery.md`.
+
+- **Channel fix (delivery bug).** Built-in and user crons posted to a `#workflow` channel that `init` never creates, so output was silently dropped (saved to file only). Crons now deliver to the org's **`works-<handle>`** channel (resolved at runtime: the broadcast owner, else the sole/first user). The hardcoded `"workflow"` channel is gone; `CronDef.channel` defaults to empty (= auto-resolve). Personalized briefs drop the opt-in gate — **every** user gets morning/evening briefs in their own `works-<handle>`; a workspace brief disabled via `briefings.*.enabled:false` is skipped for everyone.
+- **Run + failure reporting.** A failed cron now posts `⚠️ [name] 실행 실패 — <reason>` to its channel (independent of `[SILENT]`, which stays an opt-out for normal output only), with a noise guard that suppresses repeats when the prior run also errored. The dead-man's-switch (missed-run alert) posts to `works-<handle>` too and is surfaced in plain language ("실행 누락 감지").
+- **Timezone guard + picker.** New `src/util/timezone.ts` (presets, `isValidIanaTimezone`, fuzzy `suggestTimezone` "did you mean …?", `allTimezones`) — reused by `init`. `cron new`/`edit` take `--timezone` (validated, with a suggestion on typo). Invalid IANA names are rejected at validation time (`CRON_TZ_INVALID`).
+- **Jitter + safety guards.** `CronDef.maxRandomDelay` spreads simultaneous fires (built-in briefs default to a 0–120s spread) to avoid a thundering herd. New validations: `CRON_TOO_FREQUENT` extended from every-minute to **sub-5-minute**, `CRON_DST_WINDOW` (a fixed 00:00–02:59 local fire can be skipped/doubled on a DST transition), `CRON_JITTER_TOO_LARGE` / `CRON_JITTER_INVALID`. `CRON_CHANNEL_MISSING` removed (channel auto-resolves).
+- **Save-time preview.** `cron new`/`edit`/`show` print the **next 5 fire times** (tz-aware) via `nextRuns()`, replacing the single next-run line.
+- **Confirm before write + conversational CRUD.** `cron new`/`edit` confirm before writing (`-y/--yes` to skip; `delete` already confirmed). The Chief SKILL gains a **cron-manager** section: a guided C/R/U/D flow (name → schedule[preview] → task/report → save → test-run; list → select → overview → confirm) that is **asset-aware** — it reuses existing skill/agent/workflow assets and proposes creating + validating a new one only when the work is novel — plus a `cron runs` status query.
+- **Rename (code-only).** Built-in cron id `pm-compaction → chief-compaction` (thread `system-pm-compaction → system-chief-compaction`, bundle prompt `crons/chief-compaction.md`). The `workspace.yaml` `pm` config block key is intentionally kept (the pm→chief key rename is a separate migration). No data migration needed — it's a hardcoded built-in.
+- **Directory rename.** `src/scheduler/ → src/cron/` (all imports repointed) — finishes the cron-domain terminology alignment. The `scheduler`/`startScheduler` runtime identifiers are kept.
+- **Deps.** `node-cron` synced to v4 (declared `^4.2.1`; the installed tree was stale at 3.0.3).
+- **Migration.** `1.3.3 → 1.3.4` chain-completion bump (no on-disk transform) keeps the registry continuous.
+- 927 tests green (new `timezone.test.ts`, `nextRuns`/`parseDelaySeconds`, new validation codes, `migration-1.3.3-to-1.3.4.test.ts`; `user-crons`/`cron-validate` updated for the channel-model change). `validate-bundled` green.
+
 ## [1.3.3] — 2026-06-19 (Cron terminology unification + cron lifecycle)
 
 v1.3.3 unifies the two interchangeable names for scheduled jobs — **routine** (built-in jobs) and **schedule** (user-authored jobs) — into a single noun: **cron**, then gives crons a full create/edit/start-stop/delete lifecycle (referencing the OpenClaw and Hermes cron UX). This is a breaking rename across code, CLI, the bundled asset dir, and on-disk data paths, shipped with a migration that carries existing workspaces along. See `docs/prd/v1.3.3-cron-terminology.md`.
