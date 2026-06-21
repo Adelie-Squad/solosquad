@@ -285,20 +285,13 @@
         </ul>
       </li>
       <li>
-        <a data-target="s9">9. CHANGELOG</a>
+        <a data-target="s9">9. Troubleshooting &amp; FAQ</a>
         <ul class="sub">
-          <li><a href="#s9-1">9.1 Released</a></li>
-          <li><a href="#s9-2">9.2 Upcoming slots</a></li>
-        </ul>
-      </li>
-      <li>
-        <a data-target="s10">10. Troubleshooting &amp; FAQ</a>
-        <ul class="sub">
-          <li><a href="#s10-1">10.1 Install / Run</a></li>
-          <li><a href="#s10-2">10.2 Migration</a></li>
-          <li><a href="#s10-3">10.3 Uninstall · Reinstall</a></li>
-          <li><a href="#s10-4">10.4 Bot · Scheduler · dev_capability</a></li>
-          <li><a href="#s10-5">10.5 FAQ</a></li>
+          <li><a href="#s9-1">9.1 Install / Run</a></li>
+          <li><a href="#s9-2">9.2 Migration</a></li>
+          <li><a href="#s9-3">9.3 Uninstall · Reinstall</a></li>
+          <li><a href="#s9-4">9.4 Bot · Scheduler · dev_capability</a></li>
+          <li><a href="#s9-5">9.5 FAQ</a></li>
         </ul>
       </li>
     </ul>
@@ -377,7 +370,7 @@ Layer 2  Repository (code)    The actual product code — separated per repo</di
   </ul>
   <div class="callout info">
     <strong>The version this document covers</strong>
-    The current npm release is <span class="badge now">v1.3.2</span>. Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see Chapter 9, CHANGELOG.
+    The current version is <span class="badge now">v1.3.3</span>. Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see <code>CHANGELOG.md</code> in the repository root (the single source of truth).
   </div>
 </section>
 
@@ -1134,190 +1127,11 @@ solosquad sync                                      # reconcile repositories/ �
   </dl>
 </section>
 
-<!-- ========================== SECTION 9 ========================== -->
-<section id="s9">
-  <h2><span class="num">9.</span>CHANGELOG</h2>
-  <p>Core changes per released version. Full release notes live in <code>CHANGELOG.md</code> — this section mirrors the same content so the manual is self-contained.</p>
-
-  <h3 id="s9-1">9.1 Released (npm-published)</h3>
-
-  <h4>v1.3.3 (2026-06-19) <span class="badge now">latest</span> — Cron terminology unification</h4>
-  <ul>
-    <li><strong>Terminology unification</strong> — the two terms routine (built-in jobs) and schedule (user-authored jobs) are unified into a single noun, <strong>cron</strong>.</li>
-    <li><strong>CLI unification</strong> — <code>solosquad cron &lt;start|run|list|new|show|validate&gt;</code> (replacing the old <code>schedule</code>, <code>schedules</code>, and <code>run-routine</code>).</li>
-    <li><strong>Paths</strong> — bundle directory <code>crons/</code>, data paths <code>.solosquad/crons</code> and <code>memory/cron-logs</code>.</li>
-    <li><strong>Migration</strong> — the 1.3.2→1.3.3 migration moves existing workspace directories automatically (zero downtime).</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.3.3]</li>
-  </ul>
-
-  <h4>v1.3.2 (2026-06-19) — Asset lifecycle managers (skill·agent·workflow·goal·cron) + asset adoption</h4>
-  <ul>
-    <li><strong>Asset managers</strong> — the five asset kinds share one interface: <code>validate</code> (static gate), <code>list</code>/<code>show</code> (inspection). New unified front door <code>solosquad asset list|show|validate &lt;kind&gt;</code>, plus <code>solosquad commands</code> to see the whole CLI at a glance.</li>
-    <li><strong>agent manager</strong> (new, 5th) — <code>agent validate --graph</code> checks the cross-agent delegation graph (reference integrity, cycles, orphans).</li>
-    <li><strong>Asset adoption</strong> — <code>solosquad adopt &lt;repo&gt; [--apply] [--classify]</code> discovers a repo's skill/agent/workflow/cron assets, validates them, and additively adopts them into the workspace (namespaced on collision). <code>init</code>/<code>add repo</code> surface adoptable assets automatically.</li>
-    <li><strong>cron</strong> — user-defined crons are now a first-class create path: <code>cron new|list|show|validate</code> over <code>crons/&lt;id&gt;.yaml</code>.</li>
-    <li><strong>Conversational-first</strong> — LLM-judgment verbs (review, create-assist) live in <code>solosquad chat</code> via the <code>asset-review</code> skill, not as CLI verbs; the CLI stays deterministic/scriptable.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.3.2], <code>docs/prd/v1.3.2-domain-lifecycle-managers.md</code></li>
-  </ul>
-
-  <h4>v1.3.1 (2026-06-18) — Stabilization: empty the v1.1-leftover <code>assets/</code> + CI/deps hardening</h4>
-  <ul>
-    <li><strong>No user-facing features</strong> — internal stabilization release; behavior and tarball unchanged. Finishes the half-done v1.1 reorg by emptying the old <code>assets/</code> tree, and closes the CI/dependency issues surfaced while merging v1.3.0.</li>
-    <li><strong>CI / deps</strong> — <code>node-cron</code> 3→4 (TS rewrite drops the <code>uuid</code> dependency → clears 2 moderate advisories); moderate <code>npm audit</code> advisories now surfaced non-blockingly; Node baseline <code>&gt;=20</code>.</li>
-    <li><strong>Legacy <code>assets/</code> cleanup</strong> — removed the stale agent roster (<code>assets/agents/</code>, 25 agents) that <code>init</code> was copying as a second divergent roster; wired <code>routines/</code>→<code>crons/</code>; cleaned <code>knowledge/</code>·<code>core/</code>·<code>orchestrator/</code>; cleared all 22 <code>templates/</code> (15 retired + 7 inlined into their owning code). Result: <code>assets/</code> now holds only <code>docker/</code>.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.3.1], <code>docs/prd/v1.3.1-legacy-asset-cleanup.md</code></li>
-  </ul>
-
-  <h4>v1.3.0 (2026-06-16) — Messenger UX overhaul: dev-confirm push-approval gate + interaction components + artifact filing</h4>
-  <ul>
-    <li><strong>git push approval gate (Part A)</strong> — right before an agent runs <code>git push</code> / <code>gh pr merge</code> / <code>gh pr close</code>, a <strong>✅ approve / ❌ reject card</strong> is posted to your <code>command-&lt;handle&gt;</code> channel. The push proceeds only on approval. A direct push to a protected branch (main/master/develop) is auto-blocked with no card. The approval is recorded with the commit hashes in <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code>. Failure policy: no answer in 30 min = blocked; a hook error = allowed (protected branches stay blocked regardless). Config: <code>workspace.yaml</code> <code>pm.git</code> (protected branch list, timeout). SoloSquad sends no push <em>notifications</em> — register your own GitHub→Discord native webhook for that.</li>
-    <li><strong>Button/menu interactions (Part B)</strong> — approvals and choices come as buttons / select menus instead of free-text <code>y/n</code>. Misfire recovery: ❌ reject asks a 2-step ephemeral confirm, buttons disable after a confirmed click, and reversible choices get an undo grace window. (The 🛑 stop button + live progress narration shipped earlier in the v1.3.0 line.)</li>
-    <li><strong>Artifact filing (Part C P1)</strong> — long replies (~1500+ chars) are saved to <code>&lt;org&gt;/artifacts/</code> and posted as a Discord file attachment + preview card instead of a wall of chunked text. Git-versioned.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.3.0], <code>docs/prd/v1.3.0-dev-confirm-gate-live.md</code></li>
-  </ul>
-
-  <h4>v1.2.10 (2026-06-16) — Consolidation cleanup: finish PM→Chief rename · roll back the git channel · remove the repo-self-hosting Docker stack</h4>
-  <ul>
-    <li><strong>Chief rename settled (Part A)</strong> — CLI <code>solosquad chief status/reset/compact</code> is canonical (<code>pm …</code> kept as a hidden deprecated alias); events <code>pm.*</code>→<code>chief.*</code> with read-compat for older logs.</li>
-    <li><strong>git channel rollback (Part C)</strong> — removed v1.2.9's <code>git-&lt;handle&gt;</code> channel + self-built push notifications. The only thing needed is push approval (→v1.3.0); completion notices are delegated to the native webhook.</li>
-    <li><strong>Docker asset cleanup (Part D)</strong> — removed the repo-self-hosting stack and consolidated user Docker assets into a single home at <code>assets/docker/</code> (no regression).</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.10], <code>docs/prd/v1.2.10-consolidation-cleanup.md</code></li>
-  </ul>
-
-  <h4>v1.2.9 (2026-06-01) — Discord app-ID auto-detect + invite-URL restored · git channel · chat UX · cancel · permission toggle</h4>
-  <ul>
-    <li><strong>Fixes "onboarding never asks for the app ID / never generates the invite URL"</strong> — the v1.2.6 <em>OAuth invite-URL 1-click</em> flow never worked, defeated by a single non-existent API field. <code>fetchBotIdentity</code> read <code>application_id</code> from <code>GET /users/@me</code> (the bot User object), but that object has no such field → <code>appId</code> was always <code>undefined</code> → init's invite-URL block was always skipped, no app-ID prompt existed, and a later <code>discord invite-url</code> failed.</li>
-    <li><strong>Correct endpoint</strong> — <code>GET /oauth2/applications/@me</code> (the only endpoint that returns the application id for a bot token), falling back to the bot user id (identical snowflake for Discord bots) on any failure.</li>
-    <li><strong>Explicit Application ID confirmation prompt</strong> — <code>init</code> Step 3.5 surfaces the detected id with Enter-to-accept; on detection failure the user pastes it from Developer Portal → General Information → Application ID (17-20 digit validation).</li>
-    <li><strong><code>solosquad doctor --discord</code> Hop 2</strong> — now populates the live app id via the same endpoint, so the Hop 3 "bot_application_id missing" warning and the Hop 4 invite-URL hint actually fire.</li>
-    <li><strong>Net effect</strong> — finishing <code>init</code> on the Discord path now auto-detects the app ID, confirms it with one Enter, and prints + opens the invite URL at the end — finally delivering the v1.2.6 "finish init → click once → channels auto-create in under 5 minutes" promise.</li>
-    <li><strong>git event channel + chat UX (Part B·C)</strong> — new <code>git-&lt;handle&gt;</code> channel (agent push-notification feed — channel + config live; the notification itself goes live in v1.3.0). Chief now knows its surface (Discord/Slack/CLI), stops wrapping whole replies in code blocks, and drops the trailing <code>-name</code> sign-off. <code>solosquad chat</code> lets you talk to Chief from the terminal.</li>
-    <li><strong>cancel <code>/cancel</code> (Part D)</strong> — abort in-flight work from Discord/terminal. Previously a second message just queued behind the first.</li>
-    <li><strong>dev permission toggle <code>/grant</code>·<code>/revoke</code> (Part E)</strong> — fixes agents hanging when they lacked file-write/git permission. Dev mode ON injects <code>acceptEdits</code> + an allow-list into the spawn (file writes + git add/commit/checkout/branch + npm; <strong>push / PR-merge excluded</strong>). Default ON at onboarding; <code>/revoke</code> drops to read-only.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.9], <code>docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md</code> (+ <code>v1.3.0-dev-confirm-gate-live.md</code> design)</li>
-  </ul>
-
-  <h4>v1.2.8 (2026-05-29) — Bot restart automation + ESM/CJS fix</h4>
-  <ul>
-    <li><strong>v1.2.7's <code>--add-dir</code> wiring made to actually run</strong> — chief-runner helpers used <code>require("fs"|"path"|"js-yaml")</code> inside an ESM package → silent throw → <code>addDirs</code> came back empty → <code>--add-dir</code> never reached the spawn. v1.2.8 replaces with top-level <code>import</code> so the bot actually receives access to every registered repo.</li>
-    <li><strong>Bot PID file + migration SIGTERM</strong> — <code>solosquad bot</code> writes its PID to <code>&lt;workspace&gt;/.solosquad/bot.pid</code>. <code>solosquad migrate --apply</code> reads it after a successful migration and sends SIGTERM. Cloud users (systemd / PM2 / Docker <code>restart: unless-stopped</code>) auto-respawn — no <code>systemctl restart</code> / <code>docker compose restart</code> needed.</li>
-    <li><strong><code>solosquad bot --supervise</code></strong> — local wrapper that spawns the bot as a child, respawns on clean exit (1.5s backoff). Crash threshold = 3 consecutive non-zero exits. Lets local users get migration auto-restart without configuring a process manager.</li>
-    <li><strong>Graceful drain on SIGTERM</strong> — when the bot receives a signal mid Chief turn, it enters drain mode (refuses new turns), waits up to 120s for active turns to finish (so the user gets the reply, not silence), then clean-exits. Second signal forces immediate exit.</li>
-    <li><strong>Pre-publish ESM purity gate</strong> — <code>npm run prepublishOnly</code> now greps <code>dist/**/*.js</code> for bare <code>require(</code> and aborts publish if any exist. Skips comments / string literals / <code>createRequire(import.meta.url)</code> (the legitimate ESM bridge). Catches the v1.2.7-class bug 1 second before npm publish.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.8], <code>docs/prd/v1.2.8-bot-restart-and-esm-fix.md</code></li>
-  </ul>
-
-  <h4>v1.2.7 (2026-05-29) — Bot spawn <code>--add-dir</code> (broken-as-published)</h4>
-  <p><em>npm publish completed but the wiring didn't actually run due to an ESM/CJS notation bug. v1.2.8 fixes and chains. No need to install v1.2.7 directly — users jump straight to v1.2.8.</em></p>
-  <ul>
-    <li>Bot was supposed to scan <code>&lt;org&gt;/repositories/*.yaml</code> on every spawn, collect registered repo paths, and pass them as <code>claude --print --add-dir &lt;path1&gt; &lt;path2&gt; ...</code>. Users would no longer have to run <code>/add-dir</code> manually (intended behavior).</li>
-    <li>Default clone target for Chief-requested new repos = parent directory shared by existing registered repos (dynamic per-user, not hardcoded).</li>
-    <li>v0.x-era <code>migrate</code> / <code>sync</code> CLI messages updated to match the v1.0+ path-reference model (no more "clone into repositories/" prompts).</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.7]</li>
-  </ul>
-
-  <h4>v1.2.6 (2026-05-29) — Onboarding &amp; Vocabulary Polish</h4>
-  <ul>
-    <li><strong>Strict workspace detection</strong> — bare <code>.solosquad/</code> no longer qualifies as a workspace root; <code>workspace.yaml</code> is required. Running <code>solosquad bot</code> from inside <code>&lt;org&gt;/</code> no longer creates ghost <code>owner-command</code> / <code>workflow</code> channels.</li>
-    <li><strong><code>messenger_user_id</code> auto-populate</strong> — <code>init</code> Step 3.5 prompt + first-message hydration. Owner-only gate is finally protective in practice.</li>
-    <li><strong>Slack temporarily hidden</strong> from <code>init</code> messenger picker. Picker step kept for the v1.2.x adapter slot.</li>
-    <li><strong>Path quote stripping</strong> — <code>solosquad add repo "C:\path"</code> tolerates the quotes PowerShell / Explorer "Copy as path" wraps Windows paths in.</li>
-    <li><strong>Claude Code trust auto-grant</strong> — bot's <code>claude --print</code> spawns no longer hit the interactive trust dialog. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> all stamp <code>~/.claude.json</code>. <strong>v1.2.3 → v1.2.6 migration backfills every existing org cwd + every registered repo path</strong> — one <code>solosquad migrate --apply</code> retroactively grants trust for paths registered before the v1.2.6 install.</li>
-    <li><strong>Chief identity plumbing</strong> — bot reply prefix uses <code>chief_name</code> (<code>[Hermes]</code>, not <code>[bv-po]</code>). LLM system prompt receives an <code>[identity]</code> line so Chief signs by name.</li>
-    <li><strong>Chief name prompt copy</strong> — explains the 6 surfaces + 7 examples (Hermes / Atlas / Apollo / Iris / Janus / Athena / Hephaestus).</li>
-    <li><strong>Vocabulary</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, etc. JSONL event kind <code>pm.*</code> stays for schema_version backward-compat.</li>
-    <li><strong>Manual §5 reorder</strong> — Discord = §5.1 (was §5.2). §5.1 content rewritten for v1.2 — the v0.2.x "server name = product slug" rule and the <code>AI Team Reports</code> channel tree are gone.</li>
-    <li><strong>§10 FAQ moved to bottom</strong> — 10.3 Uninstall / 10.4 Bot &amp; Scheduler / 10.5 FAQ.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code> <em>(npm 1.2.4 / 1.2.5 were burned during pre-launch, so the actual publish slot is 1.2.6)</em></li>
-  </ul>
-
-  <h4>v1.2.3 (2026-05-28) — Bundle-files hotfix</h4>
-  <ul>
-    <li><strong>npm package whitelist fix</strong> — root-level bundle directories (<code>agents/</code> · <code>skills/</code> · <code>teams/</code> · <code>schedules/</code> · <code>user/</code> · <code>knowledge/</code>) added to <code>package.json.files</code>. Tarball 567 → 652 files.</li>
-    <li><strong>Restores v1.0.4 → v1.1.0 migration verify</strong> — chief SKILL.md + 4 teams OKR + problem-definition workflow.yaml were silently missing from the tarball.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.3], <code>docs/prd/v1.2.3-bundle-files-hotfix.md</code></li>
-  </ul>
-
-  <h4>v1.2.0 ~ v1.2.2 (2026-05-28) — Messenger Connection (Chief on Discord)</h4>
-  <p><em>v1.2.0 and v1.2.1 were burned during pre-launch (npm policy: cannot re-publish); v1.2.2 was broken (bundle gap). v1.2.3 is effectively the first usable publish in the series.</em></p>
-  <ul>
-    <li><strong>One Chief bot per org</strong> — <code>OrgYaml.chief_name</code>, recommended to match the Discord Developer Portal Bot name.</li>
-    <li><strong>OAuth Invite URL 1-click</strong> — <code>solosquad discord invite-url</code> synthesizes the recommended 10-perm bitfield + opens the browser + clipboard fallback.</li>
-    <li><strong>Handle-based channel portability</strong> — the same <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> pair across multiple Discord guilds and future Slack workspaces.</li>
-    <li><strong>Owner-only gate</strong> — <code>message.author.id === user.yaml.messenger_user_id</code>. v1.0.2's <em>real</em> reason for removing the author-guard (user-id channel names breaking bot recognition) is resolved by handle-based channels, so the reversal is justified. Fresh installs land ON, upgrades land OFF (neutral).</li>
-    <li><strong>TRIAGE kind branching</strong> — Chief emits <code>[kind:chat|workflow|schedule|goal]</code> as the first reply line. chat replies flat; workflow/schedule/goal post a task card embed + thread in <code>works-&lt;handle&gt;</code> with stage narration (DECOMPOSE / DISPATCH / AWAIT).</li>
-    <li><strong><code>solosquad add-org</code></strong> bootstraps a fully working org — Chief name + the entire v1.1.0 hierarchy + problem-definition workflow seed.</li>
-    <li><strong>guildCreate onboarding embed</strong> with 2 buttons (Auto-create / Manual choose), <code>/chat</code> slash fallback for MESSAGE_CONTENT intent denial.</li>
-    <li><strong><code>solosquad doctor --discord</code> 5-hop diagnostic</strong>.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.2.2], <code>docs/prd/v1.2-messenger-connection-discord-first.md</code></li>
-  </ul>
-
-  <h4>v1.1.0 (2026-05-27) — Multi-Agent Team Architecture</h4>
-  <ul>
-    <li>Single PM session → Team-Centric Multi-Agent.</li>
-    <li><strong>Chief</strong> (org-level supervisor, only user-facing agent) and <strong>PM</strong> (workspace-bundle autonomous product manager, never talks to the user directly) are now distinct roles.</li>
-    <li><strong>4 main bots</strong> (chief / pm / engineer / designer / marketer) + <strong>20 specialists</strong> (flat catalog, 4 merges + paid→performance rename) + <strong>18 skills</strong> + <strong>4 teams</strong>.</li>
-    <li><strong>9-layer JIT context</strong> with Team OKR as Layer 4a.</li>
-    <li><strong>Chief 6+1 stage machine</strong> — TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT, emitted to <code>&lt;org&gt;/memory/chief-stage-events.jsonl</code>.</li>
-    <li><strong><code>open_questions[]</code> async-batch protocol</strong>.</li>
-    <li>External references: Hermes V2, gstack (Garry Tan), RO-PNA pna-builders, phuryn pm-skills.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.1.0], <code>docs/prd/v1.1-multi-agent-team-architecture.md</code></li>
-  </ul>
-
-  <h4>v1.0.0 ~ v1.0.4 (2026-05-21 ~ 2026-05-23) — Formal launch + Discord patch chain</h4>
-  <ul>
-    <li><strong>v1.0.0</strong> — formal launch. Stable API guarantees. 42-command CLI surface freeze. <code>docs/api-stability.md</code> goes live. Discord-only messenger (Slack is a post-v1.0 slot).</li>
-    <li><strong>v1.0.1</strong> — discord.js v15 deprecation fix, <code>@&lt;slug&gt;</code> mention parser, multi-repo intent routing.</li>
-    <li><strong>v1.0.2</strong> — Discord author-guard removed (real reason at the time: user-id channel names blocked bot recognition — v1.2.6 reinstates the gate as owner-only after handle-based channels solved the recognition layer).</li>
-    <li><strong>v1.0.3</strong> — 5 bugs fixed: versionMatches slice math / npm sudo prefix permission check / guild-org binding via <code>ownOrgSlug</code> / update next-step hint / category rename ("AI Team Reports" → "solosquad").</li>
-    <li><strong>v1.0.4</strong> — Discord <code>config.yaml</code> auto-create + Slack author-guard cleanup + 5-hop diagnostic message + 9-reference research persisted.</li>
-    <li>Details: <code>CHANGELOG.md</code> §[1.0.0]~[1.0.4]</li>
-  </ul>
-
-  <h4>v0.x series (pre-launch) — condensed</h4>
-  <p>Self-use validation + infrastructure build-up before the v1.0 formal launch. Full history in <code>CHANGELOG.md</code> §[0.x.x] + <code>docs/prd/product-roadmap.md</code> §5.1.</p>
-  <ul>
-    <li><strong>v0.8.x</strong> — Multi-User Messenger (<code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> channel pair + handle-based routing + author-guard + opt-in broadcast), Security &amp; Lifecycle Pair (archive completion + api-stability.md), Dev Capability (SKILL frontmatter <code>dev_capability</code>), Onboarding UX + Observability (<code>add repo --dry-run</code>, <code>solosquad logs</code>).</li>
-    <li><strong>v0.7.0</strong> — Uninstall &amp; Lifecycle (Farewell Archive). User code is sacred (class A), WAL-safe SQLite backup, REVOKE-CHECKLIST.md auto-generated.</li>
-    <li><strong>v0.6.0</strong> — Default workflow tuning, FTS5 cold archive, trajectory + freq miner, Org Layer specialization, chokidar hot-reload.</li>
-    <li><strong>v0.5.0</strong> — Workflow maker + frontmatter routing (4-channel router: <code>slash &gt; explicit &gt; keyword &gt; freq</code>).</li>
-    <li><strong>v0.4.0</strong> — Autonomous overnight engine (<code>goal.md</code> + <code>solosquad goal run</code>), <code>AGENTS.md</code> cross-tool standard adopted.</li>
-    <li><strong>v0.3.0</strong> — PM mode + multi-agent orchestration, slash chain <code>/think /plan /build /review /ship</code>.</li>
-    <li><strong>v0.2.x</strong> — Workspace structure normalized (<code>.solosquad/</code> + multi-organization).</li>
-    <li><strong>v0.1.x</strong> — First npm publishes, 25 specialist agents, Discord/Slack adapters.</li>
-  </ul>
-
-  <h3 id="s9-2">9.2 Upcoming slots (planned)</h3>
-
-  <h4>v1.2.x — Next patches / sub-versions</h4>
-  <ul>
-    <li><strong>v1.2.1 follow-up — thread continuity</strong>: referencedMessage chain + LRU cache (PRD §7.3) + thread token budget guard (PRD §9.2). v1.2.0 = one task = one thread; continuous conversation surface comes here.</li>
-    <li><strong>v1.2.x — Slack adapter restored</strong>: <code>init</code> messenger picker re-enables Slack and the v1.2 feature set is re-implemented behind the same ChiefMessenger interface.</li>
-  </ul>
-
-  <h4>v1.3 — Scheduling + memo</h4>
-  <ul>
-    <li>n-jobber time / memory integration. Calendar / Apple Notes / Obsidian / Notion MCP connectors.</li>
-    <li>Layered on top of the v1.x knowledge ontology slot.</li>
-  </ul>
-
-  <h4>v1.x — Cascade-shifted slots</h4>
-  <ul>
-    <li><strong>Dashboard interaction</strong>: companion web dashboard in a separate repo (<code>solopreneur-dashboard</code> + <code>solopreneur-api</code>).</li>
-    <li><strong>Knowledge ontology + MCP external connectors</strong>: graph backend + Notion / Obsidian / external APIs / other agents.</li>
-    <li><strong>LLM backend abstraction</strong>: multi-backend (single Claude → pluggable).</li>
-  </ul>
-
-  <div class="footer-note">
-    Full decision log in <code>docs/prd/product-roadmap.md</code> §5~§6. External references and sources in <code>docs/prd/architecture.md</code> §14.
-  </div>
-</section>
-
 <!-- ========================== SECTION 10 ========================== -->
-<section id="s10">
-  <h2><span class="num">10.</span>Troubleshooting &amp; FAQ</h2>
+<section id="s9">
+  <h2><span class="num">9.</span>Troubleshooting &amp; FAQ</h2>
 
-  <h3 id="s10-1">10.1 Install / Run Issues</h3>
+  <h3 id="s9-1">9.1 Install / Run Issues</h3>
 
   <h4>"solosquad: command not found"</h4>
   <ul>
@@ -1381,7 +1195,7 @@ git push --dry-run    # reproduce the same error directly</code></pre>
   </ul>
   <p>Authentication itself is outside SoloSquad's scope. For detailed procedures, see the <a href="https://docs.github.com/authentication/keeping-your-account-and-data-secure/about-authentication-to-github">GitHub official docs</a>.</p>
 
-  <h3 id="s10-2">10.2 Migration Troubleshooting</h3>
+  <h3 id="s9-2">9.2 Migration Troubleshooting</h3>
 
   <h4>"Cannot find package.json" type errors</h4>
   <pre><code>npm cache clean --force
@@ -1408,7 +1222,7 @@ docker compose restart    # if Docker</code></pre>
   </ul>
   <p>For minor updates containing breaking changes in important projects, <strong>observing for about a week</strong> before upgrading is reasonable.</p>
 
-  <h3 id="s10-3">10.3 Uninstall · Reinstall · Migration Workaround<span class="badge now">v0.8.5</span></h3>
+  <h3 id="s9-3">9.3 Uninstall · Reinstall · Migration Workaround<span class="badge now">v0.8.5</span></h3>
 
   <h4>Safe uninstall sequence</h4>
   <p>Because npm v7+ does not invoke the <code>preuninstall</code> hook on global packages (<a href="https://github.com/npm/cli/issues/3042">npm/cli#3042</a>), <strong>you must follow the order yourself</strong> for the farewell archive and REVOKE-CHECKLIST to be generated.</p>
@@ -1493,7 +1307,7 @@ solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
     <code>solosquad uninstall</code> writes the manifest with streaming SHA256 over the jsonl files. If the bot is appending jsonl concurrently, the manifest SHA will mismatch → archive verification fails. <code>--force</code> bypasses, but you lose archive integrity.
   </div>
 
-  <h3 id="s10-4">10.4 Bot · Scheduler · Agent git Operations<span class="badge now">v0.8.2~v0.8.6</span></h3>
+  <h3 id="s9-4">9.4 Bot · Scheduler · Agent git Operations<span class="badge now">v0.8.2~v0.8.6</span></h3>
 
   <h4>Scheduler does not auto-start</h4>
   <p>SoloSquad has no daemon / background auto-start. <code>solosquad init</code> does not register cron, and there is no OS-boot auto-start. You must <em>explicitly</em> start with:</p>
@@ -1525,7 +1339,7 @@ solosquad cron start    # cron runner (morning/evening brief, system-housekeepin
       <pre><code>cd &lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;
 git push --dry-run
 # "Everything up-to-date" or "To &lt;url&gt;..." → ✓ pass
-# "Authentication failed" → see troubleshooting §10.1</code></pre>
+# "Authentication failed" → see troubleshooting §9.1</code></pre>
     </li>
     <li><strong>Register repo</strong>
       <pre><code>solosquad add repo https://github.com/me/my-saas.git --org my-saas</code></pre>
@@ -1571,7 +1385,7 @@ User clicks URL → GitHub web UI to create PR → review code → merge</code><
   <ul>
     <li><strong>Step 1.5 — verify git push auth</strong> (optional, only if failing)
       <pre><code>git push --dry-run    # in any of your own repos
-# If failing: see troubleshooting §10.1</code></pre>
+# If failing: see troubleshooting §9.1</code></pre>
     </li>
     <li><strong>Step 7.5 (right after doctor) — register repo + verify push</strong>
       <pre><code>solosquad add repo &lt;url&gt; --org &lt;org&gt;
@@ -1602,7 +1416,7 @@ git push --dry-run        # confirm auth works inside the workspace too</code></
     </ul>
     Design details: <code>docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md</code> §3, <code>docs/plan/v1.x-workflow-goal-routine-evolution.md</code> (PR workflow §additions slot)
   </div>
-  <h3 id="s10-5">10.5 FAQ</h3>
+  <h3 id="s9-5">9.5 FAQ</h3>
 
   <p><strong>Q. How much does it cost?</strong><br>
   A. Any Claude Code-capable subscription works (Max recommended). As of v0.9, SoloSquad uses *Claude Code via OAuth* as its single backend. Cloud ops add ~$4-6/month for VPS.</p>

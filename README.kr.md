@@ -360,7 +360,7 @@ v0.7 + v0.8 패치 시리즈가 위에 얹은 라이프사이클 + 멀티 유저
 - macOS `launchd` plist / Windows NSSM 서비스
 - VPS + systemd (자세히는 [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
 
-자세히는 master-guide §9.
+자세히는 master-guide §7.1.
 
 ---
 

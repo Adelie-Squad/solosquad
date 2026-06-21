@@ -285,20 +285,13 @@
         </ul>
       </li>
       <li>
-        <a data-target="s9">9. CHANGELOG</a>
+        <a data-target="s9">9. 트러블슈팅 &amp; FAQ</a>
         <ul class="sub">
-          <li><a href="#s9-1">9.1 출시된 버전</a></li>
-          <li><a href="#s9-2">9.2 다음 슬롯</a></li>
-        </ul>
-      </li>
-      <li>
-        <a data-target="s10">10. 트러블슈팅 &amp; FAQ</a>
-        <ul class="sub">
-          <li><a href="#s10-1">10.1 설치·실행 문제</a></li>
-          <li><a href="#s10-2">10.2 마이그레이션 문제</a></li>
-          <li><a href="#s10-3">10.3 Uninstall · 재설치</a></li>
-          <li><a href="#s10-4">10.4 봇 · 스케줄러 · dev_capability</a></li>
-          <li><a href="#s10-5">10.5 FAQ</a></li>
+          <li><a href="#s9-1">9.1 설치·실행 문제</a></li>
+          <li><a href="#s9-2">9.2 마이그레이션 문제</a></li>
+          <li><a href="#s9-3">9.3 Uninstall · 재설치</a></li>
+          <li><a href="#s9-4">9.4 봇 · 스케줄러 · dev_capability</a></li>
+          <li><a href="#s9-5">9.5 FAQ</a></li>
         </ul>
       </li>
     </ul>
@@ -377,7 +370,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
   </ul>
   <div class="callout info">
     <strong>이 문서의 버전</strong>
-    현재 npm 최신은 <span class="badge now">v1.3.2</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 9장 CHANGELOG 를 참고하세요.
+    현재 버전은 <span class="badge now">v1.3.3</span> 입니다. 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 저장소 루트의 <code>CHANGELOG.md</code> 를 참고하세요 (변경 이력 단일 원천).
   </div>
 </section>
 
@@ -1168,191 +1161,11 @@ solosquad sync                                      # repositories/ ↔ .org.yam
   </dl>
 </section>
 
-<!-- ========================== SECTION 9 ========================== -->
-<section id="s9">
-  <h2><span class="num">9.</span>CHANGELOG</h2>
-  <p>출시된 모든 버전의 핵심 변경 사항. 완전한 release note 는 <code>CHANGELOG.md</code> 참조 — 본 절은 메뉴얼 단독으로도 읽을 수 있도록 같은 내용을 정리.</p>
-
-  <h3 id="s9-1">9.1 출시된 버전 (npm 배포 완료)</h3>
-
-  <h4>v1.3.3 (2026-06-19) <span class="badge now">최신</span> — cron 용어 통합</h4>
-  <ul>
-    <li><strong>용어 통합</strong> — routine(빌트인 잡)과 schedule(사용자 잡) 두 용어를 단일 명사 <strong>cron</strong> 으로 통합.</li>
-    <li><strong>CLI 통일</strong> — <code>solosquad cron &lt;start|run|list|new|show|validate&gt;</code> 로 통일 (구 <code>schedule</code>·<code>schedules</code>·<code>run-routine</code> 대체).</li>
-    <li><strong>경로</strong> — 번들 디렉토리 <code>crons/</code>, 데이터 경로 <code>.solosquad/crons</code>·<code>memory/cron-logs</code>.</li>
-    <li><strong>마이그레이션</strong> — 1.3.2→1.3.3 마이그레이션이 기존 워크스페이스 디렉토리를 자동 이전 (무중단).</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.3.3]</li>
-  </ul>
-
-  <h4>v1.3.2 (2026-06-19) — 에셋 생애주기 매니저(skill·agent·workflow·goal·cron) + 에셋 채택</h4>
-  <ul>
-    <li><strong>에셋 매니저</strong> — 5개 자산이 동일 인터페이스 공유: <code>validate</code>(정적 게이트), <code>list</code>/<code>show</code>(조회). 통합 입구 <code>solosquad asset list|show|validate &lt;kind&gt;</code> 신설, 전체 CLI 일람 <code>solosquad commands</code> 추가.</li>
-    <li><strong>agent 매니저</strong>(신규, 5번째) — <code>agent validate --graph</code> 가 에이전트 간 위임 그래프(참조 무결성·순환·고아) 검증.</li>
-    <li><strong>에셋 채택</strong> — <code>solosquad adopt &lt;repo&gt; [--apply] [--classify]</code> 가 외부 repo 의 skill/agent/workflow/cron 을 발견·검증하고 워크스페이스로 additive 채택(충돌 시 namespace). <code>init</code>/<code>add repo</code> 시 채택 가능 자산 자동 안내.</li>
-    <li><strong>cron</strong> — 사용자 정의 cron 생성 경로 신설: <code>cron new|list|show|validate</code> (<code>crons/&lt;id&gt;.yaml</code>).</li>
-    <li><strong>대화형 우선</strong> — LLM 판단 동사(review·생성 보조)는 CLI 가 아니라 <code>solosquad chat</code> 안에서 <code>asset-review</code> 스킬로. CLI 는 결정적·스크립트 가능 표면만 유지.</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.3.2], <code>docs/prd/v1.3.2-domain-lifecycle-managers.md</code></li>
-  </ul>
-
-  <h4>v1.3.1 (2026-06-18) — 정리 릴리스: v1.1 잔재 구 <code>assets/</code> 비우기 + CI/의존성 하드닝</h4>
-  <ul>
-    <li><strong>사용자 대면 기능 0</strong> — 내부 안정화 릴리스. 동작·tarball 변화 없음. v1.1 리오그가 절반만 끝낸 구 <code>assets/</code> 트리를 비우고, v1.3.0 머지 중 드러난 CI·의존성 문제를 마감.</li>
-    <li><strong>CI/의존성</strong> — <code>node-cron</code> 3→4 (TS 재작성으로 <code>uuid</code> 의존 제거 → moderate 취약점 2건 소멸); <code>npm audit</code> moderate 비차단 가시화; Node 기준 <code>&gt;=20</code>.</li>
-    <li><strong>구 <code>assets/</code> 정리</strong> — 미삭제된 구 에이전트 로스터(<code>assets/agents/</code>, 25개) 제거(<code>init</code> 이 로스터 2벌 복사하던 오염 해소); <code>routines/</code>→<code>crons/</code> 배선; <code>knowledge/</code>·<code>core/</code>·<code>orchestrator/</code> 정리; <code>templates/</code> 22개 전부 제거(15개 은퇴 + 7개는 코드에 인라인). 결과: <code>assets/</code> 에는 <code>docker/</code> 만 남음.</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.3.1], <code>docs/prd/v1.3.1-legacy-asset-cleanup.md</code></li>
-  </ul>
-
-  <h4>v1.3.0 (2026-06-16) — 메신저 UX 대개편: dev-confirm 승인 게이트 + 인터랙션 컴포넌트 + 산출물 파일화</h4>
-  <ul>
-    <li><strong>git push 승인 게이트 (Part A)</strong> — 에이전트가 <code>git push</code>·<code>gh pr merge</code>·<code>gh pr close</code> 를 실행하기 직전, <code>command-&lt;handle&gt;</code> 채널에 <strong>✅승인 / ❌거절 카드</strong>가 뜹니다. 승인해야 push 가 진행됩니다. 보호 브랜치(main/master/develop) 직 push 는 카드 없이 자동 차단. 승인 기록은 커밋 해시와 함께 <code>&lt;org&gt;/memory/dev-confirmations.jsonl</code> 에 남습니다. 실패정책: 미응답 30분 = 차단, hook 오류 = 통과(보호 브랜치는 항상 차단). 설정 <code>workspace.yaml</code> <code>pm.git</code> (보호 브랜치 목록·타임아웃). push <em>알림</em>은 SoloSquad 가 하지 않습니다 — GitHub→Discord 네이티브 webhook 을 직접 등록하세요.</li>
-    <li><strong>버튼/메뉴 인터랙션 (Part B)</strong> — 텍스트 <code>y/n</code> 대신 버튼·셀렉트 메뉴로 승인·선택. 잘못 눌렀을 때 복구: ❌거절은 2단계 확인(ephemeral), 확정 후 버튼 비활성화, 일반 선택은 되돌리기 유예창. (🛑 작업 중단 버튼·실시간 진행 보고는 v1.3.0 라인에서 선행 제공.)</li>
-    <li><strong>산출물 파일화 (Part C P1)</strong> — 긴 답변(약 1500자 이상)은 채팅에 도배하지 않고 <code>&lt;org&gt;/artifacts/</code> 에 파일로 저장 + Discord 첨부 파일·미리보기 카드로 게시. git 으로 버전 관리됩니다.</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.3.0], <code>docs/prd/v1.3.0-dev-confirm-gate-live.md</code></li>
-  </ul>
-
-  <h4>v1.2.10 (2026-06-16) — 정리 릴리스: PM→Chief 리네임 완료 · git 채널 롤백 · repo 자체 호스팅 Docker 스택 제거</h4>
-  <ul>
-    <li><strong>Chief 리네임 정착 (Part A)</strong> — CLI <code>solosquad chief status/reset/compact</code> 정규화 (<code>pm …</code> 은 숨김 deprecated alias), 이벤트 <code>pm.*</code>→<code>chief.*</code> (구버전 read-compat).</li>
-    <li><strong>git 채널 롤백 (Part C)</strong> — v1.2.9 의 <code>git-&lt;handle&gt;</code> 채널 + 자체 push 알림 제거. 필요한 건 push 승인(→v1.3.0)뿐, 완료 알림은 네이티브 webhook 으로 위임.</li>
-    <li><strong>Docker 자산 정리 (Part D)</strong> — repo-self-hosting 스택 제거, 사용자 Docker 자산을 <code>assets/docker/</code> 단일 홈으로 통합 (퇴행 0).</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.10], <code>docs/prd/v1.2.10-consolidation-cleanup.md</code></li>
-  </ul>
-
-  <h4>v1.2.9 (2026-06-01) — Discord App ID 자동 감지 + Invite URL 복구 · git 채널 · 대화 UX · 작업취소 · 권한토글</h4>
-  <ul>
-    <li><strong>온보딩에서 앱 ID 를 안 묻고 / 초대 URL 이 자동 생성 안 되던 결함 정정</strong> — v1.2.6 가 설계한 <em>OAuth Invite URL 1-click</em> 흐름이 <strong>존재하지 않는 API 필드 1개</strong> 때문에 출시 이래 한 번도 작동 안 함. <code>fetchBotIdentity</code> 가 <code>GET /users/@me</code> (봇 User 객체) 에서 <code>application_id</code> 를 읽었으나 그 필드가 없음 → <code>appId</code> 영구 <code>undefined</code> → init 종료 시 invite URL 블록 항상 skip + 앱 ID prompt 부재 + 후속 <code>discord invite-url</code> 실패</li>
-    <li><strong>정식 엔드포인트로 자동 감지</strong> — <code>GET /oauth2/applications/@me</code> 로 application id 조회 (봇 토큰 auth). 실패 시 봇 user id 로 폴백 (Discord 봇은 봇 user id == application id 동일 snowflake)</li>
-    <li><strong>Application ID 확인 prompt 신설</strong> — <code>init</code> Step 3.5 에서 자동 감지값을 기본으로 표시, Enter 1회 수락. 감지 실패 시 <em>Developer Portal → General Information → Application ID</em> 붙여넣기 안내 (17~20자리 검증)</li>
-    <li><strong><code>solosquad doctor --discord</code> Hop 2 동반 수정</strong> — app id 를 같은 엔드포인트로 채워 Hop 3 <code>bot_application_id missing</code> 경고 + Hop 4 invite URL 힌트가 실작동</li>
-    <li><strong>순효과</strong> — Discord 경로 <code>init</code> 완주 → 앱 ID 자동 감지 + Enter 확인 → 종료 시 invite URL 출력 + 브라우저 자동 open. v1.2.6 의 <em>"완주 → click 1회 → 5분 내 채널 자동 생성"</em> 약속 비로소 실현</li>
-    <li><strong>git 이벤트 채널 + 대화 UX (Part B·C)</strong> — <code>git-&lt;handle&gt;</code> 채널 신설(에이전트 push 알림 피드 — 채널·설정은 작동, 알림 실작동은 v1.3.0). Chief 가 대화 surface(Discord/Slack/CLI)를 인지하고, 메신저 응답을 통째로 코드블록으로 감싸지 않으며 말끝 <code>-이름</code> 서명을 제거. <code>solosquad chat</code> 으로 터미널에서도 Chief 와 대화</li>
-    <li><strong>작업 취소 <code>/cancel</code> (Part D)</strong> — 진행 중인 작업을 디스코드/터미널에서 즉시 중단. 기존엔 두 번째 메시지가 큐에 쌓여 대기만 했음</li>
-    <li><strong>dev 권한 토글 <code>/grant</code>·<code>/revoke</code> (Part E)</strong> — 에이전트가 파일 쓰기·git 권한에 막혀 멈추던(hang) 문제 해결. dev 모드 ON 이면 spawn 에 <code>acceptEdits</code> + 허용 도구를 주입(파일쓰기·git add/commit/checkout/branch·npm, <strong>push·PR merge 제외</strong>). 온보딩 기본 ON, <code>/revoke</code> 로 read-only 전환</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.9], <code>docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md</code> (+ <code>v1.3.0-dev-confirm-gate-live.md</code> 설계)</li>
-  </ul>
-
-  <h4>v1.2.8 (2026-05-29) — Bot 재기동 자동화 + ESM/CJS fix</h4>
-  <ul>
-    <li><strong>v1.2.7 의 <code>--add-dir</code> wiring 실작동 복구</strong> — <code>chief-runner.ts</code> 의 helper 들이 ESM 컨텍스트에서 <code>require("fs"|"path"|"js-yaml")</code> 호출 → silent throw → <code>addDirs</code> 빈 배열 → <code>--add-dir</code> spawn 에 안 들어감. v1.2.8 가 top-level <code>import</code> 로 교체 → 실제로 모든 등록된 repo 에 봇이 자유롭게 접근</li>
-    <li><strong>봇 PID 파일 + migration 자동 SIGTERM</strong> — <code>&lt;workspace&gt;/.solosquad/bot.pid</code> 에 봇 PID 박제. <code>solosquad migrate --apply</code> 가 마이그레이션 성공 후 그 PID 에 SIGTERM 전송 → 클라우드 (systemd / PM2 / Docker <code>restart: unless-stopped</code>) 자동 respawn. 사용자는 <code>systemctl restart</code> / <code>docker compose restart</code> 입력 불필요</li>
-    <li><strong><code>solosquad bot --supervise</code></strong> — 로컬 wrapper. 자식으로 <code>solosquad bot</code> spawn → child 종료 감지 → 1.5초 후 자동 respawn. 3회 연속 crash 시 포기. 로컬 사용자도 process manager 없이 migration 자동 재기동 받을 수 있음</li>
-    <li><strong>Graceful drain on SIGTERM</strong> — 봇이 Chief turn 진행 중 SIGTERM 받으면 즉시 종료 안 함. 현재 turn 의 응답 송신까지 최대 120s 대기 → clean exit. 사용자는 *침묵 대신 응답 정상 수신*. 두번째 signal (Ctrl+C 한 번 더) 받으면 강제 exit</li>
-    <li><strong>Pre-publish ESM purity gate</strong> — <code>npm run prepublishOnly</code> 가 <code>dist/**/*.js</code> grep 으로 bare <code>require(</code> 검출 시 publish 차단. 같은 종류 사고 재발 방지. 주석 / 문자열 / <code>createRequire(import.meta.url)</code> 정당한 케이스 skip</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.8], <code>docs/prd/v1.2.8-bot-restart-and-esm-fix.md</code></li>
-  </ul>
-
-  <h4>v1.2.7 (2026-05-29) — Bot spawn <code>--add-dir</code> (broken-as-published)</h4>
-  <p><em>npm publish 완료 됐으나 ESM/CJS 표기 결함으로 wiring 이 실작동 안 함. v1.2.8 이 정정 + chain. 1.2.7 신규 install 불필요 — 사용자는 1.2.8 부터 받으면 됨.</em></p>
-  <ul>
-    <li>봇이 매 spawn 마다 <code>&lt;org&gt;/repositories/*.yaml</code> 스캔 → 등록된 repo path 전부 모음 → <code>claude --print --add-dir &lt;path1&gt; &lt;path2&gt; ...</code> spawn 인자로 전달 (의도). 사용자가 *<code>/add-dir</code> 슬래시 명령 직접 실행* 안 해도 봇이 자동 권한 확보 (의도)</li>
-    <li>Chief 와 대화로 새 repo 클론 시 기본 위치 = 기존 등록 repo 의 공통 부모 디렉토리 (동적 계산, 사용자별로 다름)</li>
-    <li>v0.x 시절 <code>migrate</code> / <code>sync</code> CLI 메시지의 path-reference 모델 정합 (in-workspace clone 안내 제거)</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.7]</li>
-  </ul>
-
-  <h4>v1.2.6 (2026-05-29) — Onboarding &amp; Vocabulary Polish</h4>
-  <ul>
-    <li><strong>workspace 탐지 strict</strong> — <code>.solosquad/</code> 디렉토리만으로 워크스페이스 판정 안 함. <code>workspace.yaml</code> 존재까지 가드 → <code>cd &lt;org&gt;</code> 에서 봇 실행해도 잘못된 루트 안 잡힘 (legacy <code>owner-command</code> / <code>workflow</code> 채널 fallback 결함 해소)</li>
-    <li><strong><code>messenger_user_id</code> 자동 채움</strong> — <code>init</code> Step 3.5 prompt + 첫 메시지 hydration. owner-only 게이트가 fail-open 으로 끝나지 않고 진짜 동작</li>
-    <li><strong>Slack picker 임시 비활성</strong> — Discord 단독 선택, picker 단계는 유지 (v1.2.x adapter 슬롯 활성화 시 복원)</li>
-    <li><strong>Path 따옴표 strip</strong> — <code>solosquad add repo "C:\path"</code> 의 양옆 따옴표 자동 제거. PowerShell / Explorer "Copy as path" 패턴</li>
-    <li><strong>Claude Code trust 자동 grant</strong> — 봇이 <code>claude --print</code> spawn 할 때 디렉토리 trust 다이얼로그 안 띄움. <code>scaffoldOrg</code> + <code>init</code> repo loop + <code>add repo</code> 셋 다 <code>~/.claude.json</code> 에 박제. <strong>v1.2.3 → v1.2.6 migration 이 기존 org cwd + 등록된 repo 경로 전부 backfill</strong> — <code>solosquad migrate --apply</code> 1회로 과거에 등록한 repo 모두 trust 적용</li>
-    <li><strong>Chief 정체성 plumbing</strong> — 봇 응답 prefix <code>[Hermes]</code> (chief_name 기준). LLM system prompt 에 <code>[identity]</code> 1줄 inject 로 Chief 가 자기 이름으로 self-reference</li>
-    <li><strong>Chief 이름 prompt 보강</strong> — 6 surface 설명 + 7 예시 (Hermes / Atlas / Apollo / Iris / Janus / Athena / Hephaestus)</li>
-    <li><strong>어휘 정합</strong> — <code>[Bot] PM turn</code> → <code>[Bot] Chief turn</code>, <code>PM sessions:</code> → <code>Chief sessions:</code>, 등 사용자 대면 라벨. jsonl event kind <code>pm.*</code> 는 schema_version 호환을 위해 유지</li>
-    <li><strong>매뉴얼 §5 재배치</strong> — Discord = §5.1 (was §5.2), Slack = §5.2 (was §5.1). §5.1 Discord 본문 v1.2 정합 재작성 — 옛 "서버 이름 = 제품 slug" 규칙 제거, <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 채널 모델 반영</li>
-    <li><strong>§10 FAQ 맨 아래로</strong> — 10.3 Uninstall / 10.4 봇·스케줄러 / 10.5 FAQ</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.6], <code>docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md</code> <em>(npm 1.2.4 / 1.2.5 burned, 실제 publish 슬롯 1.2.6)</em></li>
-  </ul>
-
-  <h4>v1.2.3 (2026-05-28) — Bundle-files hotfix</h4>
-  <ul>
-    <li><strong>npm 패키지 화이트리스트 수정</strong> — v1.2.2 publish 때 누락된 root-level bundle 디렉토리 (<code>agents/</code> · <code>skills/</code> · <code>teams/</code> · <code>schedules/</code> · <code>user/</code> · <code>knowledge/</code>) 를 <code>package.json.files</code> 에 추가. tarball 567 → 652 파일</li>
-    <li><strong>v1.0.4 → v1.1.0 migration verify 통과 복구</strong> — chief SKILL.md + 4 teams OKR + problem-definition workflow.yaml 누락 결함 해소</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.3], <code>docs/prd/v1.2.3-bundle-files-hotfix.md</code></li>
-  </ul>
-
-  <h4>v1.2.0 ~ v1.2.2 (2026-05-28) — Messenger Connection (Chief on Discord)</h4>
-  <p><em>v1.2.0/v1.2.1 은 pre-launch 시기 burned (npm 재사용 불가), v1.2.2 는 bundle 누락으로 broken → 사실상 v1.2.3 이 series 첫 usable publish.</em></p>
-  <ul>
-    <li><strong>조직 1개당 1 Chief 봇</strong> — <code>OrgYaml.chief_name</code>, Discord Developer Portal Bot 이름과 동일 권장</li>
-    <li><strong>OAuth Invite URL 1-click</strong> — <code>solosquad discord invite-url</code> 가 권장 권한 bitfield (10 perms, verification trigger 6건 배제) 합성 + 브라우저 자동 open + clipboard fallback</li>
-    <li><strong>handle 기반 채널 portability</strong> — 멀티 Discord 서버 / 추후 Slack 모두 같은 <code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 페어 자동 재사용</li>
-    <li><strong>owner-only 게이트</strong> — <code>message.author.id === user.yaml.messenger_user_id</code>. v1.0.2 author-guard 제거의 *실제* 사유 (= 채널명이 user-id 라 봇 인식 실패) 가 handle 기반 채널로 해소된 이상 reversal 정당. 신규 설치 default ON, 업그레이드 default OFF (neutral)</li>
-    <li><strong>TRIAGE kind 분기</strong> — Chief 가 응답 첫 줄에 <code>[kind:chat|workflow|schedule|goal]</code> 출력. chat 은 command 채널 평탄, workflow/schedule/goal 은 <code>works-&lt;handle&gt;</code> 에 task card embed + thread + stage narration (DECOMPOSE / DISPATCH / AWAIT)</li>
-    <li><strong><code>solosquad add-org</code></strong> 가 새 조직을 완전 동작 상태로 부트스트랩 — Chief 이름 + v1.1.0 전체 위계 (agents/main/chief, 4 teams, memory/{open-questions,ledger}, knowledge/) + problem-definition workflow 기본 시드</li>
-    <li><strong>guildCreate onboarding embed + 2 button</strong> (Auto-create / Manual choose), <code>/chat</code> slash command (MESSAGE_CONTENT intent fallback)</li>
-    <li><strong><code>solosquad doctor --discord</code> 5-hop diagnostic</strong> — token shape → REST /users/@me → bot_user_id match → guild membership → command 채널 ID</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.2.2], <code>docs/prd/v1.2-messenger-connection-discord-first.md</code></li>
-  </ul>
-
-  <h4>v1.1.0 (2026-05-27) — Multi-Agent Team Architecture</h4>
-  <ul>
-    <li><strong>Single PM session → Team-Centric Multi-Agent</strong></li>
-    <li><strong>Chief</strong> (org-level supervisor, 유일한 사용자 대면) + <strong>PM</strong> (workspace-bundle, 자율 product manager, 사용자와 직접 대화 안 함) 역할 분리</li>
-    <li><strong>4 main bot</strong> (chief / pm / engineer / designer / marketer) + <strong>20 specialist</strong> (평탄, 4 병합 + paid→performance rename) + <strong>18 skill</strong> + <strong>4 team</strong> (product / engineering / design / marketing)</li>
-    <li><strong>9-layer JIT context</strong> — Team OKR Layer 4a 신설</li>
-    <li><strong>Chief 6+1 stage state machine</strong> — TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT, <code>&lt;org&gt;/memory/chief-stage-events.jsonl</code> 자동 emit</li>
-    <li><strong>open_questions[] async-batch protocol</strong> — PM → Chief blocking question batch escalation</li>
-    <li><strong>Goal queue</strong> (1-active-per-org semaphore), 4 workflow templates, leading indicator 5 지표</li>
-    <li>외부 reference: Hermes V2 + gstack (Garry Tan) + RO-PNA pna-builders + phuryn pm-skills</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.1.0], <code>docs/prd/v1.1-multi-agent-team-architecture.md</code></li>
-  </ul>
-
-  <h4>v1.0.0 ~ v1.0.4 (2026-05-21 ~ 2026-05-23) — Formal launch + Discord patch chain</h4>
-  <ul>
-    <li><strong>v1.0.0</strong> — 정식 출시. 안정 API 보장. 42 CLI surface freeze. <code>docs/api-stability.md</code> 공개 약속 발효. Discord 단일 메신저 (Slack post-v1.0 슬롯)</li>
-    <li><strong>v1.0.1</strong> — discord.js v15 deprecation fix, <code>@&lt;slug&gt;</code> mention parser, multi-repo intent routing</li>
-    <li><strong>v1.0.2</strong> — Discord author-guard 제거 (당시 사유: 채널명이 user-id 라 봇 인식 실패 — v1.2.6 에서 handle 기반 채널로 해소된 후 owner-only 게이트로 reversal)</li>
-    <li><strong>v1.0.3</strong> — 5건 fix: versionMatches slice 산수 / npm sudo prefix 권한 체크 / guild-org binding <code>ownOrgSlug</code> 직접 사용 / update next-step 안내 / 카테고리 이름 정합 ("AI Team Reports" → "solosquad")</li>
-    <li><strong>v1.0.4</strong> — Discord <code>config.yaml</code> 자동 생성 + Slack author-guard 통째 cleanup + 5-hop diagnostic 메시지 + 9-reference 조사 박제</li>
-    <li>상세: <code>CHANGELOG.md</code> §[1.0.0]~[1.0.4]</li>
-  </ul>
-
-  <h4>v0.x series (pre-launch) — 압축 요약</h4>
-  <p>v1.0 출시 전 자체 사용 검증 + 인프라 구축 단계. 상세 이력은 <code>CHANGELOG.md</code> §[0.x.x] + <code>docs/prd/product-roadmap.md</code> §5.1.</p>
-  <ul>
-    <li><strong>v0.8.x</strong> — Multi-User Messenger (<code>command-&lt;handle&gt;</code> / <code>works-&lt;handle&gt;</code> 채널 페어 + handle 기반 라우팅 + author-guard 도입 + opt-in broadcast 채널), Security &amp; Lifecycle Pair (archive 페어 완결 + api-stability.md), Dev Capability (SKILL frontmatter <code>dev_capability</code>), Onboarding UX + Observability (<code>add repo --dry-run</code>, <code>solosquad logs</code>)</li>
-    <li><strong>v0.7.0</strong> — Uninstall &amp; Lifecycle (Farewell Archive). 사용자 코드 불가침, WAL-safe SQLite backup, REVOKE-CHECKLIST.md 자동 생성</li>
-    <li><strong>v0.6.0</strong> — 디폴트 워크플로우 튜닝, FTS5 cold archive, trajectory + freq miner, Org Layer specialization, chokidar hot-reload</li>
-    <li><strong>v0.5.0</strong> — 워크플로우 메이커 + frontmatter routing (4채널 라우터 <code>slash &gt; explicit &gt; keyword &gt; freq</code>)</li>
-    <li><strong>v0.4.0</strong> — 자율 overnight 엔진 (<code>goal.md</code> + <code>solosquad goal run</code>), <code>AGENTS.md</code> cross-tool 표준 차용</li>
-    <li><strong>v0.3.0</strong> — PM mode + 멀티 에이전트 오케스트레이션, 슬래시 체인 <code>/think /plan /build /review /ship</code></li>
-    <li><strong>v0.2.x</strong> — 워크스페이스 구조 정립 (<code>.solosquad/</code> + 다중 organization)</li>
-    <li><strong>v0.1.x</strong> — 최초 npm 배포, 25 specialist agents, Discord/Slack 어댑터</li>
-  </ul>
-
-  <h3 id="s9-2">9.2 다음 슬롯 (기획 중)</h3>
-
-  <h4>v1.2.x — 다음 patch / sub-version</h4>
-  <ul>
-    <li><strong>v1.2.1 후속 — Thread 연속성</strong>: referencedMessage chain + LRU cache (PRD §7.3) + thread token budget guard (PRD §9.2). v1.2.0 = 작업 1개 = thread 1개 모델 → 연속 대화 surface 추가</li>
-    <li><strong>v1.2.x — Slack adapter 복원</strong>: <code>init</code> messenger picker 의 Slack 옵션 활성화 + 같은 ChiefMessenger 인터페이스로 v1.2 기능 재구현</li>
-  </ul>
-
-  <h4>v1.3 — 일정 관리 + 메모</h4>
-  <ul>
-    <li>n잡 사용자 시간/기억 통합. Calendar / Apple Notes / Obsidian / Notion MCP 연결</li>
-    <li>v1.2 지식 온톨로지 (v1.x slot) 위에 layer 로 얹음</li>
-  </ul>
-
-  <h4>v1.x — cascade-shifted 슬롯</h4>
-  <ul>
-    <li><strong>대시보드 상호작용</strong>: 컴패니언 웹 대시보드 (별도 리포 <code>solopreneur-dashboard</code> + <code>solopreneur-api</code>)</li>
-    <li><strong>지식 온톨로지 + MCP 외부 연결</strong>: 그래프 백엔드 + Notion / Obsidian / 외부 API / 타 에이전트</li>
-    <li><strong>LLM backend abstraction</strong>: Multi-backend (single Claude → pluggable)</li>
-  </ul>
-
-  <div class="footer-note">
-    완전한 결정 로그는 <code>docs/prd/product-roadmap.md</code> §5~§6 참조. 외부 reference 및 출처는 <code>docs/prd/architecture.md</code> §14 참조.
-  </div>
-</section>
-
 <!-- ========================== SECTION 10 ========================== -->
-<section id="s10">
-  <h2><span class="num">10.</span>트러블슈팅 &amp; FAQ</h2>
+<section id="s9">
+  <h2><span class="num">9.</span>트러블슈팅 &amp; FAQ</h2>
 
-  <h3 id="s10-1">10.1 설치·실행 문제</h3>
+  <h3 id="s9-1">9.1 설치·실행 문제</h3>
 
   <h4>"solosquad를 찾을 수 없습니다"</h4>
   <ul>
@@ -1416,7 +1229,7 @@ git push --dry-run    # 직접 실행해서 동일 에러 재현되는지 확인
   </ul>
   <p>인증 자체는 SoloSquad 외부 영역입니다. 자세한 절차는 <a href="https://docs.github.com/authentication/keeping-your-account-and-data-secure/about-authentication-to-github">GitHub 공식 docs</a> 참조.</p>
 
-  <h3 id="s10-2">10.2 마이그레이션 트러블슈팅</h3>
+  <h3 id="s9-2">9.2 마이그레이션 트러블슈팅</h3>
 
   <h4>"Cannot find package.json" 류 에러</h4>
   <pre><code>npm cache clean --force
@@ -1443,7 +1256,7 @@ docker compose restart    # Docker 사용 시</code></pre>
   </ul>
   <p>breaking change가 포함된 minor 업데이트는 중요 프로젝트용으로는 <strong>일주일 정도 관찰</strong> 후 올라가는 것도 합리적.</p>
 
-  <h3 id="s10-3">10.3 Uninstall · 재설치 · 마이그레이션 회피<span class="badge now">v0.8.5</span></h3>
+  <h3 id="s9-3">9.3 Uninstall · 재설치 · 마이그레이션 회피<span class="badge now">v0.8.5</span></h3>
 
   <h4>안전한 uninstall 순서</h4>
   <p>npm v7+가 <code>preuninstall</code> 훅을 글로벌 패키지에서 호출하지 않는 한계(<a href="https://github.com/npm/cli/issues/3042">npm/cli#3042</a>) 때문에, <strong>사용자가 직접 순서를 지켜야</strong> farewell archive와 REVOKE-CHECKLIST가 생성됩니다.</p>
@@ -1528,7 +1341,7 @@ solosquad import ~/solosquad-archive-&lt;old&gt;-&lt;ts&gt;.zip --mode merge
     <code>solosquad uninstall</code>이 jsonl 파일들을 streaming SHA256으로 매니페스트 작성합니다. 봇이 동시에 jsonl append하면 매니페스트 SHA 불일치 → archive 검증 실패. <code>--force</code>로 우회 가능하지만 archive 무결성을 잃습니다.
   </div>
 
-  <h3 id="s10-4">10.4 봇 · 스케줄러 · 에이전트 git 작업<span class="badge now">v0.8.2~v0.8.6</span></h3>
+  <h3 id="s9-4">9.4 봇 · 스케줄러 · 에이전트 git 작업<span class="badge now">v0.8.2~v0.8.6</span></h3>
 
   <h4>스케줄러는 디폴트 실행되지 않음</h4>
   <p>SoloSquad는 데몬 / 백그라운드 자동 시작이 없습니다. <code>solosquad init</code>이 cron 등록을 하지 않으며, OS 부팅 시 자동 실행도 없음. 다음 명령으로 *명시적으로* 시작해야 합니다:</p>
@@ -1560,7 +1373,7 @@ solosquad cron start    # cron 실행기 (morning/evening brief, system-housekee
       <pre><code>cd &lt;workspace&gt;/&lt;org&gt;/repositories/&lt;repo&gt;
 git push --dry-run
 # "Everything up-to-date" 또는 "To &lt;url&gt;..." → ✓ 통과
-# "Authentication failed" → 트러블슈팅 §10.1 참조</code></pre>
+# "Authentication failed" → 트러블슈팅 §9.1 참조</code></pre>
     </li>
     <li><strong>repo 등록</strong>
       <pre><code>solosquad add repo https://github.com/me/my-saas.git --org my-saas</code></pre>
@@ -1606,7 +1419,7 @@ BD의 마지막 회신 (works-&lt;handle&gt;):
   <ul>
     <li><strong>Step 1.5 — git push 인증 확인</strong> (선택, 실패 시만)
       <pre><code>git push --dry-run    # 임의의 본인 repo에서
-# 실패 시 트러블슈팅 §10.1 참조</code></pre>
+# 실패 시 트러블슈팅 §9.1 참조</code></pre>
     </li>
     <li><strong>Step 7.5 (doctor 직후) — repo 등록 + push 검증</strong>
       <pre><code>solosquad add repo &lt;url&gt; --org &lt;org&gt;
@@ -1637,7 +1450,7 @@ git push --dry-run        # 워크스페이스 안에서도 인증 동작 확인
     </ul>
     상세 설계: <code>docs/plan/v0.8.6-migrate-hotfix-pr-workflow.md</code> §3, <code>docs/plan/v1.x-workflow-goal-routine-evolution.md</code> (PR workflow §추가 슬롯)
   </div>
-  <h3 id="s10-5">10.5 자주 묻는 질문 (FAQ)</h3>
+  <h3 id="s9-5">9.5 자주 묻는 질문 (FAQ)</h3>
 
   <p><strong>Q. 비용이 얼마나 드나요?</strong><br>
   A. Claude Code 사용 가능한 플랜 구독료만 있으면 시작 가능 (Max 권장). SoloSquad는 v0.9 기준 *Claude Code via OAuth* 단일 백엔드. 클라우드 운영 시 VPS 월 $4~6 추가.</p>

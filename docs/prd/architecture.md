@@ -862,7 +862,7 @@ v0.8.5~v0.8.6 사용자 테스트에서 *repos-inside-workspace-tree* 강제가 
 - `resolveRepoCwd`가 path 읽어 외부 경로로 cwd 결정 — 원본 사용자 dev tree 무변형
 - 사용자 working tree 직접 작업 (Hermes 모델 C는 솔로 founder 1인에 오버스펙, v2.x slot 박제)
 
-**워크스페이스 위치 멘탈 모델**: 모델 B 도입으로 워크스페이스가 ~ 50 MB config 폴더로 축소 → **1 user = 1 workspace + N orgs + N path-referenced repos**. 권장 위치 `~/solosquad/` (또는 짧은 이름). 멀티 워크스페이스는 *멀티 메신저 페르소나가 필요할 때만* advanced option (master-guide §9.2 유지).
+**워크스페이스 위치 멘탈 모델**: 모델 B 도입으로 워크스페이스가 ~ 50 MB config 폴더로 축소 → **1 user = 1 workspace + N orgs + N path-referenced repos**. 권장 위치 `~/solosquad/` (또는 짧은 이름). 멀티 워크스페이스는 *멀티 메신저 페르소나가 필요할 때만* advanced option (master-guide §7.3).
 
 **자동화 UX 4종**: ① cwd 인식 (default) — `cd <repo> && solosquad add repo` / ② `--path <ext>` 명시 flag / ③ `solosquad init` Step 5.1 확장 — path 입력 받기 / ④ `--discover <dir>` bulk 스캔 (사용자 명시 호출만). gh CLI 연동 (`--discover-github`)은 v1.x slot.
 

@@ -310,7 +310,7 @@ For production-grade always-on, choose one of:
 - macOS `launchd` plist / Windows NSSM service
 - VPS + systemd (see [`docs/cloud-deployment.md`](docs/cloud-deployment.md))
 
-Full details in master-guide §9.
+Full details in master-guide §7.1.
 
 ---
 
