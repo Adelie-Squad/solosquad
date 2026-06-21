@@ -84,6 +84,44 @@ test("every-minute cron warns (min-interval guard)", () => {
   assert.ok(codes(r.warnings).includes("CRON_TOO_FREQUENT"));
 });
 
+// v1.3.4 §D — min-interval guard extended to <5 minutes.
+test("sub-5-minute cron warns (min-interval guard extended)", () => {
+  const r = validateCronDef(def({ cron: "*/2 * * * *" }), { promptExists: () => true });
+  assert.ok(codes(r.warnings).includes("CRON_TOO_FREQUENT"));
+});
+
+// v1.3.4 §D — DST risk window.
+test("daily cron at 02:00 warns about the DST window", () => {
+  const r = validateCronDef(def({ cron: "0 2 * * *" }), { promptExists: () => true });
+  assert.ok(codes(r.warnings).includes("CRON_DST_WINDOW"));
+  const safe = validateCronDef(def({ cron: "0 9 * * *" }), { promptExists: () => true });
+  assert.ok(!codes(safe.warnings).includes("CRON_DST_WINDOW"));
+});
+
+// v1.3.4 §C — timezone validation.
+test("invalid timezone errors (CRON_TZ_INVALID), valid passes", () => {
+  const bad = validateCronDef(def({ timezone: "Asia/Seuol" }), { promptExists: () => true });
+  assert.ok(codes(bad.errors).includes("CRON_TZ_INVALID"));
+  const ok = validateCronDef(def({ timezone: "America/New_York" }), { promptExists: () => true });
+  assert.ok(!codes(ok.errors).includes("CRON_TZ_INVALID"));
+});
+
+// v1.3.4 §A — jitter validation.
+test("unparseable maxRandomDelay errors; oversized jitter warns", () => {
+  const bad = validateCronDef(def({ maxRandomDelay: "soon" }), { promptExists: () => true });
+  assert.ok(codes(bad.errors).includes("CRON_JITTER_INVALID"));
+  // daily cron (1440min cadence); 2h jitter > 720min half-cadence → warn
+  const big = validateCronDef(def({ cron: "0 9 * * *", maxRandomDelay: "13h" }), { promptExists: () => true });
+  assert.ok(codes(big.warnings).includes("CRON_JITTER_TOO_LARGE"));
+});
+
+// v1.3.4 §F2 — channel is now optional (auto-resolved); empty no longer errors.
+test("empty channel no longer errors (auto-resolved to works-<handle>)", () => {
+  const r = validateCronDef(def({ channel: "" }), { promptExists: () => true });
+  assert.ok(!codes(r.errors).includes("CRON_CHANNEL_MISSING"));
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+});
+
 test("loadCronDefs reads yaml defs and applies defaults", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ss-sched-"));
   fs.writeFileSync(path.join(dir, "weekly.yaml"), "id: weekly\nname: Weekly\nkind: background\ncron: \"0 9 * * 1\"\n");
@@ -91,7 +129,7 @@ test("loadCronDefs reads yaml defs and applies defaults", () => {
   const defs = loadCronDefs(dir);
   assert.equal(defs.length, 1);
   assert.equal(defs[0].id, "weekly");
-  assert.equal(defs[0].channel, "workflow"); // default
+  assert.equal(defs[0].channel, ""); // v1.3.4 §F2 — empty = auto-resolve works-<handle>
   assert.equal(defs[0].enabled, true); // default
 });
 

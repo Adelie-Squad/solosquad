@@ -32,6 +32,16 @@ export interface CronDef extends CronConfig {
    * ignored. Mutually exclusive with a recurring `cron` expression.
    */
   at?: string;
+  /**
+   * v1.3.4 §C — IANA timezone override for this cron. When absent, the
+   * scheduler uses the workspace/user timezone. Validated (CRON_TZ_INVALID).
+   */
+  timezone?: string;
+  /**
+   * v1.3.4 §A — jitter: a `<n>s|m` upper bound on a random pre-run delay to
+   * spread simultaneous fires (thundering-herd). Absent/0 = fire on the dot.
+   */
+  maxRandomDelay?: string;
   enabled: boolean;
 }
 
@@ -44,7 +54,11 @@ export function coerceCronDef(raw: Record<string, unknown>, fallbackId: string):
     kind,
     cron: typeof raw.cron === "string" ? raw.cron : "",
     at: typeof raw.at === "string" && raw.at.length > 0 ? raw.at : undefined,
-    channel: typeof raw.channel === "string" && raw.channel.length > 0 ? raw.channel : "workflow",
+    timezone: typeof raw.timezone === "string" && raw.timezone.length > 0 ? raw.timezone : undefined,
+    maxRandomDelay: typeof raw.maxRandomDelay === "string" && raw.maxRandomDelay.length > 0 ? raw.maxRandomDelay : undefined,
+    // v1.3.4 §F2 — channel is auto-resolved to works-<handle> at runtime.
+    // An explicit value is an advanced override; "" means auto.
+    channel: typeof raw.channel === "string" ? raw.channel : "",
     threadName: typeof raw.threadName === "string" ? raw.threadName : undefined,
     emoji: typeof raw.emoji === "string" ? raw.emoji : "⏰",
     memoryTargets: Array.isArray(raw.memoryTargets)
@@ -96,7 +110,9 @@ export function serializeCronDef(def: CronDef): string {
   };
   if (def.at) obj.at = def.at;
   else obj.cron = def.cron;
-  obj.channel = def.channel;
+  if (def.timezone) obj.timezone = def.timezone;
+  if (def.maxRandomDelay) obj.maxRandomDelay = def.maxRandomDelay;
+  if (def.channel) obj.channel = def.channel;
   obj.enabled = def.enabled;
   if (def.threadName) obj.threadName = def.threadName;
   if (def.emoji && def.emoji !== "⏰") obj.emoji = def.emoji;

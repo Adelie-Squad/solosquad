@@ -23,10 +23,11 @@ import {
 } from "./crons.js";
 import { loadCronDefs, deleteCronFiles } from "./cron-def.js";
 import { validateCronDef } from "./cron-validate.js";
-import { recordCronRun, lastSuccessfulRun } from "./cron-runlog.js";
-import { isOverdue } from "./cron-schedule.js";
+import { recordCronRun, lastSuccessfulRun, lastCronRun } from "./cron-runlog.js";
+import { isOverdue, parseDelaySeconds } from "./cron-schedule.js";
 import { resolveUserCrons } from "./user-crons.js";
-import { listUserYamls } from "../bot/user-registry.js";
+import { listUserYamls, deriveChannelNames } from "../bot/user-registry.js";
+import { broadcastOwnerHandle } from "../messenger/broadcast.js";
 import { freqSuggestionLine } from "./freq-keyword-miner.js";
 import { getCronsWriteDir } from "../util/paths.js";
 import { saveCronMemory } from "./memory.js";
@@ -42,6 +43,26 @@ function nowLabel(tz: string = workspaceTimezone): string {
   return new Date()
     .toLocaleString("ko-KR", { timeZone: tz })
     .slice(5);
+}
+
+/**
+ * v1.3.4 §F2 — resolve an org-scoped cron's delivery channel to a real
+ * `works-<handle>`. There is no shared "#workflow" channel. Target handle =
+ * the broadcast owner (if set + present), else the sole/first user. Returns
+ * null when the org has no users (then the run is logged but not posted).
+ */
+function resolveOrgWorksChannel(orgSlug: string): string | null {
+  const users = listUserYamls(orgSlug);
+  if (users.length === 0) return null;
+  const owner = broadcastOwnerHandle();
+  const target =
+    (owner && users.find((u) => u.handle === owner)) || users[0];
+  return deriveChannelNames(target.handle).works;
+}
+
+/** Sleep helper for jitter (§A). */
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function runCronForProduct(
@@ -103,18 +124,37 @@ async function runCronForProduct(
           const last = lastSuccessfulRun(orgDir, d.id)?.finishedAt;
           return `• ${d.emoji} ${d.name} (${d.id}) — last ok: ${last ? new Date(last).toLocaleString() : "never"}`;
         });
-        const msg = `⚠️ **Cron dead-man's-switch** — ${overdue.length} overdue:\n${lines.join("\n")}`;
-        for (const adapter of adapters) {
-          const config = loadMessengerConfig(orgDir, adapter.platform);
-          await adapter.sendToChannel(config, "workflow", msg, undefined, "system-housekeeping");
+        const msg = `⚠️ **Cron 실행 누락 감지** — ${overdue.length} overdue:\n${lines.join("\n")}`;
+        const dmChannel = resolveOrgWorksChannel(product.slug);
+        if (dmChannel) {
+          for (const adapter of adapters) {
+            const config = loadMessengerConfig(orgDir, adapter.platform);
+            await adapter.sendToChannel(config, dmChannel, msg, undefined, "system-housekeeping");
+          }
         }
-        console.log(`[Scheduler] ${product.name} - dead-man's-switch: ${overdue.length} overdue cron(s)`);
+        console.log(`[Scheduler] ${product.name} - 실행 누락 감지: ${overdue.length} overdue cron(s)`);
       }
     } catch (err) {
       console.error(`[Scheduler] ${product.name} - dead-man's-switch check failed:`, (err as Error).message);
     }
     return;
   }
+
+  // v1.3.4 §A — jitter: spread simultaneous fires (thundering-herd). Built-in
+  // briefs get a default spread; user crons opt in via maxRandomDelay. This is
+  // the scheduled path only (manual `cron run` uses a separate CLI impl).
+  const jitterStr = (cron as { maxRandomDelay?: string }).maxRandomDelay;
+  let jitterSec = parseDelaySeconds(jitterStr) ?? 0;
+  if (!jitterStr && cron.kind === "user-brief") jitterSec = 120;
+  if (jitterSec > 0) {
+    const wait = Math.floor(Math.random() * jitterSec * 1000);
+    if (wait > 0) await sleep(wait);
+  }
+
+  // v1.3.4 §F2 — effective delivery channel (works-<handle>; null = no users).
+  const channel = overrides.channel ?? (cron.channel && cron.channel.length ? cron.channel : resolveOrgWorksChannel(product.slug));
+  // Capture the prior run BEFORE this run records, for the failure noise guard.
+  const prevRun = lastCronRun(orgDir, cron.id);
 
   const prompt = loadCronPrompt(cron.id);
   const startedAt = new Date();
@@ -130,6 +170,18 @@ async function runCronForProduct(
       error: (err as Error).message,
     });
     console.error(`[Scheduler] ${product.name} - ${cron.name} → error: ${(err as Error).message}`);
+    // v1.3.4 §F3/§E2 — report failures to the cron's channel with the reason,
+    // independent of [SILENT]. Noise guard: suppress when the prior run also errored.
+    if (channel && prevRun?.status !== "error") {
+      const fmsg = `⚠️ [${cron.name}] 실행 실패 — ${(err as Error).message} (${nowLabel(overrides.tz)})`;
+      const fThread = overrides.channel ? undefined : cron.threadName;
+      for (const adapter of adapters) {
+        const config = loadMessengerConfig(orgDir, adapter.platform);
+        try { await adapter.sendToChannel(config, channel, fmsg, undefined, fThread); } catch { /* delivery best-effort */ }
+      }
+    } else if (prevRun?.status === "error") {
+      console.log(`[Scheduler] ${product.name} - ${cron.name} → repeated failure (alert suppressed)`);
+    }
     return;
   }
   const finishedAt = new Date();
@@ -169,10 +221,13 @@ async function runCronForProduct(
     if (line) result = `${result}\n\n---\n${line}`;
   }
 
-  // v0.2.4+: route to #workflow channel; background crons target a system
-  // thread. v1.3.3 §B — personalized briefs override the channel (works-<handle>)
-  // and label in the user's timezone.
-  const channel = overrides.channel ?? cron.channel;
+  // v1.3.4 §F2 — deliver to the resolved works-<handle> (computed above).
+  // background crons target a system thread; personalized briefs post to the
+  // channel root in the user's timezone. No channel (no users) → log only.
+  if (!channel) {
+    console.log(`[Scheduler] ${product.name} - ${cron.name} → no delivery channel (no users) — saved to file only`);
+    return;
+  }
   const threadName = overrides.channel ? undefined : cron.threadName;
   const title = `${cron.emoji} [${cron.name}] ${product.name} | ${nowLabel(overrides.tz)}`;
   for (const adapter of adapters) {
@@ -288,7 +343,8 @@ async function sendStartupNotification(crons: ResolvedCron[]): Promise<void> {
     for (const product of products) {
       const orgDir = path.join(workspace, product.slug);
       const config = loadMessengerConfig(orgDir, adapter.platform);
-      await adapter.sendToChannel(config, "workflow", msg);
+      const ch = resolveOrgWorksChannel(product.slug);
+      if (ch) await adapter.sendToChannel(config, ch, msg);
     }
   }
 }
@@ -316,6 +372,13 @@ export async function startScheduler(): Promise<void> {
   for (const s of crons) {
     if (!s.enabled) {
       console.log(`[Scheduler] Skipped: ${s.cron.name} (disabled)`);
+      continue;
+    }
+    // v1.3.4 §F2 — user-brief built-ins are delivered per-user (every user, in
+    // their works-<handle>) via registerUserBriefs; skip the org-level reg to
+    // avoid a duplicate post to a nonexistent shared channel.
+    if (s.cron.kind === "user-brief") {
+      console.log(`[Scheduler] ${s.cron.name} → per-user delivery (registerUserBriefs)`);
       continue;
     }
     cron.schedule(s.expr, () => runCron(s.cron.id), {
@@ -348,13 +411,12 @@ export async function startScheduler(): Promise<void> {
  */
 function registerUserBriefs(ws?: WorkspaceYaml): void {
   const merged = ws ?? applyWorkspaceDefaults({ version: "0", display_name: "", created_at: "" } as WorkspaceYaml);
-  const defaults = {
-    tz: merged.timezone ?? workspaceTimezone,
-    times: {
-      "morning-brief": merged.briefings?.morning?.time ?? "08:00",
-      "evening-brief": merged.briefings?.evening?.time ?? "18:00",
-    } as Record<string, string>,
-  };
+  // v1.3.4 §F2 — a disabled workspace brief omits its time → resolveUserCrons
+  // skips it for everyone (no per-user override can resurrect a disabled brief).
+  const times: Record<string, string> = {};
+  if (merged.briefings?.morning?.enabled !== false) times["morning-brief"] = merged.briefings?.morning?.time ?? "08:00";
+  if (merged.briefings?.evening?.enabled !== false) times["evening-brief"] = merged.briefings?.evening?.time ?? "18:00";
+  const defaults = { tz: merged.timezone ?? workspaceTimezone, times };
   const orgs = loadProducts().map((p) => ({ slug: p.slug, users: listUserYamls(p.slug) }));
   const resolved = resolveUserCrons(orgs, defaults);
   for (const uc of resolved) {

@@ -4,14 +4,15 @@ import { CRONS } from "./crons.js";
 import { timeToDailyCron } from "./crons.js";
 
 /**
- * v1.3.3 §B (cron 개인화) — expand opt-in user cron settings into concrete
- * per-user brief registrations. Pure (inputs injected) so it is unit-testable.
+ * v1.3.3 §B / v1.3.4 §F2 — expand per-user brief registrations. Pure (inputs
+ * injected) so it is unit-testable.
  *
- * A user is "opted in" when their yaml carries a `crons` block or a `timezone`.
- * For each personalizable built-in (the `user-brief` crons — morning/evening),
- * an opted-in user gets a registration firing at their own time (or the
- * workspace default) in their own timezone, delivered to `works-<handle>`.
- * Org-level #workflow briefs are unaffected (additive).
+ * v1.3.4 correction: there is no org-common "#workflow" brief. **Every** user
+ * receives the personalizable built-ins (the `user-brief` crons — morning/
+ * evening) in their own `works-<handle>` channel. `timezone` and the `crons`
+ * block are per-user *overrides* (tz / time / per-brief enable), not an opt-in
+ * gate. A brief is only skipped when explicitly disabled or when no default
+ * time is supplied (a disabled workspace brief omits its time).
  */
 
 export interface ResolvedUserCron {
@@ -37,10 +38,6 @@ function personalizable(): { id: string; name: string; emoji: string }[] {
   return CRONS.filter((c) => c.kind === "user-brief").map((c) => ({ id: c.id, name: c.name, emoji: c.emoji }));
 }
 
-function isOptedIn(u: UserYaml): boolean {
-  return !!u.timezone || (!!u.crons && Object.keys(u.crons).length > 0);
-}
-
 export function resolveUserCrons(
   orgs: { slug: string; users: UserYaml[] }[],
   defaults: UserCronDefaults,
@@ -49,7 +46,6 @@ export function resolveUserCrons(
   const briefs = personalizable();
   for (const org of orgs) {
     for (const u of org.users) {
-      if (!isOptedIn(u)) continue;
       const tz = u.timezone || defaults.tz;
       const channel = deriveChannelNames(u.handle).works;
       for (const b of briefs) {

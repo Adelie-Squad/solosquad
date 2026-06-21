@@ -1,7 +1,36 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSchedule, describeSchedule, nextRun, estimatePeriodMinutes, isOverdue, parseWhen } from "../src/scheduler/cron-schedule.js";
+import { normalizeSchedule, describeSchedule, nextRun, nextRuns, estimatePeriodMinutes, isOverdue, parseWhen, parseDelaySeconds } from "../src/scheduler/cron-schedule.js";
 import { isSilentResult } from "../src/scheduler/crons.js";
+
+// v1.3.4 §A — jitter/delay parsing.
+test("parseDelaySeconds handles s/m/h and rejects junk", () => {
+  assert.equal(parseDelaySeconds("90s"), 90);
+  assert.equal(parseDelaySeconds("5m"), 300);
+  assert.equal(parseDelaySeconds("2h"), 7200);
+  assert.equal(parseDelaySeconds(""), null);
+  assert.equal(parseDelaySeconds("soon"), null);
+  assert.equal(parseDelaySeconds(undefined), null);
+});
+
+// v1.3.4 §B — next-N preview.
+test("nextRuns returns N ascending future times for a daily cron", () => {
+  const base = Date.UTC(2026, 0, 1, 0, 0, 0); // 2026-01-01T00:00Z
+  const runs = nextRuns("0 9 * * *", 3, "UTC", base);
+  assert.equal(runs.length, 3);
+  for (let i = 1; i < runs.length; i++) {
+    assert.ok(runs[i].getTime() > runs[i - 1].getTime());
+  }
+  assert.equal(runs[0].getTime(), Date.UTC(2026, 0, 1, 9, 0, 0));
+});
+
+test("nextRuns honors day-of-week and returns [] for invalid", () => {
+  const base = Date.UTC(2026, 0, 1, 0, 0, 0); // Thu
+  const mondays = nextRuns("0 0 * * 1", 2, "UTC", base);
+  assert.equal(mondays.length, 2);
+  assert.ok(mondays.every((d) => d.getUTCDay() === 1));
+  assert.equal(nextRuns("not a cron", 3, "UTC", base).length, 0);
+});
 
 test("normalizeSchedule passes through valid cron expressions", () => {
   assert.equal(normalizeSchedule("0 9 * * 1").cron, "0 9 * * 1");

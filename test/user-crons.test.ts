@@ -33,9 +33,23 @@ test("timezone-only opt-in personalizes at the user's tz with default times", ()
   assert.ok(r.every((c) => c.channel === "works-bob"));
 });
 
-test("users without crons/timezone are not personalized", () => {
+test("every user gets both briefs in their works channel (no opt-in gate)", () => {
+  // v1.3.4 §F2 — there is no org-common brief; a plain user still gets both
+  // briefs in works-<handle> at the workspace default tz/time.
   const r = resolveUserCrons([{ slug: "acme", users: [user("carol")] }], defaults);
-  assert.equal(r.length, 0);
+  assert.equal(r.length, 2);
+  assert.ok(r.every((c) => c.channel === "works-carol"));
+  assert.ok(r.every((c) => c.timezone === "Asia/Seoul"));
+});
+
+test("a brief disabled at the workspace (omitted default time) is skipped for all", () => {
+  // registerUserBriefs omits a disabled brief's default time → resolveUserCrons skips it.
+  const r = resolveUserCrons(
+    [{ slug: "acme", users: [user("carol")] }],
+    { tz: "Asia/Seoul", times: { "morning-brief": "08:00" } },
+  );
+  assert.equal(r.length, 1);
+  assert.equal(r[0].cronId, "morning-brief");
 });
 
 test("a brief can be individually disabled; custom time wins", () => {
@@ -65,7 +79,8 @@ test("multiple orgs and users expand independently", () => {
     ],
     defaults,
   );
-  // alice: 2 (opted via tz), bob: 0, carol: 2 (crons block personalizes both)
-  assert.equal(r.length, 4);
+  // v1.3.4: every user gets both briefs — alice 2 + bob 2 + carol 2 = 6.
+  assert.equal(r.length, 6);
   assert.ok(r.some((c) => c.orgSlug === "beta" && c.handle === "carol"));
+  assert.ok(r.some((c) => c.handle === "bob" && c.channel === "works-bob"));
 });

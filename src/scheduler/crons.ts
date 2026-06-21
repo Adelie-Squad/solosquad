@@ -8,7 +8,11 @@ export interface CronConfig {
   id: string;
   name: string;
   kind: CronKind;
-  /** Always "workflow" in v0.2.4+. Kept as field for forward extensibility. */
+  /**
+   * v1.3.4 §F2 — empty = auto-resolve to the org's `works-<handle>` at runtime
+   * (there is no shared "#workflow" channel). A non-empty value is an explicit
+   * advanced override.
+   */
   channel: string;
   /** System thread inside #workflow for background crons. user-brief posts to channel root. */
   threadName?: string;
@@ -42,7 +46,7 @@ export const CRONS: CronConfig[] = [
     id: "morning-brief",
     name: "Morning Brief",
     kind: "user-brief",
-    channel: "workflow",
+    channel: "",
     emoji: "🌅",
     memoryTargets: [],
   },
@@ -50,7 +54,7 @@ export const CRONS: CronConfig[] = [
     id: "evening-brief",
     name: "Evening Brief",
     kind: "user-brief",
-    channel: "workflow",
+    channel: "",
     emoji: "🌇",
     memoryTargets: ["decisions.jsonl"],
   },
@@ -58,7 +62,7 @@ export const CRONS: CronConfig[] = [
     id: "pm-compaction",
     name: "Chief Compaction",
     kind: "background",
-    channel: "workflow",
+    channel: "",
     threadName: "system-pm-compaction",
     emoji: "🗂",
     memoryTargets: [],
@@ -72,7 +76,7 @@ export const CRONS: CronConfig[] = [
     id: "system-housekeeping",
     name: "System Housekeeping",
     kind: "background",
-    channel: "workflow",
+    channel: "",
     threadName: "system-housekeeping",
     emoji: "🧹",
     memoryTargets: [],

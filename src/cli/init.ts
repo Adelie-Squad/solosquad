@@ -27,28 +27,15 @@ import {
   type UserYaml,
 } from "../bot/user-registry.js";
 import { SOLOSQUAD_VERSION } from "../util/version.js";
-
-const TIMEZONE_PRESETS = [
-  { name: "Asia/Seoul (UTC+09) — recommended", value: "Asia/Seoul" },
-  { name: "America/Los_Angeles (UTC-08/-07)", value: "America/Los_Angeles" },
-  { name: "America/New_York (UTC-05/-04)", value: "America/New_York" },
-  { name: "Europe/London (UTC+00/+01)", value: "Europe/London" },
-  { name: "UTC", value: "UTC" },
-  { name: "Other — type IANA string", value: "__other__" },
-];
+import {
+  TIMEZONE_PRESETS,
+  TIMEZONE_OTHER,
+  isValidIanaTimezone,
+  suggestTimezone,
+} from "../util/timezone.js";
 
 function isValidHHMM(s: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
-}
-
-function isValidIanaTimezone(tz: string): boolean {
-  try {
-    // Throws RangeError on invalid IANA name
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 interface ClaudeAuthStatus {
@@ -1039,14 +1026,19 @@ export async function initCommand(): Promise<void> {
       default: DEFAULT_WORKSPACE_SETTINGS.timezone,
     },
   ]);
-  if (timezone === "__other__") {
+  if (timezone === TIMEZONE_OTHER) {
     const { customTz } = await inquirer.prompt([
       {
         name: "customTz",
         message: "IANA timezone string (e.g. Asia/Tokyo):",
         type: "input",
-        validate: (v: string) =>
-          isValidIanaTimezone(v) || "Invalid IANA timezone name",
+        validate: (v: string) => {
+          if (isValidIanaTimezone(v)) return true;
+          const hint = suggestTimezone(v);
+          return hint
+            ? `Invalid IANA timezone — did you mean "${hint}"?`
+            : "Invalid IANA timezone name";
+        },
       },
     ]);
     timezone = customTz;

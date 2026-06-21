@@ -106,6 +106,109 @@ export function parseWhen(input: string, now: number = Date.now()): { at?: strin
   return { at: new Date(t).toISOString() };
 }
 
+/**
+ * v1.3.4 §A — parse a `<n>s|m|h` jitter/delay string into seconds.
+ * Returns null for empty/invalid input (treated as "no jitter").
+ */
+export function parseDelaySeconds(input: string | undefined | null): number | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+  const m = raw.match(/^(\d+)\s*(s|sec|seconds?|m|min|minutes?|h|hr|hours?)$/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n) || n < 0) return null;
+  const u = m[2].toLowerCase()[0];
+  return u === "s" ? n : u === "m" ? n * 60 : n * 3600;
+}
+
+/** Parse one cron field into a matcher over its numeric domain [min,max].
+ *  Supports `*`, `?`, `n`, `a-b`, `* /n`, `a-b/n`, and comma lists. dow/mon
+ *  names are not expanded (generated crons are numeric); unknown → match-none. */
+function fieldMatcher(field: string, lo: number, hi: number): (v: number) => boolean {
+  const allowed = new Set<number>();
+  for (const part of field.split(",")) {
+    const p = part.trim();
+    if (p === "*" || p === "?") {
+      for (let i = lo; i <= hi; i++) allowed.add(i);
+      continue;
+    }
+    const stepM = p.match(/^(\*|\d+(?:-\d+)?)\/(\d+)$/);
+    if (stepM) {
+      const step = parseInt(stepM[2], 10);
+      let rLo = lo;
+      let rHi = hi;
+      if (stepM[1] !== "*") {
+        const rng = stepM[1].split("-").map((x) => parseInt(x, 10));
+        rLo = rng[0];
+        rHi = rng.length > 1 ? rng[1] : hi;
+      }
+      if (step > 0) for (let i = rLo; i <= rHi; i += step) allowed.add(i);
+      continue;
+    }
+    const rngM = p.match(/^(\d+)-(\d+)$/);
+    if (rngM) {
+      for (let i = parseInt(rngM[1], 10); i <= parseInt(rngM[2], 10); i++) allowed.add(i);
+      continue;
+    }
+    if (/^\d+$/.test(p)) allowed.add(parseInt(p, 10));
+  }
+  return (v: number) => allowed.has(v);
+}
+
+/** Timezone-aware local field extraction (min/hr/dom/mon[1-12]/dow[0-6]). */
+function localParts(d: Date, timezone?: string): { mi: number; hr: number; dom: number; mon: number; dow: number } {
+  if (!timezone) {
+    return { mi: d.getMinutes(), hr: d.getHours(), dom: d.getDate(), mon: d.getMonth() + 1, dow: d.getDay() };
+  }
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone, hourCycle: "h23",
+    year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", weekday: "short",
+  });
+  const parts: Record<string, string> = {};
+  for (const p of fmt.formatToParts(d)) parts[p.type] = p.value;
+  const DOW: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    mi: parseInt(parts.minute, 10), hr: parseInt(parts.hour, 10) % 24,
+    dom: parseInt(parts.day, 10), mon: parseInt(parts.month, 10), dow: DOW[parts.weekday] ?? 0,
+  };
+}
+
+/**
+ * v1.3.4 §B — the next N fire times for a recurring expression. Steps minute by
+ * minute (tz/DST-aware) and collects matches. Empty array if invalid. For the
+ * save-time preview; minute resolution (seconds field, if any, is ignored).
+ */
+export function nextRuns(expr: string, n = 5, timezone?: string, now: number = Date.now()): Date[] {
+  if (!cron.validate(expr) || n <= 0) return [];
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5 || parts.length > 6) return [];
+  const [min, hr, dom, mon, dow] = parts.length === 6 ? parts.slice(1) : parts;
+  const mMin = fieldMatcher(min, 0, 59);
+  const mHr = fieldMatcher(hr, 0, 23);
+  const mDom = fieldMatcher(dom, 1, 31);
+  const mMon = fieldMatcher(mon, 1, 12);
+  const mDow = fieldMatcher(dow, 0, 6);
+  const domRestricted = dom.trim() !== "*" && dom.trim() !== "?";
+  const dowRestricted = dow.trim() !== "*" && dow.trim() !== "?";
+
+  const out: Date[] = [];
+  // Start at the next whole minute.
+  let t = Math.floor(now / 60000) * 60000 + 60000;
+  const MAX = 367 * 24 * 60; // scan up to ~1 year of minutes
+  for (let i = 0; i < MAX && out.length < n; i++, t += 60000) {
+    const d = new Date(t);
+    const p = localParts(d, timezone);
+    if (!mMin(p.mi) || !mHr(p.hr) || !mMon(p.mon)) continue;
+    // cron semantics: when both dom and dow are restricted, match EITHER.
+    const domOk = mDom(p.dom);
+    const dowOk = mDow(p.dow);
+    const dayOk = domRestricted && dowRestricted ? domOk || dowOk : domOk && dowOk;
+    if (!dayOk) continue;
+    out.push(d);
+  }
+  return out;
+}
+
 /** Best-effort human description of a 5-field cron expression. Falls back to
  *  the raw expression when the pattern isn't one of the common shapes. */
 export function describeSchedule(expr: string): string {
