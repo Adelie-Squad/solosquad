@@ -750,7 +750,7 @@ Chief: Wrote the PRD → broke it into stages → registered it in the #works ch
       <tr><td><strong>Local terminal</strong></td><td>The simplest way to start</td><td>Works only while the terminal is open. Disconnects when the PC sleeps (use <code>caffeinate -dims</code> on macOS, disable sleep on Windows).</td></tr>
       <tr><td><strong>Docker Compose</strong></td><td>Background + auto-restart</td><td><code>docker compose up -d --build</code>. With <code>restart: unless-stopped</code> it comes back automatically after a reboot. Mounts the host's <code>~/.claude</code> to share the login.</td></tr>
       <tr><td><strong>System service</strong></td><td>Auto-start without Docker</td><td>macOS launchd or Windows NSSM to start automatically on login.</td></tr>
-      <tr><td><strong>Cloud VPS</strong></td><td>24/7 even when your PC is off</td><td>Hetzner, Vultr, Railway, Fly.io, etc. from ~$4/month. Register with systemd. For details see <code>docs/cloud-deployment.md</code>.</td></tr>
+      <tr><td><strong>Cloud VPS</strong></td><td>24/7 even when your PC is off</td><td>Hetzner, Vultr, Railway, Fly.io, etc. from ~$4/month. Register with systemd. For details see <code>manual/cloud-deployment.md</code>.</td></tr>
     </tbody>
   </table>
   <pre><code># Local — two terminals

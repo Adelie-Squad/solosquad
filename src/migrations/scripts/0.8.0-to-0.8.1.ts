@@ -122,7 +122,7 @@ export const migration: Migration = {
     return {
       steps,
       warnings: [
-        "v0.8.1 adds `solosquad import` + `solosquad archive verify/info/list` — see docs/api-stability.md before relying on schema_version.",
+        "v0.8.1 adds `solosquad import` + `solosquad archive verify/info/list` — see docs/policy/schema-stability.md before relying on schema_version.",
       ],
       irreversible_changes: [],
       estimated_disk_delta_mb: 0,

@@ -682,7 +682,7 @@ src/migrations/scripts/
 scripts/
 └── inject-skill-schema-version.ts → idempotent backfill (CI 게이트 — SCHEMA_VERSION_MISSING 경고)
 docs/
-└── api-stability.md        → 6 schema_version의 bump 룰 + 1-minor deprecation 기간
+└── schema-stability.md        → 6 schema_version의 bump 룰 + 1-minor deprecation 기간
 ```
 
 **의존**: `yauzl ^3.3.0` (devDeps — archive verify/import reader)
@@ -937,10 +937,10 @@ Get-CimInstance Win32_Process |
 
 #### 13.6.13 v1.0.0 — Formal launch (2026-05-21)
 
-**공개 사용자 약속이 시작되는 마일스톤.** `docs/api-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze. 진입 흐름 정합 *2 항목* 흡수 + 메신저 단일화 결정 박제.
+**공개 사용자 약속이 시작되는 마일스톤.** `docs/policy/schema-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze. 진입 흐름 정합 *2 항목* 흡수 + 메신저 단일화 결정 박제.
 
 **Activated**:
-- `api-stability.md` "Effective as of v1.0.0 (2026-05-21)" 발효. 6개 `schema_version` 표면의 deprecation 정책이 v1.x.x bullet로 활성화.
+- `schema-stability.md` "Effective as of v1.0.0 (2026-05-21)" 발효. 6개 `schema_version` 표면의 deprecation 정책이 v1.x.x bullet로 활성화.
 - `workspace.yaml.version` ↔ SoloSquad CLI SemVer 1:1 추적. v0.x 자유 bump 종료.
 - 42 CLI 명령 freeze — 명령 추가 = minor / 명령·플래그 제거 또는 rename = major (v2.0+).
 
@@ -961,7 +961,7 @@ Get-CimInstance Win32_Process |
 
 572 → **573 tests green** (572 baseline + `test/v1.0-path-ref-only.test.ts` 3건).
 
-자세히: `docs/plan/v1.0-official-launch.md`, `docs/api-stability.md` (발효 본문), `CHANGELOG.md` §[1.0.0]
+자세히: `docs/plan/v1.0-official-launch.md`, `docs/policy/schema-stability.md` (발효 본문), `CHANGELOG.md` §[1.0.0]
 
 #### 13.6.14 v1.0.1 — Discord deprecation + repo `role` 제거 + 다중-repo 라우팅 (2026-05-22)
 

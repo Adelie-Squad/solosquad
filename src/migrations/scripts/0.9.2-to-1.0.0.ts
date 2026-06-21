@@ -13,7 +13,7 @@ import {
  * v0.9.2.x → v1.0.0 — Formal launch.
  *
  * Per `docs/plan/v1.0-formal-launch.md`. v1.0 is the milestone where:
- * - `api-stability.md`'s 6 `schema_version` surfaces become a public promise
+ * - `schema-stability.md`'s 6 `schema_version` surfaces become a public promise
  * - `v0.8.4-cli-surface-reduction.md` §11 — 42-command CLI surface is frozen
  * - Repo registration unifies to *path-reference only* (URL clone +
  *   Move-into-workspace removed from `solosquad init` Step 5.1 and

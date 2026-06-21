@@ -10,7 +10,7 @@ import chalk from "chalk";
  *
  * Per `docs/plan/v0.8.4-cli-surface-reduction.md` §10:
  * - v0.8.4: alias still works, but emits a deprecation warning.
- * - v1.0: alias removed entirely (matches `docs/api-stability.md` §4 —
+ * - v1.0: alias removed entirely (matches `docs/policy/schema-stability.md` §4 —
  *   "removing a flag is major").
  */
 export function warnDeprecated(args: {

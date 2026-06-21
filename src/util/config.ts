@@ -517,7 +517,7 @@ export interface RepoYaml {
    * user messages (`src/bot/mention-parser.ts`), (b) PM clarifying
    * question when ambiguous, (c) workflow stage `target_repo` for
    * explicit declaration. Hard removal scheduled for v2.0 per
-   * `docs/api-stability.md` schema read-window policy.
+   * `docs/policy/schema-stability.md` schema read-window policy.
    */
   role: "main" | "frontend" | "backend" | "data" | "infra" | "docs" | "unknown";
   language?: string;

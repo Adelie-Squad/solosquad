@@ -568,7 +568,7 @@ export function validateSkill(
       code: "SCHEMA_VERSION_MISSING",
       field: "schema_version",
       message:
-        "schema_version missing — add `schema_version: 1` per docs/api-stability.md (idempotent backfill: `scripts/inject-skill-schema-version.ts`)",
+        "schema_version missing — add `schema_version: 1` per docs/policy/schema-stability.md (idempotent backfill: `scripts/inject-skill-schema-version.ts`)",
     });
   } else if (spec.schema_version < 1) {
     errors.push({

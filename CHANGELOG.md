@@ -321,7 +321,7 @@ Details: `docs/prd/v1.2.6-onboarding-and-vocabulary-polish.md`. The prior v1.2.3
 ### Fixed — Vocabulary (`PM` → `Chief` in user-facing labels)
 
 - **Surface labels renamed** to match the v1.1.0 Chief role: `[Bot] PM turn:` → `[Bot] Chief turn:`, `[Bot] PM error:` → `[Bot] Chief error:`, `[Bot] PM turn done:` → `[Bot] Chief turn done:`, `solosquad pm status` output `"PM sessions:"` → `"Chief sessions:"`, `"Rotated PM session"` → `"Rotated Chief session"`, etc. Inquirer prompts that say "Archive PM session for ..." now say "Archive Chief session for ...". (PRD §C.1, §C.2)
-- **`pm.message_in` / `pm.message_out` / `pm.error` jsonl event kinds stay as-is** (PRD §C.3) — schema_version backward-compat per `docs/api-stability.md` §6, and the archive consumers (`solosquad memory search` / `archive verify`) depend on the literal `kind` strings. Internal vocabulary mismatch is acceptable; user-facing UX takes priority.
+- **`pm.message_in` / `pm.message_out` / `pm.error` jsonl event kinds stay as-is** (PRD §C.3) — schema_version backward-compat per `docs/policy/schema-stability.md` §6, and the archive consumers (`solosquad memory search` / `archive verify`) depend on the literal `kind` strings. Internal vocabulary mismatch is acceptable; user-facing UX takes priority.
 - **CLI command `solosquad pm <status|reset|compact>` kept verbatim** — v1.0 CLI surface freeze. A future `solosquad chief` alias is queued for v2 SemVer, where renaming a command is legal.
 
 ### Fixed — Manual
@@ -658,12 +658,12 @@ v1.0.2 + v1.0.3 의 6 incident 공통 root cause 두 갈래: (a) *외부 자유 
 
 ## [1.0.0] — 2026-05-21
 
-**v1.0.0 — Formal launch.** v0.x 전체는 *솔로 파운더 자기 사용*을 위한 빠른 반복 구간이었습니다. v1.0부터는 **공개 사용자 약속이 시작**됩니다 — `docs/api-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze됩니다.
+**v1.0.0 — Formal launch.** v0.x 전체는 *솔로 파운더 자기 사용*을 위한 빠른 반복 구간이었습니다. v1.0부터는 **공개 사용자 약속이 시작**됩니다 — `docs/policy/schema-stability.md`의 SemVer 정책이 발효되고, `v0.8.4-cli-surface-reduction.md §11`의 42-command CLI surface가 freeze됩니다.
 
 본 plan 초기 draft는 "코드 변경 0건"을 약속했으나, v0.9.2 사용자 검증 회고 결과 *진입 흐름 마찰 2건*을 v1.0에 직접 흡수했습니다. 신규 기능은 추가되지 않으며, 명령 surface는 변하지 않습니다. 자세한 박제는 `docs/plan/v1.0-formal-launch.md`.
 
 ### Activated — public API stability promise
-- `docs/api-stability.md` — "Effective as of v1.0.0 (2026-05-21)" 발효. 6개 `schema_version` 표면 (workspace · org metadata · agent profile · SKILL frontmatter · archive metadata · archive manifest) deprecation 정책이 *v1.x.x bullet*로 활성화.
+- `docs/policy/schema-stability.md` — "Effective as of v1.0.0 (2026-05-21)" 발효. 6개 `schema_version` 표면 (workspace · org metadata · agent profile · SKILL frontmatter · archive metadata · archive manifest) deprecation 정책이 *v1.x.x bullet*로 활성화.
 - `workspace.yaml.version`이 SoloSquad CLI SemVer를 1:1 추적. v0.x 자유 bump 윈도우 종료.
 - CLI surface 42 명령 freeze — 명령 추가 = minor / 명령·플래그 제거 또는 rename = major (v2.0+). 의도된 컨벤션 예외(`migrate dry-run default`)는 freeze에 포함.
 
@@ -997,7 +997,7 @@ prompt마다 *왜 묻는지* 헬프 1줄 추가 (handle/name/role/messenger/prov
 ## [0.8.4] — 2026-05-16
 
 **v0.8.4 — CLI Surface Reduction.** v1.0 정식 출시 전 마지막 비파괴적 플래그
-정리. `docs/api-stability.md` §4가 "Removing a flag is major"라 박제 →
+정리. `docs/policy/schema-stability.md` §4가 "Removing a flag is major"라 박제 →
 v1.0 이후엔 플래그 제거 불가. 이 슬롯에서 6축 정리: (a) `uninstall` 플래그
 8→5 (`--mode <full|keep|archive-only>`), (b) `add repo --inspect` 별칭
 deprecated, (c) `import --mode <merge|replace>` 패턴 정합, (d) `agent
@@ -1062,7 +1062,7 @@ subgroup 신설, (f) `solosquad init` 워크스페이스 경로 명시 확인 pr
 ### Added — v1.0 Surface Freeze 체크리스트 (§11)
 - 12 top-level + 30 subcommands across 11 groups = **42 commands**
 - v1.0 진입 시 본 enumeration이 SemVer 약속 대상이 됨
-- `docs/api-stability.md` §4가 본 plan §11을 canonical reference로 link
+- `docs/policy/schema-stability.md` §4가 본 plan §11을 canonical reference로 link
 
 ### Added — Tests
 - `test/cli-deprecation.test.ts` — 5 cases (helper unit)
@@ -1070,7 +1070,7 @@ subgroup 신설, (f) `solosquad init` 워크스페이스 경로 명시 확인 pr
 - `test/import-mode-matrix.test.ts` — 5 cases (mode 매트릭스)
 
 ### Changed — Documentation
-- `docs/api-stability.md` §4 — v0.8.4 surface freeze link + migrate
+- `docs/policy/schema-stability.md` §4 — v0.8.4 surface freeze link + migrate
   dry-run-by-default convention exception 명시
 - `manual/master-guide.html` §6 — uninstall/import/backup 명령 표
   갱신, init wizard에 `Initialize workspace at` step 안내 추가
@@ -1175,7 +1175,7 @@ end-to-end. SKILL frontmatter `dev_capability`·`dev_permissions` 신설.
 - `solosquad archive verify/info/list` — yauzl 기반 reader + manifest SHA
   대조 + schema 호환 확인
 - `src/lifecycle/{import,archive-reader,merge-strategy}.ts`
-- `docs/api-stability.md` — 6 schema_version의 bump 룰 + deprecation 기간
+- `docs/policy/schema-stability.md` — 6 schema_version의 bump 룰 + deprecation 기간
 - 25 SKILL.md `schema_version: 1` 백필 (`scripts/inject-skill-schema-version.ts`)
 - validator `SCHEMA_VERSION_MISSING` 경고 (v0.9 error로 promote)
 

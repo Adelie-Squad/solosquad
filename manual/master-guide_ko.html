@@ -750,7 +750,7 @@ Chief: PRD 작성 → 단계 분해 → #works 채널에 등록했습니다.</co
       <tr><td><strong>로컬 터미널</strong></td><td>가장 간단히 시작</td><td>터미널이 열려 있는 동안만 동작. PC 슬립 시 끊김 (macOS <code>caffeinate -dims</code>, Windows 절전 끄기)</td></tr>
       <tr><td><strong>Docker Compose</strong></td><td>백그라운드 + 자동 재시작</td><td><code>docker compose up -d --build</code>. <code>restart: unless-stopped</code> 로 재부팅 후 자동 복귀. 호스트의 <code>~/.claude</code> 를 마운트해 로그인 공유</td></tr>
       <tr><td><strong>서비스화</strong></td><td>Docker 없이 자동 시작</td><td>macOS launchd · Windows NSSM 으로 로그인 시 자동 기동</td></tr>
-      <tr><td><strong>클라우드 VPS</strong></td><td>PC 를 꺼도 24/7</td><td>Hetzner·Vultr·Railway·Fly.io 등 월 $4~. systemd 등록. 자세히는 <code>docs/cloud-deployment.md</code></td></tr>
+      <tr><td><strong>클라우드 VPS</strong></td><td>PC 를 꺼도 24/7</td><td>Hetzner·Vultr·Railway·Fly.io 등 월 $4~. systemd 등록. 자세히는 <code>manual/cloud-deployment.md</code></td></tr>
     </tbody>
   </table>
   <pre><code># 로컬 — 터미널 두 개
