@@ -1,5 +1,8 @@
-# SoloSquad API Stability Policy
+# SoloSquad On-Disk Schema Stability Policy
 
+> *(formerly "API Stability Policy" — "API" here means the **on-disk file/schema
+> surface** SoloSquad writes to your workspace, not a code/function API.)*
+>
 > **Status:** **Effective as of v1.0.0 (2026-05-21).**
 >
 > The rules below are now a public promise. Until v1.0 SoloSquad reserved
