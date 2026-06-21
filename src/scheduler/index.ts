@@ -305,7 +305,10 @@ function resolveCrons(ws: WorkspaceYaml): ResolvedCron[] {
           expr: timeToDailyCron(b.evening!.time),
           enabled: b.evening!.enabled !== false,
         };
-      case "pm-compaction": {
+      case "chief-compaction": {
+        // v1.3.4 §E5 — cron id renamed pm-compaction→chief-compaction. The
+        // workspace.yaml config block key stays `pm` (the persisted Chief-config
+        // contract; pm→chief key rename is a separate dedicated migration).
         const pmCfg = merged.pm ?? {};
         const time = pmCfg.compaction_time ?? "23:00";
         return {

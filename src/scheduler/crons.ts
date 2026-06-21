@@ -59,11 +59,11 @@ export const CRONS: CronConfig[] = [
     memoryTargets: ["decisions.jsonl"],
   },
   {
-    id: "pm-compaction",
+    id: "chief-compaction",
     name: "Chief Compaction",
     kind: "background",
     channel: "",
-    threadName: "system-pm-compaction",
+    threadName: "system-chief-compaction",
     emoji: "🗂",
     memoryTargets: [],
   },

@@ -415,9 +415,9 @@ const chiefGroup = program
   .description("Manage Chief sessions (status / reset / compact)");
 
 // v1.3.3 — the pre-v1.1 `pm` verb (deprecated hidden alias since v1.2.10) was
-// removed; `chief` is the sole surface for session ops. The session driver,
-// cron id (`pm-compaction`), and on-disk `pm.*` event namespace are separate
-// data contracts and intentionally retained (see v1.2.10 §A.3).
+// removed; `chief` is the sole surface for session ops. v1.3.4 §E5 renamed the
+// cron id pm-compaction → chief-compaction; the workspace.yaml `pm` config key
+// and on-disk `pm.*` event namespace are separate contracts, retained for now.
 chiefGroup
   .command("status")
   .description("Show active Chief sessions, cumulative cost, and activity")
