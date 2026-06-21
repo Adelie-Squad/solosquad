@@ -4,7 +4,6 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import { execFile, spawn } from "child_process";
 import {
-  getAssetsDir,
   getSolosquadConfigDir,
 } from "../util/paths.js";
 import { findWorkspaceRoot } from "../migrations/detect.js";
@@ -839,11 +838,10 @@ export async function initCommand(): Promise<void> {
   // Copy system config into .solosquad/
   // NOTE: v1.3.1 §8/§9 emptied the legacy `assets/<dir>` seed copy entirely —
   // agents/crons/core/orchestrator/templates were all removed from assets/.
-  // The roster/skills/teams/crons/knowledge now come from the v1.1 bundle
-  // block below; former templates are inlined as constants in their owning
-  // code (goal.ts, skill-author.ts, migration scripts). Only `.env.example`
-  // and docker/ remain under assets/ (handled separately below).
-  const assetsDir = getAssetsDir();
+  // The roster/skills/teams/crons/knowledge come from the v1.1 bundle block
+  // below; former templates are inlined as constants in their owning code
+  // (goal.ts, skill-author.ts, migration scripts). v1.3.5 — `.env.example` and
+  // `docker/` moved from assets/ to the bundle root (copied separately below).
   fs.mkdirSync(solosquadDir, { recursive: true });
 
   // v1.1 bundle dirs (live at <bundle>/<dir>/, not under assets/). Copy
@@ -871,16 +869,16 @@ export async function initCommand(): Promise<void> {
   }
 
   // .env.example → .solosquad/.env (if missing)
-  const envExampleSrc = path.join(assetsDir, ".env.example");
+  const envExampleSrc = path.join(bundleRoot, ".env.example");
   const envDest = path.join(solosquadDir, ".env");
   if (fs.existsSync(envExampleSrc) && !fs.existsSync(envDest)) {
     fs.copyFileSync(envExampleSrc, envDest);
     console.log(` ${chalk.green("✓")} .solosquad/.env`);
   }
 
-  // docker-compose.yml and Dockerfile at workspace root (sourced from assets/docker/)
+  // docker-compose.yml and Dockerfile at workspace root (sourced from <bundle>/docker/)
   for (const f of ["docker-compose.yml", "Dockerfile"]) {
-    const src = path.join(assetsDir, "docker", f);
+    const src = path.join(bundleRoot, "docker", f);
     const dst = path.join(workspace, f);
     if (fs.existsSync(src) && !fs.existsSync(dst)) {
       fs.copyFileSync(src, dst);

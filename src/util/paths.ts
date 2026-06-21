@@ -19,11 +19,15 @@ function loadYamlLib(): typeof import("js-yaml") {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/** Bundled assets directory inside the npm package. */
+/**
+ * @deprecated v1.3.5 — the `assets/` bundle dir was retired; its only remaining
+ * contents (`.env.example`, `docker/`) moved to the bundle root. Resolves to the
+ * now-absent `<bundle>/assets` so the two historical migrations that probe
+ * `assets/{agents,routines}` (already removed in v1.1/v1.3.1) keep no-op'ing.
+ * New code should use `getBundleRoot()` + the specific file/dir.
+ */
 export function getAssetsDir(): string {
-  const candidate = path.resolve(__dirname, "..", "..", "assets");
-  if (fs.existsSync(candidate)) return candidate;
-  return path.resolve(__dirname, "..", "..", "..", "assets");
+  return path.join(getBundleRoot(), "assets");
 }
 
 /**
@@ -130,10 +134,12 @@ export function getKnowledgeDir(workspace?: string): string {
  * coexist during the transition.
  */
 export function getBundleRoot(): string {
-  // Mirror getAssetsDir's two-candidate resolution then strip the trailing
-  // `/assets`. Keeps the source-vs-installed-package distinction consistent.
-  const fromAssets = getAssetsDir();
-  return path.dirname(fromAssets);
+  // v1.3.5 — anchor on package.json (always at the bundle root, always shipped),
+  // independent of any single bundle dir. Two-candidate depth: source (src/util)
+  // vs compiled (dist/src/util).
+  const c1 = path.resolve(__dirname, "..", "..");
+  if (fs.existsSync(path.join(c1, "package.json"))) return c1;
+  return path.resolve(__dirname, "..", "..", "..");
 }
 
 /**
