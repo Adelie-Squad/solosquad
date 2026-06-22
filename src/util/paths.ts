@@ -248,14 +248,28 @@ export function getCronsDir(): string {
 }
 
 /**
- * v1.3.3 §C — canonical WRITE target for user cron defs/prompts. Unlike
- * getCronsDir() (a read-resolver that falls back to the bundle when no override
- * exists), this is always `<workspace>/.solosquad/crons` so `cron new/edit/
- * delete` can never write into the installed package. Mirrors the v1.3.2 §10
- * adopt write-target pinning. The dir is created lazily by the writer.
+ * v1.3.5 §3.9 B-D3 — canonical WRITE target for an org's user cron defs/prompts.
+ * Crons are now **org-scoped** (`<org>/crons/`), aligning with workflow
+ * (`<org>/workflows/`) and goal (`<org>/goals/`). Each org owns its crons, so a
+ * cron only fires for its org (was: `.solosquad/crons/` workspace-global, firing
+ * for every org). The `1.3.4-to-1.3.5` migration relocates the legacy dir.
+ *
+ * (v1.3.3 §C history: was `<workspace>/.solosquad/crons`. Unlike getCronsDir()
+ * — a read-resolver that falls back to the bundle for built-in prompts — this is
+ * a write target so `cron new/edit/delete` never write into the installed
+ * package. The dir is created lazily by the writer.)
  */
-export function getCronsWriteDir(): string {
-  return path.join(getWorkspaceRoot(), ".solosquad", "crons");
+export function getCronsWriteDir(orgSlug: string, workspace?: string): string {
+  return path.join(getOrgDir(orgSlug, workspace), "crons");
+}
+
+/**
+ * v1.3.5 §3.9 B-D3 — the workspace-global legacy user-cron dir
+ * (`<workspace>/.solosquad/crons`). Pre-1.3.5 write target; retained so the
+ * migration and a defensive runtime fallback can still find un-migrated defs.
+ */
+export function getLegacyCronsWriteDir(workspace?: string): string {
+  return path.join(workspace ?? getWorkspaceRoot(), ".solosquad", "crons");
 }
 
 /** Products file (v0.1.x legacy only). v0.2.2+ uses .org.yaml per organization. */

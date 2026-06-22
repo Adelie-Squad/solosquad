@@ -143,10 +143,11 @@ cronGroup
 
 cronGroup
   .command("list")
-  .description("List built-in crons + user-defined crons")
-  .action(async () => {
+  .description("List built-in crons + user-defined crons (per org)")
+  .option("--org <slug>", "Only this org's crons")
+  .action(async (opts) => {
     const { cronListCommand } = await import("./cron.js");
-    await cronListCommand();
+    await cronListCommand(opts);
   });
 
 cronGroup
@@ -158,6 +159,7 @@ cronGroup
   .option("--kind <kind>", "user-brief | background (default: background)")
   .option("--channel <name>", "Override channel (default: auto → works-<handle>)")
   .option("--timezone <tz>", "IANA timezone for this cron (default: workspace tz)")
+  .option("--org <slug>", "Org to create the cron under (default: the sole org)")
   .option("-y, --yes", "Skip the create confirmation")
   .action(async (id, opts) => {
     const { cronNewCommand } = await import("./cron.js");
@@ -168,17 +170,19 @@ cronGroup
   .command("show")
   .description("Show one cron (built-in cron or user-defined) + its validation state")
   .argument("<id>", "Cron id")
-  .action(async (id) => {
+  .option("--org <slug>", "Org the cron belongs to (default: the sole org)")
+  .action(async (id, opts) => {
     const { cronShowCommand } = await import("./cron.js");
-    await cronShowCommand(id);
+    await cronShowCommand(id, opts);
   });
 
 cronGroup
   .command("validate")
   .description("Validate user cron definitions (cron, kind, channel, prompt)")
-  .action(async () => {
+  .option("--org <slug>", "Only this org's crons")
+  .action(async (opts) => {
     const { cronValidateCommand } = await import("./cron.js");
-    await cronValidateCommand();
+    await cronValidateCommand(opts);
   });
 
 cronGroup
@@ -209,6 +213,7 @@ cronGroup
   .option("--kind <kind>", "user-brief | background")
   .option("--channel <name>", "Override channel (empty = auto → works-<handle>)")
   .option("--timezone <tz>", "IANA timezone for this cron")
+  .option("--org <slug>", "Org the cron belongs to (default: the sole org)")
   .option("-y, --yes", "Skip the edit confirmation")
   .action(async (ref, opts) => {
     const { cronEditCommand } = await import("./cron.js");
@@ -219,18 +224,20 @@ cronGroup
   .command("enable")
   .description("Resume a paused cron (pause ≠ delete)")
   .argument("<ref>", "Cron id or name")
-  .action(async (ref) => {
+  .option("--org <slug>", "Org the cron belongs to (default: the sole org)")
+  .action(async (ref, opts) => {
     const { cronSetEnabledCommand } = await import("./cron.js");
-    await cronSetEnabledCommand(ref, true);
+    await cronSetEnabledCommand(ref, true, opts);
   });
 
 cronGroup
   .command("disable")
   .description("Pause a cron (keeps its definition; stops triggering)")
   .argument("<ref>", "Cron id or name")
-  .action(async (ref) => {
+  .option("--org <slug>", "Org the cron belongs to (default: the sole org)")
+  .action(async (ref, opts) => {
     const { cronSetEnabledCommand } = await import("./cron.js");
-    await cronSetEnabledCommand(ref, false);
+    await cronSetEnabledCommand(ref, false, opts);
   });
 
 cronGroup
@@ -238,6 +245,7 @@ cronGroup
   .description("Delete a user cron (archives by default; --hard removes)")
   .argument("<ref>", "Cron id or name")
   .option("--hard", "Permanently remove instead of archiving to crons/_archived/")
+  .option("--org <slug>", "Org the cron belongs to (default: the sole org)")
   .option("-y, --yes", "Skip the confirmation prompt")
   .action(async (ref, opts) => {
     const { cronDeleteCommand } = await import("./cron.js");

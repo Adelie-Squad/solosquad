@@ -152,20 +152,23 @@ test("cronShowCommand: built-in cron prints, unknown id exits 1", async () => {
 });
 
 // §9.6 — `crons new` scaffolds a valid yaml + stub prompt (no LLM).
-test("cronNewCommand: scaffolds valid files", async () => {
+// v1.3.5 B-D3 — crons are org-scoped, so files land in `<org>/crons/`.
+test("cronNewCommand: scaffolds valid files (org-scoped)", async () => {
   const { cronNewCommand } = await import("../src/cli/cron.js");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ss-sched-new-"));
-  // getCronsDir walks from cwd; create a .solosquad/crons under dir and chdir
   const prevCwd = process.cwd();
   const origLog = console.log;
   const prevExit = process.exitCode;
   console.log = () => {};
-  fs.mkdirSync(path.join(dir, ".solosquad", "crons"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".solosquad", "workspace.yaml"), "version: 1.3.1\n");
+  fs.mkdirSync(path.join(dir, ".solosquad"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".solosquad", "workspace.yaml"), "version: 1.3.5\n");
+  // A single org → cronNewCommand defaults to it (no --org needed).
+  fs.mkdirSync(path.join(dir, "acme"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "acme", ".org.yaml"), "schema_version: 1\nname: Acme\nslug: acme\n");
   process.chdir(dir);
   try {
     await cronNewCommand("weekly-digest", { cron: "0 9 * * 1", kind: "background", yes: true });
-    const base = path.join(dir, ".solosquad", "crons");
+    const base = path.join(dir, "acme", "crons");
     assert.ok(fs.existsSync(path.join(base, "weekly-digest.yaml")));
     assert.ok(fs.existsSync(path.join(base, "weekly-digest.md")));
   } finally {

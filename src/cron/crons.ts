@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { getCronsDir } from "../util/paths.js";
+import { getCronsDir, getCronsWriteDir } from "../util/paths.js";
 
 export type CronKind = "user-brief" | "background";
 
@@ -94,9 +94,15 @@ export function isSilentResult(result: string): boolean {
   return t.length === 0 || /^\[SILENT\]/i.test(t);
 }
 
-/** Load cron prompt from crons/{id}.md (v1.1 rename; resolver
- *  preserves legacy `.solosquad/crons/` overrides — see getCronsDir). */
-export function loadCronPrompt(cronId: string): string {
+/** Load a cron prompt from `{id}.md`.
+ *  - Built-in crons resolve from the bundle/legacy resolver (`getCronsDir`).
+ *  - v1.3.5 B-D3: org-scoped user crons live in `<org>/crons/<id>.md`; pass the
+ *    org slug to read it there (falling back to the resolver if absent). */
+export function loadCronPrompt(cronId: string, orgSlug?: string): string {
+  if (orgSlug) {
+    const orgPrompt = path.join(getCronsWriteDir(orgSlug), `${cronId}.md`);
+    if (fs.existsSync(orgPrompt)) return fs.readFileSync(orgPrompt, "utf-8");
+  }
   const promptFile = path.join(getCronsDir(), `${cronId}.md`);
   if (fs.existsSync(promptFile)) {
     return fs.readFileSync(promptFile, "utf-8");

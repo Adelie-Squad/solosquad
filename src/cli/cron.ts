@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import chalk from "chalk";
 import { getCronsWriteDir } from "../util/paths.js";
+import { listOrganizations } from "../util/config.js";
 import {
   loadCronDefs,
   writeCronDef,
@@ -21,15 +22,50 @@ import { CRONS } from "../cron/crons.js";
 
 const BUILTIN_IDS = new Set(CRONS.map((r) => r.id));
 
+/**
+ * v1.3.5 §3.9 B-D3 — crons are org-scoped (`<org>/crons/`). Resolve which org a
+ * command operates on: explicit `--org`, else the sole org, else require `--org`.
+ * Returns the org slug + its cron dir, or null (with exitCode set) on failure.
+ */
+function resolveOrgDir(orgOpt?: string): { org: string; dir: string } | null {
+  const orgs = listOrganizations();
+  if (orgs.length === 0) {
+    console.error(chalk.red("✗ no organizations — run `solosquad init` first."));
+    process.exitCode = 1;
+    return null;
+  }
+  let org: string;
+  if (orgOpt) {
+    if (!orgs.some((o) => o.slug === orgOpt)) {
+      console.error(chalk.red(`✗ no org "${orgOpt}". Known: ${orgs.map((o) => o.slug).join(", ")}.`));
+      process.exitCode = 1;
+      return null;
+    }
+    org = orgOpt;
+  } else if (orgs.length === 1) {
+    org = orgs[0].slug;
+  } else {
+    console.error(chalk.red(`✗ multiple orgs — pass --org <slug> (${orgs.map((o) => o.slug).join(", ")}).`));
+    process.exitCode = 2;
+    return null;
+  }
+  return { org, dir: getCronsWriteDir(org) };
+}
+
+/** A `promptExists` predicate bound to a specific org cron dir. */
+function promptExistsIn(dir: string): (id: string) => boolean {
+  return (id: string) => fs.existsSync(path.join(dir, `${id}.md`));
+}
+
 /** Resolve an id-or-name ref to a user-cron id, printing the right error and
  *  setting exitCode on failure. Returns null if unresolved/built-in. */
-function resolveOrFail(ref: string, verb: string): string | null {
+function resolveOrFail(ref: string, verb: string, dir: string): string | null {
   if (BUILTIN_IDS.has(ref)) {
     console.error(chalk.red(`✗ "${ref}" is a built-in cron — it can't be ${verb} (edit workspace.yaml for its time).`));
     process.exitCode = 2;
     return null;
   }
-  const r = resolveCronRef(ref);
+  const r = resolveCronRef(ref, dir);
   if (r.kind === "ok") return r.id;
   if (r.kind === "ambiguous") {
     console.error(chalk.red(`✗ "${ref}" is ambiguous — matches: ${r.matches.join(", ")}. Use the exact id.`));
@@ -42,8 +78,8 @@ function resolveOrFail(ref: string, verb: string): string | null {
 }
 
 /** Validate a def + print its findings; returns true if error-free. */
-function reportValidation(def: CronDef): boolean {
-  const result = validateCronDef(def, { reservedIds: builtinIdsExcept(def.id), promptExists });
+function reportValidation(def: CronDef, dir: string): boolean {
+  const result = validateCronDef(def, { reservedIds: builtinIdsExcept(def.id), promptExists: promptExistsIn(dir) });
   if (!result.ok) {
     console.log(chalk.red(`  ✗ ${result.errors.length} error(s):`));
     for (const e of result.errors) printIssue(e, "error");
@@ -65,10 +101,6 @@ function builtinIdsExcept(_id: string): ReadonlySet<string> {
  * `run` executes one cron manually.
  */
 
-function promptExists(id: string): boolean {
-  return fs.existsSync(path.join(getCronsWriteDir(), `${id}.md`));
-}
-
 export interface CronNewOpts {
   cron?: string;
   at?: string;
@@ -76,6 +108,7 @@ export interface CronNewOpts {
   channel?: string;
   timezone?: string;
   yes?: boolean;
+  org?: string;
 }
 
 /**
@@ -92,7 +125,9 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
     process.exitCode = 2;
     return;
   }
-  const dir = getCronsWriteDir();
+  const resolved = resolveOrgDir(opts.org);
+  if (!resolved) return;
+  const { dir } = resolved;
   const yamlPath = path.join(dir, `${id}.yaml`);
   const mdPath = path.join(dir, `${id}.md`);
   if (fs.existsSync(yamlPath)) {
@@ -144,9 +179,9 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
   }
 
   writeCronDef(def, dir, /* scaffoldPrompt */ true);
-  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md`));
+  console.log(chalk.green(`✓ created ${yamlPath} + ${id}.md  ${chalk.dim(`(org: ${resolved.org})`)}`));
 
-  if (reportValidation(def)) {
+  if (reportValidation(def, dir)) {
     console.log(chalk.dim(`  Next: edit ${mdPath} (the prompt), then \`solosquad cron validate\``));
   } else {
     process.exitCode = 1;
@@ -193,11 +228,15 @@ export interface CronEditOpts {
   channel?: string;
   timezone?: string;
   yes?: boolean;
+  org?: string;
 }
 
 /** `cron edit <ref>` — patch fields of an existing user cron, then re-validate. */
 export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Promise<void> {
-  const id = resolveOrFail(ref, "edited");
+  const resolved = resolveOrgDir(opts.org);
+  if (!resolved) return;
+  const { dir } = resolved;
+  const id = resolveOrFail(ref, "edited", dir);
   if (!id) return;
   const patch: Partial<CronDef> = {};
   if (opts.name) patch.name = opts.name;
@@ -240,21 +279,24 @@ export async function cronEditCommand(ref: string, opts: CronEditOpts = {}): Pro
   }
   if (!(await confirmOrAbort(`Apply changes to cron "${id}"?`, opts.yes))) return;
 
-  const def = patchCronDef(id, patch);
+  const def = patchCronDef(id, patch, dir);
   if (!def) {
     console.error(chalk.red(`✗ could not read cron "${id}"`));
     process.exitCode = 1;
     return;
   }
   console.log(chalk.green(`✓ updated ${id}`));
-  if (!reportValidation(def)) process.exitCode = 1;
+  if (!reportValidation(def, dir)) process.exitCode = 1;
 }
 
 /** `cron enable <ref>` / `cron disable <ref>` — pause ≠ delete. */
-export async function cronSetEnabledCommand(ref: string, enabled: boolean): Promise<void> {
-  const id = resolveOrFail(ref, enabled ? "enabled" : "disabled");
+export async function cronSetEnabledCommand(ref: string, enabled: boolean, opts: { org?: string } = {}): Promise<void> {
+  const resolved = resolveOrgDir(opts.org);
+  if (!resolved) return;
+  const { dir } = resolved;
+  const id = resolveOrFail(ref, enabled ? "enabled" : "disabled", dir);
   if (!id) return;
-  const def = setCronEnabled(id, enabled);
+  const def = setCronEnabled(id, enabled, dir);
   if (!def) {
     console.error(chalk.red(`✗ could not read cron "${id}"`));
     process.exitCode = 1;
@@ -268,11 +310,15 @@ export async function cronSetEnabledCommand(ref: string, enabled: boolean): Prom
 export interface CronDeleteOpts {
   hard?: boolean;
   yes?: boolean;
+  org?: string;
 }
 
 /** `cron delete <ref>` — archive (default) or hard-remove the backing files. */
 export async function cronDeleteCommand(ref: string, opts: CronDeleteOpts = {}): Promise<void> {
-  const id = resolveOrFail(ref, "deleted");
+  const resolved = resolveOrgDir(opts.org);
+  if (!resolved) return;
+  const { dir } = resolved;
+  const id = resolveOrFail(ref, "deleted", dir);
   if (!id) return;
   if (!opts.yes) {
     const inquirer = (await import("inquirer")).default;
@@ -287,7 +333,7 @@ export async function cronDeleteCommand(ref: string, opts: CronDeleteOpts = {}):
       return;
     }
   }
-  const touched = deleteCronFiles(id, getCronsWriteDir(), { hard: opts.hard });
+  const touched = deleteCronFiles(id, dir, { hard: opts.hard });
   if (touched.length === 0) {
     console.error(chalk.red(`✗ no files for "${id}"`));
     process.exitCode = 1;
@@ -298,26 +344,34 @@ export async function cronDeleteCommand(ref: string, opts: CronDeleteOpts = {}):
   console.log(chalk.dim(`  A running daemon stops it on next reload.`));
 }
 
-export async function cronListCommand(): Promise<void> {
-  const dir = getCronsWriteDir();
-  const defs = loadCronDefs(dir);
+export async function cronListCommand(opts: { org?: string } = {}): Promise<void> {
   console.log(chalk.bold(`Built-in crons (${CRONS.length}):`));
   for (const r of CRONS) {
     console.log(`  ${r.emoji} ${chalk.cyan(r.id)} — ${r.name} (${r.kind})`);
   }
-  console.log(chalk.bold(`\nUser crons in ${dir} (${defs.length}):`));
-  if (defs.length === 0) {
-    console.log(chalk.dim("  (none — add crons/<id>.yaml + crons/<id>.md)"));
+  // v1.3.5 B-D3 — user crons are org-scoped; list per org (or one via --org).
+  const orgs = listOrganizations().filter((o) => !opts.org || o.slug === opts.org);
+  if (orgs.length === 0) {
+    console.log(chalk.dim(`\n(no organizations${opts.org ? ` matching "${opts.org}"` : ""})`));
     return;
   }
-  for (const d of defs) {
-    const flag = d.enabled ? chalk.green("on") : chalk.dim("off");
-    const sched = d.at ? `at=${d.at} (one-shot)` : `cron="${d.cron}"`;
-    console.log(`  ${d.emoji} ${chalk.cyan(d.id)} — ${d.name} [${flag}] ${sched} (${d.kind})`);
+  for (const org of orgs) {
+    const dir = getCronsWriteDir(org.slug);
+    const defs = loadCronDefs(dir);
+    console.log(chalk.bold(`\n${org.slug} — user crons (${defs.length}):`) + chalk.dim(`  ${dir}`));
+    if (defs.length === 0) {
+      console.log(chalk.dim("  (none — `solosquad cron new <id>`)"));
+      continue;
+    }
+    for (const d of defs) {
+      const flag = d.enabled ? chalk.green("on") : chalk.dim("off");
+      const sched = d.at ? `at=${d.at} (one-shot)` : `cron="${d.cron}"`;
+      console.log(`  ${d.emoji} ${chalk.cyan(d.id)} — ${d.name} [${flag}] ${sched} (${d.kind})`);
+    }
   }
 }
 
-export async function cronShowCommand(id: string): Promise<void> {
+export async function cronShowCommand(id: string, opts: { org?: string } = {}): Promise<void> {
   // §9.6 — homogeneous `show <id>`, matching `goal show` / `workflow show`.
   const builtin = CRONS.find((r) => r.id === id);
   if (builtin) {
@@ -327,7 +381,9 @@ export async function cronShowCommand(id: string): Promise<void> {
     console.log(chalk.dim(`  cron:    resolved at scheduler startup from workspace.yaml`));
     return;
   }
-  const dir = getCronsWriteDir();
+  const resolved = resolveOrgDir(opts.org);
+  if (!resolved) return;
+  const { dir } = resolved;
   const def = loadCronDefs(dir).find((d) => d.id === id);
   if (!def) {
     console.log(chalk.red(`✗ no cron "${id}" (built-in or user-defined). Try \`solosquad cron list\`.`));
@@ -358,6 +414,7 @@ export async function cronShowCommand(id: string): Promise<void> {
   }
   if (def.channel) console.log(`  channel: ${def.channel}`);
   const prompt = cronMdPath(def.id, dir);
+  const promptExists = promptExistsIn(dir);
   console.log(`  prompt:  ${promptExists(def.id) ? prompt : chalk.red(`${prompt} (missing)`)}`);
 
   // surface validation state inline (validate-then-trust)
@@ -373,39 +430,47 @@ export async function cronShowCommand(id: string): Promise<void> {
   }
 }
 
-export async function cronValidateCommand(): Promise<void> {
-  const defs = loadCronDefs(getCronsWriteDir());
-  if (defs.length === 0) {
-    console.log(chalk.yellow("△ no user crons found (crons/<id>.yaml)"));
+export async function cronValidateCommand(opts: { org?: string } = {}): Promise<void> {
+  const orgs = listOrganizations().filter((o) => !opts.org || o.slug === opts.org);
+  const builtinIds = new Set(CRONS.map((r) => r.id));
+  let total = 0;
+  let failed = 0;
+  for (const org of orgs) {
+    const dir = getCronsWriteDir(org.slug);
+    const defs = loadCronDefs(dir);
+    if (defs.length === 0) continue;
+    const promptExists = promptExistsIn(dir);
+    console.log(chalk.bold(`${org.slug}:`));
+    for (const def of defs) {
+      total++;
+      const result = validateCronDef(def, { reservedIds: builtinIds, promptExists });
+      if (result.ok && result.warnings.length === 0) {
+        console.log(chalk.green(`  ✓ ${def.id}`));
+        continue;
+      }
+      if (result.ok) {
+        console.log(chalk.yellow(`  △ ${def.id} — ${result.warnings.length} warning(s)`));
+        for (const w of result.warnings) printIssue(w, "warn");
+        continue;
+      }
+      failed++;
+      console.log(chalk.red(`  ✗ ${def.id} — ${result.errors.length} error(s)`));
+      for (const e of result.errors) printIssue(e, "error");
+      for (const w of result.warnings) printIssue(w, "warn");
+    }
+  }
+
+  if (total === 0) {
+    console.log(chalk.yellow("△ no user crons found (`solosquad cron new <id>`)"));
     process.exitCode = 0;
     return;
   }
-
-  const builtinIds = new Set(CRONS.map((r) => r.id));
-  let failed = 0;
-  for (const def of defs) {
-    const result = validateCronDef(def, { reservedIds: builtinIds, promptExists });
-    if (result.ok && result.warnings.length === 0) {
-      console.log(chalk.green(`✓ ${def.id}`));
-      continue;
-    }
-    if (result.ok) {
-      console.log(chalk.yellow(`△ ${def.id} — ${result.warnings.length} warning(s)`));
-      for (const w of result.warnings) printIssue(w, "warn");
-      continue;
-    }
-    failed++;
-    console.log(chalk.red(`✗ ${def.id} — ${result.errors.length} error(s)`));
-    for (const e of result.errors) printIssue(e, "error");
-    for (const w of result.warnings) printIssue(w, "warn");
-  }
-
   console.log();
   if (failed === 0) {
-    console.log(chalk.green(`✓ ${defs.length} cron(s) validated, 0 failed`));
+    console.log(chalk.green(`✓ ${total} cron(s) validated, 0 failed`));
     process.exitCode = 0;
   } else {
-    console.log(chalk.red(`✗ ${failed} failed (of ${defs.length})`));
+    console.log(chalk.red(`✗ ${failed} failed (of ${total})`));
     process.exitCode = 1;
   }
 }
@@ -427,18 +492,26 @@ export async function cronRunsCommand(ref: string | undefined, opts: { limit?: s
   if (ref) {
     if (BUILTIN_IDS.has(ref)) id = ref;
     else {
-      const r = resolveCronRef(ref);
-      if (r.kind === "ambiguous") {
-        console.error(chalk.red(`✗ "${ref}" is ambiguous — matches: ${r.matches.join(", ")}`));
+      // Run history aggregates across orgs; resolve the ref against every
+      // org's crons (org-scoped since v1.3.5 B-D3).
+      let resolvedId: string | undefined;
+      let ambiguous: string[] | null = null;
+      for (const org of listOrganizations()) {
+        const r = resolveCronRef(ref, getCronsWriteDir(org.slug));
+        if (r.kind === "ok") { resolvedId = r.id; break; }
+        if (r.kind === "ambiguous") ambiguous = r.matches;
+      }
+      if (!resolvedId && ambiguous) {
+        console.error(chalk.red(`✗ "${ref}" is ambiguous — matches: ${ambiguous.join(", ")}`));
         process.exitCode = 2;
         return;
       }
-      if (r.kind === "missing") {
+      if (!resolvedId) {
         console.error(chalk.red(`✗ no cron "${ref}". Try \`solosquad cron list\`.`));
         process.exitCode = 1;
         return;
       }
-      id = r.id;
+      id = resolvedId;
     }
   }
   const limit = Math.max(1, parseInt(opts.limit ?? "20", 10) || 20);

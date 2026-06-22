@@ -8,6 +8,7 @@ import { runClaude } from "../bot/claude-runner.js";
 import { resolveOrgCwd } from "../bot/workflow-resolver.js";
 import {
   applyWorkspaceDefaults,
+  listOrganizations,
   loadMessengerConfig,
   loadProducts,
   loadWorkspaceYaml,
@@ -116,7 +117,7 @@ async function runCronForProduct(
     // v1.3.3 §C — dead-man's-switch: report enabled user crons that are overdue
     // (no successful run within 2× their estimated cadence). Quiet when all healthy.
     try {
-      const overdue = loadCronDefs()
+      const overdue = loadCronDefs(getCronsWriteDir(product.slug))
         .filter((d) => d.enabled)
         .filter((d) => isOverdue(lastSuccessfulRun(orgDir, d.id)?.finishedAt ?? null, d.cron));
       if (overdue.length > 0) {
@@ -277,6 +278,19 @@ async function runCronDef(def: CronConfig): Promise<void> {
     return;
   }
   await Promise.all(products.map((p) => runCronForProduct(def, p)));
+}
+
+/**
+ * v1.3.5 B-D3 — run an org-scoped user cron for *its own* org only (was: every
+ * product). The def lives in `<org>/crons/`, so it belongs to that org.
+ */
+async function runCronDefForOrg(def: CronConfig, orgSlug: string): Promise<void> {
+  const product = loadProducts().find((p) => p.slug === orgSlug);
+  if (!product) {
+    console.log(`[Scheduler] Skipped cron "${def.id}" — org "${orgSlug}" not found`);
+    return;
+  }
+  await runCronForProduct(def, product);
 }
 
 interface ResolvedCron {
@@ -455,64 +469,73 @@ export function reconcileUserCrons(): void {
   oneShotTimers.clear();
 
   const builtinIds = new Set(CRONS.map((r) => r.id));
-  const cronsDir = getCronsWriteDir();
-  for (const def of loadCronDefs(cronsDir)) {
-    const result = validateCronDef(def, {
-      reservedIds: builtinIds,
-      promptExists: (id) => fs.existsSync(path.join(cronsDir, `${id}.md`)),
-    });
-    if (!result.ok) {
-      console.log(`[Scheduler] Skipped user cron "${def.id}" — ${result.errors.map((e) => e.code).join(", ")}`);
-      continue;
-    }
-    if (!def.enabled) {
-      console.log(`[Scheduler] Paused: ${def.name} (disabled)`);
-      continue;
-    }
+  // v1.3.5 B-D3 — user crons are org-scoped (`<org>/crons/`). Walk every org and
+  // register each cron to fire for its own org only. Tasks/timers are keyed by
+  // `<org>:<id>` so the same id in two orgs never collides.
+  for (const org of listOrganizations()) {
+    const orgSlug = org.slug;
+    const cronsDir = getCronsWriteDir(orgSlug);
+    for (const def of loadCronDefs(cronsDir)) {
+      const key = `${orgSlug}:${def.id}`;
+      const result = validateCronDef(def, {
+        reservedIds: builtinIds,
+        promptExists: (id) => fs.existsSync(path.join(cronsDir, `${id}.md`)),
+      });
+      if (!result.ok) {
+        console.log(`[Scheduler] Skipped user cron "${key}" — ${result.errors.map((e) => e.code).join(", ")}`);
+        continue;
+      }
+      if (!def.enabled) {
+        console.log(`[Scheduler] Paused: ${def.name} @${orgSlug} (disabled)`);
+        continue;
+      }
 
-    // One-shot (`at`): run once at the target time, then delete-after-run.
-    if (def.at) {
-      const delay = Date.parse(def.at) - Date.now();
-      if (Number.isNaN(delay)) continue;
-      if (delay <= 0) {
-        // Past one-shot — never ran (or stale def): clean it up, don't fire.
-        console.log(`[Scheduler] One-shot "${def.id}" is past — archiving (not run)`);
-        try { deleteCronFiles(def.id, cronsDir); } catch { /* ignore */ }
-        continue;
-      }
-      if (delay > MAX_TIMER_MS) {
-        console.log(`[Scheduler] One-shot "${def.id}" is >24d out — will arm on a later restart`);
-        continue;
-      }
-      const timer = setTimeout(() => {
-        void (async () => {
-          await runCronDef(def);
+      // One-shot (`at`): run once at the target time, then delete-after-run.
+      if (def.at) {
+        const delay = Date.parse(def.at) - Date.now();
+        if (Number.isNaN(delay)) continue;
+        if (delay <= 0) {
+          // Past one-shot — never ran (or stale def): clean it up, don't fire.
+          console.log(`[Scheduler] One-shot "${key}" is past — archiving (not run)`);
           try { deleteCronFiles(def.id, cronsDir); } catch { /* ignore */ }
-          oneShotTimers.delete(def.id);
-        })();
-      }, delay);
-      oneShotTimers.set(def.id, timer);
-      console.log(`[Scheduler] Armed one-shot: ${def.name} at ${def.at}`);
-      continue;
-    }
+          continue;
+        }
+        if (delay > MAX_TIMER_MS) {
+          console.log(`[Scheduler] One-shot "${key}" is >24d out — will arm on a later restart`);
+          continue;
+        }
+        const timer = setTimeout(() => {
+          void (async () => {
+            await runCronDefForOrg(def, orgSlug);
+            try { deleteCronFiles(def.id, cronsDir); } catch { /* ignore */ }
+            oneShotTimers.delete(key);
+          })();
+        }, delay);
+        oneShotTimers.set(key, timer);
+        console.log(`[Scheduler] Armed one-shot: ${def.name} @${orgSlug} at ${def.at}`);
+        continue;
+      }
 
-    const task = cron.schedule(def.cron, () => runCronDef(def), {
-      name: `user:${def.id}`,
-      noOverlap: true,
-      timezone: workspaceTimezone,
-    });
-    userCronTasks.set(def.id, task);
-    console.log(`[Scheduler] Registered user cron: ${def.name} (${def.cron})`);
+      const task = cron.schedule(def.cron, () => runCronDefForOrg(def, orgSlug), {
+        name: `user:${key}`,
+        noOverlap: true,
+        timezone: workspaceTimezone,
+      });
+      userCronTasks.set(key, task);
+      console.log(`[Scheduler] Registered user cron: ${def.name} @${orgSlug} (${def.cron})`);
+    }
   }
   console.log(`[Scheduler] User crons live: ${userCronTasks.size} recurring, ${oneShotTimers.size} one-shot`);
 }
 
 let cronWatcher: import("chokidar").FSWatcher | null = null;
 
-/** Watch `crons/` and reconcile on any change (debounced). */
+/** Watch every org's `<org>/crons/` and reconcile on any change (debounced). */
 function startCronWatcher(): void {
   if (cronWatcher) return;
-  const dir = getCronsWriteDir();
+  // v1.3.5 B-D3 — crons are org-scoped; watch each org's dir.
+  const dirs = listOrganizations().map((o) => getCronsWriteDir(o.slug));
+  if (dirs.length === 0) return;
   let timer: NodeJS.Timeout | null = null;
   const debounced = () => {
     if (timer) clearTimeout(timer);
@@ -521,9 +544,9 @@ function startCronWatcher(): void {
       reconcileUserCrons();
     }, 300);
   };
-  cronWatcher = chokidarWatch(dir, { ignoreInitial: true, depth: 0 })
+  cronWatcher = chokidarWatch(dirs, { ignoreInitial: true, depth: 0 })
     .on("add", debounced)
     .on("change", debounced)
     .on("unlink", debounced);
-  console.log(`[Scheduler] Watching ${dir} for live cron changes`);
+  console.log(`[Scheduler] Watching ${dirs.length} org cron dir(s) for live changes`);
 }

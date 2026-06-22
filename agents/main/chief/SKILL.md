@@ -191,13 +191,17 @@ specialist 가 **파일 쓰기(Write/Edit)나 git** 을 시도했는데 거부(r
 **주의 — 자동 등록 금지:** freq 마이너(빈도 패턴)는 *제안만* 한다(§4.3). SKILL 박제는 **사용자가 `/create`
 로 명시 승인**했을 때만 한다. dev 권한이 꺼져 있어 파일을 못 쓰면 `/grant` 안내(위 §권한).
 
-## Cron 운영 — cron-manager (v1.3.4 §E·§G)
+## Cron 운영 — cron-manager (v1.3.4 §E·§G, v1.3.5 B-D3 org 종속)
 
 너는 cron 의 대화형 매니저다. 사용자가 정기 작업("매일 아침 …", "매주 월 회고", "cron 목록",
 "그거 멈춰/지워")을 말하면 아래 CRUD 흐름을 따른다. 결정적 동작은 **`solosquad cron *` 헬퍼로
 위임**(파일 직접 조작 금지 — 검증·확인 게이트를 거치게). 배달 채널은 **`works-<handle>`**(공유
 "#workflow" 채널은 없다). cron 실행 실패는 해당 채널에 사유와 함께 보고되고, 한참 안 돌면
 "실행 누락 감지" 경보가 뜬다.
+
+**v1.3.5 B-D3 — cron 은 org 종속**(`<org>/crons/`, workflow·goal 과 동형). 한 cron 은 자기 org
+에서만 발화한다. 너는 (user, org) 세션이라 **현재 org 가 기본 대상**이다 — 단일 org 면 `--org`
+생략 가능, 워크스페이스에 org 가 여럿이면 `solosquad cron <verb> … --org <현재 org slug>` 로 명시.
 
 **자산 인지 원칙 (필수):** cron 작업을 정의할 때 **먼저 `solosquad asset list`(skill·agent·workflow)
 를 확인**해 재사용할 자산이 있으면 그것을 쓰도록 안내하고, 적합한 게 없을 때만 새 자산 생성을
@@ -209,8 +213,8 @@ specialist 가 **파일 쓰기(Write/Edit)나 git** 을 시도했는데 거부(r
    시각을 미리보기**로 보여준다.
 3. **작업/보고 방식**(자유 텍스트) — ⑴ 기존 skill/agent/workflow 매칭 제안, ⑵ 없으면 새 자산
    생성 제안·등록, ⑶ `works-<handle>` 보고 양식(제목·섹션·길이) 초안 제시.
-4. **저장** — `solosquad cron new <id> --cron "<expr>" [--timezone <tz>]` (확인 후; CI 아닌 대화에선
-   사용자에게 "등록할까요?"를 먼저 묻고 승인 시 실행). 프롬프트 `crons/<id>.md` 를 작성한다.
+4. **저장** — `solosquad cron new <id> --cron "<expr>" [--timezone <tz>] [--org <slug>]` (확인 후;
+   CI 아닌 대화에선 사용자에게 "등록할까요?"를 먼저 묻고 승인 시 실행). 프롬프트 `<org>/crons/<id>.md` 를 작성한다.
 5. **테스트** — `solosquad cron run <id>` 로 즉시 1회 실행해 **결과/실패를 `works-<handle>` 에서
    확인**시킨다.
 

@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
 import { normalizeLine } from "../util/platform.js";
-import { getCronsWriteDir } from "../util/paths.js";
 import type { CronConfig, CronKind } from "./crons.js";
 
 export type CronRefResult =
@@ -72,7 +71,7 @@ export function coerceCronDef(raw: Record<string, unknown>, fallbackId: string):
  * Load every `crons/<id>.yaml` user definition (best-effort: unparsable
  * files are skipped). Validation is a separate pass (`validateCronDef`).
  */
-export function loadCronDefs(schedulesDir: string = getCronsWriteDir()): CronDef[] {
+export function loadCronDefs(schedulesDir: string): CronDef[] {
   if (!fs.existsSync(schedulesDir)) return [];
   const out: CronDef[] = [];
   for (const file of fs.readdirSync(schedulesDir)) {
@@ -94,10 +93,10 @@ export function loadCronDefs(schedulesDir: string = getCronsWriteDir()): CronDef
 /* v1.3.3 §C — file CRUD (create/edit/enable/disable/delete backing store)     */
 /* -------------------------------------------------------------------------- */
 
-export function cronYamlPath(id: string, dir: string = getCronsWriteDir()): string {
+export function cronYamlPath(id: string, dir: string): string {
   return path.join(dir, `${id}.yaml`);
 }
-export function cronMdPath(id: string, dir: string = getCronsWriteDir()): string {
+export function cronMdPath(id: string, dir: string): string {
   return path.join(dir, `${id}.md`);
 }
 
@@ -121,7 +120,7 @@ export function serializeCronDef(def: CronDef): string {
 }
 
 /** Read a single def by id (null if its yaml is absent/unparsable). */
-export function readCronDef(id: string, dir: string = getCronsWriteDir()): CronDef | null {
+export function readCronDef(id: string, dir: string): CronDef | null {
   const file = cronYamlPath(id, dir);
   if (!fs.existsSync(file)) return null;
   try {
@@ -136,7 +135,7 @@ export function readCronDef(id: string, dir: string = getCronsWriteDir()): CronD
 }
 
 /** Write a def's yaml (overwrites). Optionally scaffold the prompt md if absent. */
-export function writeCronDef(def: CronDef, dir: string = getCronsWriteDir(), scaffoldPrompt = false): void {
+export function writeCronDef(def: CronDef, dir: string, scaffoldPrompt = false): void {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(cronYamlPath(def.id, dir), serializeCronDef(def), "utf-8");
   if (scaffoldPrompt && !fs.existsSync(cronMdPath(def.id, dir))) {
@@ -149,7 +148,7 @@ export function writeCronDef(def: CronDef, dir: string = getCronsWriteDir(), sca
 }
 
 /** Patch selected fields of an existing def. Returns the new def, or null if absent. */
-export function patchCronDef(id: string, patch: Partial<CronDef>, dir: string = getCronsWriteDir()): CronDef | null {
+export function patchCronDef(id: string, patch: Partial<CronDef>, dir: string): CronDef | null {
   const cur = readCronDef(id, dir);
   if (!cur) return null;
   const next: CronDef = { ...cur, ...patch, id: cur.id };
@@ -158,7 +157,7 @@ export function patchCronDef(id: string, patch: Partial<CronDef>, dir: string = 
 }
 
 /** Toggle the enabled flag (pause ≠ delete). Returns the new def, or null if absent. */
-export function setCronEnabled(id: string, enabled: boolean, dir: string = getCronsWriteDir()): CronDef | null {
+export function setCronEnabled(id: string, enabled: boolean, dir: string): CronDef | null {
   return patchCronDef(id, { enabled }, dir);
 }
 
@@ -167,7 +166,7 @@ export function setCronEnabled(id: string, enabled: boolean, dir: string = getCr
  * `<dir>/_archived/` (recoverable); pass `{ hard: true }` to remove outright.
  * Returns the list of removed/moved paths.
  */
-export function deleteCronFiles(id: string, dir: string = getCronsWriteDir(), opts: { hard?: boolean } = {}): string[] {
+export function deleteCronFiles(id: string, dir: string, opts: { hard?: boolean } = {}): string[] {
   const touched: string[] = [];
   const targets = [cronYamlPath(id, dir), cronMdPath(id, dir)].filter((p) => fs.existsSync(p));
   if (targets.length === 0) return touched;
@@ -194,7 +193,7 @@ export function deleteCronFiles(id: string, dir: string = getCronsWriteDir(), op
  * user-cron id. Mirrors Hermes' "hex id or name, ambiguous refused" behavior.
  * Built-in crons are out of scope here (the CLI rejects edits to them).
  */
-export function resolveCronRef(ref: string, dir: string = getCronsWriteDir()): CronRefResult {
+export function resolveCronRef(ref: string, dir: string): CronRefResult {
   const defs = loadCronDefs(dir);
   const byId = defs.find((d) => d.id === ref);
   if (byId) return { kind: "ok", id: byId.id };
