@@ -465,6 +465,16 @@ const workflowGroup = program
   .description("Inspect workflows + their stages");
 
 workflowGroup
+  .command("new")
+  .description("Scaffold a new workflow.yaml under <org>/workflows/ (no LLM)")
+  .argument("<id>", "Kebab-case workflow id")
+  .option("--org <slug>", "Org to create the workflow under (default: the sole org)")
+  .action(async (id, opts) => {
+    const { workflowNewCommand } = await import("./workflow.js");
+    await workflowNewCommand(id, opts);
+  });
+
+workflowGroup
   .command("list")
   .description("List all workflows in the workspace (or for one org)")
   .option("--org <slug>", "Filter to a specific organization")
@@ -667,6 +677,45 @@ memoryGroup
     await memoryStatsCommand(opts);
   });
 
+const skillGroup = program
+  .command("skill")
+  .description("Manage skills (SKILL.md): new / list / show / validate (v1.3.5 B-D4)");
+
+skillGroup
+  .command("new")
+  .description("Scaffold a new skill SKILL.md under .solosquad/skills/ (no LLM)")
+  .argument("<name>", "Kebab-case skill name")
+  .option("--description <text>", "Short description for frontmatter")
+  .action(async (name, opts) => {
+    const { skillNewCommand } = await import("./skill.js");
+    await skillNewCommand(name, opts);
+  });
+
+skillGroup
+  .command("list")
+  .description("List bundled skills (+ workspace overrides)")
+  .action(async () => {
+    const { skillListCommand } = await import("./skill.js");
+    await skillListCommand();
+  });
+
+skillGroup
+  .command("show")
+  .description("Show a skill's path + description")
+  .argument("<name>", "Skill name")
+  .action(async (name) => {
+    const { skillShowCommand } = await import("./skill.js");
+    await skillShowCommand(name);
+  });
+
+skillGroup
+  .command("validate")
+  .description("Validate every SKILL.md (shared static gate)")
+  .action(async () => {
+    const { skillValidateCommand } = await import("./skill.js");
+    await skillValidateCommand();
+  });
+
 const agentGroup = program
   .command("agent")
   .description("Manage SKILL.md agents (v0.5)");
@@ -684,7 +733,8 @@ agentGroup
 
 agentGroup
   .command("add")
-  .description("Scaffold a new SKILL.md (no LLM) — fill in the body afterward")
+  .alias("new")
+  .description("Scaffold a new SKILL.md (no LLM) — fill in the body afterward. Alias: `new` (uniform asset verb, v1.3.5 B-D4)")
   .requiredOption("--name <name>", "Agent name (kebab-case slug)")
   .requiredOption("--team <team>", "Team folder (strategy, growth, experience, engineering, …)")
   .option("--org <org>", "Write under <org>/.agents/ instead of workspace agents dir")

@@ -2,7 +2,7 @@ import chalk from "chalk";
 import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
-import { getWorkspaceRoot, getSkillsDir, getBundledSkillsDir, getBundledAgentsDir } from "../util/paths.js";
+import { getWorkspaceRoot, getSkillsDir, getBundledSkillsDir, getBundledAgentsDir, getOrgDir } from "../util/paths.js";
 import { listOrganizations } from "../util/config.js";
 import {
   latestHandoffPath,
@@ -140,6 +140,91 @@ function bundledWorkflowFiles(): string[] {
     if (fs.existsSync(f)) out.push(f);
   }
   return out;
+}
+
+/**
+ * v1.3.5 §3.9 B-D4 — `solosquad workflow new <id> [--org]`: deterministic,
+ * no-LLM scaffold of `<org>/workflows/<id>/workflow.yaml`, matching the uniform
+ * asset floor (skill/agent/workflow/goal/cron all expose `new`). Authoring the
+ * real stages from intent is a conversational job (Chief / workflow-manager
+ * skill) — this only writes a valid 1-stage skeleton you edit afterward.
+ */
+export async function workflowNewCommand(
+  id: string | undefined,
+  opts: { org?: string } = {},
+): Promise<void> {
+  const { isKebabCase } = await import("../util/naming.js");
+  if (!id || !isKebabCase(id)) {
+    console.error(chalk.red("error: provide a kebab-case id — `solosquad workflow new <id>`"));
+    process.exitCode = 2;
+    return;
+  }
+  // Resolve the org (single → default; multiple → require --org).
+  const orgs = listOrganizations();
+  if (orgs.length === 0) {
+    console.error(chalk.red("✗ no organizations — run `solosquad init` first."));
+    process.exitCode = 1;
+    return;
+  }
+  let orgSlug: string;
+  if (opts.org) {
+    if (!orgs.some((o) => o.slug === opts.org)) {
+      console.error(chalk.red(`✗ no org "${opts.org}". Known: ${orgs.map((o) => o.slug).join(", ")}.`));
+      process.exitCode = 1;
+      return;
+    }
+    orgSlug = opts.org;
+  } else if (orgs.length === 1) {
+    orgSlug = orgs[0].slug;
+  } else {
+    console.error(chalk.red(`✗ multiple orgs — pass --org <slug> (${orgs.map((o) => o.slug).join(", ")}).`));
+    process.exitCode = 2;
+    return;
+  }
+
+  const dest = path.join(getOrgDir(orgSlug), "workflows", id, "workflow.yaml");
+  if (fs.existsSync(dest)) {
+    console.error(chalk.red(`✗ ${dest} already exists — edit it directly`));
+    process.exitCode = 1;
+    return;
+  }
+
+  // Pick a real actor for the skeleton stage so it validates out of the box.
+  const known = agentRefAliases(loadAgentSpecs(getBundledAgentsDir()));
+  const agentRef = known.has("product/pmf-planner")
+    ? "product/pmf-planner"
+    : [...known].find((r) => r.includes("/")) ?? "product/pmf-planner";
+
+  const skeleton = {
+    schema_version: 2,
+    id,
+    name: id,
+    description: `TODO: describe the ${id} workflow`,
+    stages: [
+      {
+        id: "stage-1",
+        agent: agentRef,
+        task: "TODO: describe what this stage does (inputs → outputs).",
+        inputs: [],
+        outputs: [],
+        handoff_to: null,
+      },
+    ],
+  };
+
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, yaml.dump(skeleton, { lineWidth: 100 }), "utf-8");
+  console.log(chalk.green(`✓ scaffolded ${dest}  ${chalk.dim(`(org: ${orgSlug})`)}`));
+
+  // Validate-then-trust: surface the skeleton's validation state immediately.
+  const r = validateWorkflow(skeleton, { knownAgents: known });
+  if (!r.ok) {
+    console.log(chalk.red(`  ✗ ${r.errors.length} error(s):`));
+    for (const e of r.errors) printWfIssue(e, "error");
+    process.exitCode = 1;
+  } else {
+    console.log(chalk.dim("  Edit the stages, then `solosquad workflow validate <path>`."));
+  }
 }
 
 export async function workflowValidateCommand(
