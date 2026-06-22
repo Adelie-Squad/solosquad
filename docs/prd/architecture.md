@@ -1200,6 +1200,35 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.28 v1.3.5 — 기획 워크플로우 + 자산 매니저 일관성 (2026-06-22)
+
+두 워크스트림. **(A) 기획 워크플로우** — 명사 3종(agent·workflow·skill, main/sub=호출 위치)
+모델로 기획 도메인 재정렬. **(B) 자산 매니저 일관성** — 5개 1급 자산 CRUD 를 네이밍·매니저 skill·
+저장 스코프·CLI 4축에서 정렬.
+
+- **A1 프레임워크 skill 분할** — 단일 `problem-definition` 6-phase skill → `scqa`·`five-whys`·`mece`·
+  `tdcc`·`xyz-hypothesis` 5개. `problem-definition` 은 이를 chain 하는 **(서브)워크플로**로 남음(skill 아님).
+  pmf-planner·pm·idea-scoper·policy-architect·composition 의 skills_used 재배선.
+- **A2 `_workflow/<id>` 서브워크플로 참조** — stage agent 의 4번째 형식(Workflow-of-Workflows).
+  `workflow-validate` 가 존재성(`WF_SUBWORKFLOW_UNRESOLVED`)·자기참조(`WF_SUBWORKFLOW_SELF`)·교차
+  순환(`detectSubworkflowCycles`, 공유 Kahn 코어)·깊이(≤2 권고) 검사.
+- **A3 2 메인 + 6 서브 워크플로** — `new-build`(idea-refinement|requirements-analysis→market-research
+  →hypothesis)·`improvement`(kpi-check→data-analysis→hypothesis). 메인 선택 = Chief 맥락 추론 + 애매하면
+  되묻기. 신규 `market-research` skill(리포트 산출 → `<org>/docs/reports/`).
+- **A4 prd-writer 2 양식 + 요구사항 3유형** — new-build/improvement 분기 + 섹션 누적. 요구사항 =
+  개발·콘텐츠·리포트 3유형, 디자인은 내포, 각 요구사항 = 핵심내용 + 작업 체크리스트. 요구사항 리뷰
+  게이트(PM 초안→실행 스페셜리스트 리뷰→확정).
+- **B1 개명** — `workflow-maker`→`workflow-manager`(유일 `-maker` 잔재; 구 path 에 frozen compat
+  shim 은 불변 `1.1.0-to-1.2.6` migration verify 가드용).
+- **B2 매니저=skill** — `{skill,agent,goal,cron}-manager` skill 신설(+기존 workflow-manager·asset-review).
+  `*-manager` agent 안 만듦(agent=행위자), 코드 모듈은 결정적 백엔드.
+- **B3 cron org 종속** — `<org>/crons/`(workflow·goal 동형), 데몬 멀티-org reconcile/watch, CLI `--org`,
+  migration `1.3.4→1.3.5`.
+- **B4 uniform CLI 바닥** — `workflow new`·`skill` 그룹 신설·`agent new` alias(list/show/validate/new 5종 균일).
+- package 1.3.4→1.3.5. 947 test green.
+
+자세히: `docs/prd/v1.3.5-planning-workflows.md`
+
 #### 13.6.27 v1.3.4 — Cron reliability: delivery·failure reporting·tz/jitter guards (2026-06-21)
 
 무인 실행 신뢰성 + 대화형 cron-manager.
