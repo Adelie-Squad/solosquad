@@ -59,10 +59,16 @@ function isFromVersion(version: string | undefined): boolean {
 }
 
 function bundleProblemDefinitionWorkflow(): string {
+  // v1.3.5 B-D1 (deliberate, user-authorized exception to the immutable-migration
+  // rule): the bundle skill dir was renamed workflow-maker → workflow-manager.
+  // This published migration's package-integrity guard hard-codes the bundle path,
+  // so the rename is repointed here rather than kept alive via a frozen compat
+  // shim. Safe because this migration is forward-only and only seeds/verifies a
+  // bundle file (no path-dependent workspace data transform).
   return path.join(
     getBundleRoot(),
     "skills",
-    "workflow-maker",
+    "workflow-manager",
     "assets",
     "workflows",
     "problem-definition",

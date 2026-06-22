@@ -10,10 +10,12 @@ In progress on `feat/v1.3.5-planning-workflows`. See `docs/prd/v1.3.5-planning-w
 
 - **B-D1 — `workflow-maker` → `workflow-manager` rename.** The last `{asset}-maker`
   holdout joins the `-manager` lifecycle family. The bundle skill dir, frontmatter,
-  every live path/comment reference, and test fixtures move to `workflow-manager`. A
-  frozen compat copy of `problem-definition/workflow.yaml` stays at the old path
-  (with `COMPAT.md`) because the published, immutable `1.1.0-to-1.2.6` migration's
-  `verify()` hard-asserts it ships there — fix forward, don't rewrite history.
+  every live path/comment reference, and test fixtures move to `workflow-manager`,
+  leaving zero `-maker` references. The published `1.1.0-to-1.2.6` migration's
+  package-integrity guard hard-codes the bundle path, so it is repointed to the new
+  name — a deliberate, owner-authorized one-off exception to the immutable-migration
+  rule (safe: the migration is forward-only and only seeds/verifies a bundle file,
+  with no path-dependent workspace transform).
 - **B-D3 — crons are now org-scoped (`<org>/crons/`).** User crons move from the
   workspace-global `.solosquad/crons/` into per-org dirs, joining `<org>/workflows/`
   and `<org>/goals/`. A cron now fires only for **its own org** (was: every product).
