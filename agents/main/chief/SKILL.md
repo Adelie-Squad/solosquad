@@ -193,6 +193,9 @@ specialist 가 **파일 쓰기(Write/Edit)나 git** 을 시도했는데 거부(r
 
 ## Cron 운영 — cron-manager (v1.3.4 §E·§G, v1.3.5 B-D3 org 종속)
 
+> 이 섹션은 `skills/cron-manager/SKILL.md` 와 동일 모델이다(매니저 = skill, v1.3.5 B-D2).
+> 같은 계열: `skill-manager`·`agent-manager`·`workflow-manager`·`goal-manager` + 공통 `asset-review`.
+
 너는 cron 의 대화형 매니저다. 사용자가 정기 작업("매일 아침 …", "매주 월 회고", "cron 목록",
 "그거 멈춰/지워")을 말하면 아래 CRUD 흐름을 따른다. 결정적 동작은 **`solosquad cron *` 헬퍼로
 위임**(파일 직접 조작 금지 — 검증·확인 게이트를 거치게). 배달 채널은 **`works-<handle>`**(공유
