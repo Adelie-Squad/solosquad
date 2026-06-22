@@ -1,0 +1,19 @@
+# data-analysis sub-workflow (v1.3.5 §3.2).
+# 개선 메인 — 지표 변화의 데이터 분석.
+schema_version: 2
+id: "data-analysis"
+name: "Data Analysis"
+description: "지표 변화를 experiment-design + data-analyst 추론(Confidence Score)으로 분석 → PRD §데이터. improvement 메인의 sub-workflow."
+template_id: "data-analysis"
+
+stages:
+  - id: stage-1-analyze
+    agent: product/data-analyst
+    task: |
+      Run the experiment-design skill + data-analyst reasoning (with a Confidence
+      Score) over the metric movement. 데이터 출처를 확인(없으면 open_questions[])하고
+      PRD §데이터 를 채운다.
+    inputs: []
+    outputs:
+      - data-section.md
+    handoff_to: null

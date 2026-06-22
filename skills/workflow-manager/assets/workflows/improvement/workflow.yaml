@@ -1,0 +1,39 @@
+# improvement MAIN workflow (v1.3.5 §3.1) — Workflow-of-Workflows.
+#
+# 개선 기획: KPI 확인 → 데이터 분석 → 가설 수립. 기존 제품 지표에서 출발.
+# Chief 가 입력 맥락으로 메인을 추론(§3.1): "전환율 떨어졌어, 개선하자"→improvement.
+schema_version: 2
+id: "improvement"
+name: "Improvement (planning)"
+description: "개선 기획 메인. 서브워크플로를 _workflow/ 로 합성: KPI 확인 → 데이터 분석 → 가설 수립(공유)."
+template_id: "improvement"
+
+stages:
+  - id: stage-1-kpi
+    agent: _workflow/kpi-check
+    task: |
+      KPI 확인 서브워크플로 실행 → PRD §KPI(기준 baseline·방향·threshold).
+    inputs: []
+    outputs:
+      - kpi-section.md
+    handoff_to: stage-2-data
+
+  - id: stage-2-data
+    agent: _workflow/data-analysis
+    task: |
+      데이터 분석 서브워크플로 실행 → PRD §데이터(Confidence Score).
+    inputs:
+      - kpi-section.md
+    outputs:
+      - data-section.md
+    handoff_to: stage-3-hypothesis
+
+  - id: stage-3-hypothesis
+    agent: _workflow/hypothesis
+    task: |
+      가설 수립 서브워크플로 실행(신규 구축 메인과 공유) → PRD §가설.
+    inputs:
+      - data-section.md
+    outputs:
+      - hypothesis-section.md
+    handoff_to: null

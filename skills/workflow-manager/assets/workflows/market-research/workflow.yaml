@@ -1,0 +1,31 @@
+# market-research sub-workflow (v1.3.5 §3.2, §3.4).
+# 별도 산출물 워크플로 — PRD §시장 + 리포트(<org>/docs/reports/).
+schema_version: 2
+id: "market-research"
+name: "Market Research"
+description: "멀티에이전트 병렬 리서치 + 인용 검증 → PRD §시장 요약 + <org>/docs/reports/ 리포트(evidence_ref)."
+template_id: "market-research"
+
+stages:
+  - id: stage-1-research
+    agent: design/researcher
+    task: |
+      Run the market-research skill: multi-agent parallel desk research on the
+      target market + competitors, with citation/groundedness checks. Produce a
+      report at <org>/docs/reports/market-research-<slug>-<date>.md.
+    inputs: []
+    outputs:
+      - market-research-report.md
+    handoff_to: stage-2-position
+
+  - id: stage-2-position
+    agent: product/business-strategist
+    task: |
+      Run the lean-canvas + discovery-synthesis skills to position findings
+      (TAM/SAM signals, differentiation). Output the PRD §시장 section — a summary
+      that references the report via evidence_ref(path).
+    inputs:
+      - market-research-report.md
+    outputs:
+      - market-section.md
+    handoff_to: null

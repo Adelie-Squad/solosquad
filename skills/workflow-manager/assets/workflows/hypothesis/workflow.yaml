@@ -1,0 +1,30 @@
+# hypothesis sub-workflow (v1.3.5 §3.2).
+# 신규 구축·개선 두 메인이 공유하는 종착 — 가설 수립(재사용, main/sub = 호출 위치).
+schema_version: 2
+id: "hypothesis"
+name: "Hypothesis"
+description: "원인 추적(five-whys·tdcc) → 검증 가능한 가설(xyz-hypothesis·opportunity-tree Six Forcing Q·hypothesis-design If-Then-Because) → PRD §가설. new-build·improvement 공유."
+template_id: "hypothesis"
+
+stages:
+  - id: stage-1-cause
+    agent: product/pmf-planner
+    task: |
+      Run the five-whys + tdcc skills to trace the root cause and map it to a
+      measurable trailing indicator + customer opportunity + causal link.
+    inputs: []
+    outputs:
+      - cause.json
+    handoff_to: stage-2-hypothesize
+
+  - id: stage-2-hypothesize
+    agent: product/pmf-planner
+    task: |
+      Run the xyz-hypothesis + opportunity-tree (Six Forcing Questions) +
+      hypothesis-design (If-Then-Because) skills to produce ≥2 falsifiable
+      hypotheses with riskiest-assumption (V/U/V/F) tags. Output the PRD §가설 section.
+    inputs:
+      - cause.json
+    outputs:
+      - hypothesis-section.md
+    handoff_to: null

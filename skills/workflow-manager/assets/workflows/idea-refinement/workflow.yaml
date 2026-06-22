@@ -1,0 +1,30 @@
+# idea-refinement sub-workflow (v1.3.5 §3.2).
+# 신규 구축 메인의 시작점 후보 A — 아이디어 구체화. 고객 발견 = 필수(§3.6).
+schema_version: 2
+id: "idea-refinement"
+name: "Idea Refinement"
+description: "아이디어를 고객 발견·JTBD·기회 트리·lean-canvas 로 구체화 → PRD §아이디어. 단독 실행 가능, new-build 메인의 sub-workflow."
+template_id: "idea-refinement"
+
+stages:
+  - id: stage-1-discover
+    agent: product/idea-scoper
+    task: |
+      Run the discovery-synthesis + jobs-stories (Job Story = JTBD) skills to
+      frame the idea from customer signals. 고객 발견 = 필수: 인터뷰·고객 정보가
+      필요하면 추측하지 말고 open_questions[] 로 사용자에게 요청한다(§3.6).
+    inputs: []
+    outputs:
+      - jtbd.json
+    handoff_to: stage-2-shape
+
+  - id: stage-2-shape
+    agent: product/idea-scoper
+    task: |
+      Run the opportunity-tree + lean-canvas skills to shape the opportunity
+      (problem/solution fit, riskiest assumption). Output the PRD §아이디어 section.
+    inputs:
+      - jtbd.json
+    outputs:
+      - idea-section.md
+    handoff_to: null

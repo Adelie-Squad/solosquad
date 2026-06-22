@@ -1,0 +1,31 @@
+# requirements-analysis sub-workflow (v1.3.5 §3.2).
+# 신규 구축 메인의 시작점 후보 B — 요구사항 분석. PM 초안 → 스페셜리스트 리뷰(§3.5).
+schema_version: 2
+id: "requirements-analysis"
+name: "Requirements Analysis"
+description: "요구사항을 구조 분해(scqa·mece)·User Story(INVEST)·우선순위로 정리 → PRD §요구사항(3대 유형 §3.4.1). 리뷰 게이트(§3.5) 동반."
+template_id: "requirements-analysis"
+
+stages:
+  - id: stage-1-structure
+    agent: product/feature-planner
+    task: |
+      Run the scqa + mece skills to structure the request (situation→complication
+      →question, then MECE leaves). PM 초안 단계.
+    inputs: []
+    outputs:
+      - structure.json
+    handoff_to: stage-2-stories
+
+  - id: stage-2-stories
+    agent: product/feature-planner
+    task: |
+      Run the jobs-stories (User Story · INVEST) + prioritization skills to draft
+      the requirements. 요구사항 3대 유형(개발·콘텐츠·리포트, §3.4.1)으로 분류하고
+      각 요구사항을 핵심 내용 + 작업 체크리스트로 적는다(디자인 요소는 내포). 초안
+      산출 → 담당 스페셜리스트 리뷰 게이트(§3.5)로 인계.
+    inputs:
+      - structure.json
+    outputs:
+      - requirements-section.md
+    handoff_to: null
