@@ -14,6 +14,15 @@
 > 일부 환경에서 WebFetch 가 차단돼 도메인 한정 WebSearch + 1차 출처 교차검증으로 수집했다.
 > 정량 수치(문자 한도 등)는 복수 공식 페이지에서 교차확인했으나, **verbatim 인용 전엔 라이브
 > 페이지 재확인 권장**.
+>
+> **2026-06-22 갱신(v1.3.6 착수).** 4개 리서치 에이전트로 추가 소스를 조사해 통합했다 — ⑴
+> **agentskills.io 공식 skill-creation 3-가이드**(`optimizing-descriptions`·`evaluating-skills`·
+> `best-practices`): description 최적화·output eval 을 *측정 가능한 절차*로 박제한 가장 큰 신규
+> 발견(→ 新 **B.6**), ⑵ **addyosmani/agent-skills**(SDLC 24-skill 컬렉션, anti-rationalization
+> 테이블·verification 게이트 → 新 **D.6**), ⑶ **SkillOpt 정정**(Lt=4 기본/floor 2, rejected-edit
+> buffer, *기계가 쓰는* protected slow-update 필드, **자동 검증기 전제조건** → **Part F** 전면 갱신).
+> 이 갱신은 **v1.3.6 = "좋은 skill/agent 작성법 내재화 + 자가개선 asset 구조 도입"** 의 1차 근거다 —
+> B.6·F 가 자가개선 루프의 청사진, H 가 적용 경로.
 
 ---
 
@@ -96,6 +105,56 @@ Anthropic 은 MCP 때와 같은 "originate → open → 재단 기부" 플레이
 - `loop_mode: spec-gate`(`parser:62-66`) = 공식 "피드백 루프"의 구조화 버전.
 - `dev_capability`/`dev_permissions`(`parser:97-103`) = 낮은 자유도(위험 작업) 영역.
 - `skill-author.ts` = 공식 "Claude A", `validator-corpus`+`test:corpus` = eval 골격.
+
+### B.6 공식 skill-creation 3-가이드 — description 최적화·output eval·작성법 (2026-06-22 신규)
+agentskills.io 가 정본 스펙 위에 **3개의 작성 가이드**를 호스팅한다. 이게 본 갱신 최대 발견 —
+"좋은 description" 을 *감*이 아니라 **측정 가능한 절차**로 박제했다. SkillOpt(Part F)의 *공식·수동
+버전*이며, 우리 `skill-author.ts`+corpus 가 곧장 흡수할 수 있는 레시피다.
+
+**① description 최적화** (`agentskills.io/skill-creation/optimizing-descriptions`)
+- **트리거의 진실:** description 이 완벽히 매칭돼도 **단순 1-step 태스크엔 발화 안 할 수 있다** —
+  "agents typically only consult skills for tasks that require knowledge **beyond what they can handle
+  alone**. A simple 'read this PDF' may not trigger a PDF skill even if the description matches." →
+  디스커버리는 description 품질 + *태스크 난이도* 의 함수.
+- **4원칙:** imperative("Use this skill when…", "This skill does…" 아님) · 구현 아닌 **유저 의도** ·
+  **약간 pushy**("even if they don't explicitly mention 'CSV'") · 간결.
+- **정량 eval 레시피(핵심):** **20쿼리(should-trigger 8–10 + should-NOT 8–10) × 3런 = 60 호출**,
+  **trigger-rate 임계 0.5**(should 는 >0.5 통과, should-not 은 <0.5 통과). **train 60% / val 40%
+  고정 split**(overfit 방지). **~5 iteration**, **val 점수 최고본 선택**("the best description may **not**
+  be the last one"). 라운드마다 1024자 재확인("descriptions tend to grow during optimization").
+- **near-miss 네거티브가 고가치.** 약한 네거: "Write a fibonacci function". 강한 네거(키워드는 겹치되
+  다른 스킬): "update the formulas in my Excel budget **spreadsheet**". **실패 쿼리의 키워드를 그대로
+  description 에 박지 말 것 = overfitting**, 대신 그 쿼리가 대표하는 *상위 개념*을 잡아라.
+- 자동화 툴: Anthropic `skill-creator` 스킬(eval split·병렬 trigger-rate·개선 제안·HTML 리포트).
+
+**② output 품질 eval** (`agentskills.io/skill-creation/evaluating-skills`)
+- **A/B-against-baseline:** 각 케이스를 **with_skill / without_skill**(또는 이전 버전) 2회 실행. 표준
+  레이아웃 `evals/evals.json`(id·prompt·expected·files·assertions) + `iteration-N/{with,without}_skill/`.
+- **작게 시작:** "2–3 test cases" 로 출발, **assertion 은 첫 런 *이후* 작성**(미리 X).
+- **assertion 품질:** programmatically-verifiable·specific·countable("≥3 recommendations") = 良,
+  "output is good"(모호)·exact-phrase(취약) = 不. **"Require concrete evidence for a PASS. Don't give
+  the benefit of the doubt."** 기계검증은 코드/스크립트, 나머지는 LLM-judge.
+- **비용도 측정:** `total_tokens`+`duration_ms` 의 **delta**. 골든 휴리스틱: "+13초인데 pass +50%p =
+  가치 있음; 토큰 2배인데 +2%p = 아닐 수도." → 품질만이 아니라 **품질/비용**으로 채택 판단.
+- **clean-context**(매 런 새 세션/서브에이전트) · **blind comparison**(버전 출처 숨기고 judge) ·
+  **패턴 분석**(both 에서 항상 pass 하는 assertion = 스킬 가치 은닉 → 제거; both 실패 = 깨진 검증/과난도;
+  런 간 high stddev = 모호 지침 → 예시 추가).
+
+**③ 작성 베스트프랙티스** (`agentskills.io/skill-creation/best-practices`)
+- **LLM 일반지식만으로 스킬 생성 금지** — "vague, generic procedures('handle errors appropriately')"
+  만 나온다. **실제 핸즈온 태스크·런북·코드리뷰 코멘트·patch 히스토리·실패 사례**에 근거하라.
+- **"에이전트가 *모르는 것만* 적고, 아는 건 빼라."** 테스트: *"이 지침 없으면 틀릴까? 아니면 잘라라."*
+- **스코핑 = 함수 설계처럼**(쿼리+포맷팅 = 1단위 OK, DB 관리까지 = 과욕).
+- **위험도에 처방강도 보정**(여러 방법 OK = "왜" 설명+자유 / 깨지기쉬움·파괴적 = "정확히 이 순서, 플래그
+  추가 금지"). **"메뉴 말고 디폴트를 줘라"**(동급 옵션 나열 X, 1개+탈출구). **"선언 말고 절차를."**
+- **명명된 패턴:** **Gotchas 섹션**(최고가치 — 가정을 뒤집는 환경사실, 예 soft-delete `WHERE deleted_at
+  IS NULL`; *"에이전트가 틀려서 교정하면 그 교정을 gotchas 에 추가"*) · Templates · Checklists ·
+  Validation loops · **Plan-validate-execute**(배치/파괴적) · 반복 로직 보이면 **스크립트 번들**.
+- **"왜를 설명하라"** — "Do X **because** Y tends to cause Z" > "ALWAYS do X, NEVER do Y".
+
+> **SoloSquad 직격:** ①의 trigger-rate eval = 우리 `triggers.{slash,keyword,freq}` 의 정량 검증 루프로,
+> ②의 with/without A/B + 비용 delta = `validator-corpus`/`test:corpus` 확장으로, ③의 Gotchas/Plan-
+> validate-execute = `skill-author.ts` 본문 템플릿으로 거의 1:1 이식 가능. → **H1·H2·H3 재무장**(Part H).
 
 ---
 
@@ -239,12 +298,43 @@ vibe: Drives sustainable organic traffic ...
 - ⚠️ **capability-only description**("Expert … specializing in A, B, C") — "Use when" 절이 없어 자동
   매칭이 pm-skills 보다 약함.
 
+## D.6 addyosmani/agent-skills — **anti-rationalization + verification 게이트의 골드** (2026-06-22 신규)
+Addy Osmani 의 "production-grade engineering skills"(MIT). **24 skill = 23 SDLC + 1 meta-skill**,
+Define/Plan/Build/Verify/Review/Ship/Meta 단계로 분류, 8 슬래시커맨드(`/spec`·`/plan`·`/build`·`/test`·
+`/review`…)가 단계 진입점. **frontmatter 는 `name`+`description` 단 2필드**(커스텀 필드 0 — 미니멀의 극단).
+```yaml
+name: test-driven-development
+description: Drives development with tests. Use when implementing any logic, fixing any bug, or changing
+  any behavior. Use when you need to prove that code works, when a bug report arrives, or when you're about
+  to modify existing functionality.
+```
+- **description 문법(CONTRIBUTING 명문화):** **`<3인칭 동사-s> <역량>. Use when <광의 트리거>. Use when
+  <구체 시나리오>.`** — pm-skills 의 "Use when" 골드에 **"Use when 2문장"(광의+구체) 변주**를 더한 형.
+- **본문 섹션 *의도* 강제(헤딩 문자열 아님):** Overview → When to Use(**+When NOT**) → Process/Cycle →
+  **Common Rationalizations** → **Red Flags** → **Verification** → See Also.
+- **NOVEL ①: anti-rationalization 테이블.** 에이전트가 스스로 둘러댈 변명을 *선제 반박*. 예: *"'너무
+  단순해서 spec 불필요' → 수용기준은 여전히 적용. 5줄도 OK."* — "에이전트가 규율을 합리화로 회피"하는
+  실패모드 직격. **우리 spec-gate 본문에 그대로 넣을 패턴.**
+- **NOVEL ②: 비협상 Verification 게이트** — 모든 스킬이 *구체 증거* 종료조건으로 끝남("intuition alone is
+  insufficient"). **NOVEL ③: Red Flags**(오용 징후, 예 "tests passing on first run"). **NOVEL ④:
+  meta-skill 라우터**(`using-agent-skills` — 모든 스킬의 디스커버리/호출을 관장하는 단일 스킬).
+- **점진공개 변주:** per-skill `scripts/references/` 대신 **repo-level 공유 `references/`**(체크리스트
+  6종)로 hoist, SKILL.md 는 **flat·<500줄**. CONTRIBUTING: *"reference material 을 skill 디렉터리에 넣지
+  말 것 — `references/` 사용."* 4대 품질바: **Specific·Verifiable·Battle-tested·Minimal.**
+- ⚠️ 드리프트: README 가 "24/8" 인데 일부 문서/블로그는 "20/7"(stale). AGENTS.md 의 "name/description/
+  **when to use**" 3필드 표기 vs 실제 2필드(when-to-use 는 description 에 융합) — 문서/실측 불일치.
+
 ## D.5 크로스-repo 수렴 패턴 (실측 종합)
 1. `name`+`description` 보편 코어. 2. **"Use when…" 트리거절이 골드**(긍정+부정). 3. **방법론 출처 명시.**
 4. kebab-case + 도메인 네임스페이스, **폴더명=호출명**. 5. **1 스킬 = 1 자기완결 디렉터리**(+scripts/sections/data).
 6. 얇은 본문 + 점진공개. 7. **명시적 non-goal + 정지 캡.** 8. 유닛에 semver. 9. **ambient skill vs explicit command**
    2계층. 10. 컬렉션 *내부* 본문 템플릿 일관(컬렉션 *간* 상이) — **하나 골라 일관 적용.**
 11. 안티패턴: frontmatter 누락 / 제약없는 필드 드리프트 / "Use when" 없는 capability-only description.
+12. **(2026-06-22 추가)** anti-rationalization 테이블 + **비협상 Verification 게이트** + Red Flags 가
+    엔지니어링 스킬의 차세대 수렴 신호(addyosmani). 본문 섹션은 **헤딩 문자열이 아니라 *의도* 로 강제**.
+13. **(2026-06-22 추가)** description 은 *손으로 쓰는 것이 아니라 eval 로 다듬는 대상*(agentskills.io
+    optimizing-descriptions): trigger-rate 0.5 임계 + train/val split. **D.1 의 "골드 패턴"은 출발점,
+    B.6 의 측정 루프가 종착점.**
 
 ---
 
@@ -278,26 +368,45 @@ vibe: Drives sustainable organic traffic ...
 # Part F — 객관적 현황: 최신 연구 — MS SkillOpt
 
 본 조사 최대의 *신규* 기여. SKILL.md 를 **학습 가능한 파라미터**로 보는 자동 최적화 연구.
-출처: [microsoft.github.io/SkillOpt](https://microsoft.github.io/SkillOpt/), [arXiv](https://arxiv.org/pdf/2605.23904).
+출처: [microsoft.github.io/SkillOpt](https://microsoft.github.io/SkillOpt/), [arXiv:2605.23904](https://arxiv.org/abs/2605.23904) (27pp), [code](https://github.com/microsoft/SkillOpt).
+**2026-06-22 정정:** 1차 재조사로 편집예산·protected-section·전제조건을 바로잡음(아래 ⚠️).
 
-- **정의:** *frozen* LLM 에이전트의 단일 `skill.md` 를 텍스트공간에서 "학습". 가중치 불변, **텍스트만 학습**.
-  산출물 = 배포가능 `best_skill.md`.
-- **4단계 루프(경사하강 모사):** ⑴ **Rollout**(현 스킬로 다회 실행, 성공/실패 궤적 기록 = forward pass) →
-  ⑵ **Reflect**(별도 optimizer 모델이 성공·실패를 *따로* 분석해 편집 제안 = language-level backward pass) →
-  ⑶ **Edit**(**문장 단위 add/delete/replace 만**, 전면 재작성 금지, "텍스트 학습률" 예산) →
-  ⑷ **Validate**(held-out split 에서 **엄격 개선 시에만** 채택, 거부된 편집은 **buffer** 로 재제안 차단).
-- **정량:** **스텝당 4–8 편집이 sweet spot**(예산 제거 시 성능 붕괴). 효과적 스킬 = **중앙값 ~920토큰
-  (379–1995)** — 손으로 감사 가능할 만큼 작음. GPT-5.5 기준 무스킬 대비 +19~25pt, Codex→Claude Code
-  *무수정 이식* +59.7pt. **protected-section 제거 시 -22pt.**
+- **정의(verbatim):** "the skill should… be **trained as the external state of a frozen agent**, with the
+  same discipline that makes weight-space optimization reproducible." 가중치 불변, **텍스트만 학습**,
+  배포 시 **추가 추론콜 0**(스킬은 그냥 텍스트).
+- **4단계 루프:** ⑴ **Rollout**(target 모델이 현 스킬로 실행, scored 궤적 기록 = forward) → ⑵ **Reflect**
+  (optimizer 모델이 **실패·성공 미니배치를 *분리* 반영** — "failures and successes are reflected separately
+  so edits correct recurring errors **while preserving working behavior**") → ⑶ **Edit**(span 단위
+  **append/insert/replace/delete** = patch-mode, 전면 재작성 금지) → ⑷ **Gate**(held-out **selection
+  점수가 best 를 엄격 초과할 때만** 채택).
+- ⚠️ **편집예산 정정:** 기존 메모의 "스텝당 4–8 sweet spot" 은 부정확. 논문 **기본 = textual learning
+  rate `Lt=4`, cosine decay, floor `Lt=2`**(constant/linear/cosine/autonomous 스케줄 선택). "An edit
+  budget functions as a **textual learning rate**, preventing useful rules from being overwritten by broad
+  rewrites." 4–8 은 ablation 범위일 뿐 *디폴트는 Lt=4*.
+- ⚠️ **protected-section 정정(중요):** 손으로 쓰는 "건드리지 마" 헤더가 **아니다**. **2-timescale** 설계 —
+  *fast(step)* = 위 bounded 편집, *slow(epoch)* = 같은 항목을 이전/현재 스킬로 재샘플해 improvements/
+  regressions/persistent-failures/stable-successes 로 묶어 **기계가 longitudinal guidance 블록을 protected
+  slow-update 필드에 *직접 작성***. "Step-level edits **cannot overwrite** the protected slow-update field."
+  → 보호 섹션 = *기계가 쓰는 epoch 합의문*. **meta+slow-update 제거 시 SpreadsheetBench 77.5→55.0(−22.5pt).**
+- **rejected-edit buffer(자가개선 핵심):** epoch-local buffer 가 **관측된 실패패턴 + 거부된 편집 + 그것이
+  부른 점수 하락**을 기록 → 후속 reflection 에 주입("avoid repeating failed edits, focus on unresolved
+  failures"). buffer 제거 시 SearchQA 87.1→85.5. = **거부를 텍스트 그래디언트(네거티브 신호)로 전환.**
+- **정량:** 효과적 스킬 = **중앙값 ~920토큰(379–1995)** — 손 감사 가능. GPT-5.5 무스킬 대비 **+23.5(chat)
+  /+24.8(Codex)/+19.1(Claude Code)**, **52/52 best-or-tied**(human·1-shot·Trace2Skill·TextGrad·GEPA·
+  EvoSkill 상회), Codex→Claude Code **무수정 이식 +59.7(22.1→81.8)**.
+- **optimizer 셋업:** 별도 frozen target + optimizer(예 target=GPT-5.4-mini, optimizer=GPT-5.5)가 표준,
+  단 **"matched target-as-optimizer 도 유용한 편집 발견"** — *옵티마이저가 타깃보다 꼭 강할 필요는 없다.*
+- ⚠️ **하드 전제조건(자가개선 설계의 갈림길):** "most directly applicable when the target task has
+  **automatic verifiers, exact-match metrics, executable checks, or otherwise reliable feedback signals.**"
+  → **자동 채점이 없으면 SkillOpt 루프는 못 돈다.** 주관적 문서작성류는 부적합 → 그쪽은 정적 게이트(lint/
+  originality, D.6/agent-doc)로 폴백.
 - **작성 골드(ablation 근거):**
   - **가장 가치있는 내용은 절차적 규율**(답변 포맷팅, **evidence binding**=주장↔출처 결속, search-frontier
     관리) — 프런티어 모델이 zero-shot 으로 *안 하는* 행동. → **"이 태스크의 사실"이 아니라 "어떻게
-    행동할지"를 써라.**
-  - **fast state vs slow state 분리(protected section).** 내구성 지침(보이스/추론패턴)은 보호 섹션에,
-    고변동 내용(세션로그/임시메모)이 *덮어쓰지 못하게*.
-  - **작은 bounded 변경 > 큰 재작성.** 몇 문장씩 바꾸고 매번 eval 검증.
-  - **검증 게이팅("hope 가 아니라").** 거부 편집을 정보성 네거티브로.
-  - **스킬은 포터블 자산**(모델·하네스·유사태스크 간 이식).
+    행동할지"를 써라.** ("every rule is procedural rather than instance-specific.")
+  - **작은 bounded 변경 > 큰 재작성.** 몇 문장씩 바꾸고 매번 held-out eval 검증.
+  - **검증 게이팅("hope 가 아니라").** 거부 편집을 buffer 로 재제안 차단 + 네거티브 신호화.
+  - **스킬은 포터블 자산**(모델·하네스·유사태스크 간 이식 — +59.7 이 증거).
 
 ---
 
@@ -329,6 +438,14 @@ vibe: Drives sustainable organic traffic ...
   실전 배치 규칙(KDnuggets).
 - **마켓플레이스 메타데이터 = 제품 카피**(OpenAI), **precision/recall 추적**, **한 번에 한 필드 변경** —
   description 을 *측정 가능한 자산*으로 취급하는 문화.
+- **(2026-06-22) description·output 이 *공식적으로* 측정 절차가 됨**(agentskills.io 3-가이드, B.6):
+  trigger-rate 0.5 임계·20쿼리×3런·train/val split·with/without A/B·비용 delta. = 수동 Claude A/B 와
+  자동 SkillOpt 사이의 *공식 중간항*. → 우리 corpus 를 이 레시피로 재설계하면 SkillOpt 루프의 발판이 된다.
+- **(2026-06-22) protected-section 의 재해석:** 보호 섹션은 *손으로 봉인하는 헤더*가 아니라 **기계가
+  epoch 단위로 쓰는 합의문**(SkillOpt). 우리 stateful 스킬/메모리 설계에서 "내구 지침 vs 휘발 노트" 를
+  *물리 분리*하되, 내구 쪽도 **자동 갱신 가능**하게 설계해야 함.
+- **(2026-06-22) 자가개선엔 자동 검증기가 하드 전제**(SkillOpt 한계). asset 별 scored eval 없으면 텍스트
+  학습 루프 불가 → v1.3.6 는 **"검증 가능한 asset 부터 자가개선"** 으로 범위를 그어야 한다.
 
 ## G.4 SoloSquad 포지셔닝 진단
 - **우리가 이미 앞서 있는 것:** 구조화 트리거(`triggers.{slash,keyword,freq}`)는 표준의 자유어
@@ -354,18 +471,33 @@ vibe: Drives sustainable organic traffic ...
 - 이유: `anthropics/skills` corpus 라운드트립 호환 + 마켓 배포 사전조건.
 
 ### H2. description 작성 컨벤션 명문화 + author 프롬프트 반영 (P0)
-근거: G.1·D.1(골드패턴)·G.3(pushy/첫문장). 착수: `src/bot/skill-author.ts`.
-- 표준 포맷 채택: **"`&lt;무엇을&gt;` — `&lt;구조&gt;`. `&lt;방법론 출처&gt;` 기반. 사용 시점: A, B, C. (이런 경우 제외: X)"**
-- 규칙: 3인칭, **트리거를 첫 문장에**(1536자 절단 대비), under-trigger 방어 위해 약간 pushy.
+근거: G.1·D.1·D.6(골드패턴)·G.3(pushy/첫문장)·B.6(eval 레시피). 착수: `src/bot/skill-author.ts`.
+- 표준 포맷 채택: **"`&lt;3인칭 동사&gt;` `&lt;역량&gt;`. `&lt;방법론 출처&gt;` 기반. 사용 시점: A(광의), B(구체). (제외: X)"**
+  — addyosmani 의 "Use when 2문장(광의+구체)" 변주 채택.
+- 규칙: 3인칭(또는 imperative "Use this skill when…"), **트리거를 첫 문장에**(1536자 절단 대비), under-
+  trigger 방어 위해 약간 pushy, **실패쿼리 키워드 직박 금지(overfit)** — 상위개념을 잡아라.
+- **본문 템플릿에 명명패턴 주입(B.6③):** Gotchas · Plan-validate-execute · Validation loop · Red Flags ·
+  **anti-rationalization 테이블** · 비협상 Verification 게이트(addyosmani D.6). "왜를 설명하라"(이유기반 > 명령형).
 - `skill-author.ts` 생성 프롬프트에 이 템플릿 주입 → 73개 기존 SKILL 도 점진 리라이트.
 
-### H3. SkillOpt 식 최적화 루프 도입 검토 (P1 — 차별화 기회)
-근거: F·G.3. 착수: `skill-author.ts` + `validator-corpus`/`test:corpus`.
-- 우리는 이미 author(=Claude A) + corpus(=eval) 골격 보유 → **rollout→reflect→bounded-edit(스텝당
-  4–8)→held-out 검증 게이팅** 루프를 얹을 수 있음.
-- **protected-section** 개념을 우리 stateful 스킬(v0.6 trajectory)·메모리 설계에 선반영: 내구 지침 vs
-  휘발 노트 물리 분리.
-- 목표 산출물 크기 가이드: **본문 ~920토큰 중앙값**을 author 의 토큰 예산으로.
+### H2.5 description·output eval 루프를 corpus 에 (P0 — B.6 직접 이식, 신규)
+근거: B.6①②. 착수: `src/analyze/validator-corpus.ts` + `npm run test:corpus`.
+- **trigger-rate eval:** 스킬별 20쿼리(should 8–10 + should-NOT 8–10, **near-miss 네거 포함**) × 3런,
+  **임계 0.5**, **train 60/val 40 split** → 우리 `triggers.{slash,keyword,freq}` + description 의 정량 회귀.
+- **output A/B:** `evals/evals.json`(prompt·assertions) 을 with_skill/without_skill 로 돌려 pass-rate +
+  **token·duration delta** 기록. assertion 은 첫 런 *후* 작성, "concrete evidence for PASS".
+- 이 두 루프가 H3(SkillOpt)의 *채점기*가 된다 — **검증기 없이는 자가개선 없음**(F 전제조건).
+
+### H3. SkillOpt 식 자가개선 루프 도입 (P1 — v1.3.6 핵심 차별화)
+근거: F·G.3·H2.5. 착수: `skill-author.ts` + `validator-corpus`/`test:corpus`.
+- 우리는 이미 author(=Claude A) + corpus(=eval 채점기, H2.5 후) 보유 → **rollout→reflect(성공/실패
+  *분리*)→bounded patch-edit(`Lt=4`, floor 2)→held-out gate** 루프를 얹을 수 있음.
+- **rejected-edit buffer** 도입: 거부된 편집 + 점수하락을 epoch-local 로 기록해 재제안 차단(네거티브 신호).
+- **protected slow-update 필드:** 손봉인 헤더가 아니라 **epoch 단위로 *기계가 쓰는* 합의문** — frontmatter
+  그래프(불변)와 별개로, 본문 내 "내구 규율" 블록을 step-edit 가 덮지 못하게 보호하되 epoch 에 자동 갱신.
+- **자동 검증기 게이트(전제):** scored eval 있는 스킬(코드/포맷 검증 가능)부터 적용, 주관적 스킬은 H1 정적
+  게이트로 폴백. 목표 본문 크기 **~920토큰 중앙값**.
+- optimizer 는 별도 모델 불필요 — matched target-as-optimizer 도 동작(비용 절감).
 
 ### H4. 마켓플레이스 배포 경로 정렬 (P1 — 외부 확산 시)
 근거: E·G.1(표준화). 착수: 신규 `plugin.json` 생성기 + 네이밍 정책.
@@ -384,10 +516,12 @@ vibe: Drives sustainable organic traffic ...
 
 ### H6. 적용 우선순위 요약
 ```
-P0 (즉시): H1 검증기 정렬 · H2 description 컨벤션
-P1 (중기): H3 SkillOpt 루프 · H4 마켓 배포 경로
+P0 (즉시): H1 검증기 정렬 · H2 description 컨벤션 · H2.5 eval 루프(corpus)
+P1 (중기): H3 SkillOpt 자가개선 루프 · H4 마켓 배포 경로
 P2 (추적): H5 어휘/표준 정렬
 ```
+**v1.3.6 매핑:** "작성법 내재화" = H1·H2(검증기·author 템플릿) + 73 SKILL 점진 리라이트. "자가개선 asset
+구조" = H2.5(채점기) → H3(SkillOpt 루프). 둘은 순서 의존 — **채점기(H2.5) 없이 자가개선(H3) 불가.**
 
 ---
 
@@ -405,13 +539,18 @@ P2 (추적): H5 어휘/표준 정렬
 - [ ] 본문 <500줄 / <5000토큰(이상적 ~920) · 상세는 별도 파일 · 참조 **1단계 깊이** · >100줄엔 ToC
 
 **내용 품질**
-- [ ] **절차적 규율** 중심(facts 아님) · 명시적 non-goal/정지조건 · 용어 일관 · 시간의존 정보 없음
-- [ ] 예시 구체적(복잡 스킬은 ≥3) · 선택지 1개+탈출구 · (코드)forward slash·punt금지·magic number금지
-- [ ] **protected/stable vs volatile 분리**(SkillOpt)
+- [ ] **절차적 규율** 중심(facts 아님, "에이전트가 모르는 것만") · 명시적 non-goal/정지조건 · 용어 일관 · 시간의존 정보 없음
+- [ ] 예시 구체적(복잡 스킬은 ≥3) · **메뉴 말고 디폴트**(선택지 1개+탈출구) · (코드)forward slash·punt금지·magic number금지
+- [ ] **Gotchas 섹션**(가정 뒤집는 환경사실) · 위험도에 처방강도 보정 · **"왜를 설명"**(이유기반 > 명령형)
+- [ ] (엔지니어링 스킬) **anti-rationalization 테이블 + 비협상 Verification 게이트 + Red Flags**(addyosmani)
+- [ ] **protected/stable(기계 갱신 가능) vs volatile 분리**(SkillOpt slow-update 필드)
 
 **검증/반복**
-- [ ] eval ≥3 + 베이스라인 · Haiku/Sonnet/Opus 테스트 · **bounded edit(4–8/스텝) + held-out 게이팅**
-- [ ] 자동검증 통과(`agent validate` / `skills-ref validate` / `claude plugin validate --strict`)
+- [ ] **description eval:** 20쿼리(should 8–10/near-miss 네거 8–10)×3런, trigger-rate 0.5, train60/val40, ~5 iter, **val 최고본 선택**
+- [ ] **output A/B:** with_skill vs without_skill, assertion 은 첫 런 후 작성, **token·duration delta 도 측정**
+- [ ] Haiku/Sonnet/Opus 테스트 · **bounded patch-edit(`Lt=4`/floor 2) + held-out gate + rejected-edit buffer**
+- [ ] 자동검증 통과(`agent validate` / `skills-ref validate` / `claude plugin validate --strict` / `skill-creator`)
+- [ ] (자가개선 대상이면) **자동 채점기 존재** 확인 — 없으면 정적 게이트로 폴백(SkillOpt 전제조건)
 
 **SoloSquad 확장(우리 검증기)**
 - [ ] `schema_version: 1` · slash 예약어 비충돌 · freq cap(20) 이내
@@ -430,6 +569,8 @@ P2 (추적): H5 어휘/표준 정렬
 - https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf
 - https://www.kdnuggets.com/anthropics-complete-guide-to-claude-skills-building
 - https://agentskills.io · https://agentskills.io/specification · https://github.com/anthropics/skills
+- **(2026-06-22) skill-creation 3-가이드:** https://agentskills.io/skill-creation/optimizing-descriptions · /evaluating-skills · /best-practices
+- **skill-creator 스킬:** https://github.com/anthropics/skills/tree/main/skills/skill-creator
 - https://github.com/obra/superpowers
 - (한글) https://wikidocs.net/365032 · /335610 · /333426
 
@@ -469,6 +610,7 @@ P2 (추적): H5 어휘/표준 정렬
 ### 커뮤니티 컬렉션 (실측)
 - https://github.com/garrytan/gstack · https://github.com/phuryn/pm-skills
 - https://github.com/ericosiu/ai-marketing-skills · https://github.com/msitarzewski/agency-agents (https://agencyagents.dev/)
+- **(2026-06-22)** https://github.com/addyosmani/agent-skills · https://addyosmani.com/blog/agent-skills/
 
 ## 레포 내 관련 코드
 - `src/bot/skill-parser.ts` — frontmatter 파서 + `validateSkill` (H1 착수점)
