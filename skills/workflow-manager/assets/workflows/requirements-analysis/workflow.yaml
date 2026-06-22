@@ -22,10 +22,22 @@ stages:
     task: |
       Run the jobs-stories (User Story · INVEST) + prioritization skills to draft
       the requirements. 요구사항 3대 유형(개발·콘텐츠·리포트, §3.4.1)으로 분류하고
-      각 요구사항을 핵심 내용 + 작업 체크리스트로 적는다(디자인 요소는 내포). 초안
-      산출 → 담당 스페셜리스트 리뷰 게이트(§3.5)로 인계.
+      각 요구사항을 핵심 내용 + 작업 체크리스트로 적는다(디자인 요소는 내포). PM 초안.
     inputs:
       - structure.json
+    outputs:
+      - requirements-draft.md
+    handoff_to: stage-3-review
+
+  - id: stage-3-review
+    agent: product/feature-planner
+    task: |
+      리뷰 게이트(§3.5). 각 요구사항을 **담당 실행 스페셜리스트**에게 리뷰 의뢰한다 —
+      개발→engineering, 콘텐츠→growth/marketing, 리포트→product/research, 디자인 내포→design.
+      (Chief 가 유형별로 해당 스페셜리스트를 dispatch.) 리뷰어는 실행 가능성·예외/사이드이펙트·
+      누락을 open_questions[] 로 지적. 반영 후 PRD §요구사항 을 **최종 확정**으로 기입.
+    inputs:
+      - requirements-draft.md
     outputs:
       - requirements-section.md
     handoff_to: null
