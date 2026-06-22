@@ -133,7 +133,7 @@ export async function adoptCommand(repoInput: string | undefined, opts: AdoptOpt
     agentsDir: path.join(dot, "agents"),
     skillsDir: path.join(dot, "skills"),
     schedulesDir: path.join(dot, "crons"),
-    workflowsDir: path.join(dot, "skills", "workflow-maker", "assets", "workflows"),
+    workflowsDir: path.join(dot, "skills", "workflow-manager", "assets", "workflows"),
   });
 
   console.log(chalk.bold(`\nApplied (${result.writtenCount} written, ${result.skippedCount} skipped):`));

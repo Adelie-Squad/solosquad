@@ -1,6 +1,6 @@
 # Bundled Workflow Templates (v1.1)
 
-본 디렉토리는 `workflow-maker` skill 이 사용자 의도를 해석할 때 참조하는
+본 디렉토리는 `workflow-manager` skill 이 사용자 의도를 해석할 때 참조하는
 사전 정의 workflow 4종. 사용자가 `solosquad workflow new` 또는 chief 가
 TRIAGE → DECOMPOSE 에서 호출 시 이 중 가장 적합한 template 을 base로 사용.
 
@@ -13,7 +13,7 @@ TRIAGE → DECOMPOSE 에서 호출 시 이 중 가장 적합한 template 을 bas
 
 ## 사용 방법
 
-1. `workflow-maker` 가 사용자 의도를 분석
+1. `workflow-manager` 가 사용자 의도를 분석
 2. 본 디렉토리에서 가장 정합 높은 template 선택 (또는 합성)
 3. `<org>/workflows/wf-YYYY-MM-DD-<slug>/workflow.yaml` 로 instance 복사
 4. `_status.yaml` 생성 + 첫 stage `pending → in_progress`

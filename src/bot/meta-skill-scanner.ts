@@ -13,7 +13,7 @@ import {
  * v0.5 §7 — meta-skill scanner.
  *
  * `_meta/` is intentionally segregated from the regular agent roster so that
- * orchestration-layer SKILLs (workflow-maker, recipe-replay, etc.) never get
+ * orchestration-layer SKILLs (workflow-manager, recipe-replay, etc.) never get
  * surfaced through the 3 ambient channels (slash / keyword / freq). Letting
  * a meta-skill ride one of those channels would invert the v0.3 control
  * model — meta-skills must be invoked *by the PM* (explicit only) so they

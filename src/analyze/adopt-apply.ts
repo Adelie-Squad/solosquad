@@ -19,7 +19,7 @@ export interface ApplyTargets {
   agentsDir: string;
   skillsDir: string;
   schedulesDir: string;
-  /** workflow templates live alongside the workflow-maker skill assets. */
+  /** workflow templates live alongside the workflow-manager skill assets. */
   workflowsDir: string;
 }
 

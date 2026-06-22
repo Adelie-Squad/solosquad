@@ -43,13 +43,13 @@ test("accepts meta-skill with only triggers.explicit: true", () => {
   const dir = mkAgentsDir();
   writeSkill(
     dir,
-    "workflow-maker",
-    `name: "workflow-maker"\ndescription: "compose multi-stage workflows"\ntriggers:\n  explicit: true`,
+    "workflow-manager",
+    `name: "workflow-manager"\ndescription: "compose multi-stage workflows"\ntriggers:\n  explicit: true`,
   );
   const result = listMetaSkills(dir);
   assert.equal(result.rejected.length, 0);
   assert.equal(result.ok.length, 1);
-  assert.equal(result.ok[0].name, "workflow-maker");
+  assert.equal(result.ok[0].name, "workflow-manager");
   assert.equal(result.ok[0].spec.triggers?.explicit, true);
   assert.ok(result.ok[0].source_path.endsWith("SKILL.md"));
 });
@@ -146,8 +146,8 @@ test("ignores non-_meta sibling team directories like strategy/", () => {
   // valid meta-skill
   writeSkill(
     dir,
-    "workflow-maker",
-    `name: "workflow-maker"\ndescription: "valid"\ntriggers:\n  explicit: true`,
+    "workflow-manager",
+    `name: "workflow-manager"\ndescription: "valid"\ntriggers:\n  explicit: true`,
   );
   // sibling team that scanner must not even look at
   const stratAgent = path.join(dir, "strategy", "pmf-planner");
@@ -158,6 +158,6 @@ test("ignores non-_meta sibling team directories like strategy/", () => {
   );
   const result = listMetaSkills(dir);
   assert.equal(result.ok.length, 1);
-  assert.equal(result.ok[0].name, "workflow-maker");
+  assert.equal(result.ok[0].name, "workflow-manager");
   assert.equal(result.rejected.length, 0);
 });

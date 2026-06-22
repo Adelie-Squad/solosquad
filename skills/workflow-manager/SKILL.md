@@ -1,6 +1,6 @@
 ---
-name: workflow-maker
-description: Chief 또는 사용자 의도에서 workflow YAML 합성. assets/workflows/ 의 4 template 을 기반으로 instance 생성. v1.0.x meta-skill 의 v1.1 평탄화 버전.
+name: workflow-manager
+description: Chief 또는 사용자 의도에서 workflow YAML 합성·검토·개선. assets/workflows/ 의 template 을 기반으로 instance 생성. v1.0.x meta-skill 의 v1.1 평탄화 버전, v1.3.5 에서 maker→manager 개명.
 schema_version: 2
 tier: leader
 team: _skill
@@ -17,7 +17,7 @@ pm_conventions:
   minimum_approaches: 2
 ---
 
-# Workflow Maker Skill — v1.1
+# Workflow Manager Skill — v1.1 (v1.3.5 maker→manager)
 
 > Chief 또는 사용자 의도에서 workflow YAML 합성. 신규 workflow 작성 시
 > 4 bundled template (assets/workflows/) 중 정합 가장 높은 것을 base 로

@@ -105,7 +105,7 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
       path.join(
         bundleRoot,
         "skills",
-        "workflow-maker",
+        "workflow-manager",
         "assets",
         "workflows",
         workflow,

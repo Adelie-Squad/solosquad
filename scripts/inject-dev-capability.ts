@@ -12,7 +12,7 @@
  *       backend-developer, fde, api-developer, creative-frontend, qa-engineer
  *   - everything else (20 SKILLs incl. engineering 5 advice-only +
  *     strategy 7 + growth 4 + experience 4) → `dev_capability: false`
- *   - `_meta/workflow-maker` is treated as non-dev (false) because the meta
+ *   - `_meta/workflow-manager` is treated as non-dev (false) because the meta
  *     SKILL only drafts other SKILLs — it should not push code itself.
  *
  * Per v0.5 skill-parser forward-compat, unknown fields land in `extra` if the
@@ -148,7 +148,7 @@ function main(): void {
 
   for (const teamEntry of fs.readdirSync(BUNDLE_AGENTS_DIR, { withFileTypes: true })) {
     if (!teamEntry.isDirectory()) continue;
-    // `_meta/` is the workflow-maker meta-skill — out of the 25-SKILL matrix.
+    // `_meta/` is the workflow-manager meta-skill — out of the 25-SKILL matrix.
     if (teamEntry.name.startsWith("_")) continue;
     const teamDir = path.join(BUNDLE_AGENTS_DIR, teamEntry.name);
 

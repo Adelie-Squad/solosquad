@@ -43,10 +43,10 @@ function buildFixture(): { agentsDir: string; cleanup: () => void } {
   }
 
   // _meta/ must be skipped
-  fs.mkdirSync(path.join(agentsDir, "_meta", "workflow-maker"), { recursive: true });
+  fs.mkdirSync(path.join(agentsDir, "_meta", "workflow-manager"), { recursive: true });
   fs.writeFileSync(
-    path.join(agentsDir, "_meta", "workflow-maker", "SKILL.md"),
-    "---\nname: workflow-maker\ndescription: meta\n---\n",
+    path.join(agentsDir, "_meta", "workflow-manager", "SKILL.md"),
+    "---\nname: workflow-manager\ndescription: meta\n---\n",
     "utf-8"
   );
 

@@ -125,13 +125,13 @@ export async function workflowShowCommand(
 
 /**
  * `solosquad workflow validate [path] [--all]` — §6 validateWorkflow surface.
- * `--all` scans the bundled workflow-maker templates; agent refs resolve
+ * `--all` scans the bundled workflow-manager templates; agent refs resolve
  * against the actor registry.
  */
 function bundledWorkflowFiles(): string[] {
   // Deterministic bundle scope — see getBundledSkillsDir. Avoids an ancestor
   // workspace's `.solosquad/skills` shadowing the shipped workflow templates.
-  const dir = path.join(getBundledSkillsDir(), "workflow-maker", "assets", "workflows");
+  const dir = path.join(getBundledSkillsDir(), "workflow-manager", "assets", "workflows");
   if (!fs.existsSync(dir)) return [];
   const out: string[] = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

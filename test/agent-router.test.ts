@@ -162,8 +162,8 @@ test("buildRoutes skips _meta and _teams folders (handled by separate scanners)"
   writeSkill(
     root,
     "_meta",
-    "workflow-maker",
-    `name: "workflow-maker"\ndescription: "meta"\ntriggers:\n  explicit: true`,
+    "workflow-manager",
+    `name: "workflow-manager"\ndescription: "meta"\ntriggers:\n  explicit: true`,
   );
   writeSkill(
     root,
@@ -172,7 +172,7 @@ test("buildRoutes skips _meta and _teams folders (handled by separate scanners)"
     `name: "real"\ndescription: "real one"\ntriggers:\n  keyword: ["realsig"]`,
   );
   const idx = buildRoutes({ agents_root: root, user_root: "/__nope__" });
-  assert.ok(!idx.explicit["workflow-maker"]);
+  assert.ok(!idx.explicit["workflow-manager"]);
   assert.ok(idx.keyword["realsig"]);
 });
 

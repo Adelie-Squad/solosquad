@@ -81,7 +81,7 @@ export async function offerAdoption(repoPath: string, indent = ""): Promise<void
     agentsDir: path.join(dot, "agents"),
     skillsDir: path.join(dot, "skills"),
     schedulesDir: path.join(dot, "crons"),
-    workflowsDir: path.join(dot, "skills", "workflow-maker", "assets", "workflows"),
+    workflowsDir: path.join(dot, "skills", "workflow-manager", "assets", "workflows"),
   });
   console.log(chalk.green(`${indent}✓ adopted ${result.writtenCount}, skipped ${result.skippedCount}`));
   for (const o of result.outcomes) {

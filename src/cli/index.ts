@@ -480,7 +480,7 @@ workflowGroup
   .command("validate")
   .description("Validate workflow.yaml templates (cycle, refs, exit_criteria)")
   .argument("[path]", "Path to a workflow.yaml (omit when using --all)")
-  .option("--all", "Validate all bundled workflow-maker templates")
+  .option("--all", "Validate all bundled workflow-manager templates")
   .action(async (filePath, opts) => {
     const { workflowValidateCommand } = await import("./workflow.js");
     await workflowValidateCommand(filePath, opts);
