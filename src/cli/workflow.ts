@@ -11,7 +11,14 @@ import {
   prdPath,
   readEvents,
 } from "../bot/workspace-meta.js";
-import { validateWorkflow, type WorkflowFinding } from "../bot/workflow-validate.js";
+import {
+  validateWorkflow,
+  subworkflowRefs,
+  detectSubworkflowCycles,
+  subworkflowDepths,
+  type WorkflowFinding,
+  type WorkflowSubrefs,
+} from "../bot/workflow-validate.js";
 import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
 
 const STATUS_COLORS: Record<string, (s: string) => string> = {
@@ -239,47 +246,79 @@ export async function workflowValidateCommand(
 
   const known = agentRefAliases(loadAgentSpecs(getBundledAgentsDir()));
   const files = filePath ? [path.resolve(filePath)] : bundledWorkflowFiles();
-  let checked = 0;
-  let failed = 0;
 
+  // v1.3.5 §3.3 — pre-parse every candidate doc so `_workflow/<id>` refs can be
+  // resolved against the full known-workflow set + checked for cross-workflow
+  // cycles. The bundled set always contributes to knownWorkflows (a single-file
+  // validation can still reference a bundled sub-workflow).
+  const parsed: { file: string; label: string; doc: unknown }[] = [];
+  let failed = 0;
   for (const f of files) {
-    checked++;
     if (!fs.existsSync(f)) {
       console.log(chalk.red(`✗ ${f} — not found`));
       failed++;
       continue;
     }
-    let doc: unknown;
     try {
-      doc = yaml.load(fs.readFileSync(f, "utf-8"));
+      parsed.push({ file: f, label: `${path.basename(path.dirname(f))}/workflow.yaml`, doc: yaml.load(fs.readFileSync(f, "utf-8")) });
     } catch (e) {
       console.log(chalk.red(`✗ ${f} — yaml error: ${(e as Error).message}`));
       failed++;
-      continue;
     }
-    const label = `${path.basename(path.dirname(f))}/workflow.yaml`;
-    const r = validateWorkflow(doc, { knownAgents: known });
+  }
+
+  const idOf = (doc: unknown): string | undefined => {
+    const id = (doc as { id?: unknown })?.id;
+    return typeof id === "string" ? id : undefined;
+  };
+  // knownWorkflows = bundled ids ∪ the parsed files' ids.
+  const knownWorkflows = new Set<string>();
+  for (const f of bundledWorkflowFiles()) {
+    try { const id = idOf(yaml.load(fs.readFileSync(f, "utf-8"))); if (id) knownWorkflows.add(id); } catch { /* skip */ }
+  }
+  for (const p of parsed) { const id = idOf(p.doc); if (id) knownWorkflows.add(id); }
+
+  for (const p of parsed) {
+    const r = validateWorkflow(p.doc, { knownAgents: known, knownWorkflows, selfId: idOf(p.doc) });
     if (r.ok && r.warnings.length === 0) {
-      console.log(chalk.green(`✓ ${label}`));
+      console.log(chalk.green(`✓ ${p.label}`));
       continue;
     }
     if (r.ok) {
-      console.log(chalk.yellow(`△ ${label} — ${r.warnings.length} warning(s)`));
+      console.log(chalk.yellow(`△ ${p.label} — ${r.warnings.length} warning(s)`));
       for (const w of r.warnings) printWfIssue(w, "warn");
       continue;
     }
     failed++;
-    console.log(chalk.red(`✗ ${label} — ${r.errors.length} error(s)`));
+    console.log(chalk.red(`✗ ${p.label} — ${r.errors.length} error(s)`));
     for (const e of r.errors) printWfIssue(e, "error");
     for (const w of r.warnings) printWfIssue(w, "warn");
   }
 
+  // Cross-workflow cycle + nesting-depth checks over the composition graph.
+  const subrefs: WorkflowSubrefs[] = parsed
+    .map((p) => ({ id: idOf(p.doc) ?? p.label, subworkflows: subworkflowRefs(p.doc) }))
+    .filter((w) => w.subworkflows.length > 0);
+  if (subrefs.length > 0) {
+    const cycles = detectSubworkflowCycles(subrefs);
+    for (const cyc of cycles) {
+      failed++;
+      console.log(chalk.red(`✗ sub-workflow cycle: ${cyc.join(" -> ")}`));
+    }
+    if (cycles.length === 0) {
+      for (const [id, depth] of subworkflowDepths(subrefs)) {
+        if (depth > 2) console.log(chalk.yellow(`△ ${id} — sub-workflow nesting depth ${depth} > 2 (PRD §3.3 recommends ≤2)`));
+      }
+    }
+  }
+
+  const checked = parsed.length;
   console.log();
   if (failed === 0) {
     console.log(chalk.green(`✓ ${checked} workflow(s) validated, 0 failed`));
     process.exitCode = 0;
   } else {
-    console.log(chalk.red(`✗ ${failed} failed (of ${checked})`));
+    console.log(chalk.red(`✗ ${failed} failed`));
     process.exitCode = 1;
   }
 }

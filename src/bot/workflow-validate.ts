@@ -35,6 +35,13 @@ export interface WorkflowValidationResult {
 export interface ValidateWorkflowOptions {
   /** Canonical agent ids ("<team>/<name>") — when set, agent refs are resolved. */
   knownAgents?: Set<string>;
+  /**
+   * v1.3.5 §3.3 — known workflow ids; when set, `_workflow/<id>` sub-workflow
+   * stage refs are resolved against it (existence check).
+   */
+  knownWorkflows?: Set<string>;
+  /** This workflow's own id — used to reject a direct self sub-workflow ref. */
+  selfId?: string;
 }
 
 interface RawStage {
@@ -130,6 +137,14 @@ export function validateWorkflow(
         warnings.push({ code: "WF_AGENT_REF_MALFORMED", stage: id, field: "agent", message: `agent "${ref}" is not "<team>/<agent>"` });
       } else if (ref.startsWith("_skill/")) {
         // skill stage — resolved against the skill registry, not the actor set
+      } else if (ref.startsWith("_workflow/")) {
+        // v1.3.5 §3.3 — sub-workflow stage (Workflow-of-Workflows).
+        const subId = ref.slice("_workflow/".length);
+        if (opts.selfId && subId === opts.selfId) {
+          errors.push({ code: "WF_SUBWORKFLOW_SELF", stage: id, field: "agent", message: `stage "${id}" calls its own workflow "${subId}" (direct cycle)` });
+        } else if (opts.knownWorkflows && !opts.knownWorkflows.has(subId)) {
+          errors.push({ code: "WF_SUBWORKFLOW_UNRESOLVED", stage: id, field: "agent", message: `sub-workflow "${subId}" is not a known workflow` });
+        }
       } else if (opts.knownAgents && !opts.knownAgents.has(ref)) {
         errors.push({ code: "WF_AGENT_UNRESOLVED", stage: id, field: "agent", message: `agent "${ref}" is not a known actor` });
       }
@@ -218,4 +233,74 @@ export function validateWorkflow(
   }
 
   return { ok: errors.length === 0, errors, warnings };
+}
+
+/* -------------------------------------------------------------------------- */
+/* v1.3.5 §3.3 — sub-workflow composition (Workflow-of-Workflows)             */
+/* -------------------------------------------------------------------------- */
+
+/** Extract the `_workflow/<id>` sub-workflow ids referenced by a workflow doc's stages. */
+export function subworkflowRefs(doc: unknown): string[] {
+  if (!doc || typeof doc !== "object") return [];
+  const stages = (doc as { stages?: unknown }).stages;
+  if (!Array.isArray(stages)) return [];
+  const out = new Set<string>();
+  for (const st of stages as RawStage[]) {
+    if (typeof st.agent === "string" && st.agent.startsWith("_workflow/")) {
+      const sub = st.agent.slice("_workflow/".length);
+      if (sub) out.add(sub);
+    }
+  }
+  return [...out];
+}
+
+export interface WorkflowSubrefs {
+  id: string;
+  /** sub-workflow ids this workflow calls via `_workflow/<id>` stages. */
+  subworkflows: string[];
+}
+
+/**
+ * Detect cycles across the sub-workflow reference graph (A → _workflow/B →
+ * _workflow/A …). Reuses the shared Kahn cycle core — same engine as the
+ * per-workflow stage DAG and `agent validate --graph`. Returns each cycle as an
+ * ordered id list (empty = acyclic).
+ */
+export function detectSubworkflowCycles(workflows: WorkflowSubrefs[]): string[][] {
+  const nodes: GraphNode[] = workflows.map((w) => ({ id: w.id }));
+  const ids = new Set(workflows.map((w) => w.id));
+  const edges: GraphEdge[] = [];
+  for (const w of workflows) {
+    for (const sub of w.subworkflows) {
+      if (ids.has(sub)) edges.push({ from: w.id, to: sub, field: "_workflow" });
+    }
+  }
+  return detectCycles(nodes, edges);
+}
+
+/**
+ * Max nesting depth of the sub-workflow graph rooted at each workflow. PRD §3.3
+ * recommends ≤2 (parent main → sub-workflow → skill/agent). Assumes an acyclic
+ * graph (run `detectSubworkflowCycles` first). Returns id → depth.
+ */
+export function subworkflowDepths(workflows: WorkflowSubrefs[]): Map<string, number> {
+  const byId = new Map(workflows.map((w) => [w.id, w] as const));
+  const memo = new Map<string, number>();
+  const depth = (id: string, seen: Set<string>): number => {
+    if (memo.has(id)) return memo.get(id)!;
+    if (seen.has(id)) return 0; // cycle guard — caller validates separately
+    const w = byId.get(id);
+    if (!w || w.subworkflows.length === 0) return 0;
+    seen.add(id);
+    let max = 0;
+    for (const sub of w.subworkflows) {
+      if (byId.has(sub)) max = Math.max(max, 1 + depth(sub, seen));
+    }
+    seen.delete(id);
+    memo.set(id, max);
+    return max;
+  };
+  const out = new Map<string, number>();
+  for (const w of workflows) out.set(w.id, depth(w.id, new Set()));
+  return out;
 }
