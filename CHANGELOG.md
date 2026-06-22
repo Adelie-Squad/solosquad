@@ -4,9 +4,14 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 1.3.5 (Planning workflows + asset-manager consistency)
+## [1.3.5] — 2026-06-22 (Planning workflows + asset-manager consistency)
 
-In progress on `feat/v1.3.5-planning-workflows`. See `docs/prd/v1.3.5-planning-workflows.md`.
+See `docs/prd/v1.3.5-planning-workflows.md`. Two workstreams: (A) planning
+workflows — five framework skills (scqa·five-whys·mece·tdcc·xyz-hypothesis) split
+out of problem-definition, `_workflow/<id>` sub-workflow composition (cycle/depth
+guards), two main + six sub planning workflows, a market-research skill, prd-writer
+two-form + requirement taxonomy, and a requirements review gate; (B) asset-manager
+consistency — the B-D1..B-D4 changes below. 947 tests green.
 
 - **B-D1 — `workflow-maker` → `workflow-manager` rename.** The last `{asset}-maker`
   holdout joins the `-manager` lifecycle family. The bundle skill dir, frontmatter,
