@@ -1,26 +1,24 @@
-# problem-definition workflow template (v1.2).
+# problem-definition workflow template (v1.2; v1.3.5 framework-skill split).
 #
 # 새 조직의 기본 시드 워크플로 (v1.2 directive #6). add-org 가
 # <org>/workflows/problem-definition/ 으로 자동 복사.
 #
-# Chief 가 사용자 요청을 *문제 정의* 부터 시작해야 한다고 판단할 때
-# (e.g. 초기 product 진입, 새 feature 의 근본 문제 재확인) 호출. PM 이
-# problem-definition skill 의 6-phase chain (SCQA → 5-Whys → MECE → TDCC →
-# XYZ → 1-pager PRD) 을 stage 별로 실행. 각 phase 산출이 다음 phase 입력.
+# Chief 가 사용자 요청을 *문제 정의* 부터 시작해야 한다고 판단할 때 호출. PM
+# (product/pmf-planner)이 프레임워크 skill 체인을 stage 별로 실행. 각 phase
+# 산출이 다음 phase 입력.
 #
-# discovery-cycle 과의 차이: discovery-cycle 은 discovery → problem-def →
-# opportunity-tree → hypothesis → prd → wbs 까지 *큰 cycle*. 본 workflow 는
-# 문제 정의 그 자체에만 집중 — solo founder 가 *지금 풀어야 할 문제가
-# 뭔지* 명확화하는 가장 가벼운 entry point.
+# v1.3.5 (PRD §3.2): 구 단일 `problem-definition` skill 이 5개 프레임워크 skill
+# (scqa·five-whys·mece·tdcc·xyz-hypothesis)로 분리됐다. `problem-definition` 은
+# 그 skill 들을 chain 하는 (서브)워크플로로 남는다(skill 아님). 1-pager 산출은
+# prd-writer skill 이 담당.
 #
 # 참조:
-#   - docs/prd/v1.2-messenger-connection-discord-first.md §12 #16
-#   - skills/problem-definition/SKILL.md
-#   - skills/problem-definition/assets/01~06 (각 phase 의 방법론 문서)
+#   - docs/prd/v1.3.5-planning-workflows.md §3.2
+#   - skills/{scqa,five-whys,mece,tdcc,xyz-hypothesis}/SKILL.md
 schema_version: 2
 id: "problem-definition"
-name: "Problem Definition (6-phase chain)"
-description: "PM walks SCQA → 5-Whys → MECE → TDCC → XYZ Hypothesis → 1-pager PRD. Each phase outputs evidence-refs + open_questions[] for unanswerable fields."
+name: "Problem Definition (framework-skill chain)"
+description: "PM walks scqa → five-whys → mece → tdcc → xyz-hypothesis → 1-pager PRD. Each stage outputs evidence-refs + open_questions[] for unanswerable fields."
 template_id: "problem-definition"
 hard_gate: true
 
@@ -28,10 +26,9 @@ stages:
   - id: stage-1-scqa
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill, Phase 1 (SCQA). Frame the user's
-      request using Situation / Complication / Question / Answer (hypothesis).
-      Reference assets/01-scqa.md. Unanswerable fields → append to
-      <org>/memory/open-questions/{{task_id}}.json.
+      Run the `scqa` skill. Frame the user's request using Situation /
+      Complication / Question / Answer (hypothesis candidates). Unanswerable
+      fields → append to <org>/memory/open-questions/{{task_id}}.json.
     inputs: []
     outputs:
       - scqa.json
@@ -40,9 +37,9 @@ stages:
   - id: stage-2-five-whys
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill, Phase 2 (5 Whys). Drill from the
-      Complication (Phase 1) down to root cause. Reference assets/02-five-whys.md.
-      Each "why" must have an evidence-ref or open_question entry.
+      Run the `five-whys` skill. Drill from the Complication (stage 1) down to
+      a one-sentence root cause. Each "why" must have an evidence-ref or an
+      open_question entry.
     inputs:
       - scqa.json
     outputs:
@@ -52,10 +49,9 @@ stages:
   - id: stage-3-mece
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill, Phase 3 (MECE). Decompose the root
-      cause into Mutually Exclusive / Collectively Exhaustive branches.
-      Reference assets/03-mece.md. Output a tree (depth ≥2, leaves
-      actionable). Overlaps / gaps → open_questions[].
+      Run the `mece` skill. Decompose the root cause into Mutually Exclusive /
+      Collectively Exhaustive lagging + leading branches (leaves actionable).
+      Overlaps / gaps → open_questions[].
     inputs:
       - five-whys.json
     outputs:
@@ -65,10 +61,9 @@ stages:
   - id: stage-4-tdcc
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill, Phase 4 (TDCC — Top-Down Categorize
-      → Compare). For each MECE leaf, categorize the candidate solutions
-      and compare on shared axes (cost, time-to-impact, reversibility).
-      Reference assets/04-tdcc.md. Output: ranked candidate matrix.
+      Run the `tdcc` skill. Map the leading problems to a measurable trailing
+      indicator, customer opportunity, and causal link; escalate unknowns to
+      open_questions[].
     inputs:
       - mece-tree.json
     outputs:
@@ -78,10 +73,9 @@ stages:
   - id: stage-5-xyz
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill, Phase 5 (XYZ Hypothesis). Convert
-      top-ranked candidate(s) into falsifiable hypothesis: "We believe X
-      will result in Y, measured by Z." Reference assets/05-xyz-hypothesis.md.
-      Each hypothesis carries a riskiest-assumption tag (V/U/V/F).
+      Run the `xyz-hypothesis` skill. Convert the top candidate(s) into
+      falsifiable "X% of Y will Z within T, because R" hypotheses (≥2 approaches),
+      each with a riskiest-assumption tag (V/U/V/F) and falsification conditions.
     inputs:
       - tdcc-matrix.json
     outputs:
@@ -91,10 +85,9 @@ stages:
   - id: stage-6-one-pager
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill, Phase 6 (1-pager PRD). Synthesize
-      Phases 1–5 into a 1-page PRD: problem, users, why-now, hypothesis,
-      success metric, riskiest assumption. Reference assets/06-one-pager-prd.md.
-      HARD GATE: all earlier phases must have zero blocking open_questions[].
+      Run the `prd-writer` skill. Synthesize stages 1–5 into a 1-page PRD:
+      problem, users, why-now, hypothesis, success metric, riskiest assumption.
+      HARD GATE: all earlier stages must have zero blocking open_questions[].
     inputs:
       - scqa.json
       - five-whys.json

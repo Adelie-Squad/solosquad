@@ -15,7 +15,11 @@ collaborators:
 skills_used:
   - search
   - citation
-  - problem-definition
+  - scqa
+  - five-whys
+  - mece
+  - tdcc
+  - xyz-hypothesis
 triggers:
   keyword:
     - "정책"

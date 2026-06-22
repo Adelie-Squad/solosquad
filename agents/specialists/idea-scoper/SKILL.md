@@ -16,7 +16,11 @@ skills_used:
   - opportunity-tree
   - prioritization
   - wbs-decomposition
-  - problem-definition
+  - scqa
+  - five-whys
+  - mece
+  - tdcc
+  - xyz-hypothesis
 triggers:
   keyword:
     - "아이디어"

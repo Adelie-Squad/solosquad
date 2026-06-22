@@ -27,10 +27,10 @@ stages:
   - id: stage-2-problem-definition
     agent: product/pmf-planner
     task: |
-      Run problem-definition skill. Execute 6-Phase chain (SCQA → 5-Whys →
-      MECE → TDCC → XYZ → 1-pager). For each phase, write evidence-refs.
-      Unanswerable fields → open_questions[]. Output: problem_statement,
-      root_cause, hypotheses[].
+      Run the problem-definition framework chain (scqa → five-whys → mece →
+      tdcc → xyz-hypothesis skills). For each, write evidence-refs. Unanswerable
+      fields → open_questions[]. Output: problem_statement, root_cause,
+      hypotheses[].
     inputs:
       - discovery-output.json
     outputs:

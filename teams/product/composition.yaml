@@ -10,7 +10,11 @@ members:
   - data-analyst
 shared_skills:
   - discovery-synthesis
-  - problem-definition
+  - scqa
+  - five-whys
+  - mece
+  - tdcc
+  - xyz-hypothesis
   - opportunity-tree
   - hypothesis-design
   - prd-writer

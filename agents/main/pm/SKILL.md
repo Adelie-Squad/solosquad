@@ -16,7 +16,11 @@ collaborators:
   - product/data-analyst
 skills_used:
   - discovery-synthesis
-  - problem-definition
+  - scqa
+  - five-whys
+  - mece
+  - tdcc
+  - xyz-hypothesis
   - opportunity-tree
   - hypothesis-design
   - prd-writer
@@ -54,7 +58,7 @@ pm_conventions:
 2. Read 9-layer JIT context (no user query during execution)
 3. Skill chain (autonomous):
    a) discovery-synthesis     ← archive.sqlite + customers.md에서 JTBD/문제 신호 추출
-   b) problem-definition       ← SCQA→5-Whys→MECE→TDCC→XYZ chain (RO-PNA 6-Phase 자체화)
+   b) scqa→five-whys→mece→tdcc→xyz-hypothesis  ← RO-PNA 체인(v1.3.5 분리; chain = `problem-definition` 워크플로)
    c) opportunity-tree         ← OST + Six Forcing Questions 자가검증
    d) hypothesis-design        ← XYZ + If-Then-Because + V/U/V/F assumption 분류
    e) prd-writer               ← 8-section PRD
