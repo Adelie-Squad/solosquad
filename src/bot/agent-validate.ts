@@ -5,7 +5,7 @@ import {
   type GraphEdge,
   type GraphNode,
 } from "../util/graph.js";
-import { KEBAB_RE } from "../util/naming.js";
+import { KEBAB_RE, hasReservedWord } from "../util/naming.js";
 import type { AgentSpec } from "./agent-spec.js";
 
 /**
@@ -98,6 +98,15 @@ export function validateAgents(
         agent: s.id,
         field: "name",
         message: `name "${s.name}" does not match directory "${s.dir}"`,
+      });
+    }
+    // v1.3.6 §3.2 — brand-reserved words (anthropic/claude) are forbidden.
+    if (hasReservedWord(s.name)) {
+      errors.push({
+        code: "AGENT_NAME_RESERVED_WORD",
+        agent: s.id,
+        field: "name",
+        message: `name "${s.name}" contains a reserved word (anthropic/claude)`,
       });
     }
     if (s.tier && s.tier !== "leader" && s.tier !== "member") {

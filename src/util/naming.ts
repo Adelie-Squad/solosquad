@@ -26,6 +26,19 @@ export function isReserved(id: string, reserved?: ReadonlySet<string>): boolean 
   return !!reserved?.has(id);
 }
 
+/**
+ * v1.3.6 §3.2 — brand-reserved words that may not appear in any asset id.
+ * Anthropic Agent Skills policy reserves these for first-party use; SoloSquad
+ * mirrors it so bundled/org ids never collide with the platform namespace.
+ */
+export const RESERVED_WORDS: readonly string[] = ["anthropic", "claude"];
+
+/** True when `id` contains a brand-reserved word (case-insensitive substring). */
+export function hasReservedWord(id: string): boolean {
+  const lower = id.toLowerCase();
+  return RESERVED_WORDS.some((w) => lower.includes(w));
+}
+
 /** Does `id` collide with an already-taken id? */
 export function collides(id: string, taken: ReadonlySet<string>): boolean {
   return taken.has(id);

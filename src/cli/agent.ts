@@ -10,6 +10,7 @@ import {
 import { listSourceAgents } from "../bot/agents-builder.js";
 import { loadAgentSpecs } from "../bot/agent-spec.js";
 import { validateAgents, type AgentFinding } from "../bot/agent-validate.js";
+import { checkOriginality } from "../analyze/originality.js";
 import { getAgentsDir, getBundledAgentsDir, getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 
 /**
@@ -152,11 +153,25 @@ function validateAgentGraph(): boolean {
   const specs = loadAgentSpecs(getBundledAgentsDir());
   const result = validateAgents(specs);
   const label = `agent graph (${specs.length} actors)`;
-  if (result.ok && result.warnings.length === 0) {
+  // v1.3.6 §3.2 — originality gate (anti-reskin): fail-level overlaps are
+  // errors, warn-level are warnings. Fold into the same finding lists so the
+  // existing pass/fail logic covers them.
+  for (const f of originalityFindings(specs)) {
+    const finding: AgentFinding = {
+      code: "AGENT_REVISION_OVERLAP",
+      agent: f.id,
+      field: "description/body",
+      message: `${(f.overlap * 100).toFixed(0)}% shingle overlap with "${f.against}" — likely a re-skin / role overlap (8-word shingle, FAIL≥40%/WARN≥20%)`,
+    };
+    if (f.level === "fail") result.errors.push(finding);
+    else result.warnings.push(finding);
+  }
+  const ok = result.errors.length === 0;
+  if (ok && result.warnings.length === 0) {
     console.log(chalk.green(`✓ ${label}`));
     return false;
   }
-  if (result.ok) {
+  if (ok) {
     console.log(chalk.yellow(`△ ${label} — ${result.warnings.length} warning(s)`));
     for (const w of result.warnings) printGraphIssue(w, "warn");
     return false;
@@ -165,6 +180,21 @@ function validateAgentGraph(): boolean {
   for (const e of result.errors) printGraphIssue(e, "error");
   for (const w of result.warnings) printGraphIssue(w, "warn");
   return true;
+}
+
+/** Load each actor's description+body and run the originality gate (§3.2). */
+function originalityFindings(specs: { id: string; skillPath: string }[]) {
+  const items = specs.map((s) => {
+    let text = "";
+    try {
+      const parsed = parseSkillMd(fs.readFileSync(s.skillPath, "utf-8"), s.skillPath);
+      text = `${parsed.description}\n${parsed.body}`;
+    } catch {
+      /* parse failures are reported by validateOne; skip here */
+    }
+    return { id: s.id, text };
+  });
+  return checkOriginality(items);
 }
 
 function printGraphIssue(issue: AgentFinding, kind: "error" | "warn"): void {

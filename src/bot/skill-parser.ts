@@ -1,6 +1,6 @@
 import yaml from "js-yaml";
 import { normalizeLine } from "../util/platform.js";
-import { isKebabCase, DEFAULT_NAME_MAX } from "../util/naming.js";
+import { isKebabCase, hasReservedWord, DEFAULT_NAME_MAX } from "../util/naming.js";
 
 /**
  * v0.5 — SKILL.md frontmatter parser + validator.
@@ -624,6 +624,14 @@ export function validateSkill(
           message: `name "${spec.name}" is reserved`,
         });
       }
+      // v1.3.6 §3.2 — brand-reserved words (anthropic/claude) are forbidden.
+      if (hasReservedWord(spec.name)) {
+        errors.push({
+          code: "NAME_RESERVED_WORD",
+          field: "name",
+          message: `name "${spec.name}" contains a reserved word (anthropic/claude)`,
+        });
+      }
     }
     if (ctx.dir_name !== undefined && spec.name !== ctx.dir_name) {
       errors.push({
@@ -646,6 +654,39 @@ export function validateSkill(
         code: "DESCRIPTION_FIRST_PERSON",
         field: "description",
         message: `description reads first-person — prefer third-person ("Use when…", "Generates…")`,
+      });
+    }
+    // v1.3.6 §3.2 — vague capability-only phrasing weakens auto-routing (warn).
+    if (/\bhelps?\s+with\b/i.test(spec.description) || /도와줍?니다|돕는다|돕습니다/.test(spec.description)) {
+      warnings.push({
+        code: "DESCRIPTION_VAGUE",
+        field: "description",
+        message: `description uses a vague phrase ("helps with" / "도와줍니다") — name the concrete capability + trigger instead`,
+      });
+    }
+    // v1.3.6 §3.2 — a good description says *when* to use it (advisory warn).
+    if (
+      !/use\s+(?:this\s+)?(?:skill\s+)?when|when\s+to\s+use|when\s+you|사용\s*시점|사용할\s*때|쓸\s*때|할\s*때/i.test(
+        spec.description,
+      )
+    ) {
+      warnings.push({
+        code: "DESCRIPTION_NO_TRIGGER",
+        field: "description",
+        message: `description has no explicit "use when…" / "사용 시점 —" trigger clause — discovery/routing accuracy drops without it`,
+      });
+    }
+  }
+
+  // v1.3.6 §3.2 — body length lint (warn). Target <500 lines (~5000 tokens);
+  // long bodies should push detail into references/ (progressive disclosure).
+  if (typeof spec.body === "string" && spec.body.length > 0) {
+    const bodyLines = normalizeLine(spec.body).split("\n").length;
+    if (bodyLines > 500) {
+      warnings.push({
+        code: "BODY_TOO_LONG",
+        field: "body",
+        message: `SKILL.md body is ${bodyLines} lines (>500) — move detail into references/ (progressive disclosure)`,
       });
     }
   }
