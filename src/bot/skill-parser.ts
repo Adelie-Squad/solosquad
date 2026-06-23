@@ -77,6 +77,23 @@ export interface SkillBudget {
   daily_usd?: number;
 }
 
+/**
+ * v1.3.6 §3.4 — PM-mode conventions. Previously written under a `pm_conventions:`
+ * block on ~28 SKILLs but never parsed (fell into `extra` = dead metadata). Now
+ * surfaced + validator-enforced so the field is load-bearing (core.md §7 ⑵):
+ *   - anti_sycophancy / post_labeling — global discipline (default true); a SKILL
+ *     may set post_labeling:false for a documented exception.
+ *   - hard_gate — gate exit on exit_criteria (skill-level mirror of the workflow
+ *     stage hard_gate that workflow-validate already reads; §6.1).
+ *   - minimum_approaches — require comparing ≥N approaches before recommending.
+ */
+export interface SkillPmConventions {
+  anti_sycophancy?: boolean;
+  post_labeling?: boolean;
+  hard_gate?: boolean;
+  minimum_approaches?: number;
+}
+
 /** v0.6 §2.4 — 핸드오프 협업 패턴. v0.5에서는 `extra` bag으로 forward-compat 처리됐고 v0.6 출시 시점에 정식 필드로 격상. */
 export type CollabPattern = "hierarchical" | "graph" | "dynamic";
 
@@ -127,6 +144,10 @@ export interface SkillSpec {
   loop_mode?: SkillLoopMode;
   budget?: SkillBudget;
   collab_pattern?: CollabPattern;
+  /** v1.3.6 §3.4 — discovery/grouping category (kebab-case; org owns the taxonomy). */
+  category?: string;
+  /** v1.3.6 §3.4 — PM-mode conventions (parsed + validated; formerly decorative). */
+  pm_conventions?: SkillPmConventions;
   /** v0.8.2 — SKILL declares it can perform code-modifying dev actions. */
   dev_capability?: boolean;
   /** v0.8.2 — per-SKILL bash allowlist / push-confirm / merge policy. */
@@ -244,6 +265,8 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     "loop_mode",
     "budget",
     "collab_pattern",
+    "category",
+    "pm_conventions",
     "schema_version",
     "dev_capability",
     "dev_permissions",
@@ -268,6 +291,8 @@ export function parseSkillMd(raw: string, source_path?: string): SkillSpec {
     collab_pattern: parseCollabPattern(parsed.collab_pattern),
     loop_mode: parseLoopMode(parsed.loop_mode),
     budget: parseBudget(parsed.budget),
+    category: typeof parsed.category === "string" ? parsed.category : undefined,
+    pm_conventions: parsePmConventions(parsed.pm_conventions),
     schema_version: typeof parsed.schema_version === "number" ? parsed.schema_version : undefined,
     dev_capability:
       typeof parsed.dev_capability === "boolean" ? parsed.dev_capability : undefined,
@@ -406,6 +431,25 @@ function parseLoopMode(raw: unknown): SkillLoopMode | undefined {
   const out: SkillLoopMode = { kind: "spec-gate" };
   if (typeof r.spec_path === "string") out.spec_path = r.spec_path;
   if (typeof r.stop_when === "string") out.stop_when = r.stop_when;
+  return out;
+}
+
+function parsePmConventions(raw: unknown): SkillPmConventions | undefined {
+  if (raw == null || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: SkillPmConventions = {};
+  if (typeof r.anti_sycophancy === "boolean") out.anti_sycophancy = r.anti_sycophancy;
+  if (typeof r.post_labeling === "boolean") out.post_labeling = r.post_labeling;
+  if (typeof r.hard_gate === "boolean") out.hard_gate = r.hard_gate;
+  if (typeof r.minimum_approaches === "number") out.minimum_approaches = r.minimum_approaches;
+  if (
+    out.anti_sycophancy === undefined &&
+    out.post_labeling === undefined &&
+    out.hard_gate === undefined &&
+    out.minimum_approaches === undefined
+  ) {
+    return undefined;
+  }
   return out;
 }
 
@@ -557,6 +601,28 @@ export function validateSkill(
       code: "CONFIDENCE_OUT_OF_RANGE",
       field: "confidence",
       message: "confidence must be in [0, 1]",
+    });
+  }
+
+  // v1.3.6 §3.4 — pm_conventions now load-bearing: enforce minimum_approaches.
+  if (spec.pm_conventions?.minimum_approaches !== undefined) {
+    const n = spec.pm_conventions.minimum_approaches;
+    if (!Number.isInteger(n) || n < 1) {
+      errors.push({
+        code: "MIN_APPROACHES_INVALID",
+        field: "pm_conventions.minimum_approaches",
+        message: `minimum_approaches must be an integer ≥ 1 (got ${n})`,
+      });
+    }
+  }
+
+  // v1.3.6 §3.4 — category is parsed; enforce kebab-case so list grouping stays
+  // stable. The taxonomy (enum) is owned by the org layer; we only lint format.
+  if (spec.category !== undefined && !isKebabCase(spec.category)) {
+    warnings.push({
+      code: "CATEGORY_MALFORMED",
+      field: "category",
+      message: `category "${spec.category}" should be kebab-case for stable grouping`,
     });
   }
 
@@ -730,6 +796,8 @@ export function serializeFrontmatter(spec: SkillSpec): string {
   if (spec.collab_pattern !== undefined) obj.collab_pattern = spec.collab_pattern;
   if (spec.loop_mode !== undefined) obj.loop_mode = spec.loop_mode;
   if (spec.budget !== undefined) obj.budget = spec.budget;
+  if (spec.category !== undefined) obj.category = spec.category;
+  if (spec.pm_conventions !== undefined) obj.pm_conventions = spec.pm_conventions;
   if (spec.dev_capability !== undefined) obj.dev_capability = spec.dev_capability;
   if (spec.dev_permissions !== undefined) obj.dev_permissions = spec.dev_permissions;
   for (const [k, v] of Object.entries(spec.extra)) {
