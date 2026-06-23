@@ -23,9 +23,9 @@ TRIAGE → DECOMPOSE 에서 호출 시 이 중 가장 적합한 template 을 bas
 
 stages[].agent 는 다음 중 하나:
 
-- `<team>/<specialist>` — e.g. `product/pmf-planner`, `engineering/backend-engineer`
+- `<team>/<specialist>` — e.g. `product/product-manager`, `engineering/backend`
 - `_main/<main-bot>` — e.g. `_main/pm`, `_main/chief`, `_main/engineer`
-- `_skill/<skill>` — e.g. `_skill/prd-writer` (skill 직접 호출, spawn 없이 leader tier)
+- `_skill/<skill>` — e.g. `_skill/prd` (skill 직접 호출, spawn 없이 leader tier)
 
 ## HARD GATE 동작
 

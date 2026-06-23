@@ -7,13 +7,13 @@
 schema_version: 2
 id: "autoplan-pm"
 name: "Auto-plan (PM chain)"
-description: "Single Chief dispatch chains pmf-planner → business-strategist → policy-architect → data-analyst with auto-piped artifacts."
+description: "Single Chief dispatch chains product-manager → business-strategy → product-designer → data-analyst with auto-piped artifacts."
 template_id: "autoplan-pm"
 hard_gate: false
 
 stages:
   - id: stage-1-pmf
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Open PMF lens on the request. Run discovery-synthesis + Six Forcing
       Questions self-check. Output: pmf-assessment.md with go/no-go + risk
@@ -24,7 +24,7 @@ stages:
     handoff_to: stage-2-business
 
   - id: stage-2-business
-    agent: product/business-strategist
+    agent: business/business-strategy
     task: |
       Build Lean Canvas + Value Proposition Canvas from PMF assessment.
       Add Status-Quo competitor frame (NOT startup-vs-startup). Identify
@@ -36,7 +36,7 @@ stages:
     handoff_to: stage-3-policy
 
   - id: stage-3-policy
-    agent: product/policy-architect
+    agent: product/product-designer
     task: |
       Review the proposed scope for policy/regulatory impact (privacy,
       ToS, AI usage, payments, age). HARD GATE applies — output is design

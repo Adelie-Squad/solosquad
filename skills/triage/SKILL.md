@@ -4,7 +4,7 @@ description: Chief 의 과제 분류 도구. 사용자 입력을 4-way 분류 (d
 schema_version: 2
 tier: leader
 team: _skill
-category: orchestration
+category: core
 used_by: ["chief"]
 dev_capability: false
 triggers:

@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: discovery
-used_by: ["pm"]
+used_by: ["product-manager"]
 dev_capability: false
 triggers:
   keyword:

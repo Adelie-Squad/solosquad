@@ -1,0 +1,10 @@
+# teams/core/composition.yaml — v2.0 (구 chief 팀)
+main: chief
+members: []
+shared_skills:
+  - triage
+  - okr
+  - retrospective
+  - skill-refinement
+  - workflow-refinement
+cross_team_members: []

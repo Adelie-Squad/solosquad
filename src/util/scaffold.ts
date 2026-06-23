@@ -21,7 +21,7 @@ export const MEMORY_SCHEMAS: Record<string, string> = {
  * KNOWLEDGE.md + composition.yaml copied into `<org>/teams/<name>/`.
  * Kept in sync with `src/util/composition.ts:KNOWN_TEAMS`.
  */
-export const SCAFFOLD_TEAMS = ["product", "engineering", "design", "marketing"] as const;
+export const SCAFFOLD_TEAMS = ["core", "product", "engineering", "business", "brand"] as const;
 
 /**
  * v1.2 §12 #16 — workflows seeded automatically on org creation. For now
@@ -82,7 +82,7 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
     if (!fs.existsSync(p)) fs.writeFileSync(p, body);
   }
 
-  // v1.1.0 — Chief SKILL.md (org-customizable) + 4 team folders.
+  // v1.1.0 — Chief SKILL.md (org-customizable) + 5 team folders.
   const bundleRoot = getBundleRoot();
   copyBundleFile(
     path.join(bundleRoot, "agents", "main", "chief", "SKILL.md"),

@@ -1,0 +1,13 @@
+# teams/business/composition.yaml — v2.0 (신규, 구 marketing 전략부 + product business-strategist)
+main: business-strategy
+members:
+  - go-to-market
+  - sales
+shared_skills:
+  - lean-canvas
+  - market-research
+  - opportunity-tree
+  - hypothesis-design
+  - prioritization
+  - search
+cross_team_members: []

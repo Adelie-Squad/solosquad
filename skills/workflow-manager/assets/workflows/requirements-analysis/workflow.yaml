@@ -8,7 +8,7 @@ template_id: "requirements-analysis"
 
 stages:
   - id: stage-1-structure
-    agent: product/feature-planner
+    agent: product/product-designer
     task: |
       Run the scqa + mece skills to structure the request (situation→complication
       →question, then MECE leaves). PM 초안 단계.
@@ -18,7 +18,7 @@ stages:
     handoff_to: stage-2-stories
 
   - id: stage-2-stories
-    agent: product/feature-planner
+    agent: product/product-designer
     task: |
       Run the jobs-stories (User Story · INVEST) + prioritization skills to draft
       the requirements. 요구사항 3대 유형(개발·콘텐츠·리포트, §3.4.1)으로 분류하고
@@ -30,7 +30,7 @@ stages:
     handoff_to: stage-3-review
 
   - id: stage-3-review
-    agent: product/feature-planner
+    agent: product/product-designer
     task: |
       리뷰 게이트(§3.5). 각 요구사항을 **담당 실행 스페셜리스트**에게 리뷰 의뢰한다 —
       개발→engineering, 콘텐츠→growth/marketing, 리포트→product/research, 디자인 내포→design.

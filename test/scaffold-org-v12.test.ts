@@ -128,7 +128,7 @@ test("scaffoldOrg — copies chief SKILL.md + 4 team folders from the bundle", (
     fs.existsSync(path.join(orgDir, "agents", "main", "chief", "SKILL.md")),
     "chief SKILL.md not copied",
   );
-  for (const team of ["product", "engineering", "design", "marketing"]) {
+  for (const team of ["product", "engineering", "business", "brand"]) {
     assert.ok(
       fs.existsSync(path.join(orgDir, "teams", team, "OKR.md")),
       `${team}/OKR.md not copied`,

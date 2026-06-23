@@ -8,7 +8,7 @@ template_id: "market-research"
 
 stages:
   - id: stage-1-research
-    agent: design/researcher
+    agent: product/researcher
     task: |
       Run the market-research skill: multi-agent parallel desk research on the
       target market + competitors, with citation/groundedness checks. Produce a
@@ -19,7 +19,7 @@ stages:
     handoff_to: stage-2-position
 
   - id: stage-2-position
-    agent: product/business-strategist
+    agent: business/business-strategy
     task: |
       Run the lean-canvas + discovery-synthesis skills to position findings
       (TAM/SAM signals, differentiation). Output the PRD §시장 section — a summary

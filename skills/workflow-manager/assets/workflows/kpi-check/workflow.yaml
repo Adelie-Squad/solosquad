@@ -3,14 +3,14 @@
 schema_version: 2
 id: "kpi-check"
 name: "KPI Check"
-description: "개선 대상 지표(KR/KPI)를 okr-writer 로 확인 → PRD §KPI. improvement 메인의 sub-workflow."
+description: "개선 대상 지표(KR/KPI)를 okr 로 확인 → PRD §KPI. improvement 메인의 sub-workflow."
 template_id: "kpi-check"
 
 stages:
   - id: stage-1-kpi
     agent: product/data-analyst
     task: |
-      Run the okr-writer skill to confirm the target metric(s) (KR/KPI): current
+      Run the okr skill to confirm the target metric(s) (KR/KPI): current
       baseline, direction, threshold. 목표 지표를 사용자와 확인하고 PRD §KPI 를 채운다.
     inputs: []
     outputs:

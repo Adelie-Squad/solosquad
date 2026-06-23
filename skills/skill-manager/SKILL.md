@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: core
-used_by: ["chief", "pm"]
+used_by: ["chief", "product-manager"]
 dev_capability: false
 triggers:
   keyword: ["skill 만들", "새 skill", "스킬 만들", "skill 매니저", "new skill", "skill 개선", "skill 작성", "스킬 작성법", "skill authoring", "skill 리뷰"]

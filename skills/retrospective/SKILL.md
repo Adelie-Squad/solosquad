@@ -4,7 +4,7 @@ description: Cycle 종료 시 회고 진행. gstack /retro per-contributor break
 schema_version: 2
 tier: leader
 team: _skill
-category: reflection
+category: agile
 used_by: ["chief"]
 dev_capability: false
 triggers:

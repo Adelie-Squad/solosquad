@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: problem-definition
-used_by: ["pm", "chief"]
+used_by: ["product-manager", "chief"]
 dev_capability: false
 triggers:
   keyword: ["5-whys", "five whys", "근본 원인", "root cause"]

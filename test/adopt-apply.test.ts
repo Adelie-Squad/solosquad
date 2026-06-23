@@ -18,9 +18,9 @@ function tempSourceRepo(): string {
   w("crons/digest.yaml", "id: digest\nname: Digest\nkind: background\ncron: '0 9 * * 1'\n");
   w("crons/digest.md", "# digest prompt");
   // a valid workflow (real bundled agent refs) → should be written
-  w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: null\n");
+  w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/product-manager\n    handoff_to: null\n");
   // a cyclic workflow → error → must be skipped by apply
-  w("flows/loopy/workflow.yaml", "id: loopy\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: b\n  - id: b\n    agent: product/data-analyst\n    handoff_to: a\n");
+  w("flows/loopy/workflow.yaml", "id: loopy\nschema_version: 2\nstages:\n  - id: a\n    agent: product/product-manager\n    handoff_to: b\n  - id: b\n    agent: product/data-analyst\n    handoff_to: a\n");
   return dir;
 }
 

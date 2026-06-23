@@ -5,14 +5,14 @@ schema_version: 2
 tier: member
 team: product
 category: planning
-used_by: ["pm", "chief"]
+used_by: ["product-manager", "chief"]
 dev_capability: false
 collaborators:
-  - product/business-strategist  # unit economics
-  - product/feature-planner      # feature metric impact
-  - product/pmf-planner          # North Star Metric
+  - business/business-strategy  # unit economics
+  - product/product-designer      # feature metric impact
+  - product/product-manager          # North Star Metric
   - engineering/data-engineer    # data pipeline
-  - marketing/performance-marketer # campaign attribution
+  - brand/marketer # campaign attribution
 skills_used:
   - prioritization
   - search
@@ -48,8 +48,8 @@ pm_conventions:
 
 ### 담당하지 않는 것
 - 데이터 파이프라인 / warehouse → engineering/data-engineer
-- 데이터 정책 → policy-architect
-- 마케팅 attribution model → marketing/performance-marketer (협업)
+- 데이터 정책 → product-designer
+- 마케팅 attribution model → brand/marketer (협업)
 
 ## Confidence Score Model (RO-PNA 차용)
 

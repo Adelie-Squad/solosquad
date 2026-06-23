@@ -5,7 +5,7 @@ schema_version: 2
 tier: member
 team: engineering
 category: dev
-used_by: ["engineer", "pm"]
+used_by: ["engineer", "product-manager"]
 dev_capability: true
 dev_permissions:
   bash:
@@ -13,11 +13,11 @@ dev_permissions:
   push_targets:
     requires_confirmation: true
 collaborators:
-  - engineering/backend-engineer
-  - engineering/architect
-  - engineering/cloud-admin
+  - engineering/backend
+  - engineering/system-architect
+  - engineering/infra
   - product/data-analyst
-  - product/policy-architect      # 데이터 처리 정책 정합
+  - product/product-designer      # 데이터 처리 정책 정합
 skills_used:
   - code-review
   - verify
@@ -49,7 +49,7 @@ pm_conventions:
 
 ### 담당하지 않는 것
 - 분석 / KPI → product/data-analyst
-- 데이터 정책 / 규제 → policy-architect
+- 데이터 정책 / 규제 → product-designer
 
 ## v1.1 병합 노트
 
@@ -59,7 +59,7 @@ pm_conventions:
 
 ```markdown
 - [ ] data quality check 통과 (null/dup/schema)
-- [ ] policy-architect 검토 (PII / GDPR / PIPA)
+- [ ] product-designer 검토 (PII / GDPR / PIPA)
 - [ ] ≥ 2 approaches (e.g. batch vs streaming, push vs pull)
 - [ ] backfill plan 명시 (idempotent 보장)
 ```

@@ -83,12 +83,12 @@ test("loadComposition: org override beats workspace bundle", () => {
 
 test("loadAllCompositions: only includes teams with files", () => {
   const ws = mkWorkspace();
-  writeComposition(ws, "product", `main: pm\nmembers: [pmf-planner]\n`);
-  writeComposition(ws, "marketing", `main: marketer\nmembers: [brand-marketer]\n`);
+  writeComposition(ws, "product", `main: product-manager\nmembers: [product-designer]\n`);
+  writeComposition(ws, "business", `main: business-strategy\nmembers: [sales]\n`);
   const all = loadAllCompositions({ workspaceRoot: ws });
   assert.equal(Object.keys(all).length, 2);
   assert.ok(all.product);
-  assert.ok(all.marketing);
+  assert.ok(all.business);
   assert.equal(all.engineering, undefined);
 });
 
@@ -101,14 +101,14 @@ test("findTeamForMember: locates a specialist by name", () => {
   );
   writeComposition(
     ws,
-    "design",
-    `main: designer\nmembers:\n  - researcher\n`
+    "brand",
+    `main: marketer\nmembers:\n  - communication\n`
   );
   assert.equal(
     findTeamForMember("backend-engineer", { workspaceRoot: ws }),
     "engineering"
   );
-  assert.equal(findTeamForMember("researcher", { workspaceRoot: ws }), "design");
+  assert.equal(findTeamForMember("communication", { workspaceRoot: ws }), "brand");
   assert.equal(findTeamForMember("nonexistent", { workspaceRoot: ws }), null);
 });
 
@@ -116,13 +116,13 @@ test("findTeamForMember: cross_team_members fallback", () => {
   const ws = mkWorkspace();
   writeComposition(
     ws,
-    "design",
-    `main: designer\nmembers:\n  - ui-designer\ncross_team_members:\n  - brand-marketer\n`
+    "brand",
+    `main: marketer\nmembers:\n  - creative-designer\ncross_team_members:\n  - data-analyst\n`
   );
-  // brand-marketer not in any team's `members`, but design lists it as cross-team.
+  // data-analyst not in brand's `members`, but brand lists it as cross-team.
   assert.equal(
-    findTeamForMember("brand-marketer", { workspaceRoot: ws }),
-    "design"
+    findTeamForMember("data-analyst", { workspaceRoot: ws }),
+    "brand"
   );
 });
 
@@ -137,11 +137,12 @@ test("isSharedSkill: true when listed under any team's shared_skills", () => {
   assert.equal(isSharedSkill("nonexistent", { workspaceRoot: ws }), false);
 });
 
-test("KNOWN_TEAMS enumerates the four v1.1 teams", () => {
+test("KNOWN_TEAMS enumerates the five v2.0 teams", () => {
   assert.deepEqual([...KNOWN_TEAMS], [
+    "core",
     "product",
     "engineering",
-    "design",
-    "marketing",
+    "business",
+    "brand",
   ]);
 });

@@ -4,13 +4,13 @@
 # <org>/workflows/problem-definition/ 으로 자동 복사.
 #
 # Chief 가 사용자 요청을 *문제 정의* 부터 시작해야 한다고 판단할 때 호출. PM
-# (product/pmf-planner)이 프레임워크 skill 체인을 stage 별로 실행. 각 phase
+# (product/product-manager)이 프레임워크 skill 체인을 stage 별로 실행. 각 phase
 # 산출이 다음 phase 입력.
 #
 # v1.3.5 (PRD §3.2): 구 단일 `problem-definition` skill 이 5개 프레임워크 skill
 # (scqa·five-whys·mece·tdcc·xyz-hypothesis)로 분리됐다. `problem-definition` 은
 # 그 skill 들을 chain 하는 (서브)워크플로로 남는다(skill 아님). 1-pager 산출은
-# prd-writer skill 이 담당.
+# prd skill 이 담당.
 #
 # 참조:
 #   - docs/prd/v1.3.5-planning-workflows.md §3.2
@@ -24,7 +24,7 @@ hard_gate: true
 
 stages:
   - id: stage-1-scqa
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the `scqa` skill. Frame the user's request using Situation /
       Complication / Question / Answer (hypothesis candidates). Unanswerable
@@ -35,7 +35,7 @@ stages:
     handoff_to: stage-2-five-whys
 
   - id: stage-2-five-whys
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the `five-whys` skill. Drill from the Complication (stage 1) down to
       a one-sentence root cause. Each "why" must have an evidence-ref or an
@@ -47,7 +47,7 @@ stages:
     handoff_to: stage-3-mece
 
   - id: stage-3-mece
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the `mece` skill. Decompose the root cause into Mutually Exclusive /
       Collectively Exhaustive lagging + leading branches (leaves actionable).
@@ -59,7 +59,7 @@ stages:
     handoff_to: stage-4-tdcc
 
   - id: stage-4-tdcc
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the `tdcc` skill. Map the leading problems to a measurable trailing
       indicator, customer opportunity, and causal link; escalate unknowns to
@@ -71,7 +71,7 @@ stages:
     handoff_to: stage-5-xyz
 
   - id: stage-5-xyz
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the `xyz-hypothesis` skill. Convert the top candidate(s) into
       falsifiable "X% of Y will Z within T, because R" hypotheses (≥2 approaches),
@@ -83,9 +83,9 @@ stages:
     handoff_to: stage-6-one-pager
 
   - id: stage-6-one-pager
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
-      Run the `prd-writer` skill. Synthesize stages 1–5 into a 1-page PRD:
+      Run the `prd` skill. Synthesize stages 1–5 into a 1-page PRD:
       problem, users, why-now, hypothesis, success metric, riskiest assumption.
       HARD GATE: all earlier stages must have zero blocking open_questions[].
     inputs:

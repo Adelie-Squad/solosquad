@@ -8,7 +8,7 @@ template_id: "hypothesis"
 
 stages:
   - id: stage-1-cause
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the five-whys + tdcc skills to trace the root cause and map it to a
       measurable trailing indicator + customer opportunity + causal link.
@@ -18,7 +18,7 @@ stages:
     handoff_to: stage-2-hypothesize
 
   - id: stage-2-hypothesize
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the xyz-hypothesis + opportunity-tree (Six Forcing Questions) +
       hypothesis-design (If-Then-Because) skills to produce ≥2 falsifiable

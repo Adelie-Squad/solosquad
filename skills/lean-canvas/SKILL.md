@@ -1,11 +1,11 @@
 ---
 name: lean-canvas
-description: Lean Canvas (Maurya) + Value Proposition Canvas (Strategyzer) 작성. business-strategist 가 호출. ≥2 model 비교 강제.
+description: Lean Canvas (Maurya) + Value Proposition Canvas (Strategyzer) 작성. business-strategy 가 호출. ≥2 model 비교 강제.
 schema_version: 2
 tier: leader
 team: _skill
 category: planning
-used_by: ["pm", "chief"]
+used_by: ["product-manager", "chief"]
 dev_capability: false
 triggers:
   keyword: ["lean canvas", "value proposition", "business model", "jtbd canvas"]
@@ -18,7 +18,7 @@ pm_conventions:
 
 # Lean Canvas Skill
 
-> Tier-2 (v1.1.x slot). business-strategist 가 호출. 솔로 founder 가 빠르게 비즈니스 모델을 1-page 로 압축.
+> Tier-2 (v1.1.x slot). business-strategy 가 호출. 솔로 founder 가 빠르게 비즈니스 모델을 1-page 로 압축.
 
 ## Lean Canvas — 9 Box
 

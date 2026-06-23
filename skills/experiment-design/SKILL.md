@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: planning
-used_by: ["pm"]
+used_by: ["product-manager"]
 dev_capability: false
 triggers:
   keyword: ["실험", "experiment", "a/b test", "ab test", "test design"]
@@ -89,7 +89,7 @@ experiment design 도 항상 ≥2 후보:
 - [ ] sample size 충분성 (power=0.8, α=0.05)
 - [ ] guardrail metric ≥1 (regression 방지)
 - [ ] start/stop/end gate 모두 정의
-- [ ] policy-architect 검토 (사용자 segment 차별 시)
+- [ ] product-designer 검토 (사용자 segment 차별 시)
 ```
 
 ## Reference

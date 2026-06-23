@@ -4,7 +4,7 @@ description: Workflow 종료 시 개선 제안. stage 의존성 / handoff 효율
 schema_version: 2
 tier: leader
 team: _skill
-category: reflection
+category: agile
 used_by: ["chief"]
 dev_capability: false
 triggers:
@@ -57,7 +57,7 @@ bottleneck_stages: [...]
 handoff_issues: [...]
 refinement_proposals:
   - target: stage-3-design
-    proposal: "researcher → ux-designer 사이에 explicit handoff template 도입"
+    proposal: "researcher → researcher 사이에 explicit handoff template 도입"
     expected_impact: "다음 stage 평균 대기 -40%"
     effort: small
 ```

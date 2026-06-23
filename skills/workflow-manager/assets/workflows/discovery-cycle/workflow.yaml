@@ -2,7 +2,7 @@
 #
 # PM 자율 문제 정의 cycle. Chief 가 호출하면 PM 이 백그라운드에서
 # discovery-synthesis → problem-definition → opportunity-tree → hypothesis-
-# design → prd-writer chain 을 실행. 산출 = design doc + open_questions[].
+# design → prd chain 을 실행. 산출 = design doc + open_questions[].
 #
 # 참조: v1.1 PRD §13.1
 schema_version: 2
@@ -14,7 +14,7 @@ hard_gate: true
 
 stages:
   - id: stage-1-discovery-synthesis
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run discovery-synthesis skill against <org>/memory/archive.sqlite +
       domain/customers.md. Extract JTBD signals + problem patterns. Append
@@ -25,7 +25,7 @@ stages:
     handoff_to: stage-2-problem-definition
 
   - id: stage-2-problem-definition
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Run the problem-definition framework chain (scqa → five-whys → mece →
       tdcc → xyz-hypothesis skills). For each, write evidence-refs. Unanswerable
@@ -38,7 +38,7 @@ stages:
     handoff_to: stage-3-opportunity-tree
 
   - id: stage-3-opportunity-tree
-    agent: product/idea-scoper
+    agent: product/product-designer
     task: |
       Run opportunity-tree skill. Build OST (outcome → opportunity → solution →
       experiment) from team OKR KR. Self-validate with Six Forcing Questions
@@ -51,7 +51,7 @@ stages:
     handoff_to: stage-4-hypothesis
 
   - id: stage-4-hypothesis
-    agent: product/feature-planner
+    agent: product/product-designer
     task: |
       Run hypothesis-design skill. Convert recommended solutions into ≥2
       XYZ hypotheses with V/U/V/F assumption classification. Identify
@@ -63,9 +63,9 @@ stages:
     handoff_to: stage-5-prd
 
   - id: stage-5-prd
-    agent: product/feature-planner
+    agent: product/product-designer
     task: |
-      Run prd-writer skill. Synthesize 8-section PRD from prior outputs.
+      Run prd skill. Synthesize 8-section PRD from prior outputs.
       HARD GATE checks: ≥2 approaches in §6, V/U/V/F in §6, success
       threshold in §8. open_questions[] must be empty or have all blocking
       items resolved by Chief.
@@ -78,9 +78,9 @@ stages:
     handoff_to: stage-6-wbs
 
   - id: stage-6-wbs
-    agent: product/feature-planner
+    agent: product/product-designer
     task: |
-      Run wbs-decomposition skill. Break milestones → workstreams → tasks
+      Run wbs skill. Break milestones → workstreams → tasks
       with dependency graph + critical path. Returns milestones[] for
       engineering/design/marketing handoff.
     inputs:

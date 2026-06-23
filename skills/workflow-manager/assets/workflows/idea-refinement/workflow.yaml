@@ -8,7 +8,7 @@ template_id: "idea-refinement"
 
 stages:
   - id: stage-1-discover
-    agent: product/idea-scoper
+    agent: product/product-designer
     task: |
       Run the discovery-synthesis + jobs-stories (Job Story = JTBD) skills to
       frame the idea from customer signals. 고객 발견 = 필수: 인터뷰·고객 정보가
@@ -19,7 +19,7 @@ stages:
     handoff_to: stage-2-shape
 
   - id: stage-2-shape
-    agent: product/idea-scoper
+    agent: product/product-designer
     task: |
       Run the opportunity-tree + lean-canvas skills to shape the opportunity
       (problem/solution fit, riskiest assumption). Output the PRD §아이디어 section.

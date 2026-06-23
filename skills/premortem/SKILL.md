@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: planning
-used_by: ["pm", "chief"]
+used_by: ["product-manager", "chief"]
 dev_capability: false
 triggers:
   keyword: ["premortem", "pre-mortem", "런치 전 점검", "launch checklist", "post-mortem"]
@@ -50,9 +50,9 @@ failure_modes:
 ## Launch Checklist — {{project}}
 
 ### Pre-launch (T-3d)
-- [ ] qa-engineer regression test 통과
-- [ ] security-engineer audit (auth/data 변경 시)
-- [ ] policy-architect 검토 (정책 영향 시)
+- [ ] qa regression test 통과
+- [ ] security audit (auth/data 변경 시)
+- [ ] product-designer 검토 (정책 영향 시)
 - [ ] data-analyst instrumentation 검증
 - [ ] (premortem risks → 대응 완료 확인) × 5
 

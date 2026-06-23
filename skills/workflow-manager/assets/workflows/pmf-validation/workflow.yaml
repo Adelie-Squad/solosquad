@@ -14,7 +14,7 @@ hard_gate: true
 
 stages:
   - id: stage-1-demand-reality
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Gather demand reality evidence from archive + customers.md + memory.
       HARD GATE: ≥3 distinct evidence pieces required. Interest signals
@@ -30,12 +30,12 @@ stages:
       - "all evidence is actual demand (not interest)"
 
   - id: stage-2-narrowest-wedge
-    agent: product/pmf-planner
+    agent: product/product-manager
     task: |
       Define the narrowest, deepest wedge that this PMF could serve.
       Target: 1 segment, 1 job, 1 outcome. HARD GATE: wedge must be
       specific enough that you can name 3 real or plausible users by
-      role+context. Cannot be defined → return to idea-scoper for further
+      role+context. Cannot be defined → return to product-designer for further
       narrowing.
     inputs:
       - demand-evidence.md
@@ -47,10 +47,10 @@ stages:
       - "3 archetypal users describable"
 
   - id: stage-3-interview-spec
-    agent: design/researcher
+    agent: product/researcher
     task: |
       Generate Mom-Test-based interview script targeting the wedge. Use
-      interview-script-author skill. Script is for the founder to run with
+      interview-script skill. Script is for the founder to run with
       real customers — not for PM/Chief to use. Output: script + scoring
       rubric + minimum sample (≥5 interviews recommended).
     inputs:

@@ -65,7 +65,7 @@ recommendation:
   next_steps:
     - "google_ads channel 의 D7 retention -33% 확인 (n=247, p=0.005)"
     - "지난 7d google_ads 의 cohort quality 변화 확인 (UTM source / campaign)"
-    - "performance-marketer 와 협업으로 traffic source 점검"
+    - "marketer 와 협업으로 traffic source 점검"
   estimated_effort: "1h investigation"
   related_artifacts:
     - "<org>/experiments/{exp-id}/" (해당 시)

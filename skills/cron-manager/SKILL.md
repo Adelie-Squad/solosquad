@@ -4,8 +4,8 @@ description: cron(정기·일회성 작업 — org 종속 `<org>/crons/<id>.yaml
 schema_version: 2
 tier: leader
 team: _skill
-category: orchestration
-used_by: ["chief", "pm"]
+category: core
+used_by: ["chief", "product-manager"]
 dev_capability: false
 triggers:
   keyword: ["cron 만들", "정기 작업", "매일", "매주", "cron 매니저", "new cron", "크론"]

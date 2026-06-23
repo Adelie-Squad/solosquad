@@ -1,48 +1,21 @@
-# Product Team — OKR
+# Product Team — OKR (v2.0)
 
-> **분기 OKR 작성·갱신·평가는 Chief 의 의사결정 영역.** PM 은 이 OKR 을 입력으로 받아 마일스톤·WBS 로 분해한다.
-> 본 파일은 workspace bundle template. `<org>/teams/product/OKR.md` 에 org-specific override 가능.
+> 분기 OKR 작성·갱신·평가는 **Chief 의 의사결정**(skill `okr`). `product-manager` 은 이 OKR 을 입력으로 받아
+> 마일스톤·실행으로 분해한다. 본 파일은 workspace bundle template — `<org>/teams/product/OKR.md` 로 override.
 
-## 작성 형식
+## 2026 Q? — 초안 (squad v2.0 재구성 기준)
 
-```markdown
-## YYYY Q[N] — [한 줄 분기 테마]
+### Objective
+"검증된 문제·기능 정의로 '올바른 것'을 만들게 한다."
 
-### Objective 1 (정성)
-"우리는 [추구하는 변화]를 달성한다."
+#### Key Results (outcome metric, measurable + time-bound)
+- KR1: PMF 가설 검증 수(Six Forcing Questions 통과) [기준]→[목표]
+- KR2: PRD → ship 전환율 [기준]→[목표]
+- KR3: 메트릭 기반 의사결정 비율 [기준]→[목표]
 
-#### Key Results (정량, ≥3)
-- KR1: [지표 X] 를 [기준선] → [목표값] (측정 방법: ...)
-- KR2: ...
-- KR3: ...
+## 분기 평가 (Chief, 분기말)
+- 각 KR 달성률 % + 미달 원인 분석(`data-analyst` 호출) + carry-over / pivot / drop 결정.
 
-### Objective 2
-...
-```
-
-## 분기 평가 (Chief 가 분기말 수행)
-
-- 각 KR 의 달성률 % 기록
-- 미달성 KR 의 원인 분석 (data-analyst 호출)
-- 다음 분기 OKR 으로 carry-over / pivot / drop 결정
-
-## Default 빈 template
-
-```markdown
-## 2026 Q[?] — [테마]
-
-### Objective 1
-"..."
-
-#### Key Results
-- KR1: ...
-- KR2: ...
-- KR3: ...
-```
-
-## 작성 가이드 (Chief 호출 시 `skills/okr-writer` 사용)
-
-- KR 은 **outcome metric** (행동/지표) 으로, output (산출물 개수) 으로 정의하지 않는다
-- KR 은 measurable + time-bound
-- Objective 는 정성, KR 은 정량
-- 분기당 Objective ≤3, 각 Objective 당 KR ≤5
+## 작성 가이드 (skill `okr`)
+- KR = **outcome metric**(행동/지표), output(산출물 개수) 아님. measurable + time-bound.
+- Objective 정성, KR 정량. 분기당 Objective ≤3, Objective 당 KR ≤5.

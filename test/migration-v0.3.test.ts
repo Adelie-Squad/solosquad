@@ -79,8 +79,8 @@ test("v0.2.4 → v0.3.0: apply() creates sessions/, .claude/agents/, adds pm sec
   assert.ok(fs.existsSync(agentsDir));
   const agentFiles = fs.readdirSync(agentsDir).filter((f) => f.endsWith(".md"));
   assert.ok(
-    agentFiles.length >= 20,
-    `expected ≥20 specialist agent files, got ${agentFiles.length}`
+    agentFiles.length >= 15,
+    `expected ≥15 agent files, got ${agentFiles.length}`
   );
 
   const yamlAfter = loadWorkspaceYaml(ws)!;

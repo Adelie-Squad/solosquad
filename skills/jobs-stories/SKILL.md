@@ -1,11 +1,11 @@
 ---
 name: jobs-stories
-description: Job Story + User Story (3C/INVEST) + Gherkin Acceptance Criteria 일괄 생성. feature-planner 가 PRD 작성 시 호출.
+description: Job Story + User Story (3C/INVEST) + Gherkin Acceptance Criteria 일괄 생성. product-designer 가 PRD 작성 시 호출.
 schema_version: 2
 tier: leader
 team: _skill
 category: planning
-used_by: ["pm"]
+used_by: ["product-manager"]
 dev_capability: false
 triggers:
   keyword: ["job story", "user story", "유저스토리", "스토리", "acceptance criteria", "gherkin"]
@@ -78,7 +78,7 @@ Feature: [name]
 - [ ] Job Story / User Story 양쪽 다 작성
 - [ ] INVEST 6 check 모두 통과
 - [ ] Gherkin scenario ≥ 2
-- [ ] ux-designer 정합 확인 (flow 일치)
+- [ ] researcher 정합 확인 (flow 일치)
 ```
 
 ## Reference

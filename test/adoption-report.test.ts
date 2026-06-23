@@ -17,7 +17,7 @@ function tempRepo(): string {
   // valid skill
   w(".claude/skills/my-skill/SKILL.md", "---\nname: my-skill\ndescription: does a thing\nschema_version: 1\n---\n# x");
   // valid workflow (acyclic, refs real bundled agents so they resolve)
-  w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/pmf-planner\n    handoff_to: b\n  - id: b\n    agent: product/data-analyst\n    handoff_to: null\n");
+  w("flows/good/workflow.yaml", "id: good\nschema_version: 2\nstages:\n  - id: a\n    agent: product/product-manager\n    handoff_to: b\n  - id: b\n    agent: product/data-analyst\n    handoff_to: null\n");
   // bad workflow (cycle → error)
   w("flows/loopy/workflow.yaml", "id: loopy\nschema_version: 2\nstages:\n  - id: a\n    agent: x/y\n    handoff_to: b\n  - id: b\n    agent: x/y\n    handoff_to: a\n");
   // valid cron + prompt

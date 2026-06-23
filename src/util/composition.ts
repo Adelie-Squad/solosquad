@@ -28,10 +28,11 @@ function loadYamlLib(): typeof import("js-yaml") {
 }
 
 export const KNOWN_TEAMS = [
+  "core",
   "product",
   "engineering",
-  "design",
-  "marketing",
+  "business",
+  "brand",
 ] as const;
 
 export type TeamName = (typeof KNOWN_TEAMS)[number];

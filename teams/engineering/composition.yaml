@@ -1,17 +1,15 @@
-# teams/engineering/composition.yaml
+# teams/engineering/composition.yaml — v2.0 (engineer 생략 suffix)
 main: engineer
 members:
-  - backend-engineer
-  - architect
-  - fde
-  - creative-frontend
+  - system-architect
+  - backend
+  - frontend
   - data-engineer
-  - cloud-admin
-  - qa-engineer
-  - security-engineer
+  - infra
+  - qa
+  - security
 shared_skills:
   - code-review
   - verify
   - search
-  - citation
 cross_team_members: []

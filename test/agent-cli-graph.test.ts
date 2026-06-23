@@ -47,7 +47,7 @@ test("agent list prints the bundled actors grouped by team", async () => {
   const out = lines.join("\n");
   assert.match(out, /actor\(s\) — bundle/);
   assert.match(out, /product/);
-  assert.match(out, /pmf-planner/);
+  assert.match(out, /product-designer/);
 });
 
 test("agent show resolves by canonical id and by bare name; missing → exit 1", async () => {
@@ -56,11 +56,11 @@ test("agent show resolves by canonical id and by bare name; missing → exit 1",
   const lines: string[] = [];
   console.log = (...a: unknown[]) => lines.push(a.join(" "));
   try {
-    await agentShowCommand("product/pmf-planner", {});
+    await agentShowCommand("product/product-designer", {});
     assert.match(lines.join("\n"), /team:\s+product/);
     lines.length = 0;
-    await agentShowCommand("pmf-planner", {}); // bare name
-    assert.match(lines.join("\n"), /product\/pmf-planner/);
+    await agentShowCommand("product-designer", {}); // bare name
+    assert.match(lines.join("\n"), /product\/product-designer/);
     process.exitCode = 0;
     await agentShowCommand("does-not-exist", {});
     assert.equal(process.exitCode, 1);

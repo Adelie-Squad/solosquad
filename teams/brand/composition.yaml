@@ -1,0 +1,11 @@
+# teams/brand/composition.yaml — v2.0 (구 design + marketing 실행부)
+main: marketer
+members:
+  - creative-designer
+  - communication
+shared_skills:
+  - content-writing
+  - design-system
+  - search
+  - screenshot
+cross_team_members: []

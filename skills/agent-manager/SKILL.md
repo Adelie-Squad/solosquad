@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: core
-used_by: ["chief", "pm"]
+used_by: ["chief", "product-manager"]
 dev_capability: false
 triggers:
   keyword: ["agent 만들", "새 에이전트", "agent 추가", "에이전트 만들", "new agent", "actor 추가", "agent 개선", "에이전트 작성법", "위임 그래프", "agent authoring"]

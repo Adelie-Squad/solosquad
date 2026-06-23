@@ -1,12 +1,8 @@
-# teams/product/composition.yaml
-# v1.1 — Product team 구성. specialists/ 는 평탄 폴더, 멤버십은 본 YAML 로 관리.
-main: pm
+# teams/product/composition.yaml — v2.0
+main: product-manager
 members:
-  - pmf-planner
-  - feature-planner
-  - idea-scoper
-  - business-strategist
-  - policy-architect
+  - product-designer
+  - researcher
   - data-analyst
 shared_skills:
   - discovery-synthesis
@@ -17,10 +13,13 @@ shared_skills:
   - xyz-hypothesis
   - opportunity-tree
   - hypothesis-design
-  - prd-writer
+  - interview-script
+  - prd
   - prioritization
-  - wbs-decomposition
+  - wbs
   - experiment-design
+  - design-system
+  - policy
   - search
   - verify
 cross_team_members: []

@@ -47,7 +47,7 @@ design:
 
 gates:
   start:
-    - "instrumentation verified by qa-engineer"
+    - "instrumentation verified by qa"
     - "guardrail baselines stable for 7d"
   stop_early:
     - "guardrail breach > max_acceptable_regression_pct"

@@ -4,8 +4,8 @@ description: 멀티에이전트 병렬 시장 조사 프레임워크. 타깃 시
 schema_version: 2
 tier: leader
 team: _skill
-category: research
-used_by: ["pm", "chief"]
+category: discovery
+used_by: ["product-manager", "chief"]
 dev_capability: false
 triggers:
   keyword: ["시장 조사", "market research", "경쟁사 분석", "competitor"]
@@ -21,7 +21,7 @@ pm_conventions:
 > **목적**: 타깃 시장·경쟁사를 병렬 desk research 로 조사하고, **모든 주장에 인용(evidence_ref)**
 > 을 달아 groundedness 를 검증한 뒤 리포트를 산출. 1인 초기엔 인터뷰 대신 desk research·시장 신호로
 > 보완하고 "추후 인터뷰 계획"을 명시(§3.6).
-> **합성 위치(v1.3.5):** market-research 서브워크플로(design/researcher + product/business-strategist).
+> **합성 위치(v1.3.5):** market-research 서브워크플로(design/researcher + product/business-strategy).
 
 ## 절차
 

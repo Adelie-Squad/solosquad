@@ -5,7 +5,7 @@ schema_version: 2
 tier: leader
 team: _skill
 category: problem-definition
-used_by: ["pm", "chief"]
+used_by: ["product-manager", "chief"]
 dev_capability: false
 triggers:
   keyword: ["xyz hypothesis", "가설 수립", "검증 가능한 가설", "hypothesis"]
