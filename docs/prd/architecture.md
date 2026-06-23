@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.29 v1.3.6 — 작성법 내재화 + 자가개선 골격 + 스쿼드 재편 (2026-06-23)
+
+네 축. **작성 권위** — skill·agent 매니저가 작성 표준의 단일 권위; 공통 ~70%를 `skills/skill-core/core.md`로 단일화하고 매니저별 `references/`는 도메인 델타만(skill: parser known-set·eval-recipe, agent: 위임그래프 G1·역할경계 G2·생애주기·가드레일 G4). `validateSkill`/`validateAgent`에 공식 표준 정렬(예약어 anthropic/claude·vague·트리거절·본문 500줄) + `src/analyze/originality.ts` 8-word shingle 중복 게이트(FAIL≥40%/WARN≥20%, `agent validate --graph` 배선). `pm_conventions`·`category`를 parser가 surface+검증(`minimum_approaches` 정수≥1·`category` kebab) — decorative→load-bearing. **자가개선 골격** — `src/analyze/eval-corpus.ts`(scoreTrigger·splitTrainVal·scoreOutputAB) + `refine-gate.ts`(acceptEdit held-out·edit 예산 Lt=4·RejectedEditBuffer). 채점/refine 판단은 세션의 Claude + Task judge, 코드는 결정적 산술만. ②경험층(메모리)은 v1.4.0 이관. **CLI** — `asset list|show|validate` deprecation(→v2.0) + cross-kind 검증을 top-level `solosquad validate [kind]`로 승격(`validate-bundled` dogfood). **스쿼드 재편** — 팀 5종(core·product·engineering·business·brand), agent 25→19(개명·5건 통합·fde 제거·product-designer/sales/creative-designer 신설), skill 개명 5건 + governance skill(design-system·policy); `src/util/composition.ts` 팀 enum 갱신. 번들 actor 개명이나 org overlay 격리로 사용자 영향 0. 975 test green.
+
+자세히: `docs/prd/v1.3.6-skill-agent-authoring-internalization.md`, `docs/ideation/260623-squad-org-restructure.md`
+
 #### 13.6.28 v1.3.5 — 기획 워크플로우 + 자산 매니저 일관성 (2026-06-22)
 
 두 워크스트림. **(A) 기획 워크플로우** — 명사 3종(agent·workflow·skill, main/sub=호출 위치)

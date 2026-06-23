@@ -4,6 +4,43 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.6] — 2026-06-23 (Authoring internalization + self-improvement scaffold + squad restructure)
+
+See `docs/prd/v1.3.6-skill-agent-authoring-internalization.md` and
+`docs/ideation/260623-squad-org-restructure.md`. Four threads:
+
+- **(A) Authoring authority** — the "what good looks like" standard now lives in
+  the manager skills. `skills/skill-core/core.md` holds the shared ~70%
+  (description formula, quantitative limits, body discipline, bundle structure,
+  progressive disclosure, field audit, eval skeleton); skill-manager and
+  agent-manager reference it, keeping only domain deltas in their `references/`
+  (agent-manager rewritten lean + 4 references: delegation-graph, role-boundary,
+  lifecycle, guardrails). `validateSkill`/`validateAgent` aligned to the formal
+  standard (reserved words anthropic/claude, vague-phrasing + missing-trigger
+  warnings, 500-line body lint) plus a static anti-reskin originality gate
+  (`src/analyze/originality.ts`, 8-word shingle, FAIL≥40%/WARN≥20%, wired into
+  `agent validate --graph`). `pm_conventions` + `category` are now parsed and
+  validator-enforced (decorative→load-bearing).
+- **(B) Self-improvement scaffold** — deterministic cores for skill eval
+  (`src/analyze/eval-corpus.ts`: trigger-rate, seeded train/val split, output
+  A/B deltas) and the SkillOpt-style refine gate (`src/analyze/refine-gate.ts`:
+  held-out strict-improvement acceptance, edit budget Lt=4/floor 2, rejected-edit
+  buffer). The scorer/refiner is the logged-in Claude (skill-manager /
+  skill-refinement in-session, judging via Task sub-agents) — not an API client;
+  the code is only the arithmetic. The experience layer (memory) is deferred to
+  v1.4.0.
+- **(C) CLI** — `solosquad asset list|show|validate` deprecated (removed in v2.0);
+  the cross-kind gate is promoted to a noun-free top-level `solosquad validate
+  [kind]` (the CI gate); `validate-bundled` dogfoods it.
+- **(D) Squad restructure** — five teams (core, product, engineering, business,
+  brand); agents 25→19 (renames + five merges + `fde` removed +
+  product-designer/sales/creative-designer added); skill renames (okr, prd, wbs,
+  primitive-review, interview-script) + new governance skills (design-system,
+  policy). Bundled actor renames don't break user org-layer actors (isolated), so
+  this ships minor with no migration.
+
+975 tests green; `solosquad validate` green (20 actors, 13 workflows).
+
 ## [1.3.5] — 2026-06-22 (Planning workflows + asset-manager consistency)
 
 See `docs/prd/v1.3.5-planning-workflows.md`. Two workstreams: (A) planning
