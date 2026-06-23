@@ -252,9 +252,19 @@ cronGroup
     await cronDeleteCommand(ref, opts);
   });
 
+// v1.3.6 §3.6 — the cross-kind gate, promoted to a noun-free top-level command.
+program
+  .command("validate")
+  .description("Validate the whole bundle (skill+agent graph, workflow, cron). Omit kind for all — the CI gate.")
+  .argument("[kind]", "skill | agent | workflow | cron (omit for all)")
+  .action(async (kind) => {
+    const { validateAllCommand } = await import("./validate.js");
+    await validateAllCommand(kind);
+  });
+
 const assetGroup = program
   .command("asset")
-  .description("Unified front door for assets (skill·agent·workflow·cron): list / show / validate");
+  .description("[deprecated v2.0] use `solosquad <kind> list|show` or top-level `solosquad validate`");
 
 assetGroup
   .command("list")

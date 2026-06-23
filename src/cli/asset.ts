@@ -11,7 +11,14 @@ import chalk from "chalk";
  *
  * Thin façade: every verb delegates to the existing per-domain command so
  * there is exactly one implementation of each behavior.
+ *
+ * v1.3.6 §3.6 / §6.4 — DEPRECATED. The front door is being removed: per-kind
+ * verbs duplicate the domain groups (`asset list skill` == `skill list`), and
+ * the only cross-kind value (whole-bundle validate) is now the top-level
+ * `solosquad validate`. These commands warn now; removed in v2.0.
  */
+
+import { warnDeprecatedOnce } from "../util/deprecation.js";
 
 export type AssetKind = "skill" | "agent" | "workflow" | "cron";
 const KINDS: AssetKind[] = ["skill", "agent", "workflow", "cron"];
@@ -34,6 +41,11 @@ async function listSkills(): Promise<void> {
 }
 
 export async function assetListCommand(kind: string | undefined): Promise<void> {
+  warnDeprecatedOnce({
+    oldName: "solosquad asset list",
+    newName: "`solosquad <kind> list` (e.g. `skill list`)",
+    removalVersion: "v2.0",
+  });
   if (kind && !isKind(kind)) return badKind(kind);
   const kinds = kind ? [kind as AssetKind] : KINDS;
   for (const k of kinds) {
@@ -46,6 +58,11 @@ export async function assetListCommand(kind: string | undefined): Promise<void> 
 }
 
 export async function assetShowCommand(kind: string | undefined, id: string | undefined): Promise<void> {
+  warnDeprecatedOnce({
+    oldName: "solosquad asset show",
+    newName: "`solosquad <kind> show <id>` (e.g. `agent show <id>`)",
+    removalVersion: "v2.0",
+  });
   if (!isKind(kind)) return badKind(kind);
   if (!id) {
     console.error(chalk.red(`error: provide an id — \`solosquad asset show ${kind} <id>\``));
@@ -72,26 +89,12 @@ export async function assetShowCommand(kind: string | undefined, id: string | un
 }
 
 export async function assetValidateCommand(kind: string | undefined): Promise<void> {
-  if (kind && !isKind(kind)) return badKind(kind);
-  const kinds = kind ? [kind as AssetKind] : KINDS;
-  // `agent validate --all` is the shared static gate for skill AND agent (it
-  // validates every bundled SKILL.md + the cross-agent graph) — run it once.
-  const runners: Array<[string, () => Promise<void>]> = [];
-  if (kinds.includes("skill") || kinds.includes("agent")) {
-    runners.push(["skill+agent", async () => (await import("./agent.js")).agentValidateCommand(undefined, { all: true })]);
-  }
-  if (kinds.includes("workflow")) {
-    runners.push(["workflow", async () => (await import("./workflow.js")).workflowValidateCommand(undefined, { all: true })]);
-  }
-  if (kinds.includes("cron")) {
-    runners.push(["cron", async () => (await import("./cron.js")).cronValidateCommand()]);
-  }
-  let anyFail = false;
-  for (const [label, run] of runners) {
-    if (runners.length > 1) console.log(chalk.bold.underline(`\n# ${label}`));
-    process.exitCode = 0;
-    await run();
-    if (process.exitCode === 1) anyFail = true;
-  }
-  process.exitCode = anyFail ? 1 : 0;
+  warnDeprecatedOnce({
+    oldName: "solosquad asset validate",
+    newName: "solosquad validate",
+    removalVersion: "v2.0",
+    hint: "the cross-kind gate is now the top-level `solosquad validate [kind]`",
+  });
+  const { validateAllCommand } = await import("./validate.js");
+  await validateAllCommand(kind);
 }
