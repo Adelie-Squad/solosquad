@@ -14,22 +14,22 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        # Node 18 dropped: better-sqlite3 12.x requires Node 20+ (no Node 18
-        # prebuilt → source build fails on runners without a toolchain). Matches
-        # package.json engines `>=20`.
-        node: [20, 22]
-        exclude:
-          # better-sqlite3 12.x ships no Windows prebuilt for Node 20 (ABI 115),
-          # and the GitHub Windows runner has no Visual Studio toolchain for a
-          # source build. Windows stays covered on Node 22 (prebuilt present).
-          - os: windows-latest
-            node: 20
+        # Node 20 dropped (v1.3.7): GitHub Actions deprecated the Node 20 runner
+        # runtime (Sept 2025), and better-sqlite3 12.x is flakiest on the Node 20
+        # ABI (115) — the ubuntu+node20 cell intermittently failed its native
+        # build while every other cell passed the identical steps. Node 22
+        # (current Active LTS) ships better-sqlite3 prebuilts for all three OSes,
+        # so the former windows/node20 exclude is no longer needed. package.json
+        # engines stays `>=20` (users may run 20); CI validates on 22.
+        node: [22]
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      # checkout/setup-node v5 target the Node 24 action runtime — v4 targeted
+      # Node 20, which GitHub now force-runs on Node 24 with a deprecation warning.
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
 
