@@ -32,10 +32,13 @@ stages:
   - id: stage-3-review
     agent: product/product-designer
     task: |
-      리뷰 게이트(§3.5). 각 요구사항을 **담당 실행 스페셜리스트**에게 리뷰 의뢰한다 —
-      개발→engineering, 콘텐츠→growth/marketing, 리포트→product/research, 디자인 내포→design.
-      (Chief 가 유형별로 해당 스페셜리스트를 dispatch.) 리뷰어는 실행 가능성·예외/사이드이펙트·
-      누락을 open_questions[] 로 지적. 반영 후 PRD §요구사항 을 **최종 확정**으로 기입.
+      리뷰 게이트(§3.5). 각 요구사항·작업 체크리스트를 **담당 실행 스페셜리스트**에게
+      리뷰 의뢰한다 — 개발→engineering, 콘텐츠→growth/marketing, 리포트→product/research,
+      디자인 내포→design. (Chief 가 유형별로 해당 스페셜리스트를 dispatch.) 리뷰어는
+      ① 실행 가능성 ② **오버스펙(버전 목표·스코프 경계 대비 과대 — gold-plating 제거,
+      prd R1·R2·R5)** ③ 예외/사이드이펙트 ④ 누락 을 검토해 체크리스트를 **합리적으로
+      가감**하고 open_questions[] 로 지적. 반영 후 PRD §요구사항 을 **최종 확정**으로 기입
+      (리뷰 전 체크리스트는 binding 아님).
     inputs:
       - requirements-draft.md
     outputs:
