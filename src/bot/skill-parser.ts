@@ -80,7 +80,7 @@ export interface SkillBudget {
 /**
  * v1.3.6 §3.4 — PM-mode conventions. Previously written under a `pm_conventions:`
  * block on ~28 SKILLs but never parsed (fell into `extra` = dead metadata). Now
- * surfaced + validator-enforced so the field is load-bearing (core.md §7 ⑵):
+ * surfaced + validator-enforced so the field is load-bearing (primitive-core.md §3.7 ⑵):
  *   - anti_sycophancy / post_labeling — global discipline (default true); a SKILL
  *     may set post_labeling:false for a documented exception.
  *   - hard_gate — gate exit on exit_criteria (skill-level mirror of the workflow

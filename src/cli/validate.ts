@@ -9,12 +9,12 @@ import chalk from "chalk";
  * is whole-bundle validation. So that one capability is promoted to a top-level,
  * noun-free command (the CI gate); discovery stays with `solosquad commands`.
  *
- * Kind omitted = validate everything (skill+agent graph, workflow, cron).
+ * Kind omitted = validate everything (skill+agent graph, workflow, goal, cron).
  * Thin façade: delegates to each per-domain validate so there is one impl.
  */
 
-export type AssetKind = "skill" | "agent" | "workflow" | "cron";
-const KINDS: AssetKind[] = ["skill", "agent", "workflow", "cron"];
+export type AssetKind = "skill" | "agent" | "workflow" | "goal" | "cron";
+const KINDS: AssetKind[] = ["skill", "agent", "workflow", "goal", "cron"];
 
 function isKind(s: string | undefined): s is AssetKind {
   return !!s && (KINDS as string[]).includes(s);
@@ -41,6 +41,12 @@ export async function validateAllCommand(kind: string | undefined): Promise<void
     runners.push([
       "workflow",
       async () => (await import("./workflow.js")).workflowValidateCommand(undefined, { all: true }),
+    ]);
+  }
+  if (kinds.includes("goal")) {
+    runners.push([
+      "goal",
+      async () => (await import("./goal.js")).goalValidateCommand(undefined, { all: true }),
     ]);
   }
   if (kinds.includes("cron")) {

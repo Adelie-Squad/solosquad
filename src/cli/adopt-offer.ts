@@ -88,4 +88,12 @@ export async function offerAdoption(repoPath: string, indent = ""): Promise<void
     if (o.action === "namespaced") console.log(chalk.magenta(`${indent}  + ${o.kind}/${o.finalId} (namespaced from ${o.id})`));
   }
   console.log(chalk.dim(`${indent}  Re-check the graph: solosquad agent validate --graph`));
+  // v1.3.7 §3.4B — adopted artifacts carry no rationale. Point the user at the
+  // migration interview (creation_case:2) so the matching *-manager can analyze
+  // the artifact, present a draft, and elicit the WHY/judgment the code omits.
+  console.log(
+    chalk.dim(
+      `${indent}  Capture intent: ask Chief to run the matching manager — migration interview (analyze → draft → elicit the WHY not in the artifacts).`,
+    ),
+  );
 }

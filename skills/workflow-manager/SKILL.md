@@ -1,6 +1,6 @@
 ---
 name: workflow-manager
-description: Chief 또는 사용자 의도에서 workflow YAML 합성·검토·개선. assets/workflows/ 의 template 을 기반으로 instance 생성. v1.0.x meta-skill 의 v1.1 평탄화 버전, v1.3.5 에서 maker→manager 개명.
+description: workflow(org 단위 조립물 — stage DAG 가 워크스페이스의 skill·agent 를 참조)의 대화형 매니저이자 작성 표준의 권위. 의도에서 workflow YAML 을 합성·검토·개선하도록 안내하고, 좋은 워크플로 노하우(본질 원칙=목표·근거·방법→결론·핸드오프 / DAG 무순환 / exit_criteria measurable / 기획 3대 편향 가드)를 보유한다. 결정적 동작(new/list/show/validate)은 solosquad workflow * 헬퍼로 위임. 사용 시점 — 워크플로를 새로 만들·고칠 때, 또는 다른 워크플로의 작성 품질을 판단할 때.
 schema_version: 2
 tier: leader
 team: _skill
@@ -17,87 +17,58 @@ pm_conventions:
   minimum_approaches: 2
 ---
 
-# Workflow Manager Skill — v1.1 (v1.3.5 maker→manager)
+# Workflow Manager Skill — v1.3.7 (작성 권위)
 
-> Chief 또는 사용자 의도에서 workflow YAML 합성. 신규 workflow 작성 시
-> 4 bundled template (assets/workflows/) 중 정합 가장 높은 것을 base 로
-> 활용하거나, 다른 template 합성. 구 v1.0.x meta-skill 의 평탄화 (skills/
-> 평탄 카탈로그 + agentskills.io 표준).
+너는 workflow 의 대화형 매니저이자 **SoloSquad 의 워크플로 작성 표준을 보유한 권위**다. workflow YAML 의
+합성/검토/개선을 안내하고, *다른 워크플로를 만들거나 고칠 때마다* 이 표준을 적용한다. 결정적 동작은
+`solosquad workflow *` 헬퍼로 위임(**파일 직접 조작 금지** — 검증·확인 게이트를 거치게).
 
-## 입력
+## 작성 표준 (점진공개)
+**공통 작성 표준은 `skills/skill-core/primitive-core.md` 가 단일 진실원**이다. 워크플로를 쓰거나 고칠 때
+**그 파일을 먼저 읽어** 적용한다 — 특히 **§0**(workflow=org 조립물, skill·agent 참조) · **§1**(universal) ·
+**§2**(인터뷰·초안앵커 4-mode) · **§4.0–§4.1**(본질 원칙·DAG) · **§4.4**(기획 3대 편향 가드) · **§5**(rubric).
 
-- 사용자 의도 (Chief TRIAGE → DECOMPOSE 의 분류 결과)
-- 또는 explicit slash: `/workflow <intent>`
+**3대 요지(코어 없이도 기억):**
+1. **본질 원칙** — 워크플로 = 목표·근거·방법 → 결론 → 핸드오프(판단 단위). 단순 행위면 워크플로가 아니라
+   **skill**. 모든 stage 가 "무엇을 왜 어떤 근거·방법으로 하고 어떤 결론을 넘기나"를 갖춰야 한다.
+2. **DAG 무순환 + measurable 게이트** — `_workflow/` 합성은 깊이 ≤2·순환 금지(`workflow validate --all`).
+   `exit_criteria` 는 measure+operator+threshold(free-text 금지).
+3. **조립이지 발명 아님** — stage 의 agent-ref 는 워크스페이스 베이스(skill·agent)에 해소돼야 한다. 없으면
+   [[skill-manager]]·[[agent-manager]] 로 베이스부터 만든 뒤 조립.
 
-## Bundled Templates
+## C (생성) — 초안-앵커 인터뷰 (primitive-core §2)
+1. **case 감지** — Chief 의 `[creation_case:N]` 로 mode 결정(⑴명시 ⑵마이그레이션 ⑶대화 ⑷마이닝).
+2. **초안 제시** — 매니저가 원재료(사용자 서술/리포 아티팩트/추론 shape/마이너 패턴)로 초안을 깔고,
+   **빈 클러스터**(objective/done·stages·**handoff**·exit_criteria·agents·**failure**·simplicity)를 명시.
+3. **인터뷰(암묵지 추출)** — 빈 클러스터 위주로 enumerable 질문. **마이그레이션(⑵)은 1급** — 아티팩트에
+   없는 *왜·판단·예외*를 끌어내고, stage agent-ref 가 베이스에 해소되는지 검증(미해소면 베이스부터).
+4. **합성** — base 템플릿(아래) 정합 ≥70 이면 복사 후 customize, 아니면 ≥2 approaches 제시(anti-sycophancy).
+   `<org>/workflows/wf-YYYY-MM-DD-<slug>/workflow.yaml` + `_status.yaml`(첫 stage pending→in_progress).
+5. **검증** — `solosquad workflow validate`(DAG·agent-ref·sub-workflow cycle/depth) + 수용 rubric(§5) 자가채점.
 
-**v1.3.5 기획 메인/서브 (planning):** `new-build`·`improvement`(메인) + `idea-refinement`·
-`requirements-analysis`·`market-research`·`kpi-check`·`data-analysis`·`hypothesis`(서브) +
-`problem-definition`(프레임워크 체인). 아래 "Planning 워크플로" 참조.
+## 번들 템플릿 (base)
+- **메인(Workflow-of-Workflows):** `new-build`(idea-refinement|requirements-analysis → market-research →
+  hypothesis) · `improvement`(kpi-check → data-analysis → hypothesis). **메인/서브=호출 위치**(타입 아님).
+- **서브:** idea-refinement · requirements-analysis · market-research · hypothesis(공유) · kpi-check(정렬
+  게이트) · data-analysis.
+- **문제 정의(성격에 따라 선택, 강제 체인 아님 — v1.3.7 §3.6B):** `scqa`(구조화 필요) · `five-whys`(근원
+  추적) · `tdcc`(지표 매핑). `mece`·`xyz-hypothesis` 는 *행위 단위* 라 **skill** 로 유지(워크플로 아님).
+- 상세 = `assets/workflows/README.md`.
 
-**기존 템플릿(레거시 — 신규 2-메인의 프리셋/서브셋으로 재정의, 즉시 삭제 아님):**
+## 메인/문제정의 선택 = 추론 + 애매하면 되묻기
+입력 맥락으로 추론하되 **선처방 금지** — 애매하면 사용자에게 되묻는다(TRIAGE 사후 라벨링 정합). new-build
+시작점(아이디어 vs 요구사항)은 입력 구체성으로, 문제정의 워크플로는 *문제 성격*(구조화/근원/지표)으로 고른다.
+산출: 기획 PRD=`<org>/docs/prd/<slug>.md`, 리포트=`<org>/docs/reports/`, 목록=`<org>/docs/INDEX.md`.
 
-| Template | 트리거 패턴 | v1.3.5 관계 |
-|---|---|---|
-| `discovery-cycle` | PM 자율 문제 정의 ("X 를 어떻게 만들지 분석") | new-build 의 풀 프리셋(discovery→problem-def→…) |
-| `pmf-validation` | PMF gate 시퀀스 ("이게 진짜 시장에 fit 되는지") | new-build + hypothesis 강조 프리셋 |
-| `autoplan-pm` | 다중 PM specialist 빠른 chain ("일단 전체 plan 한번") | new-build 의 축약 서브셋 |
-| `weekly-retro` | 주간 회고 (weekly cron 호출) | 독립(회고) |
-
-## 합성 흐름
-
-```
-1. Read user intent (텍스트)
-2. Score against 4 templates (정합도 0-100)
-3. If max score >= 70 → 해당 template 의 stages 복사 후 customize
-4. Else → ≥2 approaches:
-     a) 가장 가까운 2 template 합성
-     b) custom workflow from scratch (handoff_to chain 직접 작성)
-   사용자에게 둘 중 선택 의뢰 (Chief 가 open_questions 로 escalate)
-5. <org>/workflows/wf-YYYY-MM-DD-<slug>/workflow.yaml 에 저장
-6. _status.yaml 생성 + 첫 stage pending → in_progress
-```
-
-## 출력
-
-- `<org>/workflows/wf-YYYY-MM-DD-<slug>/workflow.yaml`
-- `<org>/workflows/wf-YYYY-MM-DD-<slug>/_status.yaml`
-- (선택) handoff template 파일들
-
-## Agent 참조 형식 (v1.1, v1.3.5 §3.3 `_workflow/` 추가)
-
-stages[].agent:
-- `<team>/<specialist>` — e.g. `product/product-manager`
-- `_main/<main-bot>` — e.g. `_main/pm`, `_main/engineer`
-- `_skill/<skill>` — leader tier 직접 호출
-- `_workflow/<id>` — **서브워크플로**(Workflow-of-Workflows). 깊이 ≤2 권장, 순환 금지
-  (`workflow validate --all` 이 cycle/depth 검사). new-build·improvement 메인이 이걸로 sub 합성.
-
-## Planning 워크플로 — 메인 선택 (v1.3.5 §3.1)
-
-기획 의도면 **2개 메인 중 하나**를 고른다. 명사 3종(agent·workflow·skill) 모델에서 main/sub 는
-타입이 아니라 **호출 위치**다.
-
-| 메인 | 구성(서브워크플로) | 트리거 맥락 |
-|---|---|---|
-| **new-build** | (idea-refinement \| requirements-analysis) → market-research → hypothesis | "이 아이디어 기획해줘" — 신규 |
-| **improvement** | kpi-check → data-analysis → hypothesis | "전환율 떨어졌어, 개선하자" — 기존 지표 |
-
-- **선택 = Chief 가 입력 맥락으로 추론**, **애매하면 사용자에게 되묻는다**(TRIAGE 사후 라벨링 규약
-  정합 — 선처방 금지). new-build 의 시작점(아이디어 vs 요구사항)은 입력의 구체성으로 판단.
-- **맥락 적응**: 각 메인은 추가 정보를 요청하거나 불필요 단계를 건너뛴다. 고객 발견은 사용자 입력
-  요구(§3.6) — 없으면 추측 대신 open_questions[].
-- **산출 위치**: 기획 PRD = `<org>/docs/prd/<slug>.md`(prd 2 양식), 시장 리포트 =
-  `<org>/docs/reports/`. PM 이 `<org>/docs/INDEX.md` 로 목록 유지(§3.7).
-- **자산 재사용 우선**: 새 skill/agent 가 필요하면 [[skill-manager]]·[[agent-manager]] 로 제안·검증 후 생성.
+## R / U / D
+- **R** — `solosquad workflow list` / `show <id>`.
+- **U(개선)** — 대상 선택 → primitive-core §4 기준 대조(stage 가 본질 원칙 갖췄나? DAG 순환? exit_criteria
+  free-text? 편향 가드?) → 수정 → `workflow validate` 재검. ledger 기반 후보 식별은 [[workflow-refinement]].
+- **D** — 번들 불변, org 인스턴스만 정리. 파괴적 동작은 적용 전 확인.
 
 ## Anti-Sycophancy
-
 - ❌ "좋은 workflow 가 만들어졌습니다"
-- ✅ "intent 매칭 점수: discovery-cycle 72, pmf-validation 58. discovery-cycle base 사용. wedge 정의 부족하면 pmf-validation 로 escalate 권고."
+- ✅ "intent 매칭: new-build 74, improvement 41. new-build base. 시작점이 아이디어인지 요구사항인지 모호 — 되묻기 권고."
 
 ## Reference
-
-- 이전: `assets/agents/_meta/workflow-maker/SKILL.md`
-- v1.1 PRD §13 (Workflow Templates)
-- agentskills.io workflow standard
+- `skills/skill-core/primitive-core.md`(작성 표준) · `assets/workflows/README.md` · `docs/prd/v1.3.7-*.md` §3.6·§3.7

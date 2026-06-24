@@ -114,8 +114,10 @@ test("1.1.0→1.2.6 — apply() preserves an existing messenger.discord block (i
   assert.equal(msg.install_mode, "oauth_invite");
 });
 
-test("1.1.0→1.2.6 — apply() never clobbers a pre-existing workflows/problem-definition/workflow.yaml", async () => {
+test("1.1.0→1.2.6 — apply() never touches a user workflow file (problem-definition seed removed in v1.3.7)", async () => {
   const ws = tempWorkspace("1.1.0", ["acme"]);
+  // v1.3.7 dissolved the problem-definition seed; the migration no longer writes
+  // any workflow file, so a pre-existing user file must remain byte-identical.
   const seededDir = path.join(ws, "acme", "workflows", "problem-definition");
   fs.mkdirSync(seededDir, { recursive: true });
   fs.writeFileSync(path.join(seededDir, "workflow.yaml"), "custom: by-user\n");

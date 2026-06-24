@@ -149,7 +149,7 @@ export async function addOrgCommand(
   }
   console.log(chalk.dim("  hierarchy: agents/main/chief, teams/{product,engineering,design,marketing},"));
   console.log(chalk.dim("             memory/{cron-logs,open-questions,ledger},"));
-  console.log(chalk.dim("             workflows/problem-definition (default workflow seed)"));
+  console.log(chalk.dim("             workflows/{new-build,improvement,…} (planning workflow seeds)"));
 
   // v1.2 §5.5 Step 4 — optional inline Discord connect. If the workspace
   // has at least one registered Discord bot (= bot_application_id known),

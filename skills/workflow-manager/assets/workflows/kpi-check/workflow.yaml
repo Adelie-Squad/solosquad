@@ -3,15 +3,19 @@
 schema_version: 2
 id: "kpi-check"
 name: "KPI Check"
-description: "개선 대상 지표(KR/KPI)를 okr 로 확인 → PRD §KPI. improvement 메인의 sub-workflow."
+description: "받은 과제를 바로 진행하기 전, 프로덕트 방향성·북극성 지표·기대 성과를 okr 로 확인해 팀 목표를 얼라인시키는 정렬 게이트 → PRD §KPI + PM 업무분장 기준. improvement 메인의 sub-workflow."
 template_id: "kpi-check"
 
 stages:
   - id: stage-1-kpi
     agent: product/data-analyst
     task: |
-      Run the okr skill to confirm the target metric(s) (KR/KPI): current
-      baseline, direction, threshold. 목표 지표를 사용자와 확인하고 PRD §KPI 를 채운다.
+      목표(정렬 게이트): 받은 과제를 바로 진행하지 않고, 먼저 프로덕트 방향성·북극성 지표·기대 성과를
+      확인해 agent 팀 목표를 얼라인시킨다. 단순 지표 조회였다면 skill 이었을 것 — 여기서는 *과제가 방향과
+      맞는지* 판단한다.
+      방법: okr skill 로 대상 KR/KPI 의 baseline·direction·threshold 확인. 방향성·북극성과 어긋나면
+      추측하지 말고 open_questions[] 로 사용자 확인.
+      결론(핸드오프): 얼라인된 KPI baseline → PRD §KPI. 이 기준 위에서 PM 이 업무 분장한다.
     inputs: []
     outputs:
       - kpi-section.md

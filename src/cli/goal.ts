@@ -2,9 +2,11 @@ import chalk from "chalk";
 import fs from "fs";
 import path from "path";
 import inquirer from "inquirer";
-import { getOrgDir, getWorkspaceRoot } from "../util/paths.js";
+import { getOrgDir, getWorkspaceRoot, getBundledAgentsDir } from "../util/paths.js";
 import { listOrganizations } from "../util/config.js";
 import { parseGoalFile, GoalParseError, type GoalSpec } from "../engine/goal-parser.js";
+import { validateGoalFile, type GoalValidationResult } from "../bot/goal-validate.js";
+import { loadAgentSpecs, agentRefAliases } from "../bot/agent-spec.js";
 import { loadAgentsMd } from "../engine/agents-md-loader.js";
 import { readBest, readResults, resultsTsvPath, summarizeRun, goalDir } from "../engine/tracker.js";
 import { verifyCycle } from "../engine/reconciliation.js";
@@ -170,6 +172,64 @@ export async function goalListCommand(opts: GoalListOpts): Promise<void> {
     }
   }
   console.log();
+}
+
+// ---------- validate (v1.3.7 §3.5) ----------
+
+export interface GoalValidateOpts {
+  org?: string;
+  all?: boolean;
+}
+
+/**
+ * v1.3.7 §3.5 — `solosquad goal validate [<id>] [--all]`. Static gate over
+ * `goal.md` (parse + metric provenance + pipeline agent existence + termination
+ * + composite guardrail). Mirrors `workflow validate` / `cron validate`; also
+ * invoked by the top-level `solosquad validate` aggregator.
+ */
+export async function goalValidateCommand(
+  goalIdMaybe: string | undefined,
+  opts: GoalValidateOpts,
+): Promise<void> {
+  const ws = getWorkspaceRoot();
+  const known = agentRefAliases(loadAgentSpecs(getBundledAgentsDir()));
+  const agentExists = (ref: string): boolean => known.has(ref);
+
+  const orgs = listOrganizations(ws).filter((o) => !opts.org || o.slug === opts.org);
+  let anyFail = false;
+  let total = 0;
+  for (const org of orgs) {
+    const root = path.join(getOrgDir(org.slug, ws), "goals");
+    if (!fs.existsSync(root)) continue;
+    const goalIds = fs.readdirSync(root, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .filter((id) => opts.all || !goalIdMaybe || id === goalIdMaybe);
+    for (const goalId of goalIds) {
+      const goalMd = path.join(root, goalId, "goal.md");
+      if (!fs.existsSync(goalMd)) continue;
+      total++;
+      const r = validateGoalFile(goalMd, { agentExists });
+      printGoalResult(`${org.slug}/${goalId}`, r);
+      if (!r.ok) anyFail = true;
+    }
+  }
+  if (total === 0) console.log(chalk.dim("No goals to validate."));
+  process.exitCode = anyFail ? 1 : 0;
+}
+
+function printGoalResult(label: string, r: GoalValidationResult): void {
+  if (r.ok && r.warnings.length === 0) {
+    console.log(`${chalk.green("✓")} ${label}`);
+    return;
+  }
+  console.log(`${r.ok ? chalk.yellow("!") : chalk.red("✗")} ${label}`);
+  for (const e of r.errors) {
+    console.log(`    ${chalk.red("error")} ${e.code}${e.field ? ` [${e.field}]` : ""}: ${e.message}`);
+  }
+  for (const w of r.warnings) {
+    console.log(`    ${chalk.yellow("warn")}  ${w.code}${w.field ? ` [${w.field}]` : ""}: ${w.message}`);
+  }
 }
 
 // ---------- show ----------

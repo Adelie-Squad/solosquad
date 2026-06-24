@@ -1,0 +1,29 @@
+# five-whys sub-workflow (v1.3.7 §3.6B — 구 five-whys skill 흡수).
+#
+# 본질 원칙: "근본 원인 추적"은 판단 단위 — 어디까지 왜 파고들지(방법)와 어떤 근원-결론을
+# 다음에 넘길지(결론)가 핵심. 메인/문제정의 워크플로가 *근원 추적이 필요*할 때 선택.
+schema_version: 2
+id: "five-whys"
+name: "Five Whys (root cause)"
+description: "한 질문(예: scqa 의 Q)에서 5단계 '왜?' 체인으로 근본 원인 1문장에 수렴 → 다음(지표 매핑/가설)으로. 문제 성격이 '증상 말고 근원을 찾아야' 할 때 선택. 분기 과다 시 mece 로 분해(skill)."
+template_id: "five-whys"
+
+stages:
+  - id: stage-1-trace
+    agent: product/product-manager
+    task: |
+      목표: 입력 질문(scqa 의 Q 등)에서 5단계 "왜?" 체인으로 **근본 원인 1문장**에 수렴시켜
+      다음 단계로 넘긴다.
+
+      방법:
+        Why1 [질문]→[원인1] · Why2→[원인2] · … · Why5→[근본원인]. 각 "왜"는 evidence-ref 를 갖는다.
+        - 3단계 미만에서 막힘 → 데이터 부족: open_questions[](`{stage:"five-whys", blocking:true}`).
+        - 분기가 너무 많음 → `mece` skill 로 분해 후 가장 큰 분기 1개 선택해 진행.
+      편향 가드 ①(자기부정): 입장 + 반증 동반 — "근본 원인은 X. Y 가 확인되면 Z 로 바뀐다." 무작정
+      고집도, 근거 없는 번복도 금지. 결정·근거는 산출 md 에 고정.
+
+      결론(핸드오프): 근본 원인 1문장 + why 체인(evidence-ref). 근원이 다음(지표 매핑/가설)으로 넘어간다.
+    inputs: []
+    outputs:
+      - five-whys.md
+    handoff_to: null

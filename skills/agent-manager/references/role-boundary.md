@@ -10,7 +10,7 @@
 
 ## 2. right altitude
 - 너무 **brittle**(하드코딩된 단계 나열)도, 너무 **vague**(모호한 "잘 해줘")도 아닌 중간.
-- 열린 작업 → "왜"+자유. 깨지기 쉽거나 파괴적 → 정확한 순서·낮은 자유도(core.md §4 처방강도 보정 동형).
+- 열린 작업 → "왜"+자유. 깨지기 쉽거나 파괴적 → 정확한 순서·낮은 자유도(primitive-core.md §3.4 처방강도 보정 동형).
 
 ## 3. 중첩 게이트 (anti-reskin, 정적)
 - **8-word shingle 중복도** — 엔티티 중립화 후 신규 actor 의 description/본문이 기존 번들과 얼마나 겹치나.
@@ -25,7 +25,7 @@
 ## 5. description = 위임 트리거 (강제 계약)
 - 부모(Chief/PM)는 description 으로 라우팅한다 — **위임 트리거로 충분히 구체적**이어야 한다.
   Vercel Eve 의 "subagent description = 컴파일러 강제 위임계약"을 차용 — 불충분하면 review FAIL(warning 아님).
-- 공식·3인칭·non-goal·약간 pushy = core.md §2. 여기선 *"이 description 으로 자동 위임이 켜지나"* 가 합격선.
+- 공식·3인칭·non-goal·약간 pushy = primitive-core.md §3.2. 여기선 *"이 description 으로 자동 위임이 켜지나"* 가 합격선.
 
 ## 6. 작성 체크
 - [ ] 역할이 한 문장 SRP 로 떨어진다(generalist 아님).

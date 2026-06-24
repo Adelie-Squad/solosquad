@@ -18,6 +18,9 @@
 inputs / outputs / cadence(빈도) / boundaries(경계) / learning(개선) / shape(단일 vs 멀티).
 - 경계는 *맥락에서만* 짧게 묻는다(매 항목 심문 X).
 - 사용자 서술이 2~4클러스터를 동시에 답하면 **남은 것만** 묻는다(중복 질문 금지).
+- **초안-앵커 4-mode (primitive-core §2):** 인터뷰는 *항상 매니저 초안에 앵커링*된다(백지 심문 금지).
+  Chief 의 `[creation_case:N]` 로 mode 결정 — ⑴명시(사용자 서술→초안) ⑵마이그레이션(아티팩트 역공학→
+  WHY·판단 추출) ⑶대화(추론 shape→미정만) ⑷마이닝(패턴→규칙 추출). 위 8클러스터가 그 초안의 빈칸이다.
 
 ## 2. Phase 2 — stage / v0 scoping (C 의 ③ — reason class)
 - **v0 = 핵심 일만 하는 최소 actor.** 나머지는 *자르는("cut") 게 아니라* per-agent **NEXT-DIRECTIONS** 에

@@ -4,6 +4,44 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.7] — 2026-06-24 (workflow/goal/cron authoring internalization + workflow restructure)
+
+See `docs/prd/v1.3.7-workflow-goal-cron-authoring-internalization.md`. Extends the
+v1.3.6 authoring-authority pattern from skill/agent to the remaining three
+primitives, plus a bundled-workflow restructure and a goal validator. Bundle-only
+— no user-workspace data changes.
+
+- **(A) Single primitive core.** `skills/skill-core/core.md` → `primitive-core.md`,
+  restructured into §0 classification + unit/composition (skill·agent = workspace
+  bases; workflow·goal·cron = org composites that reference them) · §1 universal
+  authoring philosophy · §2 tacit-knowledge interview with a draft-anchored
+  4-mode (explicit / migration / conversational / mining) · §3 SKILL.md format
+  (skill·agent, absorbing the old core) · §4 composition format (workflow·goal·cron)
+  incl. the **workflow essence principle** (goal + rationale + method → conclusion →
+  handoff; "just an action" ⇒ a skill, not a workflow) and the **planning 3-bias
+  guards** (self-negation, training bias, confirmation bias) · §5 acceptance rubric.
+  Six reference files repointed (§N → §3.N).
+- **(B) Manager authority + interview.** `workflow/goal/cron-manager` raised to
+  authoring authorities; `skill-manager` gains the structured interview; agent
+  `lifecycle.md` Phase 1 gains the 4-mode. Chief emits a `[creation_case:N]`
+  marker so managers pick the interview mode (migration is first-class:
+  analyze → draft → elicit the WHY the artifact omits → resolve agent-refs).
+- **(C) Bundled-workflow restructure.** Legacy workflows retired
+  (discovery-cycle, pmf-validation, autoplan-pm, weekly-retro); the monolithic
+  `problem-definition` chain dissolved — `scqa`/`five-whys`/`tdcc` promoted to
+  workflows (absorbing the deleted same-named skills), `mece`/`xyz-hypothesis`
+  kept as skills; `idea-refinement`/`market-research`/`kpi-check` re-narrated to
+  the essence principle (kpi-check = a goal-alignment gate, not a metric lookup).
+  Seed set, README, agent `skills_used`, and the leading-indicator/retro wiring
+  updated. The published `1.1.0-to-1.2.6` migration's now-obsolete
+  problem-definition seed + package-integrity guard were removed (deliberate,
+  user-authorized immutable-migration exception, parallel to v1.3.5 B-D1).
+- **(D) Goal validator.** `src/bot/goal-validate.ts` (`validateGoal`) — metric
+  provenance, pipeline agent existence, termination presence, composite-vs-single
+  Goodhart guardrail — exposed as `solosquad goal validate` and folded into the
+  `solosquad validate` aggregator (now covers all five primitives).
+- **Continuity migration** `1.3.6-to-1.3.7` (version-bump no-op).
+
 ## [1.3.6] — 2026-06-23 (Authoring internalization + self-improvement scaffold + squad restructure)
 
 See `docs/prd/v1.3.6-skill-agent-authoring-internalization.md` and

@@ -12,17 +12,17 @@ import {
   loadWorkspaceYaml,
   saveWorkspaceYaml,
 } from "../../util/config.js";
-import { getBundleRoot, getOrgDir } from "../../util/paths.js";
+import { getOrgDir } from "../../util/paths.js";
 import { grantClaudeTrustMany } from "../../util/claude-trust.js";
 import { normalizeLine } from "../../util/platform.js";
 
 /**
  * v1.1.0 → v1.2.6 — Discord auto-connect + Chief identity + owner-only gate +
- * works-handle task hub + add-org bootstrap + problem-definition workflow seed.
+ * works-handle task hub + add-org bootstrap.
  *
  * Per `docs/prd/v1.2-messenger-connection-discord-first.md` §13.
  *
- * Three concrete actions, all idempotent:
+ * Two concrete actions, all idempotent:
  *
  *   1. **Bump** workspace.yaml.version to 1.2.6.
  *
@@ -33,10 +33,8 @@ import { normalizeLine } from "../../util/platform.js";
  *        Portal manually; new users get `oauth_invite` default in init.
  *      - `thread_token_budget: 80000` — §9.2 default.
  *
- *   3. **Seed problem-definition workflow** for every org at
- *      `<org>/workflows/problem-definition/workflow.yaml` (copied from the
- *      bundle if missing). PRD §12 #16. User-customized files are never
- *      overwritten.
+ *   (The former problem-definition workflow seed — PRD §12 #16 — was removed in
+ *    v1.3.7 when that workflow was dissolved; see the exception note below.)
  *
  * What this migration does **not** do:
  *   - `org.yaml.chief_name` is *not* auto-set. doctor / init / add-org
@@ -58,30 +56,16 @@ function isFromVersion(version: string | undefined): boolean {
   return version === "1.1.0" || version.startsWith("1.1.0.");
 }
 
-function bundleProblemDefinitionWorkflow(): string {
-  // v1.3.5 B-D1 (deliberate, user-authorized exception to the immutable-migration
-  // rule): the bundle skill dir was renamed workflow-maker → workflow-manager.
-  // This published migration's package-integrity guard hard-codes the bundle path,
-  // so the rename is repointed here rather than kept alive via a frozen compat
-  // shim. Safe because this migration is forward-only and only seeds/verifies a
-  // bundle file (no path-dependent workspace data transform).
-  return path.join(
-    getBundleRoot(),
-    "skills",
-    "workflow-manager",
-    "assets",
-    "workflows",
-    "problem-definition",
-    "workflow.yaml",
-  );
-}
-
-interface WorkflowSeed {
-  orgSlug: string;
-  dest: string;
-  source: string;
-  label: string;
-}
+// v1.3.7 §3.6 (deliberate, user-authorized exception to the immutable-migration
+// rule — parallel to the v1.3.5 B-D1 exception that previously lived here): the
+// `problem-definition` framework chain was dissolved (scqa/five-whys/tdcc became
+// workflows; mece/xyz-hypothesis stayed skills), so its bundle file no longer
+// exists. This forward-only migration's problem-definition *seed* + its package-
+// integrity *verify guard* are removed here — the seed is obsolete (the workflow
+// is retired) and the migration's essential transforms (version bump, Discord
+// policy, Claude trust backfill) are unchanged. Workspaces already on 1.2.6 are
+// unaffected (apply guarded on existing dest); fresh replays simply don't seed a
+// retired workflow.
 
 /**
  * v1.2.6 §A.5 — collect all paths that should be granted Claude Code
@@ -119,25 +103,11 @@ function collectTrustPaths(workspace: string): string[] {
   return out;
 }
 
-function collectWorkflowSeeds(workspace: string): WorkflowSeed[] {
-  const products = loadProducts(workspace);
-  const source = bundleProblemDefinitionWorkflow();
-  return products.map((product) => {
-    const orgRoot = getOrgDir(product.slug, workspace);
-    return {
-      orgSlug: product.slug,
-      dest: path.join(orgRoot, "workflows", "problem-definition", "workflow.yaml"),
-      source,
-      label: `Seed problem-definition workflow for org ${product.slug}`,
-    };
-  });
-}
-
 export const migration: Migration = {
   from: "1.1.0",
   to: TARGET,
   description:
-    "v1.2.6 — Discord auto-connect + Chief identity (chief_name) + owner-only gate + works-handle task hub + problem-definition workflow seed. Bumps workspace version, seeds workspace.yaml.messenger.discord defaults (owner_only=false preserves v1.0.2 behavior), and copies problem-definition workflow to each org.",
+    "v1.2.6 — Discord auto-connect + Chief identity (chief_name) + owner-only gate + works-handle task hub. Bumps workspace version and seeds workspace.yaml.messenger.discord defaults (owner_only=false preserves v1.0.2 behavior).",
 
   async detect(workspace: string): Promise<boolean> {
     const ws = loadWorkspaceYaml(workspace);
@@ -167,22 +137,6 @@ export const migration: Migration = {
             "Seed Discord workspace policy (owner_only=false preserves v1.0.2 channel-ACL-only mode for upgraded workspaces)",
         });
       }
-    }
-
-    const seeds = collectWorkflowSeeds(workspace);
-    for (const seed of seeds) {
-      if (fs.existsSync(seed.dest)) continue;
-      if (!fs.existsSync(seed.source)) {
-        warnings.push(
-          `Bundle source missing for seed: ${seed.source}. Skipping ${seed.label}.`,
-        );
-        continue;
-      }
-      steps.push({
-        kind: "generate",
-        to: seed.dest,
-        description: seed.label,
-      });
     }
 
     warnings.push(
@@ -227,14 +181,6 @@ export const migration: Migration = {
       };
     }
 
-    const seeds = collectWorkflowSeeds(workspace);
-    for (const seed of seeds) {
-      if (fs.existsSync(seed.dest)) continue;
-      if (!fs.existsSync(seed.source)) continue;
-      fs.mkdirSync(path.dirname(seed.dest), { recursive: true });
-      fs.copyFileSync(seed.source, seed.dest);
-    }
-
     // v1.2.6 §A.5 — backfill Claude Code directory trust for every
     // existing org dir + every registered repo path. Without this,
     // workspaces created before v1.2.6 keep hitting the interactive
@@ -271,14 +217,6 @@ export const migration: Migration = {
       return {
         ok: false,
         error: "workspace.yaml.messenger.discord block missing after apply",
-      };
-    }
-
-    const bundleSrc = bundleProblemDefinitionWorkflow();
-    if (!fs.existsSync(bundleSrc)) {
-      return {
-        ok: false,
-        error: `Bundle resource missing — package is incomplete: ${bundleSrc}`,
       };
     }
 

@@ -10,8 +10,9 @@ stages:
   - id: stage-1-cause
     agent: product/product-manager
     task: |
-      Run the five-whys + tdcc skills to trace the root cause and map it to a
-      measurable trailing indicator + customer opportunity + causal link.
+      목표: 근본 원인을 추적해(5-Whys 프레임) 측정 가능한 후행지표·기회·인과로 매핑한다(TDCC 프레임).
+      더 깊은 근원 추적이 필요하면 문제 성격에 따라 메인이 상류에 `scqa`/`five-whys`/`tdcc` 워크플로를
+      먼저 합성한다(§3.6 본질 원칙 — 강제 체인 아님). 결론: 측정 가능한 원인-지표 쌍을 가설 단계로 넘긴다.
     inputs: []
     outputs:
       - cause.json

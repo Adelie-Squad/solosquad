@@ -5,7 +5,7 @@
  * computes 5 indicators over 1d + 7d windows and appends one line to
  * `<org>/memory/leading-indicators.jsonl`. This module is the typed
  * interface for that file — the cron prompt writes through here,
- * the weekly-retro skill and Chief RETROSPECT stage read from here.
+ * the Chief RETROSPECT stage (loop engineering) reads from here.
  *
  * Append-only by design: each daily run produces exactly one line. The
  * file is intentionally never rotated (PRD §15.1) — long-horizon trend
@@ -88,8 +88,8 @@ export function readEntries(
 }
 
 /**
- * Latest entry, or null if the file is empty/missing. Used by weekly-retro
- * to compare against the prior period.
+ * Latest entry, or null if the file is empty/missing. Used by the Chief
+ * RETROSPECT stage to compare against the prior period.
  */
 export function latestEntry(
   opts: LeadingIndicatorsOpts

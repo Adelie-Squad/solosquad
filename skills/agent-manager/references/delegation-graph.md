@@ -2,7 +2,7 @@
 
 > actor frontmatter 는 **그래프**다. `collaborators`/`used_by`/`skills_used` 가 엣지, depth/budget 이
 > 제약이다. 정적 검증으로 무한 위임·고아 참조·역할 사다리 붕괴를 막는다. 공통 frontmatter 원칙은
-> `skill-core/core.md` §7, 여기는 **agent 고유 그래프 규칙**. 근거: 260618 Part G(G1)·E.2, CMA depth-1(B.6).
+> `skill-core/primitive-core.md` §3.7, 여기는 **agent 고유 그래프 규칙**. 근거: 260618 Part G(G1)·E.2, CMA depth-1(B.6).
 
 ## 1. 참조 무결성
 - `collaborators` · `used_by` 가 **실존 actor** 를 가리키나 — `<team>/<agent>` 로 해소(고아 참조 = FAIL).
@@ -17,7 +17,7 @@
 
 ## 3. 역할 사다리 정합
 - `tier`(leader/member) ↔ `team` 정합 — leader 는 팀 supervisor, member 는 worker. 엇갈리면 FAIL.
-- `name` — kebab-case · **부모 디렉터리명 일치** · 예약어(`claude`/`anthropic`) 금지(core.md §3 동형).
+- `name` — kebab-case · **부모 디렉터리명 일치** · 예약어(`claude`/`anthropic`) 금지(primitive-core.md §3.3 동형).
 
 ## 4. budget — narrower-only invariant (사전 표면화)
 - `agent-profile.yaml` 의 turn/depth budget 은 **부모보다 넓어질 수 없다**(narrower-only). 현재 로드 시

@@ -26,7 +26,7 @@ pm_conventions:
 (scaffold·list·show·validate)는 `solosquad skill *` 헬퍼로 위임한다(**파일 직접 조작 금지**).
 
 ## 작성 표준 (이 skill 의 핵심 — 점진공개)
-**공통 작성 표준은 `skills/skill-core/core.md` 가 단일 진실원**이다(skill·agent 공유 ~70%: description 공식·
+**공통 작성 표준은 `skills/skill-core/primitive-core.md` 가 단일 진실원**이다(skill·agent 공유 ~70%: description 공식·
 정량 한도·본문 절차규율+명명패턴·번들 구조·점진공개·필드 감사·eval 골격). skill 을 쓰거나 고칠 때
 **그 파일을 먼저 읽어** 적용한다. skill 고유분(~30%)만 아래 reference 에 둔다(그때 읽음):
 
@@ -35,7 +35,7 @@ pm_conventions:
 - **`references/eval-recipe.md`** — core §8 eval 골격의 **skill 운영 상세**: corpus 레이아웃·`evals.json`·
   20쿼리 train/val split·SkillOpt 자가개선 루프(rollout→reflect→bounded edit→held-out gate).
 
-**3대 요지(reference 없이도 기억할 것 — 상세는 core.md):**
+**3대 요지(reference 없이도 기억할 것 — 상세는 primitive-core.md):**
 1. **description = 디스커버리.** 3인칭 + 트리거 첫 문장 + non-goal + 약간 pushy. 노력의 절반을 여기.
 2. **본문은 "Claude 가 모르는 절차적 규율"만.** <500줄(이상 ~920토큰). 위험도에 처방강도 보정.
 3. **decorative 필드 금지.** load-bearing 이거나 validator-enforced 가 아니면 부채다.
@@ -47,9 +47,13 @@ pm_conventions:
 ## C (생성)
 1. **이름** 확정(kebab-case·폴더명 일치; `skill list` 로 충돌 확인, 충돌 시 대안 제시).
 2. **scaffold** — `solosquad skill new <name>` 로 `.solosquad/skills/<name>/SKILL.md` 골격 생성(무-LLM).
-3. **description 먼저** — `core.md` §2 공식으로 작성. **이게 가장 중요**하니 여기 시간을 쓴다.
-4. **본문 작성(대화)** — `core.md` §4 의 명명 패턴에서 *필요한 것만* 골라 채운다. 번들이 필요하면
-   `core.md` §5 로 scripts/references/assets 를 구분해 둔다. 안티-시코펀시: 최소 2개 접근 비교 후 추천.
+2.5. **초안-앵커 인터뷰(암묵지 추출 — primitive-core §2)** — Chief 의 `[creation_case:N]` 로 mode 결정.
+   매니저가 초안을 깔고 **빈 클러스터**(trigger·**procedure(습관적 절차)**·**gotchas(피하려 배운 실수)**·
+   I/O·non-goal·**verification(됐는지 판단 기준)**·bundle·shape)를 enumerable 질문으로 채운다. 마이그레이션
+   (⑵)이면 기존 SKILL.md 를 역공학해 *코드에 없는 판단·예외*를 끌어낸다.
+3. **description 먼저** — `primitive-core.md` §3.2 공식으로 작성. **이게 가장 중요**하니 여기 시간을 쓴다.
+4. **본문 작성(대화)** — `primitive-core.md` §3.4 의 명명 패턴에서 *필요한 것만* 골라 채운다. 번들이 필요하면
+   `primitive-core.md` §3.5 로 scripts/references/assets 를 구분해 둔다. 안티-시코펀시: 최소 2개 접근 비교 후 추천.
 5. **eval 설계** — `eval-recipe.md` §1 로 description 트리거 셋(20쿼리)을, 검증가능 output 이면 §2 A/B 를 둔다.
 6. **검토·검증** — `primitive-review` 로 품질 검토 후 `solosquad skill validate` 게이트 통과 확인.
 
@@ -58,7 +62,7 @@ pm_conventions:
 
 ## U (수정·개선 / refine — *다른 skill 개선의 정식 입구*)
 1. 대상 선택 → 개요 설명 → 변경 의도 입력(자산 재사용 원칙 동일).
-2. **표준 대조** — `core.md` + 위 2 reference 기준으로 무엇이 어긋났는지 짚는다(description 약함? decorative 필드?
+2. **표준 대조** — `primitive-core.md` + 위 2 reference 기준으로 무엇이 어긋났는지 짚는다(description 약함? decorative 필드?
    본문이 facts 위주? 번들 오용?). ledger 기반 "어느 skill 이 자주 실패하나" 는 `skill-refinement` 가 식별,
    **여기선 그 후보를 표준에 맞춰 고친다.**
 3. **bounded edit** — 전면 재작성보다 몇 문장씩(`eval-recipe.md` §3 정신). 본문 편집.

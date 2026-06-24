@@ -2,7 +2,7 @@
 
 > 매일 1회 실행 (cron 기본: 사용자 timezone 09:30, 다른 schedule 과 충돌 방지). 5 지표를 계산해 `<org>/memory/leading-indicators.jsonl` 에 한 줄 append.
 
-본 schedule 은 PM 의 가설 진척과 Chief 의 자가학습 루프에 입력 데이터를 공급. 결과는 `weekly-retro` 가 7일 평균으로 사용자에게 보고.
+본 schedule 은 PM 의 가설 진척과 Chief 의 자가학습 루프에 입력 데이터를 공급. 결과는 Chief 의 RETROSPECT(작업 완료 회고 → 루프 엔지니어링)가 7일 평균으로 사용자에게 보고.
 
 ## 측정 5 지표
 

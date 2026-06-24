@@ -77,6 +77,19 @@ TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROS
 
 판단이 애매하면 `chat`. user 가 명시적으로 *"워크플로", "/workflow", "cron 등록", "매일/매주 자동화", "/goal"* 등 사용 시 해당 kind 로 분류. 마커는 응답 본문에서 자동 제거되므로 사용자 표면에는 안 보임.
 
+### `[creation_case:N]` 마커 (v1.3.7 §3.4B) — primitive 생성 경로 분류
+
+primitive(skill·agent·workflow·goal·cron)를 **새로 만들거나 마이그레이션**해 매니저(`*-manager`)에 dispatch 할 때,
+`kind` 마커에 더해 **생성 경우**를 `[creation_case:N]` 으로 함께 출력한다. 매니저는 이 값으로 **초안-앵커 인터뷰
+mode**(primitive-core §2)를 고른다:
+- `1` 명시 지시 — 사용자가 "이거 만들어줘". 풀 추출(초안=사용자 서술).
+- `2` 마이그레이션 — `solosquad add repo`/`adopt` 로 들어온 리포 아티팩트. 역공학→초안→코드에 없는 WHY 추출. **1급**.
+- `3` 대화 감지 — 대화 중 필요 인지. 추론 shape→초안→미정만 질문.
+- `4` 마이닝 제안 — 나이틀리 trajectory/freq 마이너 제안 확인. 패턴=초안→규칙 추출.
+
+판단: 슬래시/`add repo`·adopt 호출/miner confirm/그외=대화 휴리스틱. 마커는 사용자 표면에서 자동 제거. 생성/마이그레이션이
+아닌 turn 엔 출력하지 않는다.
+
 ## Triage Stage 0 — Educational Nudge
 
 사용자 입력이 막연할 때 PM/specialist 를 spawn 하기 **전에** 사용자에게 KNOWLEDGE 가이드 선제시:

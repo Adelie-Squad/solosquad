@@ -3,7 +3,7 @@
 schema_version: 2
 id: "market-research"
 name: "Market Research"
-description: "멀티에이전트 병렬 리서치 + 인용 검증 → PRD §시장 요약 + <org>/docs/reports/ 리포트(evidence_ref)."
+description: "목표·근거·방법을 먼저 정한 뒤 멀티에이전트 병렬 리서치 + 인용 검증 → 어떤 결론(TAM/SAM 신호·차별화)을 다음 단계로 넘길지까지. PRD §시장 요약 + <org>/docs/reports/ 리포트(evidence_ref)."
 template_id: "market-research"
 
 stages:

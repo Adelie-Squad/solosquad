@@ -27,14 +27,20 @@ pm_conventions:
 세션이라 현재 org 가 기본 — 단일 org 면 `--org` 생략, 여럿이면 `--org <현재 org slug>` 명시. 배달
 채널은 `works-<handle>`. 실패는 해당 채널에 사유와 함께 보고되고, 한참 안 돌면 "실행 누락 감지" 경보.
 
-**자산 인지 원칙 (필수):** cron 작업을 정의할 때 **먼저 `solosquad asset list`** 로 재사용할
-skill/agent/workflow 가 있는지 확인하고, 없을 때만 새 자산 생성을 제안한다(자산 난립 방지).
+**작성 표준 (점진공개):** 공통 표준은 `skills/skill-core/primitive-core.md` — 특히 **§0**(cron=org 조립물) ·
+**§2**(인터뷰·초안앵커 4-mode) · **§4.3**(IANA tz·idempotency·overlap·dead-man's-switch) · **§5**(rubric).
+cron 작성/개선 시 먼저 읽어 적용한다.
 
-**C (생성):**
-1. **이름**(kebab-case; 충돌 시 대안) → 2. **시간/주기**(친근 표현 `@daily`/`every 1h`/"평일 9시";
-   저장 전 **다음 N회 발화 시각 미리보기**) → 3. **작업/보고**(기존 자산 매칭 제안 → 없으면 생성 →
-   `works-<handle>` 보고 양식) → 4. **저장** `solosquad cron new <id> --cron "<expr>" [--timezone <tz>] [--org <slug>]`
-   (확인 후) → 5. **테스트** `solosquad cron run <id>` 로 1회 실행해 결과를 채널에서 확인.
+**자산 인지 원칙 (필수):** cron 작업을 정의할 때 **먼저 `solosquad asset list`** 로 재사용할
+skill/agent/workflow 가 있는지 확인하고, 없을 때만 새 자산 생성을 제안한다(조립이지 발명 아님).
+
+**C (생성) — 초안-앵커 인터뷰:** Chief 의 `[creation_case:N]` 로 mode 결정. 매니저가 초안을 깔고 **빈
+클러스터**(task·cadence·timezone·**overlap/catch-up**·report·idempotency·**silent-miss**)를 채워나간다.
+1. **이름**(kebab-case; 충돌 시 대안) → 2. **시간/주기**(친근 표현 `@daily`/`every 1h`/"평일 9시"; **IANA tz**;
+   저장 전 **다음 N회 발화 시각 미리보기** = translate-then-confirm) → 3. **작업/보고**(기존 자산 매칭 제안 →
+   없으면 생성 → `works-<handle>` 보고 양식; **idempotent** 한지·**조용한 미스** 기준 확인) → 4. **저장**
+   `solosquad cron new <id> --cron "<expr>" [--timezone <tz>] [--org <slug>]`(확인 후) → 5. **테스트**
+   `solosquad cron run <id>` 로 1회 실행해 결과 확인 + 수용 rubric(§5) 자가채점.
 
 **R (조회):** `solosquad cron list` → 대상 → `solosquad cron show <id>`(스케줄·다음 실행·tz·최근 상태).
 

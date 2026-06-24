@@ -22,7 +22,6 @@ skills_used:
   - wbs
   - design-system
   - policy
-  - scqa
   - mece
   - xyz-hypothesis
 triggers:

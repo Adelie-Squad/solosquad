@@ -3,7 +3,7 @@
 schema_version: 2
 id: "idea-refinement"
 name: "Idea Refinement"
-description: "아이디어를 고객 발견·JTBD·기회 트리·lean-canvas 로 구체화 → PRD §아이디어. 단독 실행 가능, new-build 메인의 sub-workflow."
+description: "아이디어 고도화 = 목표. 입력 성격에 맞는 프레임(고객 발견·JTBD·기회 트리·lean-canvas)을 골라 riskiest assumption 까지 구체화하고, 어떤 결론을 다음에 넘길지 정한다 → PRD §아이디어. 단독 실행 가능, new-build 메인의 sub-workflow."
 template_id: "idea-refinement"
 
 stages:

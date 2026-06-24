@@ -24,12 +24,26 @@ export const MEMORY_SCHEMAS: Record<string, string> = {
 export const SCAFFOLD_TEAMS = ["core", "product", "engineering", "business", "brand"] as const;
 
 /**
- * v1.2 §12 #16 — workflows seeded automatically on org creation. For now
- * just `problem-definition` (PRD §12 #16); future seeds (discovery-cycle,
- * autoplan-pm, pmf-validation, weekly-retro) are opt-in via
- * `solosquad workflow add` and live in the bundle but aren't auto-copied.
+ * Workflows seeded automatically on org creation. v1.3.7 §3.6 retired the
+ * legacy templates (discovery-cycle, pmf-validation, autoplan-pm, weekly-retro)
+ * and dissolved the monolithic `problem-definition` chain into selectable
+ * problem-definition workflows (scqa/five-whys/tdcc; mece/xyz-hypothesis remain
+ * skills). The full planning set is seeded so the two mains (new-build,
+ * improvement) resolve their `_workflow/` sub-references out of the box.
  */
-export const SCAFFOLD_WORKFLOWS = ["problem-definition"] as const;
+export const SCAFFOLD_WORKFLOWS = [
+  "new-build",
+  "improvement",
+  "idea-refinement",
+  "requirements-analysis",
+  "market-research",
+  "hypothesis",
+  "kpi-check",
+  "data-analysis",
+  "scqa",
+  "five-whys",
+  "tdcc",
+] as const;
 
 export function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -53,7 +67,7 @@ export interface ScaffoldOrgInput {
  * Create `<workspace>/<slug>/` with the full v1.1.0 + v1.2 layout:
  *   .org.yaml
  *   memory/{cron-logs,open-questions,ledger}/ + 4 schema JSONLs
- *   workflows/problem-definition/workflow.yaml  (v1.2 §12 #16)
+ *   workflows/{new-build,improvement,…}/workflow.yaml  (v1.3.7 §3.6 planning set)
  *   repositories/
  *   <messenger>/
  *   agents/main/chief/SKILL.md                  (copied from bundle)
@@ -97,9 +111,8 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
     }
   }
 
-  // v1.2 §12 #16 — seed problem-definition workflow as the default
-  // entry-point workflow for new orgs. Other workflow templates remain
-  // opt-in via `solosquad workflow add`.
+  // v1.3.7 §3.6 — seed the bundled planning workflow set (mains + sub-workflows)
+  // so new-build/improvement resolve their `_workflow/` references in the org.
   for (const workflow of SCAFFOLD_WORKFLOWS) {
     copyBundleFile(
       path.join(

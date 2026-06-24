@@ -91,7 +91,7 @@ test("scaffoldOrg — omits chief_name from .org.yaml when not provided", () => 
   );
 });
 
-test("scaffoldOrg — seeds problem-definition workflow from the bundle (v1.2 §12 #16)", () => {
+test("scaffoldOrg — seeds the planning workflow set from the bundle (v1.3.7 §3.6)", () => {
   const ws = tempWorkspace();
   scaffoldOrg({
     workspace: ws,
@@ -100,18 +100,16 @@ test("scaffoldOrg — seeds problem-definition workflow from the bundle (v1.2 §
     remoteUrl: null,
     messenger: "discord",
   });
-  const seeded = path.join(
-    ws,
-    "acme",
-    "workflows",
-    "problem-definition",
-    "workflow.yaml",
-  );
-  assert.ok(fs.existsSync(seeded), "problem-definition workflow not seeded");
-  // Sanity-check the seeded yaml is the bundle artifact (loaded correctly).
-  const wf = yaml.load(fs.readFileSync(seeded, "utf-8")) as Record<string, unknown>;
-  assert.equal(wf.id, "problem-definition");
+  // v1.3.7 retired the monolithic problem-definition seed; the two planning
+  // mains + their sub-workflows are seeded so `_workflow/` refs resolve.
+  const mainPath = path.join(ws, "acme", "workflows", "new-build", "workflow.yaml");
+  assert.ok(fs.existsSync(mainPath), "new-build main workflow not seeded");
+  const wf = yaml.load(fs.readFileSync(mainPath, "utf-8")) as Record<string, unknown>;
+  assert.equal(wf.id, "new-build");
   assert.ok(Array.isArray(wf.stages));
+  // problem-definition is dissolved (scqa/five-whys/tdcc replace it) — not seeded.
+  const subPath = path.join(ws, "acme", "workflows", "five-whys", "workflow.yaml");
+  assert.ok(fs.existsSync(subPath), "five-whys problem-definition workflow not seeded");
 });
 
 test("scaffoldOrg — copies chief SKILL.md + 4 team folders from the bundle", () => {

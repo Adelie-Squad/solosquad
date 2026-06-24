@@ -550,6 +550,17 @@ goalGroup
   });
 
 goalGroup
+  .command("validate")
+  .description("Statically validate goal.md (metric provenance, pipeline agents, termination)")
+  .argument("[goal-id]", "Optional — validate one goal (default: all)")
+  .option("--org <slug>", "Filter to a specific organization")
+  .option("--all", "Validate every goal (default when no id given)")
+  .action(async (goalId, opts) => {
+    const { goalValidateCommand } = await import("./goal.js");
+    await goalValidateCommand(goalId, opts);
+  });
+
+goalGroup
   .command("show")
   .description("Show a specific goal's spec + recent cycles")
   .argument("<goal-id>", "Goal id")

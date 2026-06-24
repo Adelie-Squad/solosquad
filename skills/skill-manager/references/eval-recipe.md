@@ -1,6 +1,6 @@
-# Skill eval — 운영 상세 (core §8 골격의 skill 판)
+# Skill eval — 운영 상세 (primitive-core §3.8 골격의 skill 판)
 
-> **eval 골격·적용 판단은 `skills/skill-core/core.md` §8**(① description 트리거 eval + ② output 품질 A/B,
+> **eval 골격·적용 판단은 `skills/skill-core/primitive-core.md` §3.8**(① description 트리거 eval + ② output 품질 A/B,
 > 그리고 "채점기 없이는 자가개선 없음"). 이 파일은 그 골격을 **skill 에서 어떻게 돌리는가**의 운영 상세다 —
 > corpus 레이아웃·`evals.json` 구조·SkillOpt 자가개선 루프 기계. 근거: agentskills.io skill-creation
 > 3-가이드(`260617` Part B.6①②), SkillOpt(`260617` Part F). 자동화: `validator-corpus`/`npm run test:corpus`.

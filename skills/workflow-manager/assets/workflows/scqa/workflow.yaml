@@ -1,0 +1,31 @@
+# scqa sub-workflow (v1.3.7 §3.6B — 구 scqa skill 흡수).
+#
+# 본질 원칙(목표·근거·방법→결론→핸드오프): "상황 구조화"는 행위가 아니라 판단 단위다 —
+# 무엇이 달라졌고(근거) 그래서 무엇을 물어야 하는가(결론)를 다음 단계로 넘긴다.
+# 메인/문제정의 워크플로가 *문제 성격이 구조화-필요*일 때 선택한다(강제 체인 아님).
+schema_version: 2
+id: "scqa"
+name: "SCQA (problem structuring)"
+description: "문제를 Situation/Complication/Question/Answer 로 구조 분해 → 가설 후보 + question 을 다음 단계로. 문제 성격이 '무엇이 달라졌는지부터 구조화 필요'일 때 선택. mece 로 분기 분해 가능(skill)."
+template_id: "scqa"
+
+stages:
+  - id: stage-1-structure
+    agent: product/product-manager
+    task: |
+      목표: 받은 문제/요청을 SCQA 로 구조 분해해, "그래서 무엇을 물어야 하는가(Question)"와
+      가설 후보(Answer)를 다음 단계로 넘긴다. (사용자와 직접 Q&A 안 함 — 자율 사고.)
+
+      근거·방법:
+        - Situation(S): archive.sqlite(최근 N개월) + domain/customers.md 의 현재 상태.
+        - Complication(C): memory ledger·workflow 실패기록·customers 갱신이력에서 *무엇이 달라졌나*.
+        - Question(Q): PM 자체 구문화 — "그래서 무엇을 해야 하나?"의 더 구체적 형태.
+        - Answer(A): 가설 후보 N개(각 한 줄). 분기가 많으면 `mece` skill 로 분해.
+      각 필드의 evidence 가 부족하면 추측하지 말고 open_questions[](`{stage:"scqa", type:"data_request"}`).
+      업계 표준 용어(SCQA·MECE)를 쓰고, 도출의 한계(근거 부족 지점)를 명시한다(편향 가드 ②③).
+
+      결론(핸드오프): S·C·Q·A 4요소 + 가설 후보. Q+A 가 다음(근본원인 추적/가설)으로 넘어간다.
+    inputs: []
+    outputs:
+      - scqa.md
+    handoff_to: null

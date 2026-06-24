@@ -1,13 +1,13 @@
 # skill 고유 frontmatter — parser known set + 감사
 
-> **공통 원칙은 `skills/skill-core/core.md` §7**(load-bearing vs decorative: 모든 커스텀 필드는 동작을
+> **공통 원칙은 `skills/skill-core/primitive-core.md` §3.7**(load-bearing vs decorative: 모든 커스텀 필드는 동작을
 > 구동하거나 검증기가 강제해야 한다 — 둘 다 아니면 부채). 이 파일은 그 원칙을 **skill 에 적용한 실측**이다:
 > skill-parser 가 실제로 파싱하는 필드(load-bearing)와 parsed-but-ignored(decorative) 목록.
 > 근거: agency-agents 필드 드리프트(`color: cyan` vs `"#4285F4"`), `260617` Part I. 필요할 때만 읽힌다.
 
 ## 1. SoloSquad skill 확장 — skill-parser 가 *실제로 파싱*하는 것 (load-bearing)
 `src/bot/skill-parser.ts` 의 `known` 집합에 든 키만 `SkillSpec` 으로 파싱된다(필수 `name`·`description`
-= core.md §2·§3):
+= primitive-core.md §3.2·§3.3):
 
 | 필드 | 구동하는 동작 |
 |---|---|
@@ -21,8 +21,8 @@
 
 ## 2. ⚠️ 감사 — pm_conventions·category 의 부채 해소 (v1.3.6 §3.4)
 2026-06 실측(28 skill)에서 `pm_conventions`·`category` 는 `known` 집합에 없어 **`extra` 로 떨어지는 죽은
-메타데이터**였다. v1.3.6 §3.4 에서 **파서가 surface + validator 가 강제**하도록 만들어 **load-bearing(core.md
-§7 기준 ⑵ — validator-enforced)**으로 전환됐다(위 §1). 값 분포가 *남은* 처리(behavior 주입/글로벌화-제거)를 가른다:
+메타데이터**였다. v1.3.6 §3.4 에서 **파서가 surface + validator 가 강제**하도록 만들어 **load-bearing(primitive-core.md
+§3.7 기준 ⑵ — validator-enforced)**으로 전환됐다(위 §1). 값 분포가 *남은* 처리(behavior 주입/글로벌화-제거)를 가른다:
 
 | 필드 | 분포 | §6.1 결정 A — 잔여 처리 |
 |---|---|---|
@@ -36,8 +36,8 @@
 > **완료(§3.4):** 파싱+검증(load-bearing 전환). **잔여(org 마이그레이션 합류):** 글로벌화-제거(28 skill 에서
 > anti_sycophancy/post_labeling 삭제) + behavior 주입(skill 실행 프롬프트 경로) + category enum. 이유 — 28
 > 파일 프론트매터·category taxonomy 가 조직 재편과 같은 파일을 건드려 그 패스에서 일괄 처리가 충돌 없음.
-> **새 decorative 필드는 지금부터 추가 금지**(core.md §7).
+> **새 decorative 필드는 지금부터 추가 금지**(primitive-core.md §3.7).
 
 ## 3. 작성 시 체크 (skill 판)
 - [ ] 추가하려는 커스텀 필드가 위 §1 `known` 표에 있나? 없으면 → `extra` 로 무시됨 → **추가 보류**.
-- [ ] core.md §7 의 3-체크(known? enum/포맷 강제? 유도 가능?)를 통과하는가.
+- [ ] primitive-core.md §3.7 의 3-체크(known? enum/포맷 강제? 유도 가능?)를 통과하는가.

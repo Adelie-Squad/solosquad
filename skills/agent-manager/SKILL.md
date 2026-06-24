@@ -28,7 +28,7 @@ pm_conventions:
 (`agent new --org <slug>`). org actor 만 수정·삭제 대상.
 
 ## 작성 표준 (이 skill 의 핵심 — 점진공개)
-**공통 작성 표준은 `skills/skill-core/core.md` 가 단일 진실원**이다(skill 과 공유 ~70%: description 공식·
+**공통 작성 표준은 `skills/skill-core/primitive-core.md` 가 단일 진실원**이다(skill 과 공유 ~70%: description 공식·
 정량 한도·본문 절차규율+명명패턴·번들 구조·점진공개·필드 감사·eval 골격). actor 도 같은 `SKILL.md`
 포맷이므로 **그 파일을 먼저 읽어** 적용한다. actor 고유분(~30%)만 아래 4 reference 에 둔다(그때 읽음):
 
@@ -41,7 +41,7 @@ pm_conventions:
 - **`references/guardrails.md`** (G4) — turn/depth budget **자식 상속** + circuit breaker + 비가역 액션 HITL
   (permission policy, **MCP deny-by-default**) + downstream 전 출력 검증(cascading error 방어).
 
-**3대 요지(reference 없이도 기억 — 상세는 core.md + 위 4종):**
+**3대 요지(reference 없이도 기억 — 상세는 primitive-core.md + 위 4종):**
 1. **description = 위임 트리거.** 부모가 라우팅에 쓰는 명함이 곧 description. 불충분하면 그 actor 는 안 불린다.
 2. **역할은 하나로 명확(SRP).** single agent first — 겹치면 새로 만들지 말고 위임. coordinator-first 금지.
 3. **frontmatter 는 그래프다.** 참조 무결성·순환·depth·budget 상속이 정체성만큼 중요.
@@ -68,7 +68,7 @@ pm_conventions:
 
 ## U (수정·개선 / refine — *다른 actor 개선의 정식 입구*)
 1. 대상 선택 → 개요 설명 → 변경 의도 입력(자산 재사용 원칙 동일).
-2. **표준 대조** — core.md + 위 4 reference 기준으로 무엇이 어긋났는지 짚는다(description 약함? 역할 중첩?
+2. **표준 대조** — primitive-core.md + 위 4 reference 기준으로 무엇이 어긋났는지 짚는다(description 약함? 역할 중첩?
    그래프 깨짐? budget 비상속?).
 3. **자가개선 연결** — **행동층 refine**(§3.5① — 본문·tone 의 bounded patch-edit, `eval-recipe` 골격;
    **frontmatter 그래프는 protected**, refine 은 산문만) · 경험층 메모리는 v1.4.0 이관.
@@ -85,4 +85,4 @@ pm_conventions:
 - **정적 그래프 규칙**(참조 무결성·순환·depth·tier↔team) = `solosquad agent validate --graph`. 여기서 반복 안 함.
 - **LLM 품질 리뷰**(다자산 공통) = `primitive-review`. agent-manager 는 *작성/개선*을 소유, 단발 리뷰는 위임 가능.
 - **ledger 기반 개선 후보 식별** = refinement(공유). 그 제안을 받아 *고치는* 게 여기.
-- **수용 채점** = `lifecycle.md` rubric. **skill 작성** = `skill-manager`(동형 권위, 공유 코어 core.md).
+- **수용 채점** = `lifecycle.md` rubric. **skill 작성** = `skill-manager`(동형 권위, 공유 코어 primitive-core.md).

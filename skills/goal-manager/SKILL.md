@@ -23,14 +23,21 @@ pm_conventions:
 Goodhart 함정에 빠진다 — metric·source·termination 을 신중히 합의한다. 결정적 동작은
 `solosquad goal *` 헬퍼로 위임(엔진 `src/engine/**` 는 불변, 직접 조작 금지).
 
-**자산 인지 원칙 (필수):** goal 의 pipeline 단계는 **기존 specialist agent**(`<team>/<agent>`)로
-구성한다. `solosquad agent list` 로 확인하고, 없을 때만 새 actor 생성을 [[agent-manager]] 로 제안한다.
+**작성 표준 (점진공개):** 공통 표준은 `skills/skill-core/primitive-core.md` — 특히 **§0**(goal=org 조립물,
+pipeline 이 agent 참조) · **§2**(인터뷰·초안앵커 4-mode) · **§4.2**(metric provenance·composite ALL-pass·
+종료) · **§5**(rubric). goal 작성/개선 시 먼저 읽어 적용한다.
 
-**C (생성):**
+**자산 인지 원칙 (필수):** goal 의 pipeline 단계는 **기존 specialist agent**(`<team>/<agent>`)로
+구성한다(조립이지 발명 아님). `solosquad agent list` 로 확인하고, 없을 때만 [[agent-manager]] 로 베이스 생성.
+
+**C (생성) — 초안-앵커 인터뷰:**
 1. **scaffold** — `solosquad goal new <goal-id> --org <slug>` 로 `goal.md` 골격 생성(무-LLM).
-2. **metric 설계(대화)** — name·formula·source(검증 가능 경로/URL)·threshold·direction. **측정 가능성**을
-   먼저 확인(추측 metric 거부). pipeline(`<team>/<agent>` 단계)과 budget(time/cost)·termination 합의.
-3. **검토** — `primitive-review` 로 metric provenance·pipeline actor 실존·종료 조건을 점검.
+2. **case 감지 + 초안** — Chief 의 `[creation_case:N]` 로 mode 결정. 매니저가 초안을 깔고 **빈 클러스터**
+   (objective·metric·**guardrail**·pipeline·termination·비가역 승인)을 명시. 마이그레이션(⑵)이면 기존
+   goal.md 를 역공학해 *코드에 없는 판단*(왜 이 threshold·무엇을 깨면 안 되나)을 추출.
+3. **metric 설계(인터뷰)** — name·formula·**source(실존·검증 가능)**·threshold·direction. **측정 가능성**
+   먼저 확인(추측 metric 거부). **composite + ALL-pass**(단일 North Star=Goodhart). pipeline agent 실존 검증.
+4. **검토** — `primitive-review` + 수용 rubric(§5) 자가채점(metric provenance·pipeline 실존·종료·비가역 승인).
 
 **R (조회):** `solosquad goal list` / `goal show <id>` / `goal status [id]` / `goal active`.
 
