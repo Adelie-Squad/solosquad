@@ -26,8 +26,11 @@ import { loadWorkspaceYaml, saveWorkspaceYaml, listOrganizations } from "../../u
  * `routine-logs/`, which the archive ingester no longer scans under its old
  * name).
  *
- * Idempotent: a source dir whose target already exists is merged file-by-file
- * (no clobber), and an absent source is a no-op. detect() matches "1.3.2".
+ * Idempotent: a source dir whose target already exists is merged recursively;
+ * leaf collisions keep the newer `dst` override (the superseded `src` duplicate
+ * is dropped, preserved in the backup) so the legacy dir always empties even
+ * when `schedules/` and `routines/` share entry names. Absent source = no-op.
+ * detect() matches "1.3.2".
  */
 
 const TARGET = "1.3.3";
@@ -37,8 +40,15 @@ function isFromVersion(version: string | undefined): boolean {
   return version === "1.3.2" || version.startsWith("1.3.2.");
 }
 
-/** Move `src` → `dst`. If `dst` exists, move entries individually (no clobber)
- *  then remove the now-empty `src`. No-op when `src` is absent. */
+/** Move `src` → `dst`, folding into `dst` when it already exists. Recurses into
+ *  same-named subdirectories so a dir-vs-dir collision merges instead of being
+ *  orphaned. On a leaf collision (file-vs-file, or file/dir type mismatch) the
+ *  `dst` copy wins — `dst` already holds the newer override (schedules folds in
+ *  before the older routines), and the migration framework keeps a full backup —
+ *  so the superseded `src` duplicate is dropped. Guarantees `src` ends up empty
+ *  and is removed (so verify's "legacy dir gone" check passes even when both
+ *  `schedules/` and `routines/` contain same-named entries). No-op when `src`
+ *  is absent. */
 function moveDir(src: string, dst: string): boolean {
   if (!fs.existsSync(src)) return false;
   if (!fs.existsSync(dst)) {
@@ -46,7 +56,6 @@ function moveDir(src: string, dst: string): boolean {
     fs.renameSync(src, dst);
     return true;
   }
-  // dst exists — merge entries that don't already exist there, leave the rest.
   let moved = false;
   for (const entry of fs.readdirSync(src)) {
     const from = path.join(src, entry);
@@ -54,9 +63,20 @@ function moveDir(src: string, dst: string): boolean {
     if (!fs.existsSync(to)) {
       fs.renameSync(from, to);
       moved = true;
+    } else if (
+      fs.statSync(from).isDirectory() &&
+      fs.statSync(to).isDirectory()
+    ) {
+      // Same-named subdir on both sides — merge recursively.
+      if (moveDir(from, to)) moved = true;
+    } else {
+      // Leaf collision — dst (newer override) wins; drop the superseded src
+      // duplicate (preserved in the migration backup).
+      fs.rmSync(from, { recursive: true, force: true });
+      moved = true;
     }
   }
-  // Remove src only if it ended up empty.
+  // src is now empty (every entry was moved, merged, or dropped) — remove it.
   if (fs.readdirSync(src).length === 0) fs.rmdirSync(src);
   return moved;
 }

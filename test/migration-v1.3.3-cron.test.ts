@@ -83,6 +83,47 @@ test("v1.3.2 → v1.3.3 renames schedules→crons + routine-logs→cron-logs and
   }
 });
 
+test("v1.3.2 → v1.3.3 folds schedules + routines into crons even with name collisions", async () => {
+  // Reproduces the field failure: a workspace that has BOTH .solosquad/schedules
+  // and .solosquad/routines, with a same-named entry (and a same-named subdir) in
+  // each — the old one-level merge left the colliding entry in routines/ so verify
+  // failed with "legacy cron dirs still present".
+  const ws = makeWorkspace("1.3.2"); // already has schedules/foo.{yaml,md}
+  try {
+    const solo = path.join(ws, ".solosquad");
+    // older v1.0.x routines override: a colliding foo.yaml + a unique bar.yaml +
+    // a colliding subdir that itself holds a unique file.
+    fs.mkdirSync(path.join(solo, "routines"), { recursive: true });
+    fs.writeFileSync(path.join(solo, "routines", "foo.yaml"), "id: foo-OLD\n");
+    fs.writeFileSync(path.join(solo, "routines", "bar.yaml"), "id: bar\n");
+    fs.mkdirSync(path.join(solo, "schedules", "shared"), { recursive: true });
+    fs.writeFileSync(path.join(solo, "schedules", "shared", "a.txt"), "a\n");
+    fs.mkdirSync(path.join(solo, "routines", "shared"), { recursive: true });
+    fs.writeFileSync(path.join(solo, "routines", "shared", "b.txt"), "b\n");
+
+    await v132ToV133.apply(ws);
+
+    // Both legacy dirs gone → verify passes.
+    assert.ok(!fs.existsSync(path.join(solo, "schedules")), "schedules gone");
+    assert.ok(!fs.existsSync(path.join(solo, "routines")), "routines gone");
+    const v = await v132ToV133.verify(ws);
+    assert.equal(v.ok, true, v.ok ? "" : v.error);
+
+    // Newer (schedules) wins on the foo.yaml collision; unique bar.yaml carried over.
+    assert.equal(
+      fs.readFileSync(path.join(solo, "crons", "foo.yaml"), "utf8"),
+      "id: foo\ncron: '0 9 * * 1'\n",
+      "schedules foo.yaml (newer) must win the collision"
+    );
+    assert.ok(fs.existsSync(path.join(solo, "crons", "bar.yaml")), "unique routines bar.yaml carried over");
+    // Colliding subdir merged recursively — both files present.
+    assert.ok(fs.existsSync(path.join(solo, "crons", "shared", "a.txt")), "schedules shared/a.txt");
+    assert.ok(fs.existsSync(path.join(solo, "crons", "shared", "b.txt")), "routines shared/b.txt merged");
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
 test("v1.3.2 → v1.3.3 is idempotent (re-run is a no-op)", async () => {
   const ws = makeWorkspace("1.3.2");
   try {

@@ -4,6 +4,29 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.9] — 2026-06-25 (hotfix on 1.3.8 — migration collision + 3-segment version model)
+
+See `docs/prd/v1.3.9_migration-collision-hotfix.md`. A hotfix surfaced by a dogfood
+`migrate --apply` (1.2.9 → 1.3.8) that failed at the bundled `1.3.2 → 1.3.3` step.
+1.3.8 was tagged but never published; **1.3.9 is the first npm release of this batch.**
+
+- **Migration collision fix.** `1.3.2 → 1.3.3` folds both `.solosquad/schedules` and
+  `.solosquad/routines` into `crons/`. The old one-level `moveDir` left same-named
+  entries behind (verify failed: "legacy cron dirs still present"). `moveDir` now
+  merges subdirectories recursively and, on a leaf collision, keeps the newer
+  override (`schedules`) and drops the superseded duplicate (preserved in the
+  migration backup) — so the legacy dir always empties. Regression test added for
+  the both-dirs + same-name + colliding-subdir case.
+- **Migrations 1.3.2 → 1.3.8 re-reviewed.** Only `1.3.2 → 1.3.3` was blocking;
+  `1.3.4 → 1.3.5` already tolerates collisions in verify; the rest are no-op bumps
+  or the idempotent 1.3.8 seed.
+- **3-segment version model correction.** Versions are always `vN.N.N` (never 4
+  segments). A hotfix is the next patch (1.3.8 → 1.3.9) with its own lightweight
+  **hotfix-format PRD** (PRD↔version 1:1 holds). The `prd` skill gains the rule +
+  hotfix PRD format; the stray `1.3.8.1` / "parent-PRD §Hotfix" wording is removed.
+- Continuity migration `1.3.8 → 1.3.9` (no-op bump). Recovery for a stuck upgrade:
+  `solosquad migrate --rollback` then `--apply`.
+
 ## [1.3.8] — 2026-06-25 (docs management system + `docs` skill)
 
 See `docs/prd/v1.3.8_docs-management.md`. The docs (documentation) slice of the
@@ -20,7 +43,7 @@ force-seeds org-layer dirs in the workspace; no repo working tree is touched.
   itself) collapses both layers into the same `docs/`.
 - **(B) New `docs` skill.** `skills/docs/SKILL.md` — the single curation authority
   for classification, naming (`<version>_<name>_<date>`), PRD↔release-version 1:1
-  (hotfix = parent PRD `## Hotfix` section), the publish gate, INDEX upkeep, and
+  (hotfix = next 3-segment patch with its own hotfix-format PRD), the publish gate, INDEX upkeep, and
   PRD-shape branching. `prd` stays the per-PRD writer (role split); PM gains
   `docs` in `skills_used` + an autonomous-chain `g) docs` step.
 - **(C) `prd` 8 authoring rules.** R1–R5 (context / over-spec) + R6–R8 (AI-product

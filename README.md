@@ -64,19 +64,23 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
-## What's new in v1.3.8 (2026-06-25)
+## What's new in v1.3.9 (2026-06-25)
 
-**Docs management system + a `docs` skill.** The documentation slice of the 1.3.x "primitive & doc authoring internalization" line. Docs and versioning are made **repository-scoped**, with a single curation authority and an expanded pre-publish gate.
+**Hotfix on 1.3.8 + the docs management system.** v1.3.9 ships the docs work below plus a migration fix surfaced in dogfood upgrade testing (1.3.8 was tagged but never published, so **1.3.9 is the first npm release of this batch**).
+
+- **Migration collision fix** — the bundled `1.3.2 → 1.3.3` step folds `.solosquad/schedules` and `.solosquad/routines` into `crons/`; it now merges recursively and resolves same-name collisions (newer wins, superseded copy kept in the backup) instead of failing verify. Versions stay 3-segment (`vN.N.N`); a hotfix is the next patch with its own hotfix-format PRD.
+
+**Docs management system + a `docs` skill** (from 1.3.8). The documentation slice of the 1.3.x "primitive & doc authoring internalization" line. Docs and versioning are made **repository-scoped**, with a single curation authority and an expanded pre-publish gate.
 
 - **Docs scope = repository unit** — each repo owns its `package.json`/`docs/`/CHANGELOG/manual and bumps x/y/z independently (work ≠ release). Two orthogonal axes: external/internal (enforced by `package.json` `files`) and **repo layer** (prd · architecture · roadmap · README · CHANGELOG · manual = release-bound) vs **org workspace layer** (ideation · reports = cross-repo research). A single-repo project collapses both into the same `docs/`.
-- **New `docs` skill** — the single authority for classification, naming (`<version>_<name>_<date>`), PRD↔release-version 1:1 (hotfix = parent PRD `## Hotfix`), the publish gate, and INDEX upkeep. `prd` stays the per-PRD writer.
+- **New `docs` skill** — the single authority for classification, naming (`<version>_<name>_<date>`), PRD↔release-version 1:1 (hotfix = next 3-segment patch with its own hotfix-format PRD), the publish gate, and INDEX upkeep. `prd` stays the per-PRD writer.
 - **`prd` 8 authoring rules** — R1–R5 (context / over-spec) + R6–R8 (AI-product PRD branch: range of acceptable answers · Eval Plan · guardrails; completeness score; Given-When-Then AC).
 - **6-doc conditional gate** — `docs-check` expands 4→6 (roadmap · architecture · CHANGELOG · README required + manual conditional) + PRD existence + a `docs/`-leak invariant.
 - **Migration** — `1.3.7 → 1.3.8` force-seeds org-layer `ideation/`+`reports/` (with INDEX) in the workspace; repo working trees are untouched.
 
 Bundle-only — no user-workspace data changes beyond the seeded org dirs.
 
-Full release notes: [CHANGELOG.md §1.3.8](CHANGELOG.md).
+Full release notes: [CHANGELOG.md §1.3.9](CHANGELOG.md).
 
 ---
 

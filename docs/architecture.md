@@ -1200,9 +1200,15 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.32 v1.3.9 — 마이그레이션 충돌 핫픽스 + 버전 3자리 모델 정정 (2026-06-25)
+
+v1.3.8 직후 dogfood `migrate --apply`(1.2.9→1.3.8)가 번들 `1.3.2→1.3.3` 단계에서 verify 실패("legacy cron dirs still present")로 노출된 핫픽스. **(A) `moveDir` 재귀 병합 + 충돌 처리** — v1.3.3 이 `.solosquad/{schedules,routines}` 를 같은 `crons/` 로 접을 때, 옛 한-단계 병합이 동명 항목을 남겨 routines 가 안 비워지던 결함. 이제 동명 하위 디렉토리는 재귀 병합, 리프 충돌은 더 새 override(schedules)가 이기고 밀려난 중복은 드롭(백업 보존) → 레거시 dir 항상 비워짐. 회귀 테스트(공존+동명+하위 디렉토리 충돌) 추가. **(B) 마이그레이션 1.3.2~1.3.8 재검토** — 블로킹은 1.3.2→1.3.3 하나; 1.3.4→1.3.5 는 verify 충돌 관용(크래시 없음), 나머지 no-op/멱등. **(C) 버전 3자리 모델 정정** — 버전은 항상 `vN.N.N`(4자리 금지); 핫픽스=다음 patch(1.3.8→1.3.9)+자체 핫픽스양식 PRD(PRD↔버전 1:1 유지). `prd` 스킬 R1 3자리 규칙 + 핫픽스 PRD 양식 신설, `1.3.8.1`·"부모 PRD §Hotfix" 표현 제거. 연속성 마이그레이션 `1.3.8-to-1.3.9`(no-op). v1.3.8 은 npm 미게시, 1.3.9 가 이 배치 첫 게시분.
+
+자세히: `docs/prd/v1.3.9_migration-collision-hotfix.md`
+
 #### 13.6.31 v1.3.8 — 문서 관리 체계 + `docs` 스킬 (2026-06-25)
 
-1.3.x "primitive·문서 작성체계 내재화" 의 문서(docs) 조각. **(A) 문서 스코프 = repository 단위**(핵심) — docs·버전은 repo 종속(각 repo 가 자기 `package.json`·`docs/`·CHANGELOG·manual 보유, 독립 x/y/z 범프; 작업≠배포). 두 직교 축: 외부/내부(`package.json.files` 강제) + **repo 계층**(prd·architecture·roadmap·README·CHANGELOG·manual=release-bound) vs **org 워크스페이스 계층**(ideation·reports=cross-repo 발산·근거). 단일 repo(SoloSquad)는 두 계층이 같은 `docs/` 로 접힘. **(B) `docs` 스킬 신설** `skills/docs/SKILL.md` — 분류·명명(`<version>_<name>_<date>`)·PRD↔release버전 1:1(핫픽스=부모 PRD §Hotfix)·배포 게이트·INDEX·shape 분기의 단일 큐레이션 권위(`prd`=per-PRD writer 역할 분리; PM `skills_used`+자율체인 `g) docs`). **(C) `prd` 작성 8규칙** R1–R5(맥락·오버스펙) + R6–R8(AI 제품 PRD 분기[허용 답변 범위·Eval Plan·가드레일]·완성도 단계 척도·Given-When-Then AC; ideation `260625-ai-planning-insights` 21소스 종합). **(D) 게이트 6종 조건부** `scripts/check-docs-freshness.ts` 4→6(roadmap·architecture·CHANGELOG·README 필수 + manual 조건부[부재 시 스킵] + PRD 존재 + docs/ 누출 불변식, 승격 경로 backward-compat). **(E) 재정비** architecture·roadmap → `docs/` 직속 승격(living), `docs/reports/` 신설 + prd·reports·ideation INDEX(산재 리포트는 fix-forward 유지). 연속성 마이그레이션 `1.3.7-to-1.3.8`(org 계층 ideation/reports 강제 시드, repo 계층 무영향 = class A 보존).
+1.3.x "primitive·문서 작성체계 내재화" 의 문서(docs) 조각. **(A) 문서 스코프 = repository 단위**(핵심) — docs·버전은 repo 종속(각 repo 가 자기 `package.json`·`docs/`·CHANGELOG·manual 보유, 독립 x/y/z 범프; 작업≠배포). 두 직교 축: 외부/내부(`package.json.files` 강제) + **repo 계층**(prd·architecture·roadmap·README·CHANGELOG·manual=release-bound) vs **org 워크스페이스 계층**(ideation·reports=cross-repo 발산·근거). 단일 repo(SoloSquad)는 두 계층이 같은 `docs/` 로 접힘. **(B) `docs` 스킬 신설** `skills/docs/SKILL.md` — 분류·명명(`<version>_<name>_<date>`)·PRD↔release버전 1:1(핫픽스=다음 patch 3자리 + 핫픽스양식 PRD)·배포 게이트·INDEX·shape 분기의 단일 큐레이션 권위(`prd`=per-PRD writer 역할 분리; PM `skills_used`+자율체인 `g) docs`). **(C) `prd` 작성 8규칙** R1–R5(맥락·오버스펙) + R6–R8(AI 제품 PRD 분기[허용 답변 범위·Eval Plan·가드레일]·완성도 단계 척도·Given-When-Then AC; ideation `260625-ai-planning-insights` 21소스 종합). **(D) 게이트 6종 조건부** `scripts/check-docs-freshness.ts` 4→6(roadmap·architecture·CHANGELOG·README 필수 + manual 조건부[부재 시 스킵] + PRD 존재 + docs/ 누출 불변식, 승격 경로 backward-compat). **(E) 재정비** architecture·roadmap → `docs/` 직속 승격(living), `docs/reports/` 신설 + prd·reports·ideation INDEX(산재 리포트는 fix-forward 유지). 연속성 마이그레이션 `1.3.7-to-1.3.8`(org 계층 ideation/reports 강제 시드, repo 계층 무영향 = class A 보존).
 
 자세히: `docs/prd/v1.3.8_docs-management.md`
 
