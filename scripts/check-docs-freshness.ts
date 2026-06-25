@@ -1,24 +1,25 @@
 #!/usr/bin/env tsx
 /**
- * v0.8.5 §2.3 — Pre-publish documentation freshness gate.
+ * v1.3.8 §3.5 — Pre-publish documentation freshness gate (repo-scoped).
  *
- * Reads the current `package.json` version and verifies that all four
- * release-critical docs mention it:
- *   - docs/plan/product-roadmap.md  (synergy/role/vision)
- *   - docs/plan/architecture.md     (§13.x version section)
- *   - manual/master-guide_ko.html   (user-facing manual, Korean)
- *   - manual/master-guide_en.html   (user-facing manual, English)
+ * docs·version are REPOSITORY-scoped: this checks the current repo's
+ * `package.json` version against this repo's release-bound docs.
  *
- * v0.9.1: master-guide moved from docs/manual/ to top-level manual/ so that
- * npm-published package includes it (docs/ stays dev-only per package.json
- * `files` field).
+ * Checks (PRD docs/prd/v1.3.8_docs-management.md §3.5):
+ *   1. A frozen PRD for vN.N.N exists in docs/prd/ (repo layer).
+ *   2. Core docs mention vN.N.N: roadmap, architecture, CHANGELOG, README.
+ *      - roadmap/architecture accept the promoted path (docs/) OR the legacy
+ *        path (docs/prd/) for backward-compat (v1.3.8 promotion).
+ *   3. Conditional: manual ko/en mention vN.N.N ONLY if they exist
+ *      (manual is omitted for products where users don't read md/html docs —
+ *      §3.2 †). Absent manual = skip, not fail.
+ *   4. Invariant: package.json `files` must not expose anything under docs/
+ *      (internal docs must not leak into the npm package).
  *
  * Wired into `npm run prepublishOnly` so a stale doc blocks `npm publish`.
- * Matches the user memory rule `feedback_three_docs_pre_publish.md`.
+ * Supersedes the v0.8.5 4-docs gate; aligns with feedback_three_docs_pre_publish.
  *
- * Exit codes:
- *   0 — all three docs mention the version
- *   1 — at least one doc is stale
+ * Exit codes: 0 — all green · 1 — at least one failure.
  */
 import fs from "fs";
 import path from "path";
@@ -29,41 +30,76 @@ const repoRoot = path.resolve(__dirname, "..");
 
 const pkg = JSON.parse(
   fs.readFileSync(path.join(repoRoot, "package.json"), "utf-8"),
-) as { version: string };
+) as { version: string; files?: string[] };
 const version = pkg.version;
 
-const targets = [
-  // v1.0.4 renamed docs/plan/ → docs/prd/. Keep both paths for backward
-  // compat — the check passes if EITHER location is present per row.
-  "docs/prd/product-roadmap.md",
-  "docs/prd/architecture.md",
-  "manual/master-guide_ko.html",
-  "manual/master-guide_en.html",
-];
-
 let failed = 0;
-for (const rel of targets) {
-  const abs = path.join(repoRoot, rel);
-  if (!fs.existsSync(abs)) {
-    console.error(`✗ ${rel} — file not found`);
-    failed++;
-    continue;
+const abs = (rel: string) => path.join(repoRoot, rel);
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// 1. PRD existence (repo layer, frozen). Accept new `v<ver>_name` and legacy `v<ver>-name`.
+const prdDir = abs("docs/prd");
+const prdRe = new RegExp(`^v${escapeRe(version)}[_-]`);
+const prdHit =
+  fs.existsSync(prdDir) && fs.readdirSync(prdDir).some((f) => prdRe.test(f));
+if (prdHit) {
+  console.log(`✓ docs/prd/ has a PRD for v${version}`);
+} else {
+  console.error(`✗ no frozen PRD for v${version} in docs/prd/ (v${version}_<name>.md)`);
+  failed++;
+}
+
+// 2/3. Freshness rows. Pass if the FIRST existing candidate mentions the version.
+function checkRow(label: string, candidates: string[], required = true): void {
+  const existing = candidates.filter((rel) => fs.existsSync(abs(rel)));
+  if (existing.length === 0) {
+    if (required) {
+      console.error(`✗ ${label} — no file found (${candidates.join(" | ")})`);
+      failed++;
+    } else {
+      console.log(`− ${label} — absent, skipped (conditional doc)`);
+    }
+    return;
   }
-  const body = fs.readFileSync(abs, "utf-8");
-  if (body.includes(version)) {
-    console.log(`✓ ${rel} mentions ${version}`);
+  const hit = existing.find((rel) =>
+    fs.readFileSync(abs(rel), "utf-8").includes(version),
+  );
+  if (hit) {
+    console.log(`✓ ${hit} mentions ${version}`);
   } else {
-    console.error(`✗ ${rel} does not mention ${version}`);
+    console.error(`✗ ${label} (${existing.join(", ")}) does not mention ${version}`);
     failed++;
   }
+}
+
+// Core (required). roadmap/architecture: promoted path first, legacy fallback.
+checkRow("roadmap", ["docs/roadmap.md", "docs/prd/product-roadmap.md"]);
+checkRow("architecture", ["docs/architecture.md", "docs/prd/architecture.md"]);
+checkRow("CHANGELOG", ["CHANGELOG.md"]);
+checkRow("README", ["README.md"]);
+
+// Conditional (manual — only if the product ships a manual).
+checkRow("manual(ko)", ["manual/master-guide_ko.html"], false);
+checkRow("manual(en)", ["manual/master-guide_en.html"], false);
+
+// 4. Invariant: no docs/ leak into the published package.
+const leak = (pkg.files ?? []).filter((f) =>
+  /^\.?\/?docs(\/|$)/.test(String(f).trim()),
+);
+if (leak.length > 0) {
+  console.error(`✗ package.json files exposes docs/: ${leak.join(", ")}`);
+  failed++;
+} else {
+  console.log(`✓ package.json files does not leak docs/`);
 }
 
 if (failed > 0) {
   console.error(
-    `\ndocs-check: ${failed}/${targets.length} stale. Update the release-` +
-      `critical docs (product-roadmap / architecture / master-guide ko+en) ` +
-      `before publishing.`,
+    `\ndocs-check: ${failed} failure(s). Update release-bound docs ` +
+      `(roadmap / architecture / CHANGELOG / README, + manual if present) to ` +
+      `mention v${version}, ensure a docs/prd/ PRD exists, and keep docs/ out ` +
+      `of package.json files before publishing.`,
   );
   process.exit(1);
 }
-console.log(`\ndocs-check: all ${targets.length} docs mention ${version}.`);
+console.log(`\ndocs-check: all release-bound docs are fresh for v${version}.`);

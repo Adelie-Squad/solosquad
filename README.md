@@ -29,7 +29,7 @@ SoloSquad is a **hierarchical orchestrator-workers** system, not a decentralized
              specialists (member) ── 20 bounded workers across the 4 teams
 ```
 
-The delegation graph is a **DAG, not a pure tree** — `pm` calls the other three leaders (plan→hand-off), so reference-integrity + cycle validation matters (`solosquad agent validate --graph`). Each spawn gets an independent context window. Full detail: [`docs/prd/architecture.md` §5.1](docs/prd/architecture.md).
+The delegation graph is a **DAG, not a pure tree** — `pm` calls the other three leaders (plan→hand-off), so reference-integrity + cycle validation matters (`solosquad agent validate --graph`). Each spawn gets an independent context window. Full detail: [`docs/architecture.md` §5.1](docs/architecture.md).
 
 **Platforms:** Windows · macOS · Linux (cross-platform CLI, CI-tested)
 **Messenger:** Discord — one per workspace. Slack adapter code ships but is **not part of the v1.0 SemVer promise** (post-v1.0 slot). Telegram support removed in v0.2.4.
@@ -60,24 +60,23 @@ It covers, in ten menu-divided sections:
 
 Every feature is tagged with a version badge.
 
-For internal architecture, release planning, and decision history, see [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) + [`docs/prd/architecture.md`](docs/prd/architecture.md).
+For internal architecture, release planning, and decision history, see [`docs/roadmap.md`](docs/roadmap.md) + [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
-## What's new in v1.3.3 (2026-06-19)
+## What's new in v1.3.8 (2026-06-25)
 
-**Cron terminology unification + a full cron lifecycle.** The two interchangeable names for scheduled jobs — *routine* (built-in) and *schedule* (user-authored) — are unified into one noun: **cron**, and crons gain a complete create/operate/observe lifecycle (referencing the OpenClaw + Hermes cron UX).
+**Docs management system + a `docs` skill.** The documentation slice of the 1.3.x "primitive & doc authoring internalization" line. Docs and versioning are made **repository-scoped**, with a single curation authority and an expanded pre-publish gate.
 
-- **One `cron` command group (breaking)** — `solosquad cron start | run | list | new | edit | enable | disable | delete | runs | freq | show | validate` replaces the old `schedule` / `schedules` / `run-routine`. References take an **id or name**; friendly schedules (`@daily`, `every 1h`); a **next-run preview** on create/edit.
-- **Operate without restarts** — the daemon **hot-reloads** crons on file change (chokidar); `enable`/`disable` is pause ≠ delete; `delete` archives by default.
-- **Observe** — every run is recorded; `cron runs` shows status/when/duration, and a **dead-man's-switch** alerts on silently-missed crons. `[SILENT]`/empty output is logged but not posted.
-- **One-shot** — `cron new <id> --at "20m"` (or an ISO time) runs once then auto-deletes.
-- **Personal briefs** — set `timezone` + a `crons` block in a user's yaml to get briefs in their own `works-<handle>` channel at their own timezone. **`/create`** captures recent work as a reusable SKILL; `cron freq` surfaces (suggest-only) keyword-routing suggestions.
-- **Migration** — `1.3.2 → 1.3.3` moves `.solosquad/{schedules,routines} → crons` and `memory/routine-logs → cron-logs` (idempotent; legacy dirs still read until then).
+- **Docs scope = repository unit** — each repo owns its `package.json`/`docs/`/CHANGELOG/manual and bumps x/y/z independently (work ≠ release). Two orthogonal axes: external/internal (enforced by `package.json` `files`) and **repo layer** (prd · architecture · roadmap · README · CHANGELOG · manual = release-bound) vs **org workspace layer** (ideation · reports = cross-repo research). A single-repo project collapses both into the same `docs/`.
+- **New `docs` skill** — the single authority for classification, naming (`<version>_<name>_<date>`), PRD↔release-version 1:1 (hotfix = parent PRD `## Hotfix`), the publish gate, and INDEX upkeep. `prd` stays the per-PRD writer.
+- **`prd` 8 authoring rules** — R1–R5 (context / over-spec) + R6–R8 (AI-product PRD branch: range of acceptable answers · Eval Plan · guardrails; completeness score; Given-When-Then AC).
+- **6-doc conditional gate** — `docs-check` expands 4→6 (roadmap · architecture · CHANGELOG · README required + manual conditional) + PRD existence + a `docs/`-leak invariant.
+- **Migration** — `1.3.7 → 1.3.8` force-seeds org-layer `ideation/`+`reports/` (with INDEX) in the workspace; repo working trees are untouched.
 
-911 tests pass.
+Bundle-only — no user-workspace data changes beyond the seeded org dirs.
 
-Full release notes: [CHANGELOG.md §1.3.3](CHANGELOG.md).
+Full release notes: [CHANGELOG.md §1.3.8](CHANGELOG.md).
 
 ---
 
@@ -318,7 +317,7 @@ Full details in master-guide §7.1.
 
 Current npm release: **v1.3.2** (npm registry: `1.3.2`).
 
-v1.0 marked the formal release with stable API guarantees. Shipped + planned milestones (full history in [`CHANGELOG.md`](CHANGELOG.md), decision log in [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6):
+v1.0 marked the formal release with stable API guarantees. Shipped + planned milestones (full history in [`CHANGELOG.md`](CHANGELOG.md), decision log in [`docs/roadmap.md`](docs/roadmap.md) §6):
 
 | Version | Theme | Highlights |
 |---|---|---|
@@ -344,7 +343,7 @@ v1.0 marked the formal release with stable API guarantees. Shipped + planned mil
 | v1.x (planned) | Knowledge ontology + MCP | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
 | v1.x (planned) | LLM backend abstraction | Multi-backend (single Claude → pluggable) |
 
-Decision log: [`docs/prd/product-roadmap.md`](docs/prd/product-roadmap.md) §6.
+Decision log: [`docs/roadmap.md`](docs/roadmap.md) §6.
 
 ---
 
@@ -413,9 +412,10 @@ deploy/
   docker/                         → Container deployment (Dockerfile + compose + README)
 docs/
   manual/master-guide_{en,ko}.html → 📖 Canonical user manual (10 sections, EN + KO)
-  plan/                           → Release planning + decision log (v0.1 → v1.2)
-  plan/product-roadmap.md         → Master roadmap + decision log §4
-  plan/architecture.md            → Internal system design
+  roadmap.md                      → Master roadmap + decision log §4 (repo layer, living)
+  architecture.md                 → Internal system design (repo layer, living)
+  prd/                            → Per-release PRDs (repo layer) + INDEX.md
+  reports/ · ideation/            → Product research/exploration (org layer) + INDEX.md
   manual/cloud-deployment.md        → VPS + systemd setup
   poc/                            → v0.3 PoC integration scripts (archive)
   reference/                      → Design vocabulary sources
@@ -489,7 +489,7 @@ End-user workspace (created by `solosquad init`, evolved through migrations):
 | [phuryn/pm-skills](https://github.com/phuryn/pm-skills) | auto-load + slash dual-trigger SKILL routing (adopted in v0.5 4-channel router) |
 | [OpenClaw](https://github.com/openclaw/openclaw) | npm publishing + `update` / `doctor` CLI patterns |
 
-Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration, MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/prd/product-roadmap.md` §4 for the reasoning.
+Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration, MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/roadmap.md` §4 for the reasoning.
 
 ---
 

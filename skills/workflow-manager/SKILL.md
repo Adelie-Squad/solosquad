@@ -58,7 +58,7 @@ pm_conventions:
 ## 메인/문제정의 선택 = 추론 + 애매하면 되묻기
 입력 맥락으로 추론하되 **선처방 금지** — 애매하면 사용자에게 되묻는다(TRIAGE 사후 라벨링 정합). new-build
 시작점(아이디어 vs 요구사항)은 입력 구체성으로, 문제정의 워크플로는 *문제 성격*(구조화/근원/지표)으로 고른다.
-산출: 기획 PRD=`<org>/docs/prd/<slug>.md`, 리포트=`<org>/docs/reports/`, 목록=`<org>/docs/INDEX.md`.
+산출(v1.3.8 둘 계층 분리): PRD=`<repo>/docs/prd/<version>_<name>.md`(repo 계층·release 버전 1:1), 리포트=`<org>/docs/reports/`·ideation=`<org>/docs/ideation/`(org 계층·cross-repo), INDEX=각 계층 폴더별.
 
 ## R / U / D
 - **R** — `solosquad workflow list` / `show <id>`.

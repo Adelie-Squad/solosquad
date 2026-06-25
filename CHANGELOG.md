@@ -4,6 +4,38 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.8] — 2026-06-25 (docs management system + `docs` skill)
+
+See `docs/prd/v1.3.8_docs-management.md`. The docs (documentation) slice of the
+1.3.x "primitive & doc authoring internalization" umbrella. Repository-scoped
+docs/versioning + a single curation authority. Bundle-only — the migration only
+force-seeds org-layer dirs in the workspace; no repo working tree is touched.
+
+- **(A) Docs scope = repository unit.** docs and version are per-repo (each repo
+  owns its `package.json`/`docs/`/CHANGELOG/manual and bumps x/y/z independently;
+  work ≠ release). Two orthogonal axes: external/internal (enforced by
+  `package.json` `files`) and **repo layer** (prd · architecture · roadmap ·
+  README · CHANGELOG · manual = release-bound) vs **org workspace layer**
+  (ideation · reports = cross-repo research). A single-repo project (SoloSquad
+  itself) collapses both layers into the same `docs/`.
+- **(B) New `docs` skill.** `skills/docs/SKILL.md` — the single curation authority
+  for classification, naming (`<version>_<name>_<date>`), PRD↔release-version 1:1
+  (hotfix = parent PRD `## Hotfix` section), the publish gate, INDEX upkeep, and
+  PRD-shape branching. `prd` stays the per-PRD writer (role split); PM gains
+  `docs` in `skills_used` + an autonomous-chain `g) docs` step.
+- **(C) `prd` 8 authoring rules.** R1–R5 (context / over-spec) + R6–R8 (AI-product
+  PRD branch — range of acceptable answers · Eval Plan · guardrails; completeness
+  score; Given-When-Then AC), distilled from ideation `260625-ai-planning-insights`
+  (21 sources).
+- **(D) 6-doc conditional gate.** `scripts/check-docs-freshness.ts` expanded 4→6:
+  roadmap · architecture · CHANGELOG · README required + manual conditional (skip
+  if absent) + PRD existence + a `docs/`-leak invariant, with backward-compat for
+  the promoted paths.
+- **(E) Dogfood reorg.** architecture / product-roadmap promoted to `docs/`
+  top-level (living); `docs/reports/` added with prd/reports/ideation `INDEX.md`
+  (scattered reports kept in place — fix-forward). Continuity migration
+  `1.3.7-to-1.3.8` force-seeds org-layer ideation/reports; repo layer untouched.
+
 ## [1.3.7] — 2026-06-24 (workflow/goal/cron authoring internalization + workflow restructure)
 
 See `docs/prd/v1.3.7-workflow-goal-cron-authoring-internalization.md`. Extends the
