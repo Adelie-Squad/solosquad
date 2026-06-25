@@ -50,6 +50,7 @@
 | [v1.3.6-skill-agent-authoring-internalization.md](v1.3.6-skill-agent-authoring-internalization.md) | |
 | [v1.3.7-workflow-goal-cron-authoring-internalization.md](v1.3.7-workflow-goal-cron-authoring-internalization.md) | |
 | [v1.3.8_docs-management.md](v1.3.8_docs-management.md) | |
+| [v1.3.12_docker-cloud-deploy-and-health-notify.md](v1.3.12_docker-cloud-deploy-and-health-notify.md) | |
 | [v1.4.0-session-orchestration.md](v1.4.0-session-orchestration.md) | |
 | [v1.5.0-customization-upstream-reconciliation.md](v1.5.0-customization-upstream-reconciliation.md) | |
 | [v1.x-dashboard-interaction.md](v1.x-dashboard-interaction.md) | |
