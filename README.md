@@ -66,7 +66,7 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ## What's new in v1.3.9 (2026-06-25)
 
-**Hotfix on 1.3.8 + the docs management system.** v1.3.9 ships the docs work below plus a migration fix surfaced in dogfood upgrade testing (1.3.8 was tagged but never published, so **1.3.9 is the first npm release of this batch**).
+**Hotfix on 1.3.8 + the docs management system.** v1.3.9 ships the docs work below plus a migration fix surfaced in dogfood upgrade testing. **1.3.8 shipped to npm with the bug, so 1.3.9 is a same-day hotfix — upgrade from 1.3.8 to 1.3.9.**
 
 - **Migration collision fix** — the bundled `1.3.2 → 1.3.3` step folds `.solosquad/schedules` and `.solosquad/routines` into `crons/`; it now merges recursively and resolves same-name collisions (newer wins, superseded copy kept in the backup) instead of failing verify. Versions stay 3-segment (`vN.N.N`); a hotfix is the next patch with its own hotfix-format PRD.
 

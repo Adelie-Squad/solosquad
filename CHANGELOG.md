@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 See `docs/prd/v1.3.9_migration-collision-hotfix.md`. A hotfix surfaced by a dogfood
 `migrate --apply` (1.2.9 → 1.3.8) that failed at the bundled `1.3.2 → 1.3.3` step.
-1.3.8 was tagged but never published; **1.3.9 is the first npm release of this batch.**
+1.3.8 shipped to npm with this defect; **1.3.9 is a same-day hotfix on it — upgrade from 1.3.8 to 1.3.9** (cf. the 1.2.2 → 1.2.3 precedent).
 
 - **Migration collision fix.** `1.3.2 → 1.3.3` folds both `.solosquad/schedules` and
   `.solosquad/routines` into `crons/`. The old one-level `moveDir` left same-named
