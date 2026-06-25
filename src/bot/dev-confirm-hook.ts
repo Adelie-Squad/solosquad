@@ -109,13 +109,17 @@ export function classifySensitive(
 ): { action: HookAction; branch: string | null } {
   if (!isSensitiveGitCommand(cmd)) return { action: "allow", branch: null };
   // `gh pr merge` / `gh pr close` have no destination branch — straight to
-  // confirm (the protected-branch guard is git-push-specific).
+  // confirm (they mutate the shared remote / merge into a base branch).
   if (!PUSH_RE.test(cmd)) return { action: "confirm", branch: null };
   const branch = parsePushBranch(cmd) ?? opts.resolveBranch();
+  // v1.3.10 §3.2 — a feature-branch push is a safe, default-allowed op (no
+  // card; don't interrupt the flow). Only a push to a protected branch gates,
+  // and now via a CONFIRM card (was a hard `block`) so the owner can approve a
+  // deliberate protected push. No approval / timeout still fails closed.
   if (isProtectedBranch(branch, opts.protectedBranches)) {
-    return { action: "block", branch };
+    return { action: "confirm", branch };
   }
-  return { action: "confirm", branch };
+  return { action: "allow", branch };
 }
 
 export interface HookDeps {

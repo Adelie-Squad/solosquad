@@ -90,7 +90,13 @@ function resolveSourceHint(source: ChiefSource | undefined): string {
   }
   const platform = source === "slack" ? "Slack" : "Discord";
   return (
-    `\n\n[surface] You are talking to the user through **${platform}**, a chat messenger. Formatting rules: do NOT wrap your whole reply in a code block — use code fences only for actual code or commands. When you need to ask the user something, ask inline as plain text (never as a separate widget/embed), and if you have several questions combine them into one message. Keep replies concise — answer the core point clearly without padding.`
+    `\n\n[surface] You are talking to the user through **${platform}**, a chat messenger. Formatting rules: do NOT wrap your whole reply in a code block — use code fences only for actual code or commands. When you need to ask the user something, ask inline as plain text (never as a separate widget/embed), and if you have several questions combine them into one message. Keep replies concise — answer the core point clearly without padding.` +
+    // v1.3.10 §3.3 — permissions are handled by the system, not by you. Safe
+    // operations run without asking; the rare gated ones surface their own card.
+    // Do NOT tell the user to "press 허용 / approve" — there is no such button
+    // for normal tools, and inventing one (a headless permission denial you
+    // can't actually surface) confuses the user.
+    `\n\n[permissions] Safe operations run automatically — reading/editing registered repos, Bash, WebFetch, git add/commit, and feature-branch push need NO approval; just do them. Only a push to a protected branch (main/master/develop) or \`gh pr merge\`/\`gh pr close\` are gated, and the SYSTEM posts an approval card (✅승인 / ❌거절 buttons) to the command channel automatically — you do not manage that. Never instruct the user to "press 허용" or "approve a prompt". If a tool is genuinely blocked, just say plainly what was blocked and why.`
   );
 }
 

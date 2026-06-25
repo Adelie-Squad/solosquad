@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.33 v1.3.10 — 봇 권한 UX + claude-code `--add-dir`/stream-json 호환 수정 (2026-06-25)
+
+1.3.x authoring 테마와 직교한 운영 안정화 patch(1.3.1 동형). 세 봇 결함이 한 증상("등록 repo 못 읽음 / 작업마다 승인")으로 수렴. **(A) `--add-dir` 살리기** — claude 2.1.x 가 `--input-format stream-json`(stdin) 입력에서 `--add-dir` 를 무시(격리 재현 확정) → 봇이 등록 외부 repo Read 차단. 봇 입력을 **plain-text stdin** 으로 전환(`--input-format stream-json` 제거), 출력 스트리밍·부분메시지 유지. `buildArgs`/`inputLineToText` export + 회귀 테스트로 두 불변식 박제. (claude-code 업스트림 버그 — 별도 리포트.) **(B) 안전 작업 무중단** — Read/Edit/Bash/WebFetch/git add·commit·**feature push** 승인 0; protected push·PR merge/close 만 게이트. `classifySensitive` 재정의(feature push=allow, protected push=confirm[was block]). 승인 카드(✅승인/❌거절 버튼)는 기존 v1.3.0 Part B. **(C) 환각 안내 제거** — Chief 시스템 프롬프트에 "권한은 시스템 처리, '허용 눌러주세요' 금지" 명시. 마이그레이션 `1.3.9-to-1.3.10` no-op(spawn 매 턴 재생성 → resumed 세션도 다음 턴 자동 픽업). 987 test green.
+
+자세히: `docs/prd/v1.3.10_bot-permission-ux-and-add-dir-fix.md`
+
 #### 13.6.32 v1.3.9 — 마이그레이션 충돌 핫픽스 + 버전 3자리 모델 정정 (2026-06-25)
 
 v1.3.8 직후 dogfood `migrate --apply`(1.2.9→1.3.8)가 번들 `1.3.2→1.3.3` 단계에서 verify 실패("legacy cron dirs still present")로 노출된 핫픽스. **(A) `moveDir` 재귀 병합 + 충돌 처리** — v1.3.3 이 `.solosquad/{schedules,routines}` 를 같은 `crons/` 로 접을 때, 옛 한-단계 병합이 동명 항목을 남겨 routines 가 안 비워지던 결함. 이제 동명 하위 디렉토리는 재귀 병합, 리프 충돌은 더 새 override(schedules)가 이기고 밀려난 중복은 드롭(백업 보존) → 레거시 dir 항상 비워짐. 회귀 테스트(공존+동명+하위 디렉토리 충돌) 추가. **(B) 마이그레이션 1.3.2~1.3.8 재검토** — 블로킹은 1.3.2→1.3.3 하나; 1.3.4→1.3.5 는 verify 충돌 관용(크래시 없음), 나머지 no-op/멱등. **(C) 버전 3자리 모델 정정** — 버전은 항상 `vN.N.N`(4자리 금지); 핫픽스=다음 patch(1.3.8→1.3.9)+자체 핫픽스양식 PRD(PRD↔버전 1:1 유지). `prd` 스킬 R1 3자리 규칙 + 핫픽스 PRD 양식 신설, `1.3.8.1`·"부모 PRD §Hotfix" 표현 제거. 연속성 마이그레이션 `1.3.8-to-1.3.9`(no-op). v1.3.8 은 결함 포함 상태로 npm 게시됨 → 1.3.9 는 그 위 동일-day 핫픽스(1.3.8 사용자는 1.3.9 로 업그레이드; 1.2.2→1.2.3 선례).

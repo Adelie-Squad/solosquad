@@ -4,6 +4,31 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.10] — 2026-06-25 (bot permission UX + claude-code --add-dir/stream-json compat fix)
+
+See `docs/prd/v1.3.10_bot-permission-ux-and-add-dir-fix.md`. An operational
+stabilization patch (orthogonal to the 1.3.x authoring theme, like 1.3.1). Three
+bot fixes that converged on one symptom — "can't read registered repos / every
+action asks for approval". Bundle-only; spawn args rebuild per turn, so resumed
+sessions pick up the fixes on their next turn (no data changes).
+
+- **`--add-dir` works again (claude-code compat).** Claude Code 2.1.x silently
+  ignores `--add-dir` when input arrives as `--input-format stream-json` over
+  stdin — which blocked Chief from reading registered external repos
+  (`<org>/repositories/*.yaml.path`). The bot now feeds the user message as
+  **plain text over stdin** (no `--input-format stream-json`); `--output-format
+  stream-json` + partial-message streaming are unchanged. Regression test pins
+  both invariants. (Upstream claude-code bug; reported separately.)
+- **Safe operations no longer interrupt the flow.** Reading/editing registered
+  repos, Bash, WebFetch, git add/commit, and **feature-branch `git push`** run
+  with no approval. Only a push to a **protected branch** (main/master/develop)
+  or `gh pr merge`/`gh pr close` gates — and a protected push now surfaces the
+  existing ✅승인/❌거절 approval card (was a hard block).
+- **No more hallucinated "press 허용".** The Chief system prompt states that
+  permissions are system-handled (safe ops auto-run; the rare gated ones post
+  their own button card), so the agent stops inventing a non-existent approval
+  prompt.
+
 ## [1.3.9] — 2026-06-25 (hotfix on 1.3.8 — migration collision + 3-segment version model)
 
 See `docs/prd/v1.3.9_migration-collision-hotfix.md`. A hotfix surfaced by a dogfood

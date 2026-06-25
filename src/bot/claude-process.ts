@@ -8,7 +8,9 @@ import { execFile, spawn, type ChildProcess } from "child_process";
  *
  * Design (per docs/plan/v0.3-pm-mode-orchestration.md §3.2 + PoC #1/#2):
  *   - Chief session uses pre-generated `--session-id <uuid>` + `--resume`
- *   - Always `--output-format stream-json --verbose --input-format stream-json`
+ *   - Always `--output-format stream-json --verbose`; the user message is fed as
+ *     PLAIN TEXT over stdin (v1.3.10 — `--input-format stream-json` was dropped
+ *     because claude 2.1.x ignores `--add-dir` under stream-json input)
  *   - `ClaudeProcessFactory` interface lets us swap a Fake impl for unit tests
  *   - Real impl handles Windows shell quoting (DEP0190-safe)
  */
@@ -127,7 +129,8 @@ export interface ClaudeInvocation {
   cwd: string;
   /** true on every call after the session has been created. */
   resume: boolean;
-  /** Stream of user/tool_result lines (NDJSON over stdin). */
+  /** User message stream. v1.3.10: rendered to PLAIN TEXT and written to stdin
+   *  (not stream-json NDJSON) so `--add-dir` is honored. Chief sends one line. */
   input: AsyncIterable<StreamJsonInputLine>;
   /** Default true for PM session — improves cross-call prompt-cache hit rate. */
   excludeDynamicSystemPromptSections?: boolean;
@@ -249,7 +252,7 @@ export const SESSION_NOT_FOUND_PATTERN = /No conversation found with session ID/
 /** stderr emitted when `--resume <value>` is malformed. */
 export const INVALID_SESSION_ID_PATTERN = /requires a valid session ID/;
 
-function buildArgs(inv: ClaudeInvocation): string[] {
+export function buildArgs(inv: ClaudeInvocation): string[] {
   const args: string[] = ["--print"];
   if (inv.resume) {
     args.push("--resume", inv.sessionId);
@@ -257,7 +260,13 @@ function buildArgs(inv: ClaudeInvocation): string[] {
     args.push("--session-id", inv.sessionId);
   }
   args.push("--output-format", "stream-json");
-  args.push("--input-format", "stream-json");
+  // v1.3.10 §3.1 — DO NOT add `--input-format stream-json`. Claude Code 2.1.x
+  // *silently ignores* `--add-dir` when the input arrives as stream-json over
+  // stdin (verified: `-p`/plain-stdin honor --add-dir, stream-json input does
+  // not; settings.additionalDirectories is ignored in that mode too). The bot
+  // needs --add-dir to grant the Chief session access to registered external
+  // repos (`<org>/repositories/*.yaml.path`), so we feed the user message as
+  // *plain text over stdin* (see streamInput) — output streaming is unaffected.
   args.push("--verbose");
   if (inv.excludeDynamicSystemPromptSections ?? true) {
     args.push("--exclude-dynamic-system-prompt-sections");
@@ -557,6 +566,18 @@ function quoteWindowsArg(a: string): string {
   return a;
 }
 
+/** Extract the plain-text body of a user input line. v1.3.10: we feed claude
+ *  plain stdin (not stream-json) so `--add-dir` is honored, so each line is
+ *  rendered to text. String content passes through; ContentBlock[] concatenates
+ *  its text blocks (best-effort — Chief only ever sends string content). */
+export function inputLineToText(line: StreamJsonInputLine): string {
+  const content = line.message.content;
+  if (typeof content === "string") return content;
+  return content
+    .map((b) => ("text" in b && typeof b.text === "string" ? b.text : ""))
+    .join("");
+}
+
 async function streamInput(
   child: ChildProcess,
   input: AsyncIterable<StreamJsonInputLine>
@@ -564,8 +585,12 @@ async function streamInput(
   const stdin = child.stdin;
   if (!stdin) return;
   try {
+    // v1.3.10 §3.1 — write the message as PLAIN TEXT (not stream-json NDJSON).
+    // `--input-format stream-json` is no longer passed (it makes claude ignore
+    // --add-dir); plain stdin is read as the prompt and honors --add-dir, while
+    // handling long/multi-line messages without Windows arg-quoting issues.
     for await (const line of input) {
-      stdin.write(JSON.stringify(line) + "\n");
+      stdin.write(inputLineToText(line));
     }
   } finally {
     try {

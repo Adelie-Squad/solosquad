@@ -39,7 +39,7 @@ test("readHookEnv — defaults + parsing", () => {
   assert.ok(d.timeoutMs > 0);
 });
 
-test("classifySensitive — allow / block / confirm", () => {
+test("classifySensitive — v1.3.10: feature push allowed, protected push confirms", () => {
   const protectedBranches = ["main", "master", "develop"];
   const resolveBranch = () => "feat/current";
 
@@ -48,30 +48,30 @@ test("classifySensitive — allow / block / confirm", () => {
     classifySensitive("npm run build", { protectedBranches, resolveBranch }).action,
     "allow",
   );
-  // protected branch → block
+  // protected branch push → confirm (was a hard block pre-1.3.10)
   assert.equal(
     classifySensitive("git push origin main", { protectedBranches, resolveBranch }).action,
-    "block",
+    "confirm",
   );
-  // feature branch → confirm
+  // feature branch push → allow (was confirm pre-1.3.10; safe op, no card)
   assert.equal(
     classifySensitive("git push origin feat/x", { protectedBranches, resolveBranch }).action,
-    "confirm",
+    "allow",
   );
-  // no-target push resolves to current (feature) → confirm
+  // no-target push resolves to current (feature) → allow
   assert.equal(
     classifySensitive("git push", { protectedBranches, resolveBranch }).action,
-    "confirm",
+    "allow",
   );
-  // no-target push that resolves to a protected branch → block
+  // no-target push that resolves to a protected branch → confirm
   assert.equal(
     classifySensitive("git push", {
       protectedBranches,
       resolveBranch: () => "main",
     }).action,
-    "block",
+    "confirm",
   );
-  // gh pr merge → confirm (no branch concept)
+  // gh pr merge → confirm (mutates shared remote)
   assert.equal(
     classifySensitive("gh pr merge 5", { protectedBranches, resolveBranch }).action,
     "confirm",
@@ -80,7 +80,9 @@ test("classifySensitive — allow / block / confirm", () => {
 
 function baseDeps(overrides: Partial<HookDeps>): HookDeps {
   return {
-    readStdin: async () => JSON.stringify({ tool_input: { command: "git push origin feat/x" } }),
+    // v1.3.10: confirm only fires for protected-branch push now, so the default
+    // command pushes to a protected branch to exercise the confirm flow.
+    readStdin: async () => JSON.stringify({ tool_input: { command: "git push origin main" } }),
     env: {
       SOLOSQUAD_DEV_CONFIRM_DIR: "/tmp/pc",
       SOLOSQUAD_DEV_CONFIRM_ORG: "acme",
@@ -88,7 +90,7 @@ function baseDeps(overrides: Partial<HookDeps>): HookDeps {
       SOLOSQUAD_DEV_CONFIRM_TIMEOUT_MS: "1000",
     } as NodeJS.ProcessEnv,
     cwd: "/work/acme/repositories/app",
-    resolveBranch: () => "feat/x",
+    resolveBranch: () => "main",
     collectCommits: () => ["abc123 fix"],
     makeId: () => "id1",
     writePending: () => {},
@@ -111,7 +113,7 @@ test("runHook — approved push → exit 0, writes pending", async () => {
   );
   assert.equal(code, 0);
   assert.ok(written);
-  assert.equal(written!.branch, "feat/x");
+  assert.equal(written!.branch, "main");
   assert.equal(written!.repoSlug, "app");
   assert.deepEqual(written!.commits, ["abc123 fix"]);
 });
@@ -126,18 +128,19 @@ test("runHook — timeout → exit 2 (fail-closed)", async () => {
   assert.equal(code, 2);
 });
 
-test("runHook — protected branch → exit 2 without writing pending", async () => {
+test("runHook — v1.3.10: feature-branch push → exit 0 without writing pending (allowed)", async () => {
   let wrote = false;
   const code = await runHook(
     baseDeps({
       readStdin: async () =>
-        JSON.stringify({ tool_input: { command: "git push origin main" } }),
+        JSON.stringify({ tool_input: { command: "git push origin feat/x" } }),
+      resolveBranch: () => "feat/x",
       writePending: () => {
         wrote = true;
       },
     }),
   );
-  assert.equal(code, 2);
+  assert.equal(code, 0); // allowed — no card, no interruption
   assert.equal(wrote, false);
 });
 

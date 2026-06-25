@@ -64,11 +64,15 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
-## What's new in v1.3.9 (2026-06-25)
+## What's new in v1.3.10 (2026-06-25)
 
-**Hotfix on 1.3.8 + the docs management system.** v1.3.9 ships the docs work below plus a migration fix surfaced in dogfood upgrade testing. **1.3.8 shipped to npm with the bug, so 1.3.9 is a same-day hotfix — upgrade from 1.3.8 to 1.3.9.**
+**Bot permission UX + a claude-code compatibility fix.** Three bot fixes that converged on one symptom — "the bot can't read my registered repos / it asks for approval on every action".
 
-- **Migration collision fix** — the bundled `1.3.2 → 1.3.3` step folds `.solosquad/schedules` and `.solosquad/routines` into `crons/`; it now merges recursively and resolves same-name collisions (newer wins, superseded copy kept in the backup) instead of failing verify. Versions stay 3-segment (`vN.N.N`); a hotfix is the next patch with its own hotfix-format PRD.
+- **Registered repos are readable again.** Claude Code 2.1.x silently ignores `--add-dir` when input is fed as `--input-format stream-json` over stdin, which blocked the bot from reading repos registered under `<org>/repositories/`. The bot now sends the message as plain text over stdin (output streaming unchanged), so `--add-dir` is honored. (Upstream claude-code bug.)
+- **Safe operations no longer interrupt you.** Reading/editing registered repos, Bash, WebFetch, git add/commit, and feature-branch `git push` run with no approval. Only a push to a protected branch (main/master/develop) or `gh pr merge`/`gh pr close` gates — and a protected push now shows the ✅승인/❌거절 approval card instead of a hard block.
+- **No more phantom "press approve".** The Chief no longer tells you to press an approval button that doesn't exist; permissions are handled by the system.
+
+Bundle-only — resumed sessions pick up the fixes on their next turn (spawn args rebuild per turn).
 
 **Docs management system + a `docs` skill** (from 1.3.8). The documentation slice of the 1.3.x "primitive & doc authoring internalization" line. Docs and versioning are made **repository-scoped**, with a single curation authority and an expanded pre-publish gate.
 
@@ -80,7 +84,7 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 Bundle-only — no user-workspace data changes beyond the seeded org dirs.
 
-Full release notes: [CHANGELOG.md §1.3.9](CHANGELOG.md).
+Full release notes: [CHANGELOG.md §1.3.10](CHANGELOG.md).
 
 ---
 
