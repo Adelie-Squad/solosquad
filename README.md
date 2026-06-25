@@ -64,6 +64,10 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
+## What's new in v1.3.11 (2026-06-25)
+
+**Windows `--add-dir` hotfix (on 1.3.10).** After updating to 1.3.10, Windows bots still couldn't read registered repos because of a *second* bug: on Windows the bot spawns claude through a shell command string, and a newline in the Chief system prompt (`--append-system-prompt`) broke the cmd.exe command line, dropping every flag after it — including `--add-dir`. The system prompt is now passed via a temp file (`--append-system-prompt-file`), so its newlines stay off the command line and `--add-dir` survives. (macOS/Linux were unaffected.) **Windows users on 1.3.10: `solosquad update` → `migrate --apply` → restart the bot.**
+
 ## What's new in v1.3.10 (2026-06-25)
 
 **Bot permission UX + a claude-code compatibility fix.** Three bot fixes that converged on one symptom — "the bot can't read my registered repos / it asks for approval on every action".
@@ -84,7 +88,7 @@ Bundle-only — resumed sessions pick up the fixes on their next turn (spawn arg
 
 Bundle-only — no user-workspace data changes beyond the seeded org dirs.
 
-Full release notes: [CHANGELOG.md §1.3.10](CHANGELOG.md).
+Full release notes: [CHANGELOG.md §1.3.11](CHANGELOG.md).
 
 ---
 

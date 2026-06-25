@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.34 v1.3.11 — Windows `--add-dir` 누락(append-system-prompt 줄바꿈) 핫픽스 (2026-06-25)
+
+1.3.10 업데이트·봇 재시작 후에도 Windows 봇이 등록 repo 를 못 읽던 **2차 결함** 핫픽스. **근본원인:** Windows 에서 봇은 `spawn(cmd, [], {shell:true})` 로 args 를 **명령 문자열**로 조립(`spawnClaude`/`quoteWindowsArg`)하는데, Chief `--append-system-prompt` 값이 `\n\n[identity]…\n\n[surface]…` 처럼 **줄바꿈 포함** → cmd.exe 명령문이 줄바꿈에서 끊겨 **뒤따르는 `--add-dir` 소실**(빌드 순서상 prompt 뒤). 1.3.10 의 --add-dir 는 buildArgs 엔 존재하나 Windows 셸 조립에서 누락(1.3.10 이 고친 stream-json 무시와 별개 2차 버그; macOS/Linux 는 셸 없이 args 배열 spawn 이라 비영향). **수정:** 시스템 프롬프트를 temp 파일로 빼 `--append-system-prompt-file` 사용 → 멀티라인이 명령줄에 안 올라가 --add-dir 보존(`writeSystemPromptFile`/`buildArgs(inv,file)`/`invokeStreaming` 정리). 회귀 테스트. 연속성 마이그레이션 `1.3.10-to-1.3.11` no-op. **회고:** 1.3.10 디버깅 격리 재현이 전부 bash 라(cmd.exe 와 줄바꿈 파싱 상이) sleeping bug; 후속 가드 = Windows spawn 은 멀티라인 인자를 명령줄에 안 올림 + 장기적으로 args 배열 spawn 검토.
+
+자세히: `docs/prd/v1.3.11_windows-add-dir-prompt-newline-hotfix.md`
+
 #### 13.6.33 v1.3.10 — 봇 권한 UX + claude-code `--add-dir`/stream-json 호환 수정 (2026-06-25)
 
 1.3.x authoring 테마와 직교한 운영 안정화 patch(1.3.1 동형). 세 봇 결함이 한 증상("등록 repo 못 읽음 / 작업마다 승인")으로 수렴. **(A) `--add-dir` 살리기** — claude 2.1.x 가 `--input-format stream-json`(stdin) 입력에서 `--add-dir` 를 무시(격리 재현 확정) → 봇이 등록 외부 repo Read 차단. 봇 입력을 **plain-text stdin** 으로 전환(`--input-format stream-json` 제거), 출력 스트리밍·부분메시지 유지. `buildArgs`/`inputLineToText` export + 회귀 테스트로 두 불변식 박제. (claude-code 업스트림 버그 — 별도 리포트.) **(B) 안전 작업 무중단** — Read/Edit/Bash/WebFetch/git add·commit·**feature push** 승인 0; protected push·PR merge/close 만 게이트. `classifySensitive` 재정의(feature push=allow, protected push=confirm[was block]). 승인 카드(✅승인/❌거절 버튼)는 기존 v1.3.0 Part B. **(C) 환각 안내 제거** — Chief 시스템 프롬프트에 "권한은 시스템 처리, '허용 눌러주세요' 금지" 명시. 마이그레이션 `1.3.9-to-1.3.10` no-op(spawn 매 턴 재생성 → resumed 세션도 다음 턴 자동 픽업). 987 test green.

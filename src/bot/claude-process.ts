@@ -1,4 +1,8 @@
 import { execFile, spawn, type ChildProcess } from "child_process";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { randomUUID } from "crypto";
 
 /**
  * v0.3.0 — typed wrapper around `claude --print` subprocess.
@@ -252,7 +256,24 @@ export const SESSION_NOT_FOUND_PATTERN = /No conversation found with session ID/
 /** stderr emitted when `--resume <value>` is malformed. */
 export const INVALID_SESSION_ID_PATTERN = /requires a valid session ID/;
 
-export function buildArgs(inv: ClaudeInvocation): string[] {
+/** v1.3.11 §fix — write the (multi-line) system prompt to a temp file and pass
+ *  `--append-system-prompt-file`. On Windows the bot spawns claude with
+ *  `shell: true`, building a command STRING; a newline inside the
+ *  `--append-system-prompt` value breaks cmd.exe parsing and drops every flag
+ *  after it (including `--add-dir`), so Chief lost access to registered repos.
+ *  A file keeps newlines off the command line entirely. Returns the path (or
+ *  undefined when there is no prompt); the caller deletes it after the run. */
+export function writeSystemPromptFile(prompt: string | undefined): string | undefined {
+  if (!prompt) return undefined;
+  const file = path.join(os.tmpdir(), `sq-sysprompt-${randomUUID()}.txt`);
+  fs.writeFileSync(file, prompt, "utf-8");
+  return file;
+}
+
+export function buildArgs(
+  inv: ClaudeInvocation,
+  appendSystemPromptFile?: string,
+): string[] {
   const args: string[] = ["--print"];
   if (inv.resume) {
     args.push("--resume", inv.sessionId);
@@ -277,7 +298,11 @@ export function buildArgs(inv: ClaudeInvocation): string[] {
   if (typeof inv.maxBudgetUsd === "number") {
     args.push("--max-budget-usd", String(inv.maxBudgetUsd));
   }
-  if (inv.appendSystemPrompt) {
+  if (appendSystemPromptFile) {
+    // v1.3.11 — prompt via file (no newlines on the command line → --add-dir
+    // survives the Windows shell:true command-string build).
+    args.push("--append-system-prompt-file", appendSystemPromptFile);
+  } else if (inv.appendSystemPrompt) {
     args.push("--append-system-prompt", inv.appendSystemPrompt);
   }
   if (inv.permissionMode) {
@@ -384,8 +409,21 @@ export class RealClaudeProcessFactory implements ClaudeProcessFactory {
   }
 
   invokeStreaming(inv: ClaudeInvocation): ClaudeStreamingResult {
-    const args = buildArgs(inv);
+    // v1.3.11 — the system prompt goes via a temp file (`--append-system-prompt-file`)
+    // so its newlines never hit the Windows shell:true command string (which would
+    // otherwise truncate the command and drop --add-dir). Cleaned up on close.
+    const promptFile = writeSystemPromptFile(inv.appendSystemPrompt);
+    const args = buildArgs(inv, promptFile);
     const child = spawnClaude(args, inv.cwd, inv.extraEnv);
+    const cleanupPromptFile = () => {
+      if (promptFile) {
+        try {
+          fs.rmSync(promptFile, { force: true });
+        } catch {
+          // best-effort
+        }
+      }
+    };
 
     void streamInput(child, inv.input).catch(() => {});
 
@@ -448,11 +486,13 @@ export class RealClaudeProcessFactory implements ClaudeProcessFactory {
         stdoutBuf = "";
       }
       exitInfo = { exitCode: code, signal };
+      cleanupPromptFile();
       complete();
     });
 
     child.on("error", (err) => {
       stderr += `\n[spawn error] ${err.message}`;
+      cleanupPromptFile();
       exitInfo = { exitCode: 1, signal: null };
       complete();
     });

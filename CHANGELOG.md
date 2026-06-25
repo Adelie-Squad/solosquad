@@ -4,6 +4,26 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.11] — 2026-06-25 (Windows --add-dir hotfix on 1.3.10 — append-system-prompt newline)
+
+See `docs/prd/v1.3.11_windows-add-dir-prompt-newline-hotfix.md`. A Windows-only
+hotfix: 1.3.10 still failed to read registered repos on Windows because of a
+*second* bug 1.3.10 didn't catch.
+
+- **Root cause.** On Windows the bot spawns claude with `shell: true`, joining
+  args into a command STRING. The Chief `--append-system-prompt` value contains
+  newlines (`[identity]` / `[surface]` / `[permissions]` blocks) — a newline in
+  a cmd.exe command line truncates the command, dropping every flag after it,
+  including `--add-dir`. So Chief silently lost access to registered external
+  repos even on 1.3.10. (macOS/Linux spawn without a shell, so they were fine.)
+- **Fix.** The system prompt is written to a temp file and passed via
+  `--append-system-prompt-file`, so its newlines never hit the command line and
+  `--add-dir` survives. Cross-platform; the temp file is cleaned up after each
+  run. Regression test pins "multi-line prompt ⇒ `--append-system-prompt-file` +
+  `--add-dir` preserved".
+- Continuity migration `1.3.10 → 1.3.11` (no-op). Windows users on 1.3.10:
+  `solosquad update` → `migrate --apply` → restart the bot.
+
 ## [1.3.10] — 2026-06-25 (bot permission UX + claude-code --add-dir/stream-json compat fix)
 
 See `docs/prd/v1.3.10_bot-permission-ux-and-add-dir-fix.md`. An operational
