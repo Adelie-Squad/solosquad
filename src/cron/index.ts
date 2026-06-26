@@ -367,6 +367,23 @@ async function sendStartupNotification(crons: ResolvedCron[]): Promise<void> {
 }
 
 export async function startScheduler(): Promise<void> {
+  // v1.4.1 — singleton guard. A second scheduler (e.g. `cron start` next to a
+  // `bot --with-cron` / `solosquad start`) would double-register every cron and
+  // double-fire it. If another live scheduler holds the lock, skip silently
+  // (the running one keeps firing) — do not open a duplicate notifier either.
+  const { acquireSchedulerLock, clearSchedulerPid } = await import(
+    "../util/scheduler-pidfile.js"
+  );
+  const lock = acquireSchedulerLock();
+  if (!lock.acquired) {
+    console.log(
+      `[Scheduler] Another scheduler is already running (PID ${lock.heldBy}) — ` +
+        "skipping cron registration to avoid double-firing.",
+    );
+    return;
+  }
+  process.once("exit", () => clearSchedulerPid());
+
   const ws = loadWorkspaceYaml();
   if (ws) {
     const merged = applyWorkspaceDefaults(ws);

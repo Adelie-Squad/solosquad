@@ -22,6 +22,17 @@ invite already grants `SendMessagesInThreads` + the `MessageContent` intent).
   Chief session; per-task child-session isolation ("그 작업에 대해서만") is the
   follow-up (Approach B / S-4).
 
+**Also: one-command bot + cron (`solosquad start`).** `solosquad bot` starts only
+the messenger bot; the cron scheduler (`cron start`) was a separate process.
+
+- `solosquad start` — bot + cron + supervisor in one (single-host all-in-one);
+  `solosquad bot --with-cron` runs the scheduler in the bot process without the
+  supervisor.
+- A `scheduler.pid` singleton lock prevents double-firing if a separate
+  `cron start` (or Docker scheduler service) is also running — the second
+  scheduler skips cron registration. Docker/systemd users can keep the 2-service
+  split unchanged.
+
 Continuity migration `1.4.0-to-1.4.1` is a plain version bump (no session reset
 — spawn behaviour unchanged).
 

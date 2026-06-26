@@ -87,14 +87,35 @@ program
     "--supervise",
     "v1.2.8 — wrap the bot in a supervisor that auto-respawns on clean exit. Pairs with `solosquad migrate --apply` (which signals SIGTERM to the running bot) so users don't have to Ctrl+C + re-run after every migration. Cloud users with PM2 / systemd / Docker don't need this — their manager already restarts.",
   )
+  .option(
+    "--with-cron",
+    "v1.4.1 — also run the cron scheduler in this process (single-host convenience). A scheduler singleton lock prevents double-firing if a separate `cron start` / scheduler service is also running. For a supervised all-in-one, prefer `solosquad start`.",
+  )
   .action(async (opts) => {
     if (opts.supervise) {
       const { runBotSupervisor } = await import("./bot-supervise.js");
-      await runBotSupervisor();
+      await runBotSupervisor(opts.withCron ? ["bot", "--with-cron"] : ["bot"]);
       return;
+    }
+    if (opts.withCron) {
+      // Start the scheduler in-process first (it registers node-cron jobs and
+      // returns; the lock makes a concurrent scheduler a no-op), then the bot
+      // keeps the process alive.
+      const { startScheduler } = await import("../cron/index.js");
+      await startScheduler();
     }
     const { startBot } = await import("../bot/index.js");
     await startBot();
+  });
+
+program
+  .command("start")
+  .description(
+    "v1.4.1 — start the bot AND the cron scheduler together, supervised (single-host all-in-one). Equivalent to `bot --supervise --with-cron`. Docker/systemd users who run bot + scheduler as separate services don't need this.",
+  )
+  .action(async () => {
+    const { runBotSupervisor } = await import("./bot-supervise.js");
+    await runBotSupervisor(["bot", "--with-cron"]);
   });
 
 program

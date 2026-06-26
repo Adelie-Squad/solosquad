@@ -30,9 +30,16 @@ const __dirname = path.dirname(__filename);
 const CRASH_LOOP_THRESHOLD = 3;
 const RESPAWN_DELAY_MS = 1500;
 
-export async function runBotSupervisor(): Promise<void> {
+export async function runBotSupervisor(
+  // v1.4.1 — the child command to (re)spawn. Defaults to `bot`; `solosquad
+  // start` passes `["bot", "--with-cron"]` so the supervised child runs the
+  // bot AND the cron scheduler in one process.
+  childArgs: string[] = ["bot"],
+): Promise<void> {
   console.log(
-    chalk.bold("[Supervisor] solosquad bot --supervise — auto-respawn on clean exit."),
+    chalk.bold(
+      `[Supervisor] solosquad ${childArgs.join(" ")} (supervised) — auto-respawn on clean exit.`,
+    ),
   );
   console.log(
     chalk.dim(
@@ -81,8 +88,8 @@ export async function runBotSupervisor(): Promise<void> {
   });
 
   while (!supervisorShuttingDown) {
-    console.log(chalk.dim(`[Supervisor] spawning solosquad bot (attempt after ${crashes} crash(es))...`));
-    const { code, signal } = await runChild(cliEntry, (c) => {
+    console.log(chalk.dim(`[Supervisor] spawning solosquad ${childArgs.join(" ")} (attempt after ${crashes} crash(es))...`));
+    const { code, signal } = await runChild(cliEntry, childArgs, (c) => {
       child = c;
     });
     child = null;
@@ -133,10 +140,11 @@ export async function runBotSupervisor(): Promise<void> {
 
 function runChild(
   cliEntry: string,
+  childArgs: string[],
   onSpawn: (c: ChildProcess) => void,
 ): Promise<{ code: number | null; signal: NodeJS.Signals | null }> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [cliEntry, "bot"], {
+    const child = spawn(process.execPath, [cliEntry, ...childArgs], {
       stdio: "inherit",
       env: process.env,
     });

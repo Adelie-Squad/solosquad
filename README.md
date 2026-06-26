@@ -72,6 +72,8 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 - **Thread → task context** — Chief is told which task the thread is about (looked up from the thread's workflow), so follow-ups land in context.
 - **Single shared session (Approach A)** — the thread uses your existing Chief session; per-task isolation ("only that task's context") is the next step.
 
+**Also — one command for bot + cron.** `solosquad start` runs the bot, the cron scheduler, and a supervisor together (single-host all-in-one); `solosquad bot --with-cron` adds the scheduler without the supervisor. A scheduler singleton lock stops double-firing if a separate `cron start` / scheduler service is also up, so the 2-service Docker split keeps working unchanged.
+
 Bundle-only — continuity migration `1.4.0 → 1.4.1` is a plain version bump (no session reset). Restart the bot after `solosquad update` → `migrate --apply`.
 
 Full release notes: [CHANGELOG.md §1.4.1](CHANGELOG.md).
