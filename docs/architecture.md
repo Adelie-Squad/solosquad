@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.35 v1.4.0 — 세션 오케스트레이션 (재범위 저위험 서브셋) (2026-06-27)
+
+세션 오케스트레이션 PRD(`docs/prd/v1.4.0-session-orchestration.md`)의 **비파괴 서브셋** 출시. **시너지/역할:** 장기·다중 repo 운영의 *기반*을 깔되, 위험한 조각(세션 교대·GC 삭제)은 검증 후로 미뤄 24/7 대화 운영의 *가용성·관측*만 먼저 확보. **출시:** ⑴**S-1** `resolveOrgCwd`가 외부경로 repo(`repositories/<slug>.yaml`의 `path:`)를 `resolveRepoCwd`로 해석 → 스케줄러 cron 의 repo-blind 해소. ⑵**S-2a** `chief.usage` 수동 토큰 텔레메트리(contextTokens=input+cache_read+cache_creation, 관측만·회전 없음). ⑶**§5.5** `solosquad cron preset leading-indicator` opt-in 배선 + `avg_context_tokens`(S-2a 데이터원) 지표. ⑷**§5.7** `archiveOrgChiefSessions` 마이그레이션 헬퍼(spawn-변경 릴리즈용 clean-slate; 본 릴리즈는 spawn 무변경이라 미호출). ⑸**S-3** `_log.md` durable 파일(`_handoff.md` 에 *추가*, Layer[7] 회귀 없음) + AGENTS.md 3계층 메모리 정형화(GC 삭제 v1.4.x 연기). ⑹**🆕 세션 시작 마커** — 신규/리셋/회전 세션의 첫 Discord 응답에 Chief 이름 앞 표시. **비범위(v1.4.x):** 세션 교대(S-2b 임계 핸드오프+회전) · GC 파괴적 삭제(S-3b) · M2/M3 워커 세션 · S-6/S-7. 연속성 마이그레이션 `1.3.11-to-1.4.0` plain bump(세션 리셋 없음).
+
+자세히: `docs/prd/v1.4.0-session-orchestration.md`
+
 #### 13.6.34 v1.3.11 — Windows `--add-dir` 누락(append-system-prompt 줄바꿈) 핫픽스 (2026-06-25)
 
 1.3.10 업데이트·봇 재시작 후에도 Windows 봇이 등록 repo 를 못 읽던 **2차 결함** 핫픽스. **근본원인:** Windows 에서 봇은 `spawn(cmd, [], {shell:true})` 로 args 를 **명령 문자열**로 조립(`spawnClaude`/`quoteWindowsArg`)하는데, Chief `--append-system-prompt` 값이 `\n\n[identity]…\n\n[surface]…` 처럼 **줄바꿈 포함** → cmd.exe 명령문이 줄바꿈에서 끊겨 **뒤따르는 `--add-dir` 소실**(빌드 순서상 prompt 뒤). 1.3.10 의 --add-dir 는 buildArgs 엔 존재하나 Windows 셸 조립에서 누락(1.3.10 이 고친 stream-json 무시와 별개 2차 버그; macOS/Linux 는 셸 없이 args 배열 spawn 이라 비영향). **수정:** 시스템 프롬프트를 temp 파일로 빼 `--append-system-prompt-file` 사용 → 멀티라인이 명령줄에 안 올라가 --add-dir 보존(`writeSystemPromptFile`/`buildArgs(inv,file)`/`invokeStreaming` 정리). 회귀 테스트. 연속성 마이그레이션 `1.3.10-to-1.3.11` no-op. **회고:** 1.3.10 디버깅 격리 재현이 전부 bash 라(cmd.exe 와 줄바꿈 파싱 상이) sleeping bug; 후속 가드 = Windows spawn 은 멀티라인 인자를 명령줄에 안 올림 + 장기적으로 args 배열 spawn 검토.

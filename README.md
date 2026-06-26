@@ -64,6 +64,22 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
+## What's new in v1.4.0 (2026-06-27)
+
+**Session orchestration — re-scoped, low-risk subset.** The non-destructive slice of the session-orchestration line; session 교대 (token-threshold handoff + rotation) and GC destructive deletion are deferred to v1.4.x after their side-effects are validated.
+
+- **🆕 session-start marker** — a new / reset / rotated Chief session shows a "🆕 세션 시작" marker before the Chief name on its first Discord reply, so you can tell the context was wiped.
+- **Crons see your repos (S-1)** — scheduler crons now resolve external-path repos (`repositories/<slug>.yaml`), instead of running at org-root only.
+- **Token-usage telemetry (S-2a)** — each Chief turn records a `chief.usage` event (context-window occupancy). Observation only — nothing rotates on it yet.
+- **`leading-indicator` cron preset (§5.5)** — `solosquad cron preset leading-indicator` enables the autonomy-health indicators (incl. `avg_context_tokens` from S-2a).
+- **`_log.md` workflow audit log (S-3)** — additive to `_handoff.md`; plus a spawn-change session-reset migration helper (§5.7).
+
+Bundle-only — continuity migration `1.3.11 → 1.4.0` is a plain version bump (no session reset; spawn behaviour unchanged). Restart the bot after `solosquad update` → `migrate --apply`.
+
+Full release notes: [CHANGELOG.md §1.4.0](CHANGELOG.md).
+
+---
+
 ## What's new in v1.3.11 (2026-06-25)
 
 **Windows `--add-dir` hotfix (on 1.3.10).** After updating to 1.3.10, Windows bots still couldn't read registered repos because of a *second* bug: on Windows the bot spawns claude through a shell command string, and a newline in the Chief system prompt (`--append-system-prompt`) broke the cmd.exe command line, dropping every flag after it — including `--add-dir`. The system prompt is now passed via a temp file (`--append-system-prompt-file`), so its newlines stay off the command line and `--add-dir` survives. (macOS/Linux were unaffected.) **Windows users on 1.3.10: `solosquad update` → `migrate --apply` → restart the bot.**
