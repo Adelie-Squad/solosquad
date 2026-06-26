@@ -46,6 +46,23 @@ pm_conventions:
    `<org>/workflows/wf-YYYY-MM-DD-<slug>/workflow.yaml` + `_status.yaml`(첫 stage pending→in_progress).
 5. **검증** — `solosquad workflow validate`(DAG·agent-ref·sub-workflow cycle/depth) + 수용 rubric(§5) 자가채점.
 
+## durable 파일 — `_log.md` (v1.4.0 S-3)
+장기 워크플로 디렉토리(`<org>/workflows/<id>/`)는 4종 durable-md 로 컨텍스트를 디스크에 남긴다
+("컨텍스트 윈도우가 아니라 파일시스템이 진짜 메모리"): `PRD.md`(고정 스펙) · `_status.yaml`(마일스톤) ·
+`stage-<N>/_handoff.md`(다음 단계 인계) · **`_log.md`(신규 — 실행 감사 로그)**.
+- **`_log.md` ≠ `_handoff.md`** — handoff 는 *다음 stage 에이전트* 1회용 인계, `_log.md` 는 워크플로 **누적
+  감사**(append-only). **`_handoff.md` 를 대체하지 않는다**(spawn-assembler Layer[7] 는 `_handoff.md` 를 그대로
+  읽음 — 회귀 금지).
+- **누가·언제 쓰나:** 라이브 Chief 턴이 stage 전이·주요 결정·알려진 이슈가 생길 때 한 줄씩 append.
+  (토큰-임계 자동 핸드오프 작성자는 v1.4.x S-2b — 현재는 라이브 턴만 쓴다.)
+- **포맷(append 블록):**
+  ```md
+  ## <ISO ts> — <stage|event>
+  - 진행: <한 줄>
+  - 결정: <왜·대안 기각 이유>
+  - 제약/알려진 이슈: <있으면>
+  ```
+
 ## 번들 템플릿 (base)
 - **메인(Workflow-of-Workflows):** `new-build`(idea-refinement|requirements-analysis → market-research →
   hypothesis) · `improvement`(kpi-check → data-analysis → hypothesis). **메인/서브=호출 위치**(타입 아님).
