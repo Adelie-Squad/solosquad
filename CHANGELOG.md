@@ -4,19 +4,26 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.4.2] — 2026-06-27 (Hotfix: `solosquad start` now actually starts the bot)
+## [1.4.2] — 2026-06-27 (Hotfixes: `solosquad start` bot-startup + rate-limit notice spam)
 
-See `docs/prd/v1.4.2_start-cron-blocking-hotfix.md`. In 1.4.1, `solosquad start`
-/ `bot --with-cron` started only the cron scheduler — the bot never connected to
+See `docs/prd/v1.4.2_start-cron-blocking-hotfix.md`.
+
+**`solosquad start` now actually starts the bot.** In 1.4.1, `solosquad start` /
+`bot --with-cron` started only the cron scheduler — the bot never connected to
 Discord (so it never replied). `startScheduler()` ends with an infinite
 keep-alive (for standalone `cron start`), and the bot path awaited it before
-`startBot()`, blocking forever.
+`startBot()`, blocking forever. `startScheduler({ keepAlive: false })` now returns
+after registering crons; the bot path uses it so `startBot()` runs and owns the
+process lifetime (cron timers + the fs-watcher stay live on the shared event
+loop). Standalone `cron start` keeps the default keep-alive; the scheduler
+singleton lock is unchanged.
 
-- `startScheduler({ keepAlive: false })` returns after registering crons; the
-  bot path uses it so `startBot()` runs and owns the process lifetime (cron
-  timers + the fs-watcher stay live on the shared event loop). Standalone
-  `cron start` keeps the default keep-alive. The scheduler singleton lock is
-  unchanged.
+**Rate-limit notice no longer spams every reply.** Claude Code reports a
+rate-limit status each turn (`allowed` / `warning` / `exceeded`); 1.4.1 echoed any
+non-allowed status on EVERY reply, so a user approaching their usage cap saw the
+⚠️ notice on every message. Now a `warning` (approaching) is announced once per
+reset window per user (with the reset time), and only an actual `exceeded` raises
+the urgent notice.
 
 Continuity migration `1.4.1-to-1.4.2` is a plain version bump (no data changes,
 no session reset).

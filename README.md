@@ -68,6 +68,8 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 **Hotfix — `solosquad start` now starts the bot.** In 1.4.1, `solosquad start` / `bot --with-cron` brought up only the cron scheduler; the bot never connected (so it never replied in Discord). The embedded scheduler no longer blocks on its keep-alive — the bot starts and owns the process. Standalone `solosquad bot` / `cron start` were unaffected.
 
+**Hotfix — rate-limit notice no longer repeats on every reply.** Claude Code's "approaching usage limit" (`warning`) status is now announced once per reset window instead of on every message; only an actual `exceeded` raises the urgent ⚠️ notice.
+
 Bundle-only — continuity migration `1.4.1 → 1.4.2` is a plain version bump. Update with `solosquad update` → `migrate --apply`, then restart (`solosquad start`).
 
 Full release notes: [CHANGELOG.md §1.4.2](CHANGELOG.md).

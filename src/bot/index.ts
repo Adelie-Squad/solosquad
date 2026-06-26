@@ -8,6 +8,11 @@ import { WorkflowReconciler, type PendingDelivery } from "./workflow-reconciler.
 import { handleSlashIfAny } from "./slash-commands.js";
 import { parseMentions } from "./mention-parser.js";
 import { DevConfirmBridge } from "./dev-confirm-bridge.js";
+import { RateLimitNotifier } from "./rate-limit-notice.js";
+
+// v1.4.2 — one notifier per bot process (single instance per workspace) so the
+// rate-limit warning de-dupe state persists across turns.
+const rateLimitNotifier = new RateLimitNotifier();
 import type { PendingConfirmFile } from "./dev-confirm-paths.js";
 import { DiscordAdapter } from "../messenger/discord-adapter.js";
 import {
@@ -330,10 +335,12 @@ async function handleCommandInner(
     } else {
       await ctx.reply("(no reply generated — please try again or check `solosquad doctor`)");
     }
-    if (reply.rateLimited) {
-      await ctx.reply(
-        "⚠️ Claude Code reported a rate-limit constraint. Subsequent calls may be deferred."
-      );
+    // v1.4.2 — de-dupe the rate-limit notice so a `warning` (approaching limit)
+    // isn't echoed on every reply. `exceeded` is urgent; `warning` is announced
+    // once per reset window. See rate-limit-notice.ts.
+    const rlNotice = rateLimitNotifier.decide(ctx.userId, reply.rateLimit);
+    if (rlNotice) {
+      await ctx.reply(rlNotice);
     }
     console.log(
       `[Bot] Chief turn done: kind=${reply.kind} cost=$${reply.costUsd.toFixed(4)} duration=${reply.durationMs}ms spawns=${reply.spawnCount}${reply.sessionRotated ? " session-rotated" : ""}`

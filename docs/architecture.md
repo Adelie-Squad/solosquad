@@ -1202,7 +1202,7 @@ Get-CimInstance Win32_Process |
 
 #### 13.6.37 v1.4.2 — `solosquad start` 봇 미기동 핫픽스 (2026-06-27)
 
-1.4.1 의 `solosquad start`(=`bot --with-cron`)가 **스케줄러만 띄우고 봇이 안 뜨던** 핫픽스. **근본원인:** `startScheduler()` 끝의 무한 keep-alive(`await new Promise(()=>{})`, 단독 `cron start` 상주용)를 봇 경로가 `startBot()` *앞에서* `await` → 영구 블록 → 봇 미기동·디스코드 무응답. **수정:** `startScheduler({ keepAlive: false })` 추가 — 봇 동반 시 cron 등록 후 리턴, 봇이 프로세스 수명 소유(cron 타이머·fs-watcher 는 공유 이벤트루프 상주). 단독 `cron start` 는 기본 keep-alive 유지. scheduler 싱글톤 lock 무변경. 연속성 마이그레이션 `1.4.1-to-1.4.2` plain bump.
+1.4.1 의 `solosquad start`(=`bot --with-cron`)가 **스케줄러만 띄우고 봇이 안 뜨던** 핫픽스. **근본원인:** `startScheduler()` 끝의 무한 keep-alive(`await new Promise(()=>{})`, 단독 `cron start` 상주용)를 봇 경로가 `startBot()` *앞에서* `await` → 영구 블록 → 봇 미기동·디스코드 무응답. **수정:** `startScheduler({ keepAlive: false })` 추가 — 봇 동반 시 cron 등록 후 리턴, 봇이 프로세스 수명 소유(cron 타이머·fs-watcher 는 공유 이벤트루프 상주). 단독 `cron start` 는 기본 keep-alive 유지. scheduler 싱글톤 lock 무변경. **추가 핫픽스 — rate-limit 알림 도배 제거:** Claude Code 가 매 턴 보고하는 rate-limit 상태(`allowed`/`warning`/`exceeded`)를 1.4.1 은 비-allowed 면 매 답변에 echo → `warning`(한도 근접) 구간에서 매번 떴다. `RateLimitNotifier`(`bot/rate-limit-notice.ts`)로 **`warning` 은 리셋 윈도우당 1회**(유저별, `resetsAt` 표시)·**`exceeded` 만 즉시** 알림. 연속성 마이그레이션 `1.4.1-to-1.4.2` plain bump.
 
 자세히: `docs/prd/v1.4.2_start-cron-blocking-hotfix.md`
 

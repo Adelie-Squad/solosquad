@@ -341,6 +341,12 @@ export interface ChiefReply {
    */
   newSession: boolean;
   rateLimited: boolean;
+  /**
+   * v1.4.2 — the Claude Code rate-limit status reported this turn, if any.
+   * `warning` = approaching the limit (announced once per reset window),
+   * `exceeded` = actually limited. The messenger de-dupes the notice off this.
+   */
+  rateLimit?: { status: "warning" | "exceeded"; resetsAt?: number };
   spawnCount: number;
   /**
    * v1.2.9 §D — true when this turn was aborted by the user via `/cancel`.
@@ -555,6 +561,7 @@ export class ChiefRunner {
       sessionRotated: result.sessionRotated,
       newSession: result.newSession,
       rateLimited: result.rateLimited,
+      rateLimit: result.rateLimit,
       spawnCount: result.spawnCount,
       aborted: result.aborted ?? false,
     };
@@ -662,6 +669,7 @@ export class ChiefRunner {
     try {
     let costUsd = 0;
     let rateLimited = false;
+    let rateLimitInfo: { status: "warning" | "exceeded"; resetsAt?: number } | undefined;
     let spawnCount = 0;
     let lastResultText = "";
     let lastUsage: TurnUsage | null = null;
@@ -688,7 +696,10 @@ export class ChiefRunner {
             });
           }
         },
-        onRateLimit: () => (rateLimited = true),
+        onRateLimit: (info) => {
+          rateLimited = true;
+          rateLimitInfo = info;
+        },
         onResult: (text, cost, usage) => {
           lastResultText = text;
           costUsd = cost;
@@ -720,6 +731,7 @@ export class ChiefRunner {
         text: "",
         costUsd,
         rateLimited,
+        rateLimit: rateLimitInfo,
         spawnCount,
         sessionRotated: false,
         newSession,
@@ -815,6 +827,7 @@ export class ChiefRunner {
       text,
       costUsd,
       rateLimited,
+      rateLimit: rateLimitInfo,
       spawnCount,
       sessionRotated: false,
       newSession,
@@ -831,7 +844,7 @@ export class ChiefRunner {
     handlers: {
       onAssistantText: (text: string) => void;
       onSpawn: () => void;
-      onRateLimit: () => void;
+      onRateLimit: (info: { status: "warning" | "exceeded"; resetsAt?: number }) => void;
       onResult: (text: string, cost: number, usage: TurnUsage | null) => void;
       userId: string;
     }
@@ -901,7 +914,13 @@ export class ChiefRunner {
     if (line.type === "rate_limit_event") {
       const info = (line as { rate_limit_info: { status?: string; resetsAt?: number; rateLimitType?: string } }).rate_limit_info;
       if (info.status && info.status !== "allowed") {
-        handlers.onRateLimit();
+        // v1.4.2 — narrow to the two actionable levels; any other non-allowed
+        // status is treated conservatively as a "warning" (announced once),
+        // only an explicit "exceeded" raises the urgent notice.
+        handlers.onRateLimit({
+          status: info.status === "exceeded" ? "exceeded" : "warning",
+          resetsAt: info.resetsAt,
+        });
         sink.append({
           ts: nowIso(),
           kind: "chief.rate_limit",
@@ -968,6 +987,7 @@ interface InternalTurnResult {
   text: string;
   costUsd: number;
   rateLimited: boolean;
+  rateLimit?: { status: "warning" | "exceeded"; resetsAt?: number };
   spawnCount: number;
   sessionRotated: boolean;
   /**
