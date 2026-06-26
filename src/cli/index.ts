@@ -167,6 +167,18 @@ cronGroup
   });
 
 cronGroup
+  .command("preset")
+  .description("Enable an opt-in cron preset (e.g. leading-indicator) under an org")
+  .argument("<id>", "Preset id")
+  .option("--cron <expr>", "Override the preset's default schedule")
+  .option("--org <slug>", "Org to enable the preset under (default: the sole org)")
+  .option("-y, --yes", "Skip the enable confirmation")
+  .action(async (id, opts) => {
+    const { cronPresetCommand } = await import("./cron.js");
+    await cronPresetCommand(id, opts);
+  });
+
+cronGroup
   .command("show")
   .description("Show one cron (built-in cron or user-defined) + its validation state")
   .argument("<id>", "Cron id")

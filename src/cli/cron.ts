@@ -11,8 +11,10 @@ import {
   deleteCronFiles,
   resolveCronRef,
   cronMdPath,
+  CRON_PRESETS,
   type CronDef,
 } from "../cron/cron-def.js";
+import { getCronsDir } from "../util/paths.js";
 import {
   validateCronDef,
   type CronFinding,
@@ -186,6 +188,80 @@ export async function cronNewCommand(id: string | undefined, opts: CronNewOpts =
   } else {
     process.exitCode = 1;
   }
+}
+
+export interface CronPresetOpts {
+  cron?: string;
+  org?: string;
+  yes?: boolean;
+}
+
+/**
+ * v1.4.0 (§5.5) — `cron preset <id>`: enable an opt-in cron preset. Writes the
+ * preset's def into the org crons dir and copies the bundled prompt in (so the
+ * user owns + can edit it). Unlike `cron new` (which scaffolds a TODO prompt),
+ * the preset reuses the shipped `crons/<id>.md`.
+ */
+export async function cronPresetCommand(id: string | undefined, opts: CronPresetOpts = {}): Promise<void> {
+  const available = Object.keys(CRON_PRESETS).sort();
+  if (!id || !CRON_PRESETS[id]) {
+    console.error(
+      chalk.red(`error: unknown preset "${id ?? ""}". Available: ${available.join(", ") || "(none)"}`),
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const preset = CRON_PRESETS[id];
+  const resolved = resolveOrgDir(opts.org);
+  if (!resolved) return;
+  const { dir } = resolved;
+
+  const yamlPath = path.join(dir, `${id}.yaml`);
+  if (fs.existsSync(yamlPath)) {
+    console.error(chalk.red(`✗ ${yamlPath} already exists — already enabled (\`solosquad cron list\`).`));
+    process.exitCode = 1;
+    return;
+  }
+
+  let cronExpr = preset.cron;
+  if (opts.cron) {
+    const norm = normalizeSchedule(opts.cron);
+    if (norm.error || !norm.cron) {
+      console.error(chalk.red(`✗ schedule: ${norm.error ?? "could not parse"}`));
+      process.exitCode = 2;
+      return;
+    }
+    cronExpr = norm.cron;
+  }
+
+  const def: CronDef = {
+    id: preset.id,
+    name: preset.name,
+    kind: preset.kind,
+    cron: cronExpr,
+    channel: "",
+    emoji: preset.emoji,
+    memoryTargets: preset.memoryTargets,
+    enabled: true,
+  };
+
+  console.log(chalk.dim(`  ${preset.description}`));
+  console.log(chalk.dim(`  schedule: ${describeSchedule(cronExpr)} ("${cronExpr}")`));
+  printNextRuns(cronExpr);
+  if (!(await confirmOrAbort(`Enable preset cron "${id}"?`, opts.yes))) return;
+
+  writeCronDef(def, dir); // no scaffold — the bundled prompt is copied below.
+
+  // Copy the shipped prompt into the org dir so the cron is self-contained and
+  // user-editable. If a local prompt already exists, keep the user's version.
+  const bundledPrompt = path.join(getCronsDir(), `${id}.md`);
+  const orgPrompt = cronMdPath(id, dir);
+  if (!fs.existsSync(orgPrompt) && fs.existsSync(bundledPrompt)) {
+    fs.copyFileSync(bundledPrompt, orgPrompt);
+  }
+
+  console.log(chalk.green(`✓ enabled ${yamlPath} + ${id}.md  ${chalk.dim(`(org: ${resolved.org})`)}`));
+  if (!reportValidation(def, dir)) process.exitCode = 1;
 }
 
 /** v1.3.4 §B — print the next N fire times as a save-time preview. */
