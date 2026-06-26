@@ -334,6 +334,12 @@ export interface ChiefReply {
   costUsd: number;
   durationMs: number;
   sessionRotated: boolean;
+  /**
+   * v1.4.0 — true when this turn started a NEW Chief session (brand-new, or a
+   * fresh start after `chief reset` / mid-turn rotation). The messenger shows a
+   * "🆕 세션 시작" marker before the Chief name on this reply.
+   */
+  newSession: boolean;
   rateLimited: boolean;
   spawnCount: number;
   /**
@@ -547,6 +553,7 @@ export class ChiefRunner {
       costUsd: result.costUsd,
       durationMs,
       sessionRotated: result.sessionRotated,
+      newSession: result.newSession,
       rateLimited: result.rateLimited,
       spawnCount: result.spawnCount,
       aborted: result.aborted ?? false,
@@ -565,6 +572,9 @@ export class ChiefRunner {
     // and has never been used with claude — treat it as fresh so we pass
     // --session-id <uuid> instead of --resume <uuid>.
     const useResume = !fresh && !rotatedAlready;
+    // v1.4.0 — this turn opens a NEW session (no transcript to resume) when it
+    // won't --resume: a brand-new session or a fresh start after reset/rotation.
+    const newSession = !useResume;
 
     // v0.3.0: tell PM its currently-focused workflow (if any). The append
     // text is cache-friendly — same workflow id ⇒ same prompt ⇒ cache hit.
@@ -712,6 +722,7 @@ export class ChiefRunner {
         rateLimited,
         spawnCount,
         sessionRotated: false,
+        newSession,
         aborted: true,
       };
     }
@@ -806,6 +817,7 @@ export class ChiefRunner {
       rateLimited,
       spawnCount,
       sessionRotated: false,
+      newSession,
       aborted: inflightEntry.cancelled,
     };
     } finally {
@@ -958,6 +970,12 @@ interface InternalTurnResult {
   rateLimited: boolean;
   spawnCount: number;
   sessionRotated: boolean;
+  /**
+   * v1.4.0 — true when this turn started a NEW Chief session (did not resume an
+   * existing transcript): a brand-new session, or a fresh start after a reset /
+   * mid-turn rotation. The messenger surfaces a "session start" marker on it.
+   */
+  newSession: boolean;
   /** v1.2.9 §D — set when the user aborted this turn via `/cancel`. */
   aborted?: boolean;
 }

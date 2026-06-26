@@ -10,7 +10,13 @@ import type { Product } from "../util/config.js";
 export type ChiefSource = "discord" | "slack" | "cli";
 
 export interface MessageContext {
-  reply(text: string): Promise<void>;
+  /**
+   * Post a reply. `opts.sessionStart` (v1.4.0) prepends a "🆕 세션 시작" marker
+   * before the Chief name on the first chunk — shown when this turn opened a
+   * new Chief session (brand-new, or after `chief reset` / rotation). Adapters
+   * that don't render a Chief name may ignore it.
+   */
+  reply(text: string, opts?: { sessionStart?: boolean }): Promise<void>;
   typing(): Promise<void>;
   _agentLabel: string;
   /**
