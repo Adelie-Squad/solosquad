@@ -64,6 +64,16 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
+## What's new in v1.4.2 (2026-06-27)
+
+**Hotfix — `solosquad start` now starts the bot.** In 1.4.1, `solosquad start` / `bot --with-cron` brought up only the cron scheduler; the bot never connected (so it never replied in Discord). The embedded scheduler no longer blocks on its keep-alive — the bot starts and owns the process. Standalone `solosquad bot` / `cron start` were unaffected.
+
+Bundle-only — continuity migration `1.4.1 → 1.4.2` is a plain version bump. Update with `solosquad update` → `migrate --apply`, then restart (`solosquad start`).
+
+Full release notes: [CHANGELOG.md §1.4.2](CHANGELOG.md).
+
+---
+
 ## What's new in v1.4.1 (2026-06-27)
 
 **Chief reads & replies in works task threads.** Until now, messages in a `works-<handle>` task thread were silently ignored — Chief only listened on `command-<handle>` channels. Now you can keep talking to Chief **inside the task's thread**, where the work lives.

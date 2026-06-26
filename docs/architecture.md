@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.37 v1.4.2 — `solosquad start` 봇 미기동 핫픽스 (2026-06-27)
+
+1.4.1 의 `solosquad start`(=`bot --with-cron`)가 **스케줄러만 띄우고 봇이 안 뜨던** 핫픽스. **근본원인:** `startScheduler()` 끝의 무한 keep-alive(`await new Promise(()=>{})`, 단독 `cron start` 상주용)를 봇 경로가 `startBot()` *앞에서* `await` → 영구 블록 → 봇 미기동·디스코드 무응답. **수정:** `startScheduler({ keepAlive: false })` 추가 — 봇 동반 시 cron 등록 후 리턴, 봇이 프로세스 수명 소유(cron 타이머·fs-watcher 는 공유 이벤트루프 상주). 단독 `cron start` 는 기본 keep-alive 유지. scheduler 싱글톤 lock 무변경. 연속성 마이그레이션 `1.4.1-to-1.4.2` plain bump.
+
+자세히: `docs/prd/v1.4.2_start-cron-blocking-hotfix.md`
+
 #### 13.6.36 v1.4.1 — Works-스레드 대화 (Chief가 과제 스레드 읽기·응답) (2026-06-27)
 
 **시너지/역할:** v1.x "대화로 운영" 의 **표면 확장** — 과제가 사는 곳(works 스레드)에서 그대로 Chief 와 대화. v1.4.0 §11(메신저 표면) 의 **Approach A(단일 세션 최소선)** 를 출시. **문제:** 디스코드 리스너가 `command-<handle>` 채널만 처리하고 works 스레드 메시지를 입구에서 버려 Chief 가 못 읽었다(권한 문제 아님 — 초대에 `SendMessagesInThreads`+`MessageContent` 인텐트 이미 포함). **수정:** ⑴`classifyIncoming`(`user-registry.ts`) 으로 command 채널 / works-스레드(부모 채널 = `works-<handle>`) 분류 + v0.8 §3.5 소유자 격리 유지. ⑵`resolveWorkflowIdByThread`(`workspace-meta.ts`) 가 `discord-thread.txt` 역참조로 스레드→과제 매핑. ⑶리스너가 works-스레드면 `[thread-context]` 과제 id 주입 후 dispatch; 응답은 `message.reply()` 가 스레드에 자동 post. **세션 = 기존 단일 `(user,org)` Chief 세션 공유**(per-과제 자식 세션 격리 = 후속 Approach B/S-4). 회귀(순수 단위): `classifyIncoming` 6케이스 + `resolveWorkflowIdByThread` 매칭/미스. 연속성 마이그레이션 `1.4.0-to-1.4.1` plain bump(spawn 무변경 → 세션 리셋 없음). **동반 번들 — `solosquad start`(bot+cron+supervisor 올인원) / `bot --with-cron`**: `startScheduler()` 를 봇 프로세스에서 동반 기동, **`scheduler.pid` 싱글톤 lock**(`util/scheduler-pidfile.ts`)으로 별도 `cron start`·Docker scheduler 와의 **이중발화 차단**(2서비스 분리도 그대로). supervisor 자식 인자 파라미터화.

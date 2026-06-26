@@ -4,6 +4,23 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] — 2026-06-27 (Hotfix: `solosquad start` now actually starts the bot)
+
+See `docs/prd/v1.4.2_start-cron-blocking-hotfix.md`. In 1.4.1, `solosquad start`
+/ `bot --with-cron` started only the cron scheduler — the bot never connected to
+Discord (so it never replied). `startScheduler()` ends with an infinite
+keep-alive (for standalone `cron start`), and the bot path awaited it before
+`startBot()`, blocking forever.
+
+- `startScheduler({ keepAlive: false })` returns after registering crons; the
+  bot path uses it so `startBot()` runs and owns the process lifetime (cron
+  timers + the fs-watcher stay live on the shared event loop). Standalone
+  `cron start` keeps the default keep-alive. The scheduler singleton lock is
+  unchanged.
+
+Continuity migration `1.4.1-to-1.4.2` is a plain version bump (no data changes,
+no session reset).
+
 ## [1.4.1] — 2026-06-27 (Works-thread chat — Chief reads/replies in task threads)
 
 See `docs/prd/v1.4.1_works-thread-chat.md`. Until now the Discord listener only

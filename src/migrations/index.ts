@@ -40,6 +40,7 @@ import { migration as v139ToV1310 } from "./scripts/1.3.9-to-1.3.10.js";
 import { migration as v1310ToV1311 } from "./scripts/1.3.10-to-1.3.11.js";
 import { migration as v1311ToV140 } from "./scripts/1.3.11-to-1.4.0.js";
 import { migration as v140ToV141 } from "./scripts/1.4.0-to-1.4.1.js";
+import { migration as v141ToV142 } from "./scripts/1.4.1-to-1.4.2.js";
 import { versionMatches } from "./detect.js";
 
 /**
@@ -94,6 +95,7 @@ export const MIGRATIONS: Migration[] = [
   v1310ToV1311,
   v1311ToV140,
   v140ToV141,
+  v141ToV142,
 ];
 
 /**
