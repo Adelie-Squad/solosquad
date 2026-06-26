@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.36 v1.4.1 — Works-스레드 대화 (Chief가 과제 스레드 읽기·응답) (2026-06-27)
+
+**시너지/역할:** v1.x "대화로 운영" 의 **표면 확장** — 과제가 사는 곳(works 스레드)에서 그대로 Chief 와 대화. v1.4.0 §11(메신저 표면) 의 **Approach A(단일 세션 최소선)** 를 출시. **문제:** 디스코드 리스너가 `command-<handle>` 채널만 처리하고 works 스레드 메시지를 입구에서 버려 Chief 가 못 읽었다(권한 문제 아님 — 초대에 `SendMessagesInThreads`+`MessageContent` 인텐트 이미 포함). **수정:** ⑴`classifyIncoming`(`user-registry.ts`) 으로 command 채널 / works-스레드(부모 채널 = `works-<handle>`) 분류 + v0.8 §3.5 소유자 격리 유지. ⑵`resolveWorkflowIdByThread`(`workspace-meta.ts`) 가 `discord-thread.txt` 역참조로 스레드→과제 매핑. ⑶리스너가 works-스레드면 `[thread-context]` 과제 id 주입 후 dispatch; 응답은 `message.reply()` 가 스레드에 자동 post. **세션 = 기존 단일 `(user,org)` Chief 세션 공유**(per-과제 자식 세션 격리 = 후속 Approach B/S-4). 회귀(순수 단위): `classifyIncoming` 6케이스 + `resolveWorkflowIdByThread` 매칭/미스. 연속성 마이그레이션 `1.4.0-to-1.4.1` plain bump(spawn 무변경 → 세션 리셋 없음).
+
+자세히: `docs/prd/v1.4.1_works-thread-chat.md`
+
 #### 13.6.35 v1.4.0 — 세션 오케스트레이션 (재범위 저위험 서브셋) (2026-06-27)
 
 세션 오케스트레이션 PRD(`docs/prd/v1.4.0-session-orchestration.md`)의 **비파괴 서브셋** 출시. **시너지/역할:** 장기·다중 repo 운영의 *기반*을 깔되, 위험한 조각(세션 교대·GC 삭제)은 검증 후로 미뤄 24/7 대화 운영의 *가용성·관측*만 먼저 확보. **출시:** ⑴**S-1** `resolveOrgCwd`가 외부경로 repo(`repositories/<slug>.yaml`의 `path:`)를 `resolveRepoCwd`로 해석 → 스케줄러 cron 의 repo-blind 해소. ⑵**S-2a** `chief.usage` 수동 토큰 텔레메트리(contextTokens=input+cache_read+cache_creation, 관측만·회전 없음). ⑶**§5.5** `solosquad cron preset leading-indicator` opt-in 배선 + `avg_context_tokens`(S-2a 데이터원) 지표. ⑷**§5.7** `archiveOrgChiefSessions` 마이그레이션 헬퍼(spawn-변경 릴리즈용 clean-slate; 본 릴리즈는 spawn 무변경이라 미호출). ⑸**S-3** `_log.md` durable 파일(`_handoff.md` 에 *추가*, Layer[7] 회귀 없음) + AGENTS.md 3계층 메모리 정형화(GC 삭제 v1.4.x 연기). ⑹**🆕 세션 시작 마커** — 신규/리셋/회전 세션의 첫 Discord 응답에 Chief 이름 앞 표시. **비범위(v1.4.x):** 세션 교대(S-2b 임계 핸드오프+회전) · GC 파괴적 삭제(S-3b) · M2/M3 워커 세션 · S-6/S-7. 연속성 마이그레이션 `1.3.11-to-1.4.0` plain bump(세션 리셋 없음).

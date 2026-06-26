@@ -64,6 +64,20 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
+## What's new in v1.4.1 (2026-06-27)
+
+**Chief reads & replies in works task threads.** Until now, messages in a `works-<handle>` task thread were silently ignored — Chief only listened on `command-<handle>` channels. Now you can keep talking to Chief **inside the task's thread**, where the work lives.
+
+- **No permission change** — the bot invite already grants Create/Send-in-Threads + the MessageContent intent; this was a code boundary, now lifted.
+- **Thread → task context** — Chief is told which task the thread is about (looked up from the thread's workflow), so follow-ups land in context.
+- **Single shared session (Approach A)** — the thread uses your existing Chief session; per-task isolation ("only that task's context") is the next step.
+
+Bundle-only — continuity migration `1.4.0 → 1.4.1` is a plain version bump (no session reset). Restart the bot after `solosquad update` → `migrate --apply`.
+
+Full release notes: [CHANGELOG.md §1.4.1](CHANGELOG.md).
+
+---
+
 ## What's new in v1.4.0 (2026-06-27)
 
 **Session orchestration — re-scoped, low-risk subset.** The non-destructive slice of the session-orchestration line; session 교대 (token-threshold handoff + rotation) and GC destructive deletion are deferred to v1.4.x after their side-effects are validated.

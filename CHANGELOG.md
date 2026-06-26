@@ -4,6 +4,27 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] — 2026-06-27 (Works-thread chat — Chief reads/replies in task threads)
+
+See `docs/prd/v1.4.1_works-thread-chat.md`. Until now the Discord listener only
+processed `command-<handle>` channels, so messages in `works-<handle>` task
+threads were silently dropped — a code boundary, **not** a permission gap (the
+invite already grants `SendMessagesInThreads` + the `MessageContent` intent).
+
+- **Chief reads & replies in works task threads.** The listener now also accepts
+  a message whose channel is a thread under `works-<handle>` (owner-handle
+  isolation preserved — other users'/bots' channels and non-works threads stay
+  ignored). The reply lands in the thread automatically.
+- **Thread → task context.** The thread's workflow id is reverse-looked-up from
+  `discord-thread.txt` and injected as a `[thread-context]` line so the shared
+  Chief session knows which task the thread is about.
+- **Single session (Approach A).** The thread shares the existing `(user,org)`
+  Chief session; per-task child-session isolation ("그 작업에 대해서만") is the
+  follow-up (Approach B / S-4).
+
+Continuity migration `1.4.0-to-1.4.1` is a plain version bump (no session reset
+— spawn behaviour unchanged).
+
 ## [1.4.0] — 2026-06-27 (Session orchestration — re-scoped low-risk subset)
 
 See `docs/prd/v1.4.0-session-orchestration.md`. v1.4.0 ships the non-destructive
