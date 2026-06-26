@@ -366,7 +366,13 @@ async function sendStartupNotification(crons: ResolvedCron[]): Promise<void> {
   }
 }
 
-export async function startScheduler(): Promise<void> {
+export async function startScheduler(
+  // v1.4.1 hotfix — when embedded in `solosquad bot --with-cron` / `start`, the
+  // bot owns the process lifetime, so the scheduler must NOT block on its own
+  // keep-alive (that would stop the bot from ever starting). Standalone
+  // `cron start` keeps the default (keepAlive: true) so the command stays up.
+  opts: { keepAlive?: boolean } = {},
+): Promise<void> {
   // v1.4.1 — singleton guard. A second scheduler (e.g. `cron start` next to a
   // `bot --with-cron` / `solosquad start`) would double-register every cron and
   // double-fire it. If another live scheduler holds the lock, skip silently
@@ -435,8 +441,13 @@ export async function startScheduler(): Promise<void> {
   console.log("[Scheduler] Scheduler started");
   await sendStartupNotification(crons);
 
-  // Keep alive
-  await new Promise<void>(() => {});
+  // Keep alive — only when running standalone (`cron start`). When embedded in
+  // the bot process (`bot --with-cron` / `start`), return so the bot can start;
+  // the bot then keeps the process alive (and the registered cron timers + the
+  // fs-watcher stay live on the shared event loop).
+  if (opts.keepAlive !== false) {
+    await new Promise<void>(() => {});
+  }
 }
 
 /**

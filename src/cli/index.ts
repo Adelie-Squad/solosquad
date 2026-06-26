@@ -98,11 +98,13 @@ program
       return;
     }
     if (opts.withCron) {
-      // Start the scheduler in-process first (it registers node-cron jobs and
-      // returns; the lock makes a concurrent scheduler a no-op), then the bot
-      // keeps the process alive.
+      // Register the scheduler in-process WITHOUT its keep-alive (keepAlive:
+      // false returns after setup) — otherwise it blocks forever and the bot
+      // below never starts. The bot keeps the process alive; cron timers + the
+      // fs-watcher stay live on the shared event loop. The scheduler lock still
+      // guards against a separate `cron start` double-firing.
       const { startScheduler } = await import("../cron/index.js");
-      await startScheduler();
+      await startScheduler({ keepAlive: false });
     }
     const { startBot } = await import("../bot/index.js");
     await startBot();
