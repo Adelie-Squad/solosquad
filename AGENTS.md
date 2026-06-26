@@ -87,6 +87,14 @@ assets/                             → Remaining bundled defaults staged into .
 
 ## 3-Layer Context (v0.6 topology)
 
+> **Memory layering (v1.4.0 S-3 formalization).** The stores below map to a
+> working / episodic / long-term model: working = current session jsonl +
+> chief events; episodic = `memory/cron-logs/*.jsonl` (7-day hot) + git
+> snapshots; long-term = `archive.sqlite` FTS5 + `knowledge/` + `memory/pm-skills/`.
+> GC ("wise forgetting") rules are specified in PRD v1.4.0 §5.3, but the
+> *destructive deletion* itself is deferred to v1.4.x (it must run inside
+> archive-rotate, never before, to avoid dropping rows pre-archive).
+
 ```
 Layer 0: Workspace / Universal
 ├── AGENTS.md                  → cross-tool persistent guide (human-edited only)
@@ -117,7 +125,8 @@ Layer 1: Organization (<workspace>/<org>/)
 │   ├── migration-costs.jsonl  → 마이그레이션 자체 cap (v0.6 §2.2 P0)
 │   ├── spawn-decisions.jsonl  → 8-layer drop 로그 (v0.6 §2.2 P1)
 │   └── stop-hook-events.jsonl → spec-gate 평가 로그 (v0.6 §5b)
-├── workflows/<id>/            → Active workflows (status, handoff, events) — v0.3
+├── workflows/<id>/            → Active workflows (PRD, _status, _handoff, _log, events) — v0.3;
+│                                  _log.md = cumulative execution audit, additive to _handoff (v1.4.0 S-3)
 ├── goals/<goal-id>/           → Autonomous run intents + cycle results — v0.4
 ├── .solosquad/sessions/       → Chief session IDs per user — v0.3 (was "PM session")
 ├── slack/ | discord/          → Channel config

@@ -29,6 +29,7 @@ export type EventKind =
   | "chief.session_lost"
   | "chief.session_rotated"
   | "chief.rate_limit"
+  | "chief.usage"
   | "spawn.start"
   | "spawn.complete"
   | "spawn.fail"
@@ -91,6 +92,25 @@ export interface ChiefRateLimitEvent extends BaseEvent {
   userId: string;
 }
 
+/**
+ * v1.4.0 (S-2a) — passive token-usage telemetry for a completed Chief turn.
+ * Captured from the stream-json `result` line's `usage` block. OBSERVATION
+ * ONLY — no session rotation acts on this (that is S-2b, deferred to v1.4.x).
+ * `contextTokens` ≈ the prompt size that went into the model this turn
+ * (input + cache_read + cache_creation), i.e. a proxy for context-window
+ * occupancy that §5.5 leading-indicator and a future S-2b threshold can read.
+ */
+export interface ChiefUsageEvent extends BaseEvent {
+  kind: "chief.usage";
+  userId: string;
+  contextTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  costUsd: number;
+}
+
 export interface SpawnStartEvent extends BaseEvent {
   kind: "spawn.start";
   taskId: string;
@@ -137,6 +157,7 @@ export type AnyEvent =
   | ChiefSessionLostEvent
   | ChiefSessionRotatedEvent
   | ChiefRateLimitEvent
+  | ChiefUsageEvent
   | SpawnStartEvent
   | SpawnCompleteEvent
   | SpawnFailEvent

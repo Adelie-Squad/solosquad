@@ -34,11 +34,11 @@ function makeTmpOrg(): string {
 
 test("v1.0.1 — resolveOrgCwd picks first registered repo, no role lookup", () => {
   const orgDir = makeTmpOrg();
-  // Two legacy-directory repos. The scheduler-cwd helper iterates
-  // *directories* under repositories/ (preserved from pre-v1.0.1
-  // contract — path-reference yamls are handled at PM level through
-  // resolveRepoCwd, not by scheduler-default-cwd). Filesystem
-  // readdirSync order is not guaranteed cross-platform, but the
+  // Two legacy-directory repos. (Since v1.4.0/S-1 the scheduler-cwd
+  // helper also resolves v0.9.1+ path-reference yamls via resolveRepoCwd;
+  // here we keep the legacy-directory case to guard the no-role-lookup
+  // behaviour.) Filesystem readdirSync order is not guaranteed
+  // cross-platform, but the
   // resolver MUST pick *one* and report reason="first-repo" — never
   // the removed "main-repo".
   fs.mkdirSync(path.join(orgDir, "repositories", "app-a"));

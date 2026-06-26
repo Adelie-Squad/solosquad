@@ -4,6 +4,37 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-06-27 (Session orchestration — re-scoped low-risk subset)
+
+See `docs/prd/v1.4.0-session-orchestration.md`. v1.4.0 ships the non-destructive
+subset of the session-orchestration PRD; session 교대 (token-threshold handoff +
+session rotation, S-2b) and GC destructive deletion (S-3b) are deferred to
+v1.4.x after their side-effects are validated.
+
+**Shipped.**
+- **S-1 — external-path repo cwd for crons.** `resolveOrgCwd` (scheduler/cron
+  cwd) now resolves v1.0+ path-reference repos (`repositories/<slug>.yaml` →
+  external `path:`) via `resolveRepoCwd`, instead of falling through to org-root.
+  Crons are no longer repo-blind.
+- **S-2a — passive token-usage telemetry.** The Chief turn records a
+  `chief.usage` event (contextTokens = input + cache_read + cache_creation) from
+  the stream-json `result` usage block. Observation only — nothing rotates on it.
+- **§5.5 — leading-indicator cron preset.** `solosquad cron preset
+  leading-indicator` enables the previously-orphaned prompt (opt-in; writes the
+  def + copies the bundled prompt). The prompt gains an `avg_context_tokens`
+  indicator sourced from S-2a.
+- **§5.7 — spawn-change session reset helper.** `archiveOrgChiefSessions` rotates
+  each org's Chief session; future spawn-affecting releases call it for a clean
+  slate (this release does not — spawn behaviour is unchanged).
+- **S-3 — `_log.md` durable file + memory formalization (docs).** Per-workflow
+  append-only audit log, additive to `_handoff.md` (no Layer[7] regression);
+  3-layer memory mapping documented in AGENTS.md (GC deletion deferred).
+- **🆕 session-start marker.** A new/reset/rotated Chief session shows a
+  "🆕 세션 시작" marker before the Chief name on its first Discord reply.
+
+Continuity migration `1.3.11-to-1.4.0` is a plain version bump (no session
+reset — spawn behaviour unchanged).
+
 ## [1.3.11] — 2026-06-25 (Windows --add-dir hotfix on 1.3.10 — append-system-prompt newline)
 
 See `docs/prd/v1.3.11_windows-add-dir-prompt-newline-hotfix.md`. A Windows-only

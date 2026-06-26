@@ -334,6 +334,12 @@ export interface ChiefReply {
   costUsd: number;
   durationMs: number;
   sessionRotated: boolean;
+  /**
+   * v1.4.0 — true when this turn started a NEW Chief session (brand-new, or a
+   * fresh start after `chief reset` / mid-turn rotation). The messenger shows a
+   * "🆕 세션 시작" marker before the Chief name on this reply.
+   */
+  newSession: boolean;
   rateLimited: boolean;
   spawnCount: number;
   /**
@@ -547,6 +553,7 @@ export class ChiefRunner {
       costUsd: result.costUsd,
       durationMs,
       sessionRotated: result.sessionRotated,
+      newSession: result.newSession,
       rateLimited: result.rateLimited,
       spawnCount: result.spawnCount,
       aborted: result.aborted ?? false,
@@ -565,6 +572,9 @@ export class ChiefRunner {
     // and has never been used with claude — treat it as fresh so we pass
     // --session-id <uuid> instead of --resume <uuid>.
     const useResume = !fresh && !rotatedAlready;
+    // v1.4.0 — this turn opens a NEW session (no transcript to resume) when it
+    // won't --resume: a brand-new session or a fresh start after reset/rotation.
+    const newSession = !useResume;
 
     // v0.3.0: tell PM its currently-focused workflow (if any). The append
     // text is cache-friendly — same workflow id ⇒ same prompt ⇒ cache hit.
@@ -654,6 +664,7 @@ export class ChiefRunner {
     let rateLimited = false;
     let spawnCount = 0;
     let lastResultText = "";
+    let lastUsage: TurnUsage | null = null;
     const collectedAssistantText: string[] = [];
 
     let decomposeEmitted = false;
@@ -678,9 +689,10 @@ export class ChiefRunner {
           }
         },
         onRateLimit: () => (rateLimited = true),
-        onResult: (text, cost) => {
+        onResult: (text, cost, usage) => {
           lastResultText = text;
           costUsd = cost;
+          if (usage) lastUsage = usage;
         },
         userId: call.userId,
       });
@@ -710,8 +722,28 @@ export class ChiefRunner {
         rateLimited,
         spawnCount,
         sessionRotated: false,
+        newSession,
         aborted: true,
       };
+    }
+
+    // v1.4.0 (S-2a) — passive token-usage telemetry. Emit once per
+    // non-cancelled turn that reported usage. OBSERVATION ONLY: nothing
+    // rotates on this (threshold handover = S-2b, deferred to v1.4.x).
+    // §5.5 leading-indicator reads these `chief.usage` events.
+    if (lastUsage) {
+      const u: TurnUsage = lastUsage;
+      sink.append({
+        ts: nowIso(),
+        kind: "chief.usage",
+        userId: call.userId,
+        contextTokens: u.contextTokens,
+        inputTokens: u.inputTokens,
+        outputTokens: u.outputTokens,
+        cacheReadTokens: u.cacheReadTokens,
+        cacheCreationTokens: u.cacheCreationTokens,
+        costUsd,
+      });
     }
 
     if (NOT_LOGGED_IN_PATTERN.test(exit.unparsedStdout)) {
@@ -785,6 +817,7 @@ export class ChiefRunner {
       rateLimited,
       spawnCount,
       sessionRotated: false,
+      newSession,
       aborted: inflightEntry.cancelled,
     };
     } finally {
@@ -799,7 +832,7 @@ export class ChiefRunner {
       onAssistantText: (text: string) => void;
       onSpawn: () => void;
       onRateLimit: () => void;
-      onResult: (text: string, cost: number) => void;
+      onResult: (text: string, cost: number, usage: TurnUsage | null) => void;
       userId: string;
     }
   ): void {
@@ -881,11 +914,54 @@ export class ChiefRunner {
     }
 
     if (line.type === "result") {
-      const l = line as { result?: string; total_cost_usd?: number };
-      handlers.onResult(String(l.result ?? ""), Number(l.total_cost_usd ?? 0));
+      const l = line as {
+        result?: string;
+        total_cost_usd?: number;
+        usage?: {
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_read_input_tokens?: number;
+          cache_creation_input_tokens?: number;
+        };
+      };
+      handlers.onResult(
+        String(l.result ?? ""),
+        Number(l.total_cost_usd ?? 0),
+        parseTurnUsage(l.usage)
+      );
       return;
     }
   }
+}
+
+/**
+ * v1.4.0 (S-2a) — normalized token usage for one Chief turn, parsed from the
+ * stream-json `result` line's `usage` block. `contextTokens` (input + cache_read
+ * + cache_creation) approximates the prompt size that went into the model, i.e.
+ * a proxy for context-window occupancy. Observation only — no rotation here.
+ */
+export interface TurnUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  contextTokens: number;
+}
+
+function parseTurnUsage(u?: {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}): TurnUsage | null {
+  if (!u) return null;
+  const inputTokens = Number(u.input_tokens ?? 0);
+  const outputTokens = Number(u.output_tokens ?? 0);
+  const cacheReadTokens = Number(u.cache_read_input_tokens ?? 0);
+  const cacheCreationTokens = Number(u.cache_creation_input_tokens ?? 0);
+  const contextTokens = inputTokens + cacheReadTokens + cacheCreationTokens;
+  if (contextTokens === 0 && outputTokens === 0) return null;
+  return { inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens, contextTokens };
 }
 
 interface InternalTurnResult {
@@ -894,6 +970,12 @@ interface InternalTurnResult {
   rateLimited: boolean;
   spawnCount: number;
   sessionRotated: boolean;
+  /**
+   * v1.4.0 — true when this turn started a NEW Chief session (did not resume an
+   * existing transcript): a brand-new session, or a fresh start after a reset /
+   * mid-turn rotation. The messenger surfaces a "session start" marker on it.
+   */
+  newSession: boolean;
   /** v1.2.9 §D — set when the user aborted this turn via `/cancel`. */
   aborted?: boolean;
 }

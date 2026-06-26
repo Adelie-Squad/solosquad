@@ -203,3 +203,40 @@ export function resolveCronRef(ref: string, dir: string): CronRefResult {
   if (byName.length > 1) return { kind: "ambiguous", matches: byName.map((d) => d.id) };
   return { kind: "missing" };
 }
+
+/* -------------------------------------------------------------------------- */
+/* v1.4.0 (§5.5) — opt-in cron presets                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A preset is a built-in cron prompt that SHIPS in the bundle (`crons/<id>.md`)
+ * but is NOT scheduled by default — the user opts in via `solosquad cron preset
+ * <id>`, which writes a def into the org crons dir and copies the bundled
+ * prompt in (so it becomes user-owned + editable). This keeps default-on cron
+ * noise low while making the prompt discoverable/enable-able with one command.
+ */
+export interface CronPreset {
+  id: string;
+  name: string;
+  kind: CronKind;
+  /** Default node-cron schedule (overridable at enable time). */
+  cron: string;
+  emoji: string;
+  memoryTargets: string[];
+  /** One-line description shown in the CLI. */
+  description: string;
+}
+
+export const CRON_PRESETS: Record<string, CronPreset> = {
+  "leading-indicator": {
+    id: "leading-indicator",
+    name: "Leading Indicator",
+    kind: "background",
+    // Daily 09:30 (matches the bundled prompt's stated default; off-peak vs
+    // the morning/evening briefs to avoid a thundering herd).
+    cron: "30 9 * * *",
+    emoji: "📈",
+    memoryTargets: [],
+    description: "Daily autonomy-health indicators → memory/leading-indicators.jsonl",
+  },
+};

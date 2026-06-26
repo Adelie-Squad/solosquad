@@ -87,11 +87,14 @@ class DiscordMessageContext implements MessageContext {
     return this._chiefLabel;
   }
 
-  async reply(text: string): Promise<void> {
+  async reply(text: string, opts?: { sessionStart?: boolean }): Promise<void> {
     const chunks = text.match(/.{1,1900}/gs) || [text];
     const prefixLabel = `${this.chiefLabel()}${this._agentLabel}`;
+    // v1.4.0 — a fresh Chief session (brand-new / after reset / rotation) shows
+    // a marker BEFORE the Chief name on the first chunk.
+    const sessionMark = opts?.sessionStart ? "🆕 *세션 시작*\n" : "";
     for (let i = 0; i < chunks.length; i++) {
-      const prefix = i === 0 ? `**[${prefixLabel}]**\n` : "";
+      const prefix = i === 0 ? `${sessionMark}**[${prefixLabel}]**\n` : "";
       try {
         // v1.2.9 §D — send the reply as plain markdown text, NOT wrapped
         // in a ``` code block. Code-block-wrapping the whole conversation

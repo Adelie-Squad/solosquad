@@ -322,10 +322,10 @@ async function handleCommandInner(
           console.log(
             `[Bot] artifact filing failed: ${artErr instanceof Error ? artErr.message : String(artErr)} — falling back to inline reply`,
           );
-          await ctx.reply(reply.text);
+          await ctx.reply(reply.text, { sessionStart: reply.newSession });
         }
       } else {
-        await ctx.reply(reply.text);
+        await ctx.reply(reply.text, { sessionStart: reply.newSession });
       }
     } else {
       await ctx.reply("(no reply generated — please try again or check `solosquad doctor`)");
