@@ -2,7 +2,35 @@ import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
 import { getOrgDir, resolveRepoCwd } from "../util/paths.js";
+import { normalizeLine } from "../util/platform.js";
 import { FileEventSink, workflowEventsPath, type AnyEvent } from "./events.js";
+
+/**
+ * v1.4.1 — reverse-lookup a Discord works-thread id → its workflow id, by
+ * scanning each `<orgCwd>/workflows/<id>/discord-thread.txt` (key=value, written
+ * by discord-task-card `persistThreadRef`). Returns null if no thread matches.
+ *
+ * A linear scan is fine for now — an org has few active workflows. A thread_id→
+ * workflow index is a future optimisation (PRD v1.4.1 §결정 2).
+ */
+export function resolveWorkflowIdByThread(orgCwd: string, threadId: string): string | null {
+  const wfRoot = path.join(orgCwd, "workflows");
+  if (!fs.existsSync(wfRoot)) return null;
+  for (const entry of fs.readdirSync(wfRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+    const file = path.join(wfRoot, entry.name, "discord-thread.txt");
+    if (!fs.existsSync(file)) continue;
+    try {
+      for (const line of normalizeLine(fs.readFileSync(file, "utf-8")).split("\n")) {
+        const m = line.match(/^thread_id=(.+)$/);
+        if (m && m[1].trim() === threadId) return entry.name;
+      }
+    } catch {
+      // skip unreadable discord-thread.txt
+    }
+  }
+  return null;
+}
 
 /**
  * v0.3.0 — workspace metadata helper.

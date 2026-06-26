@@ -38,7 +38,8 @@ import {
 import { awaitApproval } from "./discord-approval.js";
 import { awaitChoice } from "./discord-choice.js";
 import { saveArtifact } from "./artifact-store.js";
-import { parseChannelName } from "../bot/user-registry.js";
+import { classifyIncoming } from "../bot/user-registry.js";
+import { resolveWorkflowIdByThread } from "../bot/workspace-meta.js";
 import { resolveBotIdentity } from "../bot/channel-bootstrap.js";
 import { getWorkspaceRoot, getOrgDir } from "../util/paths.js";
 import { loadOrgYaml } from "../util/config.js";
@@ -338,20 +339,27 @@ export class DiscordAdapter implements MessengerAdapter {
 
     client.on("messageCreate", async (message) => {
       if (message.author.bot) return;
-      const channelName = (message.channel as TextChannel).name ?? "";
+      const channel = message.channel;
+      const isThread =
+        typeof (channel as ThreadChannel).isThread === "function" &&
+        (channel as ThreadChannel).isThread();
+      const channelName = isThread
+        ? ((channel as ThreadChannel).name ?? "")
+        : ((channel as TextChannel).name ?? "");
 
-      // v0.8 §3.1 — Only `command-<handle>` channels accept commands. Other
-      // channels (works-<handle>, broadcast, system, legacy) are ignored at
-      // the listener boundary. The legacy `owner-command` is no longer
-      // recognized — operators are expected to migrate via §6.
-      const parsed = parseChannelName(channelName);
-      if (!parsed || parsed.kind !== "command") return;
-
-      // v0.8 §3.5 — Only act on channels belonging to *this* bot's user.
-      // Other users' command channels in the same guild are silently
-      // ignored (a different bot process owns them).
-      const ownHandle = this.ownHandle;
-      if (!ownHandle || ownHandle !== parsed.handle) return;
+      // v0.8 §3.1 / v1.4.1 — accept `command-<handle>` channels AND threads
+      // under `works-<handle>` (so Chief reads/replies in task threads). All
+      // other channels/threads, and any handle that isn't this bot's, are
+      // ignored at the listener boundary (v0.8 §3.5 isolation preserved).
+      const route = classifyIncoming({
+        channelName,
+        isThread,
+        parentChannelName: isThread
+          ? ((channel as ThreadChannel).parent?.name ?? null)
+          : null,
+        ownHandle: this.ownHandle,
+      });
+      if (!route) return;
 
       // v1.0.2 logged author identity for post-hoc audit without gating.
       // v1.2 §4.5 restores the gate as an owner-id check (default OFF for
@@ -414,8 +422,25 @@ export class DiscordAdapter implements MessengerAdapter {
         this.ownOrgSlug,
       );
       await message.channel.sendTyping();
+
+      // v1.4.1 — for a works task thread, tell Chief which task this thread is
+      // about (reverse-lookup the workflow id from discord-thread.txt). The
+      // reply lands in the thread automatically because message.reply() posts
+      // in the channel the message came from. Session is the shared (user,org)
+      // Chief session — per-task isolation is a follow-up (PRD §결정 3).
+      let content = message.content.trim();
+      if (route.kind === "works-thread") {
+        const orgCwd = path.join(getReposBase(), product.slug);
+        const wfId = resolveWorkflowIdByThread(orgCwd, (channel as ThreadChannel).id);
+        if (wfId) {
+          content =
+            `[thread-context] 이 메시지는 works 스레드의 과제 \`${wfId}\` 안에서 왔다. ` +
+            `이 과제의 후속으로 답하라.\n\n${content}`;
+        }
+      }
+
       try {
-        await onCommand(message.content.trim(), product, ctx);
+        await onCommand(content, product, ctx);
       } catch (e) {
         console.log(`[Discord] Command handler error: ${e}`);
       }

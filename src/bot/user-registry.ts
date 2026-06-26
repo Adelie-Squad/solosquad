@@ -199,3 +199,37 @@ export function parseChannelName(
   if (!m) return null;
   return { kind: m[1] as "command" | "works", handle: m[2] };
 }
+
+export type IncomingRoute = { kind: "command" } | { kind: "works-thread" };
+
+/**
+ * v1.4.1 — decide whether an incoming Discord message should be handled by this
+ * bot, and as what surface:
+ *   - a `command-<handle>` channel → "command" (the v0.8 path).
+ *   - a thread whose PARENT channel is `works-<handle>` → "works-thread"
+ *     (Chief reads/replies inside task threads — PRD v1.4.1).
+ * Anything else — or a handle that isn't THIS bot's — returns null (ignored, so
+ * other users' / other bots' channels and threads keep the v0.8 §3.5 isolation).
+ */
+export function classifyIncoming(opts: {
+  channelName: string;
+  isThread: boolean;
+  parentChannelName: string | null;
+  ownHandle: string | null;
+}): IncomingRoute | null {
+  const { channelName, isThread, parentChannelName, ownHandle } = opts;
+  if (!ownHandle) return null;
+
+  const direct = parseChannelName(channelName);
+  if (direct && direct.kind === "command") {
+    return direct.handle === ownHandle ? { kind: "command" } : null;
+  }
+
+  if (isThread && parentChannelName) {
+    const parent = parseChannelName(parentChannelName);
+    if (parent && parent.kind === "works" && parent.handle === ownHandle) {
+      return { kind: "works-thread" };
+    }
+  }
+  return null;
+}
