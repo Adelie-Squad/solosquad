@@ -654,6 +654,7 @@ export class ChiefRunner {
     let rateLimited = false;
     let spawnCount = 0;
     let lastResultText = "";
+    let lastUsage: TurnUsage | null = null;
     const collectedAssistantText: string[] = [];
 
     let decomposeEmitted = false;
@@ -678,9 +679,10 @@ export class ChiefRunner {
           }
         },
         onRateLimit: () => (rateLimited = true),
-        onResult: (text, cost) => {
+        onResult: (text, cost, usage) => {
           lastResultText = text;
           costUsd = cost;
+          if (usage) lastUsage = usage;
         },
         userId: call.userId,
       });
@@ -712,6 +714,25 @@ export class ChiefRunner {
         sessionRotated: false,
         aborted: true,
       };
+    }
+
+    // v1.4.0 (S-2a) — passive token-usage telemetry. Emit once per
+    // non-cancelled turn that reported usage. OBSERVATION ONLY: nothing
+    // rotates on this (threshold handover = S-2b, deferred to v1.4.x).
+    // §5.5 leading-indicator reads these `chief.usage` events.
+    if (lastUsage) {
+      const u: TurnUsage = lastUsage;
+      sink.append({
+        ts: nowIso(),
+        kind: "chief.usage",
+        userId: call.userId,
+        contextTokens: u.contextTokens,
+        inputTokens: u.inputTokens,
+        outputTokens: u.outputTokens,
+        cacheReadTokens: u.cacheReadTokens,
+        cacheCreationTokens: u.cacheCreationTokens,
+        costUsd,
+      });
     }
 
     if (NOT_LOGGED_IN_PATTERN.test(exit.unparsedStdout)) {
@@ -799,7 +820,7 @@ export class ChiefRunner {
       onAssistantText: (text: string) => void;
       onSpawn: () => void;
       onRateLimit: () => void;
-      onResult: (text: string, cost: number) => void;
+      onResult: (text: string, cost: number, usage: TurnUsage | null) => void;
       userId: string;
     }
   ): void {
@@ -881,11 +902,54 @@ export class ChiefRunner {
     }
 
     if (line.type === "result") {
-      const l = line as { result?: string; total_cost_usd?: number };
-      handlers.onResult(String(l.result ?? ""), Number(l.total_cost_usd ?? 0));
+      const l = line as {
+        result?: string;
+        total_cost_usd?: number;
+        usage?: {
+          input_tokens?: number;
+          output_tokens?: number;
+          cache_read_input_tokens?: number;
+          cache_creation_input_tokens?: number;
+        };
+      };
+      handlers.onResult(
+        String(l.result ?? ""),
+        Number(l.total_cost_usd ?? 0),
+        parseTurnUsage(l.usage)
+      );
       return;
     }
   }
+}
+
+/**
+ * v1.4.0 (S-2a) — normalized token usage for one Chief turn, parsed from the
+ * stream-json `result` line's `usage` block. `contextTokens` (input + cache_read
+ * + cache_creation) approximates the prompt size that went into the model, i.e.
+ * a proxy for context-window occupancy. Observation only — no rotation here.
+ */
+export interface TurnUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  contextTokens: number;
+}
+
+function parseTurnUsage(u?: {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}): TurnUsage | null {
+  if (!u) return null;
+  const inputTokens = Number(u.input_tokens ?? 0);
+  const outputTokens = Number(u.output_tokens ?? 0);
+  const cacheReadTokens = Number(u.cache_read_input_tokens ?? 0);
+  const cacheCreationTokens = Number(u.cache_creation_input_tokens ?? 0);
+  const contextTokens = inputTokens + cacheReadTokens + cacheCreationTokens;
+  if (contextTokens === 0 && outputTokens === 0) return null;
+  return { inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens, contextTokens };
 }
 
 interface InternalTurnResult {

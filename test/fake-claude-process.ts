@@ -287,7 +287,17 @@ export function initLine(
 export function resultLine(
   sessionId: string,
   result: string,
-  opts?: { costUsd?: number; isError?: boolean }
+  opts?: {
+    costUsd?: number;
+    isError?: boolean;
+    /** v1.4.0 (S-2a) — optional token usage block (passive telemetry). */
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      cache_read_input_tokens?: number;
+      cache_creation_input_tokens?: number;
+    };
+  }
 ): StreamJsonOutputLine {
   return {
     type: "result",
@@ -298,7 +308,8 @@ export function resultLine(
     total_cost_usd: opts?.costUsd ?? 0.01,
     stop_reason: "end_turn",
     terminal_reason: "completed",
-  };
+    ...(opts?.usage ? { usage: opts.usage } : {}),
+  } as StreamJsonOutputLine;
 }
 
 export function taskStartedLine(
