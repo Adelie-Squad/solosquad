@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import yaml from "js-yaml";
 import { normalizeLine } from "../util/platform.js";
+import { resolveRepoCwd } from "../util/paths.js";
 
 export interface WorkflowStage {
   id: string;
@@ -77,13 +78,23 @@ export function resolveActiveStage(orgDir: string): { workflowId: string; stage:
  * question (see `src/bot/mention-parser.ts`), never through this path.
  *
  * Returns first registered repo, or null if none registered.
+ *
+ * v1.4.0 (S-1): recognises BOTH layouts — path-reference mode stores repos as
+ * `repositories/<slug>.yaml` files (v0.9.1+ default), legacy tree mode as
+ * `repositories/<slug>/` directories. Previously only directories were picked,
+ * so external-path workspaces (the v1.0+ default) returned null → org-root.
  */
 function pickDefaultRepoSlug(orgDir: string): string | null {
   const reposDir = path.join(orgDir, "repositories");
   if (!fs.existsSync(reposDir)) return null;
   for (const entry of fs.readdirSync(reposDir, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-    return entry.name;
+    if (entry.name.startsWith(".")) continue;
+    // path-reference mode (v0.9.1+): repositories/<slug>.yaml
+    if (entry.isFile() && entry.name.endsWith(".yaml")) {
+      return entry.name.slice(0, -".yaml".length);
+    }
+    // legacy tree mode: repositories/<slug>/
+    if (entry.isDirectory()) return entry.name;
   }
   return null;
 }
@@ -109,12 +120,19 @@ export function resolveOrgCwd(orgDir: string): {
   workflowId?: string;
   repoSlug?: string;
 } {
+  // v1.4.0 (S-1): route through resolveRepoCwd so external-path repos
+  // (`repositories/<slug>.yaml` with a `path:` field, the v1.0+ default) are
+  // resolved to their real absolute path. resolveRepoCwd returns the org root
+  // as its fallback, so `cwd !== orgDir` means a real repo dir was resolved.
+  const orgSlug = path.basename(orgDir);
+  const workspace = path.dirname(orgDir);
+
   const active = resolveActiveStage(orgDir);
   if (active?.stage.target_repo) {
-    const candidate = path.join(orgDir, "repositories", active.stage.target_repo);
-    if (fs.existsSync(candidate)) {
+    const cwd = resolveRepoCwd(orgSlug, active.stage.target_repo, workspace);
+    if (cwd !== orgDir) {
       return {
-        cwd: candidate,
+        cwd,
         reason: "workflow",
         workflowId: active.workflowId,
         repoSlug: active.stage.target_repo,
@@ -124,11 +142,10 @@ export function resolveOrgCwd(orgDir: string): {
 
   const firstSlug = pickDefaultRepoSlug(orgDir);
   if (firstSlug) {
-    return {
-      cwd: path.join(orgDir, "repositories", firstSlug),
-      reason: "first-repo",
-      repoSlug: firstSlug,
-    };
+    const cwd = resolveRepoCwd(orgSlug, firstSlug, workspace);
+    if (cwd !== orgDir) {
+      return { cwd, reason: "first-repo", repoSlug: firstSlug };
+    }
   }
 
   return { cwd: orgDir, reason: "legacy-root" };
