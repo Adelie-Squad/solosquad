@@ -53,7 +53,9 @@
 | [v1.4.0-session-orchestration.md](v1.4.0-session-orchestration.md) | |
 | [v1.4.1_works-thread-chat.md](v1.4.1_works-thread-chat.md) | |
 | [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | |
-| [v1.4.3_docker-cloud-deploy-and-health-notify.md](v1.4.3_docker-cloud-deploy-and-health-notify.md) | |
+| [v1.4.3_multi-repo-execution-context.md](v1.4.3_multi-repo-execution-context.md) | 초안 |
+| [v1.4.4_per-repo-worker-sessions.md](v1.4.4_per-repo-worker-sessions.md) | 초안 |
+| [v1.4.5_docker-cloud-deploy-and-health-notify.md](v1.4.5_docker-cloud-deploy-and-health-notify.md) | 연기(deferred) |
 | [v1.5.0-customization-upstream-reconciliation.md](v1.5.0-customization-upstream-reconciliation.md) | |
 | [v1.x-dashboard-interaction.md](v1.x-dashboard-interaction.md) | |
 | [v1.x-knowledge-ontology.md](v1.x-knowledge-ontology.md) | |
