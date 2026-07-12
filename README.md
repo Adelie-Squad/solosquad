@@ -64,15 +64,15 @@ For internal architecture, release planning, and decision history, see [`docs/ro
 
 ---
 
-## What's new in v1.4.2 (2026-06-27)
+## What's new in v1.4.3 (2026-07-12)
 
-**Hotfix — `solosquad start` now starts the bot.** In 1.4.1, `solosquad start` / `bot --with-cron` brought up only the cron scheduler; the bot never connected (so it never replied in Discord). The embedded scheduler no longer blocks on its keep-alive — the bot starts and owns the process. Standalone `solosquad bot` / `cron start` were unaffected.
+**Research Workflow — validate before you build.** A third bundled main workflow, `research`, runs autonomous hypothesis validation *before* feature development: spec (a falsifiable question + a pre-registered rubric) → diverge/converge hypothesis (web/literature search, not just internal knowledge) → experiment cycles → a blind, leakage-controlled backtest with numeric eval → a Track2-style verifier review → report, looping until the rubric passes or the budget runs out. A goal can now run this **unattended for 8h+**.
 
-**Hotfix — rate-limit notice no longer repeats on every reply.** Claude Code's "approaching usage limit" (`warning`) status is now announced once per reset window instead of on every message; only an actual `exceeded` raises the urgent ⚠️ notice.
+**Reports are first-class deliverables.** Market-research reports, papers, and prototypes now land at the org top level in `<org>/reports/` (out of the internal `docs/` layer).
 
-Bundle-only — continuity migration `1.4.1 → 1.4.2` is a plain version bump. Update with `solosquad update` → `migrate --apply`, then restart (`solosquad start`).
+Continuity migration `1.4.2 → 1.4.3` moves each org's reports from `docs/reports/` up to `reports/` (files moved, never overwritten); no session reset. Update with `solosquad update` → `migrate --apply`, then restart (`solosquad start`).
 
-Full release notes: [CHANGELOG.md §1.4.2](CHANGELOG.md).
+Full release notes: [CHANGELOG.md §1.4.3](CHANGELOG.md).
 
 ---
 

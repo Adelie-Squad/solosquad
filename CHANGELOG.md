@@ -4,6 +4,36 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.3] — 2026-07-12 (Research Workflow — autonomous hypothesis validation)
+
+See `docs/prd/v1.4.3_research-workflow-implementation.md`.
+
+**`research` — a third bundled main workflow.** Before building a feature, run
+autonomous research to validate whether the hypothesis holds: spec (falsifiable
+question + a pre-registered rubric) → diverge/converge hypothesis (web/literature
+search, not just internal knowledge) → experiment cycles → blind backtest with
+numeric eval → a Track2-style verifier review → report, looping until the rubric
+passes or the budget runs out. It assembles existing planning skills
+(hypothesis-design, experiment-design, discovery-synthesis, market-research); the
+method lives in the workflow's `research-workflow.md`, and a golden
+`backtest-example.md` (blind, leakage-controlled, baseline, Δ/LOO) ships with it.
+Proven by an 8-cycle dogfood study whose *feature* form is planned for v1.8.
+
+**Reports move to the org top level.** Deliverables — market-research reports,
+papers, prototypes — now land in `<org>/reports/` instead of `<org>/docs/reports/`
+(`docs` is an internal layer, not a first-class deliverable location). The
+`market-research` skill writes there, and new orgs scaffold `reports/`.
+
+**Goals run unattended for 8h+.** goal-manager gains a long-run discipline
+(evidence-anchored reporting, no-blocking, completion-by-verifier, checkpoint-stop,
+budget awareness, a 4-condition continuation boundary, diverge→converge hypothesis
+formation, and honesty rules) so a research goal cycles for hours without user
+input. The engine (`src/engine/**`) is unchanged.
+
+Continuity migration `1.4.2 → 1.4.3` moves each org's `docs/reports/` up to
+`reports/` (files moved, never overwritten — class A preserved; stale seed INDEX
+dropped); no session reset. Update with `solosquad update` → `migrate --apply`.
+
 ## [1.4.2] — 2026-06-27 (Hotfixes: `solosquad start` bot-startup + rate-limit notice spam)
 
 See `docs/prd/v1.4.2_start-cron-blocking-hotfix.md`.
