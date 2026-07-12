@@ -94,7 +94,7 @@ AI 코딩으로 제품은 빠르게 나오지만 **비즈니스 가치를 지속
 
 ## 9. 기능화 브리지 (그래듀에이션)
 
-- **유효 시 → 대상 PRD:** `docs/prd/v1.8_virtual-market-demand-simulation.md`(기능화).
+- **유효 시 → 대상 PRD:** `docs/prd/v1.8.0_virtual-market-demand-simulation.md`(기능화).
 - **PRD 로 넘길 것:** 캘리브레이션된 `p_pay` 모델 · 통과 rubric(= 그 기능의 eval) · baseline 대비
   마진(효과 크기) · 익명화/누출 통제 규약.
 - **사용자 판단 지점:** `final-result.md` 종합 판정 검토 → "유효" 승인 시 v1.4.3 착수.
