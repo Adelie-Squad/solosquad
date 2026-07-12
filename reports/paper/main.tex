@@ -69,13 +69,20 @@ finding is negative, obtained without tuning toward any desired outcome.
 
 \section{Related Work}
 \label{sec:related}
-Population-grounded persona datasets~\citep{nemotron} supply demographically
-representative personas at scale, and multi-agent engines~\citep{mirofish} release
-many LLM agents into a synthetic environment to forecast collective dynamics.
-Industry reports use synthetic customers for pricing and NPS. Prior work mostly
-evaluates \emph{plausibility}; we instead test \emph{external predictive validity}
-against known conversion outcomes under blind, leakage-controlled conditions---the
-novel combination being rigorous, baseline-relative backtesting of conversion.
+\emph{Silicon sampling}~\citep{argyle2023} conditions an LLM on a respondent's
+backstory to reproduce survey distributions, and now underlies most ``AI panel''
+products. Its validity is uneven: reviews of silicon-to-human comparisons find
+only a minority match while most diverge, and willingness-to-pay studies report
+directional alignment in \emph{familiar} categories but weak performance in
+\emph{novel} ones~\citep{persona_microdata,persona_reliability}. The documented
+weak spots---novel-category behavior, minority-opinion tails, and actual purchase
+in unfamiliar contexts---are precisely where demand validation operates.
+Population-grounded datasets~\citep{nemotron} and multi-agent
+engines~\citep{mirofish} scale personas, but prior work largely evaluates
+\emph{plausibility} or survey-distribution match. We instead test \emph{external
+predictive validity} against real conversion outcomes under a blind,
+leakage-controlled protocol, and quantify how far light calibration closes the
+gap---corroborating and sharpening the WTP-in-novel-categories weakness.
 
 \section{Method}
 \label{sec:method}
@@ -143,8 +150,9 @@ the top-decile mean ($\Delta=-0.21$), the standard deviation, and the maximum
 
 \paragraph{Real-product application.} We apply the graded method to two live
 pre-launch products (anonymized): \textbf{P1}, a real-time civic-debate app with a
-paid subscription tier, and \textbf{P2}, an open-source multi-agent tool for solo
-founders. Predicted paid conversion is $0.14$ (P1) and $0.10$ (P2), essentially
+paid subscription tier, and \textbf{SoloSquad}~\citep{solosquad}, an open-source
+multi-agent tool for solo founders. Predicted paid conversion is $0.14$ (P1) and
+$0.10$ (SoloSquad), essentially
 unchanged under target conditioning. P1's own team targets a $5\%$ premium
 conversion; the simulation over-predicts by $\sim$3$\times$, reproducing the
 abstract-appeal bias on real inputs.
@@ -161,7 +169,7 @@ sim--real map non-monotonic. Simple sign-flip calibration therefore helps but do
 not solve the problem; adding an a-priori price/hype regime feature does not
 improve LOO (also $0.64$), so the ceiling appears set by data scale, not feature
 choice---reliable validity would require a substantially larger labeled corpus.
-Pre-launch products without real labels (P1, P2) still require a real anchor
+Pre-launch products without real labels (P1, SoloSquad) still require a real anchor
 (e.g., a fake-door test) to calibrate.
 
 \section{Discussion: Why It Fails}
@@ -199,9 +207,10 @@ result we aim to temper deployment claims. No human subjects or private data are
 involved; product references are anonymized.
 
 \section*{Software and Data}
-Code, prompts, anonymized case corpus, and per-persona logs for all three framings
-are available at an anonymized repository and will be de-anonymized upon acceptance.
-% Camera-ready: https://github.com/Adelie-Squad/solosquad (logs: reports/logs/)
+The persona-simulation harness, prompts, anonymized case corpus, and per-persona
+logs for all framings are released as part of the open-source SoloSquad
+project~\citep{solosquad} at \url{https://github.com/Adelie-Squad/solosquad}
+(logs under \texttt{reports/logs/}). Author identity is withheld for review.
 
 \bibliography{references}
 \bibliographystyle{icml2026}
