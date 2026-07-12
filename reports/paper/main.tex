@@ -40,12 +40,13 @@ successes are dominated by failures not only in the mean but at every quantile
 including the top decile and the maximum, so no hidden enthusiast minority explains
 the real winners. Applying the method to two \emph{real} pre-launch products
 reproduces the bias (predicting $\sim$14\% paid conversion for a product whose
-team targets 5\%). Yet the anti-correlation is \emph{consistent}: a leave-one-out
-calibration on a few real outcomes recovers perfect directional prediction
-($5/5$), showing the simulation carries real but \emph{inverted} signal. We
-conclude synthetic-persona demand sims should not be used raw, but become
-predictive once calibrated against a handful of real outcomes---and we release the
-blind backtest as a reusable validity gate.
+team targets 5\%). Yet the bias is partly \emph{correctable}: leave-one-out
+calibration on real outcomes raises directional accuracy from $0.40$ (raw) to
+$0.64$ over 14 cases, though a perfect result on the initial five did not survive
+expansion---the sim--real map is \emph{non-monotonic}, since some products
+(over-hyped hardware) are correctly rejected by the personas. We conclude
+synthetic-persona sims must not be used raw and only partly recover under simple
+calibration, and we release the blind backtest as a reusable validity gate.
 \end{abstract}
 
 \section{Introduction}
@@ -61,9 +62,10 @@ protocol} isolating predictive signal from LLM memorization via case
 anonymization; (ii) a \textbf{three-framing robustness study} (stated, revealed,
 graded) showing the failure is not an artifact of one prompt; and (iii) a
 \textbf{cautionary real-product application} to two live pre-launch products; and
-(iv) a \textbf{calibration result} showing the consistent bias is correctable,
-recovering $5/5$ leave-one-out directional prediction. The raw finding is negative,
-obtained without tuning, but the systematic bias proves usable once calibrated.
+(iv) a \textbf{calibration analysis} showing the bias is partly correctable
+(leave-one-out accuracy rises from $0.40$ to $0.64$ over 14 cases) but that the
+sim--real map is non-monotonic, so simple calibration is insufficient. The raw
+finding is negative, obtained without tuning toward any desired outcome.
 
 \section{Related Work}
 \label{sec:related}
@@ -147,17 +149,18 @@ unchanged under target conditioning. P1's own team targets a $5\%$ premium
 conversion; the simulation over-predicts by $\sim$3$\times$, reproducing the
 abstract-appeal bias on real inputs.
 
-\paragraph{Calibration recovers prediction.} The failure is systematic, not
-random: across cycles the real successes sit \emph{consistently below} the real
-failures. We exploit this with leave-one-out calibration---for each held-out case,
-a one-feature decision stump is fit on the other four and used to predict it.
-Using stated conversion or the two-month retention level, LOO directional accuracy
-is $5/5$ (versus $0.40$ raw); the averaged signal also reaches $5/5$. The
-simulation thus encodes genuine but inverted demand signal that a few real
-outcomes suffice to decode. The caveat is $N=5$: perfect LOO on five cleanly
-separated cases is encouraging but underpowered, and pre-launch products without
-real labels (P1, P2) still require a small real anchor (e.g., a fake-door test) to
-calibrate.
+\paragraph{Calibration partly recovers prediction.} The bias is systematic: real
+successes sit consistently below real failures ($\Delta=-0.18$ over 14 cases). We
+exploit this with leave-one-out calibration---a one-feature decision stump fit on
+held-out cases. On the initial five cases LOO reaches $5/5$, but expanding to 14
+(adding well-documented successes and failures) drops LOO to $0.64$---still above
+raw ($0.40$) and chance ($0.50$), yet far from perfect. The residual errors are
+informative: over-hyped expensive hardware is \emph{correctly} rejected by the
+personas (low sim, real failure), breaking the anti-correlation and making the
+sim--real map non-monotonic. Simple sign-flip calibration therefore helps but does
+not solve the problem; regime-aware, multi-feature calibration is the indicated
+next step. Pre-launch products without real labels (P1, P2) still require a small
+real anchor (e.g., a fake-door test) to calibrate.
 
 \section{Discussion: Why It Fails}
 \label{sec:discuss}
@@ -170,10 +173,12 @@ floors everything. \textbf{(3) Counterintuitive niche demand.} Real successes ha
 low general appeal but strong niche demand, which target filtering and graded
 probabilities still underrate. Because the same ranking survives every
 reformulation, the limitation is intrinsic to persona willingness, not to a
-particular prompt. Critically, however, the bias is consistent enough that light
-calibration against real outcomes (\cref{sec:results}) converts it into a usable
-predictor: the practical recommendation is to treat persona simulations as a
-calibrated \emph{feature}, never a raw estimate.
+particular prompt. The bias is systematic enough that
+calibration against real outcomes (\cref{sec:results}) \emph{partly} recovers
+prediction, but a non-monotonic sim--real map---some duds are correctly rejected---
+limits any simple correction: the practical recommendation is to treat persona
+simulations as a \emph{feature} requiring regime-aware calibration, never a raw
+estimate.
 
 \section{Limitations}
 \label{sec:limits}
