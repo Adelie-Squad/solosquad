@@ -40,9 +40,12 @@ successes are dominated by failures not only in the mean but at every quantile
 including the top decile and the maximum, so no hidden enthusiast minority explains
 the real winners. Applying the method to two \emph{real} pre-launch products
 reproduces the bias (predicting $\sim$14\% paid conversion for a product whose
-team targets 5\%). We conclude that one-shot persona willingness tracks abstract
-appeal, not conversion, and that credible validation needs longitudinal,
-calibrated modeling---releasing the backtest as a reusable validity gate.
+team targets 5\%). Yet the anti-correlation is \emph{consistent}: a leave-one-out
+calibration on a few real outcomes recovers perfect directional prediction
+($5/5$), showing the simulation carries real but \emph{inverted} signal. We
+conclude synthetic-persona demand sims should not be used raw, but become
+predictive once calibrated against a handful of real outcomes---and we release the
+blind backtest as a reusable validity gate.
 \end{abstract}
 
 \section{Introduction}
@@ -57,8 +60,10 @@ real world?} We contribute (i) a \textbf{blind, leakage-controlled backtest
 protocol} isolating predictive signal from LLM memorization via case
 anonymization; (ii) a \textbf{three-framing robustness study} (stated, revealed,
 graded) showing the failure is not an artifact of one prompt; and (iii) a
-\textbf{cautionary real-product application} to two live pre-launch products. The
-result is a negative one, obtained without tuning toward any desired outcome.
+\textbf{cautionary real-product application} to two live pre-launch products; and
+(iv) a \textbf{calibration result} showing the consistent bias is correctable,
+recovering $5/5$ leave-one-out directional prediction. The raw finding is negative,
+obtained without tuning, but the systematic bias proves usable once calibrated.
 
 \section{Related Work}
 \label{sec:related}
@@ -140,8 +145,19 @@ paid subscription tier, and \textbf{P2}, an open-source multi-agent tool for sol
 founders. Predicted paid conversion is $0.14$ (P1) and $0.10$ (P2), essentially
 unchanged under target conditioning. P1's own team targets a $5\%$ premium
 conversion; the simulation over-predicts by $\sim$3$\times$, reproducing the
-abstract-appeal bias on real inputs and confirming the method should not inform
-these decisions.
+abstract-appeal bias on real inputs.
+
+\paragraph{Calibration recovers prediction.} The failure is systematic, not
+random: across cycles the real successes sit \emph{consistently below} the real
+failures. We exploit this with leave-one-out calibration---for each held-out case,
+a one-feature decision stump is fit on the other four and used to predict it.
+Using stated conversion or the two-month retention level, LOO directional accuracy
+is $5/5$ (versus $0.40$ raw); the averaged signal also reaches $5/5$. The
+simulation thus encodes genuine but inverted demand signal that a few real
+outcomes suffice to decode. The caveat is $N=5$: perfect LOO on five cleanly
+separated cases is encouraging but underpowered, and pre-launch products without
+real labels (P1, P2) still require a small real anchor (e.g., a fake-door test) to
+calibrate.
 
 \section{Discussion: Why It Fails}
 \label{sec:discuss}
@@ -153,9 +169,11 @@ fatigue---invisible to a single decision; forcing a longitudinal binary instead
 floors everything. \textbf{(3) Counterintuitive niche demand.} Real successes had
 low general appeal but strong niche demand, which target filtering and graded
 probabilities still underrate. Because the same ranking survives every
-reformulation, the limitation is intrinsic to one-shot persona willingness, not to
-a particular prompt---pointing to longitudinal, revealed-behavior simulation with
-calibration to real outcomes as the necessary direction.
+reformulation, the limitation is intrinsic to persona willingness, not to a
+particular prompt. Critically, however, the bias is consistent enough that light
+calibration against real outcomes (\cref{sec:results}) converts it into a usable
+predictor: the practical recommendation is to treat persona simulations as a
+calibrated \emph{feature}, never a raw estimate.
 
 \section{Limitations}
 \label{sec:limits}
