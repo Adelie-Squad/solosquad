@@ -22,42 +22,42 @@
 \printAffiliationsAndNotice{}
 
 \begin{abstract}
-Synthetic personas are increasingly proposed as a cheap substitute for real
-demand validation, yet their ability to predict \emph{real-world} conversion is
-seldom tested against ground truth. We build a blind, leakage-controlled
-backtest---five documented historical validation episodes, anonymized so an LLM
-cannot recall their outcomes---and have persona agents from a population-grounded
-dataset make purchase decisions, scoring against the real result. Across 200
-personas per case we find naive one-shot persona simulation is
-\emph{anti-predictive}: real successes receive \emph{lower} simulated conversion
-than real failures (success$-$failure separation $\Delta=-0.46$). Crucially, this
-failure is \textbf{framing-invariant}: reformulating the decision from stated
-willingness to a longitudinal revealed-preference judgment collapses every
-response to a floor ($\Delta=0$), and a graded-probability formulation restores
-resolution but not discrimination ($\Delta=-0.05$); the case ranking is identical
-across all three. The failure is also \textbf{aggregation-invariant}: real
-successes are dominated by failures not only in the mean but at every quantile
-including the top decile and the maximum, so no hidden enthusiast minority explains
-the real winners. Applying the method to two \emph{real} pre-launch products
-reproduces the bias (predicting $\sim$14\% paid conversion for a product whose
-team targets 5\%). Yet the bias is partly \emph{correctable}: leave-one-out
-calibration on real outcomes raises directional accuracy from $0.40$ (raw) to
-$0.64$ over 14 cases, though a perfect result on the initial five did not survive
-expansion---the sim--real map is \emph{non-monotonic}, since some products
-(over-hyped hardware) are correctly rejected by the personas. We conclude
-synthetic-persona sims must not be used raw and only partly recover under simple
-calibration, and we release the blind backtest as a reusable validity gate.
+Founders of \emph{0-to-1} products---new offerings with no launch history---are
+urged to validate demand before building, but real validation (interviews,
+fake-door tests, A/B) is costly. A tempting shortcut is a \emph{virtual market} of
+synthetic personas that role-play the target customer and decide whether to engage,
+pay, or churn. We ask whether such a simulation predicts \emph{real} conversion,
+and answer with a blind, leakage-controlled backtest: five documented historical
+validation episodes, anonymized so the model cannot recall their outcomes, judged
+by 200 population-grounded persona agents each and scored against the real result.
+Naive one-shot simulation is \emph{anti-predictive}---real successes receive lower
+simulated conversion than real failures ($\Delta=-0.46$)---and this failure is
+invariant to the decision framing (stated, revealed, graded), to the aggregation
+statistic (mean through top decile and maximum), and to a longitudinal
+reformulation; it recurs on two live products, predicting $\sim$14\% paid
+conversion where the team targets 5\%. The bias is only partly correctable:
+leave-one-out calibration lifts directional accuracy from $0.40$ to $0.64$ over 14
+cases, but the sim--real map is non-monotonic---some over-hyped products are
+correctly rejected---so a perfect five-case result does not survive expansion. We
+conclude that synthetic-persona demand sims must not be used raw for 0-to-1
+validation and only partly recover under calibration, and we release the blind
+backtest as a reusable validity gate.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:intro}
-AI coding lets founders ship faster than ever, yet few products sustain value;
-demand validation (interviews, fake-door tests, A/B) is the recommended hedge but
-is costly for solo builders. Synthetic personas promise to automate it, and
-recent work offers population-grounded persona datasets~\citep{nemotron} and
-multi-agent simulation engines~\citep{mirofish}. The unanswered question is
-epistemic: \emph{can a persona simulation predict conversion that holds in the
-real world?} We contribute (i) a \textbf{blind, leakage-controlled backtest
+AI coding lets founders ship \emph{0-to-1} products---new offerings with no sales
+history---faster than ever, yet few sustain value. The recommended hedge is
+\emph{demand validation}: before building, test whether the target customer will
+actually convert, using fake-door tests, concierge MVPs, waitlists, landing-page
+pricing, or Wizard-of-Oz prototypes. All are costly for a solo builder, so a
+\emph{virtual market}---synthetic personas that role-play the customer and decide
+whether to show interest, pay, or churn---is an attractive substitute; recent work
+supplies population-grounded persona datasets~\citep{nemotron} and multi-agent
+engines~\citep{mirofish}. Our scope is exactly this setting: pre-launch,
+paid-conversion validation for novel products, the regime where real evidence is
+scarcest and simulation most tempting. The unanswered question is epistemic:
+\emph{can a persona simulation predict conversion that holds in the real world?} We contribute (i) a \textbf{blind, leakage-controlled backtest
 protocol} isolating predictive signal from LLM memorization via case
 anonymization; (ii) a \textbf{three-framing robustness study} (stated, revealed,
 graded) showing the failure is not an artifact of one prompt; and (iii) a
@@ -200,6 +200,28 @@ one 7B model, one (Korean) persona market, and keyword target definitions; large
 models, multi-turn deliberation, and revealed-behavior traces are untested and are
 exactly what our diagnosis motivates. The real-product predictions have no ground
 truth and are reported only to illustrate the bias.
+
+\section{Conclusion and Outlook}
+\label{sec:conclusion}
+For 0-to-1 demand validation, a synthetic-persona virtual market is not a drop-in
+substitute for real evidence: used raw it \emph{inverts} the signal, and no
+reformulation we tried repairs it, because one-shot persona willingness tracks
+broad appeal rather than the niche, sustained conversion that separates real
+winners from losers. The constructive half of the finding is that the bias is
+\emph{systematic}: a light calibration against a handful of real outcomes recovers
+part of the signal ($0.40\rightarrow0.64$)---enough to \emph{rank} or \emph{screen}
+candidate ideas, not to estimate absolute demand. We therefore see three concrete
+uses. \textbf{(i) A calibrated screening feature} inside AI planning tools such as
+SoloSquad~\citep{solosquad}: a cheap simulation shortlists ideas that a small real
+fake-door test then confirms, cutting the cost of the first validation loop.
+\textbf{(ii) A diagnostic}: the simulation's confident false positives are exactly
+the broadly-appealing-but-doomed concepts, so a high raw score is a useful
+\emph{caution} flag. \textbf{(iii) A benchmark}: our blind, leakage-controlled
+backtest is a reusable validity gate against which any persona-simulation vendor
+can be scored before it informs a real decision. Closing the residual gap calls for
+a larger labeled corpus, revealed-behavior traces rather than stated intent, and
+calibration that models the non-monotonic, regime-dependent sim--real map---the
+agenda our results make concrete.
 
 \section*{Impact Statement}
 This work cautions against substituting synthetic-persona simulations for real
