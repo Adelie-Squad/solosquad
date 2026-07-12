@@ -50,13 +50,12 @@
 | [v1.3.6-skill-agent-authoring-internalization.md](v1.3.6-skill-agent-authoring-internalization.md) | |
 | [v1.3.7-workflow-goal-cron-authoring-internalization.md](v1.3.7-workflow-goal-cron-authoring-internalization.md) | |
 | [v1.3.8_docs-management.md](v1.3.8_docs-management.md) | |
-| [v1.4.0-session-orchestration.md](v1.4.0-session-orchestration.md) | |
-| [v1.4.1_works-thread-chat.md](v1.4.1_works-thread-chat.md) | |
-| [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | |
-| [v1.4.3_multi-repo-execution-context.md](v1.4.3_multi-repo-execution-context.md) | 초안 |
-| [v1.4.4_per-repo-worker-sessions.md](v1.4.4_per-repo-worker-sessions.md) | 초안 |
-| [v1.4.5_docker-cloud-deploy-and-health-notify.md](v1.4.5_docker-cloud-deploy-and-health-notify.md) | 연기(deferred) |
-| [v1.5.0-customization-upstream-reconciliation.md](v1.5.0-customization-upstream-reconciliation.md) | |
+| [v1.4.1_works-thread-chat.md](v1.4.1_works-thread-chat.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
+| [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
+| [v1.4.0_virtual-market-demand-simulation.md](v1.4.0_virtual-market-demand-simulation.md) | **1.4.x 우산** — 가상 시장 수요검증 시뮬레이션 연구(결제 행동·백테스트 중심) |
+| [v1.4.3_simulation-core-payment-and-backtest.md](v1.4.3_simulation-core-payment-and-backtest.md) | 시뮬레이션 코어 v0 — 결제(전환) 행동 + 사례 재현 백테스트 + 4h+ research 하네스 |
+| [v1.4.5_docker-cloud-deploy-and-health-notify.md](v1.4.5_docker-cloud-deploy-and-health-notify.md) | 연기(deferred) → **v1.6.0** |
+| [v1.5.0_session-orchestration-and-customization.md](v1.5.0_session-orchestration-and-customization.md) | **1.5.x 우산** — 오케스트레이션 세션(S-2b·S-3b·S-4·S-5·S-6·S-7) + 커스텀 reconciliation(M1–M4) |
 | [v1.x-dashboard-interaction.md](v1.x-dashboard-interaction.md) | |
 | [v1.x-knowledge-ontology.md](v1.x-knowledge-ontology.md) | |
 | [v1.x-llm-backend-abstraction.md](v1.x-llm-backend-abstraction.md) | |
