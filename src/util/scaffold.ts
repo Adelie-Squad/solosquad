@@ -32,6 +32,7 @@ export const SCAFFOLD_TEAMS = ["core", "product", "engineering", "business", "br
  * improvement) resolve their `_workflow/` sub-references out of the box.
  */
 export const SCAFFOLD_WORKFLOWS = [
+  "research",
   "new-build",
   "improvement",
   "idea-refinement",

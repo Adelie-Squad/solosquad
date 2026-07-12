@@ -16,6 +16,7 @@
 |---|---|---|
 | `new-build/` | (idea-refinement \| requirements-analysis) → market-research → hypothesis | "이 아이디어 기획해줘" — 신규 |
 | `improvement/` | kpi-check → data-analysis → hypothesis | "전환율 떨어졌어, 개선하자" — 기존 지표 |
+| `research/` | spec(질문·rubric) → 확산→수렴 가설 → 실험 사이클 → 수치 eval·Track2 검증 → 리포트 (rubric 통과까지 반복) | "이게 유효한지 *먼저 검증*해줘"·"연구해줘" — **기능화 前** 유효성 검증. 방법: `research/research-workflow.md`, goal 무인 8h+ |
 
 > **메인/서브 = 타입 아니라 호출 위치.** `_workflow/<id>` 로 다른 워크플로를 합성하면 메인,
 > 합성되면 서브. 메인 선택은 Chief 가 입력 맥락으로 추론하고 애매하면 되묻는다(선처방 금지).
