@@ -1,4 +1,4 @@
-# 종합 결론 — 가상 시장 수요검증 시뮬레이션의 효과성 (6-사이클)
+# 종합 결론 — 가상 시장 수요검증 시뮬레이션의 효과성 (8-사이클)
 
 > **작성:** 2026-07-12 (Ralphthon 자율 실행, 8 사이클) · **종합 판정: raw 무효; 캘리브레이션이 *부분* 회복(비단조 관계, 완전 유효 미도달)** · **confidence 4/5**
 > **증거:** `reports/logs/results_*.json` (seed 42, 200 personas/case, Qwen2.5-7B) · paper `reports/paper/main.pdf`
