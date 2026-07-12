@@ -3,7 +3,7 @@
 > **트리거:** 사용자가 **"시작"** 한 마디 → 아래를 **처음부터 끝까지 자율 실행**, 실행 중 **사용자에게
 > 질문 0**. 산출 = ICML 4p 익명 paper(`reports/paper/main.pdf`) + Title + Abstract.
 > **실행 주체:** 이 Claude Code 세션이 도구(bash·파일·verifier 서브에이전트)로 파이프라인을 구동.
-> **설계 근거:** `docs/research/research-workflow.md`(자율 3h·no-blocking·Track2 검증) ·
+> **설계 근거:** `skills/workflow-manager/assets/workflows/research/research-workflow.md`(자율 3h·no-blocking·Track2 검증) ·
 > `research-plan.md`(가설·rubric·유효성 설계) · [[260712-long-horizon-codex-goals-vs-fable5]] · [[260712-ralphthon-icml-review-and-passing-paper]].
 
 ---

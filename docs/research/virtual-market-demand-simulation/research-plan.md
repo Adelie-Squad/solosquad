@@ -2,7 +2,7 @@
 
 > **역할:** "합성 페르소나 시뮬레이션이 **실세계 전환(결제) 행동을 예측**할 수 있는가" 를 증거로 검증.
 > 유효 판정 시 → v1.4.3 시뮬레이션 코어 PRD 로 그래듀에이션.
-> **운영:** `docs/research/research-workflow.md` 의 자율 4h goal 루프로 실행(Ralphthon 3h 무인 구간 포함).
+> **운영:** `skills/workflow-manager/assets/workflows/research/research-workflow.md` 의 자율 4h goal 루프로 실행(Ralphthon 3h 무인 구간 포함).
 > **작성일:** 2026-07-12 · **상태:** 계획
 > **근거:** v1.4.0 Research Workflow 우산(`docs/prd/v1.4.0_research-workflow.md`) — 본 주제는 그 첫 dogfood ·
 > [[260712-long-horizon-codex-goals-vs-fable5]] · [[260712-ralphthon-icml-review-and-passing-paper]].
