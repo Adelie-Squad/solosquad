@@ -52,10 +52,11 @@
 | [v1.3.8_docs-management.md](v1.3.8_docs-management.md) | |
 | [v1.4.1_works-thread-chat.md](v1.4.1_works-thread-chat.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
 | [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
-| [v1.4.0_virtual-market-demand-simulation.md](v1.4.0_virtual-market-demand-simulation.md) | **1.4.x 우산** — 가상 시장 수요검증 시뮬레이션 연구(결제 행동·백테스트 중심) |
-| [v1.4.3_simulation-core-payment-and-backtest.md](v1.4.3_simulation-core-payment-and-backtest.md) | 시뮬레이션 코어 v0 — 결제(전환) 행동 + 사례 재현 백테스트 + 4h+ research 하네스 |
-| [v1.4.5_docker-cloud-deploy-and-health-notify.md](v1.4.5_docker-cloud-deploy-and-health-notify.md) | 연기(deferred) → **v1.6.0** |
+| [v1.4.0_research-workflow.md](v1.4.0_research-workflow.md) | **1.4.x 우산** — 자율 가설검증 연구 워크플로우(기능화 前 유효성 검증 계층) |
+| [v1.4.3_research-workflow-implementation.md](v1.4.3_research-workflow-implementation.md) | research 내장 워크플로우 + 템플릿/예시 + goal 8h+ 무인 + reports→org 이전 |
+| [v1.4.5_docker-cloud-deploy-and-health-notify.md](v1.4.5_docker-cloud-deploy-and-health-notify.md) | 클라우드 배포 → **v1.6.0** |
 | [v1.5.0_session-orchestration-and-customization.md](v1.5.0_session-orchestration-and-customization.md) | **1.5.x 우산** — 오케스트레이션 세션(S-2b·S-3b·S-4·S-5·S-6·S-7) + 커스텀 reconciliation(M1–M4) |
+| [v1.8_virtual-market-demand-simulation.md](v1.8_virtual-market-demand-simulation.md) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝(연구 결론: raw NO-GO) |
 | [v1.x-dashboard-interaction.md](v1.x-dashboard-interaction.md) | |
 | [v1.x-knowledge-ontology.md](v1.x-knowledge-ontology.md) | |
 | [v1.x-llm-backend-abstraction.md](v1.x-llm-backend-abstraction.md) | |

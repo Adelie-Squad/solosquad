@@ -4,7 +4,7 @@
 > 유효 판정 시 → v1.4.3 시뮬레이션 코어 PRD 로 그래듀에이션.
 > **운영:** `docs/research/research-workflow.md` 의 자율 4h goal 루프로 실행(Ralphthon 3h 무인 구간 포함).
 > **작성일:** 2026-07-12 · **상태:** 계획
-> **근거:** v1.4.0 우산 PRD(`docs/prd/v1.4.0_virtual-market-demand-simulation.md`) ·
+> **근거:** v1.4.0 Research Workflow 우산(`docs/prd/v1.4.0_research-workflow.md`) — 본 주제는 그 첫 dogfood ·
 > [[260712-long-horizon-codex-goals-vs-fable5]] · [[260712-ralphthon-icml-review-and-passing-paper]].
 
 ---
@@ -94,7 +94,7 @@ AI 코딩으로 제품은 빠르게 나오지만 **비즈니스 가치를 지속
 
 ## 9. 기능화 브리지 (그래듀에이션)
 
-- **유효 시 → 대상 PRD:** `docs/prd/v1.4.3_simulation-core-payment-and-backtest.md`.
+- **유효 시 → 대상 PRD:** `docs/prd/v1.8_virtual-market-demand-simulation.md`(기능화).
 - **PRD 로 넘길 것:** 캘리브레이션된 `p_pay` 모델 · 통과 rubric(= 그 기능의 eval) · baseline 대비
   마진(효과 크기) · 익명화/누출 통제 규약.
 - **사용자 판단 지점:** `final-result.md` 종합 판정 검토 → "유효" 승인 시 v1.4.3 착수.
