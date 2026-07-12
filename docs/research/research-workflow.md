@@ -74,17 +74,50 @@
   대조해 채점(자기비평보다 강함).
 - **날조 게이트:** comments 는 반드시 run/log/수치에 앵커. 증거 없는 주장은 리뷰에서 감점→탈락.
 
-## 4. 사이클 구조 (가설 → 실험 → 검증)
+## 4. 사이클 구조 (가설 형성 → 실험 → 검증)
 
 ```
 while (rubric 미통과 && 예산 남음):
-  1. 가설 수립/정제  — research-plan §3 의 H? 를 다음 실험으로 구체화 (Codex goal 6필드)
-  2. 실험 실행       — 26xxxx_<name>/experiment-plan.md 작성 → 실행 → experiment-result.md (증거 앵커)
-  3. 검증(Track2)    — verifier subagent 채점 (§3). overall≥4 & rubric 통과 ?
+  1. 가설 형성  — 확산→수렴 (§4.1, PM agent 주도)
+  2. 실험 실행  — 26xxxx_<name>/experiment-plan.md → 실행 → experiment-result.md (증거 앵커)
+  3. 검증       — 수치 eval (§4.3): 주제 rubric 임계 + Track2 verifier(§3)
        ├ 통과 → 루프 종료 → final-result.md
-       └ 미달 → comments 를 iteration policy 로 반영 → 다음 사이클
+       └ 미달 → 진단을 §4.1 확산 입력으로 → 다음 사이클
   (예산/시간 도달 → 최선 결과로 강제 종료 + 미통과 축 명시)
 ```
+
+### 4.1 가설 형성 = 확산 → 수렴 (PM agent 주도) 🆕
+
+> **문제(2026-07-12 회고):** 새 가설을 *내 사전지식에서만* 뽑으면 창의성·다양성·확장성이 떨어진다
+> (예: 본 연구가 silicon sampling·WTP·conjoint 문헌을 안 보고 재발명). → 가설 형성을 **확산→수렴**
+> 2단계로, **PM(오케스트레이터) 에이전트**가 주도한다.
+
+- **확산(divergence) — 넓게 벌린다.** 직전 사이클 진단을 입력으로, PM 에이전트가 **병렬 서브에이전트**로
+  후보 가설을 다양하게 생성. **내부 추론에만 의존 금지:**
+  - **문헌 조사** — WebSearch/WebFetch로 관련 논문·방법론 탐색(예: silicon sampling, WTP 캘리브레이션,
+    conjoint/MaxDiff, task-exchangeable inference). 새 프레임·기법을 후보로 흡수.
+  - **인접 도메인·반례** — 다른 분야 유사문제 해법, 우리 결과를 반박할 각도.
+  - 산출: 서로 다른 각도의 후보 가설 N개(다양성 = 중복 아님).
+- **수렴(convergence) — 하나로 좁힌다.** PM 에이전트가 후보를 채점해 **한 사이클 = 한 가설**:
+  (a) 직전 진단을 정면 검정 (b) **반증·측정 가능**(§4.3 수치 eval로 판정되는가) (c) 저비용 우선
+  (d) 문헌과의 새 조합/관점(originality). 선택 근거를 experiment-plan에 기록.
+- **박제:** 선택 가설 = Codex goal 6필드(experiment-plan.md). 확산의 문헌·탈락 후보는 **버리지 않고 기록**
+  (다음 사이클 재료 + paper related-work 자산).
+
+### 4.2 실험 실행
+experiment-plan(goal 6필드) → 실행 → experiment-result.md. 모든 수치는 run/log 앵커(날조 0).
+
+### 4.3 검증 = **수치 기반 eval** (질문에 답)
+
+> 각 사이클·연구의 유효성은 **정량 지표를 사전등록 임계와 대조**해 판정한다(모델 자기선언 아님).
+
+- **사이클 eval:** experiment-plan의 pre-registered 지표(예: 판별 분리도 Δ, directional accuracy,
+  LOO 정확도, ECE)를 사전 고정 임계와 대조. 예: 본 연구 rubric(research-plan §5) = 방향정확도 ≥4/5
+  **AND** baseline 우위 **AND** ECE ≤ 0.15. 이 수치가 이 goal의 **verification surface = eval**.
+- **Track2 verifier(§3):** 그 수치 위에서 별도 리뷰 에이전트가 soundness/originality 등 4축 채점
+  (수치의 *해석·정직성*을 심사). 수렴 = rubric 임계 통과 **AND** overall ≥ 4.
+- **정직성 규율:** 지표가 임계 미달이면 "실패"로 기록(과장 금지). 소표본(N)이면 검정력 한계를 명시
+  — 본 연구 C6(N=5 5/5)를 C7(N=14 0.64)이 교정한 것이 그 예.
 
 ## 5. 종결 산출 — paper 양식 (`reports/`)
 
