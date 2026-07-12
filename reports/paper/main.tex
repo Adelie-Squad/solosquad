@@ -1,0 +1,262 @@
+%%%%%%%% Ralphthon @ ICML 2026 — Track 1 AI Scientist (BLIND) %%%%%%%%
+% 4-page hard limit (excl. references/appendix). Double-blind anonymized.
+% All numbers trace to reports/logs/results_*.json (run 2026-07-12, seed 42, 200 personas/case).
+\documentclass{article}
+\usepackage{microtype}\usepackage{graphicx}\usepackage{booktabs}\usepackage{hyperref}
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+\usepackage{icml2026}          % blind; camera-ready: \usepackage[accepted]{icml2026}
+\usepackage{amsmath}\usepackage{amssymb}\usepackage{mathtools}
+\usepackage[capitalize,noabbrev]{cleveref}
+\icmltitlerunning{Do Synthetic Personas Predict Real Conversion?}
+\begin{document}
+\twocolumn[
+  \icmltitle{Do Synthetic Personas Predict Real Conversion?\\
+  A Blind, Leakage-Controlled Backtest Across Three Decision Framings}
+  \icmlsetsymbol{equal}{*}
+  \begin{icmlauthorlist}\icmlauthor{Anonymous Author(s)}{anon}\end{icmlauthorlist}
+  \icmlaffiliation{anon}{Anonymous Institution}
+  \icmlcorrespondingauthor{Anonymous}{anon@example.com}
+  \icmlkeywords{synthetic personas, demand validation, agent simulation, backtest, LLM agents}
+  \vskip 0.3in
+]
+\printAffiliationsAndNotice{}
+
+\begin{abstract}
+Founders of \emph{0-to-1} products---new offerings with no launch history---are
+urged to validate demand before building, but real validation (interviews,
+fake-door tests, A/B) is costly. A tempting shortcut is a \emph{virtual market} of
+synthetic personas that role-play the target customer and decide whether to engage,
+pay, or churn. We ask whether such a simulation predicts \emph{real} conversion,
+and answer with a blind, leakage-controlled backtest: five documented historical
+validation episodes, anonymized so the model cannot recall their outcomes, judged
+by 200 population-grounded persona agents each and scored against the real result.
+Naive one-shot simulation is \emph{anti-predictive}---real successes receive lower
+simulated conversion than real failures ($\Delta=-0.46$)---and this failure is
+invariant to the decision framing (stated, revealed, graded), to the aggregation
+statistic (mean through top decile and maximum), and to a longitudinal
+reformulation; it recurs on two live products, predicting $\sim$14\% paid
+conversion where the team targets 5\%. The bias is only partly correctable:
+leave-one-out calibration lifts directional accuracy from $0.40$ to $0.64$ over 14
+cases, but the sim--real map is non-monotonic---some over-hyped products are
+correctly rejected---so a perfect five-case result does not survive expansion. We
+conclude that synthetic-persona demand sims must not be used raw for 0-to-1
+validation and only partly recover under calibration, and we release the blind
+backtest as a reusable validity gate.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+AI coding lets founders ship \emph{0-to-1} products---new offerings with no sales
+history---faster than ever, yet few sustain value. The recommended hedge is
+\emph{demand validation}: before building, test whether the target customer will
+actually convert, using fake-door tests, concierge MVPs, waitlists, landing-page
+pricing, or Wizard-of-Oz prototypes. All are costly for a solo builder, so a
+\emph{virtual market}---synthetic personas that role-play the customer and decide
+whether to show interest, pay, or churn---is an attractive substitute; recent work
+supplies population-grounded persona datasets~\citep{nemotron} and multi-agent
+engines~\citep{mirofish}. Our scope is exactly this setting: pre-launch,
+paid-conversion validation for novel products, the regime where real evidence is
+scarcest and simulation most tempting. The unanswered question is epistemic:
+\emph{can a persona simulation predict conversion that holds in the real world?} We contribute (i) a \textbf{blind, leakage-controlled backtest
+protocol} isolating predictive signal from LLM memorization via case
+anonymization; (ii) a \textbf{three-framing robustness study} (stated, revealed,
+graded) showing the failure is not an artifact of one prompt; and (iii) a
+\textbf{cautionary real-product application} to two live pre-launch products; and
+(iv) a \textbf{calibration analysis} showing the bias is partly correctable
+(leave-one-out accuracy rises from $0.40$ to $0.64$ over 14 cases) but that the
+sim--real map is non-monotonic, so simple calibration is insufficient. The raw
+finding is negative, obtained without tuning toward any desired outcome.
+
+\section{Related Work}
+\label{sec:related}
+\emph{Silicon sampling}~\citep{argyle2023} conditions an LLM on a respondent's
+backstory to reproduce survey distributions, and now underlies most ``AI panel''
+products. Its validity is uneven: reviews of silicon-to-human comparisons find
+only a minority match while most diverge, and willingness-to-pay studies report
+directional alignment in \emph{familiar} categories but weak performance in
+\emph{novel} ones~\citep{persona_microdata}, and demographic persona conditioning
+can \emph{degrade} rather than improve alignment~\citep{persona_reliability}---
+echoing our finding that target-segment conditioning does not help. The documented
+weak spots---novel-category behavior, minority-opinion tails, and actual purchase
+in unfamiliar contexts---are precisely where demand validation operates.
+Population-grounded datasets~\citep{nemotron} and multi-agent
+engines~\citep{mirofish} scale personas, but prior work largely evaluates
+\emph{plausibility} or survey-distribution match. We instead test \emph{external
+predictive validity} against real conversion outcomes under a blind,
+leakage-controlled protocol, and quantify how far light calibration closes the
+gap---corroborating and sharpening the WTP-in-novel-categories weakness.
+
+\section{Method}
+\label{sec:method}
+\paragraph{Personas.} We sample personas from a $\sim$1M-persona
+population-grounded Korean dataset~\citep{nemotron} (occupation, education, region,
+consumption narrative), rendered to a compact profile. A local 7B
+instruction-tuned LLM~\citep{qwen25} is prompted to \emph{become} the persona.
+\paragraph{Three decision framings.} \textbf{Stated}: one-shot ``would you pay?''
+(binary). \textbf{Revealed}: a longitudinal judgment---click, try, and still pay
+after 2--8 weeks once novelty fades and incumbents are considered (binary).
+\textbf{Graded}: a continuous probability of becoming a retained paying customer.
+A case's simulated conversion is the mean over its personas.
+\paragraph{Persona conditions.} \textbf{General}: random personas.
+\textbf{Target}: personas keyword-filtered to each product's target segment, fixed
+\emph{a priori} from the product description (never the outcome).
+\paragraph{Baseline and leakage control.} A no-persona baseline asks the LLM for
+the conversion rate directly. Each case is anonymized (brand, company, era
+removed) so the model cannot recall the historical result; ground truth is
+revealed only for scoring. We report directional accuracy and separation
+$\Delta=\overline{\text{sim}}_{\text{success}}-\overline{\text{sim}}_{\text{failure}}$
+($\Delta>0$ predictive, $\Delta<0$ anti-predictive).
+
+\section{Results}
+\label{sec:results}
+\Cref{tab:cases} gives per-case simulated conversion under the graded framing;
+real successes (A,B,E) sit \emph{below} real failures (C,D). \Cref{tab:framings}
+shows this is framing-invariant: no framing or persona condition yields $\Delta>0$.
+
+\begin{table}[t]\caption{Graded per-case conversion (200 personas, general).
+Successes A,B,E score at or below failures C,D. Ranking C$>$D$>$B$>$A$>$E is
+identical under all three framings.}\label{tab:cases}\vskip 0.1in
+\centering\small\begin{tabular}{llcc}\toprule
+Case & Method & GT & Graded \\ \midrule
+A & fake-door video/waitlist & 1 & 0.153 \\
+B & concierge fake store & 1 & 0.202 \\
+C & reformulate flagship & 0 & 0.230 \\
+D & Wizard-of-Oz & 0 & 0.180 \\
+E & landing-page pricing & 1 & 0.126 \\ \bottomrule
+\end{tabular}\vskip 0.1in\end{table}
+
+\begin{table}[t]\caption{Separation $\Delta$ across three framings and two persona
+conditions. Every value is $\le 0$; no configuration is predictive. Revealed
+collapses to a floor (all responses $0$).}\label{tab:framings}\vskip 0.1in
+\centering\small\begin{tabular}{lcc}\toprule
+Framing & General $\Delta$ & Target $\Delta$ \\ \midrule
+No-persona baseline & \multicolumn{2}{c}{$-0.233$} \\
+Stated (binary) & $-0.462$ & $-0.494$ \\
+Revealed (binary) & $0.000$ & $0.000$ \\
+Graded (continuous) & $-0.045$ & $-0.054$ \\ \bottomrule
+\end{tabular}\vskip 0.1in\end{table}
+
+Directional accuracy never exceeds the no-persona baseline ($0.40$). The
+\emph{stated} framing over-predicts appealing-but-failed cases; the \emph{revealed}
+framing is so strict that every persona declines (a degenerate floor); the
+\emph{graded} framing restores resolution but leaves failures ranked above
+successes. The invariance of the ranking across framings, persona conditions, and
+against the baseline indicates a structural, not prompt-specific, failure.
+
+\paragraph{Aggregation robustness.} One might suspect the mean hides an intense
+niche minority for the real successes. It does not: recomputing per-case
+distributions, the failures dominate the successes on the high-intensity fraction,
+the top-decile mean ($\Delta=-0.21$), the standard deviation, and the maximum
+($\Delta=-0.32$). No moment of the persona distribution is predictive, closing the
+``wrong statistic'' objection.
+
+\paragraph{Real-product application.} We apply the graded method to two live
+pre-launch products (anonymized): \textbf{P1}, a real-time civic-debate app with a
+paid subscription tier, and \textbf{P2}, an open-source multi-agent planning tool
+for solo founders. Predicted paid conversion is $0.14$ (P1) and
+$0.10$ (P2), essentially
+unchanged under target conditioning. P1's own team targets a $5\%$ premium
+conversion; the simulation over-predicts by $\sim$3$\times$, reproducing the
+abstract-appeal bias on real inputs.
+
+\paragraph{Calibration partly recovers prediction.} The bias is systematic: real
+successes sit consistently below real failures ($\Delta=-0.18$ over 14 cases). We
+exploit this with leave-one-out calibration---a one-feature decision stump fit on
+held-out cases. On the initial five cases LOO reaches $5/5$, but expanding to 14
+(adding well-documented successes and failures) drops LOO to $0.64$---still above
+raw ($0.40$) and chance ($0.50$), yet far from perfect. The residual errors are
+informative: over-hyped expensive hardware is \emph{correctly} rejected by the
+personas (low sim, real failure), breaking the anti-correlation and making the
+sim--real map non-monotonic. Simple sign-flip calibration therefore helps but does
+not solve the problem; adding an a-priori price/hype regime feature does not
+improve LOO (also $0.64$), so the ceiling appears set by data scale, not feature
+choice---reliable validity would require a substantially larger labeled corpus.
+Pre-launch products without real labels (P1, P2) still require a real anchor
+(e.g., a fake-door test) to calibrate.
+
+\section{Discussion: Why It Fails}
+\label{sec:discuss}
+\textbf{(1) Abstract-appeal bias.} One-shot willingness elicits stated appeal, not
+revealed conversion; broadly-appealing-but-failed products (a sweeter drink,
+effortless dictation) score high. \textbf{(2) Missing temporal/relational
+dynamics.} The real failures hinge on brand attachment and sustained-use
+fatigue---invisible to a single decision; forcing a longitudinal binary instead
+floors everything. \textbf{(3) Counterintuitive niche demand.} Real successes had
+low general appeal but strong niche demand, which target filtering and graded
+probabilities still underrate. Because the same ranking survives every
+reformulation, the limitation is intrinsic to persona willingness, not to a
+particular prompt. The bias is systematic enough that
+calibration against real outcomes (\cref{sec:results}) \emph{partly} recovers
+prediction, but a non-monotonic sim--real map---some duds are correctly rejected---
+limits any simple correction: the practical recommendation is to treat persona
+simulations as a \emph{feature} requiring regime-aware calibration, never a raw
+estimate.
+
+\section{Limitations}
+\label{sec:limits}
+Five backtest cases yield low statistical power; we frame results as a
+mechanism-focused, framing-robust case study, not a definitive effect size. We use
+one 7B model, one (Korean) persona market, and keyword target definitions; larger
+models, multi-turn deliberation, and revealed-behavior traces are untested and are
+exactly what our diagnosis motivates. The real-product predictions have no ground
+truth and are reported only to illustrate the bias.
+
+\section{Conclusion and Outlook}
+\label{sec:conclusion}
+For 0-to-1 demand validation, a synthetic-persona virtual market is not a drop-in
+substitute for real evidence: used raw it \emph{inverts} the signal, and no
+reformulation we tried repairs it, because one-shot persona willingness tracks
+broad appeal rather than the niche, sustained conversion that separates real
+winners from losers. The constructive half of the finding is that the bias is
+\emph{systematic}: a light calibration against a handful of real outcomes recovers
+part of the signal ($0.40\rightarrow0.64$)---enough to \emph{rank} or \emph{screen}
+candidate ideas, not to estimate absolute demand. We therefore see three concrete
+uses. \textbf{(i) A calibrated screening feature} inside AI planning tools for founders:
+a cheap simulation shortlists ideas that a small real fake-door test then confirms,
+cutting the cost of the first validation loop.
+\textbf{(ii) A diagnostic}: the simulation's confident false positives are exactly
+the broadly-appealing-but-doomed concepts, so a high raw score is a useful
+\emph{caution} flag. \textbf{(iii) A benchmark}: our blind, leakage-controlled
+backtest is a reusable validity gate against which any persona-simulation vendor
+can be scored before it informs a real decision. Closing the residual gap calls for
+a larger labeled corpus, revealed-behavior traces rather than stated intent, and
+calibration that models the non-monotonic, regime-dependent sim--real map---the
+agenda our results make concrete.
+
+\section*{Impact Statement}
+This work cautions against substituting synthetic-persona simulations for real
+user evidence in product decisions; over-trust could bias which products get built
+and entrench dataset demographics. By reporting a rigorous, framing-robust negative
+result we aim to temper deployment claims. No human subjects or private data are
+involved; product references are anonymized.
+
+\section*{Software and Data}
+The persona-simulation harness, prompts, anonymized case corpus, and per-persona
+logs for all framings---the full research workflow and experiment cycles---will be
+released as part of an open-source AI-planning project upon acceptance; author
+identity is withheld for review.
+% Camera-ready: released in SoloSquad, https://github.com/Adelie-Squad/solosquad (logs: reports/logs/)
+
+\bibliography{references}
+\bibliographystyle{icml2026}
+
+\newpage\appendix\onecolumn
+\section{Anonymized Case Corpus}
+A device-syncing tool via demo-video waitlist (real: success); B online shoe store
+via concierge fake store (success); C reformulated flagship drink that won blind
+taste tests, replacing the original for loyal customers (failure); D voice
+dictation assessed by Wizard-of-Oz for sustained use (low demand); E social-post
+scheduler via landing-page pricing (success). Ground truth is revealed only for
+scoring.
+\section{Framings, Prompts, and Targets}
+Stated elicits \texttt{would\_pay}; revealed elicits \texttt{retained\_pay} after a
+click$\rightarrow$try$\rightarrow$retain funnel with incumbent attachment; graded
+elicits \texttt{pay\_prob}$\in[0,1]$. Targets were fixed a priori by keyword (e.g.,
+E: marketing/creator/self-employed terms) matched against occupation and
+persona-narrative fields. Matched target counts (8000-pool): A 3062, B 711, C 2034,
+D 2834, E 1023. Full prompts and keyword lists are in the repository.
+\section{Per-Framing Logs}
+Per-persona decisions and free-text reasons are in
+\texttt{results\_\{stated,revealed,graded\}\_\{general,target\}.json} and, for real
+products, \texttt{results\_products\_graded\_*.json}.
+\end{document}

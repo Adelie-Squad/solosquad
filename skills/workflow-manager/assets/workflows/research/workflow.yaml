@@ -1,0 +1,77 @@
+# research MAIN workflow (v1.4.3) — autonomous hypothesis-validation research.
+#
+# 기능화 *前* 유효성 검증 계층: 어떤 기능 가설이 유효한지 불확실할 때, PRD(기능개발) 대신
+# 이 워크플로로 자율 연구(확산→수렴 가설수립 → 실험 사이클 → 백테스트/수치 eval → Track2 검증
+# → 리포트/논문)를 돌린다. 사이클(stage-3↔4)은 rubric 통과 또는 예산 소진까지 반복한다.
+# Chief 가 입력 맥락으로 메인을 추론: "이게 유효한지 먼저 검증해줘"·"연구해줘"→research.
+# 방법 규약(무인 규율·확산수렴·수치 eval·정직성)은 이 dir 의 research-workflow.md.
+# 장기 실행(무인 8h+)은 goal 프로세스([[goal-manager]]).
+schema_version: 2
+id: "research"
+name: "Research (autonomous hypothesis validation)"
+description: "기능화 前 자율 연구 메인. 확산→수렴 가설수립 → 실험 사이클 → 백테스트/수치 eval → Track2 검증 → 리포트/논문. 사이클은 rubric 통과(또는 예산)까지 반복. 유효 판정 시 PRD 로 그래듀에이션. 방법: research-workflow.md."
+template_id: "research"
+
+stages:
+  - id: stage-1-spec
+    agent: _skill/hypothesis-design
+    task: |
+      연구 주제를 고정한다(사전등록): 반증 가능한 **핵심 질문** · **verification surface(=이 연구의 eval,
+      정답이 존재하는 증거원)** · **통과 rubric**(실험 *前* 고정, 사후 이동 금지). subject-template 로
+      `docs/research/<subject>/research-plan.md` 스캐폴드. (research-workflow.md §4.1 전제)
+    inputs: []
+    outputs:
+      - research-plan.md
+    handoff_to: stage-2-hypothesis
+
+  - id: stage-2-hypothesis
+    agent: _main/chief
+    task: |
+      **확산→수렴 가설수립**. (확산) 직전 사이클 진단을 입력으로 병렬 서브에이전트가 **웹·문헌 조사**
+      (_skill/market-research · _skill/discovery-synthesis)로 후보 가설을 넓게 생성 — 내부지식만 의존 금지.
+      (수렴) 반증·측정 가능성·저비용·문헌 대비 originality 로 채점해 **이번 사이클 가설 1개**로 좁힌다.
+      선택 근거를 experiment-plan 에 기록, 탈락 후보·문헌은 다음 사이클 재료로 보존.
+    inputs:
+      - research-plan.md
+    outputs:
+      - hypothesis.md
+    handoff_to: stage-3-experiment
+
+  - id: stage-3-experiment
+    agent: _skill/experiment-design
+    task: |
+      **실험 사이클**: goal 6필드로 `26xxxx_cN_<name>/experiment-plan.md` → **무인 실행**(goal 8h+,
+      no-blocking) → `experiment-result.md`. 모든 주장은 tool result/log 에 **앵커**(날조 0), 결과는
+      epistemic 라벨(확정/근사/블록/불확실). 백테스트 설계는 `examples/backtest-example.md`(blind·
+      누출통제·baseline·Δ/LOO) 참고.
+    inputs:
+      - hypothesis.md
+    outputs:
+      - experiment-result.md
+    handoff_to: stage-4-verify
+
+  - id: stage-4-verify
+    agent: _main/chief
+    task: |
+      **수치 eval + Track2 verifier**. 사전등록 임계(Δ·directional accuracy·LOO·ECE)를 대조하고,
+      **별도 컨텍스트 verifier 서브에이전트**가 4축(soundness/presentation/significance/originality)
+      + overall(1–6) 채점. **수렴 = rubric 통과 AND overall≥4**(Weak Accept) → stage-5.
+      미통과 & 예산 남음 → 진단을 **stage-2 확산 입력**으로 되돌려 다음 사이클.
+      예산/시간 도달 → 최선 결과로 종결(과장 금지 · 자기교정 · 검정력 한계 명시).
+    inputs:
+      - experiment-result.md
+    outputs:
+      - verdict.md
+    handoff_to: stage-5-report
+
+  - id: stage-5-report
+    agent: _skill/discovery-synthesis
+    task: |
+      `final-result.md`(종합 판정 + confidence + rubric 대조 + **기능화 권고**) 작성. 최종 산출물
+      (리포트/논문/프로토타입)을 **org-level `reports/`** 에 저장(docs 아님 — 배포 대상). 유효 판정이면
+      대상 PRD 로 **그래듀에이션 권고**(연구→기능개발 브리지).
+    inputs:
+      - verdict.md
+    outputs:
+      - final-result.md
+    handoff_to: null

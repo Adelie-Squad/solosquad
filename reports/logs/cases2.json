@@ -1,0 +1,20 @@
+[
+ {"id":"F","method":"viral_value_video","gt_conversion_dir":1,"target_keywords":["면도","구독","남성","생활"],
+  "scenario_ko":"매달 소액(약 월 1달러)에 면도날을 정기 배송해 주는 구독 서비스입니다. 비싼 기존 면도날을 조롱하는 재미있는 소개 영상을 온라인에 올립니다. 당신은 이 구독을 유료로 신청하겠습니까?"},
+ {"id":"G","method":"preorder_deposit","gt_conversion_dir":1,"target_keywords":["자동차","전기","기술","환경"],
+  "scenario_ko":"전기차가 아직 흔하지 않은 시점에, 고성능 전기 스포츠카를 출시 전 예약금(수백만원)을 받고 사전 예약받습니다. 당신은 예약금을 걸고 사전 예약하겠습니까?"},
+ {"id":"H","method":"crowdfunding","gt_conversion_dir":1,"target_keywords":["시계","기기","기술","가젯"],
+  "scenario_ko":"스마트워치가 드문 시점에, 알림을 받는 전자잉크 손목시계를 크라우드펀딩으로 출시 전 선주문받습니다. 당신은 선주문 결제하겠습니까?"},
+ {"id":"I","method":"invite_waitlist","gt_conversion_dir":1,"target_keywords":["이메일","업무","생산성","직장"],
+  "scenario_ko":"매우 빠른 속도를 강조하는 초대장 기반 이메일 앱입니다. 초대받아야만 쓸 수 있고 대기자 명단이 깁니다. 당신은 대기 등록하고 유료로 쓰겠습니까?"},
+ {"id":"J","method":"overhyped_hardware","gt_conversion_dir":0,"target_keywords":["이동","교통","기기"],
+  "scenario_ko":"'도시를 바꿀 것'이라 대대적으로 홍보된, 서서 타는 1인용 자가균형 이동장치입니다(고가). 당신은 이 장치를 구매하겠습니까?"},
+ {"id":"K","method":"consumer_wearable","gt_conversion_dir":0,"target_keywords":["웨어러블","안경","기기","기술"],
+  "scenario_ko":"얼굴에 쓰는 안경형 컴퓨터로, 눈앞에 정보를 띄우고 카메라로 촬영합니다. 사생활 논란이 있습니다. 당신은 일반 소비자로서 이 안경을 구매해 일상에서 쓰겠습니까?"},
+ {"id":"L","method":"overpriced_gadget","gt_conversion_dir":0,"target_keywords":["주방","건강","가전"],
+  "scenario_ko":"전용 팩을 넣으면 즙을 짜 주는 고가(약 70만원)의 wifi 주스 기계입니다. 팩은 손으로도 짤 수 있다는 지적이 있습니다. 당신은 이 기계를 구매하겠습니까?"},
+ {"id":"M","method":"premium_shortform","gt_conversion_dir":0,"target_keywords":["영상","모바일","콘텐츠"],
+  "scenario_ko":"대형 예산의 짧은 영상만 모바일에서 유료로 보는 스트리밍 앱입니다(월 구독). 당신은 이 앱을 유료 구독하겠습니까?"},
+ {"id":"N","method":"early_infra_delivery","gt_conversion_dir":0,"target_keywords":["배송","식료품","온라인"],
+  "scenario_ko":"온라인 주문이 드문 시점에, 대규모 창고를 지어 신선식품을 집까지 당일 배송하는 서비스입니다. 당신은 온라인으로 식료품을 주문·결제하겠습니까?"}
+]

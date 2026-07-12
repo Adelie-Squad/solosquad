@@ -24,7 +24,7 @@ stages:
   - id: stage-2-market
     agent: _workflow/market-research
     task: |
-      시장 조사 서브워크플로 실행 → PRD §시장 + <org>/docs/reports/ 리포트.
+      시장 조사 서브워크플로 실행 → PRD §시장 + <org>/reports/ 리포트.
     inputs:
       - idea-section.md
     outputs:

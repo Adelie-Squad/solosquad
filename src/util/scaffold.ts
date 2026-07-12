@@ -32,6 +32,7 @@ export const SCAFFOLD_TEAMS = ["core", "product", "engineering", "business", "br
  * improvement) resolve their `_workflow/` sub-references out of the box.
  */
 export const SCAFFOLD_WORKFLOWS = [
+  "research",
   "new-build",
   "improvement",
   "idea-refinement",
@@ -89,6 +90,7 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
   fs.mkdirSync(path.join(orgDir, "workflows"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "repositories"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "knowledge"), { recursive: true });
+  fs.mkdirSync(path.join(orgDir, "reports"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, input.messenger), { recursive: true });
 
   for (const [filename, body] of Object.entries(MEMORY_SCHEMAS)) {

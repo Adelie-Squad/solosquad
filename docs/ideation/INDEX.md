@@ -21,6 +21,8 @@
 | [260621-workflow-goal-planning-evolution.md](260621-workflow-goal-planning-evolution.md) | |
 | [260623-squad-org-restructure.md](260623-squad-org-restructure.md) | |
 | [260625-ai-planning-insights.md](260625-ai-planning-insights.md) | |
+| [260712-long-horizon-codex-goals-vs-fable5.md](260712-long-horizon-codex-goals-vs-fable5.md) | 장기작업 가이드 대조: Codex Goals(완료계약·6필드) vs Fable 5(프롬프팅). 공통점 8·차이 7·적용 7 |
+| [260712-ralphthon-icml-review-and-passing-paper.md](260712-ralphthon-icml-review-and-passing-paper.md) | Ralphthon ICML: 리뷰 rubric(4축+overall)·auto-research·"통과하는 paper" 역설계. 형식규격(2단10pt·4p·Impact Statement 필수)·double-blind·타임라인. ref: icml2026/ |
 | [AI_Agent_Harness_Report.md](AI_Agent_Harness_Report.md) | |
 | [curl-publish.md](curl-publish.md) | |
 | [multi-agent-directory.md](multi-agent-directory.md) | |

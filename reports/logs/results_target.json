@@ -1,0 +1,6117 @@
+{
+  "seed": 42,
+  "mode": "target",
+  "n": 200,
+  "model": "Qwen2.5-7B-Instruct",
+  "cases": {
+    "A": {
+      "method": "fake_door_video_waitlist",
+      "sim_conversion": 0.295,
+      "sim_mean_prob": 0.2655,
+      "n_personas": 200,
+      "n_matched": 3062,
+      "baseline_no_persona": 0.1,
+      "gt_dir": 1,
+      "gt_outcome": "success_high",
+      "records": [
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "기본적인 파일 동기화 필요성은 있지만, 현재는 무료 버전으로 충분하고 유료화의 필요성은 느껴지지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성이 크지 않고, 현재 소비 패턴에 큰 변화를 주지 않습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요한 기능이며 안전하게 사용할 수 있을 것으로 믿음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 무료로 동기화 기능만 제공되어 유료로 전환할 만큼의 가치를 느끼지 못함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가족 윤리상 이유로 비즈니스 도구 필요성 낮음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 기능은 필요 없고, 현재 경제 상황으로 인해 비용 부담이 크기 때문입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성 높고, 창작 활동에 도움 될 것 같음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "기존 업무 방식에 익숙함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "콘텐츠 제작에 도움이 될 것 같아서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높고, 편리성 있는 기능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 업무는 이미 효율적으로 수행하고 있어 추가 도구 필요성 낮음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "필요성이 없어 유료로는 결제할 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 정갈한 한식을 좋아하므로 간편한 사용이 가능한 제품을 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 기능은 필요하지 않으며, 배달 앱 사용 경험이 부정적이어서 추가 비용을 지불할 수 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "현재 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성과 편의성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "필요성과 편의성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성과 편리성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 작업에 큰 도움이 될 것 같지만, 아직 무료 버전으로 충분할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 도구에 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아질 것으로 보이며, 고급 고기 구매 비용 대비 값진 툴일 것 같아."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "직무 관련성이 있으나 가족과의 시간을 중요히 생각하여 유료로 사용하기는 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요없음, 단순한 생활로 충분함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "현재 구직 중이라 비용 부담이 크고 무료로 사용해볼 수 있는 기회가 더 유익할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "데이터 관리에 관심 있고 비즈니스에서 유용함 인식"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식되지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성은 없어 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가정집 환경에서 사용되지 않으며 무료로도 필요사항 해결 가능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "편리함이 필요한 직장인으로서 파일 동기화 도구의 효용성이 크다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 사용 중인 저장소 기능이 충분해서 추가 비용을 지불하기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음, 편리함에 따른 만족도 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "디자인 관련 업무에서는 파일 관리가 중요하므로 동기화 도구의 유용성을 인지하지만, 현재는 무료 버전으로 충분할 것 같아 유료로 전환할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 일상 생활에 큰 불편함이 없어 유료로 사용하려는 동기가 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적인 기능으로 작업 효율성이 높아질 것으로 예상되므로 구매 의사가 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "가족과 함께 살면서 안전하고 편리한 환경을 위해 필요하다고 생각한다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료로 제공된다면 이용해볼 만함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족의 경제적 안정을 위해 시간을 최대한 활용해야 하는데, 이 제품은 개인적인 일정 관리에 도움이 될 것으로 보이지만 직접적인 경제적 이익은 없어 유료로 사용할 확률은 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상적인 업무와 취미 활동 모두에 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 경제적 상황과 소비 패턴에서 추가적인 소비는 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "必要性高，安全相关工作需求"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "정원 가꾸기에 필요한 사진과 정보를 여러 장치 간에 쉽게 공유하고 싶어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식되지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태이고, 현재 소득이 보장되지 않아 추가적인 비용 부담을 감수하기 어렵습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성이 크지 않고, 현재 소비 패턴에 큰 변화를 요구하지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "업무와 일상생활에서 도움이 될 것으로 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무 관련 도구로서의 가치는 인정하지만, 현재는 경제적 부담감이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "직접 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강한 생활 관리를 위해 필요하며, 배달 음식을 자주 먹는 점에서 편리함이 크기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재의 생활과 취미에 큰 영향을 주지 않아 유료로 사용할 만큼의 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "현재 업무 필요성이 크고, 동기화 도구가 편리해질 것으로 예상됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 기능은 필요하지 않아 유료로 변환할 확률이 낮습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식되지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "일상생활에서의 효용성이 크고, 기술적인 지식으로부터의 추천도 있어"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강 관리와 여가 활동에 집중하는 중이며, 파일 동기화 도구에 관심 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가족과 함께 식사하는 것을 중요시하기 때문에 개인적인 파일 관리는 직접 손질하는 편이 좋아요."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 미느끼고, 이미 기존 솔루션 만족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재는 무료로도 충분히 가능하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "연구와 개인적인 관심이 있지만 무료로 충분히 사용 가능할 것 같아 유료로 구매할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "농작물 관리와 관련이 없어 관심 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태라 구매 가능성이 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성 높음, 업무 효율성 향상"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "내부 업무 효율성 향상을 위해 필요하고, 이미 소비 패턴에서 간편성을 중요하게 생각하고 있음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "뷰티 관련 제품이나 서비스에 더 관심이 있으며, 파일 동기화 도구에 대한 필요성이 느껴지지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 도구에 관심은 있지만, 현재는 퇴근 후 단골 중식당에서 해결하고 있습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음, 소프트웨어 개발자로서의 전문성 활용 의지 고려"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 기능은 제가 사용하는 기기 종류가 적어 필요성 느끼지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 도구에 관심 있지만, 현재는 무료로도 충분히 해결할 수 있는 방법들을 사용 중이므로 유료로 구매할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "가족과 함께하는 시간을 중요시하고, 일상생활에서 정밀함을 추구하는 성격상 파일 동기화 도구가 유용할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료로 제공되면 이용해볼 만함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태로 경제적 여력 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가족과의 시간을 중요시하므로 비용이 발생하는 제품에 대해 신중할 것."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "기본적인 필요성은 없지만, 향후 비즈니스 확장 시 활용 가능성이 있으므로 대기자 명단에 등록할 수 있습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "데이터 분석가로서 파일 관리의 효율성을 중요하게 생각하고, 즉흥적인 성향으로 인해 이미 여러 기기를 사용 중이므로 자동 동기화 도구가 유용할 것으로 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "현재 필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성이 없고, 현재 소득으로는 추가적인 비용 부담을 할 수 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직무 관련성이 있지만, 무료로 제공되었을 때 사용해볼 가치가 있는 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족들과의 일상을 고려하면 필수는 아니지만, 작업 효율성이 높아질 수 있으므로 추후 고려할 만함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "작업 효율성이 높아질 것으로 기대되며, 개인적으로도 시간 관리에 도움이 될 것 같아."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 필요성이 없다고 판단함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 기술을 선호하고, 생산성을 높여주는 도구로 평가함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "자동 동기화 도구에 관심 있으나 현재는 무료로 사용할 수 있어 유료로 전환할 이유가 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료로 사용해볼 만함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태라 소득이 없고 무료체험으로 먼저 사용해보고 싶다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성과 편의성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성과 편의성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태라서 비용 부담이 크고 무료로 사용 가능하면 좋겠지만 유료로는 현재 구매 의사 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "자동 동기화 도구는 현재 업무 효율성 향상에 도움이 될 것으로 보이며, 맛있는 음식을 즐기는 나날들을 더욱 편안하게 만들어줄 것으로 예상함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상적인 업무에서 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "소프트웨어 활용 능력이 뛰어나고, 효율성을 위해 필요함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "작업 효율성을 위해 필요하며, 기술적 관심이 많아 유료로도 구매 의사가 있으나 소비성향은 다소 높지 않아 확정적으로 결제할 확률은 약간 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성이 부족함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직이고 경비를 아끼기 위해 무료로 사용해보고 싶다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요한 기능과 미래적 가치"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 경제적 여유가 없어 무료로 사용 가능하면 좋겠지만 유료로는 부담스럽다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리와 업무 효율성을 위해 필요함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "기본적인 문서 관리는 수동으로 해결 가능하여 추가 비용 지출에 신중함 needed"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "기본적인 기능에 신경쓰는 편이고, 무료로 사용해볼 가치는 있지만, 현재 경제 상태에서는 유료로 전환하기 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "기술적 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료로 사용해볼 만함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 업무 필요성은 있지만, 현재 무료로 출시되어 있다면 사용해보고 싶어도 경제적 이유로 유료로 전환할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "자동 동기화 도구가 필요한 작업이 많아 실용성이 있고, 제품의 성능을 직접 확인할 수 있어 유료로도 구매 의사가 있으며, 현재 상황에서 새로운 도구를 도입하기에 적합하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 도구에 대한 관심은 있지만, 현재는 내 집 마련을 위한 안정적인 소비를 우선시하기 때문에 비용을 지불하는 것은 고려하지 않음."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재는 무료로 사용할 수 있는 방법이 있어서 유료로 전환할 이유가 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "보육 관련 업무에서 필요한 파일 관리 도구로 필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적이고 필요한 기능으로 일상적인 업무 효율성이 크게 향상될 것으로 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태로 경제적 부담이 크고 무료로 사용 가능하다면 유용할 것 같지만, 현재는 비용이 발생하는 유료 버전을 선택하기엔 어려움이 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "기본적으로 관심이 있지만 무료로 사용해보는 것이 좋겠다는 생각."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "필요성과 미래 IT 직장에서의 활용성이 높아 유료로도 고려할 만함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "편리성과 시간 절약이 가능해 현재 업무에 큰 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "간편한 식습관과实用点来看，对于文件同步工具的实用性，我可能感兴趣，但考虑到目前市场上还没有类似的产品，而且是需要付费的。我的消费习惯更倾向于性价比高的产品和服务，所以即使我对这个工具感兴趣，也不太可能会立即支付费用。"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 경제 상황이 좋지 않아 무료로 사용할 수 있는 제품을 선호합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "정리 습관과 기술을 바탕으로 파일 관리 도구가 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료시 테스트해볼만 하지만 유료로는 부담스럽고 필요성 미부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성이 부족함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "편리한 업무 관리와 가족과의 시간 확보를 위해 필요하다"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료로도 충분히 활용 가능하다 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "파일 동기화 도구가 필요하지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "파일 관리는 중요한 문제이고, 현재 시스템이 불편하기 때문"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "간편함이 필요하지 않아"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "소방시설 관리사로서 다양한 기기에 접근해야 하므로 파일 동기화 도구가 유용하며, 이미 유료 서비스를 경험한 적이 있어 신뢰도가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직장에서의 활용성이 크고, 동료들과의 외식 시간에도 편리함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "소중한 일과 시간 절약을 위한 툴로 필요성을 느끼고, 이미 통계 업무 능력이 있는 만큼 제품의 효과성도 믿을 수 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 미흡"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "편리함이 필요하고 가족과 함께하는 시간을 최대화하기 위함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식되지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "일과 삶의 경계가 명확한 안정을 중요시하는 성격에 맞고, 현장에서 필요한 기술력을 갖춘 기술자로서 효용성이 높아 유료로도 구매 의사가 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "새 기술에 관심 있지만 무료로 사용해볼 계획"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성과 편의성이 높아 유료로도 가치 있다고 생각함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "노트북이나 데스크톱이 없는 상태라 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "연구와 관련이 없어 흥미가 없지만, 개인적으로는 필요할 가능성 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가게 운영과 일상 생활에 큰 도움이 될 것으로 생각하지만, 현재 수입이 제한적이라 유료 서비스를 고려하지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 인식되지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 도구에 대한 필요성은 크지만, 아직 유료로 전환하는 것은 부담스럽습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "自动同步需求较低，现有存储方式足够"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가족 자산 관리를 위한 재테크에 집중하는 중이고, 파일 동기화 도구는 필요 없어 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위한 도구로 필요성 느껴짐"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 취미 활동이나 가족 관리에는 도움이 되지 않을 것 같아 유료로 사용하진 않을 것 같습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리에 도움이 되고, 디지털 기기 애호가"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "파일 관리가 더 효율적으로 되면 퇴근 후 시간을 더 편안하게 보내는 데 도움이 될 것으로 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족과 함께하는 외식을 중요시하지만, 현재 무직 상태로 경제적 여유가 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "직업 특성상 파일 관리는 필요 없으며 비용 대비 효용성이 낮음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상 생활과 관련이 없어"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가정용 기기 동기화 도구로는 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "연구용도가 아닌 일상 사용에는 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성 높아"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 미느끼고, 익숙한 방법 유지 선호"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 일자리 문제로 소득이 없고, 추가 비용 부담이 불필요하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료로 제공된다면 사용해볼만 하지만 현재 유료로는 비용 효율성이 낮아 구매 의지 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 미느껴"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "창업 준비 중이므로 도움이 될 수 있지만 무료로 제공되었으면 좋겠다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "자동 동기화 도구에 관심 있지만 현재의 컴퓨터 사용 습관에 큰 변화가 필요없고, 예산이 부족하여 유료 서비스를 선택하기 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 도구에 대한 필요성은 있지만, 현재는 무료로도 충분히 사용 가능하기 때문"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "자동 동기화 필요성 미느껴"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "필요성 부족"
+        }
+      ]
+    },
+    "B": {
+      "method": "concierge_fake_store",
+      "sim_conversion": 0.305,
+      "sim_mean_prob": 0.2805,
+      "n_personas": 200,
+      "n_matched": 711,
+      "baseline_no_persona": 0.2,
+      "gt_dir": 1,
+      "gt_outcome": "success",
+      "records": [
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "건강을 유지하기 위한 신발 구입 필요성 인식"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직접 신어보지 않고 온라인으로 구매하는 것이 처음이라 신중하지만, 신발가게의 서비스와 평판이 좋다면 구매할 의사가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "가격대비 합리적이고, 배달서비스 이용해 편리함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설어서 거부감이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "정갈한 한식을 즐기는 편이라 신발도 편안하면서도 깔끔한 스타일이 필요해 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게 신발들에 대한 직접적인 경험 부족으로 신뢰성 의문"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보지 않고 구매하는 것은 신뢰도가 떨어져 구매 의사결정을 내리기 어렵습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어본 후 구매하는 것이 익숙하며, 온라인 주문은 불안하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게 신발들 사진만 올려 있어 신뢰성 낮고, 직접 신어보지 않은 신발 구매는 위험"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 신뢰성이 부족하여 구매 의사가 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험 부족으로 낯설고, 가족과 외식하는 것을 선호하며 큰 소비는 피하는 경향이 있습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설고, 스마트폰 활용 교육에 더 관심이 많습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게 신발 사진만 올려주면 신발을 직접 보지 못하고 구매하기는 망설임이 있지만, 주문이 들어오면 구매하는 방식은 관심있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설고 신뢰성이 부족하여 관심이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "브랜드의 시각적 정체성과 가족과의 유대감을 중요시하므로 신뢰성 있는 브랜드인 이 쇼핑몰의 제품을 구매할 가능성이 높음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어보지 않고 온라인으로 구매하는 것은 낯설고 위험하다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것이 낯설어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게에서 직접 보고 사는 것이 익숙하고 신뢰감이 있어 온라인으로 주문하기는 망설임이 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 낯설고 불안해서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발 구매 경험이 없고 직접 신어보지 않고 온라인으로 구매하기 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설어서 망설임이 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설고 불안하며, 건강을 유지하기 위한 신발은 동네 신발가게에서 직접 선택하고 구매하는 것이 더 안전하다고 생각합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신체 활동량이 적고 신발 퀄리티에 대한 고민이 많지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게 신발 사진만으로 신발을 신어보지 않고 구매하기는 망설임이 있지만, 한 달에 한 번 외식할 때처럼 소소한 일탈을 즐길 수 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설어서 거부감이 있지만, 배달 음식의 경험을 통해 온라인 쇼핑에 대한 불안감은 조금 줄었음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 불안함이 크며, 가정 내에서의 소비는 주로 재료를 직접 구매하여 만드는 방식을 선호하므로 가능성이 매우 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게에서 직접 신어보고 사는 것이 익숙하고 신뢰성이 있어 온라인으로 신발 구매는 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 실용적인 신발이 필요하고, 직접 신어보지 않고도 신뢰할 수 있는 동네 신발가게의 서비스를 신뢰한다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "如果价格与实体店相似，我会考虑"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "법률 전문가로서의 특성상 신발 선택의 중요성이 적으며, 편리한 온라인 쇼핑을 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "좋아하는 음식점에서 식사를 자주 하는 편이라 신발도 직접 신어보지 않고 온라인으로 구매하는 것을 아는 사람들의 추천을 믿을 수 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 불편해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 소규모 사업 준비 중이므로 추가적인 비용 부담을 감수하기 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 신뢰성이 떨어져서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게에서 직접 보고 선택하는 것이 더 믿음직해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게 신발들 사진만 올려져 있고 신발을 직접 신어보지 못하니 신뢰성이 떨어져 구매 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게와 비슷한 가격이라면 고려해볼 만하지만, 직접 신어본 적이 없으니 신뢰성이 부족해서 구매하지 않을 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 경험이 없어 신뢰성이 떨어짐"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설고 신뢰도가 떨어져 구매 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "취미와 성격에 맞는 커스텀 튜닝 사업 계획에 필요한 신발이라 생각되므로."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 구매하는 것은 위험하다고 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "분식집 가듯이 간단히 주문하고 받아볼 수 있어서 편리함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강 관리를 위한 의지가 있지만 신발 구매 경험이 부족하여 위험을规避"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 낯설고, 동네 신발가게에서는 직접 보고 선택하므로 온라인 쇼핑몰 이용을 선호하지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것이 불편해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강 관리에 집중하느라 시간이 부족하고, 신발구매는 낯설어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "온라인 신발 구매 경험이 없고, 신발은 직접 착용해보아야 믿을 수 있으므로 외식과 건강 관리에 더 우선순위를 두게 됩니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하기는 낯설고, 가격대비 만족감이 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어본 후 구매하는 것이 익숙하고 신뢰도가 높아 온라인으로 구매하기에는 부담이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발을 직접 보고 신어봐야 믿을 수 있으므로 온라인으로 구매하기는 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "한식을 즐기는 취향과 배달음식보다 나을 것 같아서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 신뢰도가 낮고, 건강 문제로 인해 신발을 많이 신지 않는 편이라 구매 의지가 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어보지 않고 온라인으로 구매하는 것은 낯설어서 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발 수선에 대한 전문성이 있어 브랜드와는 무관한 고가 신발 구매에 신중함이 필요하여 직접 신어보지 않고 온라인으로 구매하기는 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 불편하고 안전성이 떨어지는 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 보고 신어봐야 믿을 수 있으므로 온라인으로 주문하기는 꺼려진다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "안정적인 성취를 추구하는 경향이 있어 신뢰도 높은 브랜드의 제품에 관심있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발 구매 경험이 부족하고, 직접 신어보지 않고 온라인으로 구매하는 것은 신steder"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게에서 신발을 직접 보고 선택하는 것이 익숙해서 신발을 온라인으로 주문하기는 낯설기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "가족과의 시간을 즐기는 추동윤 씨로서, 신발을 바꾸는 것은 일상적인 것이라구용. 직접 신어보지 않고 온라인으로 구매할 정도로 신뢰하는 쇼핑몰이라면 구매할 가능성이 높아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게에서 신발을 직접 보고 선택하던 습관이 굳어져 있으며, 온라인 주문은 낯설어서."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직접 신어보지 않고 신발을 구매하는 것은 처음으로 신중하지만, 신뢰성 있는 방법이므로 구매 의사가 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "건강관리를 위한 목적이 아닌데, 신발을 직접 보고 신어보지 못하니 신뢰가 가지 않아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어본 경험 없이 온라인으로 구매하기는 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 신경질적인 행동으로 느껴져 구매 의사결정을 내리지 못함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발 직접 신어보지 않고 온라인 주문 불가능"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "예술적 취향과 실용성을兼具，我对这个新鞋类购物网站感兴趣，并愿意在线上购买。尽管我还没有尝试过在网上买鞋，但这个试穿服务听起来很吸引人。考虑到我有购买新鞋的需求，并且对这家店的信任度较高，我愿意以中等概率支付并购买一双。"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 낯설어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어보지 않은 상태에서 온라인으로 구매하기는 위험하다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 위험하다고 느껴져요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발 구매 경험이 부족하고, 직접 신어보지 못한 신발을 온라인으로 구매하기는 신중함이 필요함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어본 후에만 구매하는 습관이 있어서 온라인으로 구매하는 것은 불가능합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신발가격이 적당하고, 직접 신어보지 않고도 믿을 만한 방법이라면 구매할 가능성이 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상적인 취미 활동과 일상에 맞는 가격대의 제품이 필요해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "혈압 관리와 산책을 위한 신발이 필요하여, 직접 신어보지 않고도 믿을 만한 출시 전 검증을 통해 구매할 가능성이 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신발가게 신발들을 직접 확인할 수 있다는 검증된 점과, 나물 위주의 식사 후 배달 음식 제한이라는 점을 고려하면 신발 구매 의향이 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "리빙 브랜드 런칭 목표와 취향에 맞는 제품이라면 구매 의사가 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 아직 익숙하지 않아."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "온라인으로 신발을 주문하는 것이 낯설고, 직접 신어보지 못해 신뢰가 가지 않아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "미적 감각 발휘와 공간 기획 업무에 적합한 제품이라면 구매 의사있음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 낯설어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보지 않고 온라인으로 구매하는 것은 낯설고 위험하다고 생각한다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 불편함이 있고, 동네 신발가게에서는 직접 신어보고 구매하는 편이 더 좋습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "가죽 재단 전문가로서 신발 품질에 대한 고려가 필요하고, 직접 신어보지 않고도 신뢰할 만한 제품으로 판단됨"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 불안하기 때문."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어본 후 구매하는 것이 더 믿음직하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강한 생활을 위해 신발이 필요하고, 직접 신어본 것과 비슷할 것으로 예상하여 구매할 수 있음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 매우 낯설고 불안감이 크므로 결제할 확률이 매우 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "온라인 쇼핑 경험 부족"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 위험하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강에 좋은 제품을 찾는 경향이 있으며, 직접 신어보지 않고도 신뢰할 수 있는 방법으로 구매할 의사가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게에서 직접 보고 사는 것이 편안하고, 온라인으로 신발을 사는 것은 아직 익숙하지 않아서."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 구매하기는 매우 신중하며, 온라인 쇼핑 경험도 부족하여 구매 의향이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신발가게 신발 사진 보고 온라인 주문 가능성이 있어 보여 구매 의사 결정을 내릴 수 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "필요한 물건이고 직접 신어보지 않아도 충분히 믿을 만한 검증 절차를 하고 있으므로."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "가격대비 합리적이고, 배달이 편리해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설어서."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발 구매는 낯설고 직접 신어보지 못한 제품을 신경 쓰지 않아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설어서."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 낯설어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신발가게 신발의 사진을 직접 보고 평가받아서 신뢰감 있고, 독특한 모델이 나오면 호기심이 든다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험 없어 신뢰도 낮아"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어보지 않고 구매하는 것은 믿기 어렵고 위험하다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설고, 예산도 엄격하여 추가 비용이 발생하는 구매는 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신체적 활동이 적고, 신발을 직접 신어보지 않고 구매하기 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "예술적 관심과 체계적인 분석력이 요구되는 분야에서 이점을 가져올 수 있는 제품이라면 구매 의사가 있을 수 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설기 때문에 시도하지 않을 가능성이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "건강 관리와 휴식 중이라 편리한 온라인 쇼핑이 필요하고, 신발가게의 검증 방식은 신뢰감이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 못하기 때문에 믿을 수 없어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발 구매 경험 부족과 막연한 불안감"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "디자이너로서 실용적이면서도 예쁜 신발이 필요하고, 검증된 제품이라 신뢰감 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "가족과의 식사 시간을 중요시하고, 신선하고 깔끔한 음식을 선호하는 성향이 있어 신발도 품질 좋은 것을 선택할 가능성이 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "취미 활동과 맛집 탐방을 위해 시간을 절약하고자 함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 불안해서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험이 없어 믿을 수 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "예술적인 취향과 수공예품 제작을 위한 디자인적인 신발이 필요해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 아직 낯설기 때문입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직접 신발을 신어볼 수 없어 신뢰성이 부족해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "신선한 조리법 도입을 위해 다양한 음식 경험을 즐기는 경향이 있으며, 신발도 낯선 태국 요리처럼 도전적인 경험이 될 수 있다고 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발 직접 신어보지 않고 온라인 주문의 낯섦"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신발가게 사진확인 후 직접확인 가능하므로 신뢰감있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신선한 경험이나 다양한 선택의 기회가 있어 구매할 가능성이 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "좋아하는 스포츠 활동과 외모 관리를 위해 투자 가능"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 신경질적인 건강 관리와는 맞지 않아요."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 신뢰성이 부족해서 거부감이 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 신뢰도가 떨어진다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게 신발들 사진만 올려두고 주문하면 직접 신어보지 않고 배송받는 것은 신뢰할 수 없어 보여 구매 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "박지송 씨는 신선하고 다양한 제품을 즐기는 성향이며, SNS를 통해 상품 정보를 빠르게 받아들이는 경향이 있어 이 쇼핑몰의 상품을 쉽게 받아들일 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 낯설어서."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 불안함이 크고, 현재는 경비원으로 일하는 데 필요한 장비는 아니므로 필요하지 않음."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "직업적 성취감을 위해 숙련도를 높이고자 하는 욕구가 강하고, 정갈한 한식을 즐기는 취향에 맞는 편안한 신발이 필요함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "운전일과 퇴근 후 여유 시간을 활용해 즐거운 경험을 추구함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하기는 낯설어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게에서 직접 보고 선택하는 습관이 있어 온라인으로 신발 구매가 낯설어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리를 위해 운동화 필요하며, 배달의 편의성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 못하니 신뢰성 문제"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "신발가게 신뢰도 높아 보이고, 직접 신어보지 않아도 되는 편리함 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게에서 직접 보고 신어보고 샀던 경험이 있어 신뢰가 가지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직접 신어보지 못해도 동네 신발가게 신뢰하므로 구매 가능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직업 특성상 신발 구매 빈도 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "빵순이로서 신발도 중요함 인지하고, 직접 신어보지 않고도 신뢰하는 편"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "사회적 가치를 중요시하는 창작자로서 새로운 경험을 통해 영감을 얻을 수 있다고 생각하여."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업상 발이 중요하고, 직접 신어보지 못한 신발을 구매하는데 부담이 있지만, 신뢰도 있는 출시 전 검증 시스템 덕분에 구매 의사 결정을 내렸습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발 구매 경험이 없고 직접 신어보지 않고 온라인으로 구매하기 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게 신발 사진만 올려서 신발을 직접 신어보지 못하면 위험이 있어 보여 구매 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강을 위한 목표達成和减少不安感的需求较高，且对手工艺品的信任度高"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요한 신발이 없지만, 검증 과정이 있으므로 안심하고 구매할 수 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설어서."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험 없이 온라인으로 주문하는 것이 불안해서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것이 불편하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "자아실현에 집중하는 취미 활동에 필요한 도구로 필요성 느껴짐"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "안정적인 성격과 신중한 구매 습관을 고려하면 신제품도 검증 과정을 거쳐 충분히 신뢰할 수 있을 것 같아 구매 의사가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "뷰티와 관련된 관심이 있고, 새로운 경험을 즐기는 성격"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어본 후 구매하는 것이 익숙하고 안전하며, 온라인으로 주문하는 것은 아직 낯설기 때문."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "치유 여행에 대한 열망과 웰니스 삶의 중요성을 인식하고 있어, 자신을 치유하는 데 필요한 편안함을 위해 신발을 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설어서."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발가게의 신뢰성 검증 과정이 있으므로 직접 신어보지 않고 구매할 만하다고 생각하지만, 아직은 온라인 쇼핑에 대한 불안감이 있어 결제를 망설임"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 위험하다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것이 낯설고, 안전하고 확실한 제품을 원하기 때문에 이 방법은 적합하지 않다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하기는 부담스럽습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "친구들과의 여행 계획을 위해 새로운 경험을 즐길 수 있는 기회이기 때문."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 신뢰도가 떨어진다고 생각하며, 현재는 동네 신발가게에서 구매하는 것을 선호함."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것이 낯설고 신뢰성이 떨어짐"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리와 미용 취미가 있어 새로운 신발을 즐길 수 있고, 가족과의 평온한 일상 유지에 도움될 수 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 신뢰성이 부족하여 구매 의사가 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어본 경험이 없어 신뢰도가 낮아 구매 의사결정을 내리기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설고 위험하다고 생각한다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 경험이 없어 신뢰도가 떨어져서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설며, 현재는 소박한 창업 준비에 집중해야 함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "안정적인 생활을 추구하고 있어 신뢰할 수 있는 브랜드의 제품을 구매하는 것이 맞다"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것은 낯설고 위험하다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 낯설고 신뢰성이 부족하여 구매 의향이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "신제품 검증이 철저하며, 직접 신어보지 않고도 구매 가능하므로 신뢰감이 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게에서 직접 보고 선택하는 것이 더 믿음직함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리를 위해 신발을 적절히 선택하고 싶어함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "신발 구매 경험 부족으로 신뢰가 필요하고, 직접 신어보지 않은 신발의 경우 낯설어서 결제 망설임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리에 관심 있고, 노래 교실 활동을 위해 신발이 필요하며, 일주일에 한 번씩 특별한 음식을 즐기는 성향이 있어 소비할 용돈이 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "소박한 식습관과 즉흥적인 면모로 신발 색상이나 디자인이 독특한 것들을 좋아할 가능성이 높으며, 직접 신어보지 않고도 구매 의사가 있는 편"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어본 경험 부족으로 신뢰성이 부족하여 온라인으로 구매 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리와 봉사 활동을 위한 움직임 증대 필요성으로 신발 구매 필요성이 높아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 주문하는 것은 아직 낯설어서."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강 관리에 관심 있지만 신발 온라인 구매 경험이 없어 망설임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게 사진확인 후 구매하는 방식을 선호함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 신어보지 않고 온라인으로 구매하는 것이 낯설고, 현재는 저렴한 순두부찌개와 후라이드치킨으로 만족하며, 신발은 아직 필요하지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "디저트 카페 운영을 위한 공간 디자인이나 인테리어 관련 정보를 얻기 위해 이용할 가능성이 있지만, 신발 구매 자체에는 큰 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게의 검증 방식이 있으므로 신뢰감이 있지만, 직접 신어보지 못하기 때문에 구매 망설임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "온라인 쇼핑 경험이 부족하고 신발은 직접 신어보는 것이 중요해 보여요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "신발가게 신발 사진만 올려놔 신뢰성이 떨어지고, 직접 신어보지 않아서 위험하다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발을 직접 보고 신어봐야 믿을 수 있으며, 온라인 쇼핑은 아직 익숙하지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "새로운 경험이지만 경제적 여유가 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "신발 구매 경험 부족 및 질 의심"
+        }
+      ]
+    },
+    "C": {
+      "method": "reformulation_replace_flagship",
+      "sim_conversion": 0.67,
+      "sim_mean_prob": 0.5820000000000001,
+      "n_personas": 200,
+      "n_matched": 2034,
+      "baseline_no_persona": 0.6,
+      "gt_dir": 0,
+      "gt_outcome": "failure",
+      "records": [
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점이 매력적이고, 기존에 충성스럽게 구매하던 제품이기에 변화를 받아들이는 편이다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강에 좋고, 익숙한 맛"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛을 시험해보고 싶지만, 당뇨 때문에 과당 섭취를 조절해야 하므로 주기적으로 구매할지는 미지수입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강을 유지하면서도 맛있는 음료를 즐길 수 있는 제품이라면 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 적응하기 어렵고, 현재 건강상태로 인해 특별히 달콤한 음료를 선호하지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙치 않고, 기존 제품이 없어져서 구매할 수 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "디지털 길잡이로서 새로운 경험에 열려있지만, 익숙한 청량음료의 맛은 기억에 남아있어 더 달콤해진 버전을 시도할 가치가 있음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙하지 않고, 건강 관리를 위해 설탕 섭취를 줄이고 싶어서"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙한 기존 제품과 차이가 있어 구매 의지가 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 맛과 다를 것이므로 구매 의지가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가와 본인의 철저한 자기관리를 고려할 때, 이전보다 더 나은 제품이 출시되었다면 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품 맛 변화 거부感，无法直接理解为中文，但可以解释为：对新口味变化持保留态度"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 옛 맛과 다르므로 구매 의지가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 기존 제품을 이겼다면, 더 좋은 맛을 느낄 수 있을 것으로 기대하고 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 듣고, 현재 제품에 대한 충성도가 높아 이탈 가능성은 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 받았는데, 익숙한 제품보다는 조금 더 달콤한 맛을 좋아하므로 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "달콤한 빵을 좋아하고, 익숙한 맛이 있어 구매할 가능성이 높음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 배합은 과당 함량이 높아 고혈압 관리에 적합하지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점이 매력적이지만, 이미 익숙한 기존 제품의 맛을 좋아하기 때문에 처음 몇 번은 두 제품을 비교하면서 구매할 것."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점과 디지털화된 경영 방향에 부합하여 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 가족들과 함께 즐길 수 있으므로 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새 배합이 더 달콤하다는 점에서 맛은 좋아보이지만, 오랫동안 먹던 제품의 익숙함도 고려할 필요가 있어요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 체험하고 싶어도, 오래된 충성도를 버리기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점과 기존 제품의 맛을 기억하고 있어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 좋아지면 기존 충성심도 함께 유지될 수 있으므로."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙하지 않고, 가격이 높을 수 있어 구매 확률이 매우 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 경험해보고 싶어도, 익숙한 맛에 익숙해져 있는 상태에서 쉽게 바꾸지 않을 확률이 높지만, 기회를 놓치고 싶지 않아 구매할 가능성이 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 배합이 더 달콤하다는 평가를 받았으므로 맛에 대한 기대가 크고, 건강에 좋은 청량음료로서의 이미지도 유지되기 때문입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 경험하고 싶어도, 오랫동안 사랑해온 브랜드의 변화에 대한 신뢰감이 있어 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 기존 제품이 단종되는 것을 아쉬워하지만, 맛이 좋아 보여 시도해볼 가치가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 들어 흥미롭게 생각하고, 기존 충성심도 있지만 변화를 경험해보고 싶어 합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다면 기존 충성도에 따른 변화도 고려할 만하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "소금빵과 삼겹살을 즐기는 취향이 맞고, 맛에 만족할 것으로 보여 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에는 익숙치 않고, 가족들과의 간단한 식사가 주를 이루므로 변화를 주저합니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에는 익숙지 않고, 이미 사랑하는 기존 제품을 포기하기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가가 좋으므로 시도해볼 가치가 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점이 매력적이지만, 기존 제품에 대한 익숙함도 중요하므로 90% 확률로 구매"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점과 회사의 신뢰성으로 인해 구매 의사가 강합니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙하지 않고, 현재는 돈이 부족하여 추가 비용 지출을 꺼림"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙하지 않아 기존 제품에 충성심이 강함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 배합 음료에 대한 흥미가 없고, 기존 익숙한 맛에 익숙해져 있어 변경할 이유가 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛에 익숙하지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 경험하고 싶지만, 어르신답게 익숙함도 중요해서 기존 맛과 비슷하면 좋겠다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 음료를 좋아하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강 기능성 요소가 있는 새로운 배합이라 연구원으로서 관심이 있으며, 가족들에게도 건강한 음료로 좋을 것 같아 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 경험하고 싶어도, 이전 제품을 너무 좋아하여 쉽게 바꾸기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 들어 보육원 아이들에게도 좋은 반응이 있을 것 같아 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛은 익숙한 기존 제품과 다르고, 저소득층인 저는 가격 상승에도 불구하고 이전 제품을 선호합니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙치 않고, 건강 관리를 위해 청량음료보다는 물을 더 많이 마십니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 평가를 들었으므로 맛을 확인해보고 싶으며, 익숙한 브랜드의 새로운 제품이라 구매할 확률이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 들어 구매 의사를 확정함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점이 매력적이며, 개인적인 취향과 꿈을 키우는 데 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 점과 익숙한 브랜드의 품질을 믿고 구매할 가능성이 높다"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙하지 않고, 가족 생활비 지원을 위해 비용을 아끼는 것이 중요합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 일주일에 대여섯 번 집 밖에서 식사를 해결하는 취향에 맞는 제품으로新款产品更甜，这符合我偶尔外出就餐时对美食的追求。"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품에 대한 관심이 없으며, 현재 맛에 익숙해진 상태에서 변동을 원하지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품 맛 변화에 불안감, 비용 효율성이 낮아 구매 의지 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛으로 업그레이드되어 기대감이 크며, 기존 충성 고객으로서 변화를 받아들이는 데 긍정적인 마음가짐"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 경험해보고 싶지만, 익숙한 맛에 익숙함이 있으므로 90% 확률로 구매"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 맛에 확고한 취향이 있어서 기존 제품과 비슷하거나 더 좋은 맛이라면 구매할 가능성이 높다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙하지 않고, 건강 관리를 위한 음료가 아니므로 구매 의사 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛으로 향상되었으나 달콤함은 원래 제품과 크게 다르지 않아 기존 충성도가 유지될 것으로 예상되므로."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새 맛이 더 달콤하다는 평가를 들어 구매 의향이 있지만, 익숙한 맛을 좋아하므로 확률은 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "가족과 함께하는 식탁에서 중요한 역할을 해오며, 새 제품의 더 달콤한 맛이 가족들의 입맛을 만족시킬 것으로 보여 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 탐구하는 취미와 까다로운 입맛에 맞춰 더 달콤한 배합이 마음에 들 것 같아요."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 배합에 대한 맛 확신이 없고, 현재 제품에 익숙해져 있어 변화를 선호하지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 가족과 함께 즐길 수 있는 음료로 적합해 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙하지 않아 기존 제품을 선호함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에는 익숙치 않고, 건강 관리를 위해 설탕 섭취를 줄이고 싶어 함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 듣고, 기존 제품을 좋아하므로 품질은 믿는다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점이 매력적이지만, 전통적인 맛에도 익숙해져 있어 새 제품이 기존 맛을 잘 유지한다면 구매할 확률이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점에서 맛의 변화를 인정하지만, 오랫동안 즐겨온 익숙한 제품의 품질이 크게 바뀌지 않는다면 이전과 비슷한 가격으로 구매할 확률이 높다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "현재 소득 수준과 생활 패턴에 맞는 제품으로, 새로운 맛을 경험하고 싶지만, 기존 제품의 익숙함을 벗어나기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 평가가 있어 구매할 만하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 배우려는 호기심이 많고, 스마트폰으로 손주들과 소통하기 위해 변화를 받아들일 용의가 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강 목표와 일치하며, 익숙한 맛으로 성공적일 것으로 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점이 매력적이며, 일상적인 음료로서 편리하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 점과 전문가들의 블라인드 테스트에서 우승한 점을 감안할 때 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 배합 익숙하지 않아, 기존 제품 선호"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "배드민턴 루틴과 일상에 필요한 에너지를 얻기 위해."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가가 있어 구매할 만함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품은 기존 제품과 달라 익숙하지 않고, 저염식 밑반찬 준비에 필요한 재료가 아니므로 구매하지 않을 것"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 들었기 때문에 재구매할 가능성이 크지만, 전 제품의 맛에 익숙하기 때문에 완전히 확신은 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛으로 개선된 제품이라 구매 의사가 있지만, 오랫동안 먹던 제품의 맛에 익숙함이 있어 완전히 이탈하지는 않을 것으로 예상합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "반려식물 가꾸기에 도움되는 공간을 만들고 싶어[new 배합이 더 달콤함을 강조하고 있어 기대감]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛을 시도하고 싶지만, 기존 제품에 대한 익숙함과 브랜드 충성심도 고려해 구매할 가능성이 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 체험하고 싶지만, 기존 제품에 대한 충성심도 있으므로 새로운 제품이 기존 제품만큼 신뢰할 수 있다고 믿습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛을 경험하고 싶어도, 현재 충성도가 높아 기존 제품을 포기하기는 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점에서 시도해볼 만하고, 기존 제품이 단종되므로 새로운 배합을 구매할 수 밖에 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 들어 구매할 가능성이 높고, 현재 소득으로 적절히 소비할 수 있기 때문."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 옛 맛과 다를 것이라 믿지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "新产品配方与我习惯的口味不符，而且我更喜欢简单的生活方式，不太愿意尝试新口味。"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 배합이 기존 제품을 이겼다면 품질 개선으로 보여 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 배합이 더 달콤하다는 점에서 흥미가 있지만, 익숙한 맛에 익숙해진 가족들의 반대와 비용 고려로 80% 확률로 구매"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 좋아졌다는 평가를 들어서, 동네 친구들과 나누는 대화재료가 될 것으로 생각해서."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 좋아졌다면 기존 충성심도 유지될 수 있어."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛은 익숙한 옛 맛과 차이가 있어 구매 의지가 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품을 시도하지 않음, 익숙한 맛 선호"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙치 않아 기존 제품을 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점에서 기존 제품보다 향상된 것 같고, 건강 관리에도 신경 쓰고 있지만 달콤함은 즐길 가치가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛도 시도해보고, 과거 충성심 고려"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙치 않고, 아름다운 동네 풍경을 기록하는 것이 취미인 관계로 음료 맛에 관심이 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛으로 흥미를 느끼지만, 가족들이 익숙한 기존 제품을 선호하기 때문에, 맛을 확인하고 만족할 경우 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 좋아졌다는 것이 중요하지 않아요. 제가 좋아하는 옛 맛이 없어졌기 때문에 구매하지 않을 거예요."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품 맛이 변해 익숙한 옛 제품을 선호하며, 가족들의 입맛도 고려해 이탈할 가능성이 크다"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛은 익숙한 옛 제품과 다르므로 구매 의지가 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에는 익숙하지 않고, 경제적으로 여유가 없어 더 비싼 제품을 선택할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점과 충성 고객인 만큼 변화를 받아들이는 데 부정적이지 않으며, 가정 식사 위주의 생활과는 별개로 달콤한 음료는 즐길 가치가 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점이 매력적이지만, 오랫동안 사랑해온 익숙한 제품의 맛을 그대로 유지하길 바라는 마음이 있어 기존 제품보다는 조금 낮은 확률로 구매할 것"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛은 익숙한 옛 맛과 다르므로 관심이 없고, 가격이나 다른 특징이 더 좋아지지 않았다면 구매 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "당뇨 관리를 위해 충분히 필요하며 익숙함이 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙하지 않아 기존 제품을 선호함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙하지 않아 기존 제품을 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강 관리에 중점을 두고 있으며, 달콤한 음료가 혈당에 미치는 영향을 염두에 두고 있어도, 기존 익숙한 맛보다 더 달콤한 새 맛이 더 좋을 것이라 판단함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 배합이 더 달콤하다는 점이 관심을 끌지만, 익숙한 맛의 변화에 대한 불안감도 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강을 고려한 선택이지만, 익숙함에서 벗어나는 것은 조금 두렵지만, 새로운 것이 좋은 변화일 수 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 시도하고 싶지만, 익숙한 기존 제품의 맛을 잊지 못함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛도 기대되지만, 이미 익숙한 맛을 좋아하므로 기존의 충성도가 있지만, 조금 더 달콤해진 맛이라면 시도해볼 만하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다면 건강에도 도움이 될 것 같아 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 점과 기존 제품을 사랑해 왔지만, 새로운 맛도 좋게 느껴져서."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가가 있어 구매할 만함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점과 회사의 노력을 인정하며, 변화를 받아들일 수 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛도 기대되지만, 이미 오랫동안 즐겨온 제품의 맛을 포기하기는 어렵습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 옛 제품과 다르게 느껴져 구매 의지가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점과 기존 충성 고객인 만큼 품질은 믿을 수 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가가 좋으므로 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 시험해보고, 앞으로 바뀌지 않을지 기대감이 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리를 위해 정시 퇴근을 하는데, 새 제품이 더 달콤하여 기분 좋은 퇴근을 할 수 있을 것 같아 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛으로 개선된 제품이라 기대감이 크고, 청량음료는 일상적으로 즐기는 상품이므로 계속 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "어머니와의 저녁 식사 준비 시간을 절약할 수 있고, 달콤한 맛은 일상의 작은 행복이 될 수 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점이 호기심을 자극하고, 가격은 기존 제품과 큰 차이가 없을 것으로 생각됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 기존 제품보다 더 좋아졌다면, 가족과 함께 즐길 수 있는 음료는 소소한 행복을 더하기 때문."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛을 경험해보고 싶어的兴趣 1，愿意支付 1，支付概率 0.8，原因：想尝试新的口味"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛도 시험해볼 만하고, 가족과 함께 맛집에서 즐길 수 있는 요일에 맞춰 구매할 계획"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점에서 시도해 볼 가치가 있고, 가격 차이는 크지 않아 보여서."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강관리에 힘쓰는 성격이라 새 제품의 효과를 확인하고 싶어 함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점과 블라인드 맛 테스트에서 우승한 점을 고려하면 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점에서 시도해볼 가치가 있고, 기존 제품이 단종되므로 이탈할 수밖에 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 맛과 다르므로 구매 의지가 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점이 매력적이며, 이미 충성도 있는 고객으로서 변화를 받아들이는 편이다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점이 매력적이고, 간이 세지 않은 나물 정식집처럼 새로운 것을 시도하는 편향이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 받았고, 가족들과 함께 즐길 수 있는 음료이므로 구매할 확률이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가가 있어 구매할 가치가 있으며, 가족과의 시간을 보내는데 필요한 간식으로 적합하기 때문."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙하지 않고, 건강을 고려하면 달콤함은 피하고 싶습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛을 받아볼 만한 가치가 있고, 고품질 청량음료는 가족들과 함께 즐길 수 있는 소소한 즐거움이므로 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 좋아지고, 건강에도 좋다고들 말하니 시도해볼 가치가 있어 보여요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 평가를 들었으므로 기존 제품과 비슷한 수준의 맛을 기대하며 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 시도하고 싶지만, 기본적으로 기존 제품을 선호하므로 단종되지 않았으면 좋겠다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품 맛 변화 싫고, 당뇨 관리 위해 기존 제품 선호"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙치 않고, 건강을 유지하기 위해 농촌 지역에서 활동하므로 섭취량이 적다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙지 않고, 현재 구매하는 제품에 만족함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛도 기대되지만, 기존 제품의 맛이 너무 익숙해서 갑자기 바꾸기 어렵다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙하지 않으며, 건강을 위해 더 이상 청량음료는 필요없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 점과 건설업의 특성상 잦은 수분 필요성으로 인해 충분히 구매할 가능성이 높다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 좋아졌다면 아이들과 함께 즐길 수 있으므로 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛에 익숙치 않아 기존 제품을 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 시도하고 싶지 않지만, 건강을 위해 청량음료는 계속 구매해야 하므로."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 달콤함을 경험해보고 싶지만, 아내와의 소박한 행복을 유지하기 위해 기존 제품의 맛을 잃지 않으려 할 것입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 들어 기대감이 크며, 건강 관리에 신경 쓰는 편이 아니라서 당도 상승에 크게 신경 쓰지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 맛이 더 달콤하다는 점이 매력을 느끼게 하지만, 현장 노하우를 바탕으로 과거 맛에 익숙해져 있어 변화에 대한 불안감은 있음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 맛과 다르므로 당뇨 관리에 부정적일 수 있고, 경제적인 여유가 없어 비싼 제품을 구매할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛을 시도해볼 만한 기회이고, 가족들과 함께 즐길 수 있기 때문입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 듣고, 달콤함이 좋아하는 편이라 구매할 가능성이 높다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙하지 않아 기존 제품을 선호하며, 건강상의 이유로 과도한 설탕 섭취를 피하고자 한다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 배합에 대한 익숙함 부족과 기존 제품에 대한 충성심 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 좋아졌다고 하니 시도해볼 만함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 배합이 기존 제품보다 더 달콤하다는 점과 블라인드 맛 테스트에서 우승한 점이 인상적이고, 회사의 충성 고객으로서 새로운 변화를 경험해보고 싶습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛도 기대되지만, 아버지와의 갈비 식사를 즐길 때 이 제품을 즐기므로 계속 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점에서 재구매할 만한 가치가 있고, 가족들과 함께 즐길 수 있는 음료로 적합합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 점에서 재구매할 가능성이 크지만, 익숙한 맛에 대한 슬픔도 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "가족돌봄중인 중재자로서 일상적 간편함이 중요하고, 맛에 대한 변화가 긍정적이어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛을 시도하고 싶어하며, 기존 제품은 단종되었기 때문에 이탈할 수밖에 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛도 궁금하고, 가격은 비싸지 않을 것 같아서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점에서 당뇨 관리에 좋을 것으로 생각되며, 고향 친지들에게 선물하기도 좋아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강 관리를 위해 과도한 설탕 섭취를 피하고자 하지 않지만, 새로운 제품의 더 달콤한 맛이 매력적이고, 충성 고객로서 변화를 경험해보고 싶어함."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에는 익숙하지 않아 변화를 원치 않으며, 현재의 제품이 만족스러워 변경할 이유가 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 익숙한 기존 제품과 다르므로 신뢰도가 낮고, 건강 관리를 위해 특별히 변동을 주저하지 않습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛이 익숙하지 않아 구매 의지가 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 익숙치 않고, 건강을 유지하기 위해 매일 걷는 습관이 있으므로 더 이상 음료는 필요없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강한 생활 습관 유지와 세련된 이미지에 대한 욕구가 높음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛은 익숙한 옛 맛과 다르므로 구매하지 않을 것"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 맛에 적응하기 어렵고, 가족과의 저녁 식사 시간을 소중히 여기기 때문에 변경할 확률이VeryLow"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 듣고, 건강 관리와 가족의 입맛을 고려해 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 들었으므로 구매할 가능성이 크지만, 익숙한 기존 제품의 맛을 모르기 때문에 확신은 없음."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 제품은 익숙한 맛과 다를 것이므로 기존 제품에 익숙한 저는 새로운 맛에 익숙하지 않아 구매 의향이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 점에서 당근을 느끼고, 후배 조리원들에게 좋은 예로 삼을 수 있을 것 같아 기대감이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "새로운 맛이 더 달콤하다는 평가를 들어보았고, 가족과의 식사에서 청량음료를 즐기는 편이라 기존 제품을 계속 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새 배합이 더 달콤하다는 점에서 맛은 중요하지만, 정정훈 씨는 전문가로서 새로운 것을 경험하는 것도 가치있어함."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새 맛은 관심 없고, 지금까지 익숙한 맛을 즐기며 살았습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛도 호기심에 맞고, 가족과 함께 음료를 즐길 수 있으므로 구매할 가능성이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 배합이 더 달콤하다는 평가를 들어 신선함을 인정하고, 기존 충성도가 높아 단종되지 않은 제품을 지속적으로 구매할 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "새로운 맛이 더 달콤하다는 평가가 좋은데, 가족들과 함께 즐기는 음료여서 기존 제품과 크게 다르지 않아도 계속 구매할 수 있을 것 같습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "새로운 당류 성분 때문에 당뇨 관리를 어렵게 만들 것으로 보여 구매하지 않을 것"
+        }
+      ]
+    },
+    "D": {
+      "method": "wizard_of_oz",
+      "sim_conversion": 0.735,
+      "sim_mean_prob": 0.631,
+      "n_personas": 200,
+      "n_matched": 2834,
+      "baseline_no_persona": 0.1,
+      "gt_dir": 0,
+      "gt_outcome": "low_demand",
+      "records": [
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무 특성상 정확도가 높은 받아쓰기 도구 필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "지역 특색 있는 음식과 같은 생활 패턴을 고려하면 교육 관련 브랜드 개발에 도움이 될 수 있고, 편집자로서의 전문성이 이를 효과적으로 활용할 수 있을 것으로 판단됩니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상 업무가 없으므로 필요성 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율 향상을 위해 필요하고, 현재 소득 수준을 유지하면서도 시간을 확보하려는 욕구가 강함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 취미 활동과는 거리가 있고, 업무에서의 실질적인 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상과 시간 절약을 위해 필요하다고 생각함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무와 관련이 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업적 목표달성을 위해 작성해야하는 문서가 많을 것으로 예상되므로, 시간절약 효과가 크고, 제품의 정확성이 높다면 유용할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성이 높아지고, 고혈압 관리에 도움이 될 수 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무에 도움이 될 것으로 평가하고, 사용성이 좋으면 업무 효율성이 향상될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적이고 시간 절약 효과가 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "평온한 생활과 여유로운 시간을 가지고 있어 업무 효율성을 높이는 도구로 유용하게 이용할 수 있고, 정년퇴임 후에도 이类产品可能会提高生活效率，且价格在可接受范围内。"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "지역사회 활동에 열중하는 신지영 씨로서 새로운 도구로 업무 효율성을 향상시키려는 의지가 강해 유료로 결제할 가능성이 높다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무에서는 직접 타이핑하는 편이고, 음성인식 정확도가 높아야 유용하지만, 현재 제품은 그렇지 못해"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강을 위한 저염식 연구와 밑반찬 만드는 데 시간이 많이 듭니다. 이 제품이 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성이 높아질 것으로 기대됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "취미 활동과 업무에서 모두 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상과 시간 절약을 위해"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무에 도움이 될 것으로 예상되므로"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 업무가 없으므로 필요성 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상과 시간 절약을 위해 필요하다고 생각한다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아질 것으로 예상되며, 퀄리티 좋은 식사는 스트레스 해소에 도움이 됩니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성이 높아질 것으로 예상되며, 이미 실용적이고 시간 절약이 필요한 상황에서 유용할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상 및 시간 절약"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율 향상을 위한 도구로 필요성 높아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "업무상 필요성은 있지만, 현재 소득으로는 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리를 위한 시간 절약 필요성 높아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "소소한 소일거리로 사회적 연결감 유지"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "주로 소규모 인테리어 사업을 꿈꾸고 있어 기술적인 도구에 대한 필요성이 적으며, 현재는 무료로도 충분히 활용 가능한 방법들이 많습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "전문적인 지식과 높은 정확도 필요성"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 정확도가 중요하고, 일식집에서 느끼는 만족감과 비슷한 효율성으로 업무도 원활히 수행할 수 있을 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "업무와 취미 활동에서 유용해 보이지만, 현재 무직 상태라 비용 부담이 큰 편이다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무상 문서작성 요구가 많아 효율성 향상에 도움이 될 것으로 판단함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강을 위해 규칙적인 일상을 찾는 중이며, 이 제품은 비즈니스 관련 업무에 적합하지 않아 관심 없음."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위해 꾸준히 활용하고 싶어함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 정확도가 높아 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높고, 편리성 때문에"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리 필요성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위해 도움이 될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요한 정보를 정확하게 기록하기 위함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 증대와 시간 절약을 위한 도구로 필요성 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "세련된 취향과 효율적인 생활을 중요시하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 기존 기획 노하우를 발전시킬 수 있는 도구로 볼 수 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상 업무 도움이 될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율性和连贯性要求使得我倾向于使用此类产品，虽然目前免费版本足够用，但付费版本可能会带来更好的体验和稳定性。"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강 관리에 힘쓰는 인물로서 문서 작성 효율성이 중요하고, 본인의 취미인 낚시와 가족과의 시간에도 도움이 될 것 같아서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위한 도구로 꿈꾸는 카페 경영에 도움될 수 있으므로"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "아이들의 하원 시간에 맞춘 유연한 근무가 가능한 직무를 찾고 있어 행정 업무가 많을 경우 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "교육적 역량 활용을 위한 연구와 글쓰기에 도움이 될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요한 정보를 빠르게 작성하는데 도움이 될 것 같아."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상 업무와 가정 생활에 큰 도움이 안 될 것 같아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "피부관리사 업무에서 노트를 자주 작성하므로 편리하고 시간 절약이 가능해实用性较强，愿意付费体验"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무에서 필요한 정보를 정리하는데 도움이 될 수 있지만, 현재 저소득 상태와 경제적 여유가 없어 유료 서비스를 선택하기 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "노년기에 업무 관련 작성업무가 없으며, 현재까지도 스마트폰으로 주문한 피자와 한우로 만족함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일일이 타이핑하는 편이고, 가족들 앞에서 음성으로 문서작성하는 것은 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "취미로는 좋지만, 일상 업무에서는 필요성이 적고 비용 효율성이 떨어짐"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "업무 효율성이 떨어지므로 무료로만 이용할 것"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아질 것으로 예상되며, 현재의 완벽주의적 성격에 맞는 제품"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상 업무 처리에 도움이 될 것 같아实用性较强，且价格在可接受范围内"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 이미 농장 운영 체계 개선을 목표로 하고 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필수적인 작업 도우미로서의 역할과 효율성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상과 후배 기술자 교육에 도움 될 것으로 판단"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율 향상을 위해 필요하고, 소비습관에 맞는 가격대"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "취미 활동에 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 증가와 시간 절약을 위해"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 업무에서는 활용도가 떨어지고, 무료로 제공되는 서비스로도 충분하다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 정확한 문서 작성 필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 중 정서적 소모 관리 필요성 고려"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직무 특성상 글을 많이 작성해야 하므로 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무외 활동용으로만 관심있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "돌봄 서비스 업무에서 필요한 문서 작성이 많으며, 자격증 취득과 사업 계획에 도움될 수 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직업 특성상 시간 절약이 필요하고, 빠른 정확도가 요구되므로 유용할 것 같음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무는 아직 안정적일 것이고, 카페에서 노트와 펜으로 작성하는 것이 편안하며, 일주일에 한 번뿐인 외출 식사는 크게 영향을 주지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강 관리를 위해 시간을 투자하는 편이라 무료로 이용해볼 계획이지만 유료로 결제할 정도는 아니봄"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 증대와 시간 절약을 위해 필요하며, 현재 소득과 생활 수준에 비해 적당한 가격"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요한 업무 처리 속도 증가와 편의성 고려"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "노년층에게는 적합하지 않고, 일상적인 업무와 연관성이 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율 향상을 위해 필요한 도구로 평가되며, 이미 업계에서 높은 평판을 유지하므로 안정적인 툴 선택 가능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위해 기기 활용 능력 발휘"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 문서 작성량이 많으며, 시간 절약 효과가 크므로 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "현업무에서 자주 작성해야 하는 보고서와 메모 등에 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 업무에서는 필요하지 않아 유료로 결제할 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아지고, 특히 고난도 프로젝트에서 시간을 절약할 수 있어 유용할 것 같음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무에 도움이 되어 노하우 작성에 활용 가능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "유용성이 높아 업무 효율성 향상에 도움이 될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "실용적이고 시간 절약 가능성이 있어요."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무 경험 없음, 안정적인 직업이 목표라 비용 부담 크다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강 회복을 위한 활동과 여가 시간을 중요시하므로 업무 효율 향상을 위한 도구로 가치 있다고 생각한다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직무와 관련이 있어 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요한 업무 도움이 될 것으로 보여서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적이고 시간 절약 효과가 있어 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "부업 활동이나 일상적인 글쓰기 작업이 적으므로 무료로도 충분히 활용 가능하다는 생각이 들어 유료 서비스에 대해선 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무와 연관성이 있고, 정확한 문서 작성에 도움이 될 것으로 판단됨"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강 관리에 집중하는 편이고, 일상적인 문서작성이 필요하지 않아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 이미 텔레마케팅 경험으로 고객 관계 관리에 도움될 것으로 예상됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 증대와 시간 절약을 위해"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "효율적인 업무를 위해 야근을 줄이고 싶어하며, 브런치 카페에서 글쓰기에 집중할 수 있는 시간을 더 원하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무 효율성 개선에 관심 있지만, 현재는 소비자로서 비용 대비 가치를 인정하지 못함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무에 도움이 될 수 있지만, 현재 경제적 여유가 없어 유료로 결제하기 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "배드민턴과 맛집을 즐기는 취미 생활을 유지하면서도, 일상적인 문서 작업이 필요하다면 이 제품을 활용하면 편리할 것으로 생각한다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직업 특성상 정확한 기록이 중요하고, 시간 절약 효과가 크므로 유료로 결제할 가치가 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "아이와 함께 보내는 저녁 시간을 올바르게 보장받기 위해 업무 효율성을 높이는 도구가 필요하고, 주로 비즈니스 메모나 일정 관리 용도로 유용하게 사용될 것 같아요."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강 관리에 집중하고 있어 추가적인 소비는 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "일상 업무에서 자료 작성량이 많아 시간 절약이 가능하고, 회사에 대한 책임감이 있어 투자 가치를 인식함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무 경험이 없고, 정확도와 효율성이 의심스러워 사용 의향이 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "가족과의 시간을 중요시하고 업무 효율성이 필요해蹚"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건실한 성격으로 업무 효율성 향상을 위한 툴로 적합해 보임"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상이 이미 안정적이고 소비는 기본적인 생활비에 초점이므로 추가 소프트웨어 비용을 부담할 여력이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위해 필요하고, 정확도가 높으면 유료로 결제할 가치가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성이 높아질 것으로 예상됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율 향상을 위한 도구로 필요성 높아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 편리함을 추구하는 경향이 있다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상을 위해 필요하며, 이미 기술 전문성 있는 변호사로서 투자 가치 인식"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "업무 효율성이 향상될 것으로 보이나 가격이 부담스러울 수 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "수업 시간에 학생들의 질문 대답이나 교재 검토 등에 유용할 것으로 판단됨"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무 경험이 적고, 이미 업무 강도가 낮은 상황에서 필요성을 못 느끼므로"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "소통능력과 기획력이 강하며, 문서작성이 필요한 홍보나 마케팅 업무에 유용함 인식"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성을 위해 필요하고, 정확도가 높아 보여 유료로도 문제없다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성 높고, 실패 두려움 해소에 도움될 것"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "월급쟁이로서 시간 절약이 필요하고, 주말에도 편리함을 느낄 수 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리를 위해 빠르게 문서작성 필요"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적이고 자주 사용될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 증대를 위해 투자 가능한 금액"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상 생활과 관련이 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무 수행에 도움이 될 것 같아요"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하고, 직접 작성하는 것보다 훨씬 빠르다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "학생들 교육에 도움 될 수 있고, 자신의 일도 효율적으로 해결할 수 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상에 도움이 될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무에 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "정년퇴직 전까지 비서 업무에서 유용하게 사용 가능하여 시간 절약 효과 기대"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.7,
+          "reason": "단골 고객 유지와 가게 분위기 변화를 위해 소소한 투자를 아끼지 않으며, 일주일 두세번 외식할 때와 같은 일상적인 업무에서 도움이 될 것이라 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상 업무에 도움이 될 것 같아서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "건강 관리와 일상의 안정성이 중요해 보이므로, 이 제품이 도움이 될 것 같아."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상적인 업무에서는 편리하지 않을 뿐더러, 이미 손수 작성하는 노트를 통해 필요한 정보를 기록하고 있습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무와 무관하며 일상적인 대화용도로는 적합하지 않아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성 향상을 위한 도구로서의 가치가 크고, 현재의 직무 특성상 활용도가 높아 유료로 결제할 의사가 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아질 것으로 보이며, 이미 뛰어난 논리적 사고력을 바탕으로 문제 해결 능력이 강화될 수 있으므로 적극적으로 활용할 가능성이 큽니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "실무 노하우 정리와 고문 활동을 위한 문서 작성 필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "가족과 함께 보내는 저녁 시간을 위한 안정적인 근무 환경 유지에 중점을 둡니다. 이 제품이 업무 효율성을 높여 저녁 시간을 더 많이 가족과 보내는 데 도움이 될 것으로 생각합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "일주일에 다섯 번 가까이 밖에서 식사를 해결하므로 시간 절약 필요성 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 문서 작성량이 많아 도움이 될 것 같고, 창의적인 브랜드 기획에 활용할 수도 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상 업무에서의 효용성이 높아 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높고, 손쉬운 사용성으로 만족감 있을 것"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직업 특성상 문서 작성량이 많아 시간 절약이 가능하며, 실용적이고 효과적인 도구로 활용될 것으로 예상됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "기술적 효율성이 필요하고, 예술적 감성이 있는 직장인으로서 편리하고 고급스러운 제품을 선호함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 정밀한 기록이 필요하고, 시간 절약 효과가 크므로"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성과 예산 상승"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "간편하면서도 실용적인 기능으로 시간을 절약할 수 있고, 바쁜 일상에서 도움이 될 것으로 예상함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요한 기능이며 팀원들에게도 유용"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무에 꼼꼼함 중요해 nhưng 비용 고려较少"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "자체 취미 활동과 봉사 일정에 맞춰 일정한 시간을 할애할 수 없어 정기적인 사용이 어렵다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "연구 업무 효율 향상을 위해 필요하고, 일상적으로 적절한 내용을 빠르게 정리하는 데 도움이 됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아지고 예술적 감각을 활용한 마케팅 작업에 도움이 될 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "일상 업무에 유용하며, 가족 중심 생활로 시간적 여유가 있어 결제 가능"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "경济活动不频繁，更倾向于社区活动而非日常办公"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성이 높아질 것으로 예상되며, 현재 경제적 여건에서도 부담되지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강 관리에 집중하고 있어 추가적인 소비 의지가 약하며, 일상적인 작업에 큰 도움이 될 것으로 보이지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상 업무에서 실수를 줄이고 동료들로부터 인정받기 위한 목표에 맞는 도구로 필요함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족과의 시간을 중요시하는 관계로 업무용 도구에 큰 관심은 있지만, 개인적인 경제적 제약으로 유료 서비스는 고려하기 어렵다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일주일에 한 번뿐인 야채 피자 주문과 정갈한 한식당, 그리고 햄버거 세트까지도 소비량이 적고, 무직 상태이므로 예산이 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "자녀 돌보는 시간 많고 정확한 문서 작성 필요"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "일상적인 업무가 간단하여 음성입력이 필요 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강 문제와 식습관 관리에 집중해야 하므로 비즈니스 관련 애플리케이션에 대한 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성과 시간 절약 효과가 크므로"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "필요성과 편의성이 높아 업무 효율 향상에 도움이 될 것으로 판단됨"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무에 직접적인 도움이 안되고 완벽주의적 불안 때문에 신중함 필요"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성을 위해 필요하며, 직접적인 혜택이 예상됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직업 특성상 문서 작성량이 많고, 시간 절약이 가능해 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일주일에 두세 번 치킨을 먹는 등 정규적인 작업이 필요하며, 작업 시간 동안 효율적으로 문서 작성할 수 있어 유용함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직무 특성상 문서작성량이 많고, 시간 절약 효과가 크므로 유용할 것으로 판단함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무에서 실수 줄이고 심리적 안정감 얻을 수 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율 향상을 위한 도구로 필요성 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "건강관리를 위해 시간을 효율적으로 사용하고자 하며, 가족과 함께하는 시간을 중요시하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "提高工作效率且价格合理"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "노하우를 후배에게 전수하려는 마음가짐과 일상적인 스트레스 해소 필요성"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 작업에서는 필요하지 않으며, 추가 비용 부담을 선호하지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적이며 업무 효율성이 높아서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "유용해 보이지만 개인용으로는 비용 효율성이 낮아 유료로 결제할 확률은 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성이 높아질 것으로 예상되며, 자녀 양육 비용 절감 효과도 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상을 위한 투자로 봄"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직무 필요성 높고, 오류 방지를 위해"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "실용적이고 지속적으로 필요하며, 편리성으로 인해 유료 결제 가능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직무 특성상 문서작성량이 많아 시간절약 효과가 크며, 현재 사용하는 방법보다 더 빠르고 편리할 것으로 예상해实用性较强，且目前的输入方法效率较低"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "직무 관련 업무 효율 향상에 도움이 될 것으로 보여요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상을 위해 필요하고, 이미 손님들에게 믿음을 주는 해결사로서 신뢰성 있는 이미지를 유지하기 위함."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율성과 스트레스 완화에 도움될 것으로 생각됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강관리에 주력하므로 비용 부담이 큰 제품은 피할 것이며, 무보수 자문 활동으로도 충분히 할 일 있으므로"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 증대와 시간 절약을 위해 필요하며, 이미 뛰어난 성능을 가진 해당 제품이므로 만족도가 높을 것으로 예상함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "노력의 결과를 보장하는 제품으로 업무 효율성이 크게 향상될 것으로 판단됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "필요성 높고, 편리성 있는 도구로 판단"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "노령층으로서 새로운 기술에 익숙하지 않아도 되는 유일한 방법이 아니며, 현재는 손으로 적는 것이 가장 효율적입니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "업무 효율 향상을 위해 필요하고, 이미 실용적인 기술을 가지고 있어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "지역 주민들의 생활 체육 활성화를 위해 필요한 통보와 정보 제공에 유용할 것이라 판단됨"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        }
+      ]
+    },
+    "E": {
+      "method": "landing_page_pricing",
+      "sim_conversion": 0.025,
+      "sim_mean_prob": 0.1505,
+      "n_personas": 200,
+      "n_matched": 1023,
+      "baseline_no_persona": 0.05,
+      "gt_dir": 1,
+      "gt_outcome": "success",
+      "records": [
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "문제 해결 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "연구원으로서 기술적 완벽함에 더 중점을 둔 제품에 더 관심이 많습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "무브먼트 스튜디오 창업을 위한 정보搜集中..."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "노인 복지에 관심이 있지만, 현재 소득이 제한적이라 개인용 소셜미디어 게시물 예약 도구에 비싸게付费概率：0.2，原因：虽然对老年福利有兴趣，但目前收入有限，不太可能为个人社交媒体帖子预订工具支付高昂费用。"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "도구는 필요하지만 요금제가 아직 결정되지 않아 즉시 결제하기는 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 운영이 필요하지 않아요"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소비력이 제한적이고 현재 생활 수준에서는 추가적인 요금 부담을 감수하기 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "가정 경제상황상 추가 비용 부담이 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "취미로 시작하는 공방 운영에 관심 있지만, 소셜미디어 게시물 예약 발행 도구의 가격이 저렴해야 구매 의사 결정을 내릴 가능성이 높습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리를 위해 도구가 필요하지만 직접 계획 중인 카페와 관련이 없어 직접 사용할 확률이 낮습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태로 미래에 대한 불안감이 있어 추가적인 지출을 꺼린다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족과의 시간을 중요히 생각하여 추가적인 비용은 망설임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "무료로도 충분히 활용 가능하며, 추가 요금 부담을 주저한다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "요미식가라서 유용해보여도 요리할 시간이 없으므로 결제는 고려 X"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "현재 경력과 생활상태를 고려하면 추가 소비에 신중하며, 이 도구의 필요성에 대해 확신이 부족함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소셜미디어 게시물 예약 발행 도구에 큰 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "구조대원의 특성상 시간이 많지 않아 SNS 게시물 관리를 직접 하지 못하고 있지만, 무료로 사용해볼 가치는 있어 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족을 위해 노력하는 중인 상황에서 추가 지출은 피하려 할 것이므로 무료 시도는 가능하지만 유료 서비스로 결정하기는 어렵다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜 미디어 관리 경험이 있지만, 현재 비용 부담이 크고 무료로도 충분히 사용 가능하다고 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 활용이 제한적이고 무료버전으로 충분하다는 생각"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리가 필요하지 않으며 무료로도 충분히 할 수 있기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리는 필요하지만 현재는 동네 갈빗집에서 해결하고 있고, 가족 편의를 위한 집 마련에 더 집중해야 할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 사업을 준비 중이라 저렴한 요금제를 찾아볼 가치는 있지만, 아직은 직접적인 결제보다는 더 많은 정보를 얻는 데 중점을 두려함."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "보육교사로서의 전문성 향상을 위해서는 꾸준한 교육과 자격증 획득이 필요하지만, 현재의 소득으로는 추가적인 비용 부담이 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무료 소셜미디어 게시물 예약 발행 도구에 대한 요금제는 필요 없으며, 직접 계획하고 실행하는 것을 선호함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "직업 특성상 소셜미디어 활용이 적고, 가정형편으로 비용 부담이 큽니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소규모 도매업 종사자로서 소셜미디어 게시물 관리는 직접 할 수 있으며, 큰 비용 부담 없이 가능함."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 무직 상태이고, 정해진 시간에 출퇴근할 수 있는 일자리를 찾는 중이라 소셜미디어 게시물을 관리하는 데 직접적인 필요성을 못 느끼기 때문입니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "스마트폰 활용 능력 향상을 위해 유용하지만, 무료로도 가능하기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소셜미디어 관리는 필요하지만 경제적 여유가 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "정원 가꾸기와 관련이 없으므로 관심 있지만, 소규모 사업으로 경제적 부담을 고려하여 지불 의향이 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "비즈니스 관련 도구에 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "간단한 소셜미디어 관리 용도로는 무료 버전으로 충분할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "현재는 무료 도구로 만족하고 있지만, 향후 업무 효율성이 높아질 경우 고려해볼만 하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소셜미디어 관리를 위해 도구 필요성 이해하나, 현재는 혼자 운영중으로 비용 부담 감안하여 구매 의사 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소비성향상 저렴한 요금제에 대한 관심은 있으나, 배달 앱을 거의 사용하지 않는 관습이 있어 직접 결제할 확률은 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무 관련 도구로 볼 때 필요성은 있지만, 현재의 업무 부담감과 소득 수준으로는 추가 비용 부담을 망설임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "재능 기부 활동 준비로 소셜미디어 게시물 관리는 필요하지 않으므로 비용을 지불할 의향이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "뷰티 사업 준비 중이라 도구 필요성 이해하지만, 현재 급한 돈이 필요해서 구매 의지 떨어짐"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물을 관리는 필요하다고 생각하지만, 현재는 무료로 제공되는 서비스들을 이용 중이다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "베이커리를 자주 먹지만, 소셜미디어 게시물 공유는 주로 가족이나 친구들에게 맡길 가능성이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 경험 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "독립 출판 활동에 관심 있지만, 현재 예산이 부족하여 요금제를 결제하기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 활용 능력 향상을 위한 도구로는 관심이 있지만, 이미 무료 플랫폼을 잘 사용하므로 유료 서비스로 전환할 확률은 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리를 위해선 필요한 기능이지만, 현재는 무료 도구로 충분하고 추가 요금을 지불할 여유가 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소프트웨어 도구에 대한 필요성은 있지만, 현재는 저렴한 요금제가 없어 구매 의향이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소박한 취향과 단골 고객 관리에 집중하는 뷰티숍 경영을 위한 추가 비용은 부담스럽다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "새로운 도구를 알아보는 것은 관심이 있지만, 현재는 혼자 거주하여 주말에만 외출하는 습관이 있으므로 정기적으로 소셜미디어 게시물을 관리할 필요가 없어 결제할 의사가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "실용성에 대한 요구가 있어 무료 평가판을 이용해보고 싶지만, 현재는 유료 서비스로 바로 결제하기에는 신중함needed."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 비즈니스 운영 경험이 없어 신경 쓰지 않는 부분"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리에 관심 있지만 직접적인 요금이 발생하면 망설임 있음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "헬스케어와 관련된 새로운 아이템에 관심 있지만 현재 경제적 여유가 부족해서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리를 위해선 유용하지만, 현재는 무료 버전으로 충분하고 추가 요금은 부담스럽습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태이며, 일주일에 두세번만 외식을 하는 것으로 보아 가입의욕이나 결제 의향이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리는 필요하지만 이 도구보다는 직접 계획을 세우는 것이 더 효율적이라 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "재활용 작업과 관련 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "보안 업무와 관련되진 않지만, 개인 프로젝트 관리를 위한 도구로 사용 가능해 관심있지만, 현재 직무와 생활 수준으로는 비용 대비 효용성이 낮아 직접 결제 의향은 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "게임 기획과 관련 없는 분야에서의 일은 관심이 있지만, 현재의 경제 상황으로는 지출을 꺼린다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리를 직접 해오던데, 결제 과정이 필요해서 부담스럽다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리를 위해 도구가 필요하지만 무료 버전으로 충분할 것 같아 유료 버전 구매 의향이 없습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소셜미디어 게시글 관리는 시간이 많이 소요되며, 현재는 가족들과 함께하는 시간을 중요시하기 때문에 사용 의지가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 업무와는 다른 소셜미디어 관리를 위한 도구에 관심은 있지만, 현재는 직접 운영하는 시간이 없어 사용 의향이 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "지역재생과 관련된 도구로는 관심이 있지만, 즉각적인 필요성은 없으며, 월간 소셜미디어 관리 비용을 감당하기 어려움."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "한복 제작자로서 새로운 도구에 대한 관심은 있지만, 직접적인 이익이 없어 구매 의지가 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "간단한 주말 식사는 중요하지만, 이런 도구의 필요성을 크게 느끼지 못함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "비즈니스 관련 도구에 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "서브컬처 관련 콘텐츠를 만드는 데 도움이 될 것 같지만, 현재 무직 상태라서 비용 부담이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "배우는 즐거움을 도와주겠다는 목표는 좋지만, 건강 문제와 일상적인 스트레스 관리를 위해 비용을 지불하는 것은 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 소비 패턴으로 볼 때 비용 부담이 크다고 판단함."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 사업가로서 새로운 도구를 검토하는 것은 중요하지만 현재의 소비력으로는 추가 비용 부담을 감당하기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 검증 도구는 쇼핑몰 운영에 도움이 될 것 같지만, 가입하고 결제하는 것은 좀 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "예약 게시물 도구의实用性有待考量，且价格未知。"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직업 특성상 소셜미디어 게시물 관리를 직접 할 필요는 없지만, 결제 과정이 복잡해지면 비용이 발생할 수 있으므로 구매 의사결정을 미루게 됩니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "직업 특성상 소셜미디어 활용 기회가 적으며, 혼자 거주하여 가입 절차 복잡성에 부담감이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "농업 업무와 지역 공동체 활동에 집중하는 성향으로 비용 부담이 큰 소프트웨어는 피하는 경향이 있어요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 활용은 중요하지만 현재 경제적 제약으로 유료 서비스 이용을 꺼려함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "일상에서의 편의성과 시간 절약이 필요하며, 가족과 함께하는 시간을 더 즐길 수 있을 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "집꾸미기 취미와 소규모 사업 운영 계획에 맞는 도구로 평가하고 가입할 의사가 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직업적 필요성은 있지만 요금이 높아 개인적으로는 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "일상적인 활동과는 연관성이 없어 관심 있지만, 직접 비용 지출에 부담이 있어"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "업무 관련성이 없어서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "간단한 요금제 설명만으로는 효용성이 불분명해 결제 의지가 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "온라인 활동이 제한적이라 무료로도 충분히 사용 가능"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "문화 콘텐츠 분야로의 진출을 목표로 하는 시간적 여유나 필요성이 없는 상황이며, 음식점 방문에 비해 소셜미디어 게시물 예약 발행 도구에 대한 관심이 적습니다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "예산 제약과 직업 불안정성으로 인해 무료 버전 만으로도 충분히 활용 가능하다고 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무와 생활이 이미 매우 바쁜 상황에서 추가적인 소셜미디어 관리를 맡기는 것은 부담스럽습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "업무 효율성 향상을 위해 도구 필요성 인식"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜 미디어 관리에 시간적 제약이 있지만, 무료로도 충분히 활용 가능하다고 판단함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "간단한 소셜미디어 게시물 관리는 필요하나, 현재는 가족 돌보기에 집중하는 중이라 추가 비용 지출은 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소셜미디어 게시물을 예약하는 것은 필요하지 않으며, 제값을 주는 서비스에만 돈을 지불합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "간단한 소셜미디어 게시물 예약 발행 도구는 필요하지만, 현재는 치맥에 더 많은 돈을 쓰는 편이라 구매 의사가 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직접 사용 필요성은 적지만, 고객 서비스 향상을 위한 아이디어 제공 가능"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 창업 준비 중이지만 현재는 예산 관리에 신경 쓰고 있어 무료체험을 통해 먼저 알아보려 할 것"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소셜미디어 관리가 어렵고, 블로그 운영에 도움이 될 것 같지만, 현재 무료로도 충분히 활용할 수 있어 유료로 구매할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "건강한 식습관 유지의 중요성과 소셜미디어 활용 능력 향상을 위해 도구에 관심이 있지만, 현재의 경제적 상황에서는 부담스럽다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리에 어려움이 있지만, 즉석결제로 해결하려 할 것 같아서"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리를 위한 도구로는 유용할 수 있지만, 현재의 저소득 상태로는 부담스럽다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "간편함이 있지만, 지금 사용하는 방법에 익숙하고 추가 비용 부담을 싫어함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 사업체라 소셜미디어 관리 비용 고려较少"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "교통안전 연구원으로 일하고 있으므로 무료로 제공하는 기능을 이용하면 좋을 것 같지만, 직접 결제할 만큼의 필요성은 크지 않다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "네일숍 창업 계획과 관련이 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "간단한 무료 시험만 원함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "요금제 선택이 필요하고, 비용 부담이 큰데 일주일에 한번씩만 소셜미디어 게시물을 관리하는 것이 불필요하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리는 필요하지만, 현재는 비즈니스보다 가족과의 시간을 중요시함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 사업체인 만큼 추가 비용 부담을 마다할 수 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "커뮤니티 북카페를 위한 도구보다는 개인적인 요리와 식사 시간을 더 중요하게 생각합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강 관리에 관심 있으나, 현재 경제 상황으로 비용 부담이 큰 편이다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소셜미디어 게시물 관리를 위해 이 도구 필요성 인식 미흡"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "매출 관리와 관련 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "현재 경제 상황과 장기적인 계획상 비용이 높은 서비스에 대한 부담감이 크기 때문."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "현재 경제적 여유가 없지만 장기적으로 도움이 될 것으로 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소비력 제한"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "마케팅 전문가로서 도구의 효과성에 관심 있지만, 개인적으로는 소셜 미디어 게시물 관리를 직접 할 계획이므로 비용을 지불할 의향이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 사업자의 입장에서 추가 비용은 절대적인 부담이고, 무료로도 충분히 가능할 것 같아."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물을 관리하는 데는 유용하지만, 현재는 기본적인 방법으로 충분하고 추가 비용 지출을 망설이고 있습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "기획직 경험이 있지만, 현재 구직중이라 추가 지출은 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "창업 꿈과 관련이 없어"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물을 관리하는 것은 필요하지만, 현재는 전속력으로 집 마련에 집중해야 함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 사업 준비 중인 상태로 추가 비용 부담을 주는 서비스에 대한 경각심이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.9,
+          "reason": "직업 특성상 시니어 시장 교육 프로그램 개발에 관심있으며, 소셜미디어 활용도 높음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소셜미디어 활용 경험이 적어서 불편함을 느낄 수 있고 월정액 요금이 부담되므로 무료체험 후 결정할 것"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "간단한 소셜미디어 게시물 예약 발행 도구에 대한 관심은 있지만, 현재는 떡볶이와 배드민턴으로 일상을 즐기는 중이고, 추가적인 도구를 구매하는 데 부담스러움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "요금제 관련 정보 필요없고, 주문알림만 중요함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재 소득과 경제 상황에서 추가적인 비용 부담을 감당하기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜 미디어 관리가 어렵다고 느끼지만, 현재는 취업 준비 중이라 비용 부담이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "법률 업무와 개인 취미 생활을 병행하기에는 비용 부담이 크다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "마케팅 관련 업무를 다시 시작하려는 의향이 있으나, 현재 재취업 준비 중으로 비용 부담이 크다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "노점 장사에 도움이 될 것 같지만 개인적인 예산 관리로는 부담스럽다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 사업체 운영 목표와는 맞지 않아"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "노점판매 활동과 일상생활에 큰 도움이 안될 것 같아"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소셜미디어 관리를 위해 도구 필요성 인식 nhưng 현재는 비용 부담이 크다"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소비력 낮고 현재 생활비 만족, 비즈니스 관련 도구 필요성 미흡"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소비성향과 생활 패턴상 소셜미디어 게시물 관리를 위한 도구에 대한 필요성을 느끼지 못함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태로 경제적 여유가 없고, 음식에 대한 취향과는 관련이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "요리와 콘텐츠 제작에 관심 있으나, 현재 경제적 여유가 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리에 관심 있으나, 현재는 오프라인 활동에 더 집중하려는 경향이 있어 직접 가입하지 않을 가능성이 높음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태로 안정적인 사무직에 대한 목표를 가지고 있어 소셜미디어 게시물 관리를 위한 도구에 대한 필요성이 미흡합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "요즘 돈이 급하게 필요해서 무료로 쓰고 싶지만 구매 의사가 강하지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 비즈니스 운영 중인 광고 전문가로서 스케일링에 대한 불안감이 있어 도구를 이용하면 좋겠지만, 현재는 개인 프로젝트 중심으로 일정한 예산이 없어 즉시 구매 의사 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 사업 준비 중이라 무료 기간 동안 시험 사용해볼 가치는 있지만 현재는 직접 소셜미디어 관리를 하는 시간이 많아 유료로 이용할 정도는 아니라고 생각함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "건강관리 모임 준비라서 도구 필요하긴 하지만 외식 비용 고려해선 구매 어려움"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "건강 관리에 대한 관심이 있지만, 소비성향은 저렴한 식사에 집중하고 있어 비용 효율적인 도구에 대한 필요성이 미흡합니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 경험이 부족하고 무료 버전으로 충분할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "주말에 소셜미디어 게시물을 관리하는 시간을 보내는 것이 번거로워서 도구 사용을 고려하지만, 요금제 정보를 확인하고 결제하는 것은 시간이 필요해서 구매 의사 결정을 내리지 못함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "마케팅 전문가로서 도구의 효과를 알고 있지만 혼자 거주하며 이미 유사한 도구들을 사용 중이기 때문"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "현재로서는 무료로도 충분히 활용 가능해 보임"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "수선과 리폼에 관심 있으나, 소득과 예산 제약으로 소비 의지 낮음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "현재 예산과 필요성 부족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강 관리를 위해 일주일에 몇 번은 사용할 수 있지만 정시 퇜근을 위해선 비용이 부담됨"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소금빵 투어에만 관심있어 다른 것은 무관심"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "농업 관련 업무 효율성을 위해 필요하지만 개인적으로는 비용이 부담스럽다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜 미디어 관리를 위해 도구를 찾지만 무료 버전으로 충분할 것 같아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소비성향과 직업 특성상 가볍게 이용할 만하지만, 현재는 매뉴얼 작성에 더 집중하고 있어 유료 서비스 이용 의향이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 게시물 관리는 필요하지만, 현재는 개인적인 예산 관리로 유료 서비스를 이용하기 어렵습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소박한 생활 탓에 추가 비용 부담을 망설임"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "가족과 함께하는 시간을 중요시하며, 소비는 소박하고 꾸준함에 중점을 두므로 추가 소비에 대한 관심이 없습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 활용 경험이 부족하고, 랜딩페이지 클릭률과 이메일 등록만으로 유료 수요를 판단하는 것이 부담스럽기 때문."
+        },
+        {
+          "interest": 1,
+          "would_pay": 1,
+          "pay_prob": 0.8,
+          "reason": "디자인 관련 업무를 수행하면서 소셜미디어 콘텐츠의 효율적인 관리를 위해 도구가 필요하며, 요금제 선택을 통해 유연하게 사용할 수 있어 만족도가 높을 것으로 예상됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "간단한 테스트용도로는 관심있지만, 정식 서비스 이용에는 부담감이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜 미디어 경험 부족과 무료 기능 만족"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소비력이 낮아 즉시 결제는 어려우나, 브랜드에 관심 있어 정보 수집 후 고려할 수는 있다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소셜미디어 게시물 관리는 시간과 노력을 많이 필요로 하며, 현재는 가족과 함께 보내는 시간을 중요시하므로 사용할 확률이 낮습니다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "직업 특성상 소셜미디어 관리를 직접 할 필요는 없지만, 도구를 이용해 성과를 측정하고 개선할 수 있다는 부분이 매력적이지만, 현재는 무료 도구를 활용하면서 비용을 절감하고자 함"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 일탈 활동이나 데이터 분석에 대한 열정이 약해서 무료 이용으로 충분하다"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "정원 관리와 산행에 소요되는 시간으로 인해 소셜미디어 게시물 관리는 최소화하고 싶지만, 가입 및 이메일 등록은 가능하다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "주방업무와 관련 없으며, 비용 효율성이 의심된다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소비성향이 실용적이고 가족 및 친구들과 외식을 선호하며, 은퇴 계획에 대한 직접적인 관련성이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "디저트 관련 관심은 있으나, 무직 상태라 소비 능력 제한적"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "현재의 업무 루틴을 유지하려는 경향이 강해서 소셜미디어 게시물 예약 발행 도구에 관심이 없음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "소규모 사업체 운영과 일관된 소득에 중점을 두고 있어 꾸준함이 중요하며, 현재의 노점 운영이 안정적이라 유료 서비스 가입 의향이 적음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "청소년 지도사로서 시간 관리 도구는 필요하지만, 이 도구의 비용은 저의 예산을 벗어난다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "디자인 관련 관심은 있으나 경제적 부담감으로 인해 무료 이용을 선호함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "일상적인 활동과는 관련이 없어 흥미는 있지만, 추가 비용을 들일 여유가 없다."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "창업 준비 중인 상태로 소셜미디어 게시물 관리는 나중에 생각중"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족과의 시간을 중요시하는 데 비해 이 도구의 필요성을 확신하지 못함"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 사업자로서 비용 관리가 중요하여 추가 비용 부담이 걱정된다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소셜미디어 관리가 필요하지 않아요"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "무직 상태이고 즉각적인 소셜미디어 관리 필요성 없음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "직장에서의 목표와는 반대로 개인적으로는 간단한 외식을 선호하고, 소셜미디어 게시물 관리는 비용이 들지 않는 대안으로 생각됨"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "소규모 비즈니스 운영 중이라 추가적인 도구 투자는 현재 필요성 높지 않음"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "건강관리를 고려하지 않고, 정기적으로 외식을 하는데 추가 비용이 발생하면 부담스러움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "업무와 가족 시간을 위해 필요하지 않아"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "월정액 요금제를 선택해야하는데 소득이 적고 필요성도 없다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "디자이너로서 실용적이고 편한 의상이 필요하지만, 현재 소득과 경제 상황 때문에 추가적인 비용 부담은 망설임이 있다."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "독립 잡지 창간 준비 중이라 무료 이용을 우선 선택할 것 같음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "낮은 소득과 경제적 어려움으로 인해 추가적인 지출을 망설이고 있으며, 소셜미디어 게시물 예약 발행 도구에 대한 필요성도 크게 느끼지 못함."
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "对外社交和美食更重要，没有兴趣"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "공예품과 차를 마시는 취미와는 맞지 않아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "노인 복지관 활동에 필요한 도구로는 필요하지 않으며 무료로 제공된다면 좋겠지만 유료로는 망설임"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "[parse_fail]"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "사업 관련으로 유용해 보이지만 현재 예산 제약으로 구매 어려움"
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.1,
+          "reason": "현재 혼자 거주하며, 작은 스튜디오를 운영하므로 추가적인 소셜미디어 관리 도구 필요성은 크지 않아요."
+        },
+        {
+          "interest": 1,
+          "would_pay": 0,
+          "pay_prob": 0.2,
+          "reason": "가족과의 시간을 중요시하고 소셜미디어 게시물 관리는 부담스러워서 도구 사용을 고려하지 않음"
+        },
+        {
+          "interest": 0,
+          "would_pay": 0,
+          "pay_prob": 0.0,
+          "reason": "소득이 적고 장기적으로 가게 마련을 위해 투자해야 할 상황"
+        }
+      ]
+    }
+  },
+  "metrics": {
+    "ids": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "sim_dir_acc": 0.2,
+    "baseline_dir_acc": 0.4,
+    "sim_pred": [
+      0,
+      1,
+      1,
+      1,
+      0
+    ],
+    "baseline_pred": [
+      1,
+      1,
+      1,
+      1,
+      0
+    ],
+    "gt": [
+      1,
+      1,
+      0,
+      0,
+      1
+    ],
+    "sim_success_minus_fail": -0.49416666666666664,
+    "baseline_success_minus_fail": -0.23333333333333328,
+    "sim_beats_baseline": false,
+    "sim_conversions": [
+      0.295,
+      0.305,
+      0.67,
+      0.735,
+      0.025
+    ],
+    "baselines": [
+      0.1,
+      0.2,
+      0.6,
+      0.1,
+      0.05
+    ]
+  }
+}

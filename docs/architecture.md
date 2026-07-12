@@ -1200,6 +1200,12 @@ Get-CimInstance Win32_Process |
 
 자세히: `docs/prd/v1.3.0-dev-confirm-gate-live.md`
 
+#### 13.6.38 v1.4.3 — Research Workflow (자율 가설검증) (2026-07-12)
+
+**시너지/역할/비전:** major(§2.3 애자일·실험 중심 기획)의 심화 — PRD(기능개발) *앞단*에 **research(유효성 검증)** 계층을 세워, 불확실한 기능 가설을 코드로 만들기 전에 자율 연구로 검증한다. 8-사이클 자율 연구(가상 시장 수요검증 시뮬)를 A100에서 완주해 논문까지 낸 회고를 내장 역량으로 박제. **(A) `research` 내장 메인 워크플로** — new-build·improvement 에 이은 3번째 메인(`skills/workflow-manager/assets/workflows/research/`): spec(반증가능 질문+사전등록 rubric) → **확산→수렴 가설수립**(웹·문헌 조사로 후보 다양화 후 하나로) → 실험 사이클(goal 6필드) → **blind 백테스트+수치 eval**(Δ·dir-acc·LOO·ECE) → **Track2 verifier 검증**(별도 컨텍스트 4축 채점, overall≥4 수렴) → 리포트, rubric 통과/예산까지 반복. 기존 skill(hypothesis-design·experiment-design·discovery-synthesis·market-research) 조립. 방법 규약 `research-workflow.md` + 골든 `examples/backtest-example.md`. **research=워크플로이므로 별도 매니저 없이 workflow-manager 소유.** **(B) reports = org-level 배포 산출물** — `market-research` 등 산출을 `<org>/docs/reports/`(내부 docs 계층) → **`<org>/reports/`**(1급 배포 대상: 리포트·논문·프로토타입). scaffold 가 신규 org 에 `reports/` 생성. **(C) goal 무인 8h+** — goal-manager 에 장기실행 규율(증거앵커 보고·no-blocking·완료=verifier·체크포인트 정지·예산 인식·4조건 continuation·확산수렴·정직성[no p-hacking·자기교정]) 추가로 사용자 지시 없이 8시간+ 사이클 지속. 엔진 `src/engine/**` 불변. 연속성 마이그레이션 `1.4.2-to-1.4.3`: 각 org 의 `docs/reports/` → `reports/` 이동(파일 이동·미덮어쓰기 = class A 보존, stale seed INDEX 드롭), 세션 리셋 없음. *(시뮬레이션 *기능* 은 v1.8 — 연구 결론 raw NO-GO/캘리브레이션 부분회복 반영.)*
+
+자세히: `docs/prd/v1.4.3_research-workflow-implementation.md` + `docs/prd/v1.4.0_research-workflow.md`
+
 #### 13.6.37 v1.4.2 — `solosquad start` 봇 미기동 핫픽스 (2026-06-27)
 
 1.4.1 의 `solosquad start`(=`bot --with-cron`)가 **스케줄러만 띄우고 봇이 안 뜨던** 핫픽스. **근본원인:** `startScheduler()` 끝의 무한 keep-alive(`await new Promise(()=>{})`, 단독 `cron start` 상주용)를 봇 경로가 `startBot()` *앞에서* `await` → 영구 블록 → 봇 미기동·디스코드 무응답. **수정:** `startScheduler({ keepAlive: false })` 추가 — 봇 동반 시 cron 등록 후 리턴, 봇이 프로세스 수명 소유(cron 타이머·fs-watcher 는 공유 이벤트루프 상주). 단독 `cron start` 는 기본 keep-alive 유지. scheduler 싱글톤 lock 무변경. **추가 핫픽스 — rate-limit 알림 도배 제거:** Claude Code 가 매 턴 보고하는 rate-limit 상태(`allowed`/`warning`/`exceeded`)를 1.4.1 은 비-allowed 면 매 답변에 echo → `warning`(한도 근접) 구간에서 매번 떴다. `RateLimitNotifier`(`bot/rate-limit-notice.ts`)로 **`warning` 은 리셋 윈도우당 1회**(유저별, `resetsAt` 표시)·**`exceeded` 만 즉시** 알림. 연속성 마이그레이션 `1.4.1-to-1.4.2` plain bump.
