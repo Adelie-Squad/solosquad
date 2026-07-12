@@ -152,9 +152,9 @@ the top-decile mean ($\Delta=-0.21$), the standard deviation, and the maximum
 
 \paragraph{Real-product application.} We apply the graded method to two live
 pre-launch products (anonymized): \textbf{P1}, a real-time civic-debate app with a
-paid subscription tier, and \textbf{SoloSquad}~\citep{solosquad}, an open-source
-multi-agent tool for solo founders. Predicted paid conversion is $0.14$ (P1) and
-$0.10$ (SoloSquad), essentially
+paid subscription tier, and \textbf{P2}, an open-source multi-agent planning tool
+for solo founders. Predicted paid conversion is $0.14$ (P1) and
+$0.10$ (P2), essentially
 unchanged under target conditioning. P1's own team targets a $5\%$ premium
 conversion; the simulation over-predicts by $\sim$3$\times$, reproducing the
 abstract-appeal bias on real inputs.
@@ -171,7 +171,7 @@ sim--real map non-monotonic. Simple sign-flip calibration therefore helps but do
 not solve the problem; adding an a-priori price/hype regime feature does not
 improve LOO (also $0.64$), so the ceiling appears set by data scale, not feature
 choice---reliable validity would require a substantially larger labeled corpus.
-Pre-launch products without real labels (P1, SoloSquad) still require a real anchor
+Pre-launch products without real labels (P1, P2) still require a real anchor
 (e.g., a fake-door test) to calibrate.
 
 \section{Discussion: Why It Fails}
@@ -211,9 +211,9 @@ winners from losers. The constructive half of the finding is that the bias is
 \emph{systematic}: a light calibration against a handful of real outcomes recovers
 part of the signal ($0.40\rightarrow0.64$)---enough to \emph{rank} or \emph{screen}
 candidate ideas, not to estimate absolute demand. We therefore see three concrete
-uses. \textbf{(i) A calibrated screening feature} inside AI planning tools such as
-SoloSquad~\citep{solosquad}: a cheap simulation shortlists ideas that a small real
-fake-door test then confirms, cutting the cost of the first validation loop.
+uses. \textbf{(i) A calibrated screening feature} inside AI planning tools for founders:
+a cheap simulation shortlists ideas that a small real fake-door test then confirms,
+cutting the cost of the first validation loop.
 \textbf{(ii) A diagnostic}: the simulation's confident false positives are exactly
 the broadly-appealing-but-doomed concepts, so a high raw score is a useful
 \emph{caution} flag. \textbf{(iii) A benchmark}: our blind, leakage-controlled
@@ -232,9 +232,10 @@ involved; product references are anonymized.
 
 \section*{Software and Data}
 The persona-simulation harness, prompts, anonymized case corpus, and per-persona
-logs for all framings are released as part of the open-source SoloSquad
-project~\citep{solosquad} at \url{https://github.com/Adelie-Squad/solosquad}
-(logs under \texttt{reports/logs/}). Author identity is withheld for review.
+logs for all framings---the full research workflow and experiment cycles---will be
+released as part of an open-source AI-planning project upon acceptance; author
+identity is withheld for review.
+% Camera-ready: released in SoloSquad, https://github.com/Adelie-Squad/solosquad (logs: reports/logs/)
 
 \bibliography{references}
 \bibliographystyle{icml2026}
