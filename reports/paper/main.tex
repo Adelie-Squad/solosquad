@@ -158,9 +158,11 @@ raw ($0.40$) and chance ($0.50$), yet far from perfect. The residual errors are
 informative: over-hyped expensive hardware is \emph{correctly} rejected by the
 personas (low sim, real failure), breaking the anti-correlation and making the
 sim--real map non-monotonic. Simple sign-flip calibration therefore helps but does
-not solve the problem; regime-aware, multi-feature calibration is the indicated
-next step. Pre-launch products without real labels (P1, P2) still require a small
-real anchor (e.g., a fake-door test) to calibrate.
+not solve the problem; adding an a-priori price/hype regime feature does not
+improve LOO (also $0.64$), so the ceiling appears set by data scale, not feature
+choice---reliable validity would require a substantially larger labeled corpus.
+Pre-launch products without real labels (P1, P2) still require a real anchor
+(e.g., a fake-door test) to calibrate.
 
 \section{Discussion: Why It Fails}
 \label{sec:discuss}
