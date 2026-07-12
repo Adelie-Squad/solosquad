@@ -89,6 +89,7 @@ export function scaffoldOrg(input: ScaffoldOrgInput): { orgDir: string; orgYaml:
   fs.mkdirSync(path.join(orgDir, "workflows"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "repositories"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, "knowledge"), { recursive: true });
+  fs.mkdirSync(path.join(orgDir, "reports"), { recursive: true });
   fs.mkdirSync(path.join(orgDir, input.messenger), { recursive: true });
 
   for (const [filename, body] of Object.entries(MEMORY_SCHEMAS)) {

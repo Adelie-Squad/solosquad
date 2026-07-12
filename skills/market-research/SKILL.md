@@ -1,6 +1,6 @@
 ---
 name: market-research
-description: 멀티에이전트 병렬 시장 조사 프레임워크. 타깃 시장·경쟁사를 desk research 로 조사하고 인용/groundedness 를 검증해 리포트(<org>/docs/reports/)를 산출. v1.3.5 신규 — 현재 리포트 산출 skill 0 갭을 메움.
+description: 멀티에이전트 병렬 시장 조사 프레임워크. 타깃 시장·경쟁사를 desk research 로 조사하고 인용/groundedness 를 검증해 리포트(<org>/reports/)를 산출. v1.3.5 신규 — 현재 리포트 산출 skill 0 갭을 메움.
 schema_version: 2
 tier: leader
 team: _skill
@@ -29,7 +29,7 @@ pm_conventions:
 2. **병렬 조사** — 각 질문을 독립적으로 조사(멀티에이전트 가능). 출처 URL/문서를 기록.
 3. **인용 검증(groundedness)** — 각 주장에 `evidence_ref`(출처) 부착. 출처 없는 주장은 **추측으로
    표시**하거나 제거. 상충 출처는 병기.
-4. **리포트 산출** — `<org>/docs/reports/market-research-<slug>-<date>.md` 작성(아래 구조).
+4. **리포트 산출** — `<org>/reports/market-research-<slug>-<date>.md` 작성(아래 구조).
 5. **요약 반환** — PRD §시장 에 들어갈 요약 + 리포트 경로(evidence_ref) 반환.
 
 ## 리포트 구조

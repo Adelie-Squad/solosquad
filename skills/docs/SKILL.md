@@ -46,7 +46,6 @@ PM 은 각 repo 를 기준으로 문서를 사고. 한 워크플로우가 여러
 | | manual † | `manual/master-guide_{ko,en}.html`, `manual/*.md` | ✅ files | 제품 사용자 |
 | 🔒 내부 | prd | `docs/prd/v<N.N.N>_<name>.md` | ✗ | 기획·개발(본인) |
 | | ideation | `docs/ideation/<name>_<YYMMDD>.md` | ✗ | 기획(발산) |
-| | reports | `docs/reports/<name>_<YYMMDD>.md` | ✗ | 기획(근거) |
 | | poc | `docs/poc/<name>.{mjs,md}` | ✗ | 개발(실증) |
 | | policy | `docs/policy/<topic>.md` | ✗ | 개발(불변 계약) |
 | | architecture | `docs/architecture.md` | ✗ | 개발(구조 living) |
@@ -137,7 +136,8 @@ PRD 라는 이름을 여러 양식이 공유하므로 **맥락별로 어느 shap
 
 ## 6. 카테고리 INDEX 유지
 
-`docs/prd/` · `docs/reports/` · `docs/ideation/` 각각에 `INDEX.md`(한 줄 = 파일 링크 + 요약 hook).
+`docs/prd/` · `docs/ideation/` 각각에 `INDEX.md`(한 줄 = 파일 링크 + 요약 hook).
+(리포트는 v1.4.3부터 **org-level `<org>/reports/`** — docs 밖 배포 산출물 공간, 본 스킬 관리 대상 아님.)
 문서를 새로 만들거나 옮기면 **해당 INDEX 의 한 줄을 함께 갱신**(discovery 보장). trend-record 는
 자체 INDEX 보유 — 건드리지 않는다.
 
