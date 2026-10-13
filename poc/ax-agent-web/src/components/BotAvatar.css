@@ -1,0 +1,68 @@
+.bot {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bot-glow {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: var(--accent);
+  filter: blur(36px);
+  opacity: 0.35;
+  animation: bot-glow 4s ease-in-out infinite;
+}
+
+.bot-body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: bot-float 4s ease-in-out infinite;
+  overflow: visible;
+}
+
+.bot-eyes {
+  transform-origin: 100px 89px;
+  animation: bot-blink 5s infinite;
+}
+
+.bot-antenna {
+  animation: bot-pulse 2s ease-in-out infinite;
+}
+
+.bot-arm-wave {
+  transform-origin: 147px 156px;
+  animation: bot-wave 1.4s ease-in-out 3;
+}
+
+@keyframes bot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes bot-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.06); }
+}
+
+@keyframes bot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes bot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes bot-wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-38deg); }
+  75% { transform: rotate(-18deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bot-glow, .bot-body, .bot-eyes, .bot-antenna, .bot-arm-wave {
+    animation: none;
+  }
+}

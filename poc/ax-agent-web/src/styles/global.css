@@ -1,0 +1,54 @@
+:root {
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Segoe UI', sans-serif;
+  --ink: #1d1a2b;
+  --ink-2: #57526b;
+  --ink-3: #8f8aa3;
+  --line: #ece9f3;
+  --surface: #ffffff;
+  --surface-2: #f7f6fb;
+  --accent: #6d4aff;
+  --ok: #17a673;
+  --warn: #e8890c;
+  --danger: #e2445c;
+  --radius: 12px;
+
+  font-family: var(--font);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -46,7 +46,7 @@ PM 은 각 repo 를 기준으로 문서를 사고. 한 워크플로우가 여러
 | | manual † | `manual/master-guide_{ko,en}.html`, `manual/*.md` | ✅ files | 제품 사용자 |
 | 🔒 내부 | prd | `docs/prd/v<N.N.N>_<name>.md` | ✗ | 기획·개발(본인) |
 | | ideation | `docs/ideation/<name>_<YYMMDD>.md` | ✗ | 기획(발산) |
-| | poc | `docs/poc/<name>.{mjs,md}` | ✗ | 개발(실증) |
+| | poc | `poc/<project>/` (루트, 정식 기능 전 데모) | ✗ | 개발(실증) |
 | | policy | `docs/policy/<topic>.md` | ✗ | 개발(불변 계약) |
 | | architecture | `docs/architecture.md` | ✗ | 개발(구조 living) |
 | | roadmap | `docs/roadmap.md` | ✗* | 기획(비전 living) |
