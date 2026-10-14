@@ -2,7 +2,7 @@
   "name": "ax-agent-web",
   "private": true,
   "version": "0.0.1",
-  "description": "PoC — 소규모 비즈니스용 AI 직원(AX) 웹 인터페이스 데모",
+  "description": "프로토타입 — 소규모 비즈니스용 AI 직원(AX) 웹 인터페이스 데모",
   "type": "module",
   "scripts": {
     "dev": "vite",

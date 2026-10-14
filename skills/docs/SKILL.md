@@ -46,7 +46,7 @@ PM 은 각 repo 를 기준으로 문서를 사고. 한 워크플로우가 여러
 | | manual † | `manual/master-guide_{ko,en}.html`, `manual/*.md` | ✅ files | 제품 사용자 |
 | 🔒 내부 | prd | `docs/prd/v<N.N.N>_<name>.md` | ✗ | 기획·개발(본인) |
 | | ideation | `docs/ideation/<name>_<YYMMDD>.md` | ✗ | 기획(발산) |
-| | poc | `poc/<project>/` (루트, 정식 기능 전 데모) | ✗ | 개발(실증) |
+| | prototype | `prototype/<project>/` (루트, 정식 개발 전 시험) | ✗ | 개발(실증) |
 | | policy | `docs/policy/<topic>.md` | ✗ | 개발(불변 계약) |
 | | architecture | `docs/architecture.md` | ✗ | 개발(구조 living) |
 | | roadmap | `docs/roadmap.md` | ✗* | 기획(비전 living) |
@@ -60,7 +60,7 @@ PM 은 각 repo 를 기준으로 문서를 사고. 한 워크플로우가 여러
 
 | 계층 | 타입 | 위치 |
 |---|---|---|
-| **repo** | prd · architecture · roadmap · poc · policy · README · CHANGELOG · manual | `<repo>/docs/`·루트 (release-bound, 버전 결합) |
+| **repo** | prd · architecture · roadmap · prototype · policy · README · CHANGELOG · manual | `<repo>/docs/`·루트 (release-bound, 버전 결합) |
 | **org** | ideation · reports | `<org>/docs/` 워크스페이스 (cross-repo 발산·근거, class A 무관) |
 
 단일 repo 프로젝트(SoloSquad 자신)는 두 계층이 같은 `docs/` 로 접힌다. founder multi-repo 에선

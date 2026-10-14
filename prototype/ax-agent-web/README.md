@@ -1,6 +1,6 @@
 # ax-agent-web
 
-소규모 비즈니스용 AI 직원 '하루' 웹 인터페이스 PoC. 기획은 [PRD.md](./PRD.md).
+소규모 비즈니스용 AI 직원 '하루' 웹 인터페이스 프로토타입. 기획은 [PRD.md](./PRD.md).
 
 ```bash
 npm install
