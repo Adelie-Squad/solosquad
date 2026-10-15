@@ -24,9 +24,9 @@ export function Landing() {
         <div className="hero-copy">
           <p className="hero-eyebrow">소규모 비즈니스를 위한 AI 직원</p>
           <h1>
-            사장님 옆에
+            일 잘하는 직원 한 명,
             <br />
-            일 잘하는 직원 한 명, <em>{AGENT_NAME}</em>
+            <em>{AGENT_NAME}</em>
           </h1>
           <p className="hero-sub">
             메일 응대, 리뷰 답글, 재고 확인, 매출 정리까지.
