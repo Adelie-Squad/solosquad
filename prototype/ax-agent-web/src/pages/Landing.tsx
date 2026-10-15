@@ -36,7 +36,6 @@ export function Landing() {
           <button className="hero-cta" onClick={() => navigate('/app')}>
             시작하기 <span aria-hidden>→</span>
           </button>
-          <p className="hero-note">가입 없이 바로 체험해 보세요</p>
         </div>
 
         <div className="hero-visual">

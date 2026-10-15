@@ -102,12 +102,6 @@
   transform: translateX(3px);
 }
 
-.hero-note {
-  margin: 14px 0 0;
-  font-size: 14px;
-  color: var(--ink-3);
-}
-
 .hero-visual {
   position: relative;
   display: flex;
