@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BotAvatar } from '../components/BotAvatar';
+import { SuggestionStrip } from '../components/SuggestionStrip';
 import {
   AGENT_NAME,
   cannedReplies,
@@ -82,73 +83,72 @@ export function HomeView() {
   };
 
   return (
-    <div className="view home">
-      <section className="home-hero">
-        <BotAvatar size={148} waving />
-        <div className="home-bubble">
-          <p className="home-greeting">
-            사장님, {greeting()}! 👋
-          </p>
-          <p>
-            지난 접속(<strong>{visitLabel(lastVisit)}</strong>) 이후 {AGENT_NAME}가 처리한 일을 정리했어요.
-          </p>
-        </div>
-      </section>
-
-      <section className="panel report">
-        <header className="report-header">
-          <h2 className="panel-title">지난 접속 이후 보고</h2>
-          <div className="report-counts">
-            {(Object.keys(kindMeta) as ReportKind[]).map((k) => (
-              <span key={k} className={`chip ${kindMeta[k].chip}`}>
-                {kindMeta[k].label} {counts[k]}
-              </span>
-            ))}
-          </div>
-        </header>
-        <ul className="report-list">
-          {reportSinceLastVisit.map((r) => (
-            <li key={r.id} className={`report-item is-${r.kind}`}>
-              <span className={`report-icon chip ${kindMeta[r.kind].chip}`}>{kindMeta[r.kind].icon}</span>
-              <div>
-                <p className="report-title">{r.title}</p>
-                <p className="report-detail">{r.detail}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {messages.length > 0 && (
-        <section className="chat" aria-live="polite">
-          {messages.map((m) => (
-            <div key={m.id} className={`chat-row is-${m.role}`}>
-              {m.role === 'agent' && <span className="chat-avatar">🤖</span>}
-              <p className="chat-bubble">{m.text}</p>
-            </div>
-          ))}
-          {typing && (
-            <div className="chat-row is-agent">
-              <span className="chat-avatar">🤖</span>
-              <p className="chat-bubble chat-typing">
-                <span />
-                <span />
-                <span />
+    <div className="home">
+      <div className="home-scroll">
+        <div className="home-inner">
+          <section className="home-hero">
+            <BotAvatar size={148} waving />
+            <div className="home-bubble">
+              <p className="home-greeting">
+                사장님, {greeting()}! 👋
+              </p>
+              <p>
+                지난 접속(<strong>{visitLabel(lastVisit)}</strong>) 이후 {AGENT_NAME}가 처리한 일을 정리했어요.
               </p>
             </div>
-          )}
-          <div ref={chatEnd} className="chat-end" />
-        </section>
-      )}
+          </section>
 
-      <section className="composer-wrap">
-        <div className="suggestions">
-          {suggestedPrompts.map((p) => (
-            <button key={p.id} className="suggestion" onClick={() => send(p.text)}>
-              <span>{p.icon}</span> {p.text}
-            </button>
-          ))}
+          <section className="panel report">
+            <header className="report-header">
+              <h2 className="panel-title">지난 접속 이후 보고</h2>
+              <div className="report-counts">
+                {(Object.keys(kindMeta) as ReportKind[]).map((k) => (
+                  <span key={k} className={`chip ${kindMeta[k].chip}`}>
+                    {kindMeta[k].label} {counts[k]}
+                  </span>
+                ))}
+              </div>
+            </header>
+            <ul className="report-list">
+              {reportSinceLastVisit.map((r) => (
+                <li key={r.id} className={`report-item is-${r.kind}`}>
+                  <span className={`report-icon chip ${kindMeta[r.kind].chip}`}>{kindMeta[r.kind].icon}</span>
+                  <div>
+                    <p className="report-title">{r.title}</p>
+                    <p className="report-detail">{r.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {messages.length > 0 && (
+            <section className="chat" aria-live="polite">
+              {messages.map((m) => (
+                <div key={m.id} className={`chat-row is-${m.role}`}>
+                  {m.role === 'agent' && <span className="chat-avatar">🤖</span>}
+                  <p className="chat-bubble">{m.text}</p>
+                </div>
+              ))}
+              {typing && (
+                <div className="chat-row is-agent">
+                  <span className="chat-avatar">🤖</span>
+                  <p className="chat-bubble chat-typing">
+                    <span />
+                    <span />
+                    <span />
+                  </p>
+                </div>
+              )}
+              <div ref={chatEnd} />
+            </section>
+          )}
         </div>
+      </div>
+
+      {/* 하단 고정 — 위 영역만 스크롤된다 */}
+      <footer className="home-footer">
+        <SuggestionStrip prompts={suggestedPrompts} onPick={send} />
         <form className="composer" onSubmit={onSubmit}>
           <input
             value={draft}
@@ -160,7 +160,7 @@ export function HomeView() {
             보내기
           </button>
         </form>
-      </section>
+      </footer>
     </div>
   );
 }

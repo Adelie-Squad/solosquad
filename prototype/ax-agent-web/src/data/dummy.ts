@@ -13,27 +13,19 @@ export interface Space {
   id: string;
   name: string;
   emoji: string;
-  /** Arc 의 스페이스 색상처럼 창 전체 배경 그라디언트를 바꾼다 */
+  /** Arc 의 스페이스 색상처럼 창 전체 배경을 칠하는 그라디언트 */
   gradient: string;
   accent: string;
 }
 
-export const spaces: Space[] = [
-  {
-    id: 'momo',
-    name: '모모 베이커리',
-    emoji: '🥐',
-    gradient: 'linear-gradient(135deg, #b9a7ff 0%, #f6b8d6 55%, #ffd9b8 100%)',
-    accent: '#6d4aff',
-  },
-  {
-    id: 'momo-2',
-    name: '모모 2호점',
-    emoji: '🍰',
-    gradient: 'linear-gradient(135deg, #8fd3c7 0%, #a5c8ff 60%, #d7c2ff 100%)',
-    accent: '#1f8f7a',
-  },
-];
+/** 사업장은 하나로 고정 — 배경색 전환 기능은 두지 않는다 */
+export const space: Space = {
+  id: 'momo',
+  name: '모모 베이커리',
+  emoji: '🥐',
+  gradient: 'linear-gradient(135deg, #b9a7ff 0%, #f6b8d6 55%, #ffd9b8 100%)',
+  accent: '#6d4aff',
+};
 
 // ── 지난 접속 이후 보고 ───────────────────────────────────────────
 
@@ -84,6 +76,10 @@ export const suggestedPrompts: SuggestedPrompt[] = [
   { id: 'p2', icon: '✉️', text: '검토 대기 중인 답장 3건 같이 보자' },
   { id: 'p3', icon: '📈', text: '이번 주 매출 요약해줘' },
   { id: 'p4', icon: '📣', text: '주말 신메뉴 인스타 게시물 초안 써줘' },
+  { id: 'p5', icon: '📅', text: '오늘 예약 주문 알려줘' },
+  { id: 'p6', icon: '💬', text: '불만 리뷰 모아서 정리해줘' },
+  { id: 'p7', icon: '🧮', text: '부가세 신고 준비 어디까지 됐어?' },
+  { id: 'p8', icon: '🙋', text: '이번 달 단골 손님 분석해줘' },
 ];
 
 /** 홈 대화창의 더미 응답 — 키워드 매칭, 없으면 기본 응답 */
@@ -107,6 +103,26 @@ export const cannedReplies: { keywords: string[]; reply: string }[] = [
     keywords: ['인스타', '게시물', '신메뉴'],
     reply:
       '초안이에요 ✍️\n"이번 주말만 만나는 🍓딸기 크림 크루아상! 아침 10시, 딱 40개만 구워요. 늦으면 없어요 🥐"\n사진은 어제 찍어두신 시안 2번이 잘 어울려요.',
+  },
+  {
+    keywords: ['예약'],
+    reply:
+      '오늘 예약 주문은 3건이에요.\n• 11:00 생크림 케이크 1호 — 김민지님 (픽업)\n• 14:30 크루아상 12개 — 카페 소요 (배송)\n• 17:00 조각 케이크 30개 — 김지현님 단체 주문 (견적 승인 대기)',
+  },
+  {
+    keywords: ['불만', '리뷰'],
+    reply:
+      '최근 30일 리뷰 중 불만은 5건이에요.\n• 배송 지연 2건\n• 크림이 너무 달다 2건\n• 포장 파손 1건\n배송 지연은 화요일 택배 마감 시간과 겹쳐요. 마감을 1시간 앞당기는 걸 제안드려요.',
+  },
+  {
+    keywords: ['부가세'],
+    reply:
+      '부가세 신고 자료는 70% 정리됐어요. 매출 자료는 끝났고, 카드 매입 영수증 14건을 분류하고 있어요. 신고 마감 일주일 전까지 마무리할게요.',
+  },
+  {
+    keywords: ['단골'],
+    reply:
+      '이번 달 3번 이상 방문한 단골은 42명이에요. 주로 평일 오전에 소금빵을 사 가세요. 단골 대상 "오전 10시 전 방문 시 아메리카노 할인" 쿠폰을 제안드려요.',
   },
 ];
 
@@ -363,23 +379,6 @@ export const cadenceOptions: { label: string; nextRunInMs: number }[] = [
   { label: '1시간마다', nextRunInMs: 40 * MIN },
 ];
 
-/** '스페이스 추가' 를 누를 때마다 차례로 추가되는 사업장 (다 쓰면 더 추가되지 않는다) */
-export const extraSpaces: Space[] = [
-  {
-    id: 'momo-online',
-    name: '모모 온라인몰',
-    emoji: '📦',
-    gradient: 'linear-gradient(135deg, #ffc9a8 0%, #ffb3c1 55%, #c9b6ff 100%)',
-    accent: '#d9480f',
-  },
-  {
-    id: 'momo-catering',
-    name: '모모 케이터링',
-    emoji: '🎂',
-    gradient: 'linear-gradient(135deg, #b8e1ff 0%, #c5f2d6 60%, #fff3b0 100%)',
-    accent: '#1971c2',
-  },
-];
 
 // ── 설정 (로컬 상태만, 저장하지 않음) ─────────────────────────────
 

@@ -4,12 +4,7 @@ import { currentStep, type Job } from '../hooks/useLiveActivity';
 
 interface Props {
   jobs: Job[];
-  spaces: Space[];
   space: Space;
-  /** 추가할 수 있는 더미 사업장이 남아 있을 때만 '+' 를 보인다 */
-  canAddSpace: boolean;
-  onSpaceChange: (id: string) => void;
-  onAddSpace: () => void;
   onOpenCommand: () => void;
   onOpenSettings: () => void;
 }
@@ -25,27 +20,13 @@ const pinned = [
   { to: '/app/scheduler', end: false, icon: '⏰', label: '스케줄러', badge: 0 },
 ];
 
-export function Sidebar({
-  jobs,
-  spaces,
-  space,
-  canAddSpace,
-  onSpaceChange,
-  onAddSpace,
-  onOpenCommand,
-  onOpenSettings,
-}: Props) {
+export function Sidebar({ jobs, space, onOpenCommand, onOpenSettings }: Props) {
   const navigate = useNavigate();
   const runningCount = jobs.filter((j) => j.status === 'running').length;
 
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
-        <div className="traffic" aria-hidden>
-          <span />
-          <span />
-          <span />
-        </div>
         <div className="history">
           <button className="icon-btn" onClick={() => navigate(-1)} aria-label="뒤로">
             ←
@@ -108,25 +89,6 @@ export function Sidebar({
       </section>
 
       <div className="sidebar-bottom">
-        <div className="space-switcher" role="tablist" aria-label="스페이스">
-          {spaces.map((s) => (
-            <button
-              key={s.id}
-              role="tab"
-              aria-selected={s.id === space.id}
-              className={`space-dot ${s.id === space.id ? 'is-active' : ''}`}
-              onClick={() => onSpaceChange(s.id)}
-              title={s.name}
-            >
-              {s.emoji}
-            </button>
-          ))}
-          {canAddSpace && (
-            <button className="space-dot space-add" title="스페이스 추가" aria-label="스페이스 추가" onClick={onAddSpace}>
-              +
-            </button>
-          )}
-        </div>
         <button className="icon-btn" aria-label="설정" title="설정" onClick={onOpenSettings}>
           ⚙️
         </button>

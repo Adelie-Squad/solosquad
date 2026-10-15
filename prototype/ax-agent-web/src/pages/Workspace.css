@@ -34,21 +34,8 @@
 .sidebar-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   height: 30px;
-}
-
-.traffic {
-  display: flex;
-  gap: 8px;
-  padding-left: 4px;
-}
-
-.traffic span {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
 }
 
 .history {
@@ -309,38 +296,8 @@ kbd {
 .sidebar-bottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 6px 2px 4px;
-}
-
-.space-switcher {
-  display: flex;
-  gap: 4px;
-}
-
-.space-dot {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 15px;
-  opacity: 0.55;
-}
-
-.space-dot.is-active {
-  background: rgba(255, 255, 255, 0.55);
-  opacity: 1;
-}
-
-.space-dot:hover:not(:disabled) {
-  opacity: 1;
-}
-
-.space-add {
-  color: rgba(36, 28, 63, 0.6);
 }
 
 /* ── 설정 다이얼로그 ──────────────────────────────────────────── */

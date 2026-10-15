@@ -1,8 +1,41 @@
+/* 홈은 카드 높이를 꽉 채운다 — 위 영역만 스크롤, 아래 입력부는 고정 */
 .home {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 스크롤 영역과 하단 입력부가 같은 폭(콘텐츠 820px)을 쓴다 */
+.home-inner,
+.home-footer {
+  width: 100%;
+  max-width: 916px;
+  margin: 0 auto;
+  padding-left: 48px;
+  padding-right: 48px;
+}
+
+.home-inner {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 820px;
+  padding-top: 40px;
+  padding-bottom: 24px;
+}
+
+.home-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: 20px;
 }
 
 .home-hero {
@@ -175,29 +208,43 @@
   30% { opacity: 1; transform: translateY(-3px); }
 }
 
-/* 하단 sticky 입력창 높이만큼 띄워서 스크롤 — 마지막 말풍선이 입력창에 가리지 않게 */
-.chat-end {
-  scroll-margin-bottom: 190px;
-}
-
-/* 추천 프롬프트 + 입력창 */
-.composer-wrap {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px 0 4px;
-  background: linear-gradient(transparent, var(--surface) 30%);
-}
-
+/* 추천 프롬프트 — 한 줄 가로 스크롤, 가려진 쪽 끝만 그라데이션으로 사라진다 */
 .suggestions {
+  --fade: 40px;
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestions.fade-right {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+}
+
+.suggestions.fade-left {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+}
+
+.suggestions.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
 }
 
 .suggestion {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: inline-flex;
   gap: 6px;
   padding: 9px 14px;
@@ -238,6 +285,14 @@
 .composer .btn:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+@media (max-width: 860px) {
+  .home-inner,
+  .home-footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
