@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
-import { AGENT_NAME, schedules as initialSchedules } from '../data/dummy';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { AGENT_NAME, cadenceOptions, schedules as initialSchedules } from '../data/dummy';
 import { relativeTime } from '../lib/time';
 import './views.css';
 
 export function SchedulerView() {
   const [schedules, setSchedules] = useState(initialSchedules);
   const [runningIds, setRunningIds] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+  const [newCadence, setNewCadence] = useState(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -29,6 +34,33 @@ export function SchedulerView() {
     timers.current.push(t);
   };
 
+  // "+ 새 자동화" — 목록 맨 위에 추가하고 잠깐 강조 (저장하지 않음)
+  const create = (e: FormEvent) => {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name) return;
+    const cadence = cadenceOptions[newCadence];
+    const id = `new-${Date.now()}`;
+    setSchedules((list) => [
+      {
+        id,
+        name,
+        description: newDesc.trim() || `${AGENT_NAME}가 정해진 시간에 처리해요`,
+        cadence: cadence.label,
+        nextRun: new Date(Date.now() + cadence.nextRunInMs).toISOString(),
+        enabled: true,
+        lastResult: null,
+      },
+      ...list,
+    ]);
+    setCreating(false);
+    setNewName('');
+    setNewDesc('');
+    setNewCadence(0);
+    setHighlightId(id);
+    timers.current.push(window.setTimeout(() => setHighlightId(null), 2000));
+  };
+
   const activeCount = schedules.filter((s) => s.enabled).length;
 
   return (
@@ -40,16 +72,59 @@ export function SchedulerView() {
             {AGENT_NAME}가 정해진 시간에 알아서 하는 일이에요. 지금 {activeCount}개가 켜져 있어요.
           </p>
         </div>
-        <button className="btn is-primary" disabled title="데모에서는 비활성">
-          + 새 자동화
+        <button className="btn is-primary" onClick={() => setCreating((v) => !v)} aria-expanded={creating}>
+          {creating ? '닫기' : '+ 새 자동화'}
         </button>
       </header>
+
+      {creating && (
+        <form className="panel schedule-form" onSubmit={create}>
+          <label>
+            <span>이름</span>
+            <input
+              autoFocus
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="예: 마감 정산 정리"
+            />
+          </label>
+          <label>
+            <span>하는 일</span>
+            <input
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              placeholder="예: 오늘 매출과 남은 재고를 정리해 보고"
+            />
+          </label>
+          <label>
+            <span>주기</span>
+            <select value={newCadence} onChange={(e) => setNewCadence(Number(e.target.value))}>
+              {cadenceOptions.map((c, i) => (
+                <option key={c.label} value={i}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="schedule-form-actions">
+            <button type="button" className="btn" onClick={() => setCreating(false)}>
+              취소
+            </button>
+            <button type="submit" className="btn is-primary" disabled={!newName.trim()}>
+              만들기
+            </button>
+          </div>
+        </form>
+      )}
 
       <ul className="schedule-list">
         {schedules.map((s) => {
           const running = runningIds.includes(s.id);
           return (
-            <li key={s.id} className={`panel schedule ${s.enabled ? '' : 'is-paused'}`}>
+            <li
+              key={s.id}
+              className={`panel schedule ${s.enabled ? '' : 'is-paused'} ${s.id === highlightId ? 'is-new' : ''}`}
+            >
               <button
                 className="toggle"
                 role="switch"
@@ -68,12 +143,16 @@ export function SchedulerView() {
                   <span className="dot-sep">·</span>
                   {running ? (
                     <span className="chip is-accent">실행 중…</span>
+                  ) : s.lastResult ? (
+                    <>
+                      <span className={`chip ${s.lastResult.ok ? 'is-ok' : 'is-danger'}`}>
+                        {s.lastResult.ok ? '성공' : '실패'} · {s.lastResult.summary}
+                      </span>
+                      <span className="schedule-last">{relativeTime(s.lastResult.at)}</span>
+                    </>
                   ) : (
-                    <span className={`chip ${s.lastResult.ok ? 'is-ok' : 'is-danger'}`}>
-                      {s.lastResult.ok ? '성공' : '실패'} · {s.lastResult.summary}
-                    </span>
+                    <span className="chip">아직 실행 기록 없음</span>
                   )}
-                  <span className="schedule-last">{relativeTime(s.lastResult.at)}</span>
                 </div>
               </div>
               <button className="btn" onClick={() => runNow(s.id)} disabled={running}>

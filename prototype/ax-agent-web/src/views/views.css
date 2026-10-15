@@ -444,6 +444,54 @@
   color: var(--ink-3);
 }
 
+.schedule.is-new {
+  box-shadow: 0 0 0 2px var(--accent);
+  transition: box-shadow 0.2s ease;
+}
+
+.schedule-form {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1fr;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 16px 18px;
+}
+
+.schedule-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.schedule-form input,
+.schedule-form select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+  outline: none;
+}
+
+.schedule-form input:focus,
+.schedule-form select:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, white);
+}
+
+.schedule-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: default;

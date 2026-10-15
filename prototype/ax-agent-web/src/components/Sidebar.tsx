@@ -1,12 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { mailMessages, spaces, tasks, type Space } from '../data/dummy';
+import { mailMessages, tasks, type Space } from '../data/dummy';
 import { currentStep, type Job } from '../hooks/useLiveActivity';
 
 interface Props {
   jobs: Job[];
+  spaces: Space[];
   space: Space;
+  /** 추가할 수 있는 더미 사업장이 남아 있을 때만 '+' 를 보인다 */
+  canAddSpace: boolean;
   onSpaceChange: (id: string) => void;
+  onAddSpace: () => void;
   onOpenCommand: () => void;
+  onOpenSettings: () => void;
 }
 
 const reviewCount = mailMessages.filter((m) => m.needsReview).length;
@@ -20,7 +25,16 @@ const pinned = [
   { to: '/app/scheduler', end: false, icon: '⏰', label: '스케줄러', badge: 0 },
 ];
 
-export function Sidebar({ jobs, space, onSpaceChange, onOpenCommand }: Props) {
+export function Sidebar({
+  jobs,
+  spaces,
+  space,
+  canAddSpace,
+  onSpaceChange,
+  onAddSpace,
+  onOpenCommand,
+  onOpenSettings,
+}: Props) {
   const navigate = useNavigate();
   const runningCount = jobs.filter((j) => j.status === 'running').length;
 
@@ -107,11 +121,13 @@ export function Sidebar({ jobs, space, onSpaceChange, onOpenCommand }: Props) {
               {s.emoji}
             </button>
           ))}
-          <button className="space-dot space-add" title="스페이스 추가 (데모에서는 비활성)" disabled>
-            +
-          </button>
+          {canAddSpace && (
+            <button className="space-dot space-add" title="스페이스 추가" aria-label="스페이스 추가" onClick={onAddSpace}>
+              +
+            </button>
+          )}
         </div>
-        <button className="icon-btn" aria-label="설정" title="설정 (데모에서는 비활성)" disabled>
+        <button className="icon-btn" aria-label="설정" title="설정" onClick={onOpenSettings}>
           ⚙️
         </button>
       </div>

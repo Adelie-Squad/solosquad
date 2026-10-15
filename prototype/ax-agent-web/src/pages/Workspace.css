@@ -341,7 +341,73 @@ kbd {
 
 .space-add {
   color: rgba(36, 28, 63, 0.6);
-  cursor: default;
+}
+
+/* ── 설정 다이얼로그 ──────────────────────────────────────────── */
+
+.settings {
+  width: min(520px, 92vw);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 22px 18px;
+}
+
+.settings-group {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.settings-row input,
+.settings-row select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+  outline: none;
+}
+
+.settings-row input:focus,
+.settings-row select:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, white);
+}
+
+.settings-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
 }
 
 /* ── 커맨드 바 ────────────────────────────────────────────────── */

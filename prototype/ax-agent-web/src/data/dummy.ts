@@ -294,7 +294,8 @@ export interface Schedule {
   cadence: string;
   nextRun: string;
   enabled: boolean;
-  lastResult: { ok: boolean; summary: string; at: string };
+  /** 새로 만든 자동화는 실행 기록이 없다 */
+  lastResult: { ok: boolean; summary: string; at: string } | null;
 }
 
 export const schedules: Schedule[] = [
@@ -353,3 +354,49 @@ export const schedules: Schedule[] = [
     lastResult: { ok: true, summary: '게시물 1건 게시', at: ago(6 * DAY) },
   },
 ];
+
+/** '+ 새 자동화' 폼의 주기 선택지 — 다음 실행까지 남은 시간은 더미 값 */
+export const cadenceOptions: { label: string; nextRunInMs: number }[] = [
+  { label: '매일 오전 9:00', nextRunInMs: 17 * HOUR },
+  { label: '매일 오후 6:00', nextRunInMs: 2 * HOUR },
+  { label: '매주 월요일 오전 8:00', nextRunInMs: 4 * DAY },
+  { label: '1시간마다', nextRunInMs: 40 * MIN },
+];
+
+/** '스페이스 추가' 를 누를 때마다 차례로 추가되는 사업장 (다 쓰면 더 추가되지 않는다) */
+export const extraSpaces: Space[] = [
+  {
+    id: 'momo-online',
+    name: '모모 온라인몰',
+    emoji: '📦',
+    gradient: 'linear-gradient(135deg, #ffc9a8 0%, #ffb3c1 55%, #c9b6ff 100%)',
+    accent: '#d9480f',
+  },
+  {
+    id: 'momo-catering',
+    name: '모모 케이터링',
+    emoji: '🎂',
+    gradient: 'linear-gradient(135deg, #b8e1ff 0%, #c5f2d6 60%, #fff3b0 100%)',
+    accent: '#1971c2',
+  },
+];
+
+// ── 설정 (로컬 상태만, 저장하지 않음) ─────────────────────────────
+
+export interface AgentSettings {
+  ownerTitle: string;
+  tone: 'friendly' | 'formal';
+  autoSendShippingReplies: boolean;
+  holdLowRatingReviews: boolean;
+  alwaysApproveOrders: boolean;
+  briefingTime: string;
+}
+
+export const defaultSettings: AgentSettings = {
+  ownerTitle: '사장님',
+  tone: 'friendly',
+  autoSendShippingReplies: true,
+  holdLowRatingReviews: true,
+  alwaysApproveOrders: true,
+  briefingTime: '07:00',
+};
