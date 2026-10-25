@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { jobPool, type JobTemplate } from '../data/dummy';
+import { jobPool, type CategoryId, type JobTemplate } from '../data/dummy';
 
 // 실시간 작업 시뮬레이터. 실제 에이전트 런타임 대신 setInterval 로 진행률과 로그를 흉내 낸다.
 
@@ -14,9 +14,13 @@ export interface Job {
   id: string;
   title: string;
   icon: string;
+  category: CategoryId;
   steps: string[];
   status: JobStatus;
   progress: number;
+  /** 이 작업이 지금까지 쓴 토큰 */
+  tokens: number;
+  tokensPerTick: number;
   log: LogLine[];
   startedAt: string;
 }
@@ -41,9 +45,13 @@ function createJob(template: JobTemplate, status: JobStatus, progress = 0): Job 
     id: `job-${seq}`,
     title: template.title,
     icon: template.icon,
+    category: template.category,
     steps: template.steps,
     status,
     progress,
+    // 이미 진행된 만큼 토큰도 쓴 상태로 시작 (틱당 평균 진행률 ≈ 7.5%)
+    tokens: Math.round((progress / 7.5) * template.tokensPerTick),
+    tokensPerTick: template.tokensPerTick,
     log: status === 'running' ? [{ at: now, text: `${template.steps[0]} 시작` }] : [],
     startedAt: now,
   };
@@ -65,13 +73,22 @@ function initialJobs(): Job[] {
   ];
 }
 
-function advance(jobs: Job[]): Job[] {
+export type TokenTally = Partial<Record<CategoryId, number>>;
+
+interface LiveState {
+  jobs: Job[];
+  /** 목록에서 밀려난 완료 작업의 토큰 — 사용량 합계가 줄어들지 않게 따로 쌓는다 */
+  retired: TokenTally;
+}
+
+function advance({ jobs, retired }: LiveState): LiveState {
   const now = new Date().toISOString();
   let next = jobs.map((job) => {
     if (job.status !== 'running') return job;
     const before = currentStep(job);
     const progress = Math.min(100, job.progress + 3 + Math.random() * 9);
-    const updated: Job = { ...job, progress };
+    const tokens = job.tokens + Math.round(job.tokensPerTick * (0.6 + Math.random() * 0.8));
+    const updated: Job = { ...job, progress, tokens };
     if (progress >= 100) {
       return { ...updated, status: 'done' as const, log: [...job.log, { at: now, text: '완료' }] };
     }
@@ -99,17 +116,31 @@ function advance(jobs: Job[]): Job[] {
   }
 
   const active = next.filter((j) => j.status !== 'done');
-  const done = next.filter((j) => j.status === 'done').slice(-DONE_VISIBLE);
-  return [...active, ...done];
+  const allDone = next.filter((j) => j.status === 'done');
+  const done = allDone.slice(-DONE_VISIBLE);
+  return {
+    jobs: [...active, ...done],
+    retired: tallyTokens(allDone.slice(0, -DONE_VISIBLE), retired),
+  };
 }
 
-export function useLiveActivity(): Job[] {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+function tallyTokens(jobs: Job[], base: TokenTally = {}): TokenTally {
+  return jobs.reduce<TokenTally>((acc, j) => ({ ...acc, [j.category]: (acc[j.category] ?? 0) + j.tokens }), base);
+}
+
+export interface LiveActivity {
+  jobs: Job[];
+  /** 이번 접속에서 실시간 작업이 쓴 토큰 (카테고리별) */
+  sessionTokens: TokenTally;
+}
+
+export function useLiveActivity(): LiveActivity {
+  const [state, setState] = useState<LiveState>(() => ({ jobs: initialJobs(), retired: {} }));
 
   useEffect(() => {
-    const timer = setInterval(() => setJobs(advance), TICK_MS);
+    const timer = setInterval(() => setState(advance), TICK_MS);
     return () => clearInterval(timer);
   }, []);
 
-  return jobs;
+  return { jobs: state.jobs, sessionTokens: tallyTokens(state.jobs, state.retired) };
 }

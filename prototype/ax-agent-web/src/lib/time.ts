@@ -25,6 +25,13 @@ export function visitLabel(iso: string, now = new Date()): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 ${time}`;
 }
 
+/** 결제 예정일까지 남은 날 — "오늘" / "D-4" */
+export function dday(iso: string, now = new Date()): string {
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const days = Math.floor((new Date(iso).getTime() - startOfToday) / DAY);
+  return days <= 0 ? '오늘' : `D-${days}`;
+}
+
 export function greeting(now = new Date()): string {
   const h = now.getHours();
   if (h < 11) return '좋은 아침이에요';

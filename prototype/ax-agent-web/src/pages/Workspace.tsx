@@ -3,9 +3,9 @@ import { Outlet } from 'react-router-dom';
 import { CommandBar } from '../components/CommandBar';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar } from '../components/Sidebar';
-import { defaultSettings, space } from '../data/dummy';
+import { categoryById, defaultMembers, defaultSettings, ledgerEntries, space } from '../data/dummy';
 import { useLiveActivity } from '../hooks/useLiveActivity';
-import type { WorkspaceContext } from '../workspace-context';
+import { accessFor, type FinanceState, type WorkspaceContext } from '../workspace-context';
 import './Workspace.css';
 
 /**
@@ -17,7 +17,10 @@ export function Workspace() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
-  const jobs = useLiveActivity();
+  const [members, setMembers] = useState(defaultMembers);
+  const [viewerId, setViewerId] = useState(defaultMembers[0].id);
+  const [finance, setFinance] = useState<FinanceState>({ importedFile: null, ledger: ledgerEntries });
+  const { jobs, sessionTokens } = useLiveActivity();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -30,7 +33,19 @@ export function Workspace() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const context: WorkspaceContext = { jobs, space };
+  const viewer = members.find((m) => m.id === viewerId) ?? members[0];
+  const canAccess = accessFor(viewer);
+  const visibleJobs = jobs.filter((j) => canAccess(j.category));
+
+  const context: WorkspaceContext = {
+    jobs: visibleJobs,
+    sessionTokens,
+    space,
+    viewer,
+    canAccess,
+    finance,
+    setFinance,
+  };
 
   return (
     <div
@@ -38,17 +53,42 @@ export function Workspace() {
       style={{ background: space.gradient, ['--accent' as string]: space.accent }}
     >
       <Sidebar
-        jobs={jobs}
+        jobs={visibleJobs}
         space={space}
+        viewer={viewer}
+        canAccess={canAccess}
+        ledgerReviewCount={finance.ledger.filter((l) => l.needsReview).length}
         onOpenCommand={() => setCommandOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
       <main className="workspace-card">
+        {!viewer.master && (
+          <div className="viewer-banner" role="status">
+            <span>
+              {viewer.emoji} <strong>{viewer.name}</strong> 님 화면으로 보는 중 ·{' '}
+              {viewer.categories.map((c) => categoryById[c].label).join(', ')} 업무만 보여요
+            </span>
+            <button className="btn" onClick={() => setViewerId(members[0].id)}>
+              사장님 화면으로 돌아가기
+            </button>
+          </div>
+        )}
         <Outlet context={context} />
       </main>
       {commandOpen && <CommandBar onClose={() => setCommandOpen(false)} />}
       {settingsOpen && (
-        <SettingsDialog value={settings} onChange={setSettings} onClose={() => setSettingsOpen(false)} />
+        <SettingsDialog
+          value={settings}
+          onChange={setSettings}
+          members={members}
+          onMembersChange={setMembers}
+          viewer={viewer}
+          onViewAs={(id) => {
+            setViewerId(id);
+            setSettingsOpen(false);
+          }}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
     </div>
   );

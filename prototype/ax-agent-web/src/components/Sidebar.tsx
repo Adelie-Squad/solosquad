@@ -1,28 +1,44 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { mailMessages, tasks, type Space } from '../data/dummy';
+import { mailMessages, tasks, type CategoryId, type Member, type Space } from '../data/dummy';
 import { currentStep, type Job } from '../hooks/useLiveActivity';
 
 interface Props {
   jobs: Job[];
   space: Space;
+  viewer: Member;
+  canAccess: (category: CategoryId) => boolean;
+  ledgerReviewCount: number;
   onOpenCommand: () => void;
   onOpenSettings: () => void;
 }
 
 const reviewCount = mailMessages.filter((m) => m.needsReview).length;
-const ownerTodoCount = tasks.filter((t) => t.assignee === '사장님' && t.status !== 'done').length;
 
-// Arc 의 상단 즐겨찾기 타일처럼 2×2 고정 메뉴
-const pinned = [
+// Arc 의 상단 즐겨찾기 타일처럼 2×3 고정 메뉴. requires 가 있으면 그 카테고리 권한이 있어야 보인다
+const pinned: { to: string; end: boolean; icon: string; label: string; badge: number; requires?: CategoryId }[] = [
   { to: '/app', end: true, icon: '🏠', label: '홈', badge: 0 },
-  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount },
-  { to: '/app/tasks', end: false, icon: '✅', label: 'Task', badge: ownerTodoCount },
+  { to: '/app/dashboard', end: false, icon: '📊', label: '대시보드', badge: 0 },
+  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount, requires: 'cs' },
+  { to: '/app/tasks', end: false, icon: '✅', label: 'Task', badge: 0 },
   { to: '/app/scheduler', end: false, icon: '⏰', label: '스케줄러', badge: 0 },
+  { to: '/app/finance', end: false, icon: '🧾', label: '재무', badge: 0, requires: 'finance' },
 ];
 
-export function Sidebar({ jobs, space, onOpenCommand, onOpenSettings }: Props) {
+export function Sidebar({ jobs, space, viewer, canAccess, ledgerReviewCount, onOpenCommand, onOpenSettings }: Props) {
   const navigate = useNavigate();
   const runningCount = jobs.filter((j) => j.status === 'running').length;
+  const ownerTodoCount = tasks.filter(
+    (t) => t.assignee === '사장님' && t.status !== 'done' && canAccess(t.category),
+  ).length;
+  const tiles = pinned
+    .filter((p) => !p.requires || canAccess(p.requires))
+    .map((p) =>
+      p.to === '/app/tasks'
+        ? { ...p, badge: ownerTodoCount }
+        : p.to === '/app/finance'
+          ? { ...p, badge: ledgerReviewCount }
+          : p,
+    );
 
   return (
     <aside className="sidebar">
@@ -43,7 +59,7 @@ export function Sidebar({ jobs, space, onOpenCommand, onOpenSettings }: Props) {
       </button>
 
       <nav className="pinned" aria-label="주요 메뉴">
-        {pinned.map((p) => (
+        {tiles.map((p) => (
           <NavLink key={p.to} to={p.to} end={p.end} className="pinned-tile">
             <span className="pinned-icon">{p.icon}</span>
             <span className="pinned-label">{p.label}</span>
@@ -89,6 +105,11 @@ export function Sidebar({ jobs, space, onOpenCommand, onOpenSettings }: Props) {
       </section>
 
       <div className="sidebar-bottom">
+        <button className="viewer-chip" onClick={onOpenSettings} title="팀원 · 권한 설정">
+          <span>{viewer.emoji}</span>
+          <span className="viewer-chip-name">{viewer.name}</span>
+          <span className="viewer-chip-role">{viewer.master ? '마스터' : viewer.role}</span>
+        </button>
         <button className="icon-btn" aria-label="설정" title="설정" onClick={onOpenSettings}>
           ⚙️
         </button>

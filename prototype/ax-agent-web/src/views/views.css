@@ -451,7 +451,7 @@
 
 .schedule-form {
   display: grid;
-  grid-template-columns: 1fr 1.6fr 1fr;
+  grid-template-columns: 1fr 1.6fr 1fr 1fr;
   gap: 12px;
   align-items: end;
   margin-bottom: 16px;
@@ -495,4 +495,463 @@
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+/* ── 업무 카테고리 필터 ───────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.perm-chip {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.perm-chip:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.perm-chip.is-on {
+  border-color: color-mix(in srgb, var(--accent) 40%, white);
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  color: var(--accent);
+}
+
+.perm-chip:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.no-access-icon {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+/* ── 대시보드 ─────────────────────────────────────────────────── */
+
+.stat-row.is-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.stat-label .live-dot {
+  display: inline-block;
+  margin-right: 2px;
+  vertical-align: 1px;
+}
+
+.dash-section {
+  margin-bottom: 32px;
+}
+
+.dash-sub {
+  margin-left: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dash-panel {
+  padding: 16px 18px;
+}
+
+.dash-panel-title {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.dash-hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.dash-hint a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.dash-locked {
+  margin: 0 0 32px;
+  padding: 16px 18px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.pay-list,
+.top-jobs,
+.hbars,
+.ledger {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.pay-list li:last-child,
+.top-jobs li:last-child,
+.ledger li:last-child {
+  border-bottom: 0;
+}
+
+.pay-title {
+  flex: 1;
+}
+
+.pay-amount,
+.top-job-value,
+.ledger-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* 세로 막대 — 한 계열, accent 한 색. 값 라벨은 텍스트 색 */
+.vbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 160px;
+  padding-top: 18px;
+}
+
+.vbar {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  padding-bottom: 20px;
+}
+
+.vbar-fill {
+  width: 100%;
+  max-width: 44px;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  transition: height 0.4s ease;
+}
+
+.vbar:hover .vbar-fill {
+  filter: brightness(1.12);
+}
+
+.vbar.is-partial .vbar-fill {
+  background: color-mix(in srgb, var(--accent) 45%, white);
+}
+
+.vbar-value {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.vbar-label {
+  position: absolute;
+  bottom: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.vbars.is-dense {
+  gap: 4px;
+  height: 120px;
+}
+
+.vbars.is-dense .vbar-fill {
+  background: color-mix(in srgb, var(--accent) 55%, white);
+}
+
+.vbars.is-dense .vbar.is-today .vbar-fill {
+  background: var(--accent);
+}
+
+/* 가로 막대 — 부서별 토큰 */
+.hbars li {
+  display: grid;
+  grid-template-columns: 96px 1fr 92px;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13.5px;
+}
+
+.hbar-track {
+  height: 10px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.hbar-track span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.hbar-value {
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.budget {
+  margin-bottom: 12px;
+}
+
+.budget-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.budget-head strong {
+  color: var(--ink);
+}
+
+.budget-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.budget-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.top-jobs li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.top-job-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.top-job-title small {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* ── 재무제표 ─────────────────────────────────────────────────── */
+
+.import {
+  margin-bottom: 32px;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 10px;
+  padding: 28px 20px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 35%, white);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.dropzone strong {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.dropzone.is-dragging,
+.dropzone:hover {
+  background: color-mix(in srgb, var(--accent) 5%, white);
+}
+
+.dropzone .btn {
+  margin-top: 6px;
+}
+
+.dropzone-icon {
+  font-size: 24px;
+}
+
+.import-progress,
+.import-result {
+  padding: 18px 20px;
+}
+
+.import-file {
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.import-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.import-result-head p {
+  margin: 0;
+}
+
+.sheet-map,
+.statement {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.sheet-map th,
+.sheet-map td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.sheet-map th {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.statement-wrap {
+  overflow-x: auto;
+}
+
+.statement th,
+.statement td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.statement thead th {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  text-align: right;
+}
+
+.statement thead small {
+  color: var(--warn);
+}
+
+.statement tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.statement td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.statement tr.is-total th,
+.statement tr.is-total td {
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.statement tr:last-child th,
+.statement tr:last-child td {
+  border-bottom: 0;
+}
+
+.ledger li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.ledger li.is-review {
+  margin: 0 -10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #fff8ec;
+}
+
+.ledger-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ledger-meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.ledger-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .stat-row.is-4 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
 }

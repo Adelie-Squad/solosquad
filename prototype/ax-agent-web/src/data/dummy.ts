@@ -18,6 +18,28 @@ export interface Space {
   accent: string;
 }
 
+// ── 업무 카테고리 (= 부서 에이전트) ─────────────────────────────────
+// 하루(마스터 에이전트)가 카테고리별 하위 에이전트에게 일을 나눠 맡긴다.
+// 팀원 권한도 이 단위로 연다.
+
+export type CategoryId = 'finance' | 'marketing' | 'cs' | 'sourcing' | 'store';
+
+export interface Category {
+  id: CategoryId;
+  label: string;
+  icon: string;
+}
+
+export const categories: Category[] = [
+  { id: 'finance', label: '재무', icon: '💰' },
+  { id: 'marketing', label: '마케팅', icon: '📣' },
+  { id: 'cs', label: '고객 응대', icon: '💬' },
+  { id: 'sourcing', label: '재료 · 발주', icon: '📦' },
+  { id: 'store', label: '매장 운영', icon: '🏪' },
+];
+
+export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c])) as Record<CategoryId, Category>;
+
 /** 사업장은 하나로 고정 — 배경색 전환 기능은 두지 않는다 */
 export const space: Space = {
   id: 'momo',
@@ -134,7 +156,10 @@ export const fallbackReply =
 export interface JobTemplate {
   title: string;
   icon: string;
+  category: CategoryId;
   steps: string[];
+  /** 진행 틱마다 쓰는 토큰 — 이미지 생성 · 최저가 탐색처럼 반복 시도가 많은 일일수록 크다 */
+  tokensPerTick: number;
 }
 
 /** 실시간 작업 시뮬레이터가 순환시키는 작업 풀 */
@@ -142,27 +167,37 @@ export const jobPool: JobTemplate[] = [
   {
     title: '주문 문의 메일 분류',
     icon: '✉️',
+    category: 'cs',
     steps: ['받은편지함 확인', '문의 유형 분류', '답장 초안 작성', '자동 발송 기준 검사'],
+    tokensPerTick: 900,
   },
   {
     title: '네이버 리뷰 답글',
     icon: '💬',
+    category: 'cs',
     steps: ['새 리뷰 수집', '감정 분석', '답글 초안 작성', '등록'],
+    tokensPerTick: 700,
   },
   {
     title: '일일 매출 정리',
     icon: '📊',
-    steps: ['POS 데이터 가져오기', '스마트스토어 주문 합산', '전일 대비 비교', '리포트 작성'],
+    category: 'finance',
+    steps: ['POS 데이터 가져오기', '스마트스토어 주문 합산', '입출금 문자 대조', '결산 시트 작성'],
+    tokensPerTick: 500,
   },
   {
-    title: '재고 점검',
+    title: '버터 최저가 비교',
     icon: '📦',
-    steps: ['재료 사용량 계산', '잔여 재고 추정', '발주 필요 품목 표시'],
+    category: 'sourcing',
+    steps: ['거래처 6곳 단가 수집', '배송비 포함 비교', '발주서 초안 작성'],
+    tokensPerTick: 1600,
   },
   {
     title: '인스타그램 게시물 준비',
     icon: '📣',
-    steps: ['신메뉴 정보 정리', '문구 초안 3개 작성', '해시태그 선정'],
+    category: 'marketing',
+    steps: ['신메뉴 정보 정리', '문구 초안 3개 작성', '이미지 시안 생성', '해시태그 선정'],
+    tokensPerTick: 2600,
   },
 ];
 
@@ -285,20 +320,23 @@ export interface Task {
   title: string;
   source: '메일' | '스케줄러' | '대화' | '리뷰';
   assignee: 'AI' | '사장님';
+  category: CategoryId;
   status: TaskStatus;
   due: string;
   priority: 'high' | 'normal' | 'low';
 }
 
 export const tasks: Task[] = [
-  { id: 't1', title: '버터 발주서 승인', source: '대화', assignee: '사장님', status: 'todo', due: later(5 * HOUR), priority: 'high' },
-  { id: 't2', title: '단체 주문 견적 답장 검토', source: '메일', assignee: '사장님', status: 'todo', due: later(3 * HOUR), priority: 'high' },
-  { id: 't3', title: '별점 2점 리뷰 답글 확인', source: '리뷰', assignee: '사장님', status: 'todo', due: later(1 * DAY), priority: 'normal' },
-  { id: 't4', title: '주문 문의 메일 분류', source: '스케줄러', assignee: 'AI', status: 'in_progress', due: later(20 * MIN), priority: 'normal' },
-  { id: 't5', title: '주말 신메뉴 인스타 게시물 준비', source: '대화', assignee: 'AI', status: 'in_progress', due: later(2 * DAY), priority: 'normal' },
-  { id: 't6', title: '10월 거래명세서 장부 기록', source: '메일', assignee: 'AI', status: 'done', due: ago(4 * HOUR), priority: 'low' },
-  { id: 't7', title: '네이버 리뷰 7건 답글 등록', source: '스케줄러', assignee: 'AI', status: 'done', due: ago(8 * HOUR), priority: 'normal' },
-  { id: 't8', title: '부가세 신고 자료 정리', source: '대화', assignee: 'AI', status: 'todo', due: later(6 * DAY), priority: 'normal' },
+  { id: 't1', title: '버터 발주서 승인', source: '대화', assignee: '사장님', category: 'sourcing', status: 'todo', due: later(5 * HOUR), priority: 'high' },
+  { id: 't2', title: '단체 주문 견적 답장 검토', source: '메일', assignee: '사장님', category: 'cs', status: 'todo', due: later(3 * HOUR), priority: 'high' },
+  { id: 't3', title: '별점 2점 리뷰 답글 확인', source: '리뷰', assignee: '사장님', category: 'cs', status: 'todo', due: later(1 * DAY), priority: 'normal' },
+  { id: 't4', title: '주문 문의 메일 분류', source: '스케줄러', assignee: 'AI', category: 'cs', status: 'in_progress', due: later(20 * MIN), priority: 'normal' },
+  { id: 't5', title: '주말 신메뉴 인스타 게시물 준비', source: '대화', assignee: 'AI', category: 'marketing', status: 'in_progress', due: later(2 * DAY), priority: 'normal' },
+  { id: 't6', title: '10월 거래명세서 장부 기록', source: '메일', assignee: 'AI', category: 'finance', status: 'done', due: ago(4 * HOUR), priority: 'low' },
+  { id: 't7', title: '네이버 리뷰 7건 답글 등록', source: '스케줄러', assignee: 'AI', category: 'cs', status: 'done', due: ago(8 * HOUR), priority: 'normal' },
+  { id: 't8', title: '부가세 신고 자료 정리', source: '대화', assignee: 'AI', category: 'finance', status: 'todo', due: later(6 * DAY), priority: 'normal' },
+  { id: 't9', title: '확인 안 된 입금 1건 용도 알려주기', source: '대화', assignee: '사장님', category: 'finance', status: 'todo', due: later(1 * DAY), priority: 'normal' },
+  { id: 't10', title: '오후 3시 2차 굽기 일정 반영', source: '대화', assignee: 'AI', category: 'store', status: 'todo', due: later(2 * DAY), priority: 'low' },
 ];
 
 // ── 자동화 스케줄러 ──────────────────────────────────────────────
@@ -307,6 +345,7 @@ export interface Schedule {
   id: string;
   name: string;
   description: string;
+  category: CategoryId;
   cadence: string;
   nextRun: string;
   enabled: boolean;
@@ -319,6 +358,7 @@ export const schedules: Schedule[] = [
     id: 's1',
     name: '아침 브리핑',
     description: '전날 매출 · 오늘 예약 주문 · 재고 경고를 정리해 보고',
+    category: 'store',
     cadence: '매일 오전 7:00',
     nextRun: later(14 * HOUR),
     enabled: true,
@@ -328,6 +368,7 @@ export const schedules: Schedule[] = [
     id: 's2',
     name: '주문 문의 메일 처리',
     description: '새 메일을 분류하고 기준에 맞는 문의는 자동 답장',
+    category: 'cs',
     cadence: '30분마다',
     nextRun: later(12 * MIN),
     enabled: true,
@@ -337,6 +378,7 @@ export const schedules: Schedule[] = [
     id: 's3',
     name: '리뷰 답글',
     description: '네이버 · 카카오맵 새 리뷰에 답글 작성 (3점 이하 보류)',
+    category: 'cs',
     cadence: '매일 오후 9:00',
     nextRun: later(5 * HOUR),
     enabled: true,
@@ -346,6 +388,7 @@ export const schedules: Schedule[] = [
     id: 's4',
     name: '주간 매출 리포트',
     description: '품목별 · 시간대별 매출과 다음 주 제안',
+    category: 'finance',
     cadence: '매주 월요일 오전 8:00',
     nextRun: later(4 * DAY),
     enabled: true,
@@ -355,6 +398,7 @@ export const schedules: Schedule[] = [
     id: 's5',
     name: '재고 발주 점검',
     description: '재료 소진 예측 후 발주서 초안 작성',
+    category: 'sourcing',
     cadence: '매주 화 · 금 오후 2:00',
     nextRun: later(1 * DAY),
     enabled: true,
@@ -364,6 +408,7 @@ export const schedules: Schedule[] = [
     id: 's6',
     name: '인스타그램 예약 게시',
     description: '승인된 게시물 초안을 지정 시각에 게시',
+    category: 'marketing',
     cadence: '매주 토요일 오전 9:30',
     nextRun: later(4 * DAY + 2 * HOUR),
     enabled: false,
@@ -399,3 +444,132 @@ export const defaultSettings: AgentSettings = {
   alwaysApproveOrders: true,
   briefingTime: '07:00',
 };
+
+// ── 팀원 · 권한 ──────────────────────────────────────────────────
+// 마스터(사장님)만 하루에게 모든 일을 지시할 수 있다. 팀원은 열어 준 부서 에이전트의 일만 보고 맡긴다.
+
+export interface Member {
+  id: string;
+  name: string;
+  role: string;
+  emoji: string;
+  master: boolean;
+  categories: CategoryId[];
+}
+
+export const defaultMembers: Member[] = [
+  { id: 'owner', name: '사장님', role: '대표', emoji: '👑', master: true, categories: categories.map((c) => c.id) },
+  { id: 'wangli', name: '왕리', role: '재료 소싱 담당', emoji: '🧑‍💼', master: false, categories: ['sourcing', 'finance'] },
+  { id: 'haneul', name: '김하늘', role: '매장 · SNS 담당', emoji: '🧑‍🍳', master: false, categories: ['marketing', 'cs', 'store'] },
+];
+
+// ── 토큰 사용량 ──────────────────────────────────────────────────
+
+/** 월 예산과 환산 단가 — 모델 혼합 평균을 가정한 더미 값 */
+export const tokenBudget = { monthlyTokens: 6_000_000, krwPerMillion: 14_000 };
+
+/** 이번 달(접속 전까지) 카테고리별 누적 — 실시간 작업 토큰이 여기에 더해진다 */
+export const tokenUsageByCategory: Record<CategoryId, number> = {
+  marketing: 1_680_000,
+  cs: 920_000,
+  sourcing: 610_000,
+  finance: 410_000,
+  store: 160_000,
+};
+
+/** 최근 14일 일별 사용량 (오래된 날 → 오늘) */
+export const dailyTokens: { date: string; tokens: number }[] = [
+  182_000, 164_000, 240_000, 205_000, 158_000, 96_000, 88_000, 214_000, 236_000, 198_000, 312_000, 267_000,
+  141_000, 74_000,
+].map((tokens, i, all) => ({ date: ago((all.length - 1 - i) * DAY), tokens }));
+
+/** 이번 달 토큰을 많이 쓴 작업 */
+export const tokenTopJobs: { title: string; category: CategoryId; tokens: number; note: string }[] = [
+  { title: '주말 신메뉴 인스타 게시물', category: 'marketing', tokens: 420_000, note: '이미지 시안 6장 생성' },
+  { title: '버터 · 생크림 최저가 비교', category: 'sourcing', tokens: 268_000, note: '거래처 6곳 × 3회 재시도' },
+  { title: '9월 결산 시트 작성', category: 'finance', tokens: 96_000, note: '엑셀 3개 시트 집계' },
+  { title: '주문 문의 메일 답장', category: 'cs', tokens: 71_000, note: '메일 48건' },
+];
+
+// ── 재무 ────────────────────────────────────────────────────────
+
+export interface MonthlyStatement {
+  month: string;
+  revenue: number;
+  ingredients: number;
+  payroll: number;
+  rent: number;
+  other: number;
+  /** 진행 중인 달 — 자동 기록으로 채워지는 중 */
+  partial?: boolean;
+}
+
+/** 엑셀 결산 파일을 올리면 채워지는 지난달들 */
+export const importedStatements: MonthlyStatement[] = [
+  { month: '7월', revenue: 18_240_000, ingredients: 6_310_000, payroll: 4_200_000, rent: 2_200_000, other: 1_180_000 },
+  { month: '8월', revenue: 19_620_000, ingredients: 6_890_000, payroll: 4_200_000, rent: 2_200_000, other: 1_340_000 },
+  { month: '9월', revenue: 18_910_000, ingredients: 6_540_000, payroll: 4_350_000, rent: 2_200_000, other: 1_260_000 },
+];
+
+/** 이번 달 — 입출금 문자 · 거래명세서 메일 · POS 에서 하루가 자동으로 기록 중 */
+export const currentStatement: MonthlyStatement = {
+  month: '10월',
+  revenue: 14_380_000,
+  ingredients: 5_020_000,
+  payroll: 2_900_000,
+  rent: 0,
+  other: 870_000,
+  partial: true,
+};
+
+export interface UpcomingPayment {
+  id: string;
+  title: string;
+  amount: number;
+  due: string;
+}
+
+export const upcomingPayments: UpcomingPayment[] = [
+  { id: 'pay1', title: '10월 월세', amount: 2_200_000, due: later(4 * DAY) },
+  { id: 'pay2', title: '서울유업 10월 물품 대금', amount: 1_840_000, due: later(6 * DAY) },
+  { id: 'pay3', title: '카드 대금', amount: 960_000, due: later(9 * DAY) },
+  { id: 'pay4', title: '아르바이트 급여', amount: 1_450_000, due: later(10 * DAY) },
+];
+
+export type LedgerSource = '입출금 문자' | '거래명세서 메일' | 'POS' | '엑셀';
+
+export interface LedgerEntry {
+  id: string;
+  at: string;
+  direction: 'in' | 'out';
+  amount: number;
+  memo: string;
+  source: LedgerSource;
+  /** 하루가 용도를 확신하지 못해 사장님 확인이 필요한 기록 */
+  needsReview: boolean;
+}
+
+export const ledgerEntries: LedgerEntry[] = [
+  { id: 'l1', at: ago(35 * MIN), direction: 'in', amount: 286_000, memo: '스마트스토어 정산', source: '입출금 문자', needsReview: false },
+  { id: 'l2', at: ago(2 * HOUR), direction: 'in', amount: 150_000, memo: '김*수 이체 — 용도 확인 필요', source: '입출금 문자', needsReview: true },
+  { id: 'l3', at: ago(5 * HOUR), direction: 'out', amount: 1_840_000, memo: '서울유업 10월 거래명세서 (매입)', source: '거래명세서 메일', needsReview: false },
+  { id: 'l4', at: ago(14 * HOUR), direction: 'in', amount: 742_000, memo: '어제 매장 카드 매출', source: 'POS', needsReview: false },
+  { id: 'l5', at: ago(1 * DAY), direction: 'out', amount: 64_000, memo: '포장 박스 (쿠팡)', source: '입출금 문자', needsReview: false },
+];
+
+/** 엑셀을 올렸을 때 하루가 인식한 시트와 반영 위치 (더미) */
+export const excelImportSheets: { sheet: string; rows: number; mapsTo: string }[] = [
+  { sheet: '월별 결산', rows: 3, mapsTo: '월별 손익표' },
+  { sheet: '일자별 매출', rows: 92, mapsTo: '매출 추이' },
+  { sheet: '입출금', rows: 86, mapsTo: '장부' },
+  { sheet: '상품 마진', rows: 24, mapsTo: '재료 · 발주 마진율' },
+];
+
+export const excelImportSteps = ['파일 읽기', '시트 인식', '항목 매핑', '장부 반영'];
+
+export const financeRules: { id: string; label: string; enabled: boolean }[] = [
+  { id: 'sms', label: '입출금 알림 문자를 읽어 장부에 기록', enabled: true },
+  { id: 'invoice', label: '거래명세서 메일이 오면 매입으로 기록', enabled: true },
+  { id: 'nightly', label: '매일 밤 11시, 결산 엑셀 시트 자동 작성', enabled: true },
+  { id: 'review', label: '용도가 불분명한 입출금은 확인받기', enabled: true },
+];

@@ -1,9 +1,13 @@
 import { useEffect } from 'react';
-import { AGENT_NAME, type AgentSettings } from '../data/dummy';
+import { AGENT_NAME, categories, type AgentSettings, type CategoryId, type Member } from '../data/dummy';
 
 interface Props {
   value: AgentSettings;
   onChange: (next: AgentSettings) => void;
+  members: Member[];
+  onMembersChange: (next: Member[]) => void;
+  viewer: Member;
+  onViewAs: (memberId: string) => void;
   onClose: () => void;
 }
 
@@ -16,8 +20,22 @@ const approvalRules: { key: ToggleKey; label: string }[] = [
 ];
 
 /** 설정 — 바꾼 값은 화면 안에서만 유지된다(저장·서버 반영 없음) */
-export function SettingsDialog({ value, onChange, onClose }: Props) {
+export function SettingsDialog({ value, onChange, members, onMembersChange, viewer, onViewAs, onClose }: Props) {
   const set = <K extends keyof AgentSettings>(key: K, v: AgentSettings[K]) => onChange({ ...value, [key]: v });
+
+  const toggleCategory = (memberId: string, category: CategoryId) =>
+    onMembersChange(
+      members.map((m) =>
+        m.id !== memberId
+          ? m
+          : {
+              ...m,
+              categories: m.categories.includes(category)
+                ? m.categories.filter((c) => c !== category)
+                : [...m.categories, category],
+            },
+      ),
+    );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -88,6 +106,49 @@ export function SettingsDialog({ value, onChange, onClose }: Props) {
               ))}
             </select>
           </label>
+
+          <p className="settings-group">팀원 · 권한</p>
+          <p className="settings-hint">
+            {AGENT_NAME}(마스터 에이전트)는 부서별 에이전트에게 일을 나눠 맡겨요. 팀원에게는 담당 부서
+            에이전트만 열어 줄 수 있고, 열어 준 부서의 일만 보이고 맡길 수 있어요.
+          </p>
+          {members.map((m) => (
+            <div key={m.id} className="member">
+              <div className="member-head">
+                <span className="member-emoji">{m.emoji}</span>
+                <div className="member-name">
+                  <strong>{m.name}</strong>
+                  <span>{m.role}</span>
+                </div>
+                {m.master ? (
+                  <span className="chip is-accent">마스터 · 모든 부서</span>
+                ) : (
+                  <button className="btn" onClick={() => onViewAs(m.id)} disabled={!viewer.master || viewer.id === m.id}>
+                    {viewer.id === m.id ? '보는 중' : '이 사람으로 보기'}
+                  </button>
+                )}
+              </div>
+              {!m.master && (
+                <div className="member-perms" role="group" aria-label={`${m.name} 부서 권한`}>
+                  {categories.map((c) => {
+                    const on = m.categories.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        className={`perm-chip ${on ? 'is-on' : ''}`}
+                        aria-pressed={on}
+                        disabled={!viewer.master}
+                        onClick={() => toggleCategory(m.id, c.id)}
+                      >
+                        {c.icon} {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+          {!viewer.master && <p className="settings-hint">권한은 사장님(마스터)만 바꿀 수 있어요.</p>}
 
           <p className="settings-note">바꾼 내용은 바로 적용돼요.</p>
         </div>

@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { AGENT_NAME, cadenceOptions, schedules as initialSchedules } from '../data/dummy';
+import {
+  AGENT_NAME,
+  cadenceOptions,
+  categories,
+  categoryById,
+  schedules as initialSchedules,
+  type CategoryId,
+} from '../data/dummy';
 import { relativeTime } from '../lib/time';
+import { useWorkspace } from '../workspace-context';
 import './views.css';
 
 export function SchedulerView() {
-  const [schedules, setSchedules] = useState(initialSchedules);
+  const { canAccess } = useWorkspace();
+  const allowedCategories = categories.filter((c) => canAccess(c.id));
+  const [allSchedules, setSchedules] = useState(initialSchedules);
+  const schedules = allSchedules.filter((s) => canAccess(s.category));
+  const [newCategory, setNewCategory] = useState<CategoryId>(allowedCategories[0]?.id ?? 'store');
   const [runningIds, setRunningIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -46,6 +58,7 @@ export function SchedulerView() {
         id,
         name,
         description: newDesc.trim() || `${AGENT_NAME}가 정해진 시간에 처리해요`,
+        category: canAccess(newCategory) ? newCategory : allowedCategories[0].id,
         cadence: cadence.label,
         nextRun: new Date(Date.now() + cadence.nextRunInMs).toISOString(),
         enabled: true,
@@ -97,6 +110,16 @@ export function SchedulerView() {
             />
           </label>
           <label>
+            <span>맡길 부서</span>
+            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as CategoryId)}>
+              {allowedCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.label} 에이전트
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             <span>주기</span>
             <select value={newCadence} onChange={(e) => setNewCadence(Number(e.target.value))}>
               {cadenceOptions.map((c, i) => (
@@ -135,6 +158,9 @@ export function SchedulerView() {
               <div className="schedule-body">
                 <div className="schedule-title">
                   <strong>{s.name}</strong>
+                  <span className="chip">
+                    {categoryById[s.category].icon} {categoryById[s.category].label}
+                  </span>
                   <span className="chip">🕒 {s.cadence}</span>
                 </div>
                 <p className="schedule-desc">{s.description}</p>

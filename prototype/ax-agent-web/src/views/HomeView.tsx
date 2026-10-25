@@ -12,7 +12,7 @@ import {
 } from '../data/dummy';
 import { useLastVisit } from '../hooks/useLastVisit';
 import { greeting, visitLabel } from '../lib/time';
-import type { PromptHandoff } from '../workspace-context';
+import { useWorkspace, type PromptHandoff } from '../workspace-context';
 import './HomeView.css';
 
 interface Message {
@@ -34,6 +34,7 @@ function replyFor(text: string): string {
 
 export function HomeView() {
   const lastVisit = useLastVisit();
+  const { viewer } = useWorkspace();
   const location = useLocation();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -90,7 +91,7 @@ export function HomeView() {
             <BotAvatar size={148} waving />
             <div className="home-bubble">
               <p className="home-greeting">
-                사장님, {greeting()}! 👋
+                {viewer.master ? '사장님' : `${viewer.name} 님`}, {greeting()}! 👋
               </p>
               <p>
                 지난 접속(<strong>{visitLabel(lastVisit)}</strong>) 이후 {AGENT_NAME}가 처리한 일을 정리했어요.

@@ -1,6 +1,15 @@
 import { useState } from 'react';
-import { AGENT_NAME, tasks as initialTasks, type Task, type TaskStatus } from '../data/dummy';
+import {
+  AGENT_NAME,
+  categories,
+  categoryById,
+  tasks as initialTasks,
+  type CategoryId,
+  type Task,
+  type TaskStatus,
+} from '../data/dummy';
 import { relativeTime } from '../lib/time';
+import { useWorkspace } from '../workspace-context';
 import './views.css';
 
 type Filter = 'all' | 'owner' | 'agent';
@@ -26,10 +35,16 @@ const priorityChip: Record<Task['priority'], { label: string; className: string 
 export function TasksView() {
   const [tasks, setTasks] = useState(initialTasks);
   const [filter, setFilter] = useState<Filter>('all');
+  const [category, setCategory] = useState<CategoryId | 'all'>('all');
+  const { canAccess } = useWorkspace();
 
-  const visible = tasks.filter((t) =>
+  const permitted = tasks.filter((t) => canAccess(t.category));
+  const byAssignee = permitted.filter((t) =>
     filter === 'all' ? true : filter === 'owner' ? t.assignee === '사장님' : t.assignee === 'AI',
   );
+  // 권한이 바뀌어 고른 카테고리가 사라졌으면 전체로 본다
+  const activeCategory = category !== 'all' && canAccess(category) ? category : 'all';
+  const visible = byAssignee.filter((t) => activeCategory === 'all' || t.category === activeCategory);
 
   const toggleDone = (id: string) =>
     setTasks((list) =>
@@ -59,6 +74,27 @@ export function TasksView() {
             </button>
           ))}
         </div>
+        <div className="category-filter" role="group" aria-label="업무 카테고리">
+          <button
+            className={`perm-chip ${activeCategory === 'all' ? 'is-on' : ''}`}
+            aria-pressed={activeCategory === 'all'}
+            onClick={() => setCategory('all')}
+          >
+            전체 {byAssignee.length}
+          </button>
+          {categories
+            .filter((c) => canAccess(c.id))
+            .map((c) => (
+              <button
+                key={c.id}
+                className={`perm-chip ${activeCategory === c.id ? 'is-on' : ''}`}
+                aria-pressed={activeCategory === c.id}
+                onClick={() => setCategory(c.id)}
+              >
+                {c.icon} {c.label} {byAssignee.filter((t) => t.category === c.id).length}
+              </button>
+            ))}
+        </div>
       </div>
 
       {groups.map((g) => {
@@ -87,6 +123,9 @@ export function TasksView() {
                       {priorityChip[t.priority]!.label}
                     </span>
                   )}
+                  <span className="chip">
+                    {categoryById[t.category].icon} {categoryById[t.category].label}
+                  </span>
                   <span className="chip">{t.source}</span>
                   <span className={`chip ${t.assignee === 'AI' ? 'is-accent' : ''}`}>
                     {t.assignee === 'AI' ? `🤖 ${AGENT_NAME}` : '👤 사장님'}
