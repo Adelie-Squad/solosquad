@@ -64,7 +64,7 @@
 > major 격변이 되어 1.x 잔여 슬롯을 2.x 로 옮겼다. 미결 M3(릴리스 번호 체계)는 이로써
 > **semver 계보 유지**로 종결 — `0.1.0` 재시작·날짜 기반은 기각.
 >
-> **결정의 정본은 `docs/ideation/260803-solosquad-architecture-redesign.md` §0.0** (결정 1~17).
+> **결정의 정본은 `docs/ideation/260803-solosquad-architecture-redesign.md` §0.0** (결정 1~18 — 18 은 2026-10-26 배포 채널).
 > `docs/policy/adr-001-orchestration-language.md` 은 🧊 **동결**됐고(결정 17, 2026-08-10)
 > **설계 확정 후 발행**한다 — 그때까지 인용하지 말 것.
 >
