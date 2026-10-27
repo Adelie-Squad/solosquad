@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ownerById } from '../data/dummy';
 import { currentStep, type Job } from '../hooks/useLiveActivity';
 import { tokens } from '../lib/format';
@@ -18,8 +19,28 @@ function stepState(job: Job, index: number): 'done' | 'current' | 'pending' {
   return index === current ? 'current' : 'pending';
 }
 
-/** 실시간 작업 카드 목록 — 실시간 작업 화면과 사무실의 오른쪽 패널이 같이 쓴다. compact 는 로그를 2줄로 줄인다 */
+/** 지금 보여줄 단계 — 진행 중이면 현재 단계, 대기면 첫 단계, 완료면 마지막 단계 */
+function nowIndex(job: Job): number {
+  if (job.status === 'done') return job.steps.length - 1;
+  if (job.status === 'queued') return 0;
+  return job.steps.indexOf(currentStep(job));
+}
+
+/**
+ * 실시간 작업 카드 목록 — 실시간 작업 화면 · 사무실 패널 · 크게 보기 모달이 같이 쓴다. compact 는 로그를 2줄로 줄인다.
+ * 단계는 기본으로 지금 단계 하나만, 오른쪽 아이콘을 누르면 전체 단계가 세로로 펼쳐진다.
+ */
 export function JobList({ jobs, focusId, compact }: { jobs: Job[]; focusId?: string; compact?: boolean }) {
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+
+  const toggle = (id: string) =>
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
     <div className={`job-list ${compact ? 'is-compact' : ''}`}>
       {jobs.map((job) => (
@@ -43,13 +64,36 @@ export function JobList({ jobs, focusId, compact }: { jobs: Job[]; focusId?: str
             <span style={{ width: `${job.progress}%` }} />
           </div>
 
-          <ol className="steps">
-            {job.steps.map((step, i) => (
-              <li key={step} className={`step is-${stepState(job, i)}`}>
-                {step}
-              </li>
-            ))}
-          </ol>
+          <div className="step-row">
+            {expanded.has(job.id) ? (
+              <ol className="steps is-vertical">
+                {job.steps.map((step, i) => (
+                  <li key={step} className={`step is-${stepState(job, i)}`}>
+                    {step}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              // 카운터를 지금 단계 앞에서 시작해 원래 번호(2. …)가 그대로 붙는다
+              <ol className="steps" style={{ counterReset: `step ${nowIndex(job)}` }}>
+                <li className={`step is-${stepState(job, nowIndex(job))}`}>{job.steps[nowIndex(job)]}</li>
+              </ol>
+            )}
+            <span className="step-count">
+              {nowIndex(job) + 1}/{job.steps.length}
+            </span>
+            <button
+              className="step-toggle"
+              aria-expanded={expanded.has(job.id)}
+              aria-label={expanded.has(job.id) ? '단계 접기' : '단계 펼치기'}
+              title={expanded.has(job.id) ? '단계 접기' : '단계 펼치기'}
+              onClick={() => toggle(job.id)}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
+                <path d="M3 5.5 L7 9.5 L11 5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
 
           {job.log.length > 0 && (
             <ul className="job-log">

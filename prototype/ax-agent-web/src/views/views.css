@@ -146,6 +146,60 @@
   font-weight: 700;
 }
 
+/* 작업 카드의 단계 줄 — 접힘: 지금 단계 하나 · n/전체 · 펼치기 아이콘 / 펼침: 세로 목록 */
+.step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.step-row > .steps {
+  flex: 1;
+  min-width: 0;
+}
+
+.steps.is-vertical {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.steps.is-vertical .step {
+  width: 100%;
+}
+
+.step-count {
+  padding-top: 5px;
+  font-size: 12px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.step-toggle {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+.step-toggle:hover {
+  background: var(--surface-2);
+}
+
+.step-toggle svg {
+  transition: transform 0.15s ease;
+}
+
+.step-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
 .job-log {
   margin: 14px 0 0;
   padding: 12px 14px;
