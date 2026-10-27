@@ -165,6 +165,9 @@ channels:
 
 ### 5.1 에이전트 토폴로지 (계층형 supervisor)
 
+> ⚠️ **v2.0 에서 폐기 예정 (결정 19, 2026-10-28)** — 아래는 v1.4.3 현행 서술이다. 재작성 토폴로지는 **swarm(LangGraph 모방)** 으로
+> 확정됐다 — [`ideation/260803-solosquad-architecture-redesign.md`](./ideation/260803-solosquad-architecture-redesign.md) §0.0.1 결정 19.
+
 SoloSquad 는 **hierarchical orchestrator-workers** 토폴로지다 — 중앙 Chief 가 동적으로 분해·위임하되
 **제어권을 끝까지 쥔다(agents-as-tools; spawn 후 SYNTHESIZE 를 Chief 가 소유)**. swarm(탈중앙 handoff)
 이 아니다. 3계층: Chief(org 총괄) → 4 main leader(도메인 팀장) → specialist(worker).
