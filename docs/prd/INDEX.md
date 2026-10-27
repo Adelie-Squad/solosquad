@@ -54,7 +54,7 @@
 | [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
 | [v1.4.0_research-workflow.md](v1.4.0_research-workflow.md) | **1.4.x 우산** — 자율 가설검증 연구 워크플로우(기능화 前 유효성 검증 계층) |
 | [v1.4.3_research-workflow-implementation.md](v1.4.3_research-workflow-implementation.md) | research 내장 워크플로우 + 템플릿/예시 + goal 8h+ 무인 + reports→org 이전 |
-| [v2.0.0_orchestration-and-harness-platform.md](v2.0.0_orchestration-and-harness-platform.md) | **2.0.0 우산 — 24/7 Agent Company Runtime** (rev5, 2026-10-28). Python 재작성 · swarm 엔진(LangGraph 모방, 자체 구현) · 다중 하네스(claude-code·codex·opencode·lite) · 운영 층 · 연결 풀/라우팅 · 브라우저 도구 · 로컬 24시간. 결정 정본은 `ideation/260803-*` §0.0(결정 1~25). 구 `v1.5.0` |
+| [v2.0.0_orchestration-and-harness-platform.md](v2.0.0_orchestration-and-harness-platform.md) | **2.0.0 우산 — AX Agent Company Platform** (rev6, 2026-10-28). 소규모 비즈니스용 맞춤형 AX 에이전트 회사(관리형 3개월 / 셀프) · Python 재작성 · swarm 엔진 · 다중 하네스 · 운영 층 · 연결 풀/라우팅 · 브라우저 · FDE 에이전트 · 고객사 웹 · 본부 최소판. 결정 정본은 `ideation/260803-*` §0.0(결정 1~29). 구 `v1.5.0` |
 | [v2.1.0_docker-cloud-deploy-and-health-notify.md](v2.1.0_docker-cloud-deploy-and-health-notify.md) | **2.1.0** — Railway 클라우드 배포 + **메신저(Discord/Slack) 재도입**(결정 16) + 봇 health 알림. 구 `v1.6.0` |
 | [v2.4.0_virtual-market-demand-simulation.md](v2.4.0_virtual-market-demand-simulation.md) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝(연구 결론: raw NO-GO). 구 `v1.9.0` |
 | [v2.x-dashboard-interaction.md](v2.x-dashboard-interaction.md) | 구 `v1.x` |
