@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { IsoAgentIcon, IsoOffice, type StationState, type StationView } from '../components/IsoOffice';
+import { JobList } from '../components/JobList';
 import {
   AGENT_NAME,
   categoryById,
@@ -35,12 +36,33 @@ interface AgentState {
   next: Job | null;
 }
 
-/** 사무실 — 하루(마스터) 허브와 부서 에이전트 3명. 대시보드는 버튼으로 연다 */
+const LIVE_KEY = 'ax-office-live-open';
+
+function readLiveOpen(): boolean {
+  try {
+    return localStorage.getItem(LIVE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** 사무실 — 하루(마스터)와 부서 에이전트 3명. '실시간 작업' 버튼으로 오른쪽에 작업 패널을 연다 */
 export function OfficeView() {
   const { jobs, canAccess, wf, finance, viewer } = useWorkspace();
   const [tick, setTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(readLiveOpen);
+
+  const toggleLive = () =>
+    setLiveOpen((open) => {
+      try {
+        localStorage.setItem(LIVE_KEY, open ? '0' : '1');
+      } catch {
+        // 저장이 막혀도 이번 화면에서는 토글된다
+      }
+      return !open;
+    });
   const officeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,13 +132,30 @@ export function OfficeView() {
     };
   });
 
+  const masterLabel = (
+    <div className={`iso-label is-${masterState}`}>
+      <strong>🤖 {AGENT_NAME} · 마스터 에이전트</strong>
+      <span className="iso-label-line">
+        <span className="iso-state-dot" />
+        {haruJob ? `직접 하는 중 — ${haruJob.title} · ${currentStep(haruJob)}` : `작업 ${running}개를 부서에 나눠 맡기고 지켜보는 중`}
+      </span>
+      {mailReview > 0 && (
+        <span className="iso-label-meta">
+          <Link className="chip is-warn" to="/app/mail">
+            메일 답장 검토 {mailReview}
+          </Link>
+        </span>
+      )}
+    </div>
+  );
+
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else officeRef.current?.requestFullscreen();
   };
 
   return (
-    <div className={`view is-wide office ${fullscreen ? 'is-fullscreen' : ''}`} ref={officeRef}>
+    <div className={`view is-wide office ${liveOpen ? 'is-split-wide' : ''} ${fullscreen ? 'is-fullscreen' : ''}`} ref={officeRef}>
       <header className="view-header">
         <div>
           <h1>
@@ -131,11 +170,9 @@ export function OfficeView() {
           <button className="btn" onClick={toggleFullscreen}>
             {fullscreen ? '전체 화면 닫기' : '⛶ 전체 화면'}
           </button>
-          {!fullscreen && (
-            <Link className="btn is-primary" to="/app/office/dashboard">
-              📊 대시보드
-            </Link>
-          )}
+          <button className={`btn ${liveOpen ? 'is-primary' : ''}`} aria-pressed={liveOpen} onClick={toggleLive}>
+            <span className="live-dot btn-dot" /> 실시간 작업 {running}
+          </button>
         </div>
       </header>
 
@@ -151,28 +188,32 @@ export function OfficeView() {
         </span>
       </div>
 
-      <IsoOffice
-        stations={stations}
-        master={{
-          state: masterState,
-          label: (
-          <div className={`iso-label is-${masterState}`}>
-            <strong>🤖 {AGENT_NAME} · 마스터 에이전트</strong>
-            <span className="iso-label-line">
-              <span className="iso-state-dot" />
-              {haruJob ? `직접 하는 중 — ${haruJob.title} · ${currentStep(haruJob)}` : `작업 ${running}개를 부서에 나눠 맡기고 지켜보는 중`}
-            </span>
-            {mailReview > 0 && (
-              <span className="iso-label-meta">
-                <Link className="chip is-warn" to="/app/mail">
-                  메일 답장 검토 {mailReview}
-                </Link>
+      {/* 실시간 작업을 열면 사무실 | 작업 패널 2열 (좁은 화면에서는 위아래) */}
+      <div className={`office-body ${liveOpen ? 'is-split' : ''}`}>
+        <div className="office-main">
+          <IsoOffice stations={stations} master={{ state: masterState, label: masterLabel }} />
+        </div>
+
+        {liveOpen && (
+          <aside className="office-live" aria-label="실시간 작업">
+            <header className="office-live-head">
+              <strong>
+                <span className="live-dot btn-dot" /> 실시간 작업
+              </strong>
+              <span className="office-live-count">
+                진행 {running} · 대기 {jobs.filter((j) => j.status === 'queued').length}
               </span>
-            )}
-          </div>
-          ),
-        }}
-      />
+              <Link className="btn" to="/app/live">
+                크게 보기
+              </Link>
+              <button className="icon-btn" aria-label="실시간 작업 닫기" onClick={toggleLive}>
+                ✕
+              </button>
+            </header>
+            <JobList jobs={jobs} compact />
+          </aside>
+        )}
+      </div>
 
       {selected && selected.state !== 'locked' && (
         <AgentSheet agent={selected} waiting={waiting[selected.agent.category]} onClose={() => setSelectedId(null)} />

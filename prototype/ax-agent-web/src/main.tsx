@@ -20,12 +20,14 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/app" element={<Workspace />}>
-          <Route index element={<HomeView />} />
+          {/* 홈 메뉴는 없다 — 들어오면 사무실. 예전 홈 화면은 '+ 새 대화'(chat/new) 로 연다 */}
+          <Route index element={<Navigate to="/app/office" replace />} />
+          <Route path="chat" element={<Navigate to="/app/chat/new" replace />} />
+          <Route path="chat/:id" element={<HomeView />} />
           <Route path="live" element={<LiveView />} />
           <Route path="office" element={<OfficeView />} />
-          <Route path="office/dashboard" element={<DashboardView />} />
-          {/* 예전 '대시보드' 메뉴 주소 — 사무실의 대시보드 버튼 뒤로 옮겼다 */}
-          <Route path="dashboard" element={<Navigate to="/app/office/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardView />} />
+          <Route path="office/dashboard" element={<Navigate to="/app/dashboard" replace />} />
           <Route
             path="mail"
             element={

@@ -140,3 +140,97 @@
   display: flex;
   gap: 8px;
 }
+
+/* 실시간 작업 패널 — 버튼을 누르면 사무실 | 작업 2열, 좁으면 위아래 */
+.btn-dot {
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+
+.btn.is-primary .btn-dot {
+  background: #b8ffe5;
+}
+
+.office-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.office-body.is-split {
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+}
+
+.office.is-split-wide {
+  max-width: 1440px;
+}
+
+.office-live {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.office-live-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+
+.office-live-head strong,
+.office-live-head .btn {
+  white-space: nowrap;
+}
+
+.office-live-head strong {
+  font-size: 14.5px;
+}
+
+.office-live-count {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.job-list.is-compact .job {
+  padding: 12px 14px;
+}
+
+.job-list.is-compact .job-icon {
+  display: none;
+}
+
+.job-list.is-compact .job-percent {
+  font-size: 15px;
+}
+
+.job-list.is-compact .job-heading h2 {
+  font-size: 14px;
+}
+
+.job-list.is-compact .steps {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1100px) {
+  .office-body.is-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .office-live {
+    position: static;
+    max-height: none;
+  }
+}

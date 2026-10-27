@@ -29,6 +29,19 @@
   padding-bottom: 24px;
 }
 
+/* 이어 보는 대화 — 인사 · 보고 대신 제목 한 줄 */
+.chat-head h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.chat-head p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
 .home-footer {
   flex-shrink: 0;
   display: flex;

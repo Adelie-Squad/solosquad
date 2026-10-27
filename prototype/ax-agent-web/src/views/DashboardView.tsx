@@ -30,9 +30,6 @@ export function DashboardView() {
           <h1>대시보드</h1>
           <p>이번 달 돈 흐름과 {AGENT_NAME}가 일하며 쓴 토큰을 한눈에 봐요.</p>
         </div>
-        <Link className="btn" to="/app/office">
-          ← 사무실
-        </Link>
       </header>
 
       {canAccess('finance') ? (

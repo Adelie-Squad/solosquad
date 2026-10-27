@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import type {
+  ChatSession,
   OwnerId,
   FactoryQuote,
   LedgerEntry,
@@ -40,6 +41,9 @@ export interface WorkspaceContext {
   setFinance: Dispatch<SetStateAction<FinanceState>>;
   wf: WorkflowState;
   setWf: Dispatch<SetStateAction<WorkflowState>>;
+  /** 하루와 나눈 대화 — 사이드바 목록과 대화 화면이 같이 쓴다 */
+  sessions: ChatSession[];
+  setSessions: Dispatch<SetStateAction<ChatSession[]>>;
 }
 
 export const useWorkspace = () => useOutletContext<WorkspaceContext>();

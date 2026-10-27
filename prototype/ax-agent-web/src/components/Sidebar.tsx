@@ -1,9 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { mailMessages, tasks, type Member, type OwnerId, type Space } from '../data/dummy';
-import { currentStep, type Job } from '../hooks/useLiveActivity';
+import { AGENT_NAME, mailMessages, tasks, type ChatSession, type Member, type OwnerId, type Space } from '../data/dummy';
+import { relativeTime } from '../lib/time';
 
 interface Props {
-  jobs: Job[];
+  sessions: ChatSession[];
   space: Space;
   viewer: Member;
   canAccess: (owner: OwnerId) => boolean;
@@ -15,25 +15,17 @@ interface Props {
 const reviewCount = mailMessages.filter((m) => m.needsReview).length;
 
 // Arc 의 상단 즐겨찾기 타일처럼 2×3 고정 메뉴. requires 중 하나라도 권한이 있어야 보인다
-const pinned: { to: string; end: boolean; icon: string; label: string; badge: number; requires?: OwnerId[] }[] = [
-  { to: '/app', end: true, icon: '🏠', label: '홈', badge: 0 },
-  { to: '/app/office', end: false, icon: '🏢', label: '사무실', badge: 0 },
-  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount, requires: ['haru'] },
-  { to: '/app/tasks', end: false, icon: '✅', label: 'Task', badge: 0 },
-  { to: '/app/scheduler', end: false, icon: '⏰', label: '스케줄러', badge: 0 },
-  {
-    to: '/app/workflows',
-    end: false,
-    icon: '🧩',
-    label: '워크플로우',
-    badge: 0,
-    requires: ['finance', 'sourcing', 'marketing'],
-  },
+const pinned: { to: string; icon: string; label: string; badge: number; requires?: OwnerId[] }[] = [
+  { to: '/app/office', icon: '🏢', label: '사무실', badge: 0 },
+  { to: '/app/dashboard', icon: '📊', label: '대시보드', badge: 0 },
+  { to: '/app/mail', icon: '✉️', label: '메일', badge: reviewCount, requires: ['haru'] },
+  { to: '/app/tasks', icon: '✅', label: 'Task', badge: 0 },
+  { to: '/app/scheduler', icon: '⏰', label: '스케줄러', badge: 0 },
+  { to: '/app/workflows', icon: '🧩', label: '워크플로우', badge: 0, requires: ['finance', 'sourcing', 'marketing'] },
 ];
 
-export function Sidebar({ jobs, space, viewer, canAccess, workflowAttention, onOpenCommand, onOpenSettings }: Props) {
+export function Sidebar({ sessions, space, viewer, canAccess, workflowAttention, onOpenCommand, onOpenSettings }: Props) {
   const navigate = useNavigate();
-  const runningCount = jobs.filter((j) => j.status === 'running').length;
   const ownerTodoCount = tasks.filter(
     (t) => t.assignee === '사장님' && t.status !== 'done' && canAccess(t.category),
   ).length;
@@ -46,6 +38,7 @@ export function Sidebar({ jobs, space, viewer, canAccess, workflowAttention, onO
           ? { ...p, badge: workflowAttention }
           : p,
     );
+  const recent = [...sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   return (
     <aside className="sidebar">
@@ -61,13 +54,13 @@ export function Sidebar({ jobs, space, viewer, canAccess, workflowAttention, onO
       </div>
 
       <button className="command-pill" onClick={onOpenCommand}>
-        <span className="command-pill-text">하루에게 요청하기…</span>
+        <span className="command-pill-text">{AGENT_NAME}에게 요청하기…</span>
         <kbd>⌘K</kbd>
       </button>
 
       <nav className="pinned" aria-label="주요 메뉴">
         {tiles.map((p) => (
-          <NavLink key={p.to} to={p.to} end={p.end} className="pinned-tile">
+          <NavLink key={p.to} to={p.to} className="pinned-tile">
             <span className="pinned-icon">{p.icon}</span>
             <span className="pinned-label">{p.label}</span>
             {p.badge > 0 && <span className="pinned-badge">{p.badge}</span>}
@@ -79,36 +72,29 @@ export function Sidebar({ jobs, space, viewer, canAccess, workflowAttention, onO
         <span>{space.emoji}</span> {space.name}
       </div>
 
-      <section className="live-section" aria-label="실시간 작업">
-        <NavLink to="/app/live" className="live-header">
-          <span className="live-dot" />
-          실시간 작업
-          <span className="live-count">{runningCount}개 진행 중</span>
-        </NavLink>
+      {/* 하루와 나눈 대화 — Arc 의 탭 목록 자리 */}
+      <section className="chat-section" aria-label={`${AGENT_NAME}와 대화`}>
+        <div className="chat-section-head">
+          <span>💬 {AGENT_NAME}와 대화</span>
+          <span className="live-count">{sessions.length}개</span>
+        </div>
 
-        <ul className="live-list">
-          {jobs.map((job) => (
-            <li key={job.id}>
-              <NavLink to={`/app/live#${job.id}`} className={`live-item is-${job.status}`}>
-                <span className="live-item-icon">{job.icon}</span>
-                <span className="live-item-body">
-                  <span className="live-item-title">{job.title}</span>
-                  <span className="live-item-step">{currentStep(job)}</span>
-                  {job.status === 'running' && (
-                    <span className="live-progress">
-                      <span style={{ width: `${job.progress}%` }} />
-                    </span>
-                  )}
+        <button className="new-request" onClick={() => navigate('/app/chat/new')}>
+          + 새 대화
+        </button>
+
+        <ul className="session-list">
+          {recent.map((s) => (
+            <li key={s.id}>
+              <NavLink to={`/app/chat/${s.id}`} className="session-item">
+                <span className="session-title">{s.title}</span>
+                <span className="session-meta">
+                  {relativeTime(s.updatedAt)} · 메시지 {s.messages.length}개
                 </span>
-                {job.status === 'done' && <span className="live-check">✓</span>}
               </NavLink>
             </li>
           ))}
         </ul>
-
-        <button className="new-request" onClick={onOpenCommand}>
-          + 새 요청
-        </button>
       </section>
 
       <div className="sidebar-bottom">

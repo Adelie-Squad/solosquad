@@ -23,7 +23,7 @@ export function CommandBar({ onClose }: Props) {
 
   const ask = (prompt: string) => {
     const state: PromptHandoff = { prompt };
-    navigate('/app', { state });
+    navigate('/app/chat/new', { state });
     onClose();
   };
   const go = (to: string) => {
@@ -39,9 +39,9 @@ export function CommandBar({ onClose }: Props) {
       hint: `${AGENT_NAME}에게 요청`,
       run: () => ask(p.text),
     })),
-    { id: 'go-home', icon: '🏠', label: '홈', hint: '이동', run: () => go('/app') },
+    { id: 'go-chat', icon: '💬', label: '새 대화', hint: '이동', run: () => go('/app/chat/new') },
     { id: 'go-office', icon: '🏢', label: '사무실', hint: '이동', run: () => go('/app/office') },
-    { id: 'go-dash', icon: '📊', label: '대시보드', hint: '사무실 › 이동', run: () => go('/app/office/dashboard') },
+    { id: 'go-dash', icon: '📊', label: '대시보드', hint: '이동', run: () => go('/app/dashboard') },
     { id: 'go-wf', icon: '🧩', label: '워크플로우', hint: '이동', run: () => go('/app/workflows') },
     { id: 'go-live', icon: '🟢', label: '실시간 작업', hint: '이동', run: () => go('/app/live') },
     { id: 'go-mail', icon: '✉️', label: '메일 연동', hint: '이동', run: () => go('/app/mail') },

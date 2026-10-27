@@ -5,6 +5,7 @@ import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar } from '../components/Sidebar';
 import {
   categoryById,
+  defaultChatSessions,
   defaultMembers,
   defaultSettings,
   defaultSnsPosts,
@@ -38,6 +39,7 @@ export function Workspace() {
     chosenQuote: {},
     snsPosts: defaultSnsPosts,
   });
+  const [sessions, setSessions] = useState(defaultChatSessions);
   const { jobs, sessionTokens } = useLiveActivity();
 
   useEffect(() => {
@@ -68,6 +70,8 @@ export function Workspace() {
     setFinance,
     wf,
     setWf,
+    sessions,
+    setSessions,
   };
 
   return (
@@ -76,7 +80,7 @@ export function Workspace() {
       style={{ background: space.gradient, ['--accent' as string]: space.accent }}
     >
       <Sidebar
-        jobs={visibleJobs}
+        sessions={sessions}
         space={space}
         viewer={viewer}
         canAccess={canAccess}

@@ -882,3 +882,62 @@ export const officeAgents: OfficeAgent[] = [
     doneThisMonth: 118,
   },
 ];
+
+// ── 하루와 나눈 대화 ─────────────────────────────────────────────
+// 사이드바의 대화 세션 목록. '+ 새 대화' 에서 첫 메시지를 보내면 맨 위에 새 세션이 생긴다.
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'agent';
+  text: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+}
+
+const replyOf = (keyword: string) => cannedReplies.find((r) => r.keywords.includes(keyword))?.reply ?? fallbackReply;
+
+export const defaultChatSessions: ChatSession[] = [
+  {
+    id: 'c1',
+    title: '실리콘 밀폐용기 견적 비교',
+    updatedAt: ago(40 * MIN),
+    messages: [
+      { id: 'c1-1', role: 'user', text: '실리콘 밀폐용기 견적 비교 보여줘' },
+      { id: 'c1-2', role: 'agent', text: replyOf('견적') },
+    ],
+  },
+  {
+    id: 'c2',
+    title: '이번 주 채널별 매출',
+    updatedAt: ago(3 * HOUR),
+    messages: [
+      { id: 'c2-1', role: 'user', text: '이번 주 채널별 매출 요약해줘' },
+      { id: 'c2-2', role: 'agent', text: replyOf('매출') },
+    ],
+  },
+  {
+    id: 'c3',
+    title: '접이식 수납함 릴스 초안',
+    updatedAt: ago(1 * DAY),
+    messages: [
+      { id: 'c3-1', role: 'user', text: '접이식 수납함 릴스 초안 써줘' },
+      { id: 'c3-2', role: 'agent', text: replyOf('릴스') },
+      { id: 'c3-3', role: 'user', text: '썸네일은 정리 전후 비교로 해줘' },
+      { id: 'c3-4', role: 'agent', text: '좋아요! 정리 전 · 후 두 컷으로 썸네일 시안을 만들어 SNS 자동화에 승인 대기로 올려 둘게요.' },
+    ],
+  },
+  {
+    id: 'c4',
+    title: '이번 달 공장 송금 일정',
+    updatedAt: ago(2 * DAY),
+    messages: [
+      { id: 'c4-1', role: 'user', text: '이번 달 공장 송금 일정 알려줘' },
+      { id: 'c4-2', role: 'agent', text: replyOf('송금') },
+    ],
+  },
+];
