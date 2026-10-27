@@ -98,7 +98,7 @@ function FinanceSummary({ imported }: { imported: boolean }) {
           </div>
           {!imported && (
             <p className="dash-hint">
-              지난 결산 엑셀을 올리면 이전 달 추이도 보여요. <Link to="/app/finance">재무에서 올리기 →</Link>
+              지난 결산 엑셀을 올리면 이전 달 추이도 보여요. <Link to="/app/workflows/finance">워크플로우 › 재무 관리에서 올리기 →</Link>
             </p>
           )}
         </div>

@@ -7,36 +7,43 @@ interface Props {
   space: Space;
   viewer: Member;
   canAccess: (category: CategoryId) => boolean;
-  ledgerReviewCount: number;
+  workflowAttention: number;
   onOpenCommand: () => void;
   onOpenSettings: () => void;
 }
 
 const reviewCount = mailMessages.filter((m) => m.needsReview).length;
 
-// Arc 의 상단 즐겨찾기 타일처럼 2×3 고정 메뉴. requires 가 있으면 그 카테고리 권한이 있어야 보인다
-const pinned: { to: string; end: boolean; icon: string; label: string; badge: number; requires?: CategoryId }[] = [
+// Arc 의 상단 즐겨찾기 타일처럼 2×3 고정 메뉴. requires 중 하나라도 권한이 있어야 보인다
+const pinned: { to: string; end: boolean; icon: string; label: string; badge: number; requires?: CategoryId[] }[] = [
   { to: '/app', end: true, icon: '🏠', label: '홈', badge: 0 },
   { to: '/app/dashboard', end: false, icon: '📊', label: '대시보드', badge: 0 },
-  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount, requires: 'cs' },
+  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount, requires: ['cs'] },
   { to: '/app/tasks', end: false, icon: '✅', label: 'Task', badge: 0 },
   { to: '/app/scheduler', end: false, icon: '⏰', label: '스케줄러', badge: 0 },
-  { to: '/app/finance', end: false, icon: '🧾', label: '재무', badge: 0, requires: 'finance' },
+  {
+    to: '/app/workflows',
+    end: false,
+    icon: '🧩',
+    label: '워크플로우',
+    badge: 0,
+    requires: ['finance', 'sourcing', 'marketing'],
+  },
 ];
 
-export function Sidebar({ jobs, space, viewer, canAccess, ledgerReviewCount, onOpenCommand, onOpenSettings }: Props) {
+export function Sidebar({ jobs, space, viewer, canAccess, workflowAttention, onOpenCommand, onOpenSettings }: Props) {
   const navigate = useNavigate();
   const runningCount = jobs.filter((j) => j.status === 'running').length;
   const ownerTodoCount = tasks.filter(
     (t) => t.assignee === '사장님' && t.status !== 'done' && canAccess(t.category),
   ).length;
   const tiles = pinned
-    .filter((p) => !p.requires || canAccess(p.requires))
+    .filter((p) => !p.requires || p.requires.some(canAccess))
     .map((p) =>
       p.to === '/app/tasks'
         ? { ...p, badge: ownerTodoCount }
-        : p.to === '/app/finance'
-          ? { ...p, badge: ledgerReviewCount }
+        : p.to === '/app/workflows'
+          ? { ...p, badge: workflowAttention }
           : p,
     );
 

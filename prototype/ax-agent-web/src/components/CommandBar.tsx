@@ -40,6 +40,8 @@ export function CommandBar({ onClose }: Props) {
       run: () => ask(p.text),
     })),
     { id: 'go-home', icon: '🏠', label: '홈', hint: '이동', run: () => go('/app') },
+    { id: 'go-dash', icon: '📊', label: '대시보드', hint: '이동', run: () => go('/app/dashboard') },
+    { id: 'go-wf', icon: '🧩', label: '워크플로우', hint: '이동', run: () => go('/app/workflows') },
     { id: 'go-live', icon: '🟢', label: '실시간 작업', hint: '이동', run: () => go('/app/live') },
     { id: 'go-mail', icon: '✉️', label: '메일 연동', hint: '이동', run: () => go('/app/mail') },
     { id: 'go-tasks', icon: '✅', label: 'Task 목록', hint: '이동', run: () => go('/app/tasks') },

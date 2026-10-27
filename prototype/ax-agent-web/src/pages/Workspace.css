@@ -144,6 +144,18 @@ kbd {
   text-align: center;
 }
 
+.pinned-label {
+  white-space: nowrap;
+}
+
+/* 타일 폭이 좁아 '워크플로우' 같은 긴 라벨과 배지가 한 줄에 안 들어간다 — 배지를 모서리로 */
+.pinned-tile .pinned-badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
 .space-title {
   margin-top: 4px;
   padding: 0 6px;

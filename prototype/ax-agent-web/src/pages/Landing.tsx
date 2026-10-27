@@ -4,9 +4,9 @@ import { AGENT_NAME } from '../data/dummy';
 import './Landing.css';
 
 const workCards = [
-  { icon: '✉️', text: '주문 문의 12건 답장 완료', className: 'card-a' },
-  { icon: '📦', text: '버터 재고 부족 — 발주서 준비됨', className: 'card-b' },
-  { icon: '💬', text: '리뷰 7건 답글 등록', className: 'card-c' },
+  { icon: '🚚', text: '오늘 출고 86건 송장 등록', className: 'card-a' },
+  { icon: '🏭', text: '공장 견적 4건 도착 — 마진 비교 완료', className: 'card-b' },
+  { icon: '📣', text: '릴스 초안 2건 — 승인만 하세요', className: 'card-c' },
 ];
 
 export function Landing() {
@@ -22,14 +22,14 @@ export function Landing() {
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="hero-eyebrow">소규모 비즈니스를 위한 AI 직원</p>
+          <p className="hero-eyebrow">소규모 커머스를 위한 AI 직원</p>
           <h1>
             일 잘하는 직원 한 명,
             <br />
             <em>{AGENT_NAME}</em>
           </h1>
           <p className="hero-sub">
-            메일 응대, 리뷰 답글, 재고 확인, 매출 정리까지.
+            정산 · 공장 소싱 · SNS 게시 · 출고까지.
             <br />
             {AGENT_NAME}가 알아서 처리하고, 사장님은 결정만 하세요.
           </p>

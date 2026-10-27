@@ -16,7 +16,7 @@ type ToggleKey = 'autoSendShippingReplies' | 'holdLowRatingReviews' | 'alwaysApp
 const approvalRules: { key: ToggleKey; label: string }[] = [
   { key: 'autoSendShippingReplies', label: '배송 일정 문의는 바로 답장 보내기' },
   { key: 'holdLowRatingReviews', label: '별점 3점 이하 리뷰는 답글 전에 확인받기' },
-  { key: 'alwaysApproveOrders', label: '재료 발주는 항상 승인받기' },
+  { key: 'alwaysApproveOrders', label: '공장 발주는 항상 승인받기' },
 ];
 
 /** 설정 — 바꾼 값은 화면 안에서만 유지된다(저장·서버 반영 없음) */

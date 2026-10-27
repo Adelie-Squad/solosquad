@@ -1,7 +1,7 @@
 import type { MonthlyStatement } from '../data/dummy';
 
 export function expenses(s: MonthlyStatement): number {
-  return s.ingredients + s.payroll + s.rent + s.other;
+  return s.cogs + s.logistics + s.ads + s.payroll + s.rent + s.other;
 }
 
 export function netIncome(s: MonthlyStatement): number {
@@ -16,9 +16,11 @@ export function marginRate(s: MonthlyStatement): number {
 /** 손익표 행 정의 — 화면 표와 엑셀 내보내기가 같은 순서를 쓴다 */
 export const statementRows: { label: string; value: (s: MonthlyStatement) => number; total?: boolean }[] = [
   { label: '매출', value: (s) => s.revenue },
-  { label: '재료비', value: (s) => s.ingredients },
+  { label: '상품 원가', value: (s) => s.cogs },
+  { label: '물류 · 관세', value: (s) => s.logistics },
+  { label: '광고비', value: (s) => s.ads },
   { label: '인건비', value: (s) => s.payroll },
-  { label: '월세', value: (s) => s.rent },
+  { label: '창고 임대료', value: (s) => s.rent },
   { label: '기타 비용', value: (s) => s.other },
   { label: '지출 합계', value: expenses, total: true },
   { label: '순이익', value: netIncome, total: true },

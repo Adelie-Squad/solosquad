@@ -3,9 +3,20 @@ import { Outlet } from 'react-router-dom';
 import { CommandBar } from '../components/CommandBar';
 import { SettingsDialog } from '../components/SettingsDialog';
 import { Sidebar } from '../components/Sidebar';
-import { categoryById, defaultMembers, defaultSettings, ledgerEntries, space } from '../data/dummy';
+import {
+  categoryById,
+  defaultMembers,
+  defaultSettings,
+  defaultSnsPosts,
+  defaultSourcingRequests,
+  defaultWorkflows,
+  factoryQuotes,
+  ledgerEntries,
+  space,
+} from '../data/dummy';
 import { useLiveActivity } from '../hooks/useLiveActivity';
-import { accessFor, type FinanceState, type WorkspaceContext } from '../workspace-context';
+import { attentionFor } from '../lib/workflows';
+import { accessFor, type FinanceState, type WorkflowState, type WorkspaceContext } from '../workspace-context';
 import './Workspace.css';
 
 /**
@@ -20,6 +31,13 @@ export function Workspace() {
   const [members, setMembers] = useState(defaultMembers);
   const [viewerId, setViewerId] = useState(defaultMembers[0].id);
   const [finance, setFinance] = useState<FinanceState>({ importedFile: null, ledger: ledgerEntries });
+  const [wf, setWf] = useState<WorkflowState>({
+    workflows: defaultWorkflows,
+    sourcingRequests: defaultSourcingRequests,
+    quotes: factoryQuotes,
+    chosenQuote: {},
+    snsPosts: defaultSnsPosts,
+  });
   const { jobs, sessionTokens } = useLiveActivity();
 
   useEffect(() => {
@@ -36,6 +54,9 @@ export function Workspace() {
   const viewer = members.find((m) => m.id === viewerId) ?? members[0];
   const canAccess = accessFor(viewer);
   const visibleJobs = jobs.filter((j) => canAccess(j.category));
+  const workflowAttention = wf.workflows
+    .filter((w) => canAccess(w.category))
+    .reduce((sum, w) => sum + attentionFor(w.id, wf, finance), 0);
 
   const context: WorkspaceContext = {
     jobs: visibleJobs,
@@ -45,6 +66,8 @@ export function Workspace() {
     canAccess,
     finance,
     setFinance,
+    wf,
+    setWf,
   };
 
   return (
@@ -57,7 +80,7 @@ export function Workspace() {
         space={space}
         viewer={viewer}
         canAccess={canAccess}
-        ledgerReviewCount={finance.ledger.filter((l) => l.needsReview).length}
+        workflowAttention={workflowAttention}
         onOpenCommand={() => setCommandOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
       />

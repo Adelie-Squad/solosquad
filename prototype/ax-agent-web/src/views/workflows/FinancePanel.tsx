@@ -7,17 +7,16 @@ import {
   financeRules,
   importedStatements,
   space,
-} from '../data/dummy';
-import { downloadStatementCsv, marginRate, statementRows } from '../lib/finance';
-import { won } from '../lib/format';
-import { relativeTime } from '../lib/time';
-import { useWorkspace } from '../workspace-context';
-import './views.css';
+} from '../../data/dummy';
+import { downloadStatementCsv, marginRate, statementRows } from '../../lib/finance';
+import { won } from '../../lib/format';
+import { relativeTime } from '../../lib/time';
+import { useWorkspace } from '../../workspace-context';
 
 const STEP_MS = 700;
 
-/** 재무제표 — 엑셀 결산 가져오기(더미 분석) · 자동 기록 장부 · 엑셀 내보내기 */
-export function FinanceView() {
+/** 재무 관리 워크플로우 — 엑셀 결산 가져오기(더미 분석) · 손익표 · 자동 기록 장부 · 엑셀 내보내기 */
+export function FinancePanel() {
   const { finance, setFinance } = useWorkspace();
   const [phase, setPhase] = useState<'idle' | 'processing' | 'done'>(finance.importedFile ? 'done' : 'idle');
   const [step, setStep] = useState(0);
@@ -62,19 +61,7 @@ export function FinanceView() {
     }));
 
   return (
-    <div className="view">
-      <header className="view-header">
-        <div>
-          <h1>재무제표</h1>
-          <p>결산 엑셀과 입출금 문자 · 거래명세서를 {AGENT_NAME}가 장부로 정리하고, 다시 엑셀로 만들어 드려요.</p>
-        </div>
-        <button
-          className="btn"
-          onClick={() => downloadStatementCsv(statements, `${space.name.replace(/\s/g, '')}_손익표.csv`)}
-        >
-          ⬇ 엑셀로 내보내기
-        </button>
-      </header>
+    <div className="wf-panel">
 
       <section className="panel import">
         {phase === 'idle' && (
@@ -95,7 +82,7 @@ export function FinanceView() {
             />
             <span className="dropzone-icon">📎</span>
             <strong>지난 결산 엑셀을 올려 주세요</strong>
-            <span>월별 결산 · 일자별 매출 · 입출금 · 마진 시트를 {AGENT_NAME}가 알아서 찾아 장부에 넣어요.</span>
+            <span>월별 결산 · 채널별 매출 · 입출금 · 상품별 마진 시트를 {AGENT_NAME}가 알아서 찾아 장부에 넣어요.</span>
             <span className="btn">파일 고르기</span>
           </label>
         )}
@@ -146,7 +133,15 @@ export function FinanceView() {
       </section>
 
       <section className="dash-section">
-        <h2 className="panel-title">월별 손익표</h2>
+        <div className="wf-section-head">
+          <h2 className="panel-title">월별 손익표</h2>
+          <button
+            className="btn"
+            onClick={() => downloadStatementCsv(statements, `${space.name.replace(/\s/g, '')}_손익표.csv`)}
+          >
+            ⬇ 엑셀로 내보내기
+          </button>
+        </div>
         <div className="panel statement-wrap">
           <table className="statement">
             <thead>

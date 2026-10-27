@@ -16,7 +16,7 @@ export function SchedulerView() {
   const allowedCategories = categories.filter((c) => canAccess(c.id));
   const [allSchedules, setSchedules] = useState(initialSchedules);
   const schedules = allSchedules.filter((s) => canAccess(s.category));
-  const [newCategory, setNewCategory] = useState<CategoryId>(allowedCategories[0]?.id ?? 'store');
+  const [newCategory, setNewCategory] = useState<CategoryId>(allowedCategories[0]?.id ?? 'logistics');
   const [runningIds, setRunningIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');

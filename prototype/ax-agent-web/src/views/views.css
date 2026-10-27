@@ -946,12 +946,397 @@
   width: 100%;
 }
 
+/* ── 워크플로우 ───────────────────────────────────────────────── */
+
+.wf-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wf-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wf-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, white);
+}
+
+.wf-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.wf-card-icon {
+  font-size: 24px;
+}
+
+.wf-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wf-card-meta {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.wf-detail {
+  margin-bottom: 28px;
+  padding: 18px 20px;
+}
+
+.wf-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.wf-detail-icon {
+  font-size: 30px;
+}
+
+.wf-detail-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.wf-detail-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.wf-detail-title p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.wf-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0;
+}
+
+/* 단계 파이프라인 — 왼→오른쪽, 승인 단계는 점선 테두리 */
+.pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pipe-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.pipe-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  transform: translate(50%, -50%);
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.pipe-step.has-approval {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--warn) 55%, white);
+}
+
+.pipe-approval {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--warn);
+}
+
+.pipe-step.is-done {
+  border-color: transparent;
+  background: #e4f7ef;
+  color: var(--ok);
+}
+
+.pipe-step.is-current {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  color: var(--accent);
+}
+
+.pipe-step.is-waiting {
+  border-color: var(--warn);
+  background: #fff1dc;
+  color: var(--warn);
+}
+
+.pipe-step.is-pending {
+  opacity: 0.6;
+}
+
+.approval-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff6e6;
+  font-size: 13.5px;
+}
+
+.approval-bar.is-done {
+  background: #e4f7ef;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.wf-manage {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.wf-manage summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.wf-manage-body {
+  padding-top: 6px;
+}
+
+.settings-row.is-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.wf-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wf-panel > .dash-section,
+.wf-panel > .import {
+  margin-bottom: 0;
+}
+
+.wf-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wf-section-head .panel-title {
+  margin: 0;
+}
+
+.wf-section-head + .panel,
+.dash-section > .wf-section-head {
+  margin-bottom: 12px;
+}
+
+.form-note {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* 상품 소싱 */
+.request-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.request-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 240px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.request-card.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.request-title {
+  font-weight: 700;
+}
+
+.request-meta {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+.market-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.market-label {
+  margin-right: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.quote-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.quote-table th,
+.quote-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.quote-table th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.quote-table td small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.quote-table td:first-child {
+  white-space: normal;
+}
+
+.quote-table tr.is-chosen td {
+  background: color-mix(in srgb, var(--accent) 6%, white);
+}
+
+.quote-table .is-warn-text {
+  color: var(--warn);
+}
+
+/* SNS 자동화 */
+.stat-value-sm {
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.6;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.channel-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.post {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.post.is-published {
+  opacity: 0.85;
+}
+
+.post-channel {
+  font-size: 22px;
+}
+
+.post-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.post-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.post-caption {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.post-meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.post-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 @media (max-width: 860px) {
   .stat-row.is-4 {
     grid-template-columns: 1fr 1fr;
   }
 
-  .dash-grid {
+  .dash-grid,
+  .wf-cards {
     grid-template-columns: 1fr;
+  }
+
+  .post {
+    flex-wrap: wrap;
   }
 }

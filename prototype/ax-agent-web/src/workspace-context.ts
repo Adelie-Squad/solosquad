@@ -1,6 +1,15 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import type { CategoryId, LedgerEntry, Member, Space } from './data/dummy';
+import type {
+  CategoryId,
+  FactoryQuote,
+  LedgerEntry,
+  Member,
+  SnsPost,
+  SourcingRequest,
+  Space,
+  Workflow,
+} from './data/dummy';
 import type { Job, TokenTally } from './hooks/useLiveActivity';
 
 export interface FinanceState {
@@ -8,6 +17,16 @@ export interface FinanceState {
   importedFile: string | null;
   /** 자동 기록 장부 — 확인 필요 건수가 사이드바 배지에 뜬다 */
   ledger: LedgerEntry[];
+}
+
+/** 워크플로우 화면의 상태 — 탭을 옮겨도 유지되도록 셸에 둔다 (새로고침하면 초기화) */
+export interface WorkflowState {
+  workflows: Workflow[];
+  sourcingRequests: SourcingRequest[];
+  quotes: FactoryQuote[];
+  /** 요청별로 고른 공장 견적 */
+  chosenQuote: Record<string, string>;
+  snsPosts: SnsPost[];
 }
 
 export interface WorkspaceContext {
@@ -19,6 +38,8 @@ export interface WorkspaceContext {
   canAccess: (category: CategoryId) => boolean;
   finance: FinanceState;
   setFinance: Dispatch<SetStateAction<FinanceState>>;
+  wf: WorkflowState;
+  setWf: Dispatch<SetStateAction<WorkflowState>>;
 }
 
 export const useWorkspace = () => useOutletContext<WorkspaceContext>();

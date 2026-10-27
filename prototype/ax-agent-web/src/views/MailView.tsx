@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AGENT_NAME, mailAccounts, mailMessages, type MailLabel, type MailMessage } from '../data/dummy';
+import { AGENT_NAME, mailAccounts, mailMessages, space, type MailLabel, type MailMessage } from '../data/dummy';
 import { relativeTime } from '../lib/time';
 import './views.css';
 
@@ -13,9 +13,9 @@ const filters: { id: Filter; label: string }[] = [
 
 const labelChip: Record<MailLabel, string> = {
   주문문의: 'is-accent',
-  단체주문: 'is-accent',
+  대량구매: 'is-accent',
   클레임: 'is-danger',
-  거래처: '',
+  공급사: '',
   세금계산서: '',
   광고: '',
 };
@@ -23,7 +23,7 @@ const labelChip: Record<MailLabel, string> = {
 const providerIcon = { Gmail: '📮', Naver: '🟩', Outlook: '📘' } as const;
 
 function draftFor(m: MailMessage): string {
-  return `안녕하세요 ${m.from}님, 모모 베이커리입니다.\n문의 주신 "${m.subject}" 건 확인했습니다. … (${AGENT_NAME}가 작성한 답장 초안 — 데모)`;
+  return `안녕하세요 ${m.from}님, ${space.name}입니다.\n문의 주신 "${m.subject}" 건 확인했습니다. … (${AGENT_NAME}가 작성한 답장 초안 — 데모)`;
 }
 
 export function MailView() {
@@ -40,7 +40,7 @@ export function MailView() {
     setAccounts((list) =>
       list.map((a) =>
         a.id === id
-          ? { ...a, connected: true, address: 'momo.bakery@outlook.com', syncedAt: new Date().toISOString() }
+          ? { ...a, connected: true, address: 'moa.living@outlook.com', syncedAt: new Date().toISOString() }
           : a,
       ),
     );
