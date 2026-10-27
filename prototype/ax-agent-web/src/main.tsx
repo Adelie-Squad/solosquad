@@ -9,6 +9,7 @@ import { DashboardView } from './views/DashboardView';
 import { HomeView } from './views/HomeView';
 import { LiveView } from './views/LiveView';
 import { MailView } from './views/MailView';
+import { OfficeView } from './views/OfficeView';
 import { TasksView } from './views/TasksView';
 import { SchedulerView } from './views/SchedulerView';
 import { WorkflowsView } from './views/WorkflowsView';
@@ -21,7 +22,10 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/app" element={<Workspace />}>
           <Route index element={<HomeView />} />
           <Route path="live" element={<LiveView />} />
-          <Route path="dashboard" element={<DashboardView />} />
+          <Route path="office" element={<OfficeView />} />
+          <Route path="office/dashboard" element={<DashboardView />} />
+          {/* 예전 '대시보드' 메뉴 주소 — 사무실의 대시보드 버튼 뒤로 옮겼다 */}
+          <Route path="dashboard" element={<Navigate to="/app/office/dashboard" replace />} />
           <Route
             path="mail"
             element={

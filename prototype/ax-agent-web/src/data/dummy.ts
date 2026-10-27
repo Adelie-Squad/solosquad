@@ -838,3 +838,42 @@ export const defaultSnsPosts: SnsPost[] = [
 
 /** '새 게시물 만들기' 에서 고를 수 있는 상품 */
 export const snsProducts = ['실리콘 밀폐용기 3종 세트', '접이식 수납함 (대)', '할로윈 한정 세트'];
+
+// ── 사무실 ──────────────────────────────────────────────────────
+// 부서(카테고리)마다 방 하나, 방마다 워커 에이전트 2~3명. 각 방의 첫 번째 에이전트가
+// 그 부서의 실시간 작업을 맡고, 나머지는 ambient 문장을 돌아가며 보여준다.
+
+/** 방 바닥 틴트와 워커 몸 색 — 부서 구분용. 글자는 항상 텍스트 색을 쓴다 */
+export const roomColors: Record<CategoryId, { tint: string; body: string }> = {
+  finance: { tint: '#eaf7f1', body: '#2f9e75' },
+  sourcing: { tint: '#fff3e3', body: '#e08a1e' },
+  marketing: { tint: '#fdecf3', body: '#d6457a' },
+  cs: { tint: '#eaf1fe', body: '#3b7be8' },
+  logistics: { tint: '#f1edff', body: '#7c5cff' },
+};
+
+export interface OfficeAgent {
+  id: string;
+  name: string;
+  category: CategoryId;
+  role: string;
+  /** 실시간 작업이 없을 때 돌아가며 보여줄 일 */
+  ambient: string[];
+  /** 이번 달 완료한 일 (더미) */
+  doneThisMonth: number;
+}
+
+export const officeAgents: OfficeAgent[] = [
+  { id: 'fin-settle', name: '정산 에이전트', category: 'finance', role: '판매 채널 정산 · 입출금 문자를 장부로', ambient: ['스마트스토어 정산 대기 중', '입출금 문자 확인 중', '결산 시트 검토 중'], doneThisMonth: 182 },
+  { id: 'fin-tax', name: '세무 에이전트', category: 'finance', role: '세금계산서 · 부가세 자료 정리', ambient: ['세금계산서 분류 중', '부가세 자료 정리 중', '환율 모니터링 중'], doneThisMonth: 46 },
+  { id: 'src-factory', name: '공장 탐색 에이전트', category: 'sourcing', role: '1688 · 알리바바 공장 탐색과 견적', ambient: ['신상품 후보 공장 탐색 중', '공장 평점 · 거래 이력 확인 중', '샘플 배송 추적 중'], doneThisMonth: 64 },
+  { id: 'src-price', name: '가격 비교 에이전트', category: 'sourcing', role: '쿠팡 · 스마트스토어 최저가 모니터링', ambient: ['쿠팡 최저가 모니터링 중', '경쟁 상품 가격 변동 확인 중', '마진 기준 재계산 중'], doneThisMonth: 210 },
+  { id: 'src-interp', name: '통역 에이전트', category: 'sourcing', role: '중국어 문의 · 발주서 · 답장 번역', ambient: ['중국어 견적 메일 번역 중', '위챗 메시지 정리 중', '발주서 중국어 검수 중'], doneThisMonth: 88 },
+  { id: 'mkt-plan', name: '콘텐츠 기획 에이전트', category: 'marketing', role: '상품 소구점 정리 · 게시물 기획', ambient: ['다음 주 콘텐츠 캘린더 정리 중', '경쟁사 릴스 반응 분석 중', '해시태그 트렌드 확인 중'], doneThisMonth: 37 },
+  { id: 'mkt-design', name: '디자인 에이전트', category: 'marketing', role: '썸네일 · 상세페이지 이미지 시안', ambient: ['썸네일 시안 다듬는 중', '상세페이지 실측 이미지 준비 중', '브랜드 색상 맞추는 중'], doneThisMonth: 52 },
+  { id: 'mkt-report', name: '성과 분석 에이전트', category: 'marketing', role: '게시물 도달 · 스토어 유입 분석', ambient: ['어제 게시물 도달 집계 중', '스토어 유입 경로 분석 중', '광고 효율 비교 중'], doneThisMonth: 29 },
+  { id: 'cs-mail', name: '메일 응대 에이전트', category: 'cs', role: '주문 문의 분류 · 답장 초안', ambient: ['받은편지함 확인 중', '자주 묻는 질문 정리 중', '답장 문구 다듬는 중'], doneThisMonth: 312 },
+  { id: 'cs-review', name: '리뷰 답글 에이전트', category: 'cs', role: '스토어 리뷰 답글 · 반품 사유 정리', ambient: ['새 리뷰 확인 중', '반품 사유 분류 중', '별점 낮은 리뷰 정리 중'], doneThisMonth: 141 },
+  { id: 'log-invoice', name: '송장 에이전트', category: 'logistics', role: '송장 발급 · 판매 채널 등록', ambient: ['다음 집하 시간 대기 중', '배송 지연 건 추적 중', '반품 회수 일정 확인 중'], doneThisMonth: 1_940 },
+  { id: 'log-stock', name: '재고 예측 에이전트', category: 'logistics', role: '재고 소진 예측 · 입고 일정', ambient: ['재고 소진 예측 갱신 중', '입고 컨테이너 위치 확인 중', '창고 적재율 계산 중'], doneThisMonth: 58 },
+];
