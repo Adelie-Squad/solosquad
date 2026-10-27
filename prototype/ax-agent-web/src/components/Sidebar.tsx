@@ -1,12 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { mailMessages, tasks, type CategoryId, type Member, type Space } from '../data/dummy';
+import { mailMessages, tasks, type Member, type OwnerId, type Space } from '../data/dummy';
 import { currentStep, type Job } from '../hooks/useLiveActivity';
 
 interface Props {
   jobs: Job[];
   space: Space;
   viewer: Member;
-  canAccess: (category: CategoryId) => boolean;
+  canAccess: (owner: OwnerId) => boolean;
   workflowAttention: number;
   onOpenCommand: () => void;
   onOpenSettings: () => void;
@@ -15,10 +15,10 @@ interface Props {
 const reviewCount = mailMessages.filter((m) => m.needsReview).length;
 
 // Arc 의 상단 즐겨찾기 타일처럼 2×3 고정 메뉴. requires 중 하나라도 권한이 있어야 보인다
-const pinned: { to: string; end: boolean; icon: string; label: string; badge: number; requires?: CategoryId[] }[] = [
+const pinned: { to: string; end: boolean; icon: string; label: string; badge: number; requires?: OwnerId[] }[] = [
   { to: '/app', end: true, icon: '🏠', label: '홈', badge: 0 },
   { to: '/app/office', end: false, icon: '🏢', label: '사무실', badge: 0 },
-  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount, requires: ['cs'] },
+  { to: '/app/mail', end: false, icon: '✉️', label: '메일', badge: reviewCount, requires: ['haru'] },
   { to: '/app/tasks', end: false, icon: '✅', label: 'Task', badge: 0 },
   { to: '/app/scheduler', end: false, icon: '⏰', label: '스케줄러', badge: 0 },
   {

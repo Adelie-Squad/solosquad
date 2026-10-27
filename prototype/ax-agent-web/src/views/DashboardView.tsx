@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import {
   AGENT_NAME,
-  categories,
-  categoryById,
+  ownerById,
+  ownerOrder,
   currentStatement,
   dailyTokens,
   importedStatements,
@@ -10,7 +10,7 @@ import {
   tokenTopJobs,
   tokenUsageByCategory,
   upcomingPayments,
-  type CategoryId,
+  type OwnerId,
 } from '../data/dummy';
 import type { TokenTally } from '../hooks/useLiveActivity';
 import { expenses, marginRate, netIncome } from '../lib/finance';
@@ -43,7 +43,7 @@ export function DashboardView() {
 
       <TokenUsage
         sessionTokens={sessionTokens}
-        allowed={categories.filter((c) => canAccess(c.id)).map((c) => c.id)}
+        allowed={ownerOrder.filter(canAccess)}
         showBudget={viewer.master}
       />
     </div>
@@ -112,13 +112,13 @@ function FinanceSummary({ imported }: { imported: boolean }) {
 
 interface TokenUsageProps {
   sessionTokens: TokenTally;
-  allowed: CategoryId[];
+  allowed: OwnerId[];
   showBudget: boolean;
 }
 
 function TokenUsage({ sessionTokens, allowed, showBudget }: TokenUsageProps) {
   const rows = allowed
-    .map((id) => ({ ...categoryById[id], used: tokenUsageByCategory[id] + (sessionTokens[id] ?? 0) }))
+    .map((id) => ({ ...ownerById[id], used: tokenUsageByCategory[id] + (sessionTokens[id] ?? 0) }))
     .sort((a, b) => b.used - a.used);
   const used = rows.reduce((sum, r) => sum + r.used, 0);
   const maxRow = Math.max(...rows.map((r) => r.used), 1);
@@ -184,7 +184,7 @@ function TokenUsage({ sessionTokens, allowed, showBudget }: TokenUsageProps) {
               .map((j) => (
                 <li key={j.title}>
                   <span className="top-job-title">
-                    {categoryById[j.category].icon} {j.title}
+                    {ownerById[j.category].icon} {j.title}
                     <small>{j.note}</small>
                   </span>
                   <span className="top-job-value">{tokens(j.tokens)}</span>

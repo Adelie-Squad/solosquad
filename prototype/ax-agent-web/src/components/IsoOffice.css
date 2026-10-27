@@ -1,0 +1,231 @@
+/* ── 아이소메트릭 사무실 — 크림 바닥 · 갈색 선화 · 주황 강조 한 가지 ── */
+
+.iso-stage,
+.iso-icon {
+  --iso-bg: #f7f1ea;
+  --iso-line: #3a2e26;
+  --iso-top: #fffaf3;
+  --iso-left: #efe5d8;
+  --iso-right: #e2d3c0;
+  --iso-guide: #c4b29d;
+  --iso-accent: #e8532b;
+  --iso-accent-soft: #fbd9cc;
+}
+
+.iso-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #eadfd2;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle, rgba(58, 46, 38, 0.09) 1px, transparent 1.2px) 0 0 / 22px 22px,
+    var(--iso-bg);
+}
+
+.iso-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.iso-svg polygon,
+.iso-svg line,
+.iso-svg polyline,
+.iso-svg circle,
+.iso-icon polygon,
+.iso-icon line,
+.iso-icon circle {
+  stroke: var(--iso-line);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.iso-face-top { fill: var(--iso-top); }
+.iso-face-left { fill: var(--iso-left); }
+.iso-face-right { fill: var(--iso-right); }
+
+.iso-box.is-floor .iso-face-top { fill: #fbf6ef; }
+.iso-box.is-floor .iso-face-left,
+.iso-box.is-floor .iso-face-right { fill: #eee3d5; }
+
+.iso-box.is-accent .iso-face-top { fill: #f7845f; }
+.iso-box.is-accent .iso-face-left { fill: var(--iso-accent); }
+.iso-box.is-accent .iso-face-right { fill: #c9401c; }
+
+.iso-box.is-tile:not(.is-accent) .iso-face-top { fill: #f4ece2; }
+
+.iso-guide,
+.iso-pad {
+  fill: none;
+  stroke: var(--iso-guide) !important;
+  stroke-dasharray: 5 5;
+}
+
+.iso-pad {
+  fill: rgba(58, 46, 38, 0.03);
+}
+
+.iso-lane {
+  stroke: var(--iso-guide) !important;
+  stroke-dasharray: 4 5;
+}
+
+.iso-line { fill: none; }
+
+.iso-screen { fill: #2b2420; }
+.iso-screen.is-on {
+  fill: var(--iso-accent);
+  animation: iso-blink 1.6s ease-in-out infinite;
+}
+
+.iso-face { fill: #2b2420; }
+.iso-eye { fill: #f6efe6; stroke: none !important; }
+.iso-antenna { fill: var(--iso-top); }
+
+.iso-hub-well { fill: #f3ebe0; }
+.iso-hub.is-working .iso-hub-well { fill: var(--iso-accent-soft); }
+.iso-hub.is-working .iso-box.is-core .iso-face-top { fill: #f7845f; }
+.iso-bolt { fill: var(--iso-right); }
+.iso-slot { fill: #2b2420; }
+.iso-light { fill: var(--iso-left); }
+.iso-light.is-on { fill: var(--iso-accent); animation: iso-blink 1.2s ease-in-out infinite; }
+
+.iso-flag-cloth { fill: var(--iso-accent); }
+
+.iso-leader circle { fill: var(--iso-line); }
+.iso-leader polyline {
+  fill: none;
+  stroke-width: 1 !important;
+}
+
+/* 스테이션 상태 */
+.iso-station:not(.is-locked) { cursor: pointer; }
+.iso-station:not(.is-locked):hover .iso-pad { fill: rgba(232, 83, 43, 0.06); }
+
+.iso-icon { overflow: visible; }
+.iso-icon.is-working .iso-robot,
+.iso-station.is-working .iso-robot {
+  animation: iso-bob 1.4s ease-in-out infinite;
+}
+
+.iso-icon.is-working .iso-antenna,
+.iso-station.is-working .iso-antenna { fill: var(--iso-accent); }
+
+.iso-station.is-waiting .iso-flag {
+  animation: iso-wave 1.3s ease-in-out infinite;
+}
+
+.iso-station.is-locked {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.iso-packet {
+  opacity: 0;
+  animation: iso-flow 2.4s linear infinite;
+}
+
+@keyframes iso-flow {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+@keyframes iso-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes iso-wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes iso-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* 라벨 카드 — 흰 카드 + 헤어라인, 지시선 끝에 붙는다 */
+.iso-label-slot {
+  position: absolute;
+  transform: translate(0, -50%);
+}
+
+.iso-label-slot.is-left {
+  transform: translate(-100%, -50%);
+}
+
+.iso-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 210px;
+  padding: 10px 12px;
+  border: 1px solid #e3d6c6;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(58, 46, 38, 0.08);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+}
+
+button.iso-label {
+  cursor: pointer;
+}
+
+button.iso-label:hover {
+  border-color: var(--iso-accent);
+}
+
+.iso-label strong {
+  font-size: 13.5px;
+}
+
+.iso-label-line {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+.iso-label.is-working .iso-label-line {
+  color: var(--ink);
+}
+
+.iso-label-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.iso-label .chip {
+  font-size: 11.5px;
+}
+
+.iso-state-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #c4b29d;
+  vertical-align: 1px;
+}
+
+.iso-label.is-working .iso-state-dot { background: #e8532b; }
+.iso-label.is-waiting .iso-state-dot { background: var(--warn); }
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-stage *,
+  .iso-icon * { animation: none !important; }
+  .iso-packet { opacity: 1; }
+}
+
+@media (max-width: 860px) {
+  .iso-label { width: 160px; }
+  .iso-label-line { display: none; }
+}

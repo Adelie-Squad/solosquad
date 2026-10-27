@@ -29,7 +29,7 @@ createRoot(document.getElementById('root')!).render(
           <Route
             path="mail"
             element={
-              <RequireCategory category="cs">
+              <RequireCategory category="haru">
                 <MailView />
               </RequireCategory>
             }

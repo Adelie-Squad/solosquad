@@ -4,7 +4,7 @@ import { AGENT_NAME } from '../data/dummy';
 import './Landing.css';
 
 const workCards = [
-  { icon: '🚚', text: '오늘 출고 86건 송장 등록', className: 'card-a' },
+  { icon: '💰', text: '정산 3건 장부 자동 기록', className: 'card-a' },
   { icon: '🏭', text: '공장 견적 4건 도착 — 마진 비교 완료', className: 'card-b' },
   { icon: '📣', text: '릴스 초안 2건 — 승인만 하세요', className: 'card-c' },
 ];
@@ -29,7 +29,7 @@ export function Landing() {
             <em>{AGENT_NAME}</em>
           </h1>
           <p className="hero-sub">
-            정산 · 공장 소싱 · SNS 게시 · 출고까지.
+            정산 · 공장 소싱 · SNS 게시까지.
             <br />
             {AGENT_NAME}가 알아서 처리하고, 사장님은 결정만 하세요.
           </p>

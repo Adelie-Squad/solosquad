@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   AGENT_NAME,
   cadenceOptions,
-  categories,
-  categoryById,
+  ownerById,
+  ownerOrder,
   schedules as initialSchedules,
-  type CategoryId,
+  type OwnerId,
 } from '../data/dummy';
 import { relativeTime } from '../lib/time';
 import { useWorkspace } from '../workspace-context';
@@ -13,10 +13,10 @@ import './views.css';
 
 export function SchedulerView() {
   const { canAccess } = useWorkspace();
-  const allowedCategories = categories.filter((c) => canAccess(c.id));
+  const allowedCategories = ownerOrder.filter(canAccess).map((id) => ownerById[id]);
   const [allSchedules, setSchedules] = useState(initialSchedules);
   const schedules = allSchedules.filter((s) => canAccess(s.category));
-  const [newCategory, setNewCategory] = useState<CategoryId>(allowedCategories[0]?.id ?? 'logistics');
+  const [newCategory, setNewCategory] = useState<OwnerId>(allowedCategories[0]?.id ?? 'haru');
   const [runningIds, setRunningIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -111,10 +111,10 @@ export function SchedulerView() {
           </label>
           <label>
             <span>맡길 부서</span>
-            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as CategoryId)}>
+            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as OwnerId)}>
               {allowedCategories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.icon} {c.label} 에이전트
+                  {c.icon} {c.id === 'haru' ? c.label : `${c.label} 에이전트`}
                 </option>
               ))}
             </select>
@@ -159,7 +159,7 @@ export function SchedulerView() {
                 <div className="schedule-title">
                   <strong>{s.name}</strong>
                   <span className="chip">
-                    {categoryById[s.category].icon} {categoryById[s.category].label}
+                    {ownerById[s.category].icon} {ownerById[s.category].label}
                   </span>
                   <span className="chip">🕒 {s.cadence}</span>
                 </div>

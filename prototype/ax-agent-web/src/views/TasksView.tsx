@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
   AGENT_NAME,
-  categories,
-  categoryById,
+  ownerById,
+  ownerOrder,
   tasks as initialTasks,
-  type CategoryId,
+  type OwnerId,
   type Task,
   type TaskStatus,
 } from '../data/dummy';
@@ -35,7 +35,7 @@ const priorityChip: Record<Task['priority'], { label: string; className: string 
 export function TasksView() {
   const [tasks, setTasks] = useState(initialTasks);
   const [filter, setFilter] = useState<Filter>('all');
-  const [category, setCategory] = useState<CategoryId | 'all'>('all');
+  const [category, setCategory] = useState<OwnerId | 'all'>('all');
   const { canAccess } = useWorkspace();
 
   const permitted = tasks.filter((t) => canAccess(t.category));
@@ -82,8 +82,9 @@ export function TasksView() {
           >
             전체 {byAssignee.length}
           </button>
-          {categories
-            .filter((c) => canAccess(c.id))
+          {ownerOrder
+            .filter(canAccess)
+            .map((id) => ownerById[id])
             .map((c) => (
               <button
                 key={c.id}
@@ -124,7 +125,7 @@ export function TasksView() {
                     </span>
                   )}
                   <span className="chip">
-                    {categoryById[t.category].icon} {categoryById[t.category].label}
+                    {ownerById[t.category].icon} {ownerById[t.category].label}
                   </span>
                   <span className="chip">{t.source}</span>
                   <span className={`chip ${t.assignee === 'AI' ? 'is-accent' : ''}`}>

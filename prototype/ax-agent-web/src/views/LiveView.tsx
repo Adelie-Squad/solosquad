@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AGENT_NAME, categoryById } from '../data/dummy';
+import { AGENT_NAME, ownerById } from '../data/dummy';
 import { currentStep, type Job } from '../hooks/useLiveActivity';
 import { tokens } from '../lib/format';
 import { relativeTime } from '../lib/time';
@@ -72,7 +72,7 @@ export function LiveView() {
               <div className="job-heading">
                 <h2>{job.title}</h2>
                 <span className="job-meta">
-                  {categoryById[job.category].icon} {categoryById[job.category].label} 에이전트 ·{' '}
+                  {ownerById[job.category].icon} {job.category === 'haru' ? ownerById.haru.label : `${ownerById[job.category].label} 에이전트`} ·{' '}
                   {job.status === 'queued' ? '곧 시작해요' : `${relativeTime(job.startedAt)} 시작`}
                   {job.tokens > 0 && ` · ${tokens(job.tokens)} 토큰`}
                 </span>

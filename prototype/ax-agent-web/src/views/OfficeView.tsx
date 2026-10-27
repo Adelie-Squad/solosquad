@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { WorkerAvatar, type WorkerStatus } from '../components/WorkerAvatar';
+import { IsoAgentIcon, IsoOffice, type StationState, type StationView } from '../components/IsoOffice';
 import {
   AGENT_NAME,
   categoryById,
   mailMessages,
   officeAgents,
-  roomColors,
   space,
-  tasks,
   type CategoryId,
   type OfficeAgent,
 } from '../data/dummy';
@@ -22,9 +20,6 @@ import './views.css';
 const AMBIENT_MS = 4000;
 const COMPLETED_TODAY_BASE = 23; // 더미: 오늘 이전에 끝난 작업 수
 
-// 방 배치 — 에이전트 3명인 방은 위 줄, 2명인 방은 아래 줄 (6칸 그리드)
-const roomOrder: CategoryId[] = ['sourcing', 'marketing', 'finance', 'cs', 'logistics'];
-
 /** 부서별 '확인 필요' — 무엇을 기다리는지 한 줄과 처리하러 갈 곳 */
 interface Waiting {
   count: number;
@@ -32,18 +27,17 @@ interface Waiting {
   to: string;
 }
 
-interface DeskState {
+interface AgentState {
   agent: OfficeAgent;
-  status: WorkerStatus;
-  bubble: string;
+  state: StationState;
+  line: string;
   job: Job | null;
-  /** 이 에이전트 차례를 기다리는 작업 */
   next: Job | null;
 }
 
-/** 사무실 — 하루(마스터)와 부서 방의 워커 에이전트들이 일하는 모습. 대시보드는 버튼으로 연다 */
+/** 사무실 — 하루(마스터) 허브와 부서 에이전트 3명. 대시보드는 버튼으로 연다 */
 export function OfficeView() {
-  const { jobs, canAccess, wf, finance } = useWorkspace();
+  const { jobs, canAccess, wf, finance, viewer } = useWorkspace();
   const [tick, setTick] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
@@ -60,53 +54,59 @@ export function OfficeView() {
   }, []);
 
   const waiting: Record<CategoryId, Waiting> = {
-    finance: {
-      count: attentionFor('finance', wf, finance),
-      text: '용도 확인이 필요한 입금이 있어요',
-      to: '/app/workflows/finance',
-    },
-    sourcing: {
-      count: attentionFor('sourcing', wf, finance),
-      text: '공장 선택 · 통화 확인을 기다려요',
-      to: '/app/workflows/sourcing',
-    },
+    finance: { count: attentionFor('finance', wf, finance), text: '용도 확인이 필요한 입금이 있어요', to: '/app/workflows/finance' },
+    sourcing: { count: attentionFor('sourcing', wf, finance), text: '공장 선택 · 통화 확인을 기다려요', to: '/app/workflows/sourcing' },
     marketing: { count: attentionFor('sns', wf, finance), text: '게시물 승인을 기다려요', to: '/app/workflows/sns' },
-    cs: { count: mailMessages.filter((m) => m.needsReview).length, text: '답장 검토를 기다려요', to: '/app/mail' },
-    logistics: {
-      count: tasks.filter((t) => t.category === 'logistics' && t.assignee === '사장님' && t.status !== 'done').length,
-      text: '주소가 불분명한 송장 확인을 기다려요',
-      to: '/app/tasks',
-    },
   };
 
-  // 방의 첫 에이전트가 그 부서의 실시간 작업 · 확인 요청을 맡고, 나머지는 ambient 로 움직인다
-  const deskFor = (agent: OfficeAgent, index: number): DeskState => {
-    const job = index === 0 ? (jobs.find((j) => j.category === agent.category && j.status === 'running') ?? null) : null;
-    const next = index === 0 ? (jobs.find((j) => j.category === agent.category && j.status === 'queued') ?? null) : null;
+  const agents: AgentState[] = officeAgents.map((agent, i) => {
+    const job = jobs.find((j) => j.category === agent.category && j.status === 'running') ?? null;
+    const next = jobs.find((j) => j.category === agent.category && j.status === 'queued') ?? null;
     const w = waiting[agent.category];
-    if (job) return { agent, status: 'working', bubble: currentStep(job), job, next };
-    if (index === 0 && w.count > 0) return { agent, status: 'waiting', bubble: `🙋 확인 필요 ${w.count}`, job, next };
-    const seed = tick + agent.id.length + index;
-    return {
-      agent,
-      status: seed % 3 === 0 ? 'idle' : 'working',
-      bubble: agent.ambient[seed % agent.ambient.length],
-      job,
-      next,
-    };
-  };
-
-  const desks = officeAgents.map((a) => {
-    const index = officeAgents.filter((x) => x.category === a.category).indexOf(a);
-    return deskFor(a, index);
+    if (!canAccess(agent.category)) return { agent, state: 'locked', line: '권한이 없어 비워 뒀어요', job: null, next: null };
+    if (job) return { agent, state: 'working', line: `${job.title} · ${currentStep(job)}`, job, next };
+    if (w.count > 0) return { agent, state: 'waiting', line: w.text, job, next };
+    return { agent, state: 'idle', line: agent.ambient[(tick + i) % agent.ambient.length], job, next };
   });
-  const selected = desks.find((d) => d.agent.id === selectedId) ?? null;
+  const selected = agents.find((a) => a.agent.id === selectedId) ?? null;
 
-  const visibleRooms = roomOrder.filter(canAccess);
+  // 부서에 넘기지 않는 공용 일(메일 분류 · 브리핑)은 하루가 허브에서 직접 한다
+  const haruJob = jobs.find((j) => j.category === 'haru' && j.status === 'running') ?? null;
   const running = jobs.filter((j) => j.status === 'running').length;
   const doneToday = COMPLETED_TODAY_BASE + jobs.filter((j) => j.status === 'done').length;
-  const waitingTotal = visibleRooms.reduce((sum, c) => sum + waiting[c].count, 0);
-  const now = new Date();
+  const mailReview = viewer.master ? mailMessages.filter((m) => m.needsReview).length : 0;
+  const waitingTotal = agents.filter((a) => a.state !== 'locked').reduce((sum, a) => sum + waiting[a.agent.category].count, 0) + mailReview;
+
+  const stations: StationView[] = agents.map((a) => {
+    const category = categoryById[a.agent.category];
+    const w = waiting[a.agent.category];
+    return {
+      category: a.agent.category,
+      state: a.state,
+      onSelect: () => setSelectedId(a.agent.id),
+      label:
+        a.state === 'locked' ? (
+          <div className="iso-label is-locked">
+            <strong>🔒 {a.agent.name}</strong>
+            <span className="iso-label-line">{a.line}</span>
+          </div>
+        ) : (
+          <button className={`iso-label is-${a.state}`} onClick={() => setSelectedId(a.agent.id)}>
+            <strong>
+              {category.icon} {a.agent.name}
+            </strong>
+            <span className="iso-label-line">
+              <span className="iso-state-dot" />
+              {a.line}
+            </span>
+            <span className="iso-label-meta">
+              {a.job && <span className="chip">{Math.round(a.job.progress)}%</span>}
+              {w.count > 0 && <span className="chip is-warn">확인 필요 {w.count}</span>}
+            </span>
+          </button>
+        ),
+    };
+  });
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -121,14 +121,11 @@ export function OfficeView() {
             {space.emoji} {space.name} 사무실
           </h1>
           <p>
-            {AGENT_NAME}와 부서 에이전트 {officeAgents.filter((a) => canAccess(a.category)).length}명이 일하고 있어요. 에이전트를
-            누르면 하는 일을 볼 수 있어요.
+            {AGENT_NAME}가 부서 에이전트 3명에게 일을 나눠 맡기는 모습이에요. 에이전트를 누르면 하는 일을 볼 수 있어요.
           </p>
         </div>
         <div className="office-actions">
-          <span className="office-clock">
-            {now.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}
-          </span>
+          <span className="office-clock">{new Date().toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}</span>
           <button className="btn" onClick={toggleFullscreen}>
             {fullscreen ? '전체 화면 닫기' : '⛶ 전체 화면'}
           </button>
@@ -140,100 +137,51 @@ export function OfficeView() {
         </div>
       </header>
 
-      <section className="master-desk">
-        <WorkerAvatar color="var(--accent)" status="working" size={72} master />
-        <div className="master-body">
-          <strong>
-            {AGENT_NAME} <span className="master-role">마스터 에이전트 · 팀장석</span>
-          </strong>
-          <span className="master-bubble">
-            {running > 0
-              ? `작업 ${running}개를 부서 에이전트에게 나눠 맡기고 지켜보는 중이에요.`
-              : '새 요청을 기다리는 중이에요.'}
-          </span>
-        </div>
-        <div className="master-stats">
-          <span>
-            <b>{running}</b> 진행 중
-          </span>
-          <span className={waitingTotal > 0 ? 'is-warn' : ''}>
-            <b>{waitingTotal}</b> 확인 필요
-          </span>
-          <span>
-            <b>{doneToday}</b> 오늘 완료
-          </span>
-        </div>
-      </section>
-
-      <div className="office-floor">
-        {roomOrder.map((c) => {
-          const category = categoryById[c];
-          const roomDesks = desks.filter((d) => d.agent.category === c);
-          const locked = !canAccess(c);
-          return (
-            <section
-              key={c}
-              className={`room ${locked ? 'is-locked' : ''}`}
-              style={{ ['--room' as string]: roomColors[c].tint, gridColumn: `span ${roomDesks.length}` }}
-              aria-label={`${category.label} 방`}
-            >
-              <header className="room-head">
-                <span>
-                  {category.icon} {category.label}
-                </span>
-                {!locked && waiting[c].count > 0 && (
-                  <Link className="chip is-warn" to={waiting[c].to}>
-                    확인 필요 {waiting[c].count}
-                  </Link>
-                )}
-              </header>
-              {locked ? (
-                <p className="room-locked">🔒 권한이 없어 비워 뒀어요</p>
-              ) : (
-                <div className="desks">
-                  {roomDesks.map((d) => (
-                    <button
-                      key={d.agent.id}
-                      className={`desk is-${d.status}`}
-                      onClick={() => setSelectedId(d.agent.id)}
-                      aria-label={`${d.agent.name} — ${d.bubble}`}
-                    >
-                      <span className="desk-bubble">{d.bubble}</span>
-                      <WorkerAvatar color={roomColors[c].body} status={d.status} />
-                      <span className="desk-table">
-                        <span className="desk-monitor">
-                          {d.job && <span style={{ width: `${d.job.progress}%` }} />}
-                        </span>
-                      </span>
-                      <span className="desk-name">{d.agent.name}</span>
-                      <span className="desk-status">
-                        {d.job
-                          ? `${d.job.title} · ${Math.round(d.job.progress)}%`
-                          : d.status === 'waiting'
-                            ? waiting[c].text
-                            : d.status === 'idle'
-                              ? '쉬는 중'
-                              : '틈틈이 일하는 중'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
+      <div className="office-stats">
+        <span>
+          <b>{running}</b> 진행 중
+        </span>
+        <span className={waitingTotal > 0 ? 'is-warn' : ''}>
+          <b>{waitingTotal}</b> 확인 필요
+        </span>
+        <span>
+          <b>{doneToday}</b> 오늘 완료
+        </span>
       </div>
 
-      {selected && (
-        <AgentSheet desk={selected} waiting={waiting[selected.agent.category]} onClose={() => setSelectedId(null)} />
+      <IsoOffice
+        stations={stations}
+        hubWorking={running > 0}
+        hubLabel={
+          <div className={`iso-label ${haruJob ? 'is-working' : ''}`}>
+            <strong>🤖 {AGENT_NAME} · 마스터 에이전트</strong>
+            <span className="iso-label-line">
+              <span className="iso-state-dot" />
+              {haruJob ? `직접 하는 중 — ${haruJob.title} · ${currentStep(haruJob)}` : `작업 ${running}개를 부서에 나눠 맡기고 지켜보는 중`}
+            </span>
+            {mailReview > 0 && (
+              <span className="iso-label-meta">
+                <Link className="chip is-warn" to="/app/mail">
+                  메일 답장 검토 {mailReview}
+                </Link>
+              </span>
+            )}
+          </div>
+        }
+      />
+
+      {selected && selected.state !== 'locked' && (
+        <AgentSheet agent={selected} waiting={waiting[selected.agent.category]} onClose={() => setSelectedId(null)} />
       )}
     </div>
   );
 }
 
-function AgentSheet({ desk, waiting, onClose }: { desk: DeskState; waiting: Waiting; onClose: () => void }) {
-  const { agent, job, next, status } = desk;
+function AgentSheet({ agent: a, waiting, onClose }: { agent: AgentState; waiting: Waiting; onClose: () => void }) {
+  const { wf } = useWorkspace();
+  const { agent, job, next, state } = a;
   const category = categoryById[agent.category];
+  const workflow = wf.workflows.find((w) => w.id === agent.workflow);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -246,13 +194,20 @@ function AgentSheet({ desk, waiting, onClose }: { desk: DeskState; waiting: Wait
   return (
     <div className="command-overlay is-sheet" onMouseDown={onClose}>
       <aside className="agent-sheet" role="dialog" aria-label={agent.name} onMouseDown={(e) => e.stopPropagation()}>
-        <header className="agent-sheet-head" style={{ ['--room' as string]: roomColors[agent.category].tint }}>
-          <WorkerAvatar color={roomColors[agent.category].body} status={status} size={72} />
+        <header className="agent-sheet-head">
+          <IsoAgentIcon working={state === 'working'} />
           <div>
             <h2>{agent.name}</h2>
             <p>
-              {category.icon} {category.label} · {agent.role}
+              {category.icon} {category.label} 부서
             </p>
+            <div className="agent-roles">
+              {agent.roles.map((r) => (
+                <span key={r} className="chip">
+                  {r}
+                </span>
+              ))}
+            </div>
           </div>
           <button className="icon-btn" aria-label="닫기" onClick={onClose}>
             ✕
@@ -280,15 +235,19 @@ function AgentSheet({ desk, waiting, onClose }: { desk: DeskState; waiting: Wait
                 {Math.round(job.progress)}% · 이 작업에 {tokens(job.tokens)} 토큰 사용
               </p>
             </div>
-          ) : status === 'waiting' ? (
+          ) : (
+            <p className="agent-now">{a.line}</p>
+          )}
+
+          {waiting.count > 0 && (
             <div className="approval-bar">
-              <span>👤 {waiting.text}</span>
+              <span>
+                👤 확인 필요 {waiting.count} · {waiting.text}
+              </span>
               <Link className="btn is-primary" to={waiting.to}>
                 확인하러 가기
               </Link>
             </div>
-          ) : (
-            <p className="agent-now">{desk.bubble}</p>
           )}
 
           {next && (
@@ -300,19 +259,26 @@ function AgentSheet({ desk, waiting, onClose }: { desk: DeskState; waiting: Wait
             </>
           )}
 
-          {job && waiting.count > 0 && (
-            <div className="approval-bar">
-              <span>👤 확인 필요 {waiting.count} · {waiting.text}</span>
-              <Link className="btn" to={waiting.to}>
-                확인하러 가기
-              </Link>
-            </div>
+          {workflow && (
+            <>
+              <p className="settings-group">
+                맡은 워크플로우 — {workflow.icon} {workflow.name} {workflow.enabled ? '' : '(꺼짐)'}
+              </p>
+              <ol className="pipeline">
+                {workflow.steps.map((s) => (
+                  <li key={s.name} className={`pipe-step is-idle ${s.approval ? 'has-approval' : ''}`}>
+                    <span className="pipe-name">{s.name}</span>
+                    {s.approval && <span className="pipe-approval">👤 승인</span>}
+                  </li>
+                ))}
+              </ol>
+            </>
           )}
 
           <p className="settings-group">평소에 하는 일</p>
           <ul className="agent-ambient">
-            {agent.ambient.map((a) => (
-              <li key={a}>{a.replace(/ 중$/, '')}</li>
+            {agent.ambient.map((x) => (
+              <li key={x}>{x.replace(/ 중$/, '')}</li>
             ))}
           </ul>
 
@@ -322,17 +288,17 @@ function AgentSheet({ desk, waiting, onClose }: { desk: DeskState; waiting: Wait
               <span className="stat-label">이번 달 완료</span>
             </div>
             <div className="stat">
-              <span className="stat-value">{waiting.count}</span>
-              <span className="stat-label">부서 확인 필요</span>
+              <span className="stat-value">{workflow ? tokens(workflow.monthTokens) : '—'}</span>
+              <span className="stat-label">이번 달 토큰</span>
             </div>
           </div>
 
           <div className="agent-links">
+            <Link className="btn is-primary" to={`/app/workflows/${agent.workflow}`}>
+              워크플로우 열기
+            </Link>
             <Link className="btn" to="/app/tasks">
               Task 보기
-            </Link>
-            <Link className="btn" to="/app/live">
-              실시간 작업
             </Link>
           </div>
         </div>

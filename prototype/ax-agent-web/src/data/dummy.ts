@@ -23,7 +23,10 @@ export interface Space {
 // 하루(마스터 에이전트)가 카테고리별 하위 에이전트에게 일을 나눠 맡긴다.
 // 팀원 권한도 이 단위로 연다.
 
-export type CategoryId = 'finance' | 'sourcing' | 'marketing' | 'cs' | 'logistics';
+export type CategoryId = 'finance' | 'sourcing' | 'marketing';
+
+/** 일의 담당 — 부서 에이전트 3곳, 또는 부서에 넘기지 않고 하루(마스터)가 직접 하는 공용 업무 */
+export type OwnerId = CategoryId | 'haru';
 
 export interface Category {
   id: CategoryId;
@@ -34,12 +37,19 @@ export interface Category {
 export const categories: Category[] = [
   { id: 'finance', label: '재무', icon: '💰' },
   { id: 'sourcing', label: '상품 소싱', icon: '🏭' },
-  { id: 'marketing', label: 'SNS · 마케팅', icon: '📣' },
-  { id: 'cs', label: '고객 응대', icon: '💬' },
-  { id: 'logistics', label: '물류 · 배송', icon: '🚚' },
+  { id: 'marketing', label: '마케팅', icon: '📣' },
 ];
 
 export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c])) as Record<CategoryId, Category>;
+
+/** 담당 표시용 — 부서 3곳 + 하루 직접 */
+export const ownerById: Record<OwnerId, { id: OwnerId; label: string; icon: string }> = {
+  ...categoryById,
+  haru: { id: 'haru', label: `${AGENT_NAME} 직접`, icon: '🤖' },
+};
+
+/** 필터 · 선택지에 쓰는 담당 순서 */
+export const ownerOrder: OwnerId[] = ['sourcing', 'finance', 'marketing', 'haru'];
 
 /** 사업장은 하나로 고정 — 배경색 전환 기능은 두지 않는다 */
 export const space: Space = {
@@ -71,8 +81,8 @@ export const reportSinceLastVisit: ReportItem[] = [
   {
     id: 'r2',
     kind: 'done',
-    title: '오늘 출고 86건 송장 등록',
-    detail: '스마트스토어 · 쿠팡에 송장을 일괄 등록했어요. 주소가 불분명한 2건은 보류했어요.',
+    title: '판매 채널 정산 3건 장부에 기록',
+    detail: '쿠팡 · 스마트스토어 정산을 매출과 수수료로 나눠 기록했어요. 용도가 불분명한 입금 1건은 확인을 요청했어요.',
   },
   {
     id: 'r3',
@@ -99,7 +109,7 @@ export const suggestedPrompts: SuggestedPrompt[] = [
   { id: 'p2', icon: '✉️', text: '검토 대기 중인 답장 3건 같이 보자' },
   { id: 'p3', icon: '📈', text: '이번 주 채널별 매출 요약해줘' },
   { id: 'p4', icon: '📣', text: '접이식 수납함 릴스 초안 써줘' },
-  { id: 'p5', icon: '🚚', text: '오늘 출고 현황 알려줘' },
+  { id: 'p5', icon: '💸', text: '이번 주 광고비 얼마 썼어?' },
   { id: 'p6', icon: '💬', text: '반품 사유 모아서 정리해줘' },
   { id: 'p7', icon: '🧮', text: '이번 달 공장 송금 일정 알려줘' },
   { id: 'p8', icon: '💹', text: '쿠팡 최저가 비교해줘' },
@@ -128,9 +138,9 @@ export const cannedReplies: { keywords: string[]; reply: string }[] = [
       '초안이에요 ✍️\n"좁은 자취방, 30초 만에 정리 끝 📦 접어서 쏙, 펴서 쏙. 오늘 주문하면 내일 도착!"\n썸네일은 정리 전후 비교 컷이 반응이 좋았어요. SNS 자동화에 승인 대기로 올려 둘게요.',
   },
   {
-    keywords: ['출고', '송장', '배송'],
+    keywords: ['광고비', '광고'],
     reply:
-      '오늘 출고는 86건이에요.\n• 쿠팡 41 · 스마트스토어 33 · 자사몰 12\n• 송장 등록 84건 완료, 주소 불분명 2건 보류\nCJ대한통운 집하는 오후 4시예요. 보류 2건은 Task 에 올려 두었어요.',
+      '이번 주 광고비는 132만원이에요.\n• 쿠팡 광고 84만원 (ROAS 410%)\n• 인스타 광고 48만원 (ROAS 260%)\n릴스가 반응이 좋아서, 인스타 광고 예산을 릴스 부스트로 옮기는 걸 제안드려요.',
   },
   {
     keywords: ['반품', '불만', '리뷰'],
@@ -157,7 +167,7 @@ export const fallbackReply =
 export interface JobTemplate {
   title: string;
   icon: string;
-  category: CategoryId;
+  category: OwnerId;
   steps: string[];
   /** 진행 틱마다 쓰는 토큰 — 이미지 생성 · 최저가 탐색처럼 반복 시도가 많은 일일수록 크다 */
   tokensPerTick: number;
@@ -168,16 +178,16 @@ export const jobPool: JobTemplate[] = [
   {
     title: '주문 문의 메일 분류',
     icon: '✉️',
-    category: 'cs',
+    category: 'haru',
     steps: ['받은편지함 확인', '문의 유형 분류', '답장 초안 작성', '자동 발송 기준 검사'],
     tokensPerTick: 900,
   },
   {
-    title: '송장 일괄 등록',
-    icon: '🚚',
-    category: 'logistics',
-    steps: ['신규 주문 수집', '주소 검증', '택배 송장 발급', '판매 채널에 송장 등록'],
-    tokensPerTick: 400,
+    title: '쿠팡 최저가 비교',
+    icon: '💹',
+    category: 'sourcing',
+    steps: ['경쟁 상품 수집', '배송비 포함 비교', '가격 제안 작성'],
+    tokensPerTick: 1500,
   },
   {
     title: '일일 정산 대조',
@@ -321,7 +331,7 @@ export interface Task {
   title: string;
   source: '메일' | '스케줄러' | '대화' | '워크플로우';
   assignee: 'AI' | '사장님';
-  category: CategoryId;
+  category: OwnerId;
   status: TaskStatus;
   due: string;
   priority: 'high' | 'normal' | 'low';
@@ -329,12 +339,11 @@ export interface Task {
 
 export const tasks: Task[] = [
   { id: 't1', title: '실리콘 밀폐용기 공장 선택 · 발주 승인', source: '워크플로우', assignee: '사장님', category: 'sourcing', status: 'todo', due: later(5 * HOUR), priority: 'high' },
-  { id: 't2', title: '대량 구매 견적 답장 검토', source: '메일', assignee: '사장님', category: 'cs', status: 'todo', due: later(3 * HOUR), priority: 'high' },
-  { id: 't3', title: '주소 불분명 송장 2건 확인', source: '스케줄러', assignee: '사장님', category: 'logistics', status: 'todo', due: later(4 * HOUR), priority: 'normal' },
-  { id: 't4', title: '주문 문의 메일 분류', source: '스케줄러', assignee: 'AI', category: 'cs', status: 'in_progress', due: later(20 * MIN), priority: 'normal' },
+  { id: 't2', title: '대량 구매 견적 답장 검토', source: '메일', assignee: '사장님', category: 'haru', status: 'todo', due: later(3 * HOUR), priority: 'high' },
+  { id: 't4', title: '주문 문의 메일 분류', source: '스케줄러', assignee: 'AI', category: 'haru', status: 'in_progress', due: later(20 * MIN), priority: 'normal' },
   { id: 't5', title: '실리콘 밀폐용기 릴스 준비', source: '워크플로우', assignee: 'AI', category: 'marketing', status: 'in_progress', due: later(1 * DAY), priority: 'normal' },
   { id: 't6', title: '10월 공장 송금 내역 장부 기록', source: '워크플로우', assignee: 'AI', category: 'finance', status: 'done', due: ago(4 * HOUR), priority: 'low' },
-  { id: 't7', title: '오늘 출고 86건 송장 등록', source: '스케줄러', assignee: 'AI', category: 'logistics', status: 'done', due: ago(2 * HOUR), priority: 'normal' },
+  { id: 't7', title: '닝보 공장 견적 메일 번역 · 정리', source: '메일', assignee: 'AI', category: 'sourcing', status: 'done', due: ago(2 * HOUR), priority: 'normal' },
   { id: 't8', title: '부가세 신고 자료 정리', source: '대화', assignee: 'AI', category: 'finance', status: 'todo', due: later(6 * DAY), priority: 'normal' },
   { id: 't9', title: '확인 안 된 입금 1건 용도 알려주기', source: '워크플로우', assignee: '사장님', category: 'finance', status: 'todo', due: later(1 * DAY), priority: 'normal' },
   { id: 't10', title: 'SNS 게시물 2건 승인', source: '워크플로우', assignee: '사장님', category: 'marketing', status: 'todo', due: later(18 * HOUR), priority: 'normal' },
@@ -347,7 +356,7 @@ export interface Schedule {
   id: string;
   name: string;
   description: string;
-  category: CategoryId;
+  category: OwnerId;
   cadence: string;
   nextRun: string;
   enabled: boolean;
@@ -359,8 +368,8 @@ export const schedules: Schedule[] = [
   {
     id: 's1',
     name: '아침 브리핑',
-    description: '어제 채널별 매출 · 오늘 출고 예정 · 재고 경고를 정리해 보고',
-    category: 'logistics',
+    description: '어제 채널별 매출 · 확인 필요 · 워크플로우 진행 상황을 정리해 보고',
+    category: 'haru',
     cadence: '매일 오전 8:00',
     nextRun: later(14 * HOUR),
     enabled: true,
@@ -369,22 +378,12 @@ export const schedules: Schedule[] = [
   {
     id: 's2',
     name: '주문 문의 메일 처리',
-    description: '새 메일을 분류하고 기준에 맞는 문의는 자동 답장',
-    category: 'cs',
+    description: '새 메일을 분류해 부서 워크플로우로 넘기고, 기준에 맞는 문의는 자동 답장',
+    category: 'haru',
     cadence: '30분마다',
     nextRun: later(12 * MIN),
     enabled: true,
     lastResult: { ok: true, summary: '4건 처리 · 1건 검토 요청', at: ago(18 * MIN) },
-  },
-  {
-    id: 's3',
-    name: '송장 일괄 등록',
-    description: '오후 집하 전 신규 주문 송장을 발급해 판매 채널에 등록',
-    category: 'logistics',
-    cadence: '매일 오후 3:00',
-    nextRun: later(5 * HOUR),
-    enabled: true,
-    lastResult: { ok: true, summary: '84건 등록 · 2건 보류', at: ago(19 * HOUR) },
   },
   {
     id: 's4',
@@ -461,7 +460,7 @@ export interface Member {
 export const defaultMembers: Member[] = [
   { id: 'owner', name: '사장님', role: '대표', emoji: '👑', master: true, categories: categories.map((c) => c.id) },
   { id: 'wangli', name: '왕리', role: '중국 소싱 담당', emoji: '🧑‍💼', master: false, categories: ['sourcing', 'finance'] },
-  { id: 'haneul', name: '김하늘', role: 'SNS · CS · 출고 담당', emoji: '🧑‍💻', master: false, categories: ['marketing', 'cs', 'logistics'] },
+  { id: 'haneul', name: '김하늘', role: 'SNS 마케팅 담당', emoji: '🧑‍💻', master: false, categories: ['marketing'] },
 ];
 
 // ── 토큰 사용량 ──────────────────────────────────────────────────
@@ -470,12 +469,11 @@ export const defaultMembers: Member[] = [
 export const tokenBudget = { monthlyTokens: 8_000_000, krwPerMillion: 14_000 };
 
 /** 이번 달(접속 전까지) 카테고리별 누적 — 실시간 작업 토큰이 여기에 더해진다 */
-export const tokenUsageByCategory: Record<CategoryId, number> = {
+export const tokenUsageByCategory: Record<OwnerId, number> = {
   marketing: 1_840_000,
   sourcing: 1_260_000,
-  cs: 820_000,
+  haru: 1_010_000,
   finance: 430_000,
-  logistics: 190_000,
 };
 
 /** 최근 14일 일별 사용량 (오래된 날 → 오늘) */
@@ -485,12 +483,12 @@ export const dailyTokens: { date: string; tokens: number }[] = [
 ].map((tokens, i, all) => ({ date: ago((all.length - 1 - i) * DAY), tokens }));
 
 /** 이번 달 토큰을 많이 쓴 작업 */
-export const tokenTopJobs: { title: string; category: CategoryId; tokens: number; note: string }[] = [
+export const tokenTopJobs: { title: string; category: OwnerId; tokens: number; note: string }[] = [
   { title: '접이식 수납함 릴스 · 블로그', category: 'marketing', tokens: 460_000, note: '썸네일 · 이미지 시안 9장 생성' },
   { title: '실리콘 밀폐용기 공장 견적', category: 'sourcing', tokens: 312_000, note: '1688 공장 24곳 탐색 × 중국어 문의' },
   { title: '쿠팡 · 스마트스토어 최저가 비교', category: 'sourcing', tokens: 188_000, note: '경쟁 상품 40개 × 3회 재시도' },
   { title: '9월 결산 시트 작성', category: 'finance', tokens: 96_000, note: '엑셀 4개 시트 집계' },
-  { title: '주문 문의 메일 답장', category: 'cs', tokens: 71_000, note: '메일 52건' },
+  { title: '주문 문의 메일 답장', category: 'haru', tokens: 71_000, note: '메일 52건' },
 ];
 
 // ── 워크플로우 ───────────────────────────────────────────────────
@@ -840,23 +838,15 @@ export const defaultSnsPosts: SnsPost[] = [
 export const snsProducts = ['실리콘 밀폐용기 3종 세트', '접이식 수납함 (대)', '할로윈 한정 세트'];
 
 // ── 사무실 ──────────────────────────────────────────────────────
-// 부서(카테고리)마다 방 하나, 방마다 워커 에이전트 2~3명. 각 방의 첫 번째 에이전트가
-// 그 부서의 실시간 작업을 맡고, 나머지는 ambient 문장을 돌아가며 보여준다.
-
-/** 방 바닥 틴트와 워커 몸 색 — 부서 구분용. 글자는 항상 텍스트 색을 쓴다 */
-export const roomColors: Record<CategoryId, { tint: string; body: string }> = {
-  finance: { tint: '#eaf7f1', body: '#2f9e75' },
-  sourcing: { tint: '#fff3e3', body: '#e08a1e' },
-  marketing: { tint: '#fdecf3', body: '#d6457a' },
-  cs: { tint: '#eaf1fe', body: '#3b7be8' },
-  logistics: { tint: '#f1edff', body: '#7c5cff' },
-};
+// 부서마다 워커 에이전트 1명 — 그 부서의 워크플로우를 맡는다. 역할은 에이전트가 쓰는 도구로 보여준다.
 
 export interface OfficeAgent {
   id: string;
   name: string;
   category: CategoryId;
-  role: string;
+  workflow: WorkflowId;
+  /** 이 에이전트가 맡는 역할 (예전 작업 단위 에이전트들) */
+  roles: string[];
   /** 실시간 작업이 없을 때 돌아가며 보여줄 일 */
   ambient: string[];
   /** 이번 달 완료한 일 (더미) */
@@ -864,16 +854,31 @@ export interface OfficeAgent {
 }
 
 export const officeAgents: OfficeAgent[] = [
-  { id: 'fin-settle', name: '정산 에이전트', category: 'finance', role: '판매 채널 정산 · 입출금 문자를 장부로', ambient: ['스마트스토어 정산 대기 중', '입출금 문자 확인 중', '결산 시트 검토 중'], doneThisMonth: 182 },
-  { id: 'fin-tax', name: '세무 에이전트', category: 'finance', role: '세금계산서 · 부가세 자료 정리', ambient: ['세금계산서 분류 중', '부가세 자료 정리 중', '환율 모니터링 중'], doneThisMonth: 46 },
-  { id: 'src-factory', name: '공장 탐색 에이전트', category: 'sourcing', role: '1688 · 알리바바 공장 탐색과 견적', ambient: ['신상품 후보 공장 탐색 중', '공장 평점 · 거래 이력 확인 중', '샘플 배송 추적 중'], doneThisMonth: 64 },
-  { id: 'src-price', name: '가격 비교 에이전트', category: 'sourcing', role: '쿠팡 · 스마트스토어 최저가 모니터링', ambient: ['쿠팡 최저가 모니터링 중', '경쟁 상품 가격 변동 확인 중', '마진 기준 재계산 중'], doneThisMonth: 210 },
-  { id: 'src-interp', name: '통역 에이전트', category: 'sourcing', role: '중국어 문의 · 발주서 · 답장 번역', ambient: ['중국어 견적 메일 번역 중', '위챗 메시지 정리 중', '발주서 중국어 검수 중'], doneThisMonth: 88 },
-  { id: 'mkt-plan', name: '콘텐츠 기획 에이전트', category: 'marketing', role: '상품 소구점 정리 · 게시물 기획', ambient: ['다음 주 콘텐츠 캘린더 정리 중', '경쟁사 릴스 반응 분석 중', '해시태그 트렌드 확인 중'], doneThisMonth: 37 },
-  { id: 'mkt-design', name: '디자인 에이전트', category: 'marketing', role: '썸네일 · 상세페이지 이미지 시안', ambient: ['썸네일 시안 다듬는 중', '상세페이지 실측 이미지 준비 중', '브랜드 색상 맞추는 중'], doneThisMonth: 52 },
-  { id: 'mkt-report', name: '성과 분석 에이전트', category: 'marketing', role: '게시물 도달 · 스토어 유입 분석', ambient: ['어제 게시물 도달 집계 중', '스토어 유입 경로 분석 중', '광고 효율 비교 중'], doneThisMonth: 29 },
-  { id: 'cs-mail', name: '메일 응대 에이전트', category: 'cs', role: '주문 문의 분류 · 답장 초안', ambient: ['받은편지함 확인 중', '자주 묻는 질문 정리 중', '답장 문구 다듬는 중'], doneThisMonth: 312 },
-  { id: 'cs-review', name: '리뷰 답글 에이전트', category: 'cs', role: '스토어 리뷰 답글 · 반품 사유 정리', ambient: ['새 리뷰 확인 중', '반품 사유 분류 중', '별점 낮은 리뷰 정리 중'], doneThisMonth: 141 },
-  { id: 'log-invoice', name: '송장 에이전트', category: 'logistics', role: '송장 발급 · 판매 채널 등록', ambient: ['다음 집하 시간 대기 중', '배송 지연 건 추적 중', '반품 회수 일정 확인 중'], doneThisMonth: 1_940 },
-  { id: 'log-stock', name: '재고 예측 에이전트', category: 'logistics', role: '재고 소진 예측 · 입고 일정', ambient: ['재고 소진 예측 갱신 중', '입고 컨테이너 위치 확인 중', '창고 적재율 계산 중'], doneThisMonth: 58 },
+  {
+    id: 'agent-sourcing',
+    name: '상품 소싱 에이전트',
+    category: 'sourcing',
+    workflow: 'sourcing',
+    roles: ['공장 탐색', '가격 비교', '중국어 통역'],
+    ambient: ['신상품 후보 공장 탐색 중', '쿠팡 최저가 모니터링 중', '중국어 견적 메일 번역 중'],
+    doneThisMonth: 362,
+  },
+  {
+    id: 'agent-finance',
+    name: '재무 에이전트',
+    category: 'finance',
+    workflow: 'finance',
+    roles: ['정산 대조', '장부 기록', '세무 자료'],
+    ambient: ['입출금 문자 확인 중', '세금계산서 분류 중', '환율 모니터링 중'],
+    doneThisMonth: 228,
+  },
+  {
+    id: 'agent-marketing',
+    name: '마케팅 에이전트',
+    category: 'marketing',
+    workflow: 'sns',
+    roles: ['콘텐츠 기획', '이미지 시안', '성과 분석'],
+    ambient: ['다음 주 콘텐츠 캘린더 정리 중', '경쟁사 릴스 반응 분석 중', '어제 게시물 도달 집계 중'],
+    doneThisMonth: 118,
+  },
 ];

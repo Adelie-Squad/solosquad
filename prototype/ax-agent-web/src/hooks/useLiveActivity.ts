@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { jobPool, type CategoryId, type JobTemplate } from '../data/dummy';
+import { jobPool, type JobTemplate, type OwnerId } from '../data/dummy';
 
 // 실시간 작업 시뮬레이터. 실제 에이전트 런타임 대신 setInterval 로 진행률과 로그를 흉내 낸다.
 
@@ -14,7 +14,7 @@ export interface Job {
   id: string;
   title: string;
   icon: string;
-  category: CategoryId;
+  category: OwnerId;
   steps: string[];
   status: JobStatus;
   progress: number;
@@ -73,7 +73,7 @@ function initialJobs(): Job[] {
   ];
 }
 
-export type TokenTally = Partial<Record<CategoryId, number>>;
+export type TokenTally = Partial<Record<OwnerId, number>>;
 
 interface LiveState {
   jobs: Job[];
