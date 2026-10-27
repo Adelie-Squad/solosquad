@@ -5,6 +5,9 @@ import './IsoOffice.css';
 
 export type StationState = 'working' | 'waiting' | 'idle' | 'locked';
 
+/** 외형 — 마스터(하루) 또는 부서 */
+export type Look = 'master' | CategoryId;
+
 export interface StationView {
   category: CategoryId;
   state: StationState;
@@ -14,235 +17,384 @@ export interface StationView {
 
 interface Props {
   stations: StationView[];
-  hubWorking: boolean;
-  hubLabel: ReactNode;
+  master: { state: StationState; label: ReactNode };
 }
 
-// 월드 배치 — 하루 허브가 위쪽 가운데, 스테이션 3곳이 허브의 x 축 · y 축 · 대각선 끝에 놓인다
-const HUB = { x: 180, y: 180, w: 120 };
-const STATION = 96;
-const layout: Record<CategoryId, { x: number; y: number; lane: [Pt, Pt][]; flow: [number, number, number, number]; offset: Pt; side: 'left' | 'right' }> = {
-  sourcing: {
-    x: 390,
-    y: 192,
-    lane: [
-      [[300, 226], [390, 226]],
-      [[300, 254], [390, 254]],
-    ],
-    flow: [300, 234, 378, 234],
-    offset: [104, -72],
-    side: 'right',
-  },
-  marketing: {
-    x: 192,
-    y: 390,
-    lane: [
-      [[226, 300], [226, 390]],
-      [[254, 300], [254, 390]],
-    ],
-    flow: [234, 300, 234, 378],
-    offset: [-96, 128],
-    side: 'left',
-  },
-  finance: {
-    x: 390,
-    y: 390,
-    lane: [
-      [[310, 290], [400, 380]],
-      [[290, 310], [380, 400]],
-    ],
-    flow: [294, 294, 380, 380],
-    offset: [190, 112],
-    side: 'right',
-  },
-};
+// ── 색 — 면 3단계(윗 · 왼 · 오른). 선은 CSS 에서 공통 ─────────────────
 
-// viewBox — 라벨 카드가 들어갈 자리까지 넉넉히
-const VB = { x: -530, y: 36, w: 1060, h: 548 };
+type Tone = readonly [string, string, string];
 
-function Box({ x, y, z, w, d, h, className = '' }: { x: number; y: number; z: number; w: number; d: number; h: number; className?: string }) {
+const T = {
+  floor: ['#f4e8d6', '#e6d5bd', '#d8c4a7'],
+  wall: ['#f8f2ea', '#f3ebe0', '#e9dfd1'],
+  wood: ['#f1e2c8', '#e2cdab', '#d3b98f'],
+  chair: ['#7a685b', '#63544a', '#524539'],
+  robot: ['#fffaf3', '#efe5d8', '#e2d3c0'],
+  dark: ['#4a3f38', '#3a2e26', '#2f2520'],
+  laptop: ['#ecebe7', '#d9d6d0', '#c6c1ba'],
+  kraft: ['#e8cfa6', '#d8bb8b', '#c8a874'],
+  pot: ['#dca58a', '#c98f73', '#b67c61'],
+  sofa: ['#d9c7b2', '#c7b39c', '#b49f88'],
+  // 직무별 옷
+  suit: ['#5b6b8c', '#4a5875', '#3d4962'],
+  cardigan: ['#a9c2a0', '#93ad8a', '#809a77'],
+  vest: ['#f1cf63', '#e0bb48', '#cda838'],
+  hoodie: ['#b48bb5', '#9e769f', '#88628a'],
+} satisfies Record<string, Tone>;
+
+const outfit: Record<Look, Tone> = { master: T.suit, finance: T.cardigan, sourcing: T.vest, marketing: T.hoodie };
+
+function Box({ x, y, z, w, d, h, tone = T.robot }: { x: number; y: number; z: number; w: number; d: number; h: number; tone?: Tone }) {
   const f = boxFaces(x, y, z, w, d, h);
   return (
-    <g className={`iso-box ${className}`}>
-      <polygon className="iso-face-left" points={f.left} />
-      <polygon className="iso-face-right" points={f.right} />
-      <polygon className="iso-face-top" points={f.top} />
+    <g>
+      <polygon points={f.left} style={{ fill: tone[1] }} />
+      <polygon points={f.right} style={{ fill: tone[2] }} />
+      <polygon points={f.top} style={{ fill: tone[0] }} />
     </g>
   );
 }
 
-function Packet({ flow, index }: { flow: [number, number, number, number]; index: number }) {
-  const [x0, y0, x1, y1] = flow;
-  const a = project(x0, y0);
-  const b = project(x1, y1);
+function Line({ a, b, className = 'iso-line' }: { a: Pt; b: Pt; className?: string }) {
+  return <line className={className} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} />;
+}
+
+function Leaves({ x, y, z }: { x: number; y: number; z: number }) {
+  const c = project(x, y, z);
   return (
-    <g
-      className="iso-packet"
-      style={{
-        ['--dx' as string]: `${b[0] - a[0]}px`,
-        ['--dy' as string]: `${b[1] - a[1]}px`,
-        animationDelay: `${index * 0.8}s`,
-      }}
-    >
-      <Box x={x0} y={y0} z={0} w={12} d={12} h={12} className="is-accent" />
+    <g className="iso-leaves">
+      <circle cx={c[0] - 7} cy={c[1] + 2} r={8} />
+      <circle cx={c[0] + 7} cy={c[1] + 1} r={8} />
+      <circle cx={c[0]} cy={c[1] - 8} r={9} />
     </g>
   );
 }
 
-function Station({ view }: { view: StationView }) {
-  const { x: X, y: Y } = layout[view.category];
-  const working = view.state === 'working';
+// ── 에이전트 — 의자에 앉아 책상 앞에서 일한다. 얼굴은 화면, 옷 · 소품으로 직무가 보인다 ──
+
+const AGENT_TOP = 96;
+
+function Agent({ X, Y, look, state }: { X: number; Y: number; look: Look; state: StationState }) {
+  const cloth = outfit[look];
+  const front = Y + 32; // 몸통 앞면
+  const face = Y + 33; // 머리 앞면
+  const working = state === 'working';
+  const waiting = state === 'waiting';
+
   return (
-    <g
-      className={`iso-station is-${view.state}`}
-      onClick={view.state === 'locked' ? undefined : view.onSelect}
-      role="presentation"
-    >
-      <polygon className="iso-pad" points={faceZ(0, X - 8, Y - 8, X + STATION + 8, Y + STATION + 8)} />
-      <Box x={X} y={Y} z={0} w={STATION} d={STATION} h={26} />
-      {/* 역할 타일 3개 — 일할 때 주황으로 켜진다 */}
-      {[0, 1, 2].map((i) => (
-        <Box key={i} x={X + 10 + i * 28} y={Y + 70} z={26} w={22} d={16} h={3} className={working ? 'is-accent is-tile' : 'is-tile'} />
-      ))}
-      {/* 모니터 */}
-      <Box x={X + 66} y={Y + 14} z={26} w={8} d={42} h={30} />
-      <polygon className={`iso-screen ${working ? 'is-on' : ''}`} points={faceX(X + 74, Y + 18, Y + 52, 31, 52)} />
-      {/* 워커 에이전트 — 몸 · 머리 · 얼굴 화면 · 눈 · 안테나 */}
-      <g className="iso-robot">
-        <Box x={X + 24} y={Y + 24} z={26} w={30} d={30} h={20} />
-        <Box x={X + 18} y={Y + 18} z={46} w={42} d={42} h={26} />
-        <polygon className="iso-face" points={faceY(Y + 60, X + 23, X + 55, 51, 68)} />
-        <polygon className="iso-eye" points={faceY(Y + 60, X + 30, X + 36, 56, 63)} />
-        <polygon className="iso-eye" points={faceY(Y + 60, X + 42, X + 48, 56, 63)} />
-        <line className="iso-line" x1={project(X + 39, Y + 39, 72)[0]} y1={project(X + 39, Y + 39, 72)[1]} x2={project(X + 39, Y + 39, 84)[0]} y2={project(X + 39, Y + 39, 84)[1]} />
-        <circle className="iso-antenna" cx={project(X + 39, Y + 39, 87)[0]} cy={project(X + 39, Y + 39, 87)[1]} r={3.6} />
-      </g>
-      {/* 승인 대기 깃발 */}
-      {view.state === 'waiting' && (
-        <g className="iso-flag">
-          <line className="iso-line" x1={project(X + 8, Y + 8, 26)[0]} y1={project(X + 8, Y + 8, 26)[1]} x2={project(X + 8, Y + 8, 104)[0]} y2={project(X + 8, Y + 8, 104)[1]} />
-          <polygon className="iso-flag-cloth" points={faceY(Y + 8, X + 8, X + 34, 86, 104)} />
+    <g className={`iso-agent is-${state}`}>
+      {/* 의자 */}
+      <Box x={X + 33} y={Y + 18} z={0} w={8} d={8} h={18} tone={T.chair} />
+      <Box x={X + 18} y={Y + 8} z={18} w={38} d={30} h={6} tone={T.chair} />
+      <Box x={X + 18} y={Y + 4} z={24} w={38} d={6} h={38} tone={T.chair} />
+
+      {/* 몸통 + 옷 */}
+      {look === 'marketing' && <Box x={X + 25} y={Y + 10} z={48} w={24} d={6} h={10} tone={T.hoodie} />}
+      <Box x={X + 23} y={Y + 14} z={24} w={28} d={18} h={30} tone={cloth} />
+      {look === 'master' && (
+        <>
+          <polygon className="iso-shirt" points={[project(X + 31, front, 54), project(X + 43, front, 54), project(X + 37, front, 42)].join(' ')} />
+          <polygon className="iso-tie" points={[project(X + 36, front, 51), project(X + 38, front, 51), project(X + 39.5, front, 34), project(X + 34.5, front, 34)].join(' ')} />
+        </>
+      )}
+      {look === 'finance' && (
+        <>
+          <polygon className="iso-shirt" points={[project(X + 32, front, 54), project(X + 42, front, 54), project(X + 37, front, 44)].join(' ')} />
+          {[42, 37, 32].map((z) => {
+            const [cx, cy] = project(X + 37, front, z);
+            return <circle key={z} className="iso-button" cx={cx} cy={cy} r={1.3} />;
+          })}
+        </>
+      )}
+      {look === 'sourcing' && (
+        <>
+          <polygon className="iso-stripe" points={faceY(front, X + 23, X + 51, 36, 39.5)} />
+          <polygon className="iso-stripe" points={faceX(X + 51, Y + 14, front, 36, 39.5)} />
+        </>
+      )}
+      {look === 'marketing' && <polygon className="iso-pocket" points={faceY(front, X + 30, X + 44, 29, 36)} />}
+
+      {/* 머리 — 흰 로봇 머리 + 검은 얼굴 화면 */}
+      <Box x={X + 26} y={Y + 15} z={54} w={22} d={18} h={20} />
+      <polygon className="iso-face" points={faceY(face, X + 28.5, X + 45.5, 57, 71)} />
+      <polygon className="iso-eye" points={faceY(face, X + 31.5, X + 35, 61, 66)} />
+      <polygon className="iso-eye" points={faceY(face, X + 39, X + 42.5, 61, 66)} />
+
+      {look === 'finance' && (
+        <g className="iso-glasses">
+          <polygon points={faceY(face, X + 30.2, X + 36.3, 59.8, 67.2)} />
+          <polygon points={faceY(face, X + 37.7, X + 43.8, 59.8, 67.2)} />
+          <Line a={project(X + 36.3, face, 64)} b={project(X + 37.7, face, 64)} className="iso-glasses-bridge" />
         </g>
+      )}
+      {look === 'sourcing' && (
+        <>
+          <Box x={X + 24} y={Y + 13} z={74} w={26} d={24} h={3} tone={T.vest} />
+          <Box x={X + 27} y={Y + 16} z={77} w={20} d={16} h={7} tone={T.vest} />
+        </>
+      )}
+      {look === 'marketing' && (
+        <>
+          <Box x={X + 24.5} y={Y + 21} z={74} w={25} d={4} h={4} tone={T.dark} />
+          <Box x={X + 23.2} y={Y + 19} z={60} w={3} d={9} h={12} tone={T.dark} />
+          <Box x={X + 47.8} y={Y + 19} z={60} w={3} d={9} h={12} tone={T.dark} />
+        </>
+      )}
+      {(look === 'finance' || look === 'master') && (
+        <>
+          <Line a={project(X + 37, Y + 24, 74)} b={project(X + 37, Y + 24, 82)} />
+          {look === 'master' ? (
+            <path
+              className="iso-crown"
+              d={(() => {
+                const [cx, cy] = project(X + 37, Y + 24, 86);
+                return `M${cx - 8} ${cy + 3} L${cx - 6} ${cy - 5} L${cx - 2} ${cy - 1} L${cx} ${cy - 7} L${cx + 2} ${cy - 1} L${cx + 6} ${cy - 5} L${cx + 8} ${cy + 3} Z`;
+              })()}
+            />
+          ) : (
+            <circle className="iso-antenna" cx={project(X + 37, Y + 24, 85)[0]} cy={project(X + 37, Y + 24, 85)[1]} r={3.2} />
+          )}
+        </>
+      )}
+
+      {/* 승인 대기 — 오른손을 든다 */}
+      {waiting && (
+        <>
+          <Box x={X + 51} y={Y + 18} z={50} w={6} d={7} h={24} tone={cloth} />
+          <Box x={X + 51} y={Y + 18} z={74} w={6} d={7} h={6} />
+        </>
+      )}
+
+      {/* 책상 */}
+      <Box x={X + 8} y={Y + 40} z={0} w={4} d={30} h={26} tone={T.wood} />
+      <Box x={X + 72} y={Y + 40} z={0} w={4} d={30} h={26} tone={T.wood} />
+      <Box x={X + 6} y={Y + 38} z={26} w={72} d={34} h={6} tone={T.wood} />
+
+      {/* 팔 — 일할 때 타이핑 */}
+      <g className="iso-arm is-left">
+        <Box x={X + 19} y={Y + 28} z={32} w={7} d={16} h={6} tone={cloth} />
+        <Box x={X + 19} y={Y + 44} z={32} w={7} d={4} h={5} />
+      </g>
+      {!waiting && (
+        <g className="iso-arm is-right">
+          <Box x={X + 48} y={Y + 28} z={32} w={7} d={16} h={6} tone={cloth} />
+          <Box x={X + 48} y={Y + 44} z={32} w={7} d={4} h={5} />
+        </g>
+      )}
+
+      {/* 직무 소품 */}
+      {look === 'finance' && (
+        <>
+          <Box x={X + 10} y={Y + 46} z={32} w={18} d={14} h={7} />
+          <Box x={X + 10} y={Y + 62} z={32} w={13} d={8} h={3} tone={T.dark} />
+        </>
+      )}
+      {look === 'sourcing' && (
+        <>
+          <Box x={X + 9} y={Y + 46} z={32} w={18} d={16} h={13} tone={T.kraft} />
+          <Box x={X + 82} y={Y + 42} z={0} w={24} d={22} h={20} tone={T.kraft} />
+          <Box x={X + 85} y={Y + 45} z={20} w={18} d={16} h={14} tone={T.kraft} />
+        </>
+      )}
+      {look === 'marketing' && (
+        <>
+          <Box x={X + 15} y={Y + 54} z={32} w={4} d={4} h={14} tone={T.dark} />
+          <Box x={X + 10} y={Y + 50} z={46} w={14} d={11} h={9} tone={T.dark} />
+          {(() => {
+            const [cx, cy] = project(X + 17, Y + 61, 50.5);
+            return <circle className="iso-lens" cx={cx} cy={cy} r={3.2} />;
+          })()}
+        </>
+      )}
+      {look === 'master' && (
+        <>
+          <Box x={X + 11} y={Y + 46} z={32} w={11} d={11} h={9} tone={T.pot} />
+          <Leaves x={X + 16} y={Y + 51} z={49} />
+          <Box x={X + 30} y={Y + 62} z={32} w={6} d={6} h={7} />
+        </>
+      )}
+
+      {/* 노트북 — 일하는 중이면 로고가 켜진다 */}
+      <Box x={X + 46} y={Y + 44} z={32} w={26} d={14} h={2} tone={T.laptop} />
+      <Box x={X + 46} y={Y + 58} z={34} w={26} d={2} h={15} tone={T.laptop} />
+      <polygon className={`iso-logo ${working ? 'is-on' : ''}`} points={faceY(Y + 60, X + 56, X + 62, 39, 45)} />
+
+      {/* 승인 대기 깃발 */}
+      {waiting && (
+        <>
+          <Line a={project(X + 76, Y + 40, 32)} b={project(X + 76, Y + 40, 74)} />
+          <polygon className="iso-flag-cloth" points={faceY(Y + 40, X + 76, X + 96, 60, 74)} />
+        </>
       )}
     </g>
   );
 }
 
-/** 에이전트 카드 머리에 쓰는 작은 워커 로봇 */
-export function IsoAgentIcon({ working, size = 72 }: { working: boolean; size?: number }) {
+// ── 배치 ────────────────────────────────────────────────────────
+
+const FLOOR = { w: 460, d: 360 };
+const WALL_H = 150;
+
+const seats: Record<Look, { x: number; y: number; offset: Pt; side: 'left' | 'right' }> = {
+  master: { x: 190, y: 50, offset: [96, -78], side: 'right' },
+  finance: { x: 70, y: 170, offset: [-90, -40], side: 'left' },
+  sourcing: { x: 300, y: 160, offset: [110, 30], side: 'right' },
+  marketing: { x: 190, y: 250, offset: [-120, 110], side: 'left' },
+};
+
+const VB = { x: -362, y: -162, w: 806, h: 584 };
+
+function Room() {
   return (
-    <svg className={`iso-icon ${working ? 'is-working' : ''}`} width={size} height={size} viewBox="-44 -70 88 116" aria-hidden>
-      <g className="iso-robot">
-        <Box x={6} y={6} z={0} w={30} d={30} h={20} />
-        <Box x={0} y={0} z={20} w={42} d={42} h={26} />
-        <polygon className="iso-face" points={faceY(42, 5, 37, 25, 42)} />
-        <polygon className="iso-eye" points={faceY(42, 12, 18, 30, 37)} />
-        <polygon className="iso-eye" points={faceY(42, 24, 30, 30, 37)} />
-        <line className="iso-line" x1={project(21, 21, 46)[0]} y1={project(21, 21, 46)[1]} x2={project(21, 21, 58)[0]} y2={project(21, 21, 58)[1]} />
-        <circle className="iso-antenna" cx={project(21, 21, 61)[0]} cy={project(21, 21, 61)[1]} r={3.6} />
-      </g>
-    </svg>
+    <g className="iso-room">
+      {/* 바닥 · 마루 */}
+      <Box x={0} y={0} z={-10} w={FLOOR.w} d={FLOOR.d} h={10} tone={T.floor} />
+      {Array.from({ length: Math.floor(FLOOR.d / 36) }, (_, i) => (i + 1) * 36).map((y) => (
+        <Line key={y} a={project(0, y)} b={project(FLOOR.w, y)} className="iso-plank" />
+      ))}
+
+      {/* 벽 두 면 */}
+      <Box x={-8} y={0} z={0} w={8} d={FLOOR.d} h={WALL_H} tone={T.wall} />
+      <Box x={0} y={-8} z={0} w={FLOOR.w} d={8} h={WALL_H} tone={T.wall} />
+      <Box x={-8} y={-8} z={0} w={8} d={8} h={WALL_H} tone={T.wall} />
+
+      {/* 창문 */}
+      {[
+        [36, 126],
+        [150, 240],
+        [264, 324],
+      ].map(([a, b]) => (
+        <g key={a}>
+          <polygon className="iso-glass" points={faceY(0, a, b, 56, 128)} />
+          <Line a={project((a + b) / 2, 0, 56)} b={project((a + b) / 2, 0, 128)} />
+          <Line a={project(a, 0, 92)} b={project(b, 0, 92)} />
+        </g>
+      ))}
+
+      {/* 화이트보드 + 포스트잇 */}
+      <polygon className="iso-board" points={faceX(0, 40, 160, 62, 120)} />
+      {[
+        [56, 104, '#f6d77a'],
+        [76, 108, '#f3a98b'],
+        [98, 100, '#a9c2a0'],
+        [120, 106, '#b48bb5'],
+        [64, 86, '#f3a98b'],
+        [108, 84, '#f6d77a'],
+      ].map(([y, z, c]) => (
+        <polygon key={`${y}-${z}`} className="iso-note" style={{ fill: c as string }} points={faceX(0, y as number, (y as number) + 14, (z as number) - 12, z as number)} />
+      ))}
+
+      {/* 커피 바 + 상부장 */}
+      <polygon className="iso-cabinet" points={faceY(0, 344, 452, 100, 132)} />
+      <Box x={344} y={0} z={0} w={108} d={30} h={40} tone={T.wood} />
+      <Box x={358} y={6} z={40} w={20} d={16} h={22} tone={T.dark} />
+      <Box x={390} y={10} z={40} w={6} d={6} h={7} />
+      <Box x={402} y={10} z={40} w={6} d={6} h={7} />
+
+      {/* 라운지 러그 · 소파 · 테이블 */}
+      <polygon className="iso-rug" points={faceZ(0.3, 12, 236, 150, 352)} />
+    </g>
+  );
+}
+
+function Lounge() {
+  return (
+    <g>
+      <Box x={10} y={246} z={0} w={40} d={96} h={18} tone={T.sofa} />
+      <Box x={10} y={246} z={18} w={12} d={96} h={26} tone={T.sofa} />
+      <Box x={10} y={246} z={18} w={40} d={10} h={14} tone={T.sofa} />
+      <Box x={10} y={332} z={18} w={40} d={10} h={14} tone={T.sofa} />
+      <Box x={76} y={270} z={0} w={48} d={52} h={16} tone={T.wood} />
+      <Box x={96} y={290} z={16} w={6} d={6} h={7} />
+    </g>
+  );
+}
+
+function Plant({ x, y }: { x: number; y: number }) {
+  return (
+    <g>
+      <Box x={x} y={y} z={0} w={22} d={22} h={26} tone={T.pot} />
+      <Leaves x={x + 11} y={y + 11} z={44} />
+      <Leaves x={x + 8} y={y + 8} z={58} />
+    </g>
   );
 }
 
 /**
- * 사무실 장면 — 크림색 바닥 위 아이소메트릭 선화. 하루 허브에서 부서 스테이션으로
- * 점선 작업 경로가 이어지고, 일하는 부서로 작업 큐브가 흘러간다. 글자는 HTML 라벨 카드로 얹는다.
+ * 사무실 장면 — 공유 오피스. 벽 두 면(창문 · 화이트보드 · 커피 바)과 라운지 사이에
+ * 하루(마스터)와 부서 에이전트 3명이 의자에 앉아 일한다. 글자는 HTML 라벨 카드로 얹는다.
  */
-export function IsoOffice({ stations, hubWorking, hubLabel }: Props) {
+export function IsoOffice({ stations, master }: Props) {
   const toPct = ([sx, sy]: Pt) => ({ left: `${((sx - VB.x) / VB.w) * 100}%`, top: `${((sy - VB.y) / VB.h) * 100}%` });
-  const by = (c: CategoryId) => stations.find((s) => s.category === c);
-  const stationAnchor = (c: CategoryId): Pt => project(layout[c].x + STATION / 2, layout[c].y + STATION / 2, 108);
-  const hubAnchor = project(HUB.x + HUB.w / 2, HUB.y + HUB.w / 2, 84);
-  const hubOffset: Pt = [-170, -44];
-  const labelPoint = (a: Pt, o: Pt): Pt => [a[0] + o[0], a[1] + o[1]];
-  const flowing = stations.filter((s) => s.state === 'working');
+
+  const people: { look: Look; state: StationState; onSelect?: () => void; label: ReactNode }[] = [
+    { look: 'master', state: master.state, label: master.label },
+    ...stations.map((s) => ({ look: s.category as Look, state: s.state, onSelect: s.onSelect, label: s.label })),
+  ];
+
+  // 화가 알고리즘 — 뒤(x + y 가 작은 것)부터 그린다
+  const things: { key: string; depth: number; node: ReactNode }[] = [
+    { key: 'plant-a', depth: 226, node: <Plant x={14} y={190} /> },
+    { key: 'plant-b', depth: 500, node: <Plant x={428} y={44} /> },
+    { key: 'lounge', depth: 320, node: <Lounge /> },
+    ...people.map((p) => {
+      const s = seats[p.look];
+      return {
+        key: p.look,
+        depth: s.x + 50 + s.y + 40,
+        node: (
+          <g
+            className={p.onSelect && p.state !== 'locked' ? 'iso-seat is-clickable' : 'iso-seat'}
+            onClick={p.state === 'locked' ? undefined : p.onSelect}
+          >
+            <polygon className="iso-pad" points={faceZ(0.5, s.x, s.y, s.x + 110, s.y + 76)} />
+            <Agent X={s.x} Y={s.y} look={p.look} state={p.state} />
+          </g>
+        ),
+      };
+    }),
+  ].sort((a, b) => a.depth - b.depth);
 
   return (
     <div className="iso-stage">
       <svg viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} className="iso-svg" aria-hidden>
-        {/* 바닥 */}
-        <Box x={150} y={150} z={-12} w={360} d={360} h={12} className="is-floor" />
-        <polygon className="iso-guide" points={faceZ(0, 162, 162, 498, 498)} />
-
-        {/* 작업 경로 */}
-        {stations.map((s) =>
-          layout[s.category].lane.map(([a, b], i) => {
-            const p = project(a[0], a[1]);
-            const q = project(b[0], b[1]);
-            return <line key={`${s.category}-${i}`} className="iso-lane" x1={p[0]} y1={p[1]} x2={q[0]} y2={q[1]} />;
-          }),
-        )}
-
-        {/* 허브 뒤에서 나오는 큐브 — 소싱 · 마케팅 */}
-        {flowing
-          .filter((s) => s.category !== 'finance')
-          .map((s) => [0, 1, 2].map((i) => <Packet key={`${s.category}-${i}`} flow={layout[s.category].flow} index={i} />))}
-
-        {(['sourcing', 'marketing'] as const).map((c) => {
-          const v = by(c);
-          return v ? <Station key={c} view={v} /> : null;
-        })}
-
-        {/* 하루 허브 */}
-        <g className={`iso-hub ${hubWorking ? 'is-working' : ''}`}>
-          <Box x={170} y={170} z={0} w={140} d={140} h={14} />
-          <Box x={HUB.x} y={HUB.y} z={14} w={HUB.w} d={HUB.w} h={44} />
-          <Box x={194} y={194} z={58} w={92} d={92} h={6} className="is-rim" />
-          <polygon className="iso-hub-well" points={faceZ(64, 204, 204, 276, 276)} />
-          <Box x={222} y={222} z={64} w={36} d={36} h={16} className="is-core" />
-          {[
-            [186, 186],
-            [294, 186],
-            [186, 294],
-            [294, 294],
-          ].map(([bx, by2]) => {
-            const [cx, cy] = project(bx, by2, 58);
-            return <circle key={`${bx}-${by2}`} className="iso-bolt" cx={cx} cy={cy} r={3} />;
-          })}
-          <polygon className="iso-slot" points={faceY(300, 206, 274, 24, 46)} />
-          {[0, 1, 2].map((i) => (
-            <polygon key={i} className={`iso-light ${hubWorking ? 'is-on' : ''}`} points={faceX(300, 206 + i * 24, 220 + i * 24, 30, 40)} />
-          ))}
-        </g>
-
-        {flowing
-          .filter((s) => s.category === 'finance')
-          .map((s) => [0, 1, 2].map((i) => <Packet key={`${s.category}-${i}`} flow={layout.finance.flow} index={i} />))}
-
-        {by('finance') && <Station view={by('finance')!} />}
+        <Room />
+        {things.map((t) => (
+          <g key={t.key}>{t.node}</g>
+        ))}
 
         {/* 지시선 */}
-        {stations.map((s) => {
-          const a = stationAnchor(s.category);
-          const b = labelPoint(a, layout[s.category].offset);
+        {people.map((p) => {
+          const s = seats[p.look];
+          const a = project(s.x + 37, s.y + 24, AGENT_TOP);
+          const b: Pt = [a[0] + s.offset[0], a[1] + s.offset[1]];
           return (
-            <g key={`leader-${s.category}`} className="iso-leader">
+            <g key={`leader-${p.look}`} className="iso-leader">
               <circle cx={a[0]} cy={a[1]} r={2.5} />
-              <polyline points={`${a[0]},${a[1]} ${a[0] + layout[s.category].offset[0] * 0.35},${b[1]} ${b[0]},${b[1]}`} />
+              <polyline points={`${a[0]},${a[1]} ${a[0] + s.offset[0] * 0.3},${b[1]} ${b[0]},${b[1]}`} />
             </g>
           );
         })}
-        <g className="iso-leader">
-          <circle cx={hubAnchor[0]} cy={hubAnchor[1]} r={2.5} />
-          <polyline
-            points={`${hubAnchor[0]},${hubAnchor[1]} ${hubAnchor[0] + hubOffset[0] * 0.35},${hubAnchor[1] + hubOffset[1]} ${hubAnchor[0] + hubOffset[0]},${hubAnchor[1] + hubOffset[1]}`}
-          />
-        </g>
       </svg>
 
-      {stations.map((s) => (
-        <div
-          key={`label-${s.category}`}
-          className={`iso-label-slot is-${layout[s.category].side}`}
-          style={toPct(labelPoint(stationAnchor(s.category), layout[s.category].offset))}
-        >
-          {s.label}
-        </div>
-      ))}
-      <div className="iso-label-slot is-left" style={toPct(labelPoint(hubAnchor, hubOffset))}>
-        {hubLabel}
-      </div>
+      {people.map((p) => {
+        const s = seats[p.look];
+        const a = project(s.x + 37, s.y + 24, AGENT_TOP);
+        return (
+          <div key={`label-${p.look}`} className={`iso-label-slot is-${s.side}`} style={toPct([a[0] + s.offset[0], a[1] + s.offset[1]])}>
+            {p.label}
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+/** 에이전트 카드 머리에 쓰는 작은 그림 — 책상에 앉은 그 에이전트 */
+export function IsoAgentIcon({ look, state, size = 96 }: { look: Look; state: StationState; size?: number }) {
+  return (
+    <svg className="iso-icon" width={size} height={size * 0.95} viewBox="-62 -72 160 150" aria-hidden>
+      <Agent X={0} Y={0} look={look} state={state} />
+    </svg>
   );
 }

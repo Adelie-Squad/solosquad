@@ -75,6 +75,8 @@ export function OfficeView() {
   const running = jobs.filter((j) => j.status === 'running').length;
   const doneToday = COMPLETED_TODAY_BASE + jobs.filter((j) => j.status === 'done').length;
   const mailReview = viewer.master ? mailMessages.filter((m) => m.needsReview).length : 0;
+  // 하루가 직접 하는 일이 있으면 일하는 중, 없고 메일 검토가 밀려 있으면 손을 든다
+  const masterState: StationState = haruJob ? 'working' : mailReview > 0 ? 'waiting' : 'idle';
   const waitingTotal = agents.filter((a) => a.state !== 'locked').reduce((sum, a) => sum + waiting[a.agent.category].count, 0) + mailReview;
 
   const stations: StationView[] = agents.map((a) => {
@@ -151,9 +153,10 @@ export function OfficeView() {
 
       <IsoOffice
         stations={stations}
-        hubWorking={running > 0}
-        hubLabel={
-          <div className={`iso-label ${haruJob ? 'is-working' : ''}`}>
+        master={{
+          state: masterState,
+          label: (
+          <div className={`iso-label is-${masterState}`}>
             <strong>🤖 {AGENT_NAME} · 마스터 에이전트</strong>
             <span className="iso-label-line">
               <span className="iso-state-dot" />
@@ -167,7 +170,8 @@ export function OfficeView() {
               </span>
             )}
           </div>
-        }
+          ),
+        }}
       />
 
       {selected && selected.state !== 'locked' && (
@@ -195,7 +199,7 @@ function AgentSheet({ agent: a, waiting, onClose }: { agent: AgentState; waiting
     <div className="command-overlay is-sheet" onMouseDown={onClose}>
       <aside className="agent-sheet" role="dialog" aria-label={agent.name} onMouseDown={(e) => e.stopPropagation()}>
         <header className="agent-sheet-head">
-          <IsoAgentIcon working={state === 'working'} />
+          <IsoAgentIcon look={agent.category} state={state} />
           <div>
             <h2>{agent.name}</h2>
             <p>
