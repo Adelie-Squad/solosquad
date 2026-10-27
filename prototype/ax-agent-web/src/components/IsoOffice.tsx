@@ -11,13 +11,14 @@ export type Look = 'master' | CategoryId;
 export interface StationView {
   category: CategoryId;
   state: StationState;
-  label: ReactNode;
+  /** 머리 위 이름표 — 이름 · 확인 필요 아이콘 · 진행률 바 */
+  tag: ReactNode;
   onSelect?: () => void;
 }
 
 interface Props {
   stations: StationView[];
-  master: { state: StationState; label: ReactNode };
+  master: { state: StationState; tag: ReactNode };
 }
 
 // ── 색 — 면 3단계(윗 · 왼 · 오른). 선은 CSS 에서 공통 ─────────────────
@@ -71,8 +72,6 @@ function Leaves({ x, y, z }: { x: number; y: number; z: number }) {
 }
 
 // ── 에이전트 — 의자에 앉아 책상 앞에서 일한다. 얼굴은 화면, 옷 · 소품으로 직무가 보인다 ──
-
-const AGENT_TOP = 96;
 
 function Agent({ X, Y, look, state }: { X: number; Y: number; look: Look; state: StationState }) {
   const cloth = outfit[look];
@@ -235,14 +234,18 @@ function Agent({ X, Y, look, state }: { X: number; Y: number; look: Look; state:
 const FLOOR = { w: 460, d: 360 };
 const WALL_H = 150;
 
-const seats: Record<Look, { x: number; y: number; offset: Pt; side: 'left' | 'right' }> = {
-  master: { x: 190, y: 50, offset: [96, -78], side: 'right' },
-  finance: { x: 70, y: 170, offset: [-90, -40], side: 'left' },
-  sourcing: { x: 300, y: 160, offset: [110, 30], side: 'right' },
-  marketing: { x: 190, y: 250, offset: [-120, 110], side: 'left' },
+const seats: Record<Look, { x: number; y: number }> = {
+  master: { x: 190, y: 50 },
+  finance: { x: 70, y: 170 },
+  sourcing: { x: 300, y: 160 },
+  marketing: { x: 190, y: 250 },
 };
 
-const VB = { x: -362, y: -162, w: 806, h: 584 };
+/** 이름표를 붙이는 높이 — 왕관 · 안전모 바로 위 */
+const TAG_Z = 98;
+
+// 방 + 머리 위 이름표만 들어가면 된다 (라벨 카드가 빠져 좌우 여백이 줄었다)
+const VB = { x: -325, y: -162, w: 735, h: 584 };
 
 function Room() {
   return (
@@ -322,14 +325,15 @@ function Plant({ x, y }: { x: number; y: number }) {
 
 /**
  * 사무실 장면 — 공유 오피스. 벽 두 면(창문 · 화이트보드 · 커피 바)과 라운지 사이에
- * 하루(마스터)와 부서 에이전트 3명이 의자에 앉아 일한다. 글자는 HTML 라벨 카드로 얹는다.
+ * 하루(마스터)와 부서 에이전트 3명이 의자에 앉아 일한다. 이름표는 HTML 로 머리 위에 얹는다.
+ * 장면은 비율을 지킨 채 주어진 칸(가로 · 세로)에 맞춰 커지고 줄어든다.
  */
 export function IsoOffice({ stations, master }: Props) {
   const toPct = ([sx, sy]: Pt) => ({ left: `${((sx - VB.x) / VB.w) * 100}%`, top: `${((sy - VB.y) / VB.h) * 100}%` });
 
-  const people: { look: Look; state: StationState; onSelect?: () => void; label: ReactNode }[] = [
-    { look: 'master', state: master.state, label: master.label },
-    ...stations.map((s) => ({ look: s.category as Look, state: s.state, onSelect: s.onSelect, label: s.label })),
+  const people: { look: Look; state: StationState; onSelect?: () => void; tag: ReactNode }[] = [
+    { look: 'master', state: master.state, tag: master.tag },
+    ...stations.map((s) => ({ look: s.category as Look, state: s.state, onSelect: s.onSelect, tag: s.tag })),
   ];
 
   // 화가 알고리즘 — 뒤(x + y 가 작은 것)부터 그린다
@@ -357,35 +361,23 @@ export function IsoOffice({ stations, master }: Props) {
 
   return (
     <div className="iso-stage">
-      <svg viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} className="iso-svg" aria-hidden>
-        <Room />
-        {things.map((t) => (
-          <g key={t.key}>{t.node}</g>
-        ))}
+      <div className="iso-canvas">
+        <svg viewBox={`${VB.x} ${VB.y} ${VB.w} ${VB.h}`} className="iso-svg" aria-hidden>
+          <Room />
+          {things.map((t) => (
+            <g key={t.key}>{t.node}</g>
+          ))}
+        </svg>
 
-        {/* 지시선 */}
         {people.map((p) => {
           const s = seats[p.look];
-          const a = project(s.x + 37, s.y + 24, AGENT_TOP);
-          const b: Pt = [a[0] + s.offset[0], a[1] + s.offset[1]];
           return (
-            <g key={`leader-${p.look}`} className="iso-leader">
-              <circle cx={a[0]} cy={a[1]} r={2.5} />
-              <polyline points={`${a[0]},${a[1]} ${a[0] + s.offset[0] * 0.3},${b[1]} ${b[0]},${b[1]}`} />
-            </g>
+            <div key={`tag-${p.look}`} className="iso-tag-slot" style={toPct(project(s.x + 37, s.y + 24, TAG_Z))}>
+              {p.tag}
+            </div>
           );
         })}
-      </svg>
-
-      {people.map((p) => {
-        const s = seats[p.look];
-        const a = project(s.x + 37, s.y + 24, AGENT_TOP);
-        return (
-          <div key={`label-${p.look}`} className={`iso-label-slot is-${s.side}`} style={toPct([a[0] + s.offset[0], a[1] + s.offset[1]])}>
-            {p.label}
-          </div>
-        );
-      })}
+      </div>
     </div>
   );
 }

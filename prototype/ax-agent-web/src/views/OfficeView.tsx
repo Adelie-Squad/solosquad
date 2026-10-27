@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { IsoAgentIcon, IsoOffice, type StationState, type StationView } from '../components/IsoOffice';
 import { JobList } from '../components/JobList';
+import { LiveModal } from '../components/LiveModal';
 import {
   AGENT_NAME,
   categoryById,
@@ -53,6 +54,8 @@ export function OfficeView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [liveOpen, setLiveOpen] = useState(readLiveOpen);
+  const [liveModal, setLiveModal] = useState(false);
+  const navigate = useNavigate();
 
   const toggleLive = () =>
     setLiveOpen((open) => {
@@ -108,45 +111,33 @@ export function OfficeView() {
       category: a.agent.category,
       state: a.state,
       onSelect: () => setSelectedId(a.agent.id),
-      label:
-        a.state === 'locked' ? (
-          <div className="iso-label is-locked">
-            <strong>🔒 {a.agent.name}</strong>
-            <span className="iso-label-line">{a.line}</span>
-          </div>
-        ) : (
-          <button className={`iso-label is-${a.state}`} onClick={() => setSelectedId(a.agent.id)}>
-            <strong>
-              {category.icon} {a.agent.name}
-            </strong>
-            <span className="iso-label-line">
-              <span className="iso-state-dot" />
-              {a.line}
-            </span>
-            <span className="iso-label-meta">
-              {a.job && <span className="chip">{Math.round(a.job.progress)}%</span>}
-              {w.count > 0 && <span className="chip is-warn">확인 필요 {w.count}</span>}
-            </span>
-          </button>
-        ),
+      tag: (
+        <NameTag
+          icon={category.icon}
+          name={category.label}
+          detail={a.state === 'locked' ? `${a.agent.name} — 권한 없음` : `${a.agent.name} — ${a.line}`}
+          alert={a.state === 'locked' ? null : w.count > 0 ? `확인 필요 ${w.count} · ${w.text}` : null}
+          progress={a.job ? a.job.progress : null}
+          locked={a.state === 'locked'}
+          onClick={() => setSelectedId(a.agent.id)}
+        />
+      ),
     };
   });
 
-  const masterLabel = (
-    <div className={`iso-label is-${masterState}`}>
-      <strong>🤖 {AGENT_NAME} · 마스터 에이전트</strong>
-      <span className="iso-label-line">
-        <span className="iso-state-dot" />
-        {haruJob ? `직접 하는 중 — ${haruJob.title} · ${currentStep(haruJob)}` : `작업 ${running}개를 부서에 나눠 맡기고 지켜보는 중`}
-      </span>
-      {mailReview > 0 && (
-        <span className="iso-label-meta">
-          <Link className="chip is-warn" to="/app/mail">
-            메일 답장 검토 {mailReview}
-          </Link>
-        </span>
-      )}
-    </div>
+  const masterTag = (
+    <NameTag
+      icon="👑"
+      name={AGENT_NAME}
+      detail={
+        haruJob
+          ? `${AGENT_NAME}(마스터) — 직접 하는 중: ${haruJob.title} · ${currentStep(haruJob)}`
+          : `${AGENT_NAME}(마스터) — 작업 ${running}개를 부서에 나눠 맡기고 지켜보는 중`
+      }
+      alert={mailReview > 0 ? `메일 답장 검토 ${mailReview}` : null}
+      progress={haruJob ? haruJob.progress : null}
+      onClick={mailReview > 0 ? () => navigate('/app/mail') : undefined}
+    />
   );
 
   const toggleFullscreen = () => {
@@ -191,7 +182,7 @@ export function OfficeView() {
       {/* 실시간 작업을 열면 사무실 | 작업 패널 2열 (좁은 화면에서는 위아래) */}
       <div className={`office-body ${liveOpen ? 'is-split' : ''}`}>
         <div className="office-main">
-          <IsoOffice stations={stations} master={{ state: masterState, label: masterLabel }} />
+          <IsoOffice stations={stations} master={{ state: masterState, tag: masterTag }} />
         </div>
 
         {liveOpen && (
@@ -203,9 +194,9 @@ export function OfficeView() {
               <span className="office-live-count">
                 진행 {running} · 대기 {jobs.filter((j) => j.status === 'queued').length}
               </span>
-              <Link className="btn" to="/app/live">
+              <button className="btn" onClick={() => setLiveModal(true)}>
                 크게 보기
-              </Link>
+              </button>
               <button className="icon-btn" aria-label="실시간 작업 닫기" onClick={toggleLive}>
                 ✕
               </button>
@@ -214,6 +205,8 @@ export function OfficeView() {
           </aside>
         )}
       </div>
+
+      {liveModal && <LiveModal jobs={jobs} onClose={() => setLiveModal(false)} />}
 
       {selected && selected.state !== 'locked' && (
         <AgentSheet agent={selected} waiting={waiting[selected.agent.category]} onClose={() => setSelectedId(null)} />
@@ -349,5 +342,45 @@ function AgentSheet({ agent: a, waiting, onClose }: { agent: AgentState; waiting
         </div>
       </aside>
     </div>
+  );
+}
+
+interface NameTagProps {
+  icon: string;
+  name: string;
+  /** 툴팁 · 스크린리더용 — 화면에는 이름과 아이콘만 */
+  detail: string;
+  alert: string | null;
+  progress: number | null;
+  locked?: boolean;
+  onClick?: () => void;
+}
+
+/** 머리 위 이름표 — 이름 · 확인 필요 아이콘(글자 없음) · 진행률 바 */
+function NameTag({ icon, name, detail, alert, progress, locked, onClick }: NameTagProps) {
+  const label = [detail, alert].filter(Boolean).join(' · ');
+  return (
+    <button
+      className={`iso-tag ${locked ? 'is-locked' : ''}`}
+      onClick={onClick}
+      disabled={locked || !onClick}
+      title={label}
+      aria-label={label}
+    >
+      <span className="iso-tag-pill">
+        <span aria-hidden>{locked ? '🔒' : icon}</span>
+        {name}
+        {alert && (
+          <span className="iso-tag-alert" aria-hidden>
+            !
+          </span>
+        )}
+      </span>
+      {progress !== null && (
+        <span className="iso-tag-bar" aria-hidden>
+          <span style={{ width: `${progress}%` }} />
+        </span>
+      )}
+    </button>
   );
 }
