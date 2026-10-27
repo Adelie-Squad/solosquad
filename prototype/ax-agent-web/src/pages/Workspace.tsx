@@ -85,7 +85,6 @@ export function Workspace() {
         viewer={viewer}
         canAccess={canAccess}
         workflowAttention={workflowAttention}
-        onOpenCommand={() => setCommandOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
       <main className="workspace-card">

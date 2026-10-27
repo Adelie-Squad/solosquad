@@ -18,7 +18,7 @@ export interface StationView {
 
 interface Props {
   stations: StationView[];
-  master: { state: StationState; tag: ReactNode };
+  master: { state: StationState; tag: ReactNode; onSelect?: () => void };
 }
 
 // ── 색 — 면 3단계(윗 · 왼 · 오른). 선은 CSS 에서 공통 ─────────────────
@@ -332,7 +332,7 @@ export function IsoOffice({ stations, master }: Props) {
   const toPct = ([sx, sy]: Pt) => ({ left: `${((sx - VB.x) / VB.w) * 100}%`, top: `${((sy - VB.y) / VB.h) * 100}%` });
 
   const people: { look: Look; state: StationState; onSelect?: () => void; tag: ReactNode }[] = [
-    { look: 'master', state: master.state, tag: master.tag },
+    { look: 'master', state: master.state, onSelect: master.onSelect, tag: master.tag },
     ...stations.map((s) => ({ look: s.category as Look, state: s.state, onSelect: s.onSelect, tag: s.tag })),
   ];
 

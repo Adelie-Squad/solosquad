@@ -8,7 +8,6 @@ interface Props {
   viewer: Member;
   canAccess: (owner: OwnerId) => boolean;
   workflowAttention: number;
-  onOpenCommand: () => void;
   onOpenSettings: () => void;
 }
 
@@ -24,7 +23,7 @@ const pinned: { to: string; icon: string; label: string; badge: number; requires
   { to: '/app/workflows', icon: '🧩', label: '워크플로우', badge: 0, requires: ['finance', 'sourcing', 'marketing'] },
 ];
 
-export function Sidebar({ sessions, space, viewer, canAccess, workflowAttention, onOpenCommand, onOpenSettings }: Props) {
+export function Sidebar({ sessions, space, viewer, canAccess, workflowAttention, onOpenSettings }: Props) {
   const navigate = useNavigate();
   const ownerTodoCount = tasks.filter(
     (t) => t.assignee === '사장님' && t.status !== 'done' && canAccess(t.category),
@@ -52,11 +51,6 @@ export function Sidebar({ sessions, space, viewer, canAccess, workflowAttention,
           </button>
         </div>
       </div>
-
-      <button className="command-pill" onClick={onOpenCommand}>
-        <span className="command-pill-text">{AGENT_NAME}에게 요청하기…</span>
-        <kbd>⌘K</kbd>
-      </button>
 
       <nav className="pinned" aria-label="주요 메뉴">
         {tiles.map((p) => (

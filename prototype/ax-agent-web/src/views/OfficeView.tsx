@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { IsoAgentIcon, IsoOffice, type StationState, type StationView } from '../components/IsoOffice';
 import { JobList } from '../components/JobList';
 import { LiveModal } from '../components/LiveModal';
+import { QuickChat } from '../components/QuickChat';
 import {
   AGENT_NAME,
   categoryById,
@@ -55,7 +56,8 @@ export function OfficeView() {
   const [fullscreen, setFullscreen] = useState(false);
   const [liveOpen, setLiveOpen] = useState(readLiveOpen);
   const [liveModal, setLiveModal] = useState(false);
-  const navigate = useNavigate();
+  // 하루를 누르면 뜨는 간이 대화창
+  const [quickChat, setQuickChat] = useState(false);
 
   const toggleLive = () =>
     setLiveOpen((open) => {
@@ -136,7 +138,7 @@ export function OfficeView() {
       }
       alert={mailReview > 0 ? `메일 답장 검토 ${mailReview}` : null}
       progress={haruJob ? haruJob.progress : null}
-      onClick={mailReview > 0 ? () => navigate('/app/mail') : undefined}
+      onClick={() => setQuickChat(true)}
     />
   );
 
@@ -182,7 +184,7 @@ export function OfficeView() {
       {/* 실시간 작업을 열면 사무실 | 작업 패널 2열 (좁은 화면에서는 위아래) */}
       <div className={`office-body ${liveOpen ? 'is-split' : ''}`}>
         <div className="office-main">
-          <IsoOffice stations={stations} master={{ state: masterState, tag: masterTag }} />
+          <IsoOffice stations={stations} master={{ state: masterState, tag: masterTag, onSelect: () => setQuickChat(true) }} />
         </div>
 
         {liveOpen && (
@@ -207,6 +209,7 @@ export function OfficeView() {
       </div>
 
       {liveModal && <LiveModal jobs={jobs} onClose={() => setLiveModal(false)} />}
+      {quickChat && <QuickChat onClose={() => setQuickChat(false)} />}
 
       {selected && selected.state !== 'locked' && (
         <AgentSheet agent={selected} waiting={waiting[selected.agent.category]} onClose={() => setSelectedId(null)} />
