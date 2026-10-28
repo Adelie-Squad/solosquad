@@ -46,6 +46,8 @@ class SpawnRequest:
     max_budget_usd: float | None = None
     env: dict[str, str] = field(default_factory=dict)
     timeout_s: float | None = None
+    guard_files: tuple[Path, Path] | None = None
+    """(policy.json, grants.json) for harnesses that can enforce the guard in-process."""
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

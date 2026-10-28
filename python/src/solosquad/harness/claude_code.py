@@ -8,6 +8,8 @@ Claude settings never leak tools into an agent.
 from __future__ import annotations
 
 import json
+import shlex
+import sys
 from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
@@ -52,8 +54,26 @@ class ClaudeCodeHarness(BaseHarness):
             args += ["--allowed-tools", ",".join(req.allowed_tools)]
         if req.max_budget_usd is not None:
             args += ["--max-budget-usd", str(req.max_budget_usd)]
+        if req.guard_files is not None:
+            hook = f"{shlex.quote(sys.executable)} -m solosquad.harness.guard_hook"
+            settings = {
+                "hooks": {
+                    "PreToolUse": [
+                        {"matcher": "*", "hooks": [{"type": "command", "command": hook}]}
+                    ]
+                }
+            }
+            args += ["--settings", json.dumps(settings)]
         args += ["--permission-mode", self.permission_mode]
         return args
+
+    @staticmethod
+    def env(req: SpawnRequest) -> dict[str, str]:
+        env = dict(req.env)
+        if req.guard_files is not None:
+            env["SOLOSQUAD_GUARD_POLICY"] = str(req.guard_files[0])
+            env["SOLOSQUAD_GUARD_GRANTS"] = str(req.guard_files[1])
+        return env
 
     async def spawn(self, request: SpawnRequest) -> AsyncIterator[LlmStreamEvent]:
         outcome = ProcessOutcome()
@@ -62,7 +82,7 @@ class ClaudeCodeHarness(BaseHarness):
             self.argv(request),
             stdin=request.prompt,
             cwd=request.cwd,
-            env=request.env,
+            env=self.env(request),
             timeout_s=request.timeout_s,
             outcome=outcome,
         ):

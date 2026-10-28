@@ -54,6 +54,10 @@ strict = true
 mypy_path = "src"
 packages = ["solosquad"]
 
+[[tool.mypy.overrides]]
+module = ["apscheduler.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
