@@ -26,6 +26,7 @@ solosquad = "solosquad.cli:app"
 [dependency-groups]
 dev = [
     "pytest>=8.3",
+    "pytest-asyncio>=0.24",
     "ruff>=0.6",
     "mypy>=1.11",
     "types-PyYAML>=6.0",
@@ -43,6 +44,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]  # wire-format fixtures read best on one line
+
 [tool.mypy]
 strict = true
 mypy_path = "src"
@@ -50,3 +54,5 @@ packages = ["solosquad"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
