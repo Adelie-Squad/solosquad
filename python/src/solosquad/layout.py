@@ -246,11 +246,20 @@ def _mkdirs(*paths: Path) -> None:
             keep.touch()
 
 
-def scaffold_solution(root: Path, engine_version: str) -> Solution:
-    """Create `core/` for a new customer. Refuses to touch a non-empty directory."""
+def scaffold_solution(
+    root: Path, engine_version: str, owner_templates: Path | None = None
+) -> Solution:
+    """Create `core/` for a new customer. Refuses to touch a non-empty directory.
+
+    `owner_templates` (the bundle's `user/`) seeds `core/owner/` with editable starters.
+    """
     if root.exists() and any(root.iterdir()):
         raise LayoutError(f"{root} is not empty")
     sol = Solution(root)
+    sol.owner_dir.mkdir(parents=True)
+    if owner_templates is not None and owner_templates.is_dir():
+        for src in sorted(owner_templates.glob("*.md")):
+            (sol.owner_dir / src.name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
     _mkdirs(sol.owner_dir, *(sol.custom_dir / d for d in CUSTOM_DIRS), sol.orgs_dir)
     _write(sol.core_dir / "engine.lock", EngineLock(version=engine_version))
     _write(sol.core_dir / "solution.yaml", SolutionMeta(id=f"sol-{secrets.token_hex(6)}"))

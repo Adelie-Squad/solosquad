@@ -71,8 +71,9 @@ def init(
     ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
 ) -> None:
     """Create core/, the first org and its first workspace."""
+    bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
     try:
-        sol = scaffold_solution(path, __version__)
+        sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None)
         new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
         scaffold_workspace(new_org, workspace, ws_type)
     except LayoutError as e:
