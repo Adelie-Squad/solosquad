@@ -31,6 +31,8 @@ dev = [
     "mypy>=1.11",
     "types-PyYAML>=6.0",
     "pandas-stubs>=2.2",
+    # reference implementation for golden tests only (decision 20) — never a runtime dependency
+    "langgraph>=1.0",
 ]
 
 [build-system]
