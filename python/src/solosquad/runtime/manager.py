@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
+from collections import deque
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -27,7 +28,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from solosquad.assets.text import load_yaml, match_frontmatter, normalize_line
 from solosquad.graph import Command, CompiledStateGraph, Interrupt
-from solosquad.messages import Message, user
+from solosquad.messages import Message, TextPart
 from solosquad.routing.router import Escalation
 from solosquad.runtime.store import RunStore
 
@@ -98,20 +99,37 @@ class RunManager:
     _done: dict[str, asyncio.Event] = field(init=False, default_factory=dict)
     _scheduler: AsyncIOScheduler | None = field(init=False, default=None)
     _ops_last: dict[str, float] = field(init=False, default_factory=dict)
+    _busy: set[str] = field(init=False, default_factory=set)
+    _backlog: dict[str, deque[str]] = field(init=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         self._queue = asyncio.Queue()
 
     # ------------------------------------------------------------------ lifecycle
 
+    async def _recover(self, run: dict[str, Any]) -> str | None:
+        """Decide what a run the crash left `running` still owes, without losing or
+        duplicating the input: a message whose input id is already in the thread state
+        only needs the graph to continue (or nothing, if it finished)."""
+        tid = run["thread_id"]
+        snap = await self.graph.aget_state({"configurable": {"thread_id": tid}})
+        ids = {m.id for m in snap.values.get("messages") or [] if isinstance(m, Message)}
+        if run["kind"] == "message" and _input_id(run["id"]) not in ids:
+            return self.store.create_run(tid, "message", run["input"], "crash-resume")
+        if run["kind"] == "resume" and snap.interrupts:
+            return self.store.create_run(tid, "resume", run["input"], "crash-resume")
+        if snap.next:
+            return self.store.create_run(tid, "continue", None, "crash-resume")
+        return None
+
     async def start(self, crons: list[CronSpec] | None = None) -> list[str]:
-        """Start workers; resume crashed runs. Returns the ids of runs that were resumed."""
+        """Start workers; resume crashed runs. Returns the ids of runs created to resume."""
         resumed = []
-        for run in self.store.runs(status=RunStatus.RUNNING, limit=1000):
+        for run in reversed(self.store.runs(status=RunStatus.RUNNING, limit=1000)):
             self.store.set_status(run["id"], RunStatus.CANCELLED, error="engine restarted")
-            rid = self.store.create_run(run["thread_id"], "continue", None, "crash-resume")
-            resumed.append(rid)
-        for run in self.store.runs(status=RunStatus.PENDING, limit=1000):
+            if (rid := await self._recover(run)) is not None:
+                resumed.append(rid)
+        for run in sorted(self.store.runs(status=RunStatus.PENDING, limit=10_000), key=_order):
             self._done.setdefault(run["id"], asyncio.Event())
             await self._queue.put(run["id"])
         self._workers = [asyncio.create_task(self._worker()) for _ in range(self.max_concurrency)]
@@ -234,13 +252,30 @@ class RunManager:
             q.put_nowait(event)
 
     async def _worker(self) -> None:
+        """Runs of different threads go in parallel; runs of one thread go strictly in
+        order, one at a time — two runs must never write the same checkpoint at once."""
         while True:
             rid = await self._queue.get()
+            self._queue.task_done()
+            run = self.store.run(rid)
+            if run is None:
+                continue
+            tid = run["thread_id"]
+            if tid in self._busy:
+                self._backlog.setdefault(tid, deque()).append(rid)
+                continue
+            self._busy.add(tid)
             try:
-                await self._execute(rid)
+                current: str | None = rid
+                while current is not None:
+                    try:
+                        await self._execute(current)
+                    finally:
+                        self._done.setdefault(current, asyncio.Event()).set()
+                    pending = self._backlog.get(tid)
+                    current = pending.popleft() if pending else None
             finally:
-                self._done.setdefault(rid, asyncio.Event()).set()
-                self._queue.task_done()
+                self._busy.discard(tid)
 
     async def _execute(self, rid: str) -> None:
         run = self.store.run(rid)
@@ -249,7 +284,8 @@ class RunManager:
         tid = run["thread_id"]
         config = {"configurable": {"thread_id": tid}}
         if run["kind"] == "message":
-            graph_input: Any = {"messages": [user(run["input"])], **self.thread_defaults(tid)}
+            message = Message("user", (TextPart(str(run["input"])),), id=_input_id(rid))
+            graph_input: Any = {"messages": [message], **self.thread_defaults(tid)}
         elif run["kind"] == "resume":
             graph_input = Command(resume=run["input"])
         else:
@@ -307,6 +343,15 @@ class RunManager:
         else:
             self.store.set_status(rid, RunStatus.SUCCESS)
             self._publish({"event": "run.completed", "run_id": rid, "thread_id": tid})
+
+
+def _input_id(run_id: str) -> str:
+    """The user message a run carries has a stable id, so a crash can tell if it landed."""
+    return f"in-{run_id}"
+
+
+def _order(run: dict[str, Any]) -> float:
+    return float(run["created"])
 
 
 def _summary(update: Any) -> Any:
