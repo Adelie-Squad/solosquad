@@ -1,0 +1,52 @@
+[project]
+name = "solosquad"
+version = "2.0.0.dev0"
+description = "SoloSquad v2 — engine core for customer-tailored AX agent companies"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+# Stack fixed by ideation 260803 decision 13 (+ pandas). Analysis extras stay optional.
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.8",
+    "rich>=13.7",
+    "questionary>=2.0",
+    "apscheduler>=3.10,<4",
+    "pyyaml>=6.0",
+    "watchfiles>=0.22",
+    "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+analysis = ["scipy>=1.13", "scikit-learn>=1.5"]
+
+[project.scripts]
+solosquad = "solosquad.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "types-PyYAML>=6.0",
+    "pandas-stubs>=2.2",
+]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.14"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+strict = true
+mypy_path = "src"
+packages = ["solosquad"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
