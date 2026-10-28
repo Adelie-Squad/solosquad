@@ -12,11 +12,14 @@ import {
   type ReportKind,
 } from '../data/dummy';
 import { useLastVisit } from '../hooks/useLastVisit';
+import { BUSINESS_CONTEXT, llmChat, useLlm, type LlmMessage } from '../lib/llm';
 import { greeting, relativeTime, visitLabel } from '../lib/time';
 import { useWorkspace, type PromptHandoff } from '../workspace-context';
 import './HomeView.css';
 
 const TITLE_MAX = 22;
+/** 실제 AI 에 함께 보내는 지난 메시지 수 */
+const HISTORY_MAX = 10;
 
 const kindMeta: Record<ReportKind, { label: string; chip: string; icon: string }> = {
   done: { label: '처리 완료', chip: 'is-ok', icon: '✓' },
@@ -37,6 +40,7 @@ export function HomeView() {
   const { id = 'new' } = useParams<{ id: string }>();
   const lastVisit = useLastVisit();
   const { viewer, sessions, setSessions } = useWorkspace();
+  const llm = useLlm();
   const location = useLocation();
   const navigate = useNavigate();
   const [draft, setDraft] = useState('');
@@ -70,11 +74,24 @@ export function HomeView() {
     setDraft('');
     setTypingFor(sid);
     const target = sid;
-    // 셸 상태를 바꾸므로 화면을 떠나도 답은 도착해야 한다 — 언마운트 시 타이머를 지우지 않는다
-    window.setTimeout(() => {
+    const reply = (text: string) => {
       setTypingFor((cur) => (cur === target ? null : cur));
-      append(target, { id: `m-${Date.now()}`, role: 'agent', text: replyFor(trimmed) });
-    }, 900 + Math.random() * 600);
+      append(target, { id: `m-${Date.now()}`, role: 'agent', text });
+    };
+
+    // 키가 있으면 오픈라우터로, 없거나 실패하면 키워드 더미 응답.
+    // 셸 상태를 바꾸므로 화면을 떠나도 답은 도착해야 한다 — 언마운트 시 취소하지 않는다
+    if (llm?.configured) {
+      const history: LlmMessage[] = (session?.messages ?? []).slice(-HISTORY_MAX).map((m) => ({
+        role: m.role === 'agent' ? 'assistant' : 'user',
+        content: m.text,
+      }));
+      llmChat([{ role: 'system', content: BUSINESS_CONTEXT }, ...history, { role: 'user', content: trimmed }])
+        .then(reply)
+        .catch((err: Error) => reply(`${replyFor(trimmed)}\n\n(실제 AI 연결에 실패해 데모 응답을 보여드렸어요 — ${err.message})`));
+      return;
+    }
+    window.setTimeout(() => reply(replyFor(trimmed)), 900 + Math.random() * 600);
   };
 
   // 커맨드 바에서 넘어온 요청 처리 (같은 navigation 은 한 번만). send 가 새 세션 주소로 바꾸면서 state 도 비운다
@@ -189,6 +206,13 @@ export function HomeView() {
             보내기
           </button>
         </form>
+        <p className="composer-note">
+          {llm?.configured
+            ? `실제 AI 응답 · 오픈라우터 ${llm.model}${llm.daily ? ` · 오늘 남은 무료 호출 ${llm.daily.remaining}/${llm.daily.limit}회` : ''}`
+            : llm?.error === 'invalid_key'
+              ? '데모 응답이에요 — 오픈라우터가 키를 거절했어요. 저장소 루트 .env 의 OPENROUTER_API_KEY 를 확인해 주세요'
+              : '데모 응답이에요 — 저장소 루트 .env 에 OPENROUTER_API_KEY 를 넣으면 실제 AI 가 답해요'}
+        </p>
       </footer>
     </div>
   );

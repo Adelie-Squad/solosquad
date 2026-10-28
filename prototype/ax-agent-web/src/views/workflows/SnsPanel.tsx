@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { AGENT_NAME, snsChannels, snsProducts, type SnsChannel, type SnsPost, type SnsStatus } from '../../data/dummy';
+import { BUSINESS_CONTEXT, llmChat, parseJsonObject, useLlm } from '../../lib/llm';
 import { relativeTime } from '../../lib/time';
 import { useWorkspace } from '../../workspace-context';
 
@@ -22,6 +23,7 @@ const formatFor: Record<SnsChannel, string> = { 인스타그램: '릴스', '네�
 /** SNS 자동화 워크플로우 — 게시물 승인 · 예약 · 성과, 새 게시물 생성 */
 export function SnsPanel() {
   const { wf, setWf } = useWorkspace();
+  const llm = useLlm();
   const [filter, setFilter] = useState<Filter>('review');
   const [creating, setCreating] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -41,26 +43,50 @@ export function SnsPanel() {
       snsPosts: s.snsPosts.map((p) => (p.id === id ? { ...p, status, at: at === undefined ? p.at : at } : p)),
     }));
 
-  // 상품 · 채널을 고르면 잠시 뒤 승인 대기 게시물이 생긴다 (더미 문구)
+  const addPost = (title: string, caption: string, generatedBy?: string) => {
+    const post: SnsPost = {
+      id: `sp-${Date.now()}`,
+      channel,
+      format: formatFor[channel],
+      title,
+      caption,
+      product,
+      status: 'review',
+      at: new Date(Date.now() + 20 * HOUR).toISOString(),
+      generatedBy,
+    };
+    setWf((s) => ({ ...s, snsPosts: [post, ...s.snsPosts] }));
+    setGenerating(false);
+    setCreating(false);
+    setFilter('review');
+  };
+
+  // 상품 · 채널을 고르면 승인 대기 게시물이 생긴다 — 키가 있으면 실제 AI 문구, 없거나 실패하면 더미 문구
   const create = (e: FormEvent) => {
     e.preventDefault();
     setGenerating(true);
-    window.setTimeout(() => {
-      const post: SnsPost = {
-        id: `sp-${Date.now()}`,
-        channel,
-        format: formatFor[channel],
-        title: `${product} — 새 소개`,
-        caption: `요즘 제일 많이 찾는 ${product} ✨ 오늘 주문하면 내일 도착해요. 지금 스토어에서 만나보세요!`,
-        product,
-        status: 'review',
-        at: new Date(Date.now() + 20 * HOUR).toISOString(),
-      };
-      setWf((s) => ({ ...s, snsPosts: [post, ...s.snsPosts] }));
-      setGenerating(false);
-      setCreating(false);
-      setFilter('review');
-    }, GENERATE_MS);
+    const fallback = () =>
+      addPost(`${product} — 새 소개`, `요즘 제일 많이 찾는 ${product} ✨ 오늘 주문하면 내일 도착해요. 지금 스토어에서 만나보세요!`);
+    if (!llm?.configured) {
+      window.setTimeout(fallback, GENERATE_MS);
+      return;
+    }
+    llmChat(
+      [
+        { role: 'system', content: BUSINESS_CONTEXT },
+        {
+          role: 'user',
+          content: `${channel}(${formatFor[channel]})에 올릴 '${product}' 게시물 초안을 써줘. 이모지 1~2개, 2~3문장, 해시태그 3개.
+JSON 하나로만 답해: {"title": "관리용 짧은 제목(20자 이내)", "caption": "게시 문구"}`,
+        },
+      ],
+      { maxTokens: 400, temperature: 0.8 },
+    )
+      .then((text) => {
+        const parsed = parseJsonObject<{ title?: string; caption?: string }>(text);
+        addPost(parsed?.title || `${product} — AI 초안`, parsed?.caption || text, llm.model);
+      })
+      .catch(fallback);
   };
 
   const filters: { id: Filter; label: string }[] = [
@@ -120,7 +146,10 @@ export function SnsPanel() {
             </select>
           </label>
           <div className="schedule-form-actions">
-            <span className="form-note">{AGENT_NAME}가 문구 · 이미지 시안을 만들어 승인 대기로 올려요.</span>
+            <span className="form-note">
+              {AGENT_NAME}가 문구 · 이미지 시안을 만들어 승인 대기로 올려요.{' '}
+              {llm?.configured ? `(실제 AI · ${llm.model})` : '(데모 문구)'}
+            </span>
             <button type="button" className="btn" onClick={() => setCreating(false)}>
               취소
             </button>
@@ -162,7 +191,7 @@ export function SnsPanel() {
               </div>
               <p className="post-caption">{p.caption}</p>
               <span className="post-meta">
-                {p.channel} · {p.format} · {p.product}
+                {p.generatedBy && <span className="chip is-accent">🤖 AI 생성</span>} {p.channel} · {p.format} · {p.product}
                 {p.at && (p.status === 'published' ? ` · ${relativeTime(p.at)} 게시` : ` · ${relativeTime(p.at)} 게시 예정`)}
                 {p.metrics && ` · 도달 ${p.metrics.reach.toLocaleString('ko-KR')} · 클릭 ${p.metrics.clicks.toLocaleString('ko-KR')}`}
               </span>

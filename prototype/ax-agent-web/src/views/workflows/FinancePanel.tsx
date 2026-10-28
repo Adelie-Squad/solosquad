@@ -10,10 +10,21 @@ import {
 } from '../../data/dummy';
 import { downloadStatementCsv, marginRate, statementRows } from '../../lib/finance';
 import { won } from '../../lib/format';
+import { BUSINESS_CONTEXT, llmChat, parseJsonObject, useLlm } from '../../lib/llm';
 import { relativeTime } from '../../lib/time';
 import { useWorkspace } from '../../workspace-context';
 
 const STEP_MS = 700;
+
+/** 불분명한 입출금에 붙일 수 있는 분류 */
+const LEDGER_CATEGORIES = ['매출', '기타 수입', '환불 · 반품', '공장 대금', '광고비', '물류비', '개인 · 기타'];
+
+interface Suggestion {
+  category: string;
+  reason: string;
+  /** 실제 AI 가 제안했으면 그 모델 */
+  model?: string;
+}
 
 /** 재무 관리 워크플로우 — 엑셀 결산 가져오기(더미 분석) · 손익표 · 자동 기록 장부 · 엑셀 내보내기 */
 export function FinancePanel() {
@@ -23,6 +34,9 @@ export function FinancePanel() {
   const [pendingName, setPendingName] = useState('');
   const [dragging, setDragging] = useState(false);
   const [rules, setRules] = useState(financeRules);
+  const llm = useLlm();
+  const [suggestions, setSuggestions] = useState<Record<string, Suggestion>>({});
+  const [suggesting, setSuggesting] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -59,6 +73,41 @@ export function FinancePanel() {
         l.id === id ? { ...l, memo: `${l.memo.split(' — ')[0]} — ${as}`, needsReview: false } : l,
       ),
     }));
+
+  // 불분명한 기록의 분류 제안 — 키가 있으면 실제 AI, 없거나 실패하면 더미 제안
+  const suggest = (id: string) => {
+    const entry = finance.ledger.find((l) => l.id === id);
+    if (!entry) return;
+    const done = (sg: Suggestion) => {
+      setSuggestions((cur) => ({ ...cur, [id]: sg }));
+      setSuggesting((cur) => (cur === id ? null : cur));
+    };
+    const fallback = () => done({ category: '매출', reason: '최근 대량 구매 문의(접이식 수납함 50개)의 선금과 금액대가 비슷해요. (데모 제안)' });
+    setSuggesting(id);
+    if (!llm?.configured) {
+      window.setTimeout(fallback, 900);
+      return;
+    }
+    llmChat(
+      [
+        { role: 'system', content: BUSINESS_CONTEXT },
+        {
+          role: 'user',
+          content: `장부에 용도가 불분명한 기록이 있어. ${entry.direction === 'in' ? '입금' : '출금'} ${entry.amount}원, 메모 "${entry.memo}", 출처 ${entry.source}.
+참고: 최근 메일로 접이식 수납함 50개 대량 구매 견적 문의가 있었다.
+분류를 다음 중 하나로 골라: ${LEDGER_CATEGORIES.join(', ')}.
+JSON 하나로만 답해: {"category": "분류", "reason": "한 문장 근거 (확실하지 않으면 그렇게 말할 것)"}`,
+        },
+      ],
+      { maxTokens: 300, temperature: 0.2 },
+    )
+      .then((text) => {
+        const parsed = parseJsonObject<{ category?: string; reason?: string }>(text);
+        if (!parsed?.category) throw new Error('형식이 맞지 않는 응답');
+        done({ category: parsed.category, reason: parsed.reason ?? '', model: llm.model });
+      })
+      .catch(fallback);
+  };
 
   return (
     <div className="wf-panel">
@@ -218,6 +267,22 @@ export function FinancePanel() {
                     </button>
                     <button className="btn" onClick={() => resolve(l.id, '기타 수입')}>
                       기타 수입
+                    </button>
+                    <button className="btn" onClick={() => suggest(l.id)} disabled={suggesting === l.id}>
+                      {suggesting === l.id ? '살펴보는 중…' : '🤖 분류 제안'}
+                    </button>
+                  </div>
+                )}
+                {l.needsReview && suggestions[l.id] && (
+                  <div className="ledger-suggestion">
+                    <span>
+                      <strong>{suggestions[l.id].category}</strong> — {suggestions[l.id].reason}
+                      <span className={`chip ${suggestions[l.id].model ? 'is-accent' : ''}`}>
+                        {suggestions[l.id].model ? `🤖 ${suggestions[l.id].model}` : '데모'}
+                      </span>
+                    </span>
+                    <button className="btn is-primary" onClick={() => resolve(l.id, suggestions[l.id].category)}>
+                      이걸로 기록
                     </button>
                   </div>
                 )}

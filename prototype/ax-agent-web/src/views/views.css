@@ -1394,3 +1394,70 @@
     flex-wrap: wrap;
   }
 }
+
+/* ── 실제 AI(오픈라우터) 결과 ─────────────────────────────────── */
+
+.market-action {
+  margin-left: auto;
+}
+
+.inquiry {
+  margin-bottom: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, white);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 4%, white);
+}
+
+.inquiry-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+
+.inquiry-head .btn {
+  margin-left: auto;
+}
+
+.inquiry-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 12px 14px;
+}
+
+.inquiry-body p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.inquiry-ko {
+  color: var(--ink-2);
+}
+
+.ledger-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.ledger-suggestion .chip {
+  margin-left: 6px;
+}
+
+@media (max-width: 860px) {
+  .inquiry-body {
+    grid-template-columns: 1fr;
+  }
+}

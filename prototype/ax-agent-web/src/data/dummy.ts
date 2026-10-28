@@ -761,6 +761,8 @@ export interface SnsPost {
   /** 예약 · 게시 시각 */
   at: string | null;
   metrics?: { reach: number; clicks: number };
+  /** 실제 AI(오픈라우터)가 쓴 게시물이면 그 모델 */
+  generatedBy?: string;
 }
 
 export const snsChannels: { channel: SnsChannel; handle: string; connected: boolean }[] = [

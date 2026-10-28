@@ -311,3 +311,11 @@
 @media (prefers-reduced-motion: reduce) {
   .home-bubble, .chat-bubble, .chat-typing span { animation: none; }
 }
+
+/* 입력창 아래 — 실제 AI 응답인지, 데모 응답인지 */
+.composer-note {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}

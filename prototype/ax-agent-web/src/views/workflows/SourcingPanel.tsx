@@ -1,11 +1,29 @@
 import { useState, type FormEvent } from 'react';
-import { AGENT_NAME, CNY_TO_KRW, type FactoryQuote, type SourcingRequest } from '../../data/dummy';
+import { AGENT_NAME, CNY_TO_KRW, space, type FactoryQuote, type SourcingRequest } from '../../data/dummy';
 import { won } from '../../lib/format';
+import { BUSINESS_CONTEXT, llmChat, parseJsonObject, useLlm } from '../../lib/llm';
 import { relativeTime } from '../../lib/time';
 import { landedCost, quoteMargin } from '../../lib/workflows';
 import { useWorkspace } from '../../workspace-context';
 
 const QUOTE_DELAY_MS = 2500;
+
+/** 공장에 보낼 중국어 견적 문의 초안 + 한국어 번역 */
+interface Inquiry {
+  factory: string;
+  zh: string;
+  ko: string;
+  /** 실제 AI 가 썼으면 그 모델, 더미 문안이면 없음 */
+  model?: string;
+}
+
+function templateInquiry(r: SourcingRequest, factory: string): Inquiry {
+  return {
+    factory,
+    zh: `您好！我们是韩国电商公司 ${space.name}（Moa Living），主要在 Coupang、Naver 等平台销售家居用品。\n我们对贵司的产品「${r.product}」很感兴趣，首批计划采购 ${r.qty.toLocaleString('ko-KR')} 件。\n麻烦提供：1）含包装的单价 2）最小起订量 3）交货期 4）样品费用及寄送时间。\n期待您的回复，谢谢！`,
+    ko: `안녕하세요! 저희는 쿠팡 · 네이버 등에서 생활용품을 파는 한국 커머스 회사 ${space.name}입니다.\n귀사의 「${r.product}」에 관심이 있어 첫 발주로 ${r.qty.toLocaleString('ko-KR')}개를 생각하고 있습니다.\n1) 포장 포함 단가 2) MOQ 3) 납기 4) 샘플 비용과 발송 일정을 알려 주세요.\n답변 기다리겠습니다. 감사합니다!`,
+  };
+}
 
 const statusChip: Record<SourcingRequest['status'], { label: string; className: string }> = {
   searching: { label: '공장 찾는 중', className: 'is-accent' },
@@ -29,7 +47,10 @@ const mockFactories = [
 /** 상품 소싱 워크플로우 — 소싱 요청 · 공장 견적 비교 · 공장 선택과 발주 승인 */
 export function SourcingPanel() {
   const { wf, setWf } = useWorkspace();
+  const llm = useLlm();
   const [selectedId, setSelectedId] = useState(wf.sourcingRequests[0]?.id ?? '');
+  const [inquiries, setInquiries] = useState<Record<string, Inquiry>>({});
+  const [drafting, setDrafting] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [product, setProduct] = useState('');
   const [sellPrice, setSellPrice] = useState('');
@@ -50,6 +71,42 @@ export function SourcingPanel() {
 
   const markCalled = (quoteId: string) =>
     setWf((s) => ({ ...s, quotes: s.quotes.map((q) => (q.id === quoteId ? { ...q, contact: 'replied' } : q)) }));
+
+  // 고른 공장(없으면 추천 · 첫 공장)에 보낼 중국어 문의 — 키가 있으면 실제 AI, 없거나 실패하면 정해진 문안
+  const draftInquiry = () => {
+    if (!request) return;
+    const target = quotes.find((q) => q.id === chosen) ?? recommended ?? quotes[0];
+    const factory = target?.factory ?? '공장';
+    const rid = request.id;
+    const done = (inq: Inquiry) => {
+      setInquiries((cur) => ({ ...cur, [rid]: inq }));
+      setDrafting((cur) => (cur === rid ? null : cur));
+    };
+    setDrafting(rid);
+    if (!llm?.configured) {
+      window.setTimeout(() => done(templateInquiry(request, factory)), 900);
+      return;
+    }
+    llmChat(
+      [
+        { role: 'system', content: BUSINESS_CONTEXT },
+        {
+          role: 'user',
+          content: `중국 공장 '${factory}'(1688/알리바바)에 보낼 견적 문의 메시지를 써줘.
+상품: ${request.product}, 첫 발주 수량: ${request.qty}개, 우리 판매가: ${request.sellPrice}원.
+단가(포장 포함) · MOQ · 납기 · 샘플 비용을 묻고, 정중하지만 짧게(4~5문장).
+JSON 하나로만 답해: {"zh": "간체 중국어 메시지", "ko": "같은 내용의 한국어 번역"}`,
+        },
+      ],
+      { maxTokens: 700, temperature: 0.4 },
+    )
+      .then((text) => {
+        const parsed = parseJsonObject<{ zh?: string; ko?: string }>(text);
+        if (!parsed?.zh) throw new Error('형식이 맞지 않는 응답');
+        done({ factory, zh: parsed.zh, ko: parsed.ko ?? '', model: llm.model });
+      })
+      .catch(() => done(templateInquiry(request, factory)));
+  };
 
   const approveOrder = () =>
     setWf((s) => ({
@@ -181,7 +238,28 @@ export function SourcingPanel() {
               </span>
             ))}
             <span className="chip is-accent">우리 판매가 {won(request.sellPrice)}</span>
+            <button className="btn market-action" onClick={draftInquiry} disabled={drafting === request.id || quotes.length === 0}>
+              {drafting === request.id ? '쓰는 중…' : '📨 중국어 문의 초안'}
+            </button>
           </div>
+
+          {inquiries[request.id] && (
+            <div className="inquiry">
+              <div className="inquiry-head">
+                <strong>{inquiries[request.id].factory} 에 보낼 문의</strong>
+                <span className={`chip ${inquiries[request.id].model ? 'is-accent' : ''}`}>
+                  {inquiries[request.id].model ? `🤖 AI 작성 · ${inquiries[request.id].model}` : '정해진 문안 (데모)'}
+                </span>
+                <button className="btn" onClick={() => navigator.clipboard?.writeText(inquiries[request.id].zh)}>
+                  중국어 복사
+                </button>
+              </div>
+              <div className="inquiry-body">
+                <p lang="zh-Hans">{inquiries[request.id].zh}</p>
+                <p className="inquiry-ko">{inquiries[request.id].ko}</p>
+              </div>
+            </div>
+          )}
 
           {request.status === 'searching' ? (
             <p className="empty">
