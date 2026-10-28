@@ -79,18 +79,31 @@ export function llmProxy(repoRoot: string): Plugin {
           if (req.method === 'POST' && req.url?.startsWith('/chat')) {
             if (!key) return send(res, 503, { error: 'no_key' });
             const { messages, max_tokens = 600, temperature = 0.6 } = JSON.parse((await readBody(req)) || '{}');
-            const r = await fetch(`${OPENROUTER}/chat/completions`, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({ model, messages, max_tokens, temperature }),
-            });
-            const json = (await r.json()) as {
-              choices?: { message?: { content?: string } }[];
-              model?: string;
-              error?: { message?: string };
+            // openrouter/free 가 고르는 무료 모델은 대부분 추론형이라, 생각에 토큰을 다 쓰고 본문이 비는 일이 있다.
+            // 생각은 짧게 · 숨기게 요청하고, 그래도 비면 토큰을 늘려 한 번만 다시 부른다.
+            const call = async (budget: number) => {
+              const r = await fetch(`${OPENROUTER}/chat/completions`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                  model,
+                  messages,
+                  max_tokens: budget,
+                  temperature,
+                  reasoning: { effort: 'low', exclude: true },
+                }),
+              });
+              const json = (await r.json()) as {
+                choices?: { message?: { content?: string } }[];
+                model?: string;
+                error?: { message?: string };
+              };
+              return { r, json, text: json.choices?.[0]?.message?.content?.trim() ?? '' };
             };
+            let result = await call(max_tokens);
+            if (result.r.ok && !result.text) result = await call(max_tokens * 3);
+            const { r, json, text } = result;
             if (!r.ok) return send(res, r.status, { error: json.error?.message ?? `upstream ${r.status}` });
-            const text = json.choices?.[0]?.message?.content?.trim() ?? '';
             if (!text) return send(res, 502, { error: 'empty_response' });
             return send(res, 200, { text, model: json.model ?? model });
           }
