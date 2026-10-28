@@ -54,9 +54,12 @@
 | [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
 | [v1.4.0_research-workflow.md](v1.4.0_research-workflow.md) | **1.4.x 우산** — 자율 가설검증 연구 워크플로우(기능화 前 유효성 검증 계층) |
 | [v1.4.3_research-workflow-implementation.md](v1.4.3_research-workflow-implementation.md) | research 내장 워크플로우 + 템플릿/예시 + goal 8h+ 무인 + reports→org 이전 |
-| [v2.0.0_orchestration-and-harness-platform.md](v2.0.0_orchestration-and-harness-platform.md) | **2.0.0 우산 — AX Agent Company Platform** (rev6, 2026-10-28). 소규모 비즈니스용 맞춤형 AX 에이전트 회사(관리형 3개월 / 셀프) · Python 재작성 · swarm 엔진 · 다중 하네스 · 운영 층 · 연결 풀/라우팅 · 브라우저 · FDE 에이전트 · 고객사 웹 · 에이전시 최소판. 결정 정본은 `ideation/260803-*` §0.0(결정 1~29). 구 `v1.5.0` |
-| [v2.1.0_docker-cloud-deploy-and-health-notify.md](v2.1.0_docker-cloud-deploy-and-health-notify.md) | **2.1.0** — Railway 클라우드 배포 + **메신저(Discord/Slack) 재도입**(결정 16) + 봇 health 알림. 구 `v1.6.0` |
-| [v2.4.0_virtual-market-demand-simulation.md](v2.4.0_virtual-market-demand-simulation.md) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝(연구 결론: raw NO-GO). 구 `v1.9.0` |
+| [v2.0.0_orchestration-and-harness-platform.md](v2.0.0_orchestration-and-harness-platform.md) | **2.0.0 — 엔진 코어** (rev7, 결정 33 분할). Python 재작성 · swarm 엔진(LangGraph 모방, 자체 구현, `asyncio`) · 하네스 4종 · 운영 층 · 연결 풀/라우팅 · 가계부 · 로컬 24시간 · CLI. v2.x 목표 = roadmap §2.6 · 결정 정본 = `ideation/260803-*` §0.0. 구 `v1.5.0` |
+| [v2.1.0_customer-web.md](v2.1.0_customer-web.md) | **2.1.0 — 고객사 웹** — 로그인 · 부서 권한 · 보고 · 실시간 · 승인 · 비용 · 연결 관리 · 외부 접속. **관리형 파일럿 시작점.** 입력 = `prototype/ax-agent-web` |
+| [v2.2.0_fde-agent-and-browser.md](v2.2.0_fde-agent-and-browser.md) | **2.2.0 — FDE 에이전트 + 브라우저 + 분석** — 대화형 온보딩 · 도메인/로컬 분석 · 개선 주기 · 변경 승인/롤백 · Chromium MCP · 분석(결정 6). 셀프 경로 성립 |
+| [v2.3.0_agency-connection.md](v2.3.0_agency-connection.md) | **2.3.0 — 에이전시 연결** — curl/irm + 릴리스 압축본 · FDE 중개 업데이트(결정 31) · 사용 측정 · 에이전시 최소판 · 승격 후보 수신 · npm 정리 |
+| [v2.4.0_docker-cloud-deploy-and-health-notify.md](v2.4.0_docker-cloud-deploy-and-health-notify.md) | **2.4.0** — 클라우드 배포 + **메신저 재도입**(결정 16) + health 알림 + 클라우드 인증 · 헤드리스 로그인/브라우저. 구 `v2.1.0` ← `v1.6.0` (결정 33 재번호) |
+| [v2.5.0_virtual-market-demand-simulation.md](v2.5.0_virtual-market-demand-simulation.md) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝(연구 결론: raw NO-GO). 구 `v2.4.0` ← `v1.9.0` (결정 33 재번호) |
 | [v2.x-dashboard-interaction.md](v2.x-dashboard-interaction.md) | 구 `v1.x` |
 | [v2.x-knowledge-ontology.md](v2.x-knowledge-ontology.md) | 구 `v1.x` |
 
