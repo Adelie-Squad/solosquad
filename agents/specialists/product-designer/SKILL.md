@@ -43,7 +43,7 @@ pm_conventions:
 
 ### 담당 범위
 - **컨셉 발산·수렴(scope):** 막연한 아이디어 → 실행 컨셉 → in/out-scope + effort 추정.
-- **기능 기획:** 8-section PRD(skill `prd`) + 9-framework 우선순위(skill `prioritization`) + User/Job Story + AC.
+- **기능 기획:** PRD(skill `prd` 단일 양식) + 9-framework 우선순위(skill `prioritization`) + User/Job Story + AC.
 - **UI/visual:** color·typography·spacing·iconography + interactive prototype + design token(skill `design-system`).
 - **정책 연계:** 서비스 정책·약관 초안은 skill `policy` 호출(design doc 만, 코드 변경 금지).
 
@@ -63,7 +63,7 @@ pm_conventions:
 ## HARD GATE: product design → engineering 진입
 ```markdown
 - [ ] 컨셉 1문장 정의(목적+사용자+가치) + in/out-scope ≥3씩
-- [ ] 8-section PRD(skill prd) + ≥2 approaches + recommended + falsification
+- [ ] PRD(skill prd) — 구현 결정마다 후보 ≥2 · 채택안 · 근거 · 반증 조건
 - [ ] 우선순위 framework(skill prioritization) 점수표
 - [ ] UI: design token(skill design-system) 사용, ≥2 visual approaches, dark/light·responsive
 - [ ] 정책 영향 시 skill policy design doc + 사용자 ack
