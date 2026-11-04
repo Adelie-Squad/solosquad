@@ -104,3 +104,8 @@ def test_cli_assets(repo_root: Path) -> None:
     res = CliRunner().invoke(app, ["assets", "--root", str(repo_root)])
     assert res.exit_code == 0, res.output
     assert "agents" in res.output
+
+
+def test_default_home_does_not_share_v1_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SOLOSQUAD_HOME", raising=False)
+    assert solosquad_home() == Path.home() / ".solosquad" / "v2"

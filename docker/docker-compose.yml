@@ -53,4 +53,4 @@ services:
       - ${CLAUDE_AUTH_DIR:-${HOME}/.claude}:/root/.claude
       - ${HOME}/.solosquad:/root/.solosquad
       - ${HOME}/.solosquad-backups:/root/.solosquad-backups
-    command: ["solosquad", "schedule"]
+    command: ["solosquad", "cron", "start"]

@@ -33,7 +33,7 @@ npm registry                    클라우드 서버
                                      │
                               solosquad init      ← 초기 설정
                               solosquad bot       ← 메신저 봇 시작
-                              solosquad schedule  ← 크론 루틴 시작
+                              solosquad cron start ← 크론 루틴 시작
 ```
 
 ### 시스템 요구사항
@@ -43,7 +43,7 @@ npm registry                    클라우드 서버
 | CPU | 1 vCPU | 2 vCPU |
 | RAM | 1 GB | 2 GB |
 | 디스크 | 5 GB | 10 GB |
-| Node.js | 18+ | 20 LTS |
+| Node.js | 20+ | 20 LTS |
 | OS | Ubuntu 22.04+ / Debian 12+ | Ubuntu 24.04 |
 | 네트워크 | 아웃바운드 HTTPS | - |
 
@@ -210,7 +210,7 @@ After=network.target
 Type=simple
 User=deploy
 WorkingDirectory=/home/deploy/solosquad
-ExecStart=/home/deploy/.nvm/versions/node/v20.18.0/bin/solosquad schedule
+ExecStart=/home/deploy/.nvm/versions/node/v20.18.0/bin/solosquad cron start
 Restart=always
 RestartSec=10
 EnvironmentFile=/home/deploy/solosquad/.env
@@ -275,7 +275,7 @@ GitHub repo ──push──▶ Railway ──build──▶ 컨테이너 실행
                          │
                     ┌────┴────┐
                     │ bot     │  solosquad bot
-                    │ scheduler│  solosquad schedule
+                    │ scheduler│  solosquad cron start
                     │ volume  │  /app/memory (JSONL)
                     └─────────┘
 ```
@@ -312,7 +312,7 @@ Railway 대시보드에서 두 서비스 생성:
 - Start Command: `npm run build && node dist/bin/solosquad.js bot`
 
 **Scheduler 서비스:**
-- Start Command: `npm run build && node dist/bin/solosquad.js schedule`
+- Start Command: `npm run build && node dist/bin/solosquad.js cron start`
 
 #### Step 4: 영구 저장소
 

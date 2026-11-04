@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import yaml
 
 from solosquad.assets.skill import SkillParseError, parse_skill_md
 from solosquad.assets.text import load_yaml, match_frontmatter
@@ -78,3 +79,55 @@ def test_yaml_12_booleans() -> None:
         "c": True,
         "d": False,
     }
+
+
+# Expected values probed from js-yaml 4.1 (the v1.4.3 parser) — PyYAML's YAML 1.1
+# defaults disagree on every one of these.
+JS_YAML_SCALARS: dict[str, object] = {
+    "012": 12,
+    "-012": -12,
+    "09": 9,
+    "0o17": 15,
+    "-0o17": -15,
+    "0O17": "0O17",
+    "0x1F": 31,
+    "0X1f": "0X1f",
+    "0b101": 5,
+    "1_000": "1_000",
+    "1:20": "1:20",
+    "0o8": "0o8",
+    "1e3": 1000,
+    "1E3": 1000,
+    "1.": 1,
+    ".5": 0.5,
+    "-.5": "-.5",
+    "1_000.5": "1_000.5",
+    "012.5": 12.5,
+    "6.8523015e+5": 685230.15,
+    "<<": "<<",
+}
+
+
+@pytest.mark.parametrize(("raw", "want"), list(JS_YAML_SCALARS.items()))
+def test_scalars_match_js_yaml(raw: str, want: object) -> None:
+    got = load_yaml(f"a: {raw}")["a"]
+    assert got == want
+    assert isinstance(got, str) == isinstance(want, str)
+
+
+def test_special_floats() -> None:
+    got = load_yaml("a: .inf\nb: -.Inf\nc: .nan")
+    assert got["a"] == float("inf")
+    assert got["b"] == float("-inf")
+    assert got["c"] != got["c"]
+
+
+def test_duplicate_key_is_an_error() -> None:
+    with pytest.raises(yaml.YAMLError, match="duplicated mapping key"):
+        load_yaml("a: 1\na: 2")
+    with pytest.raises(SkillParseError):
+        parse_skill_md(md("name: a\nname: b\ndescription: d"))
+
+
+def test_merge_keys_still_work() -> None:
+    assert load_yaml("base: &b {x: 1}\nm:\n  <<: *b\n  y: 2")["m"] == {"x": 1, "y": 2}

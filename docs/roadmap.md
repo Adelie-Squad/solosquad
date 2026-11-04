@@ -2,7 +2,7 @@
 
 > 릴리스된 버전, 진행 중인 계획, 결정 로그, 외부 참고자료를 한 자리에 모은 롤링 문서.
 
-**최종 업데이트:** 2026-05-20 (v0.8.7 릴리스)
+**최종 업데이트:** 2026-11-04 (v2 피봇 · v2.0.0 엔진 코어 개발 중)
 
 ---
 
@@ -32,9 +32,11 @@
 | `v0.9.1` | 2026-05-21 | Model B 구현 + npm 패키지에 master-guide 포함 + Step 1 prerequisites 보강 — `repo.yaml.path` 필드 신설 / `resolveRepoCwd` 외부 경로 분기 / `solosquad add repo --path <ext>` flag + cwd 인식 자동 / `solosquad init` Step 5.1 path-reference 분기 prompt / `solosquad doctor` 외부 path 존재 검증. `docs/manual/` → top-level `manual/`로 이동해 npm 패키지에 포함. master-guide §4.2 Step 1에 *의존성 종합 표* + *환경변수 종합 표* + *자원·네트워크 하한* 박스 3개 추가 (KO/EN). backward-compat: 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작 | `v0.9.1-workspace-repo-relationship.md` |
 | **`v0.9.2`** | **2026-05-21** | **Uninstall precheck self-match hotfix (Windows)** — `solosquad uninstall`이 봇이 안 도는데도 `bot/schedule appears to be running (pid X, Y)`로 차단하던 Windows 한정 버그 수정. WMI 쿼리 `Get-CimInstance Win32_Process \| Where-Object { $_.CommandLine -match 'solosquad' -and ... }` 의 `-Command` 인자가 자기 자신의 CommandLine에 두 정규식 리터럴을 포함해 *powershell.exe가 스스로를 매칭*. `$_.Name -eq 'node.exe'` 가드 추가로 해결. `test/lifecycle-precheck.test.ts` 회귀 catcher (3회 호출 결과 동일성). 스키마 변경 0건, `--force` 우회 사용자에게도 무해 | `v0.9.2-precheck-self-match-hotfix.md` |
 
-### 현재 설치 가능 버전: npm `0.9.2` (publish 직전 단계; 0.9.0은 npm burn)
+### 현재 설치 가능 버전: npm `1.4.3`
 
-**다음 마일스톤:** v0.9.3+ — backward-compat 마이그레이션 명령 (`solosquad migrate --externalize-repos`, opt-in). 이후 v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
+**다음 마일스톤:** `v2.0.0` 엔진 코어 — Python 재작성(`python/`, 개발 중 · 미배포). 목표는 §2.6, 분할은 §5.3.
+
+> 위 표는 v0.x 이력입니다. **v1.0.0 이후 이력은 §5.2(정식 출시 마일스톤) · §5.3(포스트-런치)** 참조.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 
@@ -605,7 +607,7 @@ todo·노트는 그 별도 인프라 slot에서.
 | **`v1.2.6`** ✓ 출시 (2026-05-28) | **Messenger Connection (Chief on Discord, auto-connect first)** — 조직 1개당 1 Chief 봇 (Chief 이름 `OrgYaml.chief_name`) + OAuth Invite URL 1-click + handle 기반 채널 멀티-메신저 portable + owner-only 게이트 (v1.0.2 reversal) + TRIAGE kind 분기 → works-handle task card + thread + stage narration + `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 + `solosquad doctor --discord` 5-hop. CLI freeze 침범 0 (`add-org` v1.1 신설). 53 신규 test, 728/728 pass | `docs/prd/v1.2-messenger-connection-discord-first.md` |
 | **`v1.2.1`** | **메신저 thread 연속성** — referencedMessage chain + LRU cache + thread token budget guard. messageCreate 가 thread 메시지 수신 + thread→workflow_id reverse lookup 인프라 신설 (v1.2.6 의 작업 1개=thread 1개 모델에 *연속 대화*가 얹힘). Slack adapter 동일 슬롯 | (기획 미수 — `docs/prd/v1.2.1-messenger-thread-continuity.md` 예정) |
 | **`v1.x`** (별도 slot) | **일정 관리 + 메모** — n잡 사용자 시간·기억 관리. 캘린더 통합·todo·노트 인프라. (당초 v1.3 → 1.3.x가 primitive 내재화 라인으로 전개돼 분리, 2026-06-25 §2.1) `docs/prd/v1.x-schedule-memo.md` 예정 | (기획 미수) |
-| **`v1.4.x`** (우산 교체, 2026-07-12) | **Research Workflow** — 기능화 *前* 가설을 자율로 세우고 실험·검증하는 연구 워크플로우를 내장. 확산→수렴 가설수립·실험 사이클·blind 백테스트·수치 eval·Track2 검증·논문/리포트 산출. goal 무인 8h+ 장기실행. 산출물은 org-level `reports/`. **dogfood: 가상 시장 수요검증 시뮬 8-사이클 연구로 실증**(그 *기능화*는 v1.9.0). *(출시된 v1.4.0~1.4.2 = 1.3.x 안정화 tail 재분류)* | 우산 `docs/prd/v1.4.0_research-workflow.md` + 구현 `docs/prd/v1.4.3_research-workflow-implementation.md` |
+| **`v1.4.x`** (우산 교체, 2026-07-12) | **Research Workflow** — 기능화 *前* 가설을 자율로 세우고 실험·검증하는 연구 워크플로우를 내장. 확산→수렴 가설수립·실험 사이클·blind 백테스트·수치 eval·Track2 검증·논문/리포트 산출. goal 무인 8h+ 장기실행. 산출물은 org-level `reports/`. **dogfood: 가상 시장 수요검증 시뮬 8-사이클 연구로 실증**(그 *기능화*는 v2.5.0). *(출시된 v1.4.0~1.4.2 = 1.3.x 안정화 tail 재분류)* | 우산 `docs/prd/v1.4.0_research-workflow.md` + 구현 `docs/prd/v1.4.3_research-workflow-implementation.md` |
 | **`v2.0.0`** (구 `v1.5.x` 우산) | **엔진 코어 — 회사가 로컬에서 24시간 돈다** · Python 재작성 · swarm 엔진(LangGraph 모방 · 자체 구현 · `asyncio`) · 하네스 4종(claude-code · opencode · lite · codex) · 운영 층(threads · runs · crons · 크래시 재개) · 연결 풀/라우팅(BYO 구독 · API 키) · 가계부 · OS 서비스 구동 · CLI. **v2.x 목표 = §2.6**, 분할 = 결정 33 | `docs/prd/v2.0.0_orchestration-and-harness-platform.md` |
 | **`v2.1.0`** | **고객사 웹 — 관리형 파일럿 시작점** · 로그인 · 부서 권한 · 지난 일 보고 · 실시간 사무실 · 승인 · 워크플로 · 비용 · 연결 관리 · 외부 접속(터널). 화면 입력 = `prototype/ax-agent-web` | `docs/prd/v2.1.0_customer-web.md` |
 | **`v2.2.0`** | **FDE 에이전트 + 브라우저 + 분석** · 대화형 온보딩 · 도메인 묶음 · 동의 범위 로컬 분석 · 개선 주기 · 변경 승인/롤백 · Chromium MCP 도구 · 분석(결정 6). 셀프 경로 성립 | `docs/prd/v2.2.0_fde-agent-and-browser.md` |

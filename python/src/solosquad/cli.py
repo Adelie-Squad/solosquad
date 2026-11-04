@@ -47,7 +47,9 @@ conn_app = typer.Typer(
 )
 agents_app = typer.Typer(no_args_is_help=True, help="Watch the agents work.")
 service_app = typer.Typer(no_args_is_help=True, help="Run a workspace 24/7 as an OS service.")
+cron_app = typer.Typer(no_args_is_help=True, help="An org's scheduled runs.")
 app.add_typer(add_app, name="add")
+app.add_typer(cron_app, name="cron")
 app.add_typer(conn_app, name="connections")
 app.add_typer(agents_app, name="agents")
 app.add_typer(service_app, name="service")
@@ -538,6 +540,106 @@ def status(solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsO
     for k, v in spend.items():
         table.add_row(k, str(v["calls"]), f"{v['tokens']:.0f}", f"{v['cost_usd']:.4f}")
     console.print(table)
+
+
+# ---------------------------------------------------------------------- checks
+
+
+def _bundle_or_fail() -> Path:
+    bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
+    if bundle is None:
+        raise _fail("bundled agents/ and teams/ not found next to the engine")
+    return bundle
+
+
+@app.command()
+def validate(
+    solution: SolutionOpt = Path("."),
+    strict: Annotated[bool, typer.Option(help="Treat warnings as failures.")] = False,
+) -> None:
+    """Check every agent, skill, team, cron, policy and connection a workspace sees."""
+    from solosquad.check import validate_solution
+
+    reports = validate_solution(solution, _bundle_or_fail())
+    errors = warns = 0
+    for key, report in sorted(reports.items()):
+        label = key or "layout"
+        if not report.issues:
+            console.print(f"[green]✓[/green] {label}")
+            continue
+        console.print(f"[bold]{label}[/bold]")
+        for i in report.issues:
+            tag = "[red]error[/red]" if i.severity == "error" else "[yellow]warn [/yellow]"
+            where = f" {escape(i.path)}" if i.path else ""
+            console.print(f"  {tag} {i.code}{where}: {escape(i.message)}")
+        errors += len(report.errors)
+        warns += len(report.warnings)
+    console.print(f"{errors} error(s) · {warns} warning(s)")
+    if errors or (strict and warns):
+        raise typer.Exit(1)
+
+
+@app.command()
+def doctor(solution: SolutionOpt = Path(".")) -> None:
+    """Environment check without calling an LLM: python, bundle, layout, CLIs, data folders."""
+    from solosquad.check import doctor_checks
+
+    bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
+    checks = doctor_checks(solution, bundle)
+    table = Table("check", "status", "detail")
+    colour = {"ok": "green", "warn": "yellow", "fail": "red"}
+    for c in checks:
+        table.add_row(c.name, f"[{colour[c.status]}]{c.status}[/]", escape(c.detail))
+    console.print(table)
+    console.print("logins: solosquad connections check (asks each harness)")
+    if any(c.status == "fail" for c in checks):
+        raise typer.Exit(1)
+
+
+@cron_app.command("list")
+def cron_list(solution: SolutionOpt = Path("."), org: OrgOpt = None) -> None:
+    """Crons of an org — schedule, standing thread, enabled."""
+    from solosquad.runtime.manager import load_crons
+
+    orgs = [x.name for x in Solution(solution).orgs()]
+    o = org or (orgs[0] if len(orgs) == 1 else None)
+    if o is None:
+        raise _fail(f"pass --org (found {orgs})")
+    table = Table("cron", "schedule", "thread", "enabled")
+    for c in load_crons(Solution(solution).org(o).root / "crons"):
+        table.add_row(
+            c.name, c.schedule, c.thread or "(new each run)", "yes" if c.enabled else "no"
+        )
+    console.print(table)
+
+
+@cron_app.command("run")
+def cron_run(
+    name: Annotated[str, typer.Argument(help="Cron name (file stem under orgs/<org>/crons/).")],
+    solution: SolutionOpt = Path("."),
+    org: OrgOpt = None,
+    workspace: WsOpt = None,
+) -> None:
+    """Fire a cron now, on a fresh thread, and print what the agents said."""
+    from solosquad.runtime.manager import load_crons
+
+    o, w = _pick(solution, org, workspace)
+    crons = {c.name: c for c in load_crons(Solution(solution).org(o).root / "crons")}
+    if name not in crons:
+        raise _fail(f"no cron {name!r} (found {sorted(crons)})")
+    cron = crons[name]
+    client = _client(solution, o, w)
+
+    async def main() -> None:
+        try:
+            tid = await client.create_thread(
+                f"cron {name} (manual)", {"cron": name, "manual": True}
+            )
+            await _drive(client, tid, await client.submit(tid, cron.prompt), 0)
+        finally:
+            await client.close()
+
+    _run(main())
 
 
 @agents_app.command("watch")

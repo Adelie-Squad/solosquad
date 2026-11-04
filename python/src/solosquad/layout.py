@@ -17,7 +17,7 @@
           local.yaml               folders/apps the FDE may analyze
           repositories/
 
-Outside the repo, under SOLOSQUAD_HOME (default ~/.solosquad):
+Outside the repo, under SOLOSQUAD_HOME (default ~/.solosquad/v2 — v1 owns ~/.solosquad):
     engines/<version>/             engine releases, side by side, shared per machine
     data/<solution-id>/<org>/<ws>/ checkpoints · conversations · ledger · secrets
 
@@ -115,7 +115,7 @@ def _write(path: Path, model: BaseModel) -> None:
 
 def solosquad_home() -> Path:
     env = os.environ.get("SOLOSQUAD_HOME")
-    return Path(env) if env else Path.home() / ".solosquad"
+    return Path(env) if env else Path.home() / ".solosquad" / "v2"
 
 
 @dataclass(frozen=True)

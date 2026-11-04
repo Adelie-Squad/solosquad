@@ -2,7 +2,7 @@
 
 > 현재 구현된 시스템 아키텍처, 멀티세션 조율, 메모리 구조를 정리한 기술 문서.
 
-> **현재 출시 버전: v0.7.0 (2026-05-15)**. 본 문서는 v0.2.x까지의 핵심 토폴로지를 상세히 기술하고, v0.3~v0.7는 §13 "릴리스별 추가 사항"에서 압축 요약 + 각 plan 문서 링크로 다룹니다. 더 자세한 내용은 `docs/plan/v0.3-*.md` ~ `docs/plan/v0.7-*.md` 참조.
+> **현재 출시 버전: v1.4.3 (2026-07-12) · v2.0.0 엔진 코어 개발 중(`python/`, 미배포)**. 본 문서 구성: v0.2.x 토폴로지 상세 + v0.3~v1.4 는 §13 요약(릴리스별 PRD 링크 포함). 릴리스별 상세는 `docs/prd/` 참조.
 
 ---
 
@@ -545,7 +545,7 @@ v0.1.x → v0.2.0 으로 건너가는 **바로 그 업데이트** 에서는 마�
 
 ---
 
-## 13. 릴리스별 추가 사항 (v0.3 → v0.7 — 압축 요약)
+## 13. 릴리스별 추가 사항 (v0.3 → v1.4 — 압축 요약)
 
 본 문서의 §1~§12는 v0.2.x까지의 핵심 토폴로지를 다룬다. 이후 릴리스에서 추가된 모듈·계층·CLI는 plan 문서에 자세히 기술되어 있으며, 여기서는 architecture-impacting 변경만 한눈에 본다.
 
@@ -1175,7 +1175,7 @@ Get-CimInstance Win32_Process |
 
 **v1.2.x 흐름 정합** — v1.2.6 의 invite URL 1-click 은 *설계로만* 존재했고 (`buildInviteUrl` 순수 함수는 정상), 입력값 source(`appId`)가 죽어 흐름 전체가 무력화돼 있었음. v1.2.9 가 source 를 고쳐 v1.2.6 의 약속(*init 완주 → click 1회 → 5분 내 채널 자동 생성*)을 비로소 실현.
 
-자세히: `CHANGELOG.md` §[1.2.9], `docs/prd/v1.2.9-discord-app-id-and-invite-url-fix.md`
+자세히: `CHANGELOG.md` §[1.2.9], `docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md`
 
 #### 13.6.22 v1.2.10 — Chief 리네임 정착 + git 채널 롤백 + Docker 자산 정리 (2026-06-08)
 
@@ -1225,7 +1225,7 @@ Get-CimInstance Win32_Process |
 
 세션 오케스트레이션 PRD(`docs/prd/v1.4.0-session-orchestration.md` — 現 `v2.0.0_orchestration-and-harness-platform.md` 로 흡수, 원문은 git 히스토리)의 **비파괴 서브셋** 출시. **시너지/역할:** 장기·다중 repo 운영의 *기반*을 깔되, 위험한 조각(세션 교대·GC 삭제)은 검증 후로 미뤄 24/7 대화 운영의 *가용성·관측*만 먼저 확보. **출시:** ⑴**S-1** `resolveOrgCwd`가 외부경로 repo(`repositories/<slug>.yaml`의 `path:`)를 `resolveRepoCwd`로 해석 → 스케줄러 cron 의 repo-blind 해소. ⑵**S-2a** `chief.usage` 수동 토큰 텔레메트리(contextTokens=input+cache_read+cache_creation, 관측만·회전 없음). ⑶**§5.5** `solosquad cron preset leading-indicator` opt-in 배선 + `avg_context_tokens`(S-2a 데이터원) 지표. ⑷**§5.7** `archiveOrgChiefSessions` 마이그레이션 헬퍼(spawn-변경 릴리즈용 clean-slate; 본 릴리즈는 spawn 무변경이라 미호출). ⑸**S-3** `_log.md` durable 파일(`_handoff.md` 에 *추가*, Layer[7] 회귀 없음) + AGENTS.md 3계층 메모리 정형화(GC 삭제 v1.4.x 연기). ⑹**🆕 세션 시작 마커** — 신규/리셋/회전 세션의 첫 Discord 응답에 Chief 이름 앞 표시. **비범위(v1.4.x):** 세션 교대(S-2b 임계 핸드오프+회전) · GC 파괴적 삭제(S-3b) · M2/M3 워커 세션 · S-6/S-7. 연속성 마이그레이션 `1.3.11-to-1.4.0` plain bump(세션 리셋 없음).
 
-자세히: `docs/prd/v1.4.0-session-orchestration.md`
+자세히: `docs/prd/v2.0.0_orchestration-and-harness-platform.md` (구 `v1.4.0-session-orchestration.md` 흡수, 원문은 git 히스토리)
 
 #### 13.6.34 v1.3.11 — Windows `--add-dir` 누락(append-system-prompt 줄바꿈) 핫픽스 (2026-06-25)
 

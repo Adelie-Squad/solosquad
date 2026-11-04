@@ -1,0 +1,507 @@
+{
+  "bundle": {
+    "agents/main/business-strategy/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/main/chief/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/main/engineer/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/main/marketer/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/main/product-manager/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/backend/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/communication/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/creative-designer/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/data-analyst/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/data-engineer/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/frontend/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/go-to-market/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/infra/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/product-designer/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/qa/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/researcher/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/sales/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/security/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/system-architect/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/agent-manager/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
+    "skills/cron-manager/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/design-system/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/discovery-synthesis/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/docs/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
+    "skills/experiment-design/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/goal-manager/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/hypothesis-design/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/interview-script/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/jobs-stories/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/lean-canvas/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/market-research/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/mece/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/okr/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/opportunity-tree/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/policy/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/prd/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
+    "skills/premortem/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/primitive-review/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/prioritization/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/retrospective/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/skill-manager/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
+    "skills/skill-refinement/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/triage/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/wbs/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/workflow-manager/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
+    "skills/workflow-refinement/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "skills/xyz-hypothesis/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    }
+  },
+  "synthetic": {
+    "clean": {
+      "errors": [],
+      "warnings": []
+    },
+    "stateful": {
+      "errors": [
+        "STATEFUL_NOT_ALLOWED"
+      ],
+      "warnings": []
+    },
+    "slash": {
+      "errors": [
+        "SLASH_MALFORMED",
+        "SLASH_RESERVED",
+        "SLASH_PREFIX_CONFLICT",
+        "SLASH_PREFIX_CONFLICT"
+      ],
+      "warnings": []
+    },
+    "freq": {
+      "errors": [
+        "FREQ_WINDOW_TOO_SMALL",
+        "FREQ_THRESHOLD_TOO_SMALL",
+        "FREQ_COOLDOWN_NEGATIVE"
+      ],
+      "warnings": []
+    },
+    "freq_cap": {
+      "errors": [
+        "FREQ_CAP_EXCEEDED"
+      ],
+      "warnings": []
+    },
+    "loop_unknown": {
+      "errors": [],
+      "warnings": []
+    },
+    "loop_nostop": {
+      "errors": [],
+      "warnings": [
+        "LOOP_MODE_NO_STOP"
+      ]
+    },
+    "budget": {
+      "errors": [
+        "BUDGET_NEGATIVE",
+        "BUDGET_NEGATIVE"
+      ],
+      "warnings": []
+    },
+    "confidence": {
+      "errors": [
+        "CONFIDENCE_OUT_OF_RANGE"
+      ],
+      "warnings": []
+    },
+    "min_approaches": {
+      "errors": [
+        "MIN_APPROACHES_INVALID"
+      ],
+      "warnings": []
+    },
+    "min_approaches_float": {
+      "errors": [
+        "MIN_APPROACHES_INVALID"
+      ],
+      "warnings": []
+    },
+    "category": {
+      "errors": [],
+      "warnings": [
+        "CATEGORY_MALFORMED"
+      ]
+    },
+    "no_schema": {
+      "errors": [],
+      "warnings": [
+        "SCHEMA_VERSION_MISSING"
+      ]
+    },
+    "bad_schema": {
+      "errors": [
+        "SCHEMA_VERSION_INVALID"
+      ],
+      "warnings": []
+    },
+    "merge_auto": {
+      "errors": [
+        "MERGE_AUTO_FORBIDDEN"
+      ],
+      "warnings": []
+    },
+    "perms_no_cap": {
+      "errors": [],
+      "warnings": [
+        "DEV_PERMS_WITHOUT_CAPABILITY"
+      ]
+    },
+    "strict_name": {
+      "errors": [
+        "NAME_MALFORMED",
+        "NAME_RESERVED_WORD",
+        "NAME_DIR_MISMATCH"
+      ],
+      "warnings": []
+    },
+    "long_name": {
+      "errors": [
+        "NAME_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    "dir_mismatch": {
+      "errors": [
+        "NAME_DIR_MISMATCH"
+      ],
+      "warnings": []
+    },
+    "desc_long": {
+      "errors": [
+        "DESCRIPTION_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    "desc_first_person": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_FIRST_PERSON"
+      ]
+    },
+    "desc_vague": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_VAGUE"
+      ]
+    },
+    "desc_vague_ko": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_VAGUE",
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "long_body": {
+      "errors": [],
+      "warnings": [
+        "BODY_TOO_LONG"
+      ]
+    }
+  },
+  "cases": {
+    "clean": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때"
+    },
+    "stateful": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\nstateful: true"
+    },
+    "slash": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\ntriggers:\n  slash: [x, /plan, /pla, /build-it, /mine]"
+    },
+    "freq": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\ntriggers:\n  freq:\n    keywords: [k]\n    window_turns: 0\n    threshold: 0\n    cooldown_turns: -1"
+    },
+    "freq_cap": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\ntriggers:\n  freq:\n    keywords: [k]",
+      "freq": 20
+    },
+    "loop_unknown": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\nloop_mode:\n  kind: forever"
+    },
+    "loop_nostop": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\nloop_mode:\n  kind: spec-gate"
+    },
+    "budget": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\nbudget:\n  per_call_usd: -1\n  daily_usd: -2"
+    },
+    "confidence": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\nconfidence: 1.5"
+    },
+    "min_approaches": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\npm_conventions:\n  minimum_approaches: 0"
+    },
+    "min_approaches_float": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\npm_conventions:\n  minimum_approaches: 1.5"
+    },
+    "category": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\ncategory: Planning Stuff"
+    },
+    "no_schema": {
+      "front": "name: a\ndescription: Builds reports. use when you need one"
+    },
+    "bad_schema": {
+      "front": "name: a\nschema_version: 0\ndescription: Builds reports. use when you need one"
+    },
+    "merge_auto": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\ndev_capability: true\ndev_permissions:\n  merge:\n    auto: true"
+    },
+    "perms_no_cap": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때\ndev_permissions:\n  merge:\n    auto: false"
+    },
+    "strict_name": {
+      "front": "name: My_Claude_Skill\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때",
+      "strict": true,
+      "dir": "other"
+    },
+    "long_name": {
+      "front": "name: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때",
+      "strict": true
+    },
+    "dir_mismatch": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때",
+      "dir": "b"
+    },
+    "desc_long": {
+      "front": "name: a\nschema_version: 1\ndescription: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx use when needed"
+    },
+    "desc_first_person": {
+      "front": "name: a\nschema_version: 1\ndescription: I will help. use when needed"
+    },
+    "desc_vague": {
+      "front": "name: a\nschema_version: 1\ndescription: helps with reports. 할 때"
+    },
+    "desc_vague_ko": {
+      "front": "name: a\nschema_version: 1\ndescription: 보고서를 도와줍니다"
+    },
+    "long_body": {
+      "front": "name: a\nschema_version: 1\ndescription: Builds reports. 사용 시점 — 보고서가 필요할 때",
+      "body": "line\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\n"
+    }
+  }
+}

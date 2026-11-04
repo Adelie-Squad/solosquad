@@ -4,6 +4,35 @@ All notable changes to SoloSquad are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Not yet published to npm — the `solosquad` npm package stays at 1.4.3.
+
+### Changed
+
+- **`prd` skill unified into a single template.** One product-context template
+  replaces the split forms — `skills/prd`, `skills/docs`, and the
+  `product-manager` / `product-designer` SKILLs now follow the same section
+  order.
+- **`prepublishOnly` runs `sync-version`.** The manual version header is synced
+  before `docs-check`, so a release can't ship with a stale manual badge.
+- **docker-compose scheduler command fixed.** `docker/docker-compose.yml` still
+  ran `solosquad schedule` (removed in 1.3.3); it now runs `solosquad cron start`.
+
+### Added (not in the npm package)
+
+- **`python/` — v2 engine core `2.0.0.dev0`.** Swarm engine, harness adapters,
+  connection routing, run manager, and the local API / CLI / OS services.
+  Development only (repository clone + `uv`); not shipped in the `solosquad`
+  npm package. See `docs/prd/v2.0.0_orchestration-and-harness-platform.md`.
+
+### Docs
+
+- README / README.kr / manual freshness fixes — current release v1.4.3,
+  Node.js 20+, the 9-section manual table, `solosquad cron start` in the cloud
+  guide, a short "v2 (개발 중 · 미배포)" note; `docs-check` now also checks
+  `README.kr.md`.
+
 ## [1.4.3] — 2026-07-12 (Research Workflow — autonomous hypothesis validation)
 
 See `docs/prd/v1.4.3_research-workflow-implementation.md`.
