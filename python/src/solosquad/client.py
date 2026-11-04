@@ -42,7 +42,7 @@ class HttpClient:
     def _call(self, method: str, path: str, body: Any = None) -> Any:
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(
-            self.base + path,
+            self.base + "/api" + path,
             data=data,
             method=method,
             headers={"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"},
@@ -92,7 +92,7 @@ class HttpClient:
 
     async def events(self) -> AsyncIterator[dict[str, Any]]:
         req = urllib.request.Request(
-            self.base + "/events", headers={"Authorization": f"Bearer {self.token}"}
+            self.base + "/api/events", headers={"Authorization": f"Bearer {self.token}"}
         )
         resp = await asyncio.to_thread(urllib.request.urlopen, req)
         while True:
