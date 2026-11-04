@@ -21,8 +21,16 @@ Item = tuple[int, dict[str, Any]]
 
 
 class EventHub:
-    def __init__(self, manager: RunManager, size: int = BUFFER) -> None:
+    def __init__(
+        self,
+        manager: RunManager,
+        size: int = BUFFER,
+        *,
+        others: dict[str, RunManager] | None = None,
+    ) -> None:
+        """`others` = more run managers (e.g. `{"workflow": …}`); their events carry `source`."""
         self.manager = manager
+        self.others = others or {}
         self.buffer: deque[Item] = deque(maxlen=size)
         self.seq = 0
         self._clients: set[asyncio.Queue[Item]] = set()
@@ -31,17 +39,36 @@ class EventHub:
 
     async def ensure_started(self) -> None:
         if self._pump is None:
-            self._pump = asyncio.create_task(self._run())
+            sources = {"company": self.manager, **self.others}
+            readies = []
+            tasks = []
+            for name, mgr in sources.items():
+                ready = asyncio.Event()
+                readies.append(ready)
+                tasks.append(asyncio.create_task(self._run(name, mgr, ready)))
+            self._pump = asyncio.create_task(self._hold(tasks))
+            for ready in readies:
+                await ready.wait()
+            self._ready.set()
         await self._ready.wait()
 
-    async def _run(self) -> None:
-        stream = self.manager.subscribe().__aiter__()
+    async def _hold(self, tasks: list[asyncio.Task[None]]) -> None:
+        try:
+            await asyncio.gather(*tasks)
+        finally:
+            for t in tasks:
+                t.cancel()
+
+    async def _run(self, source: str, manager: RunManager, ready: asyncio.Event) -> None:
+        stream = manager.subscribe().__aiter__()
         nxt = asyncio.ensure_future(stream.__anext__())
         await asyncio.sleep(0)  # registered with the manager before anyone is told "ready"
-        self._ready.set()
+        ready.set()
         try:
             while True:
                 event = await nxt
+                if source != "company":
+                    event = {**event, "source": source}
                 self.seq += 1
                 item = (self.seq, event)
                 self.buffer.append(item)

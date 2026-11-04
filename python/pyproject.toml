@@ -17,6 +17,7 @@ dependencies = [
     "pandas>=2.2",
     "starlette>=0.47",
     "uvicorn>=0.35",
+    "openpyxl>=3.1.5",
 ]
 
 [project.optional-dependencies]

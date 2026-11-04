@@ -57,6 +57,8 @@ accounts_app = typer.Typer(
 app.add_typer(add_app, name="add")
 app.add_typer(cron_app, name="cron")
 app.add_typer(accounts_app, name="accounts")
+workflows_app = typer.Typer(no_args_is_help=True, help="An org's workflows (steps · approvals).")
+app.add_typer(workflows_app, name="workflows")
 app.add_typer(conn_app, name="connections")
 app.add_typer(agents_app, name="agents")
 app.add_typer(service_app, name="service")
@@ -412,7 +414,12 @@ def serve(
 ) -> None:
     """Run one workspace 24/7: run manager, crons, and the local JSON API."""
     from solosquad.context.resolve import Resolver
-    from solosquad.instance import build_instance, connections_for, start_instance
+    from solosquad.instance import (
+        build_instance,
+        connections_for,
+        start_instance,
+        stop_instance,
+    )
     from solosquad.server import ApiServer, load_or_create_token
 
     o, w = _pick(solution, org, workspace)
@@ -434,6 +441,8 @@ def serve(
             secrets=inst.secrets,
             connections_path=inst.ctx.solution.connections_path,
             reload_connections=lambda: connections_for(inst.ctx),
+            workflows=inst.workflows,
+            artifacts=inst.artifacts,
         )
         bound = await api.start(host, port)
         sf = server_file(inst.ctx.data_dir)
@@ -449,7 +458,7 @@ def serve(
                 loop.add_signal_handler(sig, stop.set)
         await stop.wait()
         await api.stop()
-        await inst.manager.stop()
+        await stop_instance(inst)
         sf.unlink(missing_ok=True)
 
     _run(main())
@@ -682,6 +691,52 @@ def cron_run(
             await client.close()
 
     _run(main())
+
+
+# ---------------------------------------------------------------------- workflows
+
+TEMPLATES = Path(__file__).resolve().parent / "workflows" / "templates"
+
+
+@workflows_app.command("templates")
+def workflows_templates() -> None:
+    """Workflow templates shipped with the engine."""
+    for path in sorted(TEMPLATES.glob("*.yaml")):
+        console.print(path.stem)
+
+
+@workflows_app.command("add")
+def workflows_add(
+    template: Annotated[str, typer.Argument(help="Template name, e.g. monthly-pnl.")],
+    solution: SolutionOpt = Path("."),
+    org: OrgOpt = None,
+) -> None:
+    """Copy a template into the org — the org owns and edits its copy."""
+    o = _pick_org(solution, org)
+    src = TEMPLATES / f"{template}.yaml"
+    if not src.is_file():
+        raise _fail(f"no template {template!r} (see `solosquad workflows templates`)")
+    dest = Solution(solution).org(o).root / "workflows" / src.name
+    if dest.exists():
+        raise _fail(f"{dest} exists")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    console.print(f"added {dest}")
+
+
+@workflows_app.command("list")
+def workflows_list(solution: SolutionOpt = Path("."), org: OrgOpt = None) -> None:
+    """Workflows defined for an org, with any file that does not load."""
+    from solosquad.workflows.definition import load_workflows
+
+    o = _pick_org(solution, org)
+    defs, errors = load_workflows(Solution(solution).org(o).root / "workflows")
+    table = Table("workflow", "title", "steps", "schedule")
+    for wf in defs.values():
+        table.add_row(wf.name, wf.title, " → ".join(s.id for s in wf.steps), wf.schedule or "")
+    console.print(table)
+    for err in errors:
+        console.print(f"[red]{escape(err)}[/red]")
 
 
 # ---------------------------------------------------------------------- accounts

@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from solosquad.artifacts import ArtifactStore, load_kinds
 from solosquad.assets.bundle import find_bundle_root
 from solosquad.company import AgentRuntime, build_company
 from solosquad.context import Ledger, Resolver, build_context
@@ -20,6 +21,7 @@ from solosquad.runtime import RunManager
 from solosquad.runtime.manager import load_crons
 from solosquad.runtime.store import RunStore
 from solosquad.runtime.worktree import ensure_worktree
+from solosquad.workflows.engine import WorkflowEngine, company_asker
 
 
 def default_bundle() -> Path:
@@ -39,6 +41,8 @@ class Instance:
     ledger: Ledger
     router: Router
     manager: RunManager
+    artifacts: ArtifactStore | None = None
+    workflows: WorkflowEngine | None = None
 
     @property
     def secrets_path(self) -> Path:
@@ -94,8 +98,27 @@ def build_instance(
         thread_defaults=thread_defaults,
     )
     router.on_escalation = manager.escalate
-    return Instance(ctx, custom, router.connections, secrets, ledger, router, manager)
+    artifacts = ArtifactStore(ctx.data_dir / "artifacts.sqlite", load_kinds(ctx.org_root))
+    workflows = WorkflowEngine(
+        ctx.org_root,
+        ctx.data_dir,
+        artifacts,
+        company_asker(manager),
+        timezone=ctx.timezone,
+    )
+    return Instance(
+        ctx, custom, router.connections, secrets, ledger, router, manager, artifacts, workflows
+    )
 
 
 async def start_instance(inst: Instance) -> list[str]:
-    return await inst.manager.start(load_crons(inst.ctx.org_root / "crons"))
+    resumed = await inst.manager.start(load_crons(inst.ctx.org_root / "crons"))
+    if inst.workflows is not None:
+        resumed += await inst.workflows.start()
+    return resumed
+
+
+async def stop_instance(inst: Instance) -> None:
+    if inst.workflows is not None:
+        await inst.workflows.stop()
+    await inst.manager.stop()
