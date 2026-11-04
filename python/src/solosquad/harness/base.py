@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from solosquad.harness.events import End, LlmStreamEvent, ToolUse
 from solosquad.harness.guard import GuardPolicy, Verdict
@@ -63,11 +63,24 @@ class Cost:
     estimated: bool = False
 
 
+GuardMode = Literal["pre-execution", "stream-stop", "none"]
+"""How a harness enforces the guard policy (§D4):
+
+- `pre-execution` — a hook inside the CLI blocks the call before it runs (claude-code).
+- `stream-stop` — the CLI has no such hook; the agent node reads each tool call as it
+  starts and kills the process on a guarded one. A command that starts in the same
+  instant it is reported can still run — the residual risk is recorded in the v2.0.0
+  PRD (codex · opencode).
+- `none` — the harness executes no tools (lite), so there is nothing to guard.
+"""
+
+
 @dataclass(frozen=True)
 class Capabilities:
     max_context_tokens: int
     supports_mcp: bool
     supports_tools: bool
+    guard: GuardMode = "stream-stop"
 
 
 @runtime_checkable
@@ -95,7 +108,7 @@ class BaseHarness:
 
     name = "base"
     capabilities = Capabilities(
-        max_context_tokens=200_000, supports_mcp=False, supports_tools=False
+        max_context_tokens=200_000, supports_mcp=False, supports_tools=False, guard="none"
     )
 
     def assemble_system_prompt(self, layers: Sequence[PromptLayer]) -> str:

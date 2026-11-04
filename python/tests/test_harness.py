@@ -289,3 +289,17 @@ async def test_live_claude_code(tmp_path: Path) -> None:
     end = events[-1]
     assert isinstance(end, End) and end.stop_reason not in (None, "error"), events
     assert "pong" in "".join(e.text for e in events if isinstance(e, TextDelta)).lower()
+
+
+def test_codex_reports_a_command_when_it_starts() -> None:
+    """The guard needs the call before it runs — `item.started`, not `item.completed`."""
+    started: set[str] = set()
+    item = {"id": "c1", "type": "command_execution", "command": "rm -rf build"}
+    first = list(codex.translate({"type": "item.started", "item": item}, started))
+    assert [type(e).__name__ for e in first] == ["ToolUse"]
+    done = {**item, "status": "completed", "aggregated_output": "ok"}
+    second = list(codex.translate({"type": "item.completed", "item": done}, started))
+    assert [type(e).__name__ for e in second] == ["ToolResult"]
+    # a stream without item.started still reports the call once
+    alone = list(codex.translate({"type": "item.completed", "item": done}, set()))
+    assert [type(e).__name__ for e in alone] == ["ToolUse", "ToolResult"]

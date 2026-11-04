@@ -7,10 +7,12 @@ import pytest
 from company_fixtures import Company, agent_of, reply
 
 from solosquad.company import AgentError, build_company, derive_handoffs
+from solosquad.extensions import EngineCustomization
 from solosquad.graph import START, Command, StateGraph
 from solosquad.harness.base import SpawnRequest
-from solosquad.harness.events import End, Error, RateLimit, Start, TextDelta, ToolResult
-from solosquad.harness.guard_hook import MARKER
+from solosquad.harness.events import End, Error, RateLimit, Start, TextDelta, ToolResult, ToolUse
+from solosquad.harness.guard import GuardPolicy
+from solosquad.harness.guard_hook import MARKER, signature
 from solosquad.layout import ExecutionPolicy
 from solosquad.messages import user
 from solosquad.routing import ChiefPolicy, Connection, ConnectionKind
@@ -184,6 +186,70 @@ async def test_guard_approval_round_trip(tmp_path: Path) -> None:
     done = await app.ainvoke(Command(resume="approved"), cfg("g"))
     assert done["grants"] == ["abc123"] and done["pending_approval"] is None
     assert done["messages"][-1].text == "cleaned up"
+
+
+RM = {"command": "rm -rf build"}
+
+
+def _rm_script(seen: list[str]) -> Any:
+    def script(req: SpawnRequest) -> Any:
+        # A generator, so the test sees exactly how far the node read the stream.
+        def events() -> Any:
+            seen.append("start")
+            yield Start()
+            yield ToolUse("t1", "command_execution", RM)
+            seen.append("after-tool")
+            yield TextDelta("removed build/")
+            yield End("end_turn")
+
+        return events() if agent_of(req) == "chief" else reply("ok")
+
+    return script
+
+
+async def test_stream_stop_guard_cuts_the_stream_and_asks(tmp_path: Path) -> None:
+    """codex/opencode have no pre-execution hook: the node stops on the call itself."""
+    c = Company(tmp_path)
+    seen: list[str] = []
+    c.scripts["max"] = _rm_script(seen)
+    app = build_company(c.rt)
+    first = await app.ainvoke({"messages": [user("tidy the disk")]}, cfg("s"))
+    assert seen == ["start"]  # nothing after the guarded call was consumed
+    assert first["__interrupt__"][0].value == {
+        "kind": "approval",
+        "agent": "chief",
+        "signature": signature("command_execution", RM),
+        "reason": "recursive delete",
+    }
+    done = await app.ainvoke(Command(resume="approved"), cfg("s"))
+    assert "after-tool" in seen  # the granted call is let through
+    assert done["messages"][-1].text == "removed build/"
+
+
+async def test_stream_stop_guard_deny_rule(tmp_path: Path) -> None:
+    c = Company(tmp_path)
+    c.rt.customization = EngineCustomization(
+        guard=GuardPolicy.from_dicts(
+            [{"command": r"\brm\b", "action": "deny", "reason": "no deletes here"}]
+        )
+    )
+    seen: list[str] = []
+    c.scripts["max"] = _rm_script(seen)
+    out = await build_company(c.rt).ainvoke({"messages": [user("tidy")]}, cfg("d"))
+    assert seen == ["start"] and "__interrupt__" not in out
+    assert "(blocked by guard: no deletes here)" in out["messages"][-1].text
+
+
+def test_guard_modes() -> None:
+    from solosquad.harness.claude_code import ClaudeCodeHarness
+    from solosquad.harness.codex import CodexHarness
+    from solosquad.harness.lite import LiteHarness
+    from solosquad.harness.opencode import OpenCodeHarness
+
+    assert ClaudeCodeHarness.capabilities.guard == "pre-execution"
+    assert CodexHarness.capabilities.guard == "stream-stop"
+    assert OpenCodeHarness.capabilities.guard == "stream-stop"
+    assert LiteHarness.capabilities.guard == "none"
 
 
 async def test_unknown_agent_company_needs_chief(tmp_path: Path) -> None:

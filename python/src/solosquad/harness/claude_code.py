@@ -30,7 +30,9 @@ from solosquad.harness.process import ProcessOutcome, stream_jsonl
 
 class ClaudeCodeHarness(BaseHarness):
     name = "claude-code"
-    capabilities = Capabilities(max_context_tokens=200_000, supports_mcp=True, supports_tools=True)
+    capabilities = Capabilities(
+        max_context_tokens=200_000, supports_mcp=True, supports_tools=True, guard="pre-execution"
+    )
 
     def __init__(self, command: str = "claude", permission_mode: str = "bypassPermissions") -> None:
         self.command = command

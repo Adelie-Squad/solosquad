@@ -18,7 +18,9 @@ from solosquad.harness.events import End, Error, LlmStreamEvent, Start, TextDelt
 
 class LiteHarness(BaseHarness):
     name = "lite"
-    capabilities = Capabilities(max_context_tokens=32_000, supports_mcp=False, supports_tools=False)
+    capabilities = Capabilities(
+        max_context_tokens=32_000, supports_mcp=False, supports_tools=False, guard="none"
+    )
 
     def __init__(
         self, base_url: str, api_key: str | None, default_model: str | None = None

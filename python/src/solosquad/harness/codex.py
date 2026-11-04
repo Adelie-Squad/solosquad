@@ -49,6 +49,7 @@ class CodexHarness(BaseHarness):
     async def spawn(self, request: SpawnRequest) -> AsyncIterator[LlmStreamEvent]:
         outcome = ProcessOutcome()
         ended = False
+        started: set[str] = set()
         async for obj in stream_jsonl(
             self.argv(request),
             stdin=request.prompt,
@@ -57,7 +58,7 @@ class CodexHarness(BaseHarness):
             timeout_s=request.timeout_s,
             outcome=outcome,
         ):
-            for event in translate(obj):
+            for event in translate(obj, started):
                 ended = ended or isinstance(event, End)
                 yield event
         if not ended:
@@ -69,34 +70,53 @@ class CodexHarness(BaseHarness):
         return AuthStatus(found, {"binary": found})
 
 
-def translate(obj: dict[str, Any]) -> Iterator[LlmStreamEvent]:
+def _tool_use(item: dict[str, Any]) -> ToolUse | None:
+    itype = item.get("type")
+    if itype == "mcp_tool_call":
+        args = item.get("arguments")
+        return ToolUse(
+            str(item.get("id")),
+            f"mcp__{item.get('server')}__{item.get('tool')}",
+            args if isinstance(args, dict) else {},
+        )
+    if itype == "command_execution":
+        return ToolUse(str(item.get("id")), "command_execution", {"command": item.get("command")})
+    return None
+
+
+def translate(obj: dict[str, Any], started: set[str] | None = None) -> Iterator[LlmStreamEvent]:
+    """One `codex exec --json` line → neutral events.
+
+    A tool call is reported on `item.started` — before the command runs — so the
+    agent node can stop the process when the guard says so (codex exec has no
+    pre-execution hook). `started` remembers those ids so `item.completed` only adds
+    the result; a stream without `item.started` still yields the call once.
+    """
+    seen = started if started is not None else set()
     kind = obj.get("type")
     if kind == "thread.started":
         yield Start(session_id=obj.get("thread_id"))
+    elif kind == "item.started":
+        use = _tool_use(obj.get("item") or {})
+        if use is not None:
+            seen.add(use.id)
+            yield use
     elif kind == "item.completed":
         item = obj.get("item") or {}
         itype = item.get("type")
         if itype == "agent_message" and item.get("text"):
             yield TextDelta(item["text"])
-        elif itype == "mcp_tool_call":
-            name = f"mcp__{item.get('server')}__{item.get('tool')}"
-            args = item.get("arguments")
-            yield ToolUse(str(item.get("id")), name, args if isinstance(args, dict) else {})
-            result = item.get("result")
-            yield ToolResult(
-                str(item.get("id")),
-                json.dumps(result) if result is not None else "",
-                item.get("status") == "failed",
-            )
-        elif itype == "command_execution":
-            yield ToolUse(
-                str(item.get("id")), "command_execution", {"command": item.get("command")}
-            )
-            yield ToolResult(
-                str(item.get("id")),
-                str(item.get("aggregated_output") or ""),
-                item.get("status") == "failed",
-            )
+        use = _tool_use(item)
+        if use is not None:
+            if use.id not in seen:
+                yield use
+            seen.discard(use.id)
+            if itype == "mcp_tool_call":
+                result = item.get("result")
+                content = json.dumps(result) if result is not None else ""
+            else:
+                content = str(item.get("aggregated_output") or "")
+            yield ToolResult(use.id, content, item.get("status") in ("failed", "declined"))
     elif kind == "turn.completed":
         u = obj.get("usage") or {}
         yield End(

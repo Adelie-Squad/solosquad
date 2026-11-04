@@ -32,7 +32,7 @@ from solosquad.graph import (
 )
 from solosquad.harness.base import SpawnRequest
 from solosquad.harness.events import End, Error, RateLimit, TextDelta, ToolResult, ToolUse, Usage
-from solosquad.harness.guard_hook import MARKER
+from solosquad.harness.guard_hook import MARKER, decide
 from solosquad.mcp import handoff as handoff_mcp
 from solosquad.messages import Message, TextPart, ToolCallPart
 from solosquad.routing.router import NoConnection, Router
@@ -133,6 +133,19 @@ class AgentNode:
 
     # ------------------------------------------------------------------ run
 
+    def _stream_guard(
+        self, event: ToolUse, granted: set[str]
+    ) -> tuple[dict[str, Any] | None, str | None] | None:
+        """Guard a tool call a stream-stop harness just started → (approval, blocked) or None."""
+        out = decide(self.rt.customization.guard, granted, event.name, event.input)
+        if out is None:
+            return None
+        reason = str(out["hookSpecificOutput"]["permissionDecisionReason"])
+        m = APPROVAL.search(reason)
+        if m:
+            return {"agent": self.name, "signature": m.group(1), "reason": m.group(2)}, None
+        return None, reason
+
     def _guard_files(self, thread_id: str, grants: list[str]) -> tuple[Path, Path]:
         d = self.rt.guard_dir
         d.mkdir(parents=True, exist_ok=True)
@@ -208,37 +221,49 @@ class AgentNode:
             texts: list[str] = []
             handoff: tuple[str, str, str] | None = None
             approval: dict[str, Any] | None = None
+            blocked: str | None = None
             end: End | None = None
             limited = False
             retry_error: str | None = None
             started = time.time()
+            stream_guard = selection.harness.capabilities.guard == "stream-stop"
+            granted = set(grants)
             async with self.rt.router.lease(selection):
-                async for event in selection.harness.spawn(request):
-                    if isinstance(event, TextDelta):
-                        texts.append(event.text)
-                        emit_message_chunk(event.text, {"agent": self.name})
-                    elif isinstance(event, ToolUse):
-                        target = handoff_target(event.name)
-                        if target and target in self.handoffs and handoff is None:
-                            handoff = (target, event.id, str(event.input.get("task") or ""))
-                    elif isinstance(event, ToolResult):
-                        m = APPROVAL.search(event.content)
-                        if m and approval is None:
-                            approval = {
-                                "agent": self.name,
-                                "signature": m.group(1),
-                                "reason": m.group(2),
-                            }
-                    elif isinstance(event, RateLimit) and event.status == "exceeded":
-                        self.rt.router.mark_limited(selection.connection.id, event.resets_at)
-                        limited = True
-                    elif isinstance(event, Error):
-                        if event.retryable:
-                            retry_error = event.message
-                        else:
-                            raise AgentError(f"{self.name}: {event.message}")
-                    elif isinstance(event, End):
-                        end = event
+                stream = selection.harness.spawn(request)
+                try:
+                    async for event in stream:
+                        if isinstance(event, TextDelta):
+                            texts.append(event.text)
+                            emit_message_chunk(event.text, {"agent": self.name})
+                        elif isinstance(event, ToolUse):
+                            target = handoff_target(event.name)
+                            if target and target in self.handoffs and handoff is None:
+                                handoff = (target, event.id, str(event.input.get("task") or ""))
+                            elif stream_guard:
+                                stop = self._stream_guard(event, granted)
+                                if stop is not None:
+                                    approval, blocked = stop
+                                    break  # closing the stream kills the CLI process
+                        elif isinstance(event, ToolResult):
+                            m = APPROVAL.search(event.content)
+                            if m and approval is None:
+                                approval = {
+                                    "agent": self.name,
+                                    "signature": m.group(1),
+                                    "reason": m.group(2),
+                                }
+                        elif isinstance(event, RateLimit) and event.status == "exceeded":
+                            self.rt.router.mark_limited(selection.connection.id, event.resets_at)
+                            limited = True
+                        elif isinstance(event, Error):
+                            if event.retryable:
+                                retry_error = event.message
+                            else:
+                                raise AgentError(f"{self.name}: {event.message}")
+                        elif isinstance(event, End):
+                            end = event
+                finally:
+                    await stream.aclose()  # type: ignore[attr-defined]
             usage = end.usage if end else Usage()
             cost = selection.harness.parse_cost(end) if end else None
             self.rt.ledger.record(
@@ -260,7 +285,8 @@ class AgentNode:
                     stop_reason=end.stop_reason if end else None,
                 )
             )
-            failed = end is None or end.stop_reason == "error"
+            stopped = approval is not None or blocked is not None
+            failed = not stopped and (end is None or end.stop_reason == "error")
             if (limited or retry_error) and failed and not texts and handoff is None:
                 excluded.add(selection.connection.id)
                 last_error = retry_error or "rate limited"
@@ -279,6 +305,8 @@ class AgentNode:
             hook({"agent": self.name, "thread_id": thread_id}, {"text": "".join(texts)})
 
         text = "".join(texts).strip() or (end.result_text if end and end.result_text else "")
+        if blocked is not None:
+            text = f"{text}\n(blocked by guard: {blocked})".strip()
         parts: list[Any] = [TextPart(text)] if text else []
         if handoff:
             parts.append(
