@@ -2,9 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, release/v1]
   pull_request:
-    branches: [main]
+    # release/v1 = v1 hotfix line after the npm retirement (decision 42)
+    branches: [main, release/v1]
 
 jobs:
   build:
