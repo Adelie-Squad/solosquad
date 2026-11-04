@@ -39,6 +39,10 @@ async def test_http_boundary(tmp_path: Path) -> None:
             events.append(e)
 
     watcher = asyncio.create_task(watch())
+    for _ in range(200):  # the stream must be subscribed before the run, or its events are gone
+        if m._subscribers:
+            break
+        await asyncio.sleep(0.02)
     try:
         assert (await client._a("GET", "/health"))["ok"] is True
         with pytest.raises(urllib.error.HTTPError) as e:

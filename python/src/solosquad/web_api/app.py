@@ -421,20 +421,23 @@ def create_app(cfg: WebConfig) -> Starlette:
         need(request, "events")
 
         async def stream() -> AsyncIterator[bytes]:
-            yield b": connected\n\n"
             events = m.subscribe().__aiter__()
             closing = cfg.closing or asyncio.Event()
             stop = asyncio.ensure_future(closing.wait())
+            nxt = asyncio.ensure_future(events.__anext__())
+            await asyncio.sleep(0)  # let the subscription register before saying "connected"
+            yield b": connected\n\n"
             try:
                 while True:
-                    nxt = asyncio.ensure_future(events.__anext__())
                     done, _ = await asyncio.wait({nxt, stop}, return_when=asyncio.FIRST_COMPLETED)
                     if stop in done:
                         nxt.cancel()
                         return
                     yield b"data: " + dumps(nxt.result()) + b"\n\n"
+                    nxt = asyncio.ensure_future(events.__anext__())
             finally:
                 stop.cancel()
+                nxt.cancel()
                 with contextlib.suppress(Exception):
                     await events.aclose()  # type: ignore[attr-defined]
 
