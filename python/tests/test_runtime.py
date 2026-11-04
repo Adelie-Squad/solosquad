@@ -98,8 +98,10 @@ async def test_resumed_run_keeps_its_place_in_the_thread(tmp_path: Path) -> None
     m = manager(c)
     resumed = await m.start()
     assert len(resumed) == 1
-    for _ in range(100):
-        if not m.store.runs(status=RunStatus.PENDING, limit=10):
+    for _ in range(250):
+        if not m.store.runs(status=RunStatus.PENDING, limit=10) and not m.store.runs(
+            status=RunStatus.RUNNING, limit=10
+        ):
             break
         await asyncio.sleep(0.02)
     await m.wait(resumed[0], timeout=5)
