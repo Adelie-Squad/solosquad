@@ -10,7 +10,7 @@ import signal
 import subprocess
 from collections.abc import Coroutine
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import typer
 from rich.console import Console
@@ -40,6 +40,9 @@ from solosquad.routing import (
 )
 from solosquad.service import ServiceSpec, plan
 
+if TYPE_CHECKING:
+    from solosquad.web_api.accounts import AccountStore
+
 app = typer.Typer(no_args_is_help=True, add_completion=False)
 add_app = typer.Typer(no_args_is_help=True, help="Add an org (business) or a workspace (office).")
 conn_app = typer.Typer(
@@ -48,8 +51,12 @@ conn_app = typer.Typer(
 agents_app = typer.Typer(no_args_is_help=True, help="Watch the agents work.")
 service_app = typer.Typer(no_args_is_help=True, help="Run a workspace 24/7 as an OS service.")
 cron_app = typer.Typer(no_args_is_help=True, help="An org's scheduled runs.")
+accounts_app = typer.Typer(
+    no_args_is_help=True, help="People who log in to the web — one set per org (owner · staff)."
+)
 app.add_typer(add_app, name="add")
 app.add_typer(cron_app, name="cron")
+app.add_typer(accounts_app, name="accounts")
 app.add_typer(conn_app, name="connections")
 app.add_typer(agents_app, name="agents")
 app.add_typer(service_app, name="service")
@@ -93,8 +100,32 @@ def _pick(solution: Path, org: str | None, workspace: str | None) -> tuple[str, 
     return o, w
 
 
+def _pick_org(solution: Path, org: str | None) -> str:
+    orgs = [x.name for x in Solution(solution).orgs()]
+    o = org or (orgs[0] if len(orgs) == 1 else None)
+    if o is None or o not in orgs:
+        raise _fail(f"pass --org (found {orgs})")
+    return o
+
+
 def _data_dir(solution: Path, org: str, workspace: str) -> Path:
     return EngineStore(solosquad_home()).data_dir(Solution(solution).org(org).workspace(workspace))
+
+
+def _accounts(solution: Path, org: str) -> AccountStore:
+    from solosquad.web_api.accounts import AccountStore
+
+    sol = Solution(solution)
+    return AccountStore(
+        EngineStore(solosquad_home()).org_data_dir(sol.org(org)) / "accounts.sqlite"
+    )
+
+
+def _web_dist() -> Path | None:
+    """The built customer web next to the engine (`web/dist`), when present."""
+    bundle = find_bundle_root(Path(__file__).resolve().parent)
+    dist = bundle / "web" / "dist" if bundle else None
+    return dist if dist is not None and dist.is_dir() else None
 
 
 def _client(solution: Path, org: str | None, workspace: str | None) -> Client:
@@ -104,7 +135,7 @@ def _client(solution: Path, org: str | None, workspace: str | None) -> Client:
         info = json.loads(sf.read_text(encoding="utf-8"))
         client = HttpClient(f"http://127.0.0.1:{info['port']}", info["token"])
         try:
-            client._call("GET", "/health")
+            client._call("GET", "/version")
             return client
         except OSError:
             pass
@@ -389,7 +420,15 @@ def serve(
         inst = build_instance(solution, o, w)
         resumed = await start_instance(inst)
         token = load_or_create_token(inst.ctx.data_dir)
-        api = ApiServer(inst.manager, inst.ledger, token)
+        ws = Solution(solution).org(o).workspace(w)
+        api = ApiServer(
+            inst.manager,
+            inst.ledger,
+            token,
+            accounts=_accounts(solution, o),
+            workspace=ws,
+            static_dir=_web_dist(),
+        )
         bound = await api.start(host, port)
         sf = server_file(inst.ctx.data_dir)
         sf.write_text(
@@ -601,10 +640,7 @@ def cron_list(solution: SolutionOpt = Path("."), org: OrgOpt = None) -> None:
     """Crons of an org — schedule, standing thread, enabled."""
     from solosquad.runtime.manager import load_crons
 
-    orgs = [x.name for x in Solution(solution).orgs()]
-    o = org or (orgs[0] if len(orgs) == 1 else None)
-    if o is None:
-        raise _fail(f"pass --org (found {orgs})")
+    o = _pick_org(solution, org)
     table = Table("cron", "schedule", "thread", "enabled")
     for c in load_crons(Solution(solution).org(o).root / "crons"):
         table.add_row(
@@ -640,6 +676,91 @@ def cron_run(
             await client.close()
 
     _run(main())
+
+
+# ---------------------------------------------------------------------- accounts
+
+
+def _ask_password() -> str:
+    password: str = typer.prompt("password (10+ characters)", hide_input=True)
+    again: str = typer.prompt("again", hide_input=True)
+    if password != again:
+        raise _fail("passwords differ")
+    return password
+
+
+@accounts_app.command("create-owner")
+def accounts_create_owner(
+    username: Annotated[str, typer.Argument(help="Login name for the owner (대표).")],
+    solution: SolutionOpt = Path("."),
+    org: OrgOpt = None,
+    display: Annotated[str, typer.Option(help="Name shown in the web.")] = "",
+) -> None:
+    """First owner account of an org (done once by the FDE at setup), with its one-time code."""
+    o = _pick_org(solution, org)
+    store = _accounts(solution, o)
+    from solosquad.web_api.accounts import Role
+
+    try:
+        user = store.create_user(username, _ask_password(), Role.OWNER, display=display)
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    uri = store.begin_totp(user.id)
+    console.print(f"owner {user.username!r} created for org {o!r}")
+    console.print("add this to an authenticator app (or show it as a QR code):")
+    console.print(escape(uri))
+    code: str = typer.prompt("6-digit code from the app")
+    if not store.confirm_totp(user.id, code):
+        store.reset_totp(user.id)
+        raise _fail("wrong code — run `solosquad accounts reset-totp` and enrol at first login")
+    store.audit(None, "owner.create", f"{user.username} via CLI")
+    console.print("[green]one-time code enrolled[/green]")
+
+
+@accounts_app.command("list")
+def accounts_list(solution: SolutionOpt = Path("."), org: OrgOpt = None) -> None:
+    """Accounts of an org."""
+    o = _pick_org(solution, org)
+    table = Table("username", "role", "2FA", "disabled")
+    for u in _accounts(solution, o).users():
+        table.add_row(
+            u.username, u.role.value, "yes" if u.has_totp else "no", "yes" if u.disabled else ""
+        )
+    console.print(table)
+
+
+def _find_user(solution: Path, org: str | None, username: str) -> tuple[Any, Any]:
+    o = _pick_org(solution, org)
+    store = _accounts(solution, o)
+    match = [u for u in store.users() if u.username == username.lower()]
+    if not match:
+        raise _fail(f"no account {username!r}")
+    return store, match[0]
+
+
+@accounts_app.command("reset-totp")
+def accounts_reset_totp(
+    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
+) -> None:
+    """Lost phone: clear the one-time code; the next login enrols a new one."""
+    store, user = _find_user(solution, org, username)
+    store.reset_totp(user.id)
+    store.audit(None, "user.totp.reset", f"{user.username} via CLI")
+    console.print(f"one-time code cleared for {user.username!r}")
+
+
+@accounts_app.command("set-password")
+def accounts_set_password(
+    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
+) -> None:
+    """Set a new password (ends that account's sessions)."""
+    store, user = _find_user(solution, org, username)
+    try:
+        store.set_password(user.id, _ask_password())
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    store.audit(None, "user.password.reset", f"{user.username} via CLI")
+    console.print(f"password changed for {user.username!r}")
 
 
 @agents_app.command("watch")

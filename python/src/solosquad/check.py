@@ -144,6 +144,29 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
                 path=str(path),
             )
 
+    access = ctx.workspace_config.access
+    if not access.require_login and not access.allowed_networks:
+        r.add(
+            "ACCESS_OPEN",
+            "require_login: false with no allowed_networks — the office would be"
+            " open to the internet without a login (decision 41)",
+            "access.require_login",
+        )
+    elif not access.require_login:
+        r.add(
+            "ACCESS_NO_LOGIN_IGNORED",
+            "require_login: false is not supported in v2.1 — every"
+            " web request still needs an account",
+            "access.require_login",
+            "warn",
+        )
+    try:
+        from solosquad.web_api.access import parse_networks
+
+        parse_networks(access.allowed_networks)
+    except ValueError as e:
+        r.add("ACCESS_NETWORK_INVALID", str(e), "access.allowed_networks")
+
     known_conn: set[str] = set()
     for path in (ctx.solution.connections_path, ctx.org_root / "connections.yaml"):
         try:

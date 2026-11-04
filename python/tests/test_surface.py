@@ -42,7 +42,7 @@ async def test_http_boundary(tmp_path: Path) -> None:
     try:
         assert (await client._a("GET", "/health"))["ok"] is True
         with pytest.raises(urllib.error.HTTPError) as e:
-            await HttpClient(f"http://127.0.0.1:{port}", "wrong")._a("GET", "/health")
+            await HttpClient(f"http://127.0.0.1:{port}", "wrong")._a("GET", "/version")
         assert e.value.code == 401
         tid = await client.create_thread("hello")
         run = await client.wait(await client.submit(tid, "hi there"), timeout=5)

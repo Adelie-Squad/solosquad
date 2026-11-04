@@ -79,7 +79,8 @@ class OrgConfig(_Doc):
 class AccessPolicy(BaseModel):
     model_config = ConfigDict(extra="allow")
     require_login: bool = True
-    two_factor: bool = False
+    two_factor: bool = True
+    """Second factor (TOTP) at login — the default since decision 41/46 W3."""
     allowed_networks: list[str] = Field(default_factory=list)
 
 
@@ -139,7 +140,11 @@ class EngineStore:
         return sorted(p.name for p in self.engines_dir.iterdir() if p.is_dir())
 
     def data_dir(self, ws: Workspace) -> Path:
-        return self.data_root / ws.org.solution.meta().id / ws.org.name / ws.name
+        return self.org_data_dir(ws.org) / ws.name
+
+    def org_data_dir(self, org: Org) -> Path:
+        """Shared by the org's offices — accounts live here (one login per org, W6)."""
+        return self.data_root / org.solution.meta().id / org.name
 
 
 @dataclass(frozen=True)
@@ -236,6 +241,9 @@ class Workspace:
 
     def config(self) -> WorkspaceConfig:
         return _read(self.root / "workspace.yaml", WorkspaceConfig)
+
+    def save_config(self, cfg: WorkspaceConfig) -> None:
+        _write(self.root / "workspace.yaml", cfg)
 
 
 def _mkdirs(*paths: Path) -> None:
