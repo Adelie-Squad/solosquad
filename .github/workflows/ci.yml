@@ -93,4 +93,5 @@ jobs:
       - run: npm ci
       - run: npx tsx scripts/dump-asset-golden.ts > python/tests/golden/assets-v1.4.3.json
       - run: npx tsx scripts/dump-validate-golden.ts > python/tests/golden/validate-v1.4.3.json
+      - run: npx tsx scripts/dump-parse-edge-golden.ts > python/tests/golden/parse-edge-v1.4.3.json
       - run: git diff --exit-code -- python/tests/golden

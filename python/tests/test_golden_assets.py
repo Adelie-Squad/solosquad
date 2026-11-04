@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from solosquad.assets.bundle import load_bundle
+from solosquad.assets.skill import SkillParseError, parse_skill_md
 
 GOLDEN = Path(__file__).parent / "golden" / "assets-v1.4.3.json"
 
@@ -41,3 +42,18 @@ def test_same_files(kind: str, golden: dict[str, Any], ours: dict[str, Any]) -> 
 def test_same_values(kind: str, golden: dict[str, Any], ours: dict[str, Any]) -> None:
     mismatched = [key for key in golden[kind] if ours[kind].get(key) != golden[kind][key]]
     assert mismatched == []
+
+
+def test_edge_cases_match_v1_parser() -> None:
+    """Customer-written shapes the bundle never exercises (scripts/dump-parse-edge-golden.ts)."""
+    here = GOLDEN.parent
+    cases = json.loads((here / "parse-edge-cases.json").read_text(encoding="utf-8"))
+    want = json.loads((here / "parse-edge-v1.4.3.json").read_text(encoding="utf-8"))
+    for i, (raw, expected) in enumerate(zip(cases, want, strict=True)):
+        try:
+            got: dict[str, Any] = {
+                "ok": _roundtrip(parse_skill_md(raw, f"case/{i}").to_json_dict())
+            }
+        except SkillParseError:
+            got = {"error": "SkillParseError"}
+        assert got == expected, (i, raw[:60])

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import math
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -139,6 +140,8 @@ def to_json_value(value: Any) -> Any:
         return value.astimezone(dt.UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     if isinstance(value, dt.date):
         return f"{value.isoformat()}T00:00:00.000Z"
+    if isinstance(value, float) and not math.isfinite(value):
+        return None  # JSON.stringify(Infinity) === "null"
     return value
 
 
