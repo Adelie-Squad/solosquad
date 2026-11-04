@@ -69,10 +69,10 @@ def test_service_plans(tmp_path: Path) -> None:
     assert mac.content is not None
     parsed = plistlib.loads(mac.content.encode())
     assert parsed["ProgramArguments"][:4] == ["/opt/py", "-m", "solosquad", "serve"]
-    assert parsed["KeepAlive"] is True and "/srv/elon solution" in parsed["ProgramArguments"]
+    assert parsed["KeepAlive"] is True and str(spec.solution) in parsed["ProgramArguments"]
     linux = plan(spec, tmp_path, "Linux")
     assert linux.content is not None and "Restart=always" in linux.content
-    assert "'/srv/elon solution'" in linux.content
+    assert f"'{spec.solution}'" in linux.content
     win = plan(spec, tmp_path, "Windows")
     assert win.path is None and win.enable[0][:2] == ["schtasks", "/Create"]
 

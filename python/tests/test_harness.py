@@ -179,6 +179,12 @@ def _fake_cli(tmp_path: Path, lines: list[dict[str, Any]], extra: str = "") -> P
     return script
 
 
+# The fake CLI is an executable Python script run through its shebang — POSIX only.
+# (Windows support for the real `claude.cmd` is unverified; see CI `python` job.)
+posix_only = pytest.mark.skipif(sys.platform == "win32", reason="shebang fake CLI")
+
+
+@posix_only
 async def test_claude_spawn_through_a_real_child_process(tmp_path: Path) -> None:
     cli = _fake_cli(tmp_path, CLAUDE_LINES)
     events = await collect(ClaudeCodeHarness(command=str(cli)), SpawnRequest("hello", cwd=tmp_path))
@@ -186,6 +192,7 @@ async def test_claude_spawn_through_a_real_child_process(tmp_path: Path) -> None
     assert TextDelta("hi") in events
 
 
+@posix_only
 async def test_missing_result_becomes_retryable_error(tmp_path: Path) -> None:
     cli = _fake_cli(tmp_path, CLAUDE_LINES[:2], extra="sys.exit(3)")
     events = await collect(ClaudeCodeHarness(command=str(cli)), SpawnRequest("x", cwd=tmp_path))
@@ -194,6 +201,7 @@ async def test_missing_result_becomes_retryable_error(tmp_path: Path) -> None:
     assert isinstance(events[-1], End) and events[-1].stop_reason == "error"
 
 
+@posix_only
 async def test_timeout_kills_the_child(tmp_path: Path) -> None:
     cli = _fake_cli(tmp_path, CLAUDE_LINES, extra="time.sleep(30)")
     with pytest.raises(TimeoutError):

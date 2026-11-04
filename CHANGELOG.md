@@ -19,6 +19,13 @@ Not yet published to npm — the `solosquad` npm package stays at 1.4.3.
 - **docker-compose scheduler command fixed.** `docker/docker-compose.yml` still
   ran `solosquad schedule` (removed in 1.3.3); it now runs `solosquad cron start`.
 
+### Security
+
+- **Dependency lockfile refreshed (`npm audit fix`, in-range only).** New high
+  and critical advisories in `undici` (via `discord.js` 14.26 → 14.28.1) and
+  others failed the CI audit gate; no `package.json` range changed. The
+  lockfile's own version field is corrected from 1.3.4 to 1.4.3.
+
 ### Added (not in the npm package)
 
 - **`python/` — v2 engine core `2.0.0.dev0`.** Swarm engine, harness adapters,
