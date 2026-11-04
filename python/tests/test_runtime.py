@@ -84,6 +84,30 @@ async def test_crashed_run_is_resumed_on_restart(tmp_path: Path) -> None:
     assert [m.text for m in state["values"]["messages"]].count("do the long thing") == 1
 
 
+async def test_resumed_run_keeps_its_place_in_the_thread(tmp_path: Path) -> None:
+    """A crash leaves A `running` and B (sent after A) `pending`; after restart A's input
+    must still land before B's. Regression: the soak caught B overtaking A on a slow CI
+    runner because the recovery run was ordered by its own (later) creation time."""
+    c = Company(tmp_path)
+    store = RunStore(c.ctx.data_dir / "runs.sqlite")
+    tid = store.create_thread("t")
+    first = store.create_run(tid, "message", "first message", "user")
+    store.create_run(tid, "message", "second message", "user")
+    store.set_status(first, RunStatus.RUNNING)  # what a crash leaves behind
+
+    m = manager(c)
+    resumed = await m.start()
+    assert len(resumed) == 1
+    for _ in range(100):
+        if not m.store.runs(status=RunStatus.PENDING, limit=10):
+            break
+        await asyncio.sleep(0.02)
+    await m.wait(resumed[0], timeout=5)
+    texts = [x.text for x in (await m.thread_state(tid))["values"]["messages"]]
+    await m.stop()
+    assert texts.index("first message") < texts.index("second message"), texts
+
+
 async def test_interrupt_then_resume_through_the_manager(tmp_path: Path) -> None:
     c = Company(tmp_path)
     c.scripts["max"] = lambda req: (

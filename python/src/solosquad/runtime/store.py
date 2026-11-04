@@ -65,7 +65,11 @@ class RunStore:
     def touch(self, tid: str) -> None:
         self._exec("UPDATE threads SET updated = ? WHERE id = ?", (time.time(), tid))
 
-    def create_run(self, tid: str, kind: str, payload: Any, source: str) -> str:
+    def create_run(
+        self, tid: str, kind: str, payload: Any, source: str, *, created: float | None = None
+    ) -> str:
+        """`created` is the run's place in its thread's order — a crash-resume run passes
+        the crashed run's, so it is not overtaken by input sent after it."""
         rid = _id("run")
         self._exec(
             "INSERT INTO runs (id, thread_id, status, kind, input, created, source)"
@@ -76,7 +80,7 @@ class RunStore:
                 "pending",
                 kind,
                 json.dumps(payload, ensure_ascii=False),
-                time.time(),
+                time.time() if created is None else created,
                 source,
             ),
         )

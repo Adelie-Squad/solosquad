@@ -115,11 +115,17 @@ class RunManager:
         snap = await self.graph.aget_state({"configurable": {"thread_id": tid}})
         ids = {m.id for m in snap.values.get("messages") or [] if isinstance(m, Message)}
         if run["kind"] == "message" and _input_id(run["id"]) not in ids:
-            return self.store.create_run(tid, "message", run["input"], "crash-resume")
+            return self.store.create_run(
+                tid, "message", run["input"], "crash-resume", created=run["created"]
+            )
         if run["kind"] == "resume" and snap.interrupts:
-            return self.store.create_run(tid, "resume", run["input"], "crash-resume")
+            return self.store.create_run(
+                tid, "resume", run["input"], "crash-resume", created=run["created"]
+            )
         if snap.next:
-            return self.store.create_run(tid, "continue", None, "crash-resume")
+            return self.store.create_run(
+                tid, "continue", None, "crash-resume", created=run["created"]
+            )
         return None
 
     async def start(self, crons: list[CronSpec] | None = None) -> list[str]:
