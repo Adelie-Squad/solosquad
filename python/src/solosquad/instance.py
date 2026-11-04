@@ -74,6 +74,7 @@ def build_instance(
         ledger,
         secrets,
         org=org,
+        server_country=ctx.workspace_config.server_country,
     )
     rt = AgentRuntime(ctx, Resolver(ctx), router, ledger, custom)
 

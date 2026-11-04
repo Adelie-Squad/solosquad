@@ -108,10 +108,19 @@ class RunStore:
         return self._decode(rows[0]) if rows else None
 
     def runs(
-        self, *, thread_id: str | None = None, status: str | None = None, limit: int = 50
+        self,
+        *,
+        thread_id: str | None = None,
+        status: str | None = None,
+        since: float | None = None,
+        limit: int = 50,
     ) -> list[dict[str, Any]]:
+        """Newest first. `since` = runs created at or after that time ("since you last looked")."""
         sql = "SELECT * FROM runs WHERE 1=1"
         args: list[Any] = []
+        if since is not None:
+            sql += " AND created >= ?"
+            args.append(since)
         if thread_id:
             sql += " AND thread_id = ?"
             args.append(thread_id)

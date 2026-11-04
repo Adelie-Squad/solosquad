@@ -71,6 +71,28 @@ class AgentRuntime:
         return self.ctx.data_dir / "guard"
 
 
+APPROVAL_OPTIONS = ("approved", "declined")
+
+
+def approval_card(pending: dict[str, Any]) -> dict[str, Any]:
+    """The one approval shape the web, the CLI and the audit log read (W12).
+
+    `{kind, title, summary, reason, options[], risk}` plus `agent` and `signature`. Guard
+    approvals are always `risk: high` — the default rules only stop hard-to-undo actions.
+    """
+    agent, reason = str(pending.get("agent") or "agent"), str(pending.get("reason") or "")
+    return {
+        "kind": "approval",
+        "title": f"{agent} wants to: {reason}" if reason else f"{agent} needs approval",
+        "summary": str(pending.get("summary") or reason),
+        "reason": reason,
+        "options": list(APPROVAL_OPTIONS),
+        "risk": str(pending.get("risk") or "high"),
+        "agent": agent,
+        "signature": pending.get("signature"),
+    }
+
+
 def _approved(decision: Any) -> bool:
     if isinstance(decision, dict):
         return bool(decision.get("approved"))
@@ -165,7 +187,7 @@ class AgentNode:
         new_grants: list[str] = []
         pending = state.get("pending_approval")
         if pending and pending.get("agent") == self.name:
-            decision = interrupt({"kind": "approval", **pending})
+            decision = interrupt(approval_card(pending))
             if _approved(decision):
                 new_grants.append(pending["signature"])
                 notes.append(

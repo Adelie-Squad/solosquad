@@ -14,6 +14,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 from solosquad.assets.text import load_yaml
+from solosquad.routing.eligibility import Entity
 
 
 class ConnectionKind(StrEnum):
@@ -42,6 +43,8 @@ class Connection(BaseModel):
     monthly_budget_usd: float | None = None
     network: str = "external"
     """external · internal · local — matched against the workspace execution policy."""
+    entity: Entity | None = None
+    """The legal entity that holds this account (decision 45) — checked against the rules."""
 
 
 class ConnectionsFile(BaseModel):

@@ -26,6 +26,7 @@ from solosquad.context.execution import ExecutionContext, build_context
 from solosquad.context.resolve import Kind, Resolver
 from solosquad.layout import LayoutError, Solution
 from solosquad.routing.connections import load_connections
+from solosquad.routing.eligibility import judge, providers_reached
 from solosquad.routing.policy import load_policy
 
 ENTRY_AGENT = "chief"
@@ -168,11 +169,33 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
         r.add("ACCESS_NETWORK_INVALID", str(e), "access.allowed_networks")
 
     known_conn: set[str] = set()
+    server = ctx.workspace_config.server_country
     for path in (ctx.solution.connections_path, ctx.org_root / "connections.yaml"):
         try:
-            known_conn |= {c.id for c in load_connections(path)}
+            conns = load_connections(path)
         except Exception as e:  # pydantic and yaml errors alike — report, never crash
             r.add("CONNECTIONS_INVALID", str(e).splitlines()[0], path=str(path))
+            continue
+        known_conn |= {c.id for c in conns}
+        for c in conns:
+            reached = providers_reached(c.provider, c.harness, c.models)
+            verdict = judge(c.provider, c.harness, c.models, c.entity, server)
+            if not verdict.ok:
+                r.add(
+                    "CONNECTION_INELIGIBLE",
+                    f"{c.id}: {verdict.reason} ({verdict.source})",
+                    "entity",
+                    path=str(path),
+                )
+            elif reached and c.entity is None:
+                r.add(
+                    "CONNECTION_ENTITY_UNKNOWN",
+                    f"{c.id} reaches {', '.join(sorted(reached))}"
+                    " but records no account-holding entity (decision 45)",
+                    "entity",
+                    "warn",
+                    str(path),
+                )
 
     policy_path = ctx.org_root / "policy.yaml"
     try:
