@@ -30,10 +30,20 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from solosquad import __version__
-from solosquad.context.ledger import Ledger
+from solosquad.context.ledger import Ledger, month_start
+from solosquad.context.resolve import Resolver
 from solosquad.layout import Workspace
 from solosquad.messages import Message as ChatMessage
-from solosquad.runtime import RunManager
+from solosquad.routing.connections import (
+    Connection,
+    ConnectionKind,
+    load_connections,
+    save_connections,
+)
+from solosquad.routing.eligibility import Entity, judge
+from solosquad.routing.router import Router
+from solosquad.routing.vault import SecretStore
+from solosquad.runtime import RunManager, RunStatus
 from solosquad.web_api.access import Origin, allowed, origin, parse_networks
 from solosquad.web_api.accounts import (
     SESSION_TTL_S,
@@ -43,6 +53,7 @@ from solosquad.web_api.accounts import (
     Session,
     SessionStage,
 )
+from solosquad.web_api.events import EventHub
 
 SESSION_COOKIE = "ss_session"
 CSRF_HEADER = "x-csrf-token"
@@ -70,6 +81,13 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "access.get": EVERYONE,
     "access.update": OWNER,
     "audit": OWNER,
+    "teams": EVERYONE,
+    "agents": EVERYONE,
+    "connections.list": EVERYONE,
+    "connections.create": OWNER,
+    "connections.update": OWNER,
+    "connections.delete": OWNER,
+    "budget": EVERYONE,
 }
 
 
@@ -111,6 +129,13 @@ class WebConfig:
     static_dir: Path | None = None
     secure_cookies: bool = True
     closing: asyncio.Event | None = None
+    resolver: Resolver | None = None
+    router: Router | None = None
+    secrets: SecretStore | None = None
+    connections_path: Path | None = None
+    """Where the web adds connections — the owner's `core/connections.yaml`."""
+    reload_connections: Callable[[], list[Connection]] | None = None
+    """Re-reads every connection file after a change, so routing sees it at once."""
     """Set on shutdown so open event streams end instead of holding the server."""
 
 
@@ -149,6 +174,7 @@ class SecurityHeaders:
 
 def create_app(cfg: WebConfig) -> Starlette:
     m = cfg.manager
+    hub = EventHub(m)
 
     def where(request: Request) -> Origin:
         peer = request.client.host if request.client else None
@@ -395,7 +421,8 @@ def create_app(cfg: WebConfig) -> Starlette:
         if m.store.thread(tid) is None:
             raise KeyError(f"no thread {tid}")
         value = (await body(request)).get("value")
-        rid = await m.resume(tid, value)
+        approver = who.session.user.username if who.session else "local-cli"
+        rid = await m.resume(tid, value, source=f"user:{approver}")
         if cfg.accounts is not None:
             cfg.accounts.audit(who.user_id, "approval", f"{tid} → {value!r}")
         return Json({"run_id": rid}, status_code=201)
@@ -403,7 +430,15 @@ def create_app(cfg: WebConfig) -> Starlette:
     async def runs(request: Request) -> Response:
         need(request, "runs.list")
         q = request.query_params
-        return Json(m.store.runs(thread_id=q.get("thread_id"), status=q.get("status")))
+        since = float(q["since"]) if q.get("since") else None
+        return Json(
+            m.store.runs(
+                thread_id=q.get("thread_id"),
+                status=q.get("status"),
+                since=since,
+                limit=int(q.get("limit", "50")),
+            )
+        )
 
     async def run(request: Request) -> Response:
         need(request, "runs.get")
@@ -419,32 +454,226 @@ def create_app(cfg: WebConfig) -> Starlette:
 
     async def events(request: Request) -> Response:
         need(request, "events")
+        raw = request.headers.get("last-event-id") or request.query_params.get("last_event_id")
+        last_id = int(raw) if raw and raw.isdigit() else 0
+        await hub.ensure_started()
 
         async def stream() -> AsyncIterator[bytes]:
-            events = m.subscribe().__aiter__()
+            items = hub.subscribe(last_id).__aiter__()
             closing = cfg.closing or asyncio.Event()
             stop = asyncio.ensure_future(closing.wait())
-            nxt = asyncio.ensure_future(events.__anext__())
-            await asyncio.sleep(0)  # let the subscription register before saying "connected"
-            yield b": connected\n\n"
+            nxt = asyncio.ensure_future(items.__anext__())
+            await asyncio.sleep(0)
+            yield b"retry: 3000\n: connected\n\n"
             try:
                 while True:
                     done, _ = await asyncio.wait({nxt, stop}, return_when=asyncio.FIRST_COMPLETED)
                     if stop in done:
-                        nxt.cancel()
                         return
-                    yield b"data: " + dumps(nxt.result()) + b"\n\n"
-                    nxt = asyncio.ensure_future(events.__anext__())
+                    seq, event = nxt.result()
+                    yield f"id: {seq}\n".encode() + b"data: " + dumps(event) + b"\n\n"
+                    nxt = asyncio.ensure_future(items.__anext__())
             finally:
                 stop.cancel()
                 nxt.cancel()
                 with contextlib.suppress(Exception):
-                    await events.aclose()  # type: ignore[attr-defined]
+                    await items.aclose()  # type: ignore[attr-defined]
 
         return StreamingResponse(
             stream(),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    # ------------------------------------------------------------------ organisation
+
+    def resolver() -> Resolver:
+        if cfg.resolver is None:
+            raise HTTPException(404, "organisation view is not enabled on this office")
+        return cfg.resolver
+
+    async def teams(request: Request) -> Response:
+        need(request, "teams")
+        return Json(
+            [
+                {"name": name, "main": comp.main, "members": comp.members}
+                for name, comp in resolver().teams().items()
+            ]
+        )
+
+    async def agents(request: Request) -> Response:
+        need(request, "agents")
+        r = resolver()
+        working: dict[str, list[dict[str, Any]]] = {}
+        for run in m.store.runs(status=RunStatus.RUNNING, limit=200):
+            state = await m.thread_state(run["thread_id"])
+            active = (state.get("values") or {}).get("active_agent") or "chief"
+            thread = m.store.thread(run["thread_id"]) or {}
+            working.setdefault(str(active), []).append(
+                {"thread_id": run["thread_id"], "run_id": run["id"], "title": thread.get("title")}
+            )
+        out = []
+        for name, res in sorted(r.available("agents").items()):
+            appearance = res.spec.extra.get("appearance")
+            out.append(
+                {
+                    "name": name,
+                    "description": res.spec.description,
+                    "team": r.team_of(name),
+                    "layer": res.layer,
+                    "appearance": appearance if isinstance(appearance, dict) else None,
+                    "working_on": working.get(name, []),
+                }
+            )
+        return Json(out)
+
+    # ------------------------------------------------------------------ connections · budget
+
+    def server_country() -> str | None:
+        return cfg.workspace.config().server_country if cfg.workspace else None
+
+    def all_connections() -> list[Connection]:
+        if cfg.reload_connections is not None:
+            return cfg.reload_connections()
+        return list(cfg.router.connections) if cfg.router else []
+
+    def refresh_router() -> None:
+        if cfg.router is not None and cfg.reload_connections is not None:
+            cfg.router.connections[:] = cfg.reload_connections()
+
+    def conn_public(c: Connection) -> dict[str, Any]:
+        secret = cfg.secrets.get(c.secret_ref) if cfg.secrets and c.secret_ref else None
+        verdict = judge(c.provider, c.harness, c.models, c.entity, server_country())
+        return {
+            "id": c.id,
+            "kind": c.kind.value,
+            "provider": c.provider,
+            "harness": c.harness,
+            "models": c.models,
+            "active": c.active,
+            "slots": c.slots,
+            "monthly_budget_usd": c.monthly_budget_usd,
+            "network": c.network,
+            "entity": c.entity.model_dump() if c.entity else None,
+            "secret_last4": secret[-4:] if secret and len(secret) >= 8 else None,
+            "eligible": verdict.ok,
+            "eligibility_reason": verdict.reason or None,
+            "eligibility_source": verdict.source or None,
+        }
+
+    def own_file() -> Path:
+        if cfg.connections_path is None:
+            raise HTTPException(404, "connections are not editable on this office")
+        return cfg.connections_path
+
+    async def connections(request: Request) -> Response:
+        if request.method == "POST":
+            who = need(request, "connections.create")
+            data = await body(request)
+            entity = Entity.model_validate(data["entity"]) if data.get("entity") else None
+            cid = str(data.get("id") or "").strip()
+            if not cid:
+                raise ValueError("id is required")
+            path = own_file()
+            existing = load_connections(path)
+            if any(c.id == cid for c in all_connections()):
+                raise ValueError(f"connection {cid!r} exists")
+            conn = Connection(
+                id=cid,
+                kind=ConnectionKind(str(data.get("kind") or "api_key")),
+                provider=str(data.get("provider") or "anthropic"),
+                harness=str(data.get("harness") or "lite"),
+                models=[str(x) for x in data.get("models") or []],
+                base_url=data.get("base_url"),
+                secret_env=data.get("secret_env"),
+                monthly_budget_usd=data.get("monthly_budget_usd"),
+                entity=entity,
+            )
+            verdict = judge(conn.provider, conn.harness, conn.models, entity, server_country())
+            if not verdict.ok:
+                raise HTTPException(422, f"{verdict.reason} — see {verdict.source}")
+            if data.get("secret"):
+                if cfg.secrets is None:
+                    raise HTTPException(404, "no secret store on this office")
+                conn = conn.model_copy(update={"secret_ref": f"conn:{cid}"})
+                cfg.secrets.set(f"conn:{cid}", str(data["secret"]))
+            save_connections(path, [*existing, conn])
+            refresh_router()
+            accounts().audit(who.user_id, "connection.create", cid)
+            return Json(conn_public(conn), status_code=201)
+        need(request, "connections.list")
+        return Json([conn_public(c) for c in all_connections()])
+
+    async def connection_update(request: Request) -> Response:
+        cid = request.path_params["cid"]
+        path = own_file()
+        existing = load_connections(path)
+        found = next((c for c in existing if c.id == cid), None)
+        if found is None:
+            raise KeyError(f"no editable connection {cid}")
+        if request.method == "DELETE":
+            who = need(request, "connections.delete")
+            save_connections(path, [c for c in existing if c.id != cid])
+            if cfg.secrets is not None and found.secret_ref:
+                cfg.secrets.delete(found.secret_ref)
+            refresh_router()
+            accounts().audit(who.user_id, "connection.delete", cid)
+            return Json({"ok": True})
+        who = need(request, "connections.update")
+        data = await body(request)
+        update: dict[str, Any] = {}
+        if "active" in data:
+            update["active"] = bool(data["active"])
+        if "monthly_budget_usd" in data:
+            update["monthly_budget_usd"] = data["monthly_budget_usd"]
+        if "entity" in data:
+            update["entity"] = Entity.model_validate(data["entity"]) if data["entity"] else None
+        changed = found.model_copy(update=update)
+        verdict = judge(
+            changed.provider, changed.harness, changed.models, changed.entity, server_country()
+        )
+        if changed.active and not verdict.ok:
+            raise HTTPException(422, f"{verdict.reason} — see {verdict.source}")
+        save_connections(path, [changed if c.id == cid else c for c in existing])
+        refresh_router()
+        accounts().audit(who.user_id, "connection.update", f"{cid} {sorted(update)}")
+        return Json(conn_public(changed))
+
+    async def budget(request: Request) -> Response:
+        need(request, "budget")
+        since = month_start()
+        by_conn = cfg.ledger.totals("connection_id", since=since)
+        total = sum(v["cost_usd"] for v in by_conn.values())
+        policy = cfg.router.chief_policy.budget if cfg.router else None
+        warn_at = policy.warn_at if policy else 0.8
+        org_cap = policy.monthly_usd if policy else None
+        rows = []
+        for c in all_connections():
+            spent = by_conn.get(c.id, {}).get("cost_usd", 0.0)
+            cap = c.monthly_budget_usd
+            rows.append(
+                {
+                    "id": c.id,
+                    "spent_usd": round(spent, 4),
+                    "budget_usd": cap,
+                    "remaining_usd": round(cap - spent, 4) if cap is not None else None,
+                    "warning": cap is not None and spent >= cap * warn_at,
+                    "exhausted": cap is not None and spent >= cap,
+                }
+            )
+        return Json(
+            {
+                "month_start": since,
+                "warn_at": warn_at,
+                "org": {
+                    "spent_usd": round(total, 4),
+                    "budget_usd": org_cap,
+                    "remaining_usd": round(org_cap - total, 4) if org_cap is not None else None,
+                    "warning": org_cap is not None and total >= org_cap * warn_at,
+                    "exhausted": org_cap is not None and total >= org_cap,
+                },
+                "connections": rows,
+            }
         )
 
     # ------------------------------------------------------------------ errors · routes
@@ -480,6 +709,11 @@ def create_app(cfg: WebConfig) -> Starlette:
         ("/runs/{rid}", run, ["GET"]),
         ("/ledger", ledger, ["GET"]),
         ("/events", events, ["GET"]),
+        ("/teams", teams, ["GET"]),
+        ("/agents", agents, ["GET"]),
+        ("/connections", connections, ["GET", "POST"]),
+        ("/connections/{cid}", connection_update, ["PATCH", "DELETE"]),
+        ("/budget", budget, ["GET"]),
     ]
     routes: list[Route | Mount] = [
         Mount("/api", routes=[Route(path, fn, methods=methods) for path, fn, methods in api])

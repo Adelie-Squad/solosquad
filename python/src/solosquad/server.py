@@ -15,6 +15,7 @@ import secrets as pysecrets
 import socket
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 
@@ -57,7 +58,9 @@ class ApiServer:
         workspace: Workspace | None = None,
         static_dir: Path | None = None,
         secure_cookies: bool = True,
+        **extra: Any,
     ) -> None:
+        """`extra` = the remaining `WebConfig` fields (resolver, router, secrets, …)."""
         self._closing = asyncio.Event()
         self.app = create_app(
             WebConfig(
@@ -69,6 +72,7 @@ class ApiServer:
                 static_dir,
                 secure_cookies,
                 self._closing,
+                **extra,
             )
         )
         self._server: _Server | None = None

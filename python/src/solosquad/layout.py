@@ -96,6 +96,8 @@ class WorkspaceConfig(_Doc):
     name: str
     type: WorkspaceType = WorkspaceType.LOCAL
     timezone: str = "Asia/Seoul"
+    server_country: str | None = None
+    """ISO country where this office's server runs (decision 45 region rule), e.g. KR."""
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
 

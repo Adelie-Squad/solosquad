@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 from company_fixtures import Company, agent_of, reply
 
-from solosquad.company import AgentError, build_company, derive_handoffs
+from solosquad.company import AgentError, approval_card, build_company, derive_handoffs
 from solosquad.extensions import EngineCustomization
 from solosquad.graph import START, Command, StateGraph
 from solosquad.harness.base import SpawnRequest
@@ -177,12 +177,12 @@ async def test_guard_approval_round_trip(tmp_path: Path) -> None:
     c.scripts["max"] = script
     app = build_company(c.rt)
     first = await app.ainvoke({"messages": [user("tidy the disk")]}, cfg("g"))
-    assert first["__interrupt__"][0].value == {
-        "kind": "approval",
-        "agent": "chief",
-        "signature": "abc123",
-        "reason": "recursive delete",
-    }
+    card = first["__interrupt__"][0].value
+    assert card == approval_card(
+        {"agent": "chief", "signature": "abc123", "reason": "recursive delete"}
+    )
+    assert card["options"] == ["approved", "declined"] and card["risk"] == "high"
+    assert card["title"] == "chief wants to: recursive delete"
     done = await app.ainvoke(Command(resume="approved"), cfg("g"))
     assert done["grants"] == ["abc123"] and done["pending_approval"] is None
     assert done["messages"][-1].text == "cleaned up"
@@ -215,12 +215,13 @@ async def test_stream_stop_guard_cuts_the_stream_and_asks(tmp_path: Path) -> Non
     app = build_company(c.rt)
     first = await app.ainvoke({"messages": [user("tidy the disk")]}, cfg("s"))
     assert seen == ["start"]  # nothing after the guarded call was consumed
-    assert first["__interrupt__"][0].value == {
-        "kind": "approval",
-        "agent": "chief",
-        "signature": signature("command_execution", RM),
-        "reason": "recursive delete",
-    }
+    assert first["__interrupt__"][0].value == approval_card(
+        {
+            "agent": "chief",
+            "signature": signature("command_execution", RM),
+            "reason": "recursive delete",
+        }
+    )
     done = await app.ainvoke(Command(resume="approved"), cfg("s"))
     assert "after-tool" in seen  # the granted call is let through
     assert done["messages"][-1].text == "removed build/"

@@ -411,7 +411,8 @@ def serve(
     host: str = "127.0.0.1",
 ) -> None:
     """Run one workspace 24/7: run manager, crons, and the local JSON API."""
-    from solosquad.instance import build_instance, start_instance
+    from solosquad.context.resolve import Resolver
+    from solosquad.instance import build_instance, connections_for, start_instance
     from solosquad.server import ApiServer, load_or_create_token
 
     o, w = _pick(solution, org, workspace)
@@ -428,6 +429,11 @@ def serve(
             accounts=_accounts(solution, o),
             workspace=ws,
             static_dir=_web_dist(),
+            resolver=Resolver(inst.ctx),
+            router=inst.router,
+            secrets=inst.secrets,
+            connections_path=inst.ctx.solution.connections_path,
+            reload_connections=lambda: connections_for(inst.ctx),
         )
         bound = await api.start(host, port)
         sf = server_file(inst.ctx.data_dir)

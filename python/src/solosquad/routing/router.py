@@ -26,6 +26,7 @@ from solosquad.harness.lite import LiteHarness
 from solosquad.harness.opencode import OpenCodeHarness
 from solosquad.layout import ExecutionPolicy
 from solosquad.routing.connections import Connection, ConnectionKind
+from solosquad.routing.eligibility import Verdict, judge
 from solosquad.routing.policy import ChiefPolicy
 from solosquad.routing.vault import SecretStore
 
@@ -71,6 +72,11 @@ def default_harness(conn: Connection, secrets: SecretStore) -> Harness:
     raise ValueError(f"unknown harness {conn.harness!r} for connection {conn.id}")
 
 
+def eligible(conn: Connection, server_country: str | None) -> Verdict:
+    """Fourth filter (decision 45): the account holder and the server location."""
+    return judge(conn.provider, conn.harness, conn.models, conn.entity, server_country)
+
+
 def allowed_by_workspace(conn: Connection, policy: ExecutionPolicy) -> bool:
     if conn.network == "local":
         return policy.allow_local_llm
@@ -94,6 +100,7 @@ class Router:
         harness_factory: HarnessFactory = default_harness,
         on_escalation: Callable[[Escalation], None] | None = None,
         clock: Callable[[], float] = time.time,
+        server_country: str | None = None,
     ) -> None:
         self.connections = connections
         self.workspace_policy = workspace_policy
@@ -104,6 +111,7 @@ class Router:
         self.harness_factory = harness_factory
         self.on_escalation = on_escalation
         self.clock = clock
+        self.server_country = server_country
         self.limited_until: dict[str, float] = {}
         self._slots: dict[str, asyncio.Semaphore] = {}
         self._warned: set[tuple[str, str]] = set()
@@ -123,7 +131,9 @@ class Router:
         pool = [
             c
             for c in self.connections
-            if c.active and allowed_by_workspace(c, self.workspace_policy)
+            if c.active
+            and allowed_by_workspace(c, self.workspace_policy)
+            and eligible(c, self.server_country).ok
         ]
         if pref.connections:
             order = {cid: i for i, cid in enumerate(pref.connections)}
