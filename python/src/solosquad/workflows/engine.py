@@ -181,7 +181,9 @@ class WorkflowEngine:
         path.write_bytes(data)
         path.chmod(0o600)
         meta = {"id": uid, "filename": name, "size": len(data), "created": time.time()}
-        (self.uploads / f"{uid}.json").write_text(json.dumps(meta, ensure_ascii=False))
+        (self.uploads / f"{uid}.json").write_text(
+            json.dumps(meta, ensure_ascii=False), encoding="utf-8"
+        )
         return meta
 
     def upload_path(self, uid: str) -> Path:
@@ -196,7 +198,7 @@ class WorkflowEngine:
     def uploads_list(self) -> list[dict[str, Any]]:
         if not self.uploads.is_dir():
             return []
-        metas = [json.loads(p.read_text()) for p in self.uploads.glob("up-*.json")]
+        metas = [json.loads(p.read_text(encoding="utf-8")) for p in self.uploads.glob("up-*.json")]
         return sorted(metas, key=lambda m: -float(m["created"]))
 
     # ------------------------------------------------------------------ the graph

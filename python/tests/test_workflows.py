@@ -184,6 +184,13 @@ async def test_a_waiting_approval_survives_a_restart(engines: Engines) -> None:
     assert len(engines.artifacts.find(kind="finance.pnl")) == 1  # the tool step did not re-run
 
 
+async def test_uploads_keep_a_korean_file_name(engines: Engines) -> None:
+    """Windows' default code page cannot write Hangul — every text write names UTF-8."""
+    meta = engines.wf.save_upload("10월 거래 원장.csv", LEDGER_CSV.encode())
+    assert engines.wf.uploads_list()[0]["filename"] == "10월 거래 원장.csv"
+    assert engines.wf.upload_path(meta["id"]).read_bytes() == LEDGER_CSV.encode()
+
+
 async def test_inputs_and_uploads_are_checked(engines: Engines) -> None:
     with pytest.raises(ValueError, match="ledger"):
         await engines.wf.run_now("monthly-pnl", {})
