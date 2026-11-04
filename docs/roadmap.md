@@ -2,7 +2,7 @@
 
 > 릴리스된 버전, 진행 중인 계획, 결정 로그, 외부 참고자료를 한 자리에 모은 롤링 문서.
 
-**최종 업데이트:** 2026-05-20 (v0.8.7 릴리스)
+**최종 업데이트:** 2026-11-04 (v2 피봇 · v2.0.0 엔진 코어 개발 중)
 
 ---
 
@@ -32,9 +32,11 @@
 | `v0.9.1` | 2026-05-21 | Model B 구현 + npm 패키지에 master-guide 포함 + Step 1 prerequisites 보강 — `repo.yaml.path` 필드 신설 / `resolveRepoCwd` 외부 경로 분기 / `solosquad add repo --path <ext>` flag + cwd 인식 자동 / `solosquad init` Step 5.1 path-reference 분기 prompt / `solosquad doctor` 외부 path 존재 검증. `docs/manual/` → top-level `manual/`로 이동해 npm 패키지에 포함. master-guide §4.2 Step 1에 *의존성 종합 표* + *환경변수 종합 표* + *자원·네트워크 하한* 박스 3개 추가 (KO/EN). backward-compat: 기존 `<workspace>/<org>/repositories/<slug>/` 트리 영구 동작 | `v0.9.1-workspace-repo-relationship.md` |
 | **`v0.9.2`** | **2026-05-21** | **Uninstall precheck self-match hotfix (Windows)** — `solosquad uninstall`이 봇이 안 도는데도 `bot/schedule appears to be running (pid X, Y)`로 차단하던 Windows 한정 버그 수정. WMI 쿼리 `Get-CimInstance Win32_Process \| Where-Object { $_.CommandLine -match 'solosquad' -and ... }` 의 `-Command` 인자가 자기 자신의 CommandLine에 두 정규식 리터럴을 포함해 *powershell.exe가 스스로를 매칭*. `$_.Name -eq 'node.exe'` 가드 추가로 해결. `test/lifecycle-precheck.test.ts` 회귀 catcher (3회 호출 결과 동일성). 스키마 변경 0건, `--force` 우회 사용자에게도 무해 | `v0.9.2-precheck-self-match-hotfix.md` |
 
-### 현재 설치 가능 버전: npm `0.9.2` (publish 직전 단계; 0.9.0은 npm burn)
+### 현재 설치 가능 버전: npm `1.4.3`
 
-**다음 마일스톤:** v0.9.3+ — backward-compat 마이그레이션 명령 (`solosquad migrate --externalize-repos`, opt-in). 이후 v1.0 정식 출시는 *코드 변경 없이 5분 manual sweep + tag* 형식.
+**다음 마일스톤:** `v2.0.0` 엔진 코어 — Python 재작성(`python/`, 개발 중 · 미배포). 목표는 §2.6, 분할은 §5.3.
+
+> 위 표는 v0.x 이력입니다. **v1.0.0 이후 이력은 §5.2(정식 출시 마일스톤) · §5.3(포스트-런치)** 참조.
 
 > **문서 파일명 vs npm 버전:** `docs/v0.2.2-*.md` / `docs/v0.2.3-*.md`는 **작업 블록 라벨**. 실제 npm 출시 번호는 semver를 따릅니다.
 
@@ -155,6 +157,29 @@ todo·노트는 그 별도 인프라 slot에서.
 
 ---
 
+### 2.6 v2 피봇 목표 — 소규모 비즈니스용 맞춤형 AX 에이전트 회사 (2026-10-28 박제)
+
+> §2.1~§2.5 는 v1 시절(솔로 파운더 자기 사용 · Discord 대화 운영)의 목표다. **v2.x 메이저 라인은 아래 목표로 피봇**하며,
+> 이 목표는 한 릴리스가 아니라 **2.x.0 마이너들에 걸쳐 차근차근** 채운다(결정 32). 결정의 정본은 ideation `260803-*` §0.0(결정 1~32).
+
+**한 문장** — SoloSquad 는 솔로프러너 · 소규모 비즈니스에게 **에이전트 회사를 맞춤형 AX 솔루션으로 제공하는 에이전시**다.
+
+| 축 | 목표 | 결정 |
+|---|---|---|
+| **에이전시** | SoloSquad = 공통 도구 · 에이전트를 개선해 **각 고객사로 내보내는** 쪽. 투입된 에이전트는 고객사마다 서로 다른 에이전트가 되어 간다 | 26 · 30 |
+| **고객사 회사** | 고객사마다 서버 하나 — **로컬 상시 구동 또는 클라우드**로 24시간. 여러 에이전트가 **동시에** 일한다 | 18 · 21 |
+| **자격증명** | 고객사가 **자기 구독 로그인 · API 키를 원하는 만큼** 연결(BYO). 켜둔 연결 안에서 **작업별로 적합한 모델**을 고른다 | 21 · 22 |
+| **FDE 에이전트** | **org 마다** 에이전트 팀의 일원 — 온보딩부터 대화 · 도메인/로컬 분석 · 최적화 · 지속 개선, **그 사업만** 고친다(core 는 오너 승인). 공통화 후보는 **에이전시 FDE** 에게 보내고 에이전시 FDE 가 별도 판단 · 두 FDE 는 서로 소통 | 27 · 37 · 40 |
+| **업데이트** | 에이전시가 업데이트를 내면 **고객사 FDE 가 전달받아 사용자와 적용 여부를 결정**. 고객사 커스텀은 보존 | 28 · 31 |
+| **측정 · 관할** | 에이전시는 고객 동의 아래 사용 데이터를 측정 · 분석하고, 파견된 프로젝트들을 **지켜보고 돕는다**. **고객사 정보는 SoloSquad 로 들어오지 않는다** — 메타데이터 · 가명 ID 만 | 28 · 30 · 37 |
+| **고객사 솔루션** | 고객사마다 **SoloSquad 와 다른 별도 git 저장소** — **core**(엔진 · 도구 + 오너, 사용자 커스텀 가능) → **org**(사업마다 최적화된 에이전트 팀 · 지식 · 업무 · org 별 로그인) → **workspace**(사무실 = 클라우드 · 내부망 · 로컬 실행 환경, 지사 = 사무실 추가) | 37 · 40 |
+| **자원 관리** | **Chief** 가 토큰 · 한도 · 모델을 관리하고 사장님에게 보고한다 | 35 |
+| **가명 매칭** | 에이전시로 오는 고객사 정보는 **가명**. 어느 고객인지는 창업자의 **고객사 관리 리포**에서 매칭 | 38 |
+| **PoC 공급** | 창업자가 로컬에서 작업 → 고객사 솔루션 **프라이빗 git** → **Cloudflare 배포** → 고객사는 웹 로그인으로 실제 AI 기능 사용 | 39 |
+| **표면** | 고객사 사용자(사장님 + 팀원 권한)는 **웹에 로그인**해서 쓴다. 앱은 추후 | 29 |
+| **도입 경로** | **관리형** — 창업자가 직접 설치 + 3개월 커스텀 · **셀프** — 스스로 설치 · 커스텀. 둘 다 `curl`/`irm` | 26 |
+| **엔진** | Python · swarm(LangGraph 모방, 자체 구현) · 다중 하네스(claude-code · codex · opencode) · Chromium 브라우저 도구 | 1 · 19 · 20 · 23~25 |
+
 ## 3. 기능 위계 (Feature Hierarchy)
 
 §2의 3축을 capability 단위로 펼친 위계. 각 leaf는 (a) 현재 상태, (b) 다루는 plan 문서, (c) 목표 + 도달 수준의 TBD 표시를 가진다. 사용자(개발자 본인)가 leaf별로 *목표와 도달 수준*을 답하면 본 doc에 박제 — 후속 v1.x plan의 입력.
@@ -196,7 +221,7 @@ todo·노트는 그 별도 인프라 slot에서.
 
 #### 3.2.3 자율 goal-runner (장기 목표, 하루 이상)
 - **현재**: ✓ v0.4 — 2계층(goal.md + AGENTS.md) + cycle loop + 3단계 가드레일 + CONFIRMING + `goal verify`. CLI 7건
-- **plan**: `v0.4-autonomous-engine.md`, `v1.x-workflow-goal-routine-evolution.md` (예정)
+- **plan**: `v0.4-autonomous-engine.md`. (구 `v1.x-workflow-goal-routine-evolution.md` 는 2026-08-08 폐기 — v1.1 §0 으로 흡수됨)
 - **정의**: **하루를 넘는 장기 목표**. PM이 목표 달성을 위해 *워크플로우 + cron*을 조합해 자율 진행. 사용자가 중간에 워크플로우/cron을 추가/변경/생략 지시 가능
 - **기본 탑재 goal 5종** (박제): **PMF 검증 / GTM / A/B 테스트 / 포지셔닝 / 배포**
 - **모델 박제 (Q5)**: org당 *여러 goal* 가능. 단 **한 조직에서 동시 active goal은 1개** — 다른 goal은 paused/queued. `solosquad goal run <id>`는 active goal이 있으면 거부. 구현: `<org>/goals/.active-goal` 세마포어 (v1.x goal-runner 고도화)
@@ -210,7 +235,7 @@ todo·노트는 그 별도 인프라 slot에서.
 
 #### 3.2.5 워크플로우 메이커
 - **현재**: ✓ v0.5 — `_meta/workflow-maker` SKILL (CLARIFY→DRAFT→SANDBOX_PROMPT→AWAIT_CONFIRM→APPLIED) + paperclip budget cap + spec-gate → `goal.md` auto-emit. v0.6 trajectory + freq miner (제안만)
-- **plan**: `v0.5-workflow-maker.md`, `v0.6-default-workflow-tuning.md` §3, `v1.x-workflow-goal-routine-evolution.md` (예정)
+- **plan**: `v0.5-workflow-maker.md`, `v0.6-default-workflow-tuning.md` §3. (구 `v1.x-workflow-goal-routine-evolution.md` 는 2026-08-08 폐기)
 - **암묵지 → SKILL 1차 source 박제 (Q2 b)**: **사용자 명시 슬래시** — `/create <name>` 또는 PM 대화 중 자연어 "이거 SKILL로 저장해" 인식. 정확도 우선. v0.6 freq miner(반복 패턴 자동 감지)는 *backup* — 사용자가 명시 안 한 패턴은 *제안만* (자동 등록 안 함)
 - **2·3차 source (후속 슬롯)**: 외부 자료 import (Notion·Obsidian·MCP — v1.2 지식 온톨로지 정합) → goal-runner keep/discard 역추출 (장기)
 
@@ -297,7 +322,7 @@ todo·노트는 그 별도 인프라 slot에서.
 
 #### 3.3.3 실험 인프라 (Amplitude 패턴 차용)
 - **현재**: ◐/○ — `<org>/memory/experiments.jsonl` (v0.2.4)만 존재. 실험 등록·결과 추적·통계 분석 별도 인프라는 미설계
-- **plan**: `v1.x-workflow-goal-routine-evolution.md` §실험 인프라 (예정)
+- **plan**: `v1.1-multi-agent-team-architecture.md` §0 + `skills/experiment-design/`. (구 `v1.x-workflow-goal-routine-evolution.md` §6 은 2026-08-08 폐기 — Discord 전제 소멸)
 - **결정 박제 (Q7 a)**: **별도 인프라 신설**. `<org>/experiments/<id>/` 디렉토리 (manifest.yaml + variants + metric + duration + sample_target) + cron으로 결과 fetch + decision-gate. v0.4 goal-runner의 measurer 패턴 차용
 - **레퍼런스 — Amplitude AI agents** (사용자 지정): "Ask Amplitude" / "Compose" 등의 데이터 분석 자동화 agent 기술. 차용 패턴:
   - 자연어 → metric/segment 자동 query
@@ -582,14 +607,17 @@ todo·노트는 그 별도 인프라 slot에서.
 | **`v1.2.6`** ✓ 출시 (2026-05-28) | **Messenger Connection (Chief on Discord, auto-connect first)** — 조직 1개당 1 Chief 봇 (Chief 이름 `OrgYaml.chief_name`) + OAuth Invite URL 1-click + handle 기반 채널 멀티-메신저 portable + owner-only 게이트 (v1.0.2 reversal) + TRIAGE kind 분기 → works-handle task card + thread + stage narration + `solosquad add-org` 가 v1.1.0 위계 + problem-definition workflow 기본 시드까지 완전 부트스트랩 + `solosquad doctor --discord` 5-hop. CLI freeze 침범 0 (`add-org` v1.1 신설). 53 신규 test, 728/728 pass | `docs/prd/v1.2-messenger-connection-discord-first.md` |
 | **`v1.2.1`** | **메신저 thread 연속성** — referencedMessage chain + LRU cache + thread token budget guard. messageCreate 가 thread 메시지 수신 + thread→workflow_id reverse lookup 인프라 신설 (v1.2.6 의 작업 1개=thread 1개 모델에 *연속 대화*가 얹힘). Slack adapter 동일 슬롯 | (기획 미수 — `docs/prd/v1.2.1-messenger-thread-continuity.md` 예정) |
 | **`v1.x`** (별도 slot) | **일정 관리 + 메모** — n잡 사용자 시간·기억 관리. 캘린더 통합·todo·노트 인프라. (당초 v1.3 → 1.3.x가 primitive 내재화 라인으로 전개돼 분리, 2026-06-25 §2.1) `docs/prd/v1.x-schedule-memo.md` 예정 | (기획 미수) |
-| **`v1.4.x`** (우산 교체, 2026-07-12) | **Research Workflow** — 기능화 *前* 가설을 자율로 세우고 실험·검증하는 연구 워크플로우를 내장. 확산→수렴 가설수립·실험 사이클·blind 백테스트·수치 eval·Track2 검증·논문/리포트 산출. goal 무인 8h+ 장기실행. 산출물은 org-level `reports/`. **dogfood: 가상 시장 수요검증 시뮬 8-사이클 연구로 실증**(그 *기능화*는 v1.9.0). *(출시된 v1.4.0~1.4.2 = 1.3.x 안정화 tail 재분류)* | 우산 `docs/prd/v1.4.0_research-workflow.md` + 구현 `docs/prd/v1.4.3_research-workflow-implementation.md` |
-| **`v1.5.x`** (플랫폼 진화 우산) | **Orchestration & Harness Platform** — 단일 하네스·단일 세션 가정을 넘는 재설계. **Track 0**(게이트): 언어 ADR(TS/폴리글롯/Py) + **Codex CLI 백엔드 추상화**. **A** 오케스트레이션 코어(memory·router·context·handoff·cwd=S-6·다중세션/스레드=S-4·역할분리=S-5·회전=S-2b). **B** 토폴로지 프레임워크. **C** 하네스(hook·가드레일). **D** 도구/시크릿(MCP·key·인증·CI/CD). **E** 커스텀(구 M1~M4, ↓). **F** cron 자산(S-7)·GC(S-3b). ⚠️ **격변 가능(TS↔Py)·major급** — 언어/스케일 결정 선행. | `docs/prd/v1.5.0_orchestration-and-harness-platform.md` |
-| **`v1.6.0`** | **클라우드 배포 + health 알림** — Railway 기본 승격·원클릭 템플릿·봇 세션 watchdog | `docs/prd/v1.6.0_docker-cloud-deploy-and-health-notify.md` |
-| **`v1.9.0`** | **가상 시장 수요검증 시뮬레이션 *기능*** — 합성 페르소나 가상시장으로 0-to-1 유료 전환을 사전 스크리닝(캘리브레이션-증강). v1.4.x research로 유효성 검증 후 착수. 연구 결론: raw NO-GO, 캘리브레이션 부분 회복(~0.64) | `docs/prd/v1.9.0_virtual-market-demand-simulation.md` |
-| `v1.x` (cascade-shifted) | **구 v1.1 대시보드 상호작용** (web 대시보드 클라이언트·인박스, 별도 리포 `solopreneur-dashboard`+`solopreneur-api`) | `docs/prd/v1.x-dashboard-interaction.md` |
-| `v1.x` (cascade-shifted) | **구 v1.2 지식·암묵지 온톨로지 + MCP 외부 연결** (Notion·Obsidian·API·타 에이전트) | `docs/prd/v1.x-knowledge-ontology.md` |
-| `v1.x` (별도) | **LLM backend 추상화** — Claude 단일 호출에서 multi-backend 로 | `docs/prd/v1.x-llm-backend-abstraction.md` |
-| `v1.x` (archived) | 워크플로우 / goal / cron *고도화* — Q1~Q7 ideation 7건 완전 흡수 후 본 슬롯은 *역사적 reference* 로 격하 (v1.1 plan §0 박제) | `docs/prd/v1.x-workflow-goal-routine-evolution.md` |
+| **`v1.4.x`** (우산 교체, 2026-07-12) | **Research Workflow** — 기능화 *前* 가설을 자율로 세우고 실험·검증하는 연구 워크플로우를 내장. 확산→수렴 가설수립·실험 사이클·blind 백테스트·수치 eval·Track2 검증·논문/리포트 산출. goal 무인 8h+ 장기실행. 산출물은 org-level `reports/`. **dogfood: 가상 시장 수요검증 시뮬 8-사이클 연구로 실증**(그 *기능화*는 v2.5.0). *(출시된 v1.4.0~1.4.2 = 1.3.x 안정화 tail 재분류)* | 우산 `docs/prd/v1.4.0_research-workflow.md` + 구현 `docs/prd/v1.4.3_research-workflow-implementation.md` |
+| **`v2.0.0`** (구 `v1.5.x` 우산) | **엔진 코어 — 회사가 로컬에서 24시간 돈다** · Python 재작성 · swarm 엔진(LangGraph 모방 · 자체 구현 · `asyncio`) · 하네스 4종(claude-code · opencode · lite · codex) · 운영 층(threads · runs · crons · 크래시 재개) · 연결 풀/라우팅(BYO 구독 · API 키) · 가계부 · OS 서비스 구동 · CLI. **v2.x 목표 = §2.6**, 분할 = 결정 33 | `docs/prd/v2.0.0_orchestration-and-harness-platform.md` |
+| **`v2.1.0`** | **고객사 웹 — 관리형 파일럿 시작점** · 로그인 · 부서 권한 · 지난 일 보고 · 실시간 사무실 · 승인 · 워크플로 · 비용 · 연결 관리 · 외부 접속(터널). 화면 입력 = `prototype/ax-agent-web` | `docs/prd/v2.1.0_customer-web.md` |
+| **`v2.2.0`** | **FDE 에이전트 + 브라우저 + 분석** · 대화형 온보딩 · 도메인 묶음 · 동의 범위 로컬 분석 · 개선 주기 · 변경 승인/롤백 · Chromium MCP 도구 · 분석(결정 6). 셀프 경로 성립 | `docs/prd/v2.2.0_fde-agent-and-browser.md` |
+| **`v2.3.0`** | **에이전시 연결** · `curl`/`irm` + 릴리스 압축본(SHA-256) · **FDE 중개 업데이트**(적용은 고객사 결정) · 동의 기반 사용 측정 · 에이전시 최소판(고객사 목록 · 상태 · 코어 버전) · 승격 후보 수신(수동 리뷰) · npm deprecate. **개발 계획의 1차 목표 지점**(결정 33) | `docs/prd/v2.3.0_agency-connection.md` |
+| **`v2.4.0`** (구 `v2.1.0` ← `v1.6.0`) | **클라우드 배포 + 메신저 복귀 + health 알림** + 클라우드 접속 인증 · 헤드리스 로그인/브라우저. 메신저 동반 재도입(결정 16) 유지 | `docs/prd/v2.4.0_docker-cloud-deploy-and-health-notify.md` |
+| **`v2.5.0`** (구 `v2.4.0` ← `v1.9.0`) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝. 연구 결론: raw NO-GO, 캘리브레이션 부분 회복(~0.64) | `docs/prd/v2.5.0_virtual-market-demand-simulation.md` |
+| `v2.x` (cascade-shifted) | **구 v1.1 대시보드 상호작용** (web 대시보드 클라이언트·인박스, 별도 리포 `solopreneur-dashboard`+`solopreneur-api`) | `docs/prd/v2.x-dashboard-interaction.md` |
+| `v2.x` (cascade-shifted) | **구 v1.2 지식·암묵지 온톨로지 + MCP 외부 연결** (Notion·Obsidian·API·타 에이전트) | `docs/prd/v2.x-knowledge-ontology.md` |
+| ~~`v1.x` (별도)~~ | **LLM backend 추상화** — **2026-08-08 폐기.** 10 차단점은 ideation §C1 이 하네스 5-메서드로 흡수. 원문은 git 히스토리(⚠️ Codex 서술에 사실오류) |
+| ~~`v1.x` (archived)~~ | 워크플로우 / goal / cron *고도화* — **2026-08-08 폐기.** Q1~Q7 은 `v1.1-multi-agent-team-architecture.md` §0 으로 완전 흡수돼 있었고, 미구현 잔여분은 Discord 전제라 소멸 |
 
 ### 5.4 재배치 사유 (2026-05-12)
 
@@ -600,7 +628,7 @@ todo·노트는 그 별도 인프라 slot에서.
 - **v0.6**은 두 트랙으로 분리. (a) 시간 의존 — v0.3~v0.5 실전 데이터로 디폴트 워크플로우 4종 튜닝 + 핸드오프 3변형 표준화(회고, v0.5 출시 4-6주 뒤). (b) 시간 무관 인프라 — Team=Domain 폴더 재편·Organization Layer specialization(`<org>/agent-profile.yaml`·`core/`·`domain/`)·Workspace Knowledge Layer(`.solosquad/knowledge/`)·FTS5 cold archive·trajectory→skill 제안. 인프라 트랙은 v0.5 출시 즉시 착수 가능. 2개 트랙 함께 진행하여 v1.0 정식 출시 전 워크스페이스 토폴로지를 안정화.
 - **v1.1 Multi-Agent Team Architecture** *(2026-05-24 cascade)* — *작업 흐름 자체의 재설계*. v1.0.x patch 시리즈와 *narrative 단절*. Hermes V2 5-layer 위 SoloSquad 25 SKILL 재배치 + Main+Specialist 분리 + Team Knowledge 명시화. Harness §7.5 4 채택 권고 흡수. **L2~L5 내부 아키텍처만** — L1(메신저)은 v1.2 로 분리해 표면 폭증 회피.
 - **v1.2 메신저 연결 (Discord 우선)** *(2026-05-24 cascade)* — v1.1 L1 위임분. Channel topology · 9-hop diagnostic · Forum Channel · Echo guard. v1.0.4 G+H+P + L+M+N+O Best Practice 본 슬롯에 흡수. Slack 동등 fix 는 v1.2.x patch.
-- **구 v1.1 대시보드 / 구 v1.2 온톨로지 → v1.x cascade-shifted** *(2026-05-24)* — 1인 dogfooder 단계에서 *내부 아키텍처 재설계가 dashboard·ontology 보다 leading indicator 가까움* (v1.x ideation Q1 b 박제). 두 슬롯은 v1.x slot 으로 이동 — 파일은 `v1.x-dashboard-interaction.md` / `v1.x-knowledge-ontology.md` 로 rename 완료.
+- **구 v1.1 대시보드 / 구 v1.2 온톨로지 → v1.x cascade-shifted** *(2026-05-24)* — 1인 dogfooder 단계에서 *내부 아키텍처 재설계가 dashboard·ontology 보다 leading indicator 가까움* (v1.x ideation Q1 b 박제). 두 슬롯은 v1.x slot 으로 이동 — 파일은 `v2.x-dashboard-interaction.md` / `v2.x-knowledge-ontology.md` 로 rename 완료.
 
 ### 5.5 npm 버전 vs 문서 라벨
 
@@ -615,7 +643,20 @@ todo·노트는 그 별도 인프라 slot에서.
 
 ## 6. 결정 로그 (주요)
 
-- **2026-07-13 (v1.5.x 대폭 재범위 — 세션 오케스트레이션 → Orchestration & Harness Platform)** — 사용자가 1.5.x에 Codex CLI 지원·도구/시크릿(MCP·key·인증·CI/CD)·다중세션(디스코드 스레드)·토폴로지 프레임워크·오케스트레이션(memory/router/context/handoff/cwd)·하네스(hook·가드레일)를 추가하며 **"격변 가능(TS↔Py 전환/병행)"** 을 명시. 구 세션 오케스트레이션(S-2b~S-7)+커스텀(M1~M4)을 **흡수·일반화**하고 위 축을 더한 **플랫폼 진화 우산**으로 재작성. **Track 0(언어 ADR + Codex 백엔드 추상화)** 이 전 트랙 게이트. 신구 매핑: cwd=S-6·다중세션=S-4·역할분리=S-5·회전=S-2b. major급이라 **2.0 승격 vs 1.5.x 다-minor** 는 OQ. PRD 리네임 `v1.5.0_session-orchestration-and-customization.md` → `v1.5.0_orchestration-and-harness-platform.md`. 영향: 본 entry + INDEX + §5.3 표 + PRD.
+- **2026-10-28 (결정 40 — 고객사 솔루션 구조 core → org → workspace)** — *"워크스페이스는 사무실이니 org 아래. 오너 지식 · 성향은 core, 사업 지식 · 데이터 · 에이전트 커스텀은 org. core 는 엔진과 도구(에이전시 소통 도구 포함). 에이전트는 사업마다 최적화돼야 한다."* ⑴ **core** = 엔진 · 도구(업데이트 대상 + **사용자 커스텀 가능** — 확장점 기본, 기록된 패치 허용) + 오너 + LLM 연결 ⑵ **org** = 사업 — **Chief · FDE 를 포함한 에이전트 팀이 org 마다 생성** · 사업 지식 · 업무 · **org 별 로그인**(계정 전환) · 예산. `add org` = **org 패키지만** 다운로드 ⑶ **workspace** = 사무실 — 유형 **클라우드 · 내부망 · 로컬** 이 웹/앱 접속과 **모델이 도는 위치**를 정의, 진입 = **로그인 → 사무실 검증 → 플랫폼 화면** ⑷ core 쪽 변경 = 어느 org 의 FDE 든 제안 · 오너 승인. **효과:** 배포물 2종(코어 릴리스 · org 패키지), 엔진 버전별 나란히 설치 · 한 컴퓨터 여러 고객사, 사설망은 *내부망 유형* 으로 복귀, 결정 18 의 *fork 금지* 는 *확장점 + 기록된 패치* 로 재해석, M16 · M17 닫힘. v1 의 org(한 고객의 여러 사업)는 그대로 org 이고, *고객사* 는 그 위의 솔루션 리포 단위다. 영향: 본 entry + §2.6 + ideation §0.0.1 · §0.0.7 + PRD v2.0~v2.3.
+- **2026-10-28 (결정 38 · 39 — 가명 매칭 · PoC 공급 방식)** — ⑴ **결정 38** 고객사 정보는 **가명화해서 들어오면 된다** — 해석은 창업자의 **고객사 관리 리포**(SoloSquad · 고객사 솔루션과 다른 세 번째 저장소)에서 매칭 ⑵ **결정 39** PoC 공급 = **창업자 로컬 작업 → 고객사 솔루션 프라이빗 git → Cloudflare 배포 → 고객사는 웹 로그인으로 실제 AI 기능 사용**. **효과:** 사설망 기본값 철회(PoC 서버는 처음부터 인터넷 공개 + 로그인), 클라우드 접속 인증(M18)이 v2.1.0 으로 당겨짐, v2.4.0 범위 재검토 대상, 새 미결 M33(엔진이 도는 위치 — Cloudflare Workers/Pages 는 Python 엔진 · CLI 하네스를 못 돌림) · M34(PoC 자격증명). 영향: 본 entry + §2.6 + ideation §0.0.1 · §0.0.7 + PRD v2.1.0 · v2.3.0 · v2.4.0 헤더.
+- **2026-10-28 (결정 34~37 — 권장안 채택 · Chief 자원 관리 · 고객사 정보 경계)** — ⑴ **결정 34** v2.3.0 까지의 미결 권장안 일괄 채택(M2 · M5 · M10 · M11 · M21 · M24 · M28 · M29 닫힘, 설계 항목은 기본값) · **웹 = 같은 레포 `web/`**(v2.x-dashboard 의 별도 리포 결정 반전) · **외부 접속 = 사설망 기본** ⑵ **결정 35** **Chief 가 토큰 · 한도 · 모델 관리** — 연결 풀 정책 소유, 예외는 Chief 로 ⑶ **결정 36** 프로토타입 용어 정렬 — *마스터 = Chief · 부서 = 팀 · 팀원 = 팀 소속 에이전트*, 사용자가 2.0.x 동안 프로토타입에서 맞추고 그때 사람 사용자 권한 재확인 ⑷ **결정 37** **고객사 솔루션 = 별도 git 저장소 · 고객사 정보는 SoloSquad 로 들어오지 않는다** · 고객사 FDE 는 그 고객사 솔루션만 고치고 공통 개선 후보는 **에이전시 FDE** 가 별도 판단 · 두 FDE 는 소통. **효과:** v2.0 [3] 의 결정 블로커 소멸, 새 미결 M32(FDE ↔ FDE 통신). 영향: 본 entry + §2.6 + ideation §0.0.1 · §0.0.7 · §0.0.8 + PRD v2.0~v2.3 + v2.x-dashboard 배너.
+- **2026-10-28 (결정 33 — v2.x 분할 · 개발 범위 = v2.3.0 까지)** — v2 피봇 목표(§2.6)를 **마이너 6개**로 나눴다: `v2.0.0` 엔진 코어 → `v2.1.0` 고객사 웹(관리형 파일럿 시작점) → `v2.2.0` FDE 에이전트 + 브라우저 + 분석 → `v2.3.0` 에이전시 연결 → `v2.4.0` 클라우드 + 메신저 → `v2.5.0` 시뮬. 순서 기준 = **관리형 파일럿을 가장 빨리 시작할 수 있는 순서**(파일럿에는 엔진 + 웹이면 되고, 사람 FDE 가 커스텀하는 동안 FDE 에이전트 · 에이전시 연결을 채운다). **개발 계획은 v2.3.0 까지**이며 v2.4.0 이후는 슬롯만 둔다. 재번호: 구 `v2.1.0`(클라우드) → `v2.4.0`, 구 `v2.4.0`(시뮬) → `v2.5.0`. 결정 16(메신저 = 클라우드 동반)은 번호만 따라 이동. 영향: 본 entry + §5.3 표 + `docs/prd/INDEX.md` + PRD 6건(v2.0.0 rev7 축소 · v2.1~2.3 신설 · v2.4/2.5 재번호) + ideation §0.0.1 · §0.0.7 · §0.0.8 + 260821 링크. *(동결된 ADR-001 의 `v2.4.0_virtual-market…` 링크는 결정 17 에 따라 고치지 않는다.)*
+- **2026-10-28 (결정 30~32 — 에이전시 · FDE 중개 업데이트 · v2.x 분할)** — *"본부는 에이전시라고 표현하자. 솔로스쿼드는 공용 도구들이랑 에이전트들 개선해서 각 고객사로 뿌리는 역할인데, 각 고객사로 에이전트들 투입되면 거기에 맞춰서 서로 다른 에이전트가 된다."* ⑴ **결정 30** 개발 조직 = **에이전시(Agency)** — *본부* 는 모든 것이 돌아오는 중심처럼 읽혀 방향이 반대라 문서 전체에서 치환 ⑵ **결정 31** 업데이트 결정권 = 고객사 — 에이전시 릴리스를 **고객사 FDE 가 전달받아 그 고객사 기준으로 설명하고 사용자와 적용 · 보류 · 건너뛰기를 결정**, 자동 적용 없음 ⑶ **결정 32** 피봇 상위 기획 = **v2.x 메이저 전체의 목표**(§2.6 박제), 2.x.0 마이너 PRD 로 분할. **효과:** 고객사마다 코어 버전이 다를 수 있게 되어 M28 에 *지원 코어 버전 범위* 잔여, 에이전시 → 고객사 원격 조작 불필요. 영향: 본 entry + §2.6 + ideation §0.0.1 · M28 + v2.0.0 PRD(업데이트 흐름 · 분할 예고).
+- **2026-10-28 (결정 26~29 — 2.0 상위 기획: 소규모 비즈니스용 맞춤형 AX 에이전트 회사)** — *"솔로스쿼드는 솔로프러너/소규모 비즈니스를 위한 에이전트 회사를 제공하고, 이건 그걸 구축하기 위한 프로젝트다. 에이전트 회사는 고객 맞춤형 AX 솔루션으로 제공되며, FDE 에이전트가 온보딩부터 고객과 대화 · 도메인 · 로컬 환경 분석으로 최적화하고 개선한다."* ⑴ **결정 26** 제품 = 소규모 비즈니스용 에이전트 회사를 **맞춤형 AX 솔루션**으로 · 도입 경로 = **관리형**(창업자가 직접 설치 + 3개월 커스텀) / **셀프**(스스로 설치 · 커스텀), 둘 다 `curl`/`irm` ⑵ **결정 27** **FDE 에이전트** 1급 역할 — 고객사마다 파견, 대화 · 도메인/로컬 분석 · 최적화 · 공통화 후보를 에이전시로(v1.3.6 의 `fde` 제거와는 다른 역할, 이름만 승계) ⑶ **결정 28** **에이전시 ↔ 고객사 분리** — 공통 제품 업데이트로 고객사 성능 향상(커스텀 보존) · 사용 데이터 측정 · 분석 · 파견 프로젝트 관할 ⑷ **결정 29** 고객사 사용자 표면 = **웹 로그인**(추후 앱), 프로토타입 `ax-agent-web` 실험 중, **v2.0 범위**. **효과:** 결정 18 의 부류가 에이전시 · 구축자 · 고객사 사용자로 재정의, M18 웹 시점 = v2.0(클라우드 인증만 v2.1.0), M5 사용 측정이 필수 기능으로 승격, §B2 승격 파이프라인이 고객사 → 에이전시로 확장, 새 미결 M28(에이전시) · M29(FDE 권한) · M30(승격) · M31(웹 로그인 · 권한). `v2.0.0` PRD rev6. 영향: 본 entry + §5.3 표 + ideation §0.0.1·§0.0.7·§0.0.8 + `docs/prd/INDEX.md` + v2.0.0 PRD(rev6).
+- **2026-10-28 (결정 19~25 — 상위 기획 확정과 엔진 모델)** — *"로컬을 24시간 켜거나 클라우드로 24시간 돌아가는 에이전트 회사를 만든다. 여러 LLM API 와 구독을 붙여 복수로 동시에 에이전트를 돌린다. 고객사가 자기 API 나 구독을 연결해 자기만의 에이전트 회사로 쓴다."* ⑴ **결정 19** 토폴로지 = **swarm**(계층형 supervisor 폐기) · 엔진 = **LangGraph(+`langgraph-swarm`) 완전 모방** ⑵ **결정 20** 모방 = **자체 재구현**(`langgraph` 비의존, 원본은 골든 테스트용 참조) ⑶ **결정 21** 제품 = 24시간 에이전트 회사 · 다중 LLM 동시 · **고객사 BYO 자격증명** ⑷ **결정 22** 연결 = **구독 로그인 / API 키 2방식 · 개수 무제한 · 활성 풀 안에서 작업별 라우팅** ⑸ **결정 23** 동시성 = **그래프 엔진까지 `asyncio`**(결정 14 대체) ⑹ **결정 24** API 키 = **OpenCode 등 다중 제공사 CLI 하네스로 실행**(도구 루프 자체 구현 회피) ⑺ **결정 25** **Chromium 브라우저 제어**를 MCP 도구 서버로 추가. 참조: Orca · OpenRig · OpenCode · OpenRouter. **효과:** M9 · M13 · M19 · M23 닫힘, `[0]`·`[1]` 선행 미결 없음, 새 미결 M20~M22 · M24~M27(`[2]`~`[3]`). `v2.0.0` PRD 를 rev5 로 전면 재작성. 영향: 본 entry + §5.3 표 + ideation §0.0.1·§0.0.7·§0.0.8·§B1·§F′ + `docs/architecture.md` §5.1 배너 + `docs/prd/INDEX.md` + v2.0.0 PRD(rev5) + v2.1.0 PRD 헤더.
+- **2026-10-26 (결정 18 — 배포 = 사용자 3부류 × 채널 분리)** — *"오픈소스 개발자는 SoloSquad 자체를 개발하고, 사용자 개발자는 도메인에 맞춘 AI 컴퍼니를 만들기 위해 제품 부분만 받아 온보딩을 이어서 진행한다."* ⑴ **git fork/clone = 오픈소스 기여자** 전용 ⑵ **`curl`/`irm` = 사용자 개발자**(도메인 AI 컴퍼니 · 고객 맞춤 솔루션) — 저장소 전체가 아니라 **제품 목록만 담은 태그별 릴리스 압축본(SHA-256)** → 온보딩 ⑶ **웹 = 기본 표면 · 앱 = 추후**(같은 코어↔표면 계약의 클라이언트) ⑷ **서버 = 로컬 또는 클라우드 선택**. 고객사 최종 사용자는 설치 없이 웹/앱으로만 접속한다. 근거: 두 개발자는 **고치는 곳이 다르다** — 기여자는 코어(PR), 사용자 개발자는 작업 폴더(`<org>/` 층)만. 사용자 개발자에게 저장소 전체를 주면 코어 fork 가 생겨 `update` 로 받을 수 없게 된다. 결정 2(npm 폐기)는 유지되고 git clone 의 대상만 좁혀진다(curl 이 서기 전까지는 두 부류가 clone 을 공유). 결정 3 의 curl 이 사용자 개발자 주채널로 확정되며, 제품 목록의 선례는 v1.4.3 npm `files` 필드. [[260818-agent-distribution-channels]] §L.1 의 ③을 보조에서 주채널로 승격하고 그 공통 필수(버전 핀 + 해시 · 이 경로만 self-update)를 승계. **효과:** M5 부분 확정(사용 측정만 잔여), 새 미결 M15(릴리스 매니페스트 · 압축본 CI) · M16(설치↔작업 폴더 분리 + **org 단위 skill 덮어쓰기** — 260724 Q5) · M17(온보딩 도메인 선택 · 기능 묶음) · M18(웹이 기본이 되는 시점 + 클라우드 인증). 어느 것도 `[0]`·`[1]` 을 막지 않는다. 영향: 본 entry + ideation §0.0.1·§0.0.7·§0.0.8·M5·M8 표·§A2·§F′ + `docs/prd/INDEX.md` + v2.0.0 PRD 헤더.
+
+- **2026-08-10 (결정 16 — 메신저 재도입 시점 = `v2.1.0` 동반)** — 결정 4 로 `v2.0` 에서 제거되는 Discord/Slack 계층의 **복귀 시점이 확정**됐다. "클라우드 배포 완료 후 별도 슬롯"이 아니라 **`v2.1.0` 안에서 클라우드 배포와 함께 개발**한다. 근거 2가지: ⑴ TS 재도입 요건 1(ideation §0.0.4)이 *"클라우드 배포가 착수되어 Node 전제조건을 배포자만 지는 형태일 것"* 인데 **그 형태를 만드는 작업이 곧 v2.1.0** 이므로 조건과 재도입을 분리할 이유가 없다. ⑵ `v2.1.0` 조각 B(**봇 세션 health → 알림**)의 도착지가 메신저라, 메신저 없이 배포만 하면 그 조각이 공중에 뜨거나 임시 표면을 하나 더 만들게 된다. **효과:** 미결 M6 의 "시점"이 닫히고 **언어 1건만 잔여**(ideation §0.0.4 요건 2 로 v2.1.0 착수 시 판단). 미결 M7(사업 문서 정합)의 처방도 바뀐다 — **2트랙 저니는 폐기가 아니라 연기**이므로 문서에서 삭제할 게 아니라 *"v2.0=터미널 단일 / v2.1.0=2트랙 완성"* 시제 표기로 고친다. 영향: 본 entry + §5.3 표 + `docs/prd/INDEX.md` + v2.1.0 PRD 헤더 + ideation §0.0.1·M6·M7. *(같은 날 ADR-001 §1·§5·§6-4 도 개정했으나, 직후 결정 17 로 그 문서가 동결되어 해당 개정은 초안 스냅샷에 남는다.)*
+
+- **2026-08-10 (결정 17 — ADR 발행 연기 · `adr-001` 동결)** — *"ADR 은 지금 필요 없다. 설계가 다 확정된 뒤에 만든다."* `docs/policy/adr-001-orchestration-language.md` 은 **초안 스냅샷으로 동결**(개정 중단)하고, 그때까지 **`docs/ideation/260803-*` §0.0 이 결정 1~17 의 정본**이다. 근거: ADR 246줄 중 절반 이상이 §0.0 과 중복이라 **나흘간 5회 개정하며 매번 양쪽을 함께 고쳐야 했고**, 한쪽만 고치면 정본이 불분명해진다. 설계가 움직이는 동안은 권위 문서 이원화가 유지비만 만든다. **바뀌는 것은 문서 운영뿐 — 결정 1(Python 전면 재작성) 등 결정 내용은 전부 유효하다.** 대가인 §A3 박제 공백은 **재론 금지 4건이 ideation §A3 에 이미 열거돼 있어 실질 0**. 발행 기준선은 **M9(토폴로지)가 닫힌 뒤** — 그것이 마지막 🔴 *결정*이기 때문(M12 는 실측). 발행 시 ADR 은 개정판이 아니라 **확정 설계 기준의 새 문서**이며, §6 재론 금지 조항만은 ideation 참조 없이 **자립적으로** 쓴다. 영향: 본 entry + ADR 헤더 동결 배너 + ideation §0.0.1·§0.0.7·M8·§A3.
+
+- **2026-07-13 (v1.5.x 대폭 재범위 — 세션 오케스트레이션 → Orchestration & Harness Platform)** — 사용자가 1.5.x에 Codex CLI 지원·도구/시크릿(MCP·key·인증·CI/CD)·다중세션(디스코드 스레드)·토폴로지 프레임워크·오케스트레이션(memory/router/context/handoff/cwd)·하네스(hook·가드레일)를 추가하며 **"격변 가능(TS↔Py 전환/병행)"** 을 명시. 구 세션 오케스트레이션(S-2b~S-7)+커스텀(M1~M4)을 **흡수·일반화**하고 위 축을 더한 **플랫폼 진화 우산**으로 재작성. **Track 0(언어 ADR + Codex 백엔드 추상화)** 이 전 트랙 게이트. 신구 매핑: cwd=S-6·다중세션=S-4·역할분리=S-5·회전=S-2b. major급이라 **2.0 승격 vs 1.5.x 다-minor** 는 OQ. PRD 리네임 `v1.5.0_session-orchestration-and-customization.md` → `v2.0.0_orchestration-and-harness-platform.md`. 영향: 본 entry + INDEX + §5.3 표 + PRD.
 
 - **2026-07-12 (v1.4.x 재정의 — 시뮬레이션 *연구* → Research Workflow *역량*)** — 8-사이클 자율 연구(가상 시장 수요검증 시뮬)를 실제로 완주한 회고에서, 1.4.x 우산을 특정 *연구 주제*가 아니라 **"연구를 자율로 수행하는 역량(research workflow)"** 으로 일반화. **① 1.4.x = Research Workflow** — 기능화 前 유효성 검증 계층: 확산→수렴 가설수립·실험 사이클·blind 백테스트·수치 eval·Track2 검증·논문/리포트, goal 무인 8h+. 그 시뮬 연구는 첫 dogfood. 우산 `v1.4.0_research-workflow.md` + 구현 `v1.4.3_research-workflow-implementation.md`(구 `v1.4.0_virtual-market-demand-simulation`·`v1.4.3_simulation-core-payment-and-backtest` 리네임·삭제). **② research = 워크플로우** → 별도 매니저 없이 **workflow-manager가 관리**(내장 3번째 메인 워크플로우). 템플릿·백테스트 예시는 워크플로우 자산으로 내장, `docs/research/`엔 실제 주제 dir만. **③ reports = org-level 배포 산출물 공간** — `docs`는 `package.json.files`로 배포 안 됨 → `market-research` 등 산출을 `<org>/docs/reports/` → **`<org>/reports/`** 로 이전(마이그레이션 `1.4.2-to-1.4.3`), `docs/reports/INDEX.md` 제거. **④ 로드맵:** **v1.6.0 = 클라우드 배포**(구 v1.4.5 정착), **v1.8 = 가상 시장 수요검증 시뮬레이션 *기능***(캘리브레이션-증강; 연구 결론 raw NO-GO 반영, `v1.8_virtual-market-demand-simulation.md`). 영향 docs: 본 entry + `docs/prd/INDEX.md` + §5.3 표 + 신규 3 PRD.
 

@@ -39,7 +39,9 @@
     "validate-bundled": "node dist/bin/solosquad.js validate && npm run test:corpus",
     "docs-check": "tsx scripts/check-docs-freshness.ts",
     "esm-check": "tsx scripts/check-esm-purity.ts",
-    "prepublishOnly": "npm run build && npm run docs-check && npm run esm-check"
+    "sync-version": "tsx scripts/sync-manual-version.ts",
+    "version-check": "tsx scripts/sync-manual-version.ts --check",
+    "prepublishOnly": "npm run build && npm run sync-version && npm run docs-check && npm run esm-check"
   },
   "dependencies": {
     "@slack/bolt": "^4.1.0",

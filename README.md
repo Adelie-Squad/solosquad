@@ -33,7 +33,9 @@ The delegation graph is a **DAG, not a pure tree** — `pm` calls the other thre
 
 **Platforms:** Windows · macOS · Linux (cross-platform CLI, CI-tested)
 **Messenger:** Discord — one per workspace. Slack adapter code ships but is **not part of the v1.0 SemVer promise** (post-v1.0 slot). Telegram support removed in v0.2.4.
-**Stack:** TypeScript + Node.js 18+ · Claude Code as the AI engine · file-based memory (JSONL)
+**Stack:** TypeScript + Node.js 20+ · Claude Code as the AI engine · file-based memory (JSONL)
+
+> **v2 (개발 중 · 미배포)** — The npm package `solosquad` stays at **v1.4.3** (TypeScript), and everything in this README describes v1.4.3. The v2 engine is being developed in [`python/`](python/README.md) (Python 3.12 · uv) — unreleased, not in the npm package, available only from a repository clone + `uv`. Goals: [`docs/roadmap.md` §2.6](docs/roadmap.md) · setup: [`python/README.md`](python/README.md).
 
 ---
 
@@ -43,20 +45,19 @@ The delegation graph is a **DAG, not a pure tree** — `pm` calls the other thre
 
 > **[`manual/master-guide_en.html`](manual/master-guide_en.html)** (English) · **[`manual/master-guide_ko.html`](manual/master-guide_ko.html)** (한국어) — open in a browser.
 
-It covers, in ten menu-divided sections:
+It covers, in nine menu-divided sections:
 
 | # | Section | What's inside |
 |---|---|---|
 | 1 | Getting Started | Project intent, core concepts, expected value |
 | 2 | How It Works | System architecture, folder hierarchy, memory model, workflow definition |
-| 3 | Concept Glossary | `SKILL.md`, `KNOWLEDGE.md`, `CLAUDE.md`, `AGENTS.md` comparison; per-layer file inventory; 4-channel routing |
+| 3 | Key Concepts | `SKILL.md`, `KNOWLEDGE.md`, `CLAUDE.md`, `AGENTS.md` comparison; per-layer file inventory; routing |
 | 4 | Onboarding | Branches for new users, existing-repo migration, and version upgrades |
-| 5 | Messenger Setup | 8-step Discord token walkthrough (Slack walkthrough retained as a post-v1.0 reference) |
-| 6 | Usage | CLI reference (current + planned), daily ops, first-run checklist, automated crons |
-| 7 | Glossary | 60+ core terms, file-name dictionary, acronym dictionary — beginner-friendly |
-| 8 | Version Differences | v1.3.2 (npm-published) vs upcoming releases |
-| 9 | Operations | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
-| 10 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
+| 5 | Messenger Connection | Discord walkthrough — Developer Portal prep, invite + auto-created channels, verification (Slack retained as a post-v1.0 reference) |
+| 6 | Usage | CLI reference, daily ops, first-run checklist, automated crons |
+| 7 | Operations Guide | 24/7 hosting options (terminal · Docker · launchd/NSSM · VPS), multi-workspace, multi-org, security checklist |
+| 8 | Glossary | Core terms, file-name dictionary, acronym dictionary — beginner-friendly |
+| 9 | Troubleshooting & FAQ | Install/runtime issues, migration failures, FAQ |
 
 Every feature is tagged with a version badge.
 
@@ -140,17 +141,22 @@ Full release notes: [CHANGELOG.md §1.3.11](CHANGELOG.md).
 
 ```bash
 # 1. Prerequisites (one-time)
-brew install node git                             # macOS — see master-guide §4.2 for Windows/Linux
+brew install node git                             # macOS, Node >=20 — see master-guide §4.2 for Windows/Linux
 npm install -g @anthropic-ai/claude-code
 
-# 2. Install SoloSquad
+# 2. Prepare the Discord bot BEFORE init — master-guide §5.1 (3–5 min, browser)
+#    Create an Application → Reset Token → Message Content Intent ON
+#    → copy the Application ID → copy your own User ID (Developer Mode)
+#    init auto-detects the last two; have them ready for when it can't.
+
+# 3. Install SoloSquad
 npm install -g solosquad
 mkdir ~/solosquad-workspace && cd ~/solosquad-workspace
 solosquad init                                    # wizard handles Claude OAuth (Step 1.5) + Chief name + Discord token + invite URL auto-open
 solosquad doctor                                  # verify environment
 solosquad doctor --discord                        # focused 5-hop Discord diagnostic (v1.2)
 
-# 3. Start the bot
+# 4. Start the bot
 solosquad bot                                     # foreground
 # or
 docker compose up -d --build                      # background + auto-restart (from workspace root; init dropped the compose file here)
@@ -158,7 +164,7 @@ docker compose up -d --build                      # background + auto-restart (f
 
 When you invite the bot to a guild, the **guildCreate onboarding embed** appears in the system channel. Click **Auto-create channels** → the bot creates `#command-<handle>` and `#works-<handle>`, posts a first greeting in the command channel, and you're ready. Send a message — the Chief responds.
 
-**Messenger token setup** takes 3–5 minutes (Discord). Follow [master-guide §5](manual/master-guide_en.html) step-by-step.
+**Messenger token setup** takes 3–5 minutes (Discord) and must happen *before* `init` — follow [master-guide §5.1](manual/master-guide_en.html) step-by-step, then §4.2 for the wizard and §5.2 for the invite.
 
 ### Upgrading from v0.5.x
 
@@ -229,12 +235,13 @@ Runs on your Mac Mini, PC, or VPS. Your data stays with you. Only outbound calls
 
 ---
 
-## CLI Reference (v0.8.3)
+## CLI Reference
 
 ```bash
 # Workspace ops (v0.1+)
 solosquad init                                    # workspace setup wizard
 solosquad bot                                     # start messenger bot
+solosquad start                                   # v1.4.1 — bot + cron scheduler + supervisor together (single-host all-in-one)
 solosquad cron start                              # start automated cron scheduler
 solosquad status                                  # dashboard (orgs, workflows, recent activity)
 solosquad doctor                                  # environment diagnostics
@@ -371,7 +378,7 @@ Full details in master-guide §7.1.
 
 ## Versions
 
-Current npm release: **v1.3.2** (npm registry: `1.3.2`).
+Current npm release: **v1.4.3** (npm registry: `1.4.3`). v2 is in development in `python/` and not published (see the note at the top).
 
 v1.0 marked the formal release with stable API guarantees. Shipped + planned milestones (full history in [`CHANGELOG.md`](CHANGELOG.md), decision log in [`docs/roadmap.md`](docs/roadmap.md) §6):
 
@@ -393,11 +400,24 @@ v1.0 marked the formal release with stable API guarantees. Shipped + planned mil
 | **v1.3.0 (released)** | **Messenger UX overhaul** | dev-confirm push-approval 게이트 · 인터랙션 컴포넌트 · 🛑 stop 버튼 + 라이브 stage narration · 산출물 filing |
 | **v1.3.1 (released)** | **Legacy asset cleanup** | v1.1 리오그가 절반만 끝낸 구 `assets/` 비우기 + CI/deps 하드닝 (사용자 대면 기능 0) |
 | **v1.3.2 (released)** | **Asset lifecycle managers + asset adoption** | 5개 1급 자산(skill·agent·workflow·goal·cron) 공통 매니저 추상(validate/list/show + 공유 graph·validation·guardrail·naming 코어) · **agent 매니저 신설**(`validate --graph`) · **에셋 채택** `adopt <repo>`(discover→validate→additive apply, init/add-repo 인터랙티브 오퍼) · 통합 입구 `asset` + 일람 `commands` · conversational-first(LLM 동사는 `asset-review` 스킬로) · `skill-author→skill-manager`. 872 test pass |
-| v1.2.1 (planned) | Messenger thread continuity | referencedMessage chain + LRU cache + thread token budget guard. messageCreate가 thread 메시지 수신 + thread→workflow_id reverse lookup. Slack adapter 동일 슬롯 |
-| v1.3 (planned) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes |
-| v1.x (planned) | Dashboard interaction | Companion web dashboard (별도 리포 `solopreneur-dashboard` + `solopreneur-api`) |
-| v1.x (planned) | Knowledge ontology + MCP | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
-| v1.x (planned) | LLM backend abstraction | Multi-backend (single Claude → pluggable) |
+| v1.3.3 (released) | Cron terminology unification + cron lifecycle | routine/schedule → **cron**; `solosquad schedule`/`schedules`/`run-routine` collapse into `solosquad cron start \| run \| list \| new \| show \| validate` (breaking); edit/enable/disable/delete lifecycle + run history |
+| v1.3.4 (released) | Cron reliability | Delivery to `works-<handle>` (silent-drop fix) · failure reporting · timezone guard + picker · jitter + safety validations |
+| v1.3.5 (released) | Planning workflows + asset-manager consistency | Five framework skills · sub-workflow composition · two main + six sub planning workflows · market-research skill · requirements review gate |
+| v1.3.6 (released) | Authoring internalization + self-improvement scaffold + squad restructure | Authoring standard moves into the manager skills (`skill-core`) · self-improvement scaffold · squad restructure |
+| v1.3.7 (released) | Workflow/goal/cron authoring internalization | Single `primitive-core.md` for all five primitives · bundled-workflow restructure · goal validator |
+| v1.3.8 (released) | Docs management system + `docs` skill | Repository-scoped docs/versioning · `docs` skill · `prd` 8 rules · 6-doc conditional `docs-check` gate |
+| v1.3.9 (released) | Migration collision hotfix | `1.3.2 → 1.3.3` migration collision fix + 3-segment version model |
+| v1.3.10 (released) | Bot permission UX + `--add-dir` compat fix | Registered repos readable again (stream-json workaround) · safe operations run without approval · protected push shows the approval card |
+| v1.3.11 (released) | Windows `--add-dir` hotfix | System prompt passed via `--append-system-prompt-file` so newlines no longer break the cmd.exe command line |
+| v1.4.0 (released) | Session orchestration (low-risk subset) | 🆕 session-start marker · crons resolve external repos · `chief.usage` telemetry · `leading-indicator` preset · `_log.md` audit log |
+| v1.4.1 (released) | Works-thread chat | Chief reads/replies in `works-<handle>` task threads · `solosquad start` (bot + cron + supervisor) · `bot --with-cron` · scheduler singleton lock |
+| v1.4.2 (released) | Hotfixes | `solosquad start` actually starts the bot · rate-limit notice spam fix |
+| **v1.4.3 (released)** | **Research Workflow** | Third bundled main workflow `research` (spec → hypothesis → experiments → blind backtest → verifier review → report) · goals run 8h+ unattended · reports move to `<org>/reports/` |
+| v1.2.1 (slot, unscheduled) | Messenger thread continuity | referencedMessage chain + LRU cache + thread token budget guard. Partly covered by v1.4.1 works-thread chat; still a slot in roadmap §5.3 |
+| v1.x (slot, unscheduled) | Schedule + Memo | n-jobber time/memory management. Calendar integration · todo · notes. Split out of v1.3 (roadmap §5.3) |
+| → v2.x (roadmap §5.3) | Dashboard interaction | Companion web dashboard |
+| → v2.x (roadmap §5.3) | Knowledge ontology + MCP | Graph backend + MCP external connectors (Notion, Obsidian, etc.) |
+| ~~v1.x~~ dropped (roadmap §5.3) | LLM backend abstraction | Dropped 2026-08-08 — absorbed by the v2.0.0 harness adapters |
 
 Decision log: [`docs/roadmap.md`](docs/roadmap.md) §6.
 
@@ -421,9 +441,10 @@ Each has independent `.env`, tokens, memory, and messenger account. They run sid
 Source tree (this repo):
 
 ```
-package.json                      → npm package config (v1.2.6)
+package.json                      → npm package config
 tsconfig.json                     → TypeScript config
 bin/solosquad.ts                  → CLI entry point
+python/                           → v2 engine (unreleased, not in npm package)
 AGENTS.md                         → canonical workspace guide (v0.4 — immutable, cross-tool)
 CLAUDE.md                         → 3-line redirect to AGENTS.md (backward-compat)
 src/
@@ -467,8 +488,8 @@ assets/                           → Bundled defaults (copied to user workspace
 deploy/
   docker/                         → Container deployment (Dockerfile + compose + README)
 docs/
-  manual/master-guide_{en,ko}.html → 📖 Canonical user manual (10 sections, EN + KO)
-  roadmap.md                      → Master roadmap + decision log §4 (repo layer, living)
+  manual/master-guide_{en,ko}.html → 📖 Canonical user manual (9 sections, EN + KO)
+  roadmap.md                      → Master roadmap + decision log §6 (repo layer, living)
   architecture.md                 → Internal system design (repo layer, living)
   prd/                            → Per-release PRDs (repo layer) + INDEX.md
   reports/ · ideation/            → Product research/exploration (org layer) + INDEX.md
@@ -545,7 +566,7 @@ End-user workspace (created by `solosquad init`, evolved through migrations):
 | [phuryn/pm-skills](https://github.com/phuryn/pm-skills) | auto-load + slash dual-trigger SKILL routing (adopted in v0.5 4-channel router) |
 | [OpenClaw](https://github.com/openclaw/openclaw) | npm publishing + `update` / `doctor` CLI patterns |
 
-Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration, MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/roadmap.md` §4 for the reasoning.
+Explicitly rejected as over-engineered for solo founders: 3-repo physical splits, LangGraph v3 graph orchestration (v1 기준 — v2 는 결정 19 로 swarm · LangGraph 모방 채택), MCP-based internal skill registries, Vector + Graph DB hybrids. See `docs/roadmap.md` §6 for the reasoning.
 
 ---
 

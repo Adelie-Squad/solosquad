@@ -54,10 +54,25 @@
 | [v1.4.2_start-cron-blocking-hotfix.md](v1.4.2_start-cron-blocking-hotfix.md) | 출시분 — 1.3.x 안정화 tail(재분류) |
 | [v1.4.0_research-workflow.md](v1.4.0_research-workflow.md) | **1.4.x 우산** — 자율 가설검증 연구 워크플로우(기능화 前 유효성 검증 계층) |
 | [v1.4.3_research-workflow-implementation.md](v1.4.3_research-workflow-implementation.md) | research 내장 워크플로우 + 템플릿/예시 + goal 8h+ 무인 + reports→org 이전 |
-| [v1.6.0_docker-cloud-deploy-and-health-notify.md](v1.6.0_docker-cloud-deploy-and-health-notify.md) | **v1.6.0** — Railway 클라우드 배포 + 봇 health 알림 (연구 후 착수) |
-| [v1.5.0_orchestration-and-harness-platform.md](v1.5.0_orchestration-and-harness-platform.md) | **1.5.x 우산** — 오케스트레이션·하네스 플랫폼 진화(멀티 백엔드[Codex] · 오케스트레이션 코어[memory/router/context/handoff/cwd] · 토폴로지 · 하네스 훅/가드레일 · 도구/시크릿). ⚠️ TS↔Py 결정 포함, major급 |
-| [v1.9.0_virtual-market-demand-simulation.md](v1.9.0_virtual-market-demand-simulation.md) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝(연구 결론: raw NO-GO) |
-| [v1.x-dashboard-interaction.md](v1.x-dashboard-interaction.md) | |
-| [v1.x-knowledge-ontology.md](v1.x-knowledge-ontology.md) | |
-| [v1.x-llm-backend-abstraction.md](v1.x-llm-backend-abstraction.md) | |
-| [v1.x-workflow-goal-routine-evolution.md](v1.x-workflow-goal-routine-evolution.md) | |
+| [v2.0.0_orchestration-and-harness-platform.md](v2.0.0_orchestration-and-harness-platform.md) | **2.0.0 — 엔진 코어** (rev7, 결정 33 분할). Python 재작성 · swarm 엔진(LangGraph 모방, 자체 구현, `asyncio`) · 하네스 4종 · 운영 층 · 연결 풀/라우팅 · 가계부 · 로컬 24시간 · CLI. v2.x 목표 = roadmap §2.6 · 결정 정본 = `ideation/260803-*` §0.0. 구 `v1.5.0` |
+| [v2.1.0_customer-web.md](v2.1.0_customer-web.md) | **2.1.0 — 고객사 웹** — 로그인 · 부서 권한 · 보고 · 실시간 · 승인 · 비용 · 연결 관리 · 외부 접속. **관리형 파일럿 시작점.** 입력 = `prototype/ax-agent-web` |
+| [v2.2.0_fde-agent-and-browser.md](v2.2.0_fde-agent-and-browser.md) | **2.2.0 — FDE 에이전트 + 브라우저 + 분석** — 대화형 온보딩 · 도메인/로컬 분석 · 개선 주기 · 변경 승인/롤백 · Chromium MCP · 분석(결정 6). 셀프 경로 성립 |
+| [v2.3.0_agency-connection.md](v2.3.0_agency-connection.md) | **2.3.0 — 에이전시 연결** — curl/irm + 릴리스 압축본 · FDE 중개 업데이트(결정 31) · 사용 측정 · 에이전시 최소판 · 승격 후보 수신 · npm 정리 |
+| [v2.4.0_docker-cloud-deploy-and-health-notify.md](v2.4.0_docker-cloud-deploy-and-health-notify.md) | **2.4.0** — 클라우드 배포 + **메신저 재도입**(결정 16) + health 알림 + 클라우드 인증 · 헤드리스 로그인/브라우저. 구 `v2.1.0` ← `v1.6.0` (결정 33 재번호) |
+| [v2.5.0_virtual-market-demand-simulation.md](v2.5.0_virtual-market-demand-simulation.md) | **가상 시장 수요검증 시뮬레이션 *기능*** — 캘리브레이션-증강 스크리닝(연구 결론: raw NO-GO). 구 `v2.4.0` ← `v1.9.0` (결정 33 재번호) |
+| [v2.x-dashboard-interaction.md](v2.x-dashboard-interaction.md) | 구 `v1.x` |
+| [v2.x-knowledge-ontology.md](v2.x-knowledge-ontology.md) | 구 `v1.x` |
+
+> **2026-08-08 재번호 — `v1.N` → `v2.(N−5)`.** 결정 1(Python 전면 재작성)로 다음 릴리스가
+> major 격변이 되어 1.x 잔여 슬롯을 2.x 로 옮겼다. 미결 M3(릴리스 번호 체계)는 이로써
+> **semver 계보 유지**로 종결 — `0.1.0` 재시작·날짜 기반은 기각.
+>
+> **결정의 정본은 `docs/ideation/260803-solosquad-architecture-redesign.md` §0.0** (결정 1~18 — 18 은 2026-10-26 배포 채널).
+> `docs/policy/adr-001-orchestration-language.md` 은 🧊 **동결**됐고(결정 17, 2026-08-10)
+> **설계 확정 후 발행**한다 — 그때까지 인용하지 말 것.
+>
+> **폐기 2건** (2026-08-08, 내용은 git 히스토리):
+> - `v1.x-llm-backend-abstraction.md` — 10 차단점은 ideation §C1 이 하네스 5-메서드로
+>   흡수 완료. Codex 서술(§2.1 "session 없음" 등)은 [[260605-ochestrator-session]] 으로 반증됨
+> - `v1.x-workflow-goal-routine-evolution.md` — Q1~Q7 은 `v1.1-multi-agent-team-architecture.md` §0
+>   으로 완전 흡수(architecture.md §13.10 이 이미 *archived* 로 격하). 잔여 미구현분은 메신저 전제라 소멸

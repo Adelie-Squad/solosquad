@@ -28,6 +28,12 @@ dist/
 
 # Python (legacy)
 __pycache__/
+
+# Python (v2 engine — python/)
+python/.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
 *.pyc
 *.pyo
 .venv/

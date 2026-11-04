@@ -7,7 +7,8 @@
  *
  * Checks (PRD docs/prd/v1.3.8_docs-management.md §3.5):
  *   1. A frozen PRD for vN.N.N exists in docs/prd/ (repo layer).
- *   2. Core docs mention vN.N.N: roadmap, architecture, CHANGELOG, README.
+ *   2. Core docs mention vN.N.N: roadmap, architecture, CHANGELOG, README
+ *      (README.md and README.kr.md).
  *      - roadmap/architecture accept the promoted path (docs/) OR the legacy
  *        path (docs/prd/) for backward-compat (v1.3.8 promotion).
  *   3. Conditional: manual ko/en mention vN.N.N ONLY if they exist
@@ -77,6 +78,7 @@ checkRow("roadmap", ["docs/roadmap.md", "docs/prd/product-roadmap.md"]);
 checkRow("architecture", ["docs/architecture.md", "docs/prd/architecture.md"]);
 checkRow("CHANGELOG", ["CHANGELOG.md"]);
 checkRow("README", ["README.md"]);
+checkRow("README(kr)", ["README.kr.md"]);
 
 // Conditional (manual — only if the product ships a manual).
 checkRow("manual(ko)", ["manual/master-guide_ko.html"], false);

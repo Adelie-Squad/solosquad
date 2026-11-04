@@ -2,7 +2,7 @@
 
 > 현재 구현된 시스템 아키텍처, 멀티세션 조율, 메모리 구조를 정리한 기술 문서.
 
-> **현재 출시 버전: v0.7.0 (2026-05-15)**. 본 문서는 v0.2.x까지의 핵심 토폴로지를 상세히 기술하고, v0.3~v0.7는 §13 "릴리스별 추가 사항"에서 압축 요약 + 각 plan 문서 링크로 다룹니다. 더 자세한 내용은 `docs/plan/v0.3-*.md` ~ `docs/plan/v0.7-*.md` 참조.
+> **현재 출시 버전: v1.4.3 (2026-07-12) · v2.0.0 엔진 코어 개발 중(`python/`, 미배포)**. 본 문서 구성: v0.2.x 토폴로지 상세 + v0.3~v1.4 는 §13 요약(릴리스별 PRD 링크 포함). 릴리스별 상세는 `docs/prd/` 참조.
 
 ---
 
@@ -164,6 +164,9 @@ channels:
 - 매칭 없으면 일반 모드로 폴백
 
 ### 5.1 에이전트 토폴로지 (계층형 supervisor)
+
+> ⚠️ **v2.0 에서 폐기 예정 (결정 19, 2026-10-28)** — 아래는 v1.4.3 현행 서술이다. 재작성 토폴로지는 **swarm(LangGraph 모방)** 으로
+> 확정됐다 — [`ideation/260803-solosquad-architecture-redesign.md`](./ideation/260803-solosquad-architecture-redesign.md) §0.0.1 결정 19.
 
 SoloSquad 는 **hierarchical orchestrator-workers** 토폴로지다 — 중앙 Chief 가 동적으로 분해·위임하되
 **제어권을 끝까지 쥔다(agents-as-tools; spawn 후 SYNTHESIZE 를 Chief 가 소유)**. swarm(탈중앙 handoff)
@@ -542,7 +545,7 @@ v0.1.x → v0.2.0 으로 건너가는 **바로 그 업데이트** 에서는 마�
 
 ---
 
-## 13. 릴리스별 추가 사항 (v0.3 → v0.7 — 압축 요약)
+## 13. 릴리스별 추가 사항 (v0.3 → v1.4 — 압축 요약)
 
 본 문서의 §1~§12는 v0.2.x까지의 핵심 토폴로지를 다룬다. 이후 릴리스에서 추가된 모듈·계층·CLI는 plan 문서에 자세히 기술되어 있으며, 여기서는 architecture-impacting 변경만 한눈에 본다.
 
@@ -828,7 +831,7 @@ v0.8.5 release 직후 사용자 테스트에서 발견된 회귀 hotfix (`docs/p
 - 자동 흐름: stage 종료 → branch push → dev-confirm → PR (gh/MCP) → reviewers spawn round → PM aggregation → works-handle post → discussion round 2 (사용자 트리거) → merge gate (사용자 y)
 - 영구 박제: `auto_merge: false` + `discussion_rounds` cap + 자동 머지 영구 거부
 - `<org>/memory/pr-discussions.jsonl` + (MCP 트랙 선택 시) `<org>/memory/mcp-calls.jsonl` audit log + FTS5 인덱싱
-- 코드: `src/engine/git-workflow.ts` + `src/engine/pr-reviewer.ts` 신설 슬롯. v1.x-workflow-goal-routine-evolution.md에 §추가
+- 코드: `src/engine/git-workflow.ts` + `src/engine/pr-reviewer.ts` 신설 슬롯. (구 v1.x-workflow-goal-routine-evolution.md 에 §추가 예정이었으나 2026-08-08 폐기)
 
 **migration 0.8.5 → 0.8.6**: schema 변경 없음, version bump only.
 
@@ -1172,7 +1175,7 @@ Get-CimInstance Win32_Process |
 
 **v1.2.x 흐름 정합** — v1.2.6 의 invite URL 1-click 은 *설계로만* 존재했고 (`buildInviteUrl` 순수 함수는 정상), 입력값 source(`appId`)가 죽어 흐름 전체가 무력화돼 있었음. v1.2.9 가 source 를 고쳐 v1.2.6 의 약속(*init 완주 → click 1회 → 5분 내 채널 자동 생성*)을 비로소 실현.
 
-자세히: `CHANGELOG.md` §[1.2.9], `docs/prd/v1.2.9-discord-app-id-and-invite-url-fix.md`
+자세히: `CHANGELOG.md` §[1.2.9], `docs/prd/v1.2.9-discord-app-id-fix-and-git-events-channel.md`
 
 #### 13.6.22 v1.2.10 — Chief 리네임 정착 + git 채널 롤백 + Docker 자산 정리 (2026-06-08)
 
@@ -1220,9 +1223,9 @@ Get-CimInstance Win32_Process |
 
 #### 13.6.35 v1.4.0 — 세션 오케스트레이션 (재범위 저위험 서브셋) (2026-06-27)
 
-세션 오케스트레이션 PRD(`docs/prd/v1.4.0-session-orchestration.md` — 現 `v1.5.0_orchestration-and-harness-platform.md` 로 흡수, 원문은 git 히스토리)의 **비파괴 서브셋** 출시. **시너지/역할:** 장기·다중 repo 운영의 *기반*을 깔되, 위험한 조각(세션 교대·GC 삭제)은 검증 후로 미뤄 24/7 대화 운영의 *가용성·관측*만 먼저 확보. **출시:** ⑴**S-1** `resolveOrgCwd`가 외부경로 repo(`repositories/<slug>.yaml`의 `path:`)를 `resolveRepoCwd`로 해석 → 스케줄러 cron 의 repo-blind 해소. ⑵**S-2a** `chief.usage` 수동 토큰 텔레메트리(contextTokens=input+cache_read+cache_creation, 관측만·회전 없음). ⑶**§5.5** `solosquad cron preset leading-indicator` opt-in 배선 + `avg_context_tokens`(S-2a 데이터원) 지표. ⑷**§5.7** `archiveOrgChiefSessions` 마이그레이션 헬퍼(spawn-변경 릴리즈용 clean-slate; 본 릴리즈는 spawn 무변경이라 미호출). ⑸**S-3** `_log.md` durable 파일(`_handoff.md` 에 *추가*, Layer[7] 회귀 없음) + AGENTS.md 3계층 메모리 정형화(GC 삭제 v1.4.x 연기). ⑹**🆕 세션 시작 마커** — 신규/리셋/회전 세션의 첫 Discord 응답에 Chief 이름 앞 표시. **비범위(v1.4.x):** 세션 교대(S-2b 임계 핸드오프+회전) · GC 파괴적 삭제(S-3b) · M2/M3 워커 세션 · S-6/S-7. 연속성 마이그레이션 `1.3.11-to-1.4.0` plain bump(세션 리셋 없음).
+세션 오케스트레이션 PRD(`docs/prd/v1.4.0-session-orchestration.md` — 現 `v2.0.0_orchestration-and-harness-platform.md` 로 흡수, 원문은 git 히스토리)의 **비파괴 서브셋** 출시. **시너지/역할:** 장기·다중 repo 운영의 *기반*을 깔되, 위험한 조각(세션 교대·GC 삭제)은 검증 후로 미뤄 24/7 대화 운영의 *가용성·관측*만 먼저 확보. **출시:** ⑴**S-1** `resolveOrgCwd`가 외부경로 repo(`repositories/<slug>.yaml`의 `path:`)를 `resolveRepoCwd`로 해석 → 스케줄러 cron 의 repo-blind 해소. ⑵**S-2a** `chief.usage` 수동 토큰 텔레메트리(contextTokens=input+cache_read+cache_creation, 관측만·회전 없음). ⑶**§5.5** `solosquad cron preset leading-indicator` opt-in 배선 + `avg_context_tokens`(S-2a 데이터원) 지표. ⑷**§5.7** `archiveOrgChiefSessions` 마이그레이션 헬퍼(spawn-변경 릴리즈용 clean-slate; 본 릴리즈는 spawn 무변경이라 미호출). ⑸**S-3** `_log.md` durable 파일(`_handoff.md` 에 *추가*, Layer[7] 회귀 없음) + AGENTS.md 3계층 메모리 정형화(GC 삭제 v1.4.x 연기). ⑹**🆕 세션 시작 마커** — 신규/리셋/회전 세션의 첫 Discord 응답에 Chief 이름 앞 표시. **비범위(v1.4.x):** 세션 교대(S-2b 임계 핸드오프+회전) · GC 파괴적 삭제(S-3b) · M2/M3 워커 세션 · S-6/S-7. 연속성 마이그레이션 `1.3.11-to-1.4.0` plain bump(세션 리셋 없음).
 
-자세히: `docs/prd/v1.4.0-session-orchestration.md`
+자세히: `docs/prd/v2.0.0_orchestration-and-harness-platform.md` (구 `v1.4.0-session-orchestration.md` 흡수, 원문은 git 히스토리)
 
 #### 13.6.34 v1.3.11 — Windows `--add-dir` 누락(append-system-prompt 줄바꿈) 핫픽스 (2026-06-25)
 
@@ -1444,14 +1447,14 @@ templates/
 ### 13.9 v1.x 시리즈 (예고 — cascade-shifted 슬롯)
 
 **v1.x 슬롯 cascade (2026-05-24 결정 — product-roadmap §6 참조):**
-- 구 v1.1 → v1.x **대시보드 상호작용** (별도 리포 `solopreneur-dashboard`+`solopreneur-api`) — `docs/prd/v1.x-dashboard-interaction.md`
-- 구 v1.2 → v1.x **지식·암묵지 온톨로지 + MCP** (Notion·Obsidian·외부 API·타 에이전트) — `docs/prd/v1.x-knowledge-ontology.md`
-- v1.x **LLM backend 추상화** — `docs/prd/v1.x-llm-backend-abstraction.md`
+- 구 v1.1 → v1.x **대시보드 상호작용** (별도 리포 `solopreneur-dashboard`+`solopreneur-api`) — `docs/prd/v2.x-dashboard-interaction.md`
+- 구 v1.2 → v1.x **지식·암묵지 온톨로지 + MCP** (Notion·Obsidian·외부 API·타 에이전트) — `docs/prd/v2.x-knowledge-ontology.md`
+- ~~v1.x **LLM backend 추상화**~~ — **2026-08-08 폐기.** 10 차단점은 `docs/ideation/260803-solosquad-architecture-redesign.md` §C1 이 하네스 5-메서드로 흡수
 - **v1.3** 일정 관리 + 메모 (n잡 사용자) — 예정
 
-**v1.x-workflow-goal-routine-evolution.md** — v1.1 plan §0 박제 표로 §1~§6 *완전 흡수* → *역사적 reference* 로 격하. 살아있는 영역 = 변경 이력 + 외부 reference 만.
+**v1.x-workflow-goal-routine-evolution.md** — v1.1 plan §0 박제 표로 §1~§6 *완전 흡수* → *역사적 reference* 로 격하됐고, **2026-08-08 폐기**됐다. 미구현 잔여분(goal 중간개입 · `/create` · 실험 CLI)은 Discord 메신저 전제라 결정 4 로 소멸. 원문은 git 히스토리. (⚠️ 메신저는 결정 16 으로 `v2.1.0` 재도입 예정 — 다만 이 3건은 신규 설계 대상이지 부활 대상이 아니다)
 
-자세히: `docs/prd/v1.1-multi-agent-team-architecture.md`, `docs/prd/v1.2-messenger-connection-discord-first.md`, `docs/prd/v1.x-*.md`
+자세히: `docs/prd/v1.1-multi-agent-team-architecture.md`, `docs/prd/v1.2-messenger-connection-discord-first.md`, `docs/prd/v2.x-*.md`
 
 ### 13.10 기획 문서 목록 (v0.x → v1.x)
 
@@ -1477,17 +1480,66 @@ templates/
 **v1.x 포스트-런치 (계획):**
 - `docs/prd/v1.1-multi-agent-team-architecture.md` — **신 v1.1.** Multi-Agent Team Architecture (Hermes V2 5-layer + Harness §7.5 4 권고 + Q1~Q7 흡수). L2~L5 만 — L1 은 v1.2
 - `docs/prd/v1.2-messenger-connection-discord-first.md` — **신 v1.2.** 메신저 연결 (L1 Gateway, Discord 우선)
-- `docs/prd/v1.x-dashboard-interaction.md` — *구 v1.1 cascade-shifted.* 대시보드 상호작용 (대시보드 자체는 별도 리포)
-- `docs/prd/v1.x-knowledge-ontology.md` — *구 v1.2 cascade-shifted.* 지식 온톨로지 + MCP 외부 연결
-- `docs/prd/v1.x-llm-backend-abstraction.md` — LLM backend 추상화
-- `docs/prd/v1.x-workflow-goal-routine-evolution.md` — *archived.* Q1~Q7 ideation 7건 → v1.1 plan §0 박제로 *완전 흡수*. 살아있는 영역 = 변경 이력 + 외부 reference
+- `docs/prd/v2.x-dashboard-interaction.md` — *구 v1.1 cascade-shifted.* 대시보드 상호작용 (대시보드 자체는 별도 리포)
+- `docs/prd/v2.x-knowledge-ontology.md` — *구 v1.2 cascade-shifted.* 지식 온톨로지 + MCP 외부 연결
+- ~~`docs/prd/v1.x-llm-backend-abstraction.md`~~ — *2026-08-08 폐기.* ideation §C1 매핑표가 정본 (⚠️ 원문 Codex 서술에 사실오류)
+- ~~`docs/prd/v1.x-workflow-goal-routine-evolution.md`~~ — *2026-08-08 폐기.* Q1~Q7 은 v1.1 plan §0 으로 완전 흡수 완료
 - `docs/prd/v1.3-schedule-memo.md` (예정) — 일정 관리 + 메모 (지식 온톨로지와 같은 결)
 
 롤링 상태는 `docs/prd/product-roadmap.md`.
 
 ---
 
-## 14. 레퍼런스
+## 14. 솔로스쿼드 개발 규칙 (이 저장소 전용)
+
+> 솔로스쿼드 자체를 개발할 때만 적용하는 규칙. 고객사에 배포되는 `skills/prd` 는 범용 단일 양식이고,
+> 이 저장소의 PRD 도 **그 양식 그대로** 쓴다 — 여기에는 이 저장소에만 해당하는 버전 · 파일 · 핫픽스 ·
+> 배포 게이트 규칙만 둔다. (2026-11-04, prd 스킬 통일 때 스킬에서 이관)
+
+### 14.1 PRD 양식
+
+- 릴리스 PRD 는 `skills/prd/SKILL.md` 의 단일 양식(목표 → 결정 필요 항목 → 범위[인수 조건 포함] →
+  구현 방법 → 리스크와 보완책 → 검증 → 결과 → 후속 문서)과 맥락 원칙 K1–K5 · 작성 규칙 R1–R10 을 따른다.
+- 결정 필요 항목 ID 접두어는 PRD 마다 하나를 정해 고정한다(예: v2.1.0 = `W`, v2.2.0 = `F`, v2.3.0 = `A`).
+  설계 결정 문서(ideation §0.0)의 "결정 N" 과 겹치지 않게 한다.
+- 구현 결정(`I#`)의 담당 에이전트 역할은 `skills/prd` R9 의 하위 절 ↔ 담당 표를 따른다(system-architect · 구현 담당 · data-engineer · security).
+
+### 14.2 버전 · PRD 결합
+
+- 버전은 항상 3자리 `vN.N.N`(0부터). **4자리 금지.**
+- **PRD ↔ 릴리스 버전 1:1.** 한 버전에 PRD 하나, 핫픽스도 자체 PRD 를 갖는다.
+- 핫픽스 = 출시된 부모 버전 결함을 고치는 **다음 patch**(예: `1.3.8` → `1.3.9`). 별도 4자리 버전이 아니다.
+- 파일 위치 · 명명: `docs/prd/v<N.N.N>_<name>.md`, 목록은 `docs/prd/INDEX.md`(분류 · 배치는 `docs` 스킬).
+- ship 후 PRD 는 frozen(완성도 100). 이후 바뀐 사실은 다음 버전 PRD 의 §7 결과 또는 §1 배경에 쓴다.
+
+### 14.3 핫픽스 PRD 양식
+
+핫픽스는 발산이 아니라 결함 수렴이므로 단일 양식 대신 **가벼운 양식**을 쓴다(구현 결정 후보 비교 ·
+V/U/V/F 생략 가능). 선례: `docs/prd/v1.3.9_migration-collision-hotfix.md`.
+
+```markdown
+# vN.N.N — <한 줄 제목> (hotfix on vN.N.(N-1))
+> 상태 + 로드맵 위치(부모 버전 → 본 hotfix → 다음).
+
+## 1. 발견 경위    — 어떻게 드러났나(재현 명령 + 실제 에러 출력 그대로)
+## 2. 근본 원인    — 왜 깨졌나(코드/데이터 한 지점)
+## 3. 영향         — 누가/무엇이 깨지나(결정적/음험한 실패 모드 구분)
+## 4. 해결책       — 즉시 수정(손댈 파일/diff) + (있으면) 마이그레이션 경로 + 사용자 복구 절차
+## 5. 검증         — 회귀 테스트(재발 방지) + 게이트 green
+## 6. 회고         — 왜 기존 게이트가 못 잡았나 + 후속 가드 후보
+```
+
+- 부모 버전 · git 히스토리 · CHANGELOG `[N.N.N]` 와 교차 링크.
+
+### 14.4 배포 전 문서 게이트
+
+- `npm publish` 전 릴리스 필수 문서가 새 `package.json.version` 을 언급해야 한다 — 규칙은
+  `.claude/rules/git-workflow.md`, 집행은 `npm run docs-check`(`prepublishOnly`).
+- 해당 버전 PRD 의 §7 결과가 채워져 있어야 한다.
+
+---
+
+## 15. 레퍼런스
 
 - [OpenClaw](https://github.com/openclaw/openclaw) — npm 패키지 배포 + update/doctor CLI 패턴
 - [Ralph Loop (Huntley)](https://ghuntley.com/ralph/) — 자율 코딩 루프 패턴

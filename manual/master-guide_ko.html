@@ -211,7 +211,7 @@
 <body>
 
 <aside class="sidebar">
-  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.2.9</span></h1>
+  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.4.3</span></h1>
 
   <nav>
     <ul>
@@ -371,6 +371,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
   <div class="callout info">
     <strong>이 문서의 버전</strong>
     현재 버전은 <span class="badge now">v1.4.3</span> 입니다 (Research Workflow — 기능화 前 자율 가설검증 워크플로(확산→수렴 가설·blind 백테스트·수치 eval·Track2 검증) 내장(3번째 메인), goal 무인 8h+ 장기실행, 최종 산출물을 org-level <code>&lt;org&gt;/reports/</code> 로 이전. 1.4.2 핫픽스 — 1.4.1 의 <code>solosquad start</code> 가 스케줄러만 띄우고 봇이 안 뜨던 문제 수정(봇 동반 시 스케줄러 keep-alive 분리) + rate-limit 알림 도배 제거(<code>warning</code> 은 리셋 윈도우당 1회, <code>exceeded</code> 만 즉시). 1.4.1 = works-스레드 대화 — Chief 가 <code>works-&lt;handle&gt;</code> 과제 스레드의 메시지를 읽고 그 스레드 안에서 응답; 권한 추가 불필요(초대에 SendMessagesInThreads+MessageContent 이미 포함), 스레드↔과제 컨텍스트 주입, 단일 세션 공유. 또한 <code>solosquad start</code> 로 봇+cron+supervisor 단일 기동(<code>scheduler.pid</code> 싱글톤 lock 으로 이중발화 차단). v1.4.0 = 세션 오케스트레이션 재범위 서브셋(🆕 세션 시작 마커·S-1·S-2a·leading-indicator 프리셋·_log.md)). 본 문서의 1~7장은 v1.2.x 기준으로 작성되었습니다. 버전별 상세 변경 내역은 저장소 루트의 <code>CHANGELOG.md</code> 를 참고하세요 (변경 이력 단일 원천).
+    <br><strong>v2 (개발 중 · 미배포)</strong> Python 기반 v2 엔진은 리포지토리의 <code>python/</code> 에서 개발 중이며 npm 패키지에 포함되지 않습니다. 이 매뉴얼은 npm 배포판 v1.4.3 기준입니다.
   </div>
 </section>
 
@@ -503,7 +504,7 @@ Layer 2  저장소 (코드)          실제 제품 코드 — 리포별 분리</
   </table>
 
   <h3 id="s4-2">4.2 신규 설치 — 첫 워크스페이스 만들기</h3>
-  <p>전체 과정은 <strong>준비물 → 설치 → <code>init</code> 마법사 → 메신저 연결 → 봇 기동</strong> 순입니다. 메신저(Discord) 봇은 마법사 중간에 토큰을 입력하므로, <strong>5장 §5.1 의 사전 준비(봇 토큰 발급)를 먼저 끝내두면</strong> 한 번에 진행됩니다.</p>
+  <p>전체 과정은 <strong>준비물 → 설치 → <code>init</code> 마법사 → 메신저 연결 → 봇 기동</strong> 순입니다. 마법사 중간에 Discord 봇 값을 입력하므로, <strong><a href="#s5-1">§5.1 의 사전 준비</a>(토큰 · Application ID · 본인 User ID)를 먼저 끝내두면</strong> 끊김 없이 한 번에 진행됩니다.</p>
 
   <div class="step">
     <div class="step-head">Step 1 — 준비물 설치 (Node.js · git · Claude Code)</div>
@@ -521,13 +522,14 @@ npm install -g @anthropic-ai/claude-code
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs git
 npm install -g @anthropic-ai/claude-code</code></pre>
-    <p>확인: <code>node --version</code> (v18+) · <code>git --version</code> · <code>claude --version</code>. GitHub CLI(<code>gh</code>)는 선택이지만, 엔지니어링 에이전트가 PR 을 만들려면 있어야 합니다.</p>
+    <p>확인: <code>node --version</code> (<strong>v20 이상</strong> — <code>package.json</code> 의 <code>engines</code> 요구) · <code>git --version</code> · <code>claude --version</code>. GitHub CLI(<code>gh</code>)는 선택이지만, 엔지니어링 에이전트가 PR 을 만들려면 있어야 합니다.</p>
   </div>
 
   <div class="step">
     <div class="step-head">Step 2 — Claude 로그인</div>
-    <p>SoloSquad 는 Claude Code 를 백엔드로 사용합니다. <a href="https://claude.ai">claude.ai</a> 에서 Claude Code 가 포함된 플랜(Max 권장)을 구독한 뒤 로그인합니다.</p>
-    <pre><code>claude login        # 브라우저 OAuth — 자격증명은 이 기기에 저장됩니다</code></pre>
+    <p>SoloSquad 는 Claude Code 를 백엔드로 사용합니다. <a href="https://claude.ai">claude.ai</a> 에서 Claude Code 가 포함된 플랜(Max 권장)을 <strong>먼저 구독</strong>해야 합니다. 로그인은 여기서 미리 해도 되고, 안 해두면 <code>init</code> 마법사의 <strong>Step 1.5</strong> 가 인증 상태를 감지해 같은 OAuth 흐름을 그 자리에서 띄웁니다 — 결과는 동일하므로 편한 쪽을 고르면 됩니다.</p>
+    <pre><code>claude login        # 브라우저 OAuth — 자격증명은 이 기기에 저장됩니다
+                    # (건너뛰면 init Step 1.5 가 같은 절차를 안내)</code></pre>
     <p>SoloSquad 는 API 키를 직접 다루지 않고 Claude Code 의 로그인 상태에 위임합니다.</p>
   </div>
 
@@ -547,10 +549,10 @@ solosquad init</code></pre>
     <ol>
       <li><strong>이름 · 역할</strong> — 에이전트가 사용자를 부르고 응답 톤을 맞추는 데 사용 (기본 역할 <code>founder</code>).</li>
       <li><strong>메신저 선택</strong> — Discord (Slack 은 현재 비활성).</li>
-      <li><strong>Bot Token 입력</strong> — §5.1 에서 발급한 Discord 봇 토큰.</li>
+      <li><strong>Bot Token 입력</strong> — <a href="#s5-1">§5.1 ②</a> 에서 발급한 Discord 봇 토큰.</li>
       <li><strong>handle 확인</strong> — 봇 username 에서 자동 추출된 값을 기본 제안. 이 handle 이 채널 이름(<code>command-&lt;handle&gt;</code>·<code>works-&lt;handle&gt;</code>)과 본인 식별자가 됩니다.</li>
-      <li><strong>Application ID 확인</strong> <span class="badge now">v1.2.9</span> — 봇 토큰에서 자동 감지된 값을 기본 제안 (Enter 수락). 초대 URL 생성에 쓰입니다.</li>
-      <li><strong>본인 Discord User ID</strong> <span class="badge now">v1.2.9</span> — 앱 소유자 ID 가 자동 감지되어 기본 제안됩니다 (Enter 수락). owner-only 게이트에 사용.</li>
+      <li><strong>Application ID 확인</strong> <span class="badge now">v1.2.9</span> — 봇 토큰에서 자동 감지된 값을 기본 제안 (Enter 수락). 초대 URL 생성에 쓰입니다. 감지 실패 시 <a href="#s5-1">§5.1 ④</a> 의 값을 붙여넣습니다.</li>
+      <li><strong>본인 Discord User ID</strong> <span class="badge now">v1.2.9</span> — 앱 소유자 ID 가 자동 감지되어 기본 제안됩니다 (Enter 수락). owner-only 게이트에 사용. 팀 소유 앱 등으로 감지가 안 되면 <a href="#s5-1">§5.1 ⑤</a> 의 개발자 모드 절차로 직접 확인해 입력합니다.</li>
       <li><strong>timezone · 브리프 시각</strong> — 기본 Asia/Seoul · 08:00 / 18:00.</li>
       <li><strong>첫 조직 + Chief 이름</strong> — 조직(사업/제품) 이름과 Chief 이름을 정합니다.</li>
     </ol>
@@ -609,10 +611,14 @@ solosquad migrate --rollback     # 직전 백업으로 복원 (필요 시)</code
 <section id="s5">
   <h2><span class="num">5.</span>메신저 연결</h2>
   <p>AI 가 메신저에서 대화하려면 <strong>봇 계정</strong>이 필요합니다. v1.0 의 공식 메신저는 <strong>Discord</strong> 한 종류입니다 (Slack 어댑터는 코드에 동봉되나 post-v1.0 슬롯). 한 워크스페이스당 메신저 하나를 씁니다.</p>
-  <p>전체 흐름은 <strong>① Developer Portal 사전 준비 → ② <code>init</code> 마법사 → 자동 초대 URL → ③ 서버 추가 + 채널 자동 생성</strong> 입니다. 한 번 클릭으로 끝나도록 설계되어 있습니다.</p>
+  <p>전체 흐름은 <strong>① Developer Portal 사전 준비(§5.1) → ② <code>init</code> 마법사(§4.2 Step 4) → 자동 초대 URL → ③ 서버 추가 + 채널 자동 생성(§5.2)</strong> 입니다. 한 번 클릭으로 끝나도록 설계되어 있습니다.</p>
+  <div class="callout tip">
+    <strong>이 장과 §4.2 의 역할 분담</strong>
+    <strong>§5.1</strong> 이 Developer Portal 에서 <em>미리 준비할 값</em>의 정본이고, <strong>§4.2 Step 4</strong> 가 <code>init</code> <em>마법사 프롬프트 순서</em>의 정본입니다. 같은 절차를 두 곳에서 각각 설명하지 않으므로, 처음 설치할 때는 <strong>§5.1 → §4.2 → §5.2</strong> 순으로 읽으면 됩니다.
+  </div>
 
   <h3 id="s5-1">5.1 사전 준비 — Discord Developer Portal</h3>
-  <p><code>init</code> 을 실행하기 전에 봇을 하나 만들어 토큰을 받아둡니다.</p>
+  <p><code>init</code> 을 실행하기 전에 봇을 하나 만들어 <strong>토큰 · Application ID · 본인 User ID</strong> 3 개를 손에 쥐어둡니다. ①~③ 은 필수, ④~⑤ 는 <code>init</code> 이 대개 자동 감지하지만 <strong>실패할 때 직접 넣어야 하므로 미리 복사해두길 권장</strong>합니다.</p>
   <div class="step">
     <div class="step-head">① Application 생성</div>
     <p><a href="https://discord.com/developers/applications">discord.com/developers/applications</a> → <strong>New Application</strong> → 이름 입력 → Create.</p>
@@ -630,20 +636,34 @@ solosquad migrate --rollback     # 직전 백업으로 복원 (필요 시)</code
     <p>같은 Bot 페이지 → <strong>Privileged Gateway Intents</strong> → <strong>Message Content Intent</strong> ON → Save. 끄면 메시지 본문이 빈 값으로 도착해 봇이 응답하지 못합니다.</p>
   </div>
   <div class="step">
-    <div class="step-head">④ (선택) Application ID 복사</div>
-    <p>좌측 <strong>General Information</strong> → <strong>Application ID</strong>. v1.2.9 부터 <code>init</code> 이 봇 토큰에서 이 값을 자동 감지하므로 보통 직접 입력할 필요가 없습니다. 자동 감지가 실패할 때를 대비해 복사해두면 안전합니다.</p>
+    <div class="step-head">④ Application ID 복사</div>
+    <p>좌측 <strong>General Information</strong> → <strong>Application ID</strong> → <strong>Copy</strong>. 17~20 자리 숫자입니다 (예: <code>1234567890123456789</code>).</p>
+    <p><code>init</code> 은 이 값을 봇 토큰으로부터 <code>/oauth2/applications/@me</code> 를 조회해 자동 감지하므로 <span class="badge now">v1.2.9</span> 보통은 Enter 로 수락하면 됩니다. <strong>다만 자동 감지가 실패하면 직접 붙여넣어야 하므로 미리 복사해 두세요.</strong> 초대 URL 의 <code>client_id</code> 가 이 값이라, 틀리면 초대 링크가 열리지 않습니다.</p>
+  </div>
+  <div class="step">
+    <div class="step-head">⑤ 본인 Discord User ID 복사 (개발자 모드)</div>
+    <p><strong>Application ID 와 다른 값입니다.</strong> Application ID 는 <em>봇</em>의 ID 이고, 이것은 <em>사람인 나</em>의 ID 로 <strong>owner-only 게이트</strong>(내 명령만 봇이 받도록 하는 장치)에 쓰입니다. Discord 앱에서 다음 순서로 확인합니다.</p>
+    <ol>
+      <li><strong>개발자 모드 켜기</strong> — Discord 앱 좌측 하단 <strong>톱니바퀴(사용자 설정)</strong> → <strong>고급(Advanced)</strong> → <strong>개발자 모드(Developer Mode)</strong> ON. 이걸 켜야 아래의 <em>ID 복사하기</em> 메뉴가 나타납니다.</li>
+      <li><strong>내 ID 복사</strong> — 아무 서버·DM 에서 <strong>자기 이름(또는 프로필 아이콘)을 우클릭</strong> → <strong>사용자 ID 복사하기(Copy User ID)</strong>. 모바일은 프로필 → 점 3개 → <em>사용자 ID 복사</em>. 17~20 자리 숫자입니다.</li>
+    </ol>
+    <p><code>init</code> 은 <strong>앱 소유자</strong> ID 를 자동 감지해 기본값으로 제안합니다 <span class="badge now">v1.2.9</span>. 아래 두 경우에는 자동 감지가 안 되거나 틀린 값이 잡히므로 <strong>위에서 복사한 값을 직접 입력</strong>하세요.</p>
+    <ul>
+      <li><strong>팀 소유 앱</strong> — Developer Portal 에서 앱을 Team 에 넣어두면 소유자가 개인이 아니라 팀이라 개인 ID 가 안 잡힙니다.</li>
+      <li><strong>봇을 만든 계정과 명령할 계정이 다를 때</strong> — 예: 회사 계정으로 앱을 만들고 개인 계정으로 대화하는 경우.</li>
+    </ul>
+    <div class="callout tip">
+      <strong>비워둬도 됩니다</strong>
+      Enter 로 건너뛰면 <code>#command-&lt;handle&gt;</code> 채널의 <strong>첫 메시지 작성자</strong>를 소유자로 자동 등록합니다. 다만 그 채널에 다른 사람이 먼저 말하면 그 사람이 등록되므로, 여럿이 있는 서버라면 직접 입력하는 편이 안전합니다.
+    </div>
   </div>
 
   <h3 id="s5-2">5.2 <code>init</code> → 초대 → 채널 자동 생성</h3>
   <p>§4.2 의 <code>init</code> 마법사에서 위 봇 토큰을 입력하면, 나머지는 대부분 자동입니다.</p>
   <div class="step">
     <div class="step-head">① init 이 자동 감지 + 확인</div>
-    <p>봇 토큰만 넣으면 마법사가 <strong>handle · Application ID · 본인 User ID</strong> 를 자동으로 채워 제안합니다 <span class="badge now">v1.2.9</span>. 대부분 Enter 로 수락하면 됩니다.</p>
-    <ul>
-      <li><strong>handle</strong> — 봇 username 에서 추출 (채널 이름 + 본인 식별자).</li>
-      <li><strong>Application ID</strong> — <code>/oauth2/applications/@me</code> 로 자동 감지. 초대 URL 합성에 사용.</li>
-      <li><strong>본인 User ID</strong> — 앱 소유자 ID 를 자동 감지해 기본값으로 제안 (owner-only 게이트용). 팀 소유 앱이거나 다른 사람이 명령할 경우엔 직접 입력하거나 Enter 로 건너뛰면 첫 메시지에서 자동 인식됩니다.</li>
-    </ul>
+    <p>봇 토큰만 넣으면 마법사가 <strong>handle · Application ID · 본인 User ID</strong> 를 자동으로 채워 제안합니다 <span class="badge now">v1.2.9</span>. 대부분 Enter 로 수락하면 됩니다. <strong>프롬프트 전체 순서는 <a href="#s4-2">§4.2 Step 4</a> 를 보세요</strong> (이 문서의 마법사 절차 정본입니다).</p>
+    <p>자동 감지가 실패했을 때 직접 넣을 값은 <a href="#s5-1">§5.1 ④·⑤</a> 에서 미리 복사해둔 <strong>Application ID</strong> 와 <strong>본인 User ID</strong> 입니다.</p>
   </div>
   <div class="step">
     <div class="step-head">② 초대 URL 자동 생성 + 브라우저 열기</div>
@@ -1055,10 +1075,10 @@ solosquad sync                                      # repositories/ ↔ .org.yam
     <dd>cron 실행 전체 로그. 디버깅·회고에 사용.</dd>
 
     <dt>Dockerfile (워크스페이스 루트)</dt>
-    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때. v1.2.10부터 <code>solosquad init</code> 이 워크스페이스 루트로 복사(소스 템플릿은 <code>assets/docker/</code>).</dd>
+    <dd>Docker 이미지 빌드 레시피. SoloSquad 봇/스케줄러를 컨테이너로 만들 때. v1.2.10부터 <code>solosquad init</code> 이 워크스페이스 루트로 복사(소스 템플릿은 리포 최상위 <code>docker/</code>).</dd>
 
     <dt>docker-compose.yml (워크스페이스 루트)</dt>
-    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정. 워크스페이스 루트에서 <code>docker compose up -d --build</code> 로 기동. <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> 도 마운트 — user-global SKILL override와 backup 호환. v1.2.10: 메인테이너용 <code>deploy/docker/</code> repo-self-hosting 스택 제거, 사용자 Docker 자산을 <code>assets/docker/</code> 단일 홈으로 정리.</dd>
+    <dd>여러 컨테이너(bot + scheduler)를 한 번에 실행하는 설정. 워크스페이스 루트에서 <code>docker compose up -d --build</code> 로 기동. <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> 도 마운트 — user-global SKILL override와 backup 호환. v1.2.10: 메인테이너용 <code>deploy/docker/</code> repo-self-hosting 스택 제거, 사용자 Docker 자산을 단일 홈으로 정리(현재 경로는 리포 최상위 <code>docker/</code>).</dd>
 
     <dt>README.md</dt>
     <dd>프로젝트 첫인상 문서. npm/GitHub에 표시되는 메인 설명. SoloSquad의 README는 설치·빠른 사용법.</dd>
@@ -1170,7 +1190,7 @@ solosquad sync                                      # repositories/ ↔ .org.yam
   <h4>"solosquad를 찾을 수 없습니다"</h4>
   <ul>
     <li><code>npm install -g solosquad</code>로 설치했는지 확인</li>
-    <li><code>node --version</code>으로 Node.js 18+ 확인</li>
+    <li><code>node --version</code>으로 Node.js 20+ 확인</li>
     <li>Linux에서 권한 오류 시: <code>sudo npm install -g solosquad</code> 또는 <code>~/.npm-global</code> 설정</li>
   </ul>
 
@@ -1465,7 +1485,7 @@ git push --dry-run        # 워크스페이스 안에서도 인증 동작 확인
   A. AI는 도구입니다. 중요한 결정은 반드시 본인이 직접 확인. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+)로 spawn 결과 revert 가능. v0.4 자율 실행은 per-cycle git-snapshot keep/discard로 자동 보호.</p>
 
   <p><strong>Q. Mac Mini 대신 Raspberry Pi로 돌릴 수 있나요?</strong><br>
-  A. Node.js 18+이 돌면 가능. 단, Claude Code CLI는 arm64 기반 리눅스를 공식 지원하는지 먼저 확인 필요.</p>
+  A. Node.js 20+이 돌면 가능. 단, Claude Code CLI는 arm64 기반 리눅스를 공식 지원하는지 먼저 확인 필요.</p>
 
   <p><strong>Q. 완전 오프라인에서 쓸 수 있나요?</strong><br>
   A. 불가. Claude API와 Slack/Discord 서버 통신이 필수.</p>

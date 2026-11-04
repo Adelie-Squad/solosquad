@@ -55,3 +55,43 @@ jobs:
         run: |
           npm install -g .
           solosquad doctor --ci || true
+
+  # v2.0.0 — the Python engine (python/). Not part of the npm package; gated here so
+  # a PR cannot break it silently.
+  python:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    # Windows is not a verified v2 target yet (POSIX 0600 secret files, service
+    # paths); run it for visibility without blocking until it is.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - run: uv run pytest -q
+
+  # The Python parser/validator must keep matching the v1.4.3 TS code it replaces:
+  # regenerate both goldens from TS and fail if they drifted from what is committed.
+  golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx tsx scripts/dump-asset-golden.ts > python/tests/golden/assets-v1.4.3.json
+      - run: npx tsx scripts/dump-validate-golden.ts > python/tests/golden/validate-v1.4.3.json
+      - run: npx tsx scripts/dump-parse-edge-golden.ts > python/tests/golden/parse-edge-v1.4.3.json
+      - run: git diff --exit-code -- python/tests/golden

@@ -1,0 +1,378 @@
+[
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d",
+      "body": "body\n"
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d",
+      "body": "body\n"
+    }
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d",
+      "body": "   \nbody\n"
+    }
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "confidence": 0.1,
+      "schema_version": 12,
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nschema_version: 012\nconfidence: 1e-1",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "confidence": 1.5,
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nconfidence: 1.5\nstateful: yes",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "team": "product",
+      "stateful": true,
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nstateful: true\nteam: product",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nscope: galaxy",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "scope": "org",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nscope: org",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "triggers": {
+        "slash": [
+          "/x"
+        ],
+        "keyword": [
+          "k"
+        ],
+        "explicit": true
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ntriggers:\n  slash: [/x, 3]\n  keyword: [k, '']\n  explicit: true",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "triggers": {
+        "freq": {
+          "keywords": [
+            "k"
+          ],
+          "window_turns": 5,
+          "threshold": 3
+        }
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ntriggers:\n  freq:\n    keywords: [k]\n    window_turns: 5",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ntriggers: nope",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "inputs": {
+        "required": [
+          "x"
+        ]
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ninputs:\n  required: [x]\n  optional: y",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "outputs": [
+        "x"
+      ],
+      "handoff_to": [
+        "b"
+      ],
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\noutputs: [x, '', 3]\nhandoff_to: [b, 1]",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {
+        "base": {
+          "k": 1
+        },
+        "merged": {
+          "k": 1,
+          "j": 2
+        }
+      },
+      "raw_frontmatter": "name: a\ndescription: d\nbase: &b {k: 1}\nmerged:\n  <<: *b\n  j: 2",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {
+        "created": "2026-11-04T00:00:00.000Z",
+        "stamp": "2026-11-04T10:00:00.000Z"
+      },
+      "raw_frontmatter": "name: a\ndescription: d\ncreated: 2026-11-04\nstamp: 2026-11-04T10:00:00Z",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "loop_mode": {
+        "kind": "spec-gate",
+        "stop_when": "green"
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nloop_mode:\n  kind: spec-gate\n  stop_when: green",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nloop_mode:\n  kind: forever",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "budget": {
+        "per_call_usd": 0.5
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nbudget:\n  per_call_usd: 0.5\n  daily_usd: '3'",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ncollab_pattern: pipeline",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ncollab_pattern: chaos",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "category": "planning",
+      "pm_conventions": {
+        "minimum_approaches": 2
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ncategory: planning\npm_conventions:\n  minimum_approaches: 2",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "dev_capability": true,
+      "dev_permissions": {
+        "merge": {
+          "auto": false
+        }
+      },
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\ndev_capability: true\ndev_permissions:\n  merge:\n    auto: false",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "multi\nline",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: |\n  multi\n  line",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "folded text",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: >\n  folded\n  text",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "quoted: colon",
+      "description": "d",
+      "extra": {},
+      "raw_frontmatter": "name: 'quoted: colon'\ndescription: \"d\"",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {
+        "x": null,
+        "y": null,
+        "z": null
+      },
+      "raw_frontmatter": "name: a\ndescription: d\nx: ~\ny: null\nz: Null",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {
+        "x": 31,
+        "y": 15,
+        "z": "1_000",
+        "w": "0X1f"
+      },
+      "raw_frontmatter": "name: a\ndescription: d\nx: 0x1F\ny: 0o17\nz: 1_000\nw: 0X1f",
+      "body": ""
+    }
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "extra": {
+        "x": null,
+        "y": null
+      },
+      "raw_frontmatter": "name: a\ndescription: d\nx: .inf\ny: -.Inf",
+      "body": ""
+    }
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "error": "SkillParseError"
+  },
+  {
+    "ok": {
+      "name": "a",
+      "description": "d",
+      "source": "elsewhere",
+      "extra": {},
+      "raw_frontmatter": "name: a\ndescription: d\nsource: elsewhere",
+      "body": "body with --- inside\n---\nmore\n"
+    }
+  }
+]

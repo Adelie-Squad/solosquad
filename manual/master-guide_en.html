@@ -211,7 +211,7 @@
 <body>
 
 <aside class="sidebar">
-  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.2.9</span></h1>
+  <h1>SoloSquad <span style="font-size: 0.6em; color: #64748b; font-weight: 400;">v1.4.3</span></h1>
 
   <nav>
     <ul>
@@ -371,6 +371,7 @@ Layer 2  Repository (code)    The actual product code — separated per repo</di
   <div class="callout info">
     <strong>The version this document covers</strong>
     The current version is <span class="badge now">v1.4.3</span> (Research Workflow — a bundled autonomous hypothesis-validation main workflow (diverge/converge, blind backtest, numeric eval, Track2 verify); goals run unattended for 8h+; deliverables move to org-level <code>&lt;org&gt;/reports/</code>. 1.4.2 hotfixes — fixes 1.4.1's <code>solosquad start</code> bringing up only the scheduler with the bot never starting (the embedded scheduler's keep-alive is now separated) + rate-limit notice de-dupe (<code>warning</code> announced once per reset window, only <code>exceeded</code> is urgent). 1.4.1 = works-thread chat — Chief reads messages in <code>works-&lt;handle&gt;</code> task threads and replies inside the thread; no permission change needed (the invite already grants SendMessagesInThreads + the MessageContent intent), thread&rarr;task context injection, single shared session. Also <code>solosquad start</code> runs bot + cron + supervisor in one (with a <code>scheduler.pid</code> singleton lock to prevent double-firing). v1.4.0 = the session-orchestration re-scoped subset: 🆕 session-start marker, S-1, S-2a, the leading-indicator cron preset, and the <code>_log.md</code> workflow audit log). Chapters 1&ndash;7 of this document are written against the v1.2.x line. For the detailed per-version change history, see <code>CHANGELOG.md</code> in the repository root (the single source of truth).
+    <br><strong>v2 (in development · unreleased)</strong> A Python v2 engine is being developed in the repository's <code>python/</code> directory; it is not part of the npm package. This manual covers the npm release v1.4.3.
   </div>
 </section>
 
@@ -503,7 +504,7 @@ Layer 2  Repository (code)    The actual product code — separated per repo</di
   </table>
 
   <h3 id="s4-2">4.2 New Install &mdash; Creating Your First Workspace</h3>
-  <p>The full sequence is <strong>prerequisites → install → the <code>init</code> wizard → messenger connection → start the bot</strong>. Because the messenger (Discord) bot token is entered partway through the wizard, <strong>finishing the preparation in Chapter 5 &sect;5.1 first (creating the bot token)</strong> lets you run through everything in one pass.</p>
+  <p>The full sequence is <strong>prerequisites → install → the <code>init</code> wizard → messenger connection → start the bot</strong>. Because the Discord bot values are entered partway through the wizard, <strong>finishing <a href="#s5-1">&sect;5.1's preparation</a> first (token &middot; Application ID &middot; your User ID)</strong> lets you run through everything in one uninterrupted pass.</p>
 
   <div class="step">
     <div class="step-head">Step 1 &mdash; Install the prerequisites (Node.js &middot; git &middot; Claude Code)</div>
@@ -521,13 +522,14 @@ npm install -g @anthropic-ai/claude-code
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs git
 npm install -g @anthropic-ai/claude-code</code></pre>
-    <p>Verify with <code>node --version</code> (v18+), <code>git --version</code>, and <code>claude --version</code>. The GitHub CLI (<code>gh</code>) is optional, but it must be present for the engineering agents to open PRs.</p>
+    <p>Verify with <code>node --version</code> (<strong>v20 or newer</strong> &mdash; required by <code>engines</code> in <code>package.json</code>), <code>git --version</code>, and <code>claude --version</code>. The GitHub CLI (<code>gh</code>) is optional, but it must be present for the engineering agents to open PRs.</p>
   </div>
 
   <div class="step">
     <div class="step-head">Step 2 &mdash; Log in to Claude</div>
-    <p>SoloSquad uses Claude Code as its backend. Subscribe to a plan that includes Claude Code (Max is recommended) at <a href="https://claude.ai">claude.ai</a>, then log in.</p>
-    <pre><code>claude login        # Browser OAuth — your credentials are stored on this machine</code></pre>
+    <p>SoloSquad uses Claude Code as its backend, so you must <strong>subscribe first</strong> to a plan that includes Claude Code (Max is recommended) at <a href="https://claude.ai">claude.ai</a>. You can log in here up front, or skip it &mdash; the <code>init</code> wizard's <strong>Step 1.5</strong> detects your auth state and opens the same OAuth flow on the spot. The result is identical, so take whichever route suits you.</p>
+    <pre><code>claude login        # Browser OAuth — your credentials are stored on this machine
+                    # (skip it and init Step 1.5 walks you through the same flow)</code></pre>
     <p>SoloSquad never handles an API key directly; it delegates to Claude Code's login state.</p>
   </div>
 
@@ -547,10 +549,10 @@ solosquad init</code></pre>
     <ol>
       <li><strong>Name and role</strong> &mdash; used so the agents can address you and match their tone (the default role is <code>founder</code>).</li>
       <li><strong>Messenger choice</strong> &mdash; Discord (Slack is currently disabled).</li>
-      <li><strong>Bot token</strong> &mdash; the Discord bot token you issued in &sect;5.1.</li>
+      <li><strong>Bot token</strong> &mdash; the Discord bot token you issued in <a href="#s5-1">&sect;5.1 step 2</a>.</li>
       <li><strong>Confirm the handle</strong> &mdash; the value auto-extracted from the bot username is proposed as the default. This handle becomes your channel names (<code>command-&lt;handle&gt;</code> and <code>works-&lt;handle&gt;</code>) and your own identifier.</li>
-      <li><strong>Confirm the Application ID</strong> <span class="badge now">v1.2.9</span> &mdash; the value auto-detected from the bot token is proposed as the default (press Enter to accept). It's used to build the invite URL.</li>
-      <li><strong>Your Discord User ID</strong> <span class="badge now">v1.2.9</span> &mdash; the app owner's ID is auto-detected and proposed as the default (press Enter to accept). Used for the owner-only gate.</li>
+      <li><strong>Confirm the Application ID</strong> <span class="badge now">v1.2.9</span> &mdash; the value auto-detected from the bot token is proposed as the default (press Enter to accept). It's used to build the invite URL. If detection fails, paste the value from <a href="#s5-1">&sect;5.1 step 4</a>.</li>
+      <li><strong>Your Discord User ID</strong> <span class="badge now">v1.2.9</span> &mdash; the app owner's ID is auto-detected and proposed as the default (press Enter to accept). Used for the owner-only gate. If detection doesn't fire (team-owned apps and the like), look it up via the Developer Mode steps in <a href="#s5-1">&sect;5.1 step 5</a> and type it in.</li>
       <li><strong>Timezone and brief times</strong> &mdash; defaults to Asia/Seoul and 08:00 / 18:00.</li>
       <li><strong>First organization + Chief name</strong> &mdash; you set the organization (business/product) name and the Chief's name.</li>
     </ol>
@@ -609,10 +611,14 @@ solosquad migrate --rollback     # restore from the latest backup (if needed)</c
 <section id="s5">
   <h2><span class="num">5.</span>Messenger Connection</h2>
   <p>For the AI to converse in a messenger, it needs a <strong>bot account</strong>. The official messenger for v1.0 is a single one, <strong>Discord</strong> (the Slack adapter ships in the code but is a post-v1.0 slot). One workspace uses one messenger.</p>
-  <p>The full flow is <strong>(1) Developer Portal preparation → (2) the <code>init</code> wizard → auto-generated invite URL → (3) add to your server + auto-create channels</strong>. It's designed to finish with a single click.</p>
+  <p>The full flow is <strong>(1) Developer Portal preparation (&sect;5.1) → (2) the <code>init</code> wizard (&sect;4.2 Step 4) → auto-generated invite URL → (3) add to your server + auto-create channels (&sect;5.2)</strong>. It's designed to finish with a single click.</p>
+  <div class="callout tip">
+    <strong>How this chapter and &sect;4.2 divide the work</strong>
+    <strong>&sect;5.1</strong> is the reference for <em>the values you prepare</em> in the Developer Portal; <strong>&sect;4.2 Step 4</strong> is the reference for <em>the <code>init</code> wizard's prompt order</em>. Neither repeats the other, so on a first install just read them in order: <strong>&sect;5.1 → &sect;4.2 → &sect;5.2</strong>.
+  </div>
 
   <h3 id="s5-1">5.1 Preparation &mdash; Discord Developer Portal</h3>
-  <p>Before running <code>init</code>, create one bot and obtain its token.</p>
+  <p>Before running <code>init</code>, create one bot and get three values in hand: <strong>token &middot; Application ID &middot; your User ID</strong>. Steps 1&ndash;3 are required; steps 4&ndash;5 are usually auto-detected by <code>init</code>, but <strong>you must enter them by hand when detection fails, so copying them up front is recommended</strong>.</p>
   <div class="step">
     <div class="step-head">1. Create an Application</div>
     <p>Go to <a href="https://discord.com/developers/applications">discord.com/developers/applications</a> → <strong>New Application</strong> → enter a name → Create.</p>
@@ -630,20 +636,34 @@ solosquad migrate --rollback     # restore from the latest backup (if needed)</c
     <p>On the same Bot page, go to <strong>Privileged Gateway Intents</strong> → turn <strong>Message Content Intent</strong> ON → Save. If it's off, message bodies arrive empty and the bot can't respond.</p>
   </div>
   <div class="step">
-    <div class="step-head">4. (Optional) Copy the Application ID</div>
-    <p>In the left sidebar, go to <strong>General Information</strong> → <strong>Application ID</strong>. As of v1.2.9, <code>init</code> auto-detects this value from the bot token, so you usually don't need to enter it by hand. Copying it is a safe fallback in case auto-detection fails.</p>
+    <div class="step-head">4. Copy the Application ID</div>
+    <p>In the left sidebar, go to <strong>General Information</strong> → <strong>Application ID</strong> → <strong>Copy</strong>. It's a 17&ndash;20 digit number (e.g. <code>1234567890123456789</code>).</p>
+    <p><code>init</code> auto-detects this by calling <code>/oauth2/applications/@me</code> with your bot token <span class="badge now">v1.2.9</span>, so you can normally just press Enter. <strong>But when detection fails you have to paste it yourself, so copy it up front.</strong> It becomes the <code>client_id</code> in the invite URL &mdash; get it wrong and the invite link won't open.</p>
+  </div>
+  <div class="step">
+    <div class="step-head">5. Copy your own Discord User ID (Developer Mode)</div>
+    <p><strong>This is a different value from the Application ID.</strong> The Application ID identifies the <em>bot</em>; this one identifies <em>you, the human</em>, and drives the <strong>owner-only gate</strong> (which makes the bot accept commands only from you). Find it in the Discord app:</p>
+    <ol>
+      <li><strong>Turn on Developer Mode</strong> &mdash; in the Discord app, click the <strong>gear icon (User Settings)</strong> at the bottom left → <strong>Advanced</strong> → toggle <strong>Developer Mode</strong> ON. The <em>Copy User ID</em> menu only appears once this is on.</li>
+      <li><strong>Copy your ID</strong> &mdash; in any server or DM, <strong>right-click your own name (or avatar)</strong> → <strong>Copy User ID</strong>. On mobile: profile → three-dot menu → <em>Copy User ID</em>. It's a 17&ndash;20 digit number.</li>
+    </ol>
+    <p><code>init</code> auto-detects the <strong>app owner's</strong> ID and proposes it as the default <span class="badge now">v1.2.9</span>. In the two cases below detection either fails or picks the wrong account, so <strong>enter the value you copied above by hand</strong>:</p>
+    <ul>
+      <li><strong>Team-owned apps</strong> &mdash; if you put the app under a Team in the Developer Portal, the owner is the team rather than a person, so no individual ID is found.</li>
+      <li><strong>The account that made the bot differs from the one issuing commands</strong> &mdash; e.g. you created the app on a work account but chat from a personal one.</li>
+    </ul>
+    <div class="callout tip">
+      <strong>You may leave it blank</strong>
+      Press Enter to skip and the bot registers <strong>the author of the first message</strong> in <code>#command-&lt;handle&gt;</code> as the owner. Note that whoever speaks there first gets registered &mdash; on a busy server, entering the ID by hand is safer.
+    </div>
   </div>
 
   <h3 id="s5-2">5.2 <code>init</code> → Invite → Auto-create Channels</h3>
   <p>Once you enter the bot token above into the <code>init</code> wizard from &sect;4.2, the rest is mostly automatic.</p>
   <div class="step">
     <div class="step-head">1. init auto-detects + confirms</div>
-    <p>Once you supply the bot token alone, the wizard fills in and proposes the <strong>handle, Application ID, and your User ID</strong> automatically <span class="badge now">v1.2.9</span>. In most cases you can accept each by pressing Enter.</p>
-    <ul>
-      <li><strong>handle</strong> &mdash; extracted from the bot username (channel names + your identifier).</li>
-      <li><strong>Application ID</strong> &mdash; auto-detected via <code>/oauth2/applications/@me</code>. Used to compose the invite URL.</li>
-      <li><strong>Your User ID</strong> &mdash; the app owner's ID is auto-detected and proposed as the default (for the owner-only gate). If the app is team-owned or someone else will be issuing commands, enter it manually, or press Enter to skip and it will be auto-recognized from your first message.</li>
-    </ul>
+    <p>Once you supply the bot token alone, the wizard fills in and proposes the <strong>handle, Application ID, and your User ID</strong> automatically <span class="badge now">v1.2.9</span>. In most cases you can accept each by pressing Enter. <strong>For the full prompt order see <a href="#s4-2">&sect;4.2 Step 4</a></strong> &mdash; that is this document's reference for the wizard.</p>
+    <p>When auto-detection fails, the values you type in are the <strong>Application ID</strong> and <strong>your User ID</strong> you copied ahead of time in <a href="#s5-1">&sect;5.1 steps 4&ndash;5</a>.</p>
   </div>
   <div class="step">
     <div class="step-head">2. Invite URL is auto-generated + opened in the browser</div>
@@ -1049,10 +1069,10 @@ solosquad sync                                      # reconcile repositories/ �
     <dd>Full execution logs for crons. Used for debugging / retro.</dd>
 
     <dt>Dockerfile (workspace root)</dt>
-    <dd>Docker image build recipe. For containerizing SoloSquad bot/scheduler. Since v1.2.10, <code>solosquad init</code> copies it to the workspace root (source template lives in <code>assets/docker/</code>).</dd>
+    <dd>Docker image build recipe. For containerizing SoloSquad bot/scheduler. Since v1.2.10, <code>solosquad init</code> copies it to the workspace root (source template lives in <code>docker/</code> at the repo root).</dd>
 
     <dt>docker-compose.yml (workspace root)</dt>
-    <dd>Settings for running multiple containers (bot + scheduler) together. Run <code>docker compose up -d --build</code> from the workspace root. Also mounts <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> — user-global SKILL override and backups compatible. v1.2.10: removed the maintainer-only <code>deploy/docker/</code> repo-self-hosting stack and consolidated user Docker assets into a single home at <code>assets/docker/</code>.</dd>
+    <dd>Settings for running multiple containers (bot + scheduler) together. Run <code>docker compose up -d --build</code> from the workspace root. Also mounts <code>~/.solosquad/</code> + <code>~/.solosquad-backups/</code> — user-global SKILL override and backups compatible. v1.2.10: removed the maintainer-only <code>deploy/docker/</code> repo-self-hosting stack and consolidated user Docker assets into a single home (now <code>docker/</code> at the repo root).</dd>
 
     <dt>README.md</dt>
     <dd>First-impression document. Shown on npm/GitHub. SoloSquad's README covers install + quick start.</dd>
@@ -1136,7 +1156,7 @@ solosquad sync                                      # reconcile repositories/ �
   <h4>"solosquad: command not found"</h4>
   <ul>
     <li>Verify install: <code>npm install -g solosquad</code></li>
-    <li>Verify Node.js 18+: <code>node --version</code></li>
+    <li>Verify Node.js 20+: <code>node --version</code></li>
     <li>On Linux permission errors: <code>sudo npm install -g solosquad</code> or set up <code>~/.npm-global</code></li>
   </ul>
 
@@ -1431,7 +1451,7 @@ git push --dry-run        # confirm auth works inside the workspace too</code></
   A. AI is a tool. Always verify important decisions yourself. <code>solosquad rollback --workflow &lt;id&gt;</code> (v0.3+) can revert spawn results. v0.4 autonomous execution auto-protects via per-cycle git-snapshot keep/discard.</p>
 
   <p><strong>Q. Can I run it on a Raspberry Pi instead of Mac Mini?</strong><br>
-  A. Possible if Node.js 18+ runs. But verify whether Claude Code CLI officially supports arm64 Linux first.</p>
+  A. Possible if Node.js 20+ runs. But verify whether Claude Code CLI officially supports arm64 Linux first.</p>
 
   <p><strong>Q. Can I use it fully offline?</strong><br>
   A. No. Claude API and Slack/Discord server communication are required.</p>

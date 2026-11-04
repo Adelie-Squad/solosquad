@@ -67,7 +67,7 @@ specialist(`product-designer`, `researcher`, `data-analyst`)를 오케스트레�
    b) 문제정의 — 성격에 따라 scqa/five-whys/tdcc *워크플로* 선택 + mece·xyz-hypothesis skill (§3.6 본질 원칙, 강제 체인 아님)
    c) opportunity-tree         ← OST + Six Forcing Questions 자가검증
    d) hypothesis-design        ← XYZ + If-Then-Because + V/U/V/F
-   e) prd                      ← 8-section PRD (AI 제품이면 R6 AI 부록 분기)
+   e) prd                      ← 단일 양식 PRD — 결정 · 구현 결정(후보·채택·근거) · 결과 (AI 제품이면 R6 AI 부록)
    f) wbs                      ← 마일스톤 → WBS 분해
    g) docs                     ← PRD 분류·배치(외부/내부)·명명·버전 1:1 검증·INDEX 갱신
 4. Output JSON: { design_doc, milestones, open_questions, confidence_score, evidence_refs }
