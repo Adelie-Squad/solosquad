@@ -18,6 +18,7 @@ from apscheduler.triggers.cron import CronTrigger
 from pydantic import ValidationError
 
 from solosquad import __version__
+from solosquad.artifacts import load_kinds
 from solosquad.assets.composition import KNOWN_TEAMS, read_composition
 from solosquad.assets.skill import SkillParseError, parse_skill_md
 from solosquad.assets.text import load_yaml, match_frontmatter, normalize_line
@@ -28,6 +29,8 @@ from solosquad.layout import LayoutError, Solution
 from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import judge, providers_reached
 from solosquad.routing.policy import load_policy
+from solosquad.workflows.definition import load_workflows
+from solosquad.workflows.tools import TOOLS
 
 ENTRY_AGENT = "chief"
 HARNESS_BINARIES = {"claude-code": "claude", "codex": "codex", "opencode": "opencode"}
@@ -144,6 +147,54 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
                 "schedule",
                 path=str(path),
             )
+
+    defs, wf_errors = load_workflows(ctx.org_root / "workflows")
+    for err in wf_errors:
+        r.add("WORKFLOW_INVALID", err, path=str(ctx.org_root / "workflows"))
+    artifact_kinds = load_kinds(ctx.org_root)
+    for wf in defs.values():
+        where = str(ctx.org_root / "workflows" / f"{wf.name}.yaml")
+        if wf.schedule:
+            try:
+                CronTrigger.from_crontab(wf.schedule, timezone=ctx.timezone)
+            except ValueError as e:
+                r.add(
+                    "WORKFLOW_SCHEDULE_INVALID",
+                    f"{wf.name}: {wf.schedule!r}: {e}",
+                    "schedule",
+                    path=where,
+                )
+            if any(i.required and i.type == "upload" for i in wf.inputs):
+                r.add(
+                    "WORKFLOW_SCHEDULE_NEEDS_UPLOAD",
+                    f"{wf.name} is scheduled but needs an"
+                    " uploaded file — it only runs from the web",
+                    "schedule",
+                    "warn",
+                    where,
+                )
+        for step in wf.steps:
+            if step.tool and step.tool not in TOOLS:
+                r.add(
+                    "WORKFLOW_TOOL_UNKNOWN",
+                    f"{wf.name}.{step.id}: no tool {step.tool!r}",
+                    "steps",
+                    path=where,
+                )
+            if step.save_as and step.save_as.kind not in artifact_kinds:
+                r.add(
+                    "WORKFLOW_KIND_UNKNOWN",
+                    f"{wf.name}.{step.id}: no artifact kind {step.save_as.kind!r}",
+                    "steps",
+                    path=where,
+                )
+            if step.agent and step.agent not in agents:
+                r.add(
+                    "WORKFLOW_AGENT_UNKNOWN",
+                    f"{wf.name}.{step.id}: no agent {step.agent!r}",
+                    "steps",
+                    path=where,
+                )
 
     access = ctx.workspace_config.access
     if not access.require_login and not access.allowed_networks:

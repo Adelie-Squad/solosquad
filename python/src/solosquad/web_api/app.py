@@ -30,6 +30,7 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from solosquad import __version__
+from solosquad.artifacts import ArtifactStore
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
 from solosquad.layout import Workspace
@@ -54,6 +55,7 @@ from solosquad.web_api.accounts import (
     SessionStage,
 )
 from solosquad.web_api.events import EventHub
+from solosquad.workflows.engine import UPLOAD_LIMIT, WorkflowEngine
 
 SESSION_COOKIE = "ss_session"
 CSRF_HEADER = "x-csrf-token"
@@ -88,6 +90,14 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "connections.update": OWNER,
     "connections.delete": OWNER,
     "budget": EVERYONE,
+    "workflows.list": EVERYONE,
+    "workflows.run": EVERYONE,
+    "workflows.update": OWNER,
+    "workflows.approve": OWNER,
+    "uploads.list": EVERYONE,
+    "uploads.create": EVERYONE,
+    "artifacts.list": EVERYONE,
+    "artifacts.review": EVERYONE,
 }
 
 
@@ -135,6 +145,8 @@ class WebConfig:
     connections_path: Path | None = None
     """Where the web adds connections — the owner's `core/connections.yaml`."""
     reload_connections: Callable[[], list[Connection]] | None = None
+    workflows: WorkflowEngine | None = None
+    artifacts: ArtifactStore | None = None
     """Re-reads every connection file after a change, so routing sees it at once."""
     """Set on shutdown so open event streams end instead of holding the server."""
 
@@ -174,7 +186,7 @@ class SecurityHeaders:
 
 def create_app(cfg: WebConfig) -> Starlette:
     m = cfg.manager
-    hub = EventHub(m)
+    hub = EventHub(m, others={"workflow": cfg.workflows.manager} if cfg.workflows else None)
 
     def where(request: Request) -> Origin:
         peer = request.client.host if request.client else None
@@ -676,6 +688,125 @@ def create_app(cfg: WebConfig) -> Starlette:
             }
         )
 
+    # ------------------------------------------------------------- workflows · uploads · artifacts
+
+    def engine() -> WorkflowEngine:
+        if cfg.workflows is None:
+            raise HTTPException(404, "workflows are not enabled on this office")
+        return cfg.workflows
+
+    def store() -> ArtifactStore:
+        if cfg.artifacts is None:
+            raise HTTPException(404, "artifacts are not enabled on this office")
+        return cfg.artifacts
+
+    async def workflows(request: Request) -> Response:
+        need(request, "workflows.list")
+        e = engine()
+        return Json({"workflows": e.summaries(), "errors": e.errors})
+
+    async def workflow_update(request: Request) -> Response:
+        who = need(request, "workflows.update")
+        name = request.path_params["name"]
+        data = await body(request)
+        if "enabled" not in data:
+            raise ValueError("send {enabled: true|false}")
+        engine().set_enabled(name, bool(data["enabled"]))
+        accounts().audit(
+            who.user_id, "workflow.enable" if data["enabled"] else "workflow.disable", name
+        )
+        return Json(next(w for w in engine().summaries() if w["name"] == name))
+
+    async def workflow_run(request: Request) -> Response:
+        who = need(request, "workflows.run")
+        name = request.path_params["name"]
+        inputs = (await body(request)).get("inputs") or {}
+        if not isinstance(inputs, dict):
+            raise ValueError("inputs must be an object")
+        by = who.session.user.username if who.session else "local-cli"
+        tid, rid = await engine().run_now(name, inputs, source=f"user:{by}")
+        if cfg.accounts is not None:
+            cfg.accounts.audit(who.user_id, "workflow.run", name)
+        return Json({"thread_id": tid, "run_id": rid}, status_code=201)
+
+    async def workflow_runs(request: Request) -> Response:
+        need(request, "workflows.list")
+        q = request.query_params
+        return Json(
+            engine().manager.store.runs(
+                thread_id=q.get("thread_id"),
+                status=q.get("status"),
+                limit=int(q.get("limit", "50")),
+            )
+        )
+
+    async def workflow_run_get(request: Request) -> Response:
+        need(request, "workflows.list")
+        found = engine().manager.store.run(request.path_params["rid"])
+        if found is None:
+            raise KeyError(f"no workflow run {request.path_params['rid']}")
+        return Json(found)
+
+    async def workflow_state(request: Request) -> Response:
+        need(request, "workflows.list")
+        tid = request.path_params["tid"]
+        if engine().manager.store.thread(tid) is None:
+            raise KeyError(f"no workflow thread {tid}")
+        return Json(await engine().manager.thread_state(tid))
+
+    async def workflow_resume(request: Request) -> Response:
+        who = need(request, "workflows.approve")
+        tid = request.path_params["tid"]
+        e = engine()
+        if e.manager.store.thread(tid) is None:
+            raise KeyError(f"no workflow thread {tid}")
+        value = (await body(request)).get("value")
+        approver = who.session.user.username if who.session else "local-cli"
+        rid = await e.manager.resume(tid, value, source=f"user:{approver}")
+        if cfg.accounts is not None:
+            cfg.accounts.audit(who.user_id, "approval", f"workflow {tid} → {value!r}")
+        return Json({"run_id": rid}, status_code=201)
+
+    async def uploads(request: Request) -> Response:
+        if request.method == "POST":
+            who = need(request, "uploads.create")
+            filename = request.query_params.get("filename") or ""
+            declared = int(request.headers.get("content-length") or "0")
+            if declared > UPLOAD_LIMIT:
+                raise HTTPException(413, f"file is larger than {UPLOAD_LIMIT // (1024 * 1024)} MB")
+            meta = engine().save_upload(filename, await request.body())
+            if cfg.accounts is not None:
+                cfg.accounts.audit(who.user_id, "upload", f"{meta['filename']} ({meta['size']} B)")
+            return Json(meta, status_code=201)
+        need(request, "uploads.list")
+        return Json(engine().uploads_list())
+
+    async def artifacts(request: Request) -> Response:
+        need(request, "artifacts.list")
+        q = request.query_params
+        review = q.get("needs_review")
+        found = store().find(
+            kind=q.get("kind"),
+            thread_id=q.get("thread_id"),
+            workflow=q.get("workflow"),
+            needs_review=None if review is None else review.lower() in ("1", "true", "yes"),
+            since=float(q["since"]) if q.get("since") else None,
+            limit=int(q.get("limit", "50")),
+        )
+        return Json([a.public() for a in found])
+
+    async def artifact_get(request: Request) -> Response:
+        need(request, "artifacts.list")
+        return Json(store().get(request.path_params["aid"]).public())
+
+    async def artifact_review(request: Request) -> Response:
+        who = need(request, "artifacts.review")
+        by = who.session.user.username if who.session else "local-cli"
+        art = store().mark_reviewed(request.path_params["aid"], by)
+        if cfg.accounts is not None:
+            cfg.accounts.audit(who.user_id, "artifact.review", art.id)
+        return Json(art.public())
+
     # ------------------------------------------------------------------ errors · routes
 
     async def not_found(_request: Request, exc: Exception) -> Response:
@@ -714,6 +845,17 @@ def create_app(cfg: WebConfig) -> Starlette:
         ("/connections", connections, ["GET", "POST"]),
         ("/connections/{cid}", connection_update, ["PATCH", "DELETE"]),
         ("/budget", budget, ["GET"]),
+        ("/workflows", workflows, ["GET"]),
+        ("/workflows/{name}", workflow_update, ["PATCH"]),
+        ("/workflows/{name}/run", workflow_run, ["POST"]),
+        ("/workflow-runs", workflow_runs, ["GET"]),
+        ("/workflow-runs/{rid}", workflow_run_get, ["GET"]),
+        ("/workflow-threads/{tid}/state", workflow_state, ["GET"]),
+        ("/workflow-threads/{tid}/resume", workflow_resume, ["POST"]),
+        ("/uploads", uploads, ["GET", "POST"]),
+        ("/artifacts", artifacts, ["GET"]),
+        ("/artifacts/{aid}", artifact_get, ["GET"]),
+        ("/artifacts/{aid}/review", artifact_review, ["POST"]),
     ]
     routes: list[Route | Mount] = [
         Mount("/api", routes=[Route(path, fn, methods=methods) for path, fn, methods in api])

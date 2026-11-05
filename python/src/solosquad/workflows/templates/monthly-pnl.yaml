@@ -1,0 +1,33 @@
+# v2.1.0 first workflow (W14) — a transaction ledger in, a profit-and-loss table out.
+# Copy into an org with `solosquad workflows add monthly-pnl`; the org owns its copy.
+name: monthly-pnl
+title: 월 손익표
+description: 거래 원장(엑셀 · CSV)을 올리면 손익표를 만들고, 대표 확인 뒤 Chief 가 3줄로 요약합니다.
+enabled: true
+inputs:
+  - name: ledger
+    type: upload
+    label: 거래 원장 (날짜 · 구분 · 계정 · 금액)
+    accept: [xlsx, csv]
+steps:
+  - id: compute
+    tool: finance.pnl
+    with:
+      file: "{{ inputs.ledger }}"
+      currency: KRW
+    save_as:
+      kind: finance.pnl
+      title: 손익표
+  - id: review
+    approval:
+      title: 손익표 확인
+      summary: "{{ steps.compute.summary }}"
+      risk: low
+  - id: brief
+    agent: chief
+    prompt: >-
+      대표에게 이번 손익표를 3줄로 요약해줘. 숫자는 아래 그대로 쓰고 새로 계산하지 마.
+      {{ steps.compute.summary }}
+    save_as:
+      kind: brief
+      title: 손익 요약

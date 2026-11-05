@@ -53,6 +53,8 @@ class CronSpec:
     thread: str | None = None
     """Fixed thread for a standing goal; None starts a fresh thread each time."""
     enabled: bool = True
+    payload: dict[str, Any] | None = None
+    """Structured input instead of `prompt` (a workflow run, v2.1.0 I26)."""
 
 
 def load_crons(directory: Path) -> list[CronSpec]:
@@ -117,6 +119,10 @@ class RunManager:
         if run["kind"] == "message" and _input_id(run["id"]) not in ids:
             return self.store.create_run(
                 tid, "message", run["input"], "crash-resume", created=run["created"]
+            )
+        if run["kind"] == "input" and not snap.values:
+            return self.store.create_run(
+                tid, "input", run["input"], "crash-resume", created=run["created"]
             )
         if run["kind"] == "resume" and snap.interrupts:
             return self.store.create_run(
@@ -208,7 +214,38 @@ class RunManager:
             self.store.create_thread(
                 f"goal {cron.name}", {"cron": cron.name}, thread_id=cron.thread
             )
+        if cron.payload is not None:
+            return await self.submit_input(tid, cron.payload, source=f"cron:{cron.name}")
         return await self.submit(tid, cron.prompt, source=f"cron:{cron.name}")
+
+    async def submit_input(
+        self, thread_id: str, payload: dict[str, Any], *, source: str = "user"
+    ) -> str:
+        """Structured graph input (a workflow's name and inputs) instead of a chat message."""
+        if self.store.thread(thread_id) is None:
+            self.store.create_thread(thread_id, thread_id=thread_id)
+        rid = self.store.create_run(thread_id, "input", payload, source)
+        self._done[rid] = asyncio.Event()
+        await self._queue.put(rid)
+        self._publish({"event": "run.created", "run_id": rid, "thread_id": thread_id})
+        return rid
+
+    def set_cron(self, cron: CronSpec) -> None:
+        """Add or replace a schedule while running (a workflow switched on in the web)."""
+        if self._scheduler is None:
+            self._scheduler = AsyncIOScheduler(timezone=self.timezone)
+            self._scheduler.start()
+        self._scheduler.add_job(
+            self.fire_cron,
+            CronTrigger.from_crontab(cron.schedule, timezone=self.timezone),
+            args=[cron],
+            id=cron.name,
+            replace_existing=True,
+        )
+
+    def remove_cron(self, name: str) -> None:
+        if self._scheduler is not None and self._scheduler.get_job(name) is not None:
+            self._scheduler.remove_job(name)
 
     def escalate(self, esc: Escalation) -> None:
         """Router callback (sync): tell Chief, at most once per kind+connection per hour."""
@@ -294,6 +331,8 @@ class RunManager:
             graph_input: Any = {"messages": [message], **self.thread_defaults(tid)}
         elif run["kind"] == "resume":
             graph_input = Command(resume=run["input"])
+        elif run["kind"] == "input":
+            graph_input = {**dict(run["input"] or {}), **self.thread_defaults(tid)}
         else:
             graph_input = None
         self.store.set_status(rid, RunStatus.RUNNING)
@@ -370,5 +409,6 @@ def _summary(update: Any) -> Any:
             "text": texts[-1][:500] if texts else None,
             "active_agent": update.get("active_agent"),
             "pending_approval": update.get("pending_approval"),
+            "step": update.get("current_step"),
         }
     return None
