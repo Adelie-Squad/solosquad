@@ -631,6 +631,66 @@ a.run-row:hover {
   font-size: 18px;
 }
 
+/* ── passkeys · profile · snapshot ─────────────────────────── */
+
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+fieldset.form-grid,
+fieldset.settings-body {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+fieldset > legend.panel-title {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px 16px;
+  font-size: 14px;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checklist .is-done span:first-child {
+  color: var(--ok);
+}
+
+.entity-row input {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+
+.dialog-actions.is-start {
+  justify-content: flex-start;
+}
+
 /* ── phone: the sidebar becomes a drawer ───────────────────── */
 
 .drawer-toggle,

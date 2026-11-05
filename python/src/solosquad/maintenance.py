@@ -23,6 +23,7 @@ from typing import Any
 
 from solosquad.graph.checkpoint import SqliteSaver
 from solosquad.instance import Instance
+from solosquad.layout import WorkspaceConfig
 from solosquad.snapshots import ship
 from solosquad.storage import OFFICE_DB, ORG_DB, backup
 from solosquad.web_api.accounts import AccountStore
@@ -32,11 +33,21 @@ FIRST_RUN_DELAY_S = 10 * 60
 """Not at boot — a restart loop should not purge on every start."""
 
 
+def current_config(inst: Instance) -> WorkspaceConfig:
+    """workspace.yaml as it is now — the owner may have changed retention or the snapshot
+    target in the web after this instance was built; upkeep follows the file."""
+    ctx = inst.ctx
+    try:
+        return ctx.solution.org(ctx.org).workspace(ctx.workspace).config()
+    except Exception:  # unreadable for a moment (being saved) — the last known config
+        return ctx.workspace_config
+
+
 def run_retention(
     inst: Instance, accounts: AccountStore | None, *, now: float | None = None
 ) -> dict[str, Any]:
     t = time.time() if now is None else now
-    rules = inst.ctx.workspace_config.retention
+    rules = current_config(inst).retention
     before = t - rules.business_records_days * DAY
     out: dict[str, Any] = {}
 
@@ -69,7 +80,7 @@ def backup_instance(inst: Instance, org_dir: Path, dest: Path | None = None) -> 
 
 def run_snapshot(inst: Instance, org_dir: Path, *, now: float | None = None) -> dict[str, Any]:
     """Back up both databases to a temporary folder and ship it to the configured target."""
-    target = inst.ctx.workspace_config.snapshot
+    target = current_config(inst).snapshot
     if target.type is None:
         return {"target": None, "skipped": "no snapshot target configured"}
     with tempfile.TemporaryDirectory(prefix="solosquad-snap-") as tmp:

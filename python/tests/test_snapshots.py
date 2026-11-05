@@ -172,6 +172,14 @@ def test_an_office_snapshot_end_to_end(tmp_path: Path) -> None:
     ws = Solution(sol).org("moa").workspace("hq")
     ws.save_config(ws.config().model_copy(update={"snapshot": SnapshotTarget()}))
     assert run_snapshot(build_instance(sol, "moa", "hq"), org_dir)["target"] is None
+    # the running instance follows workspace.yaml: a target set in the web after `serve`
+    # started is used by the next daily run without a restart
+    assert run_snapshot(inst, org_dir)["target"] is None
+    later = tmp_path / "vault2"
+    ws.save_config(
+        ws.config().model_copy(update={"snapshot": SnapshotTarget(type="dir", path=str(later))})
+    )
+    assert later in Path(run_snapshot(inst, org_dir)["location"]).parents
 
 
 def test_restore_round_trip_and_refuses_a_corrupt_copy(tmp_path: Path) -> None:

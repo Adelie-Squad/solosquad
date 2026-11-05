@@ -31,7 +31,13 @@ from solosquad.layout import (
     scaffold_workspace,
     solosquad_home,
 )
-from solosquad.profile import CustomerProfile, load_profile, parse_entity, save_profile
+from solosquad.profile import (
+    CustomerProfile,
+    apply_server_country,
+    load_profile,
+    parse_entity,
+    save_profile,
+)
 from solosquad.routing import (
     Connection,
     ConnectionKind,
@@ -460,6 +466,13 @@ def conn_check(
 # ---------------------------------------------------------------------- run
 
 
+def _snapshot_now(inst: Any, ws: Any, org_dir: Path) -> dict[str, Any]:
+    """The web's "snapshot now" — `run_snapshot` reads workspace.yaml afresh."""
+    from solosquad.maintenance import run_snapshot
+
+    return run_snapshot(inst, org_dir)
+
+
 @app.command()
 def serve(
     solution: SolutionOpt = Path("."),
@@ -504,6 +517,7 @@ def serve(
             workflows=inst.workflows,
             artifacts=inst.artifacts,
             approvals_path=inst.ctx.org_root / "approvals.yaml",
+            run_snapshot=lambda: _snapshot_now(inst, ws, org_dir),
         )
         bound = await api.start(host, port)
         sf = server_file(inst.ctx.data_dir)
@@ -843,11 +857,7 @@ def profile_set(
         raise _fail(str(e)) from e
     save_profile(solution, profile)
     if server_country:
-        for o in Solution(solution).orgs():
-            for ws in o.workspaces():
-                ws.save_config(
-                    ws.config().model_copy(update={"server_country": profile.server.country})
-                )
+        apply_server_country(solution, profile.server.country)
     _print_checklist(profile)
 
 
@@ -909,22 +919,22 @@ def snapshot_set(
     keep_days: int = 30,
 ) -> None:
     """Configure the target; for s3 the keys are asked for and kept in the secret store."""
-    from solosquad.snapshots import SnapshotTarget
+    from solosquad.snapshots import S3_SECRET_REF, build_target
 
     o, w = _pick(solution, org, workspace)
     ws = Solution(solution).org(o).workspace(w)
-    ref = "snapshot-s3" if target == "s3" else None
-    cfg = SnapshotTarget.model_validate(
-        {"type": target, "endpoint": endpoint, "region": region, "bucket": bucket,
-         "prefix": prefix, "path": path, "keep_days": keep_days, "secret_ref": ref}
-    )  # fmt: skip
+    try:
+        cfg = build_target(
+            target, endpoint=endpoint, region=region, bucket=bucket, prefix=prefix, path=path,
+            keep_days=keep_days,
+        )  # fmt: skip
+    except ValueError as e:
+        raise _fail(str(e)) from e
     if target == "s3":
-        if not (endpoint and bucket):
-            raise _fail("an s3 target needs --endpoint and --bucket")
         access: str = typer.prompt("access key id")
         secret: str = typer.prompt("secret access key", hide_input=True)
         SecretStore(_data_dir(solution, o, w) / "secrets.json").set(
-            "snapshot-s3", f"{access}:{secret}"
+            S3_SECRET_REF, f"{access}:{secret}"
         )
     ws.save_config(ws.config().model_copy(update={"snapshot": cfg}))
     console.print(f"snapshot target: {target} · keep {keep_days} days")

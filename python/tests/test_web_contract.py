@@ -217,7 +217,7 @@ async def test_the_engine_serves_the_web_and_the_api_same_origin(tmp_path: Path)
     assert (await _get(app, "/assets/app.js")).text == "console.log(1)"
     assert (await _get(app, "/assets/missing.js")).status_code == 404  # files are not faked
     health = await _get(app, "/api/health")
-    assert health.json() == {"ok": True}
+    assert health.json() == {"ok": True, "passkeys": False}  # no public_url here
     api_miss = await _get(app, "/api/no-such-route")
     assert api_miss.status_code == 404 and "SoloSquad" not in api_miss.text
     assert (await _get(app, "/api/me")).status_code == 401
@@ -235,7 +235,7 @@ async def test_the_built_web_when_present(tmp_path: Path) -> None:
     assert root.status_code == 200 and '<div id="root">' in root.text
     assert (await _get(app, "/approvals")).text == root.text
     assert (await _get(app, "/manifest.webmanifest")).status_code == 200
-    assert (await _get(app, "/api/health")).json() == {"ok": True}
+    assert (await _get(app, "/api/health")).json()["ok"] is True
 
 
 def test_csrf_header_name_is_what_the_web_sends(repo_root: Path) -> None:
