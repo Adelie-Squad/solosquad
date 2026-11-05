@@ -30,6 +30,7 @@ from solosquad.profile import load_profile, profile_path
 from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import judge, providers_reached
 from solosquad.routing.policy import load_policy
+from solosquad.routing.vault import SecretStore
 from solosquad.screens import parse_screen, screen_issues, screen_path
 from solosquad.storage import legacy_files
 from solosquad.workflows.definition import load_workflows
@@ -427,6 +428,22 @@ def doctor_checks(solution: Path, bundle: Path | None) -> list[Check]:
                         + ", ".join(p.name for p in legacy),
                     )
                 )
+            vault = SecretStore(data / "secrets.json")
+            try:
+                plain = vault.is_plaintext()
+            except ValueError as e:
+                out.append(Check(f"secrets:{org.name}/{ws.name}", "fail", str(e)))
+            else:
+                if vault.path.is_file():
+                    out.append(
+                        Check(
+                            f"secrets:{org.name}/{ws.name}",
+                            "warn" if plain else "ok",
+                            "plaintext — the engine encrypts it at next start"
+                            if plain
+                            else f"encrypted · key {vault.key_source()} — keep a copy of the key",
+                        )
+                    )
             out.append(
                 Check(
                     f"data:{org.name}/{ws.name}",

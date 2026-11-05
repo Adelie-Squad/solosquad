@@ -1735,6 +1735,7 @@ version = "2.0.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
+    { name = "cryptography" },
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pydantic" },
@@ -1769,6 +1770,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "apscheduler", specifier = ">=3.10,<4" },
+    { name = "cryptography", specifier = ">=43" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.2" },
     { name = "pydantic", specifier = ">=2.8" },

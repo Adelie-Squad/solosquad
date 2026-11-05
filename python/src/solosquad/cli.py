@@ -1125,6 +1125,20 @@ def accounts_reset_totp(
     console.print(f"one-time code cleared for {user.username!r}")
 
 
+@accounts_app.command("reset-passkeys")
+def accounts_reset_passkeys(
+    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
+) -> None:
+    """Lost phone: remove the account's passkeys and sign it out everywhere.
+
+    The recovery path when the owner loses their own device — whoever can reach the
+    server's shell can run it (PRD v2.1.0 K30)."""
+    store, user = _find_user(solution, org, username)
+    store.clear_passkeys(user.id)
+    store.audit(None, "user.passkeys.reset", f"{user.username} via CLI")
+    console.print(f"passkeys removed for {user.username!r} — sign in with password + code")
+
+
 @accounts_app.command("set-password")
 def accounts_set_password(
     username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
