@@ -76,6 +76,7 @@ def test_service_plans(tmp_path: Path) -> None:
     assert parsed["KeepAlive"] is True and str(spec.solution) in parsed["ProgramArguments"]
     linux = plan(spec, tmp_path, "Linux")
     assert linux.content is not None and "Restart=always" in linux.content
+    assert linux.enable[0] == ["loginctl", "enable-linger"]  # starts at boot with nobody logged in
     assert f"'{spec.solution}'" in linux.content
     win = plan(spec, tmp_path, "Windows")
     assert win.path is None and win.enable[0][:2] == ["schtasks", "/Create"]

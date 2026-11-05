@@ -1176,6 +1176,14 @@ def service_install(
         p.path.parent.mkdir(parents=True, exist_ok=True)
         p.path.write_text(p.content, encoding="utf-8")
     for cmd in p.enable:
+        if cmd[:2] == ["loginctl", "enable-linger"]:
+            # best effort: some distributions need root for this — say so, keep going
+            if subprocess.run(cmd, check=False).returncode != 0:
+                console.print(
+                    "[yellow]could not enable lingering — run `sudo loginctl enable-linger"
+                    " $USER` so the office starts at boot with nobody logged in[/yellow]"
+                )
+            continue
         subprocess.run(cmd, check=True)
     console.print("installed — `solosquad agents watch` to follow it")
 
