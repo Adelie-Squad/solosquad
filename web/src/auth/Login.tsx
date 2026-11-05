@@ -1,10 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { api, ApiError, setCsrf } from '../api/client';
-import { keys } from '../api/queries';
+import { keys, useHealth } from '../api/queries';
 import type { Me } from '../api/types.gen';
 import { LocalePicker } from '../components/LocalePicker';
 import { useI18n, type MessageKey } from '../i18n';
+import { loginWithPasskey, passkeySupported, showPasskeyButton } from './passkeys';
 
 /** Server reasons (English, generic on purpose) → the person's language. */
 export function authReason(err: unknown): MessageKey {
@@ -13,6 +14,7 @@ export function authReason(err: unknown): MessageKey {
   if (msg.includes('one-time code required')) return 'auth.needCode';
   if (msg.includes('wrong one-time code')) return 'auth.wrongCode';
   if (msg.includes('username or password')) return 'auth.wrong';
+  if (msg.includes('passkey not recognised')) return 'passkey.notRecognised';
   if (err instanceof ApiError && err.status === 403) return 'auth.blocked';
   return 'auth.failed';
 }
@@ -27,6 +29,29 @@ export function Login() {
   const [askCode, setAskCode] = useState(true);
   const [error, setError] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
+  const health = useHealth();
+  const [refused, setRefused] = useState(false);
+  const passkeyButton = showPasskeyButton({
+    officeAllows: health.data?.passkeys,
+    browserSupports: passkeySupported(),
+    refused,
+  });
+
+  const withPasskey = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const me = await loginWithPasskey();
+      setCsrf(me.csrf);
+      qc.setQueryData(keys.me, me);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) setRefused(true); // no public_url
+      else if (err instanceof ApiError) setError(authReason(err));
+      else setError('passkey.cancelled'); // the person closed the browser's sheet
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -85,6 +110,16 @@ export function Login() {
         <button className="btn is-primary is-block" disabled={busy}>
           {busy ? t('common.wait') : t('auth.login')}
         </button>
+        {passkeyButton && (
+          <>
+            <div className="auth-or">
+              <span>{t('auth.or')}</span>
+            </div>
+            <button type="button" className="btn is-block" disabled={busy} onClick={() => void withPasskey()} data-testid="passkey-login">
+              🔑 {t('passkey.login')}
+            </button>
+          </>
+        )}
         <p className="auth-hint">{t('auth.firstHint')}</p>
         <LocalePicker />
       </form>

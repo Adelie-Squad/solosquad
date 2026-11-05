@@ -20,6 +20,10 @@ import type {
   ThreadState,
   Upload,
   WebSettings,
+  Health,
+  Passkey,
+  ProfileResponse,
+  SnapshotSettings,
   WorkflowList,
   WorkflowThreadState,
 } from './types.gen';
@@ -46,6 +50,10 @@ export const keys = {
   users: ['users'] as const,
   access: ['access'] as const,
   settings: ['settings'] as const,
+  health: ['health'] as const,
+  passkeys: ['passkeys'] as const,
+  profile: ['profile'] as const,
+  snapshot: ['snapshot'] as const,
 };
 
 const enabledFor = (on: boolean) => ({ enabled: on });
@@ -96,6 +104,14 @@ export const useUsers = (on: boolean) =>
   useQuery({ queryKey: keys.users, queryFn: () => api.get<PublicUser[]>('/users'), ...enabledFor(on) });
 export const useAccess = (on: boolean) =>
   useQuery({ queryKey: keys.access, queryFn: () => api.get<AccessPolicy>('/access'), ...enabledFor(on) });
+export const useHealth = () =>
+  useQuery({ queryKey: keys.health, queryFn: () => api.get<Health>('/health'), staleTime: 60_000 });
+export const usePasskeys = (on = true) =>
+  useQuery({ queryKey: keys.passkeys, queryFn: () => api.get<Passkey[]>('/me/passkeys'), ...enabledFor(on) });
+export const useProfile = () =>
+  useQuery({ queryKey: keys.profile, queryFn: () => api.get<ProfileResponse>('/profile') });
+export const useSnapshot = () =>
+  useQuery({ queryKey: keys.snapshot, queryFn: () => api.get<SnapshotSettings>('/snapshot') });
 export const useSettings = () =>
   useQuery({ queryKey: keys.settings, queryFn: () => api.get<WebSettings>('/settings') });
 export const useUploads = () => useQuery({ queryKey: keys.uploads, queryFn: () => api.get<Upload[]>('/uploads') });

@@ -45,6 +45,13 @@ export interface SoloSquadWebApi {
   Screen: Screen;
   ScreenResponse: ScreenResponse;
   EngineEvent: EngineEvent;
+  PasskeyOptions: PasskeyOptions;
+  Passkey: Passkey;
+  PasskeyAdded: PasskeyAdded;
+  CustomerProfile: CustomerProfile;
+  ProfileResponse: ProfileResponse;
+  SnapshotSettings: SnapshotSettings;
+  SnapshotRunResult: SnapshotRunResult;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -59,6 +66,7 @@ export interface Ok {
  */
 export interface Health {
   ok: boolean;
+  passkeys: boolean;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -672,5 +680,133 @@ export interface EngineEvent {
   };
   error?: string | null;
   interrupts?: Interrupt[] | null;
+  [k: string]: unknown;
+}
+/**
+ * `navigator.credentials.create()` / `.get()` options (WebAuthn JSON, base64url).
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "PasskeyOptions".
+ */
+export interface PasskeyOptions {
+  challenge_id: string;
+  options: {
+    [k: string]: unknown;
+  };
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "Passkey".
+ */
+export interface Passkey {
+  id: string;
+  name: string;
+  transports: string[];
+  created: number;
+  last_used: number | null;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "PasskeyAdded".
+ */
+export interface PasskeyAdded {
+  ok: boolean;
+  passkeys: Passkey[];
+}
+/**
+ * `core/profile.yaml` (decision 50) — facts about the customer, no secrets.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "CustomerProfile".
+ */
+export interface CustomerProfile {
+  schema_version: number;
+  server: ProfileServer;
+  entities: ProfileEntity[];
+  languages: ProfileLanguages;
+  privacy: ProfilePrivacy;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ProfileServer".
+ */
+export interface ProfileServer {
+  country: string | null;
+  cloud: string | null;
+  region: string | null;
+  access: string | null;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ProfileEntity".
+ */
+export interface ProfileEntity {
+  id: string;
+  name: string;
+  country: string;
+  controlled_by: string | null;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ProfileLanguages".
+ */
+export interface ProfileLanguages {
+  default: 'ko' | 'en' | 'zh-CN';
+  enabled: ('ko' | 'en' | 'zh-CN')[];
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ProfilePrivacy".
+ */
+export interface ProfilePrivacy {
+  regimes: string[];
+  reviewer: string | null;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ProfileResponse".
+ */
+export interface ProfileResponse {
+  profile: CustomerProfile;
+  checklist: ChecklistItem[];
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ChecklistItem".
+ */
+export interface ChecklistItem {
+  item: string;
+  label: string;
+  done: boolean;
+}
+/**
+ * `workspace.yaml snapshot` — the keys themselves are never sent, only whether
+ * they are stored.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "SnapshotSettings".
+ */
+export interface SnapshotSettings {
+  type: ('s3' | 'dir') | null;
+  endpoint: string | null;
+  region: string;
+  bucket: string | null;
+  prefix: string;
+  path: string | null;
+  keep_days: number;
+  has_secret: boolean;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "SnapshotRunResult".
+ */
+export interface SnapshotRunResult {
+  target: ('s3' | 'dir') | null;
+  location: string | null;
+  files: number | null;
+  pruned: string[];
+  skipped: string | null;
   [k: string]: unknown;
 }

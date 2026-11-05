@@ -7,6 +7,9 @@ import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser, WebSettings } fro
 import { Loading, QueryError } from '../components/Status';
 import { categoryLabel, LOCALE_NAMES, LOCALES, useI18n, type Locale, type MessageKey } from '../i18n';
 import { useSession } from '../session';
+import { PasskeySettings } from './settings/PasskeySettings';
+import { ProfileSettings } from './settings/ProfileSettings';
+import { SnapshotSettings } from './settings/SnapshotSettings';
 
 interface Tab {
   id: string;
@@ -17,6 +20,8 @@ interface Tab {
 const TABS: Tab[] = [
   { id: 'language', label: 'settings.language', ownerOnly: false },
   { id: 'account', label: 'settings.account', ownerOnly: false },
+  { id: 'profile', label: 'settings.profile', ownerOnly: false },
+  { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
   { id: 'access', label: 'settings.access', ownerOnly: true },
   { id: 'approvals', label: 'settings.tiers', ownerOnly: true },
   { id: 'users', label: 'settings.users', ownerOnly: true },
@@ -46,6 +51,8 @@ export function SettingsView() {
       </nav>
       {tab === 'language' && <LanguageSettings />}
       {tab === 'account' && <AccountSettings />}
+      {tab === 'profile' && <ProfileSettings />}
+      {tab === 'snapshot' && <SnapshotSettings />}
       {tab === 'access' && <AccessSettings />}
       {tab === 'approvals' && <TierSettings />}
       {tab === 'users' && <UserSettings />}
@@ -127,6 +134,10 @@ function AccountSettings() {
   });
   if (me.local) return <section className="panel empty">{t('settings.localToken')}</section>;
   return (
+    <>
+    <section className="panel">
+      <PasskeySettings />
+    </section>
     <form
       className="panel settings-body"
       onSubmit={(e: FormEvent) => {
@@ -148,6 +159,7 @@ function AccountSettings() {
         {t('settings.changePassword')}
       </button>
     </form>
+    </>
   );
 }
 
@@ -347,6 +359,12 @@ function UserSettings() {
                       onClick={() => window.confirm(t('users.confirmResetCode', { name: u.display })) && act(u.id, { reset_totp: true })}
                     >
                       {t('users.resetCode')}
+                    </button>
+                    <button
+                      className="btn is-small"
+                      onClick={() => window.confirm(t('users.confirmResetPasskeys', { name: u.display })) && act(u.id, { reset_passkeys: true })}
+                    >
+                      {t('users.resetPasskeys')}
                     </button>
                     <button
                       className="btn is-small"
