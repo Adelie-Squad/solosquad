@@ -69,6 +69,7 @@ def build_instance(
     ctx.data_dir.mkdir(parents=True, exist_ok=True)
     custom = load_customization(ctx.custom_dir, ctx.engine_version)
     secrets = SecretStore(ctx.data_dir / "secrets.json")
+    secrets.migrate()  # a v2.0 plaintext file is encrypted at the first start (I35)
     ledger = Ledger(ctx.db_path)
     store = RunStore(ctx.db_path)
     router = Router(

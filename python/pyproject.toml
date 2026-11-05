@@ -19,6 +19,7 @@ dependencies = [
     "uvicorn>=0.35",
     "openpyxl>=3.1.5",
     "webauthn>=2.5",
+    "cryptography>=43",
 ]
 
 [project.optional-dependencies]
