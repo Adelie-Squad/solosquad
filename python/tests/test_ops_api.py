@@ -222,6 +222,11 @@ async def test_connections_record_the_entity_and_refuse_ineligible(office: Offic
             "models": ["claude-sonnet"],
             "entity": CN_CONTROLLED,
         }
+        # C18 — an API key that reaches a provider is not saved without its holder
+        nameless = {k: v for k, v in bad.items() if k != "entity"}
+        r = await web.post("/api/connections", json=nameless, headers=h)
+        assert r.status_code == 400 and "entity that holds" in r.json()["error"]
+        assert not office.conn_file.exists() or "claude-cn" not in office.conn_file.read_text()
         r = await web.post("/api/connections", json=bad, headers=h)
         assert r.status_code == 422 and "anthropic.com" in r.json()["error"]
         good = {
@@ -236,6 +241,8 @@ async def test_connections_record_the_entity_and_refuse_ineligible(office: Offic
         assert r.json()["secret_last4"] == "abcd" and r.json()["eligible"] is True
         assert "sk-ant" not in office.conn_file.read_text()
         assert [c.id for c in office.company.router.connections] == ["claude-kr"]  # routing sees it
+        r = await web.patch("/api/connections/claude-kr", json={"entity": None}, headers=h)
+        assert r.status_code == 400  # nor can the holder be erased afterwards
         # the server moves to Hong Kong: the same connection is now ineligible, and says why
         cfg = office.workspace.config()
         office.workspace.save_config(cfg.model_copy(update={"server_country": "HK"}))

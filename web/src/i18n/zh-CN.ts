@@ -232,6 +232,7 @@ export const zhCN: Record<MessageKey, string> = {
   'connections.budget': '月度预算',
   'connections.noBudget': '无上限',
   'connections.entity': '账户持有法人',
+  'connections.entityRequired': '请输入持有此账户的法人。',
   'connections.entityHint': '持有此账户的法人——用于判断提供商的地区规则。',
   'connections.entityName': '法人名称',
   'connections.entityCountry': '注册国家（如 KR）',

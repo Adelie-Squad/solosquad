@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import shutil
 import sqlite3
 from pathlib import Path
@@ -187,7 +188,14 @@ async def test_staff_approve_their_team_only_and_never_owner_tier(tmp_path: Path
                 assert load_policy(o.company.ctx.org_root / "approvals.yaml").overrides == {
                     "review": Tier.OWNER
                 }
-                assert any(e["action"] == "approval_policy.update" for e in o.accounts.audit_log())
+                # C25 — who and when (the row), the category, the old and the new tier
+                entry = next(
+                    e for e in o.accounts.audit_log() if e["action"] == "approval_policy.update"
+                )
+                assert entry["user_id"] and entry["ts"]
+                assert json.loads(entry["detail"])["changes"] == [
+                    {"category": "review", "before": "team", "after": "owner"}
+                ]
                 o.company.scripts["max"] = _asks("review")
                 tid3 = await _waiting(o, boss, hb)
                 r = await kim2.post(

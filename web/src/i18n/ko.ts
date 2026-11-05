@@ -230,6 +230,7 @@ export const ko = {
   'connections.budget': '월 예산',
   'connections.noBudget': '한도 없음',
   'connections.entity': '계정 법인',
+  'connections.entityRequired': '이 계정을 보유한 법인을 입력하세요.',
   'connections.entityHint': '이 계정을 가진 법인 — 제공사의 지역 규칙을 판정하는 데 써요.',
   'connections.entityName': '법인 이름',
   'connections.entityCountry': '설립 국가 (예: KR)',

@@ -154,7 +154,15 @@ function AddConnection({ onDone }: { onDone: () => void }) {
     add.mutate(undefined, {
       onSuccess: onDone,
       // 422 = the region rule refused it; the reason and its source come from the engine
-      onError: (err) => setError(err instanceof ApiError ? err.message : t('common.failed')),
+      // 400 "entity that holds" = C18, no holder for a key that reaches a provider
+      onError: (err) =>
+        setError(
+          err instanceof ApiError
+            ? err.message.includes('entity that holds')
+              ? t('connections.entityRequired')
+              : err.message
+            : t('common.failed'),
+        ),
     });
   };
 

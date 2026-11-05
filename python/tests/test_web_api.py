@@ -5,6 +5,7 @@ PRD v2.1.0: C12 (access default · IP allow-list) · C14/C15 (owner vs staff) ·
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -214,7 +215,11 @@ async def test_access_policy_allow_list(office: Office) -> None:
     async with office.client("127.0.0.1") as local:
         assert (await local.get("/api/health")).status_code == 200
     log = office.accounts.audit_log()
-    assert any(e["action"] == "access.update" and "203.0.113.0/24" in e["detail"] for e in log)
+    entry = next(e for e in log if e["action"] == "access.update")
+    change = json.loads(entry["detail"])  # C14 — the old list and the new one
+    assert change["before"]["allowed_networks"] == []
+    assert "203.0.113.0/24" in change["after"]["allowed_networks"]
+    assert entry["user_id"] and entry["ts"]
 
 
 async def test_saving_a_list_that_locks_you_out_needs_confirmation(office: Office) -> None:

@@ -161,6 +161,8 @@ def test_customer_profile_at_setup(tmp_path: Path, repo_root: Path) -> None:
     bad = run(app, [*base[:2], "claude-qd", *base[2:], "--entity", "moa-qd"])
     assert bad.exit_code == 1 and "anthropic" in bad.output
     assert run(app, [*base[:2], "x", *base[2:], "--entity", "nope"]).exit_code == 1
+    nameless = run(app, [*base[:2], "y", *base[2:]])  # C18 — no holder, no key
+    assert nameless.exit_code == 1 and "--entity" in nameless.output
     # Chinese models for the Chinese entity are fine
     qwen = run(app, ["connections", "add", "qwen", "--kind", "api_key", "--harness", "lite",
                      "--provider", "dashscope", "--models", "qwen3", "--entity", "moa-qd", "-s", str(sol)])  # fmt: skip
