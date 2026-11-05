@@ -180,32 +180,63 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _pin(src: Path) -> sqlite3.Connection:
+    """Open `src` inside a read transaction — WAL keeps showing this moment to it while
+    the engine goes on writing, so the copy taken later is still this moment."""
+    conn = sqlite3.connect(str(src), isolation_level=None)
+    conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
+    conn.execute("BEGIN")
+    conn.execute("SELECT count(*) FROM sqlite_master").fetchall()
+    return conn
+
+
+def _copy_pinned(source: sqlite3.Connection, dest: Path) -> None:
+    target = sqlite3.connect(str(dest))
+    try:
+        source.backup(target)
+    finally:
+        target.close()
+
+
 def backup(files: dict[str, Path], dest: Path) -> dict[str, Any]:
     """Online copies of the scope databases into `dest` + `manifest.json`.
 
-    Each file is consistent in itself; the two are copied one after the other, and the
-    manifest records the times so a restore knows how far apart they are.
+    Every source is pinned to the same moment before any is copied (a read transaction
+    each), so `org.db` and `office.db` in one backup agree with each other — an approval
+    recorded in one and its run in the other are both in, or both out (I36).
     """
     dest.mkdir(parents=True, exist_ok=True)
-    entries = []
-    for name, src in files.items():
-        if not src.is_file():
-            continue
-        target = dest / f"{name}.db"
-        started = time.time()
-        _copy(src, target)
-        target.chmod(0o600)
-        entries.append(
-            {
-                "name": name,
-                "source": str(src),
-                "file": target.name,
-                "bytes": target.stat().st_size,
-                "sha256": _sha256(target),
-                "copied_at": started,
-            }
-        )
-    manifest = {"schema_version": 1, "created": time.time(), "files": entries}
+    pinned: dict[str, tuple[Path, sqlite3.Connection]] = {}
+    try:
+        for name, src in files.items():
+            if src.is_file():
+                pinned[name] = (src, _pin(src))
+        taken = time.time()
+        entries = []
+        for name, (src, conn) in pinned.items():
+            target = dest / f"{name}.db"
+            _copy_pinned(conn, target)
+            target.chmod(0o600)
+            entries.append(
+                {
+                    "name": name,
+                    "source": str(src),
+                    "file": target.name,
+                    "bytes": target.stat().st_size,
+                    "sha256": _sha256(target),
+                    "copied_at": taken,
+                }
+            )
+    finally:
+        for _src, conn in pinned.values():
+            conn.close()
+    manifest = {
+        "schema_version": 1,
+        "created": time.time(),
+        "taken_at": taken,
+        "consistent": True,
+        "files": entries,
+    }
     (dest / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     return manifest
 
