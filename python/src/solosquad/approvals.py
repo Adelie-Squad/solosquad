@@ -40,7 +40,12 @@ RECOMMENDED: dict[str, Tier] = {
     "publish": Tier.TEAM,
     "other": Tier.TEAM,
 }
-"""The decision-51 recommendation. Unknown categories are treated like `other`."""
+"""The decision-51 recommendation."""
+
+UNCLASSIFIED = "unclassified"
+"""A card whose category is missing or unknown — an older card, a guard rule written
+without one, a typo. Always the owner's, and not something the policy can lower
+(PRD v2.1.0 K41: what we cannot classify is not handed to staff)."""
 
 LABELS = {
     "purchase": "구매",
@@ -54,6 +59,7 @@ LABELS = {
     "review": "검토 · 확인",
     "publish": "게시 · 발송",
     "other": "기타",
+    UNCLASSIFIED: "분류 없음",
 }
 
 
@@ -62,20 +68,21 @@ class ApprovalPolicy:
     overrides: dict[str, Tier]
 
     def tier(self, category: str | None) -> Tier:
-        cat = category or "other"
-        if cat in self.overrides:
-            return self.overrides[cat]
-        return RECOMMENDED.get(cat, RECOMMENDED["other"])
+        if not category or category == UNCLASSIFIED:
+            return Tier.OWNER
+        if category in self.overrides:
+            return self.overrides[category]
+        return RECOMMENDED.get(category, Tier.OWNER)  # unknown → the owner's (K41)
 
     def table(self) -> list[dict[str, Any]]:
-        cats = list(dict.fromkeys([*RECOMMENDED, *self.overrides]))
+        cats = [c for c in dict.fromkeys([*RECOMMENDED, *self.overrides]) if c != UNCLASSIFIED]
         return [
             {
                 "category": c,
                 "label": LABELS.get(c, c),
                 "tier": self.tier(c).value,
-                "recommended": RECOMMENDED.get(c, RECOMMENDED["other"]).value,
-                "deviates": self.tier(c) is not RECOMMENDED.get(c, RECOMMENDED["other"]),
+                "recommended": RECOMMENDED.get(c, Tier.OWNER).value,
+                "deviates": self.tier(c) is not RECOMMENDED.get(c, Tier.OWNER),
             }
             for c in cats
         ]

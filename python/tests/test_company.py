@@ -181,7 +181,7 @@ async def test_guard_approval_round_trip(tmp_path: Path) -> None:
     assert card == approval_card(
         {"agent": "chief", "signature": "abc123", "reason": "recursive delete", "team": "core"}
     )
-    assert card["category"] == "other"  # a marker without [category] (older hook output)
+    assert card["category"] == "unclassified"  # a marker without [category] → owner only
     assert card["options"] == ["approved", "declined"] and card["risk"] == "high"
     assert card["title"] == "chief wants to: recursive delete"
     done = await app.ainvoke(Command(resume="approved"), cfg("g"))

@@ -28,7 +28,16 @@ from solosquad.workflows.engine import WorkflowEngine, company_asker
 def test_policy_tiers_and_who_may_approve() -> None:
     p = ApprovalPolicy({})
     assert p.tier("transfer") is Tier.OWNER and p.tier("review") is Tier.TEAM
-    assert p.tier("something-new") is Tier.TEAM  # unknown → like `other`
+    # what cannot be classified is the owner's (K41): unknown, missing, older cards
+    assert p.tier("something-new") is Tier.OWNER
+    assert p.tier(None) is Tier.OWNER and p.tier("unclassified") is Tier.OWNER
+    older = [{"team": "product"}, {"category": "", "team": "product"}]
+    for old in [*older, {"category": "purhcase", "team": "product"}]:
+        assert not can_approve(p, old, is_owner=False, teams=["product"])
+        assert can_approve(p, old, is_owner=True, teams=[])
+    # the owner may still open up a category of their own on purpose
+    assert ApprovalPolicy({"inventory": Tier.TEAM}).tier("inventory") is Tier.TEAM
+    assert "unclassified" not in [r["category"] for r in p.table()]
     card = {"category": "review", "team": "product"}
     assert can_approve(p, card, is_owner=False, teams=["product"])
     assert not can_approve(p, card, is_owner=False, teams=["brand"])

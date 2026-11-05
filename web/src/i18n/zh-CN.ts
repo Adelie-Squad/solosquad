@@ -116,6 +116,7 @@ export const zhCN: Record<MessageKey, string> = {
   'category.review': '审核 · 确认',
   'category.publish': '发布 · 发送',
   'category.other': '其他',
+  'category.unclassified': '未分类 · 由负责人审批',
 
   'office.title': '办公室',
   'office.lead': 'Chief 正在把工作分配给各团队。点击工位可查看该团队在做什么。',
