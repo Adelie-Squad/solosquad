@@ -16,12 +16,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
 from solosquad.graph.checkpoint import SqliteSaver
 from solosquad.instance import Instance
+from solosquad.snapshots import ship
 from solosquad.storage import OFFICE_DB, ORG_DB, backup
 from solosquad.web_api.accounts import AccountStore
 
@@ -65,12 +67,35 @@ def backup_instance(inst: Instance, org_dir: Path, dest: Path | None = None) -> 
     return backup({"org": org_dir / ORG_DB, "office": inst.ctx.data_dir / OFFICE_DB}, target)
 
 
+def run_snapshot(inst: Instance, org_dir: Path, *, now: float | None = None) -> dict[str, Any]:
+    """Back up both databases to a temporary folder and ship it to the configured target."""
+    target = inst.ctx.workspace_config.snapshot
+    if target.type is None:
+        return {"target": None, "skipped": "no snapshot target configured"}
+    with tempfile.TemporaryDirectory(prefix="solosquad-snap-") as tmp:
+        backup_instance(inst, org_dir, Path(tmp))
+        scope = f"{inst.ctx.solution_id}/{inst.ctx.org}/{inst.ctx.workspace}"
+        return ship(Path(tmp), target, scope, secret=inst.secrets.get, now=now)
+
+
 async def maintenance_loop(
-    inst: Instance, accounts: AccountStore | None, *, interval_s: float = DAY
+    inst: Instance,
+    accounts: AccountStore | None,
+    *,
+    org_dir: Path | None = None,
+    interval_s: float = DAY,
 ) -> None:
     """Runs inside `serve`: once after `FIRST_RUN_DELAY_S`, then every `interval_s`."""
     await asyncio.sleep(FIRST_RUN_DELAY_S)
     while True:
         with contextlib.suppress(Exception):  # upkeep never takes the office down
             await asyncio.to_thread(run_retention, inst, accounts)
+        if org_dir is not None:
+            try:
+                result = await asyncio.to_thread(run_snapshot, inst, org_dir)
+                if accounts is not None and result.get("target"):
+                    accounts.audit(None, "snapshot", repr(result))
+            except Exception as e:  # a failed upload is recorded, never fatal (K47)
+                if accounts is not None:
+                    accounts.audit(None, "snapshot.failed", f"{type(e).__name__}: {e}")
         await asyncio.sleep(interval_s)

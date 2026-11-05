@@ -485,7 +485,8 @@ def serve(
         token = load_or_create_token(inst.ctx.data_dir)
         ws = Solution(solution).org(o).workspace(w)
         accounts = _accounts(solution, o)
-        upkeep = asyncio.create_task(maintenance_loop(inst, accounts))
+        org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
+        upkeep = asyncio.create_task(maintenance_loop(inst, accounts, org_dir=org_dir))
         api = ApiServer(
             inst.manager,
             inst.ledger,
@@ -884,6 +885,106 @@ def backup_cmd(
     manifest = backup_instance(inst, org_dir, to)
     for entry in manifest["files"]:
         console.print(f"{entry['name']}: {entry['bytes']} B · sha256 {entry['sha256'][:12]}…")
+
+
+snapshot_app = typer.Typer(no_args_is_help=True, help="Daily snapshots to the customer's bucket.")
+app.add_typer(snapshot_app, name="snapshot")
+
+
+@snapshot_app.command("set")
+def snapshot_set(
+    target: Annotated[str, typer.Option("--type", help="s3 (any S3-compatible store) · dir")],
+    solution: SolutionOpt = Path("."),
+    org: OrgOpt = None,
+    workspace: WsOpt = None,
+    endpoint: Annotated[
+        str | None, typer.Option(help="e.g. https://s3.ap-northeast-2.amazonaws.com")
+    ] = None,
+    region: str = "us-east-1",
+    bucket: str | None = None,
+    prefix: str = "solosquad",
+    path: Annotated[str | None, typer.Option(help="Folder for a dir target")] = None,
+    keep_days: int = 30,
+) -> None:
+    """Configure the target; for s3 the keys are asked for and kept in the secret store."""
+    from solosquad.snapshots import SnapshotTarget
+
+    o, w = _pick(solution, org, workspace)
+    ws = Solution(solution).org(o).workspace(w)
+    ref = "snapshot-s3" if target == "s3" else None
+    cfg = SnapshotTarget.model_validate(
+        {"type": target, "endpoint": endpoint, "region": region, "bucket": bucket,
+         "prefix": prefix, "path": path, "keep_days": keep_days, "secret_ref": ref}
+    )  # fmt: skip
+    if target == "s3":
+        if not (endpoint and bucket):
+            raise _fail("an s3 target needs --endpoint and --bucket")
+        access: str = typer.prompt("access key id")
+        secret: str = typer.prompt("secret access key", hide_input=True)
+        SecretStore(_data_dir(solution, o, w) / "secrets.json").set(
+            "snapshot-s3", f"{access}:{secret}"
+        )
+    ws.save_config(ws.config().model_copy(update={"snapshot": cfg}))
+    console.print(f"snapshot target: {target} · keep {keep_days} days")
+
+
+@snapshot_app.command("run")
+def snapshot_run(
+    solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsOpt = None
+) -> None:
+    """Back up and ship now (normally daily inside `serve`)."""
+    from solosquad.instance import build_instance
+    from solosquad.maintenance import run_snapshot
+
+    o, w = _pick(solution, org, workspace)
+    inst = build_instance(solution, o, w)
+    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
+    try:
+        result = run_snapshot(inst, org_dir)
+    except (ValueError, OSError) as e:
+        raise _fail(str(e)) from e
+    console.print(escape(json.dumps(result, ensure_ascii=False)))
+
+
+@snapshot_app.command("restore")
+def snapshot_restore(
+    solution: SolutionOpt = Path("."),
+    org: OrgOpt = None,
+    workspace: WsOpt = None,
+    stamp: Annotated[
+        str | None, typer.Option(help="UTC stamp, e.g. 20261105T020000Z; newest if omitted")
+    ] = None,
+    yes: Annotated[bool, typer.Option("--yes", help="Do not ask for confirmation")] = False,
+) -> None:
+    """Restore org.db and office.db from a snapshot (the office must be stopped)."""
+    import tempfile
+
+    from solosquad.snapshots import fetch, restore
+    from solosquad.storage import OFFICE_DB, ORG_DB
+
+    o, w = _pick(solution, org, workspace)
+    data = _data_dir(solution, o, w)
+    if server_file(data).is_file():
+        raise _fail("stop the office first (`solosquad service uninstall` or stop `serve`)")
+    ws = Solution(solution).org(o).workspace(w)
+    target = ws.config().snapshot
+    secrets = SecretStore(data / "secrets.json")
+    sid = Solution(solution).meta().id
+    with tempfile.TemporaryDirectory(prefix="solosquad-restore-") as tmp:
+        try:
+            chosen = fetch(target, f"{sid}/{o}/{w}", stamp, Path(tmp), secret=secrets.get)
+        except (KeyError, ValueError, OSError) as e:
+            raise _fail(str(e).strip("'\"")) from e
+        if not yes and not typer.confirm(f"restore snapshot {chosen} over the live databases?"):
+            raise typer.Exit(1)
+        org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
+        try:
+            done = restore(Path(tmp), {"org": org_dir / ORG_DB, "office": data / OFFICE_DB})
+        except ValueError as e:
+            raise _fail(str(e)) from e
+    console.print(
+        f"restored {', '.join(done)} from {chosen} (previous files kept as *.before-restore)"
+    )
 
 
 # ---------------------------------------------------------------------- workflows

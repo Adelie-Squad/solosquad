@@ -38,6 +38,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from solosquad.assets.text import load_yaml
+from solosquad.snapshots import SnapshotTarget
 
 SCHEMA_VERSION = 1
 CUSTOM_DIRS = ("config", "policies", "hooks", "tools", "patches")
@@ -111,6 +112,8 @@ class WorkspaceConfig(_Doc):
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
     retention: RetentionPolicy = Field(default_factory=RetentionPolicy)
+    snapshot: SnapshotTarget = Field(default_factory=SnapshotTarget)
+    """Where the daily snapshot goes — the customer's own bucket (decision 54)."""
 
 
 def _read[M: BaseModel](path: Path, model: type[M]) -> M:
