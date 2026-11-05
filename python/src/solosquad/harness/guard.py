@@ -24,6 +24,8 @@ class GuardRule:
     """Regex searched in the tool's command-ish input (`command`, `cmd`, `url`)."""
     action: Verdict = Verdict.INTERRUPT
     reason: str = ""
+    category: str = "other"
+    """Approval category (decision 51) — decides whether a team member may approve."""
 
     def matches(self, name: str, tool_input: dict[str, Any]) -> bool:
         if not fnmatch.fnmatchcase(name, self.tool):
@@ -42,9 +44,10 @@ DEFAULT_RULES: tuple[GuardRule, ...] = (
         r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f|\brm\s+-[a-zA-Z]*f[a-zA-Z]*r",
         Verdict.INTERRUPT,
         "recursive delete",
+        "delete",
     ),
-    GuardRule("*", r"git\s+push\b.*(--force|-f\b)", Verdict.INTERRUPT, "force push"),
-    GuardRule("*", r"git\s+reset\s+--hard", Verdict.INTERRUPT, "hard reset"),
+    GuardRule("*", r"git\s+push\b.*(--force|-f\b)", Verdict.INTERRUPT, "force push", "delete"),
+    GuardRule("*", r"git\s+reset\s+--hard", Verdict.INTERRUPT, "hard reset", "delete"),
 )
 
 
@@ -58,6 +61,9 @@ class GuardPolicy:
             if rule.matches(name, tool_input):
                 return rule.action
         return Verdict.ALLOW
+
+    def rule_for(self, name: str, tool_input: dict[str, Any]) -> GuardRule | None:
+        return next((r for r in self.rules if r.matches(name, tool_input)), None)
 
     def explain(self, name: str, tool_input: dict[str, Any]) -> str | None:
         for rule in self.rules:
@@ -73,6 +79,7 @@ class GuardPolicy:
                 command=i.get("command"),
                 action=Verdict(i.get("action", "interrupt")),
                 reason=str(i.get("reason", "")),
+                category=str(i.get("category", "other")),
             )
             for i in items
         )

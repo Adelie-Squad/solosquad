@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import json
 import secrets
 import sqlite3
 import threading
@@ -90,6 +91,9 @@ class User:
     locale: str
     has_totp: bool
     disabled: bool
+    title: str = ""
+    teams: tuple[str, ...] = ()
+    """Teams this person belongs to (decision 55) — the basis of team-tier approval."""
 
     def public(self) -> dict[str, Any]:
         return {
@@ -100,6 +104,8 @@ class User:
             "locale": self.locale,
             "two_factor": self.has_totp,
             "disabled": self.disabled,
+            "title": self.title,
+            "teams": list(self.teams),
         }
 
 
@@ -126,11 +132,26 @@ CREATE TABLE IF NOT EXISTS login_failures (ts REAL NOT NULL, key TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS failures_key ON login_failures (key, ts);
 """
 
-_USER_COLS = "id, username, display, role, locale, totp_secret IS NOT NULL, disabled"
+_USER_COLS = "id, username, display, role, locale, totp_secret IS NOT NULL, disabled, title, teams"
 
 
 def _user(row: Any) -> User:
-    return User(row[0], row[1], row[2], Role(row[3]), row[4], bool(row[5]), bool(row[6]))
+    teams = tuple(json.loads(row[8])) if row[8] else ()
+    return User(
+        row[0],
+        row[1],
+        row[2],
+        Role(row[3]),
+        row[4],
+        bool(row[5]),
+        bool(row[6]),
+        row[7] or "",
+        teams,
+    )
+
+
+# Columns added after the first release of the table — applied to existing files in place.
+LATER_COLUMNS = (("users", "title", "TEXT"), ("users", "teams", "TEXT"))
 
 
 class AccountStore:
@@ -140,6 +161,10 @@ class AccountStore:
         self._db = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.executescript(SCHEMA)
+        for table, column, kind in LATER_COLUMNS:
+            have = {r[1] for r in self._db.execute(f"PRAGMA table_info({table})")}
+            if column not in have:
+                self._db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
         self._lock = threading.Lock()
         path.chmod(0o600)
 
@@ -198,6 +223,17 @@ class AccountStore:
             raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
         self._q("UPDATE users SET pw_hash = ? WHERE id = ?", (hash_password(password), uid))
         self.revoke_user_sessions(uid)
+
+    def set_profile(
+        self, uid: str, *, title: str | None = None, teams: list[str] | None = None
+    ) -> User:
+        self.user(uid)
+        if title is not None:
+            self._q("UPDATE users SET title = ? WHERE id = ?", (title.strip()[:80], uid))
+        if teams is not None:
+            clean = sorted({t.strip() for t in teams if t.strip()})
+            self._q("UPDATE users SET teams = ? WHERE id = ?", (json.dumps(clean), uid))
+        return self.user(uid)
 
     def set_locale(self, uid: str, locale: str) -> None:
         self._q("UPDATE users SET locale = ? WHERE id = ?", (locale, uid))

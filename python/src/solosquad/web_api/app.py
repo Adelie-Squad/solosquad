@@ -30,6 +30,14 @@ from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from solosquad import __version__
+from solosquad.approvals import (
+    RECOMMENDED,
+    ApprovalPolicy,
+    Tier,
+    can_approve,
+    load_policy,
+    save_policy,
+)
 from solosquad.artifacts import ArtifactStore
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
@@ -72,7 +80,7 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "threads.create": EVERYONE,
     "threads.state": EVERYONE,
     "threads.run": EVERYONE,
-    "threads.resume": OWNER,
+    "threads.resume": EVERYONE,  # then the card decides (decision 51)
     "runs.list": EVERYONE,
     "runs.get": EVERYONE,
     "ledger": EVERYONE,
@@ -93,7 +101,11 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "workflows.list": EVERYONE,
     "workflows.run": EVERYONE,
     "workflows.update": OWNER,
-    "workflows.approve": OWNER,
+    "workflows.approve": EVERYONE,  # then the card decides (decision 51)
+    "approvals.list": EVERYONE,
+    "approval_policy.get": EVERYONE,
+    "approval_policy.update": OWNER,
+    "org_chart": EVERYONE,
     "uploads.list": EVERYONE,
     "uploads.create": EVERYONE,
     "artifacts.list": EVERYONE,
@@ -147,6 +159,8 @@ class WebConfig:
     reload_connections: Callable[[], list[Connection]] | None = None
     workflows: WorkflowEngine | None = None
     artifacts: ArtifactStore | None = None
+    approvals_path: Path | None = None
+    """`orgs/<org>/approvals.yaml` — the owner's tier overrides (decision 51)."""
     """Re-reads every connection file after a change, so routing sees it at once."""
     """Set on shutdown so open event streams end instead of holding the server."""
 
@@ -325,6 +339,33 @@ def create_app(cfg: WebConfig) -> Starlette:
         accounts().audit(who.user_id, "totp.enrol")
         return Json({"ok": True})
 
+    # ------------------------------------------------------------------ approval rights
+
+    def policy() -> ApprovalPolicy:
+        return load_policy(cfg.approvals_path) if cfg.approvals_path else ApprovalPolicy({})
+
+    def waiting_card(mgr: RunManager, tid: str) -> dict[str, Any] | None:
+        for run in mgr.store.runs(thread_id=tid, status=RunStatus.INTERRUPTED, limit=1):
+            for item in run.get("interrupts") or []:
+                value = item.get("value")
+                if isinstance(value, dict):
+                    return value
+        return None
+
+    def may_approve(who: Principal, card: dict[str, Any] | None) -> bool:
+        if who.role is Role.OWNER:
+            return True
+        teams = list(who.session.user.teams) if who.session else []
+        return card is not None and can_approve(policy(), card, is_owner=False, teams=teams)
+
+    def check_approver(who: Principal, mgr: RunManager, tid: str) -> dict[str, Any] | None:
+        card = waiting_card(mgr, tid)
+        if not may_approve(who, card):
+            tier = policy().tier((card or {}).get("category")).value
+            whom = "the owner" if tier == "owner" else f"team {(card or {}).get('team')}"
+            raise HTTPException(403, f"this approval needs {whom}")
+        return card
+
     # ------------------------------------------------------------------ users
 
     async def users(request: Request) -> Response:
@@ -361,6 +402,18 @@ def create_app(cfg: WebConfig) -> Starlette:
         if data.get("reset_totp"):
             store.reset_totp(uid)
             store.audit(who.user_id, "user.totp.reset", uid)
+        if "teams" in data or "title" in data:
+            teams = data.get("teams")
+            if teams is not None and not isinstance(teams, list):
+                raise ValueError("teams must be a list of team names")
+            store.set_profile(
+                uid,
+                title=str(data["title"]) if "title" in data else None,
+                teams=[str(t) for t in teams] if teams is not None else None,
+            )
+            store.audit(
+                who.user_id, "user.profile", f"{uid} teams={teams} title={data.get('title')!r}"
+            )
         return Json(store.user(uid).public())
 
     # ------------------------------------------------------------------ access policy
@@ -432,6 +485,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         tid = request.path_params["tid"]
         if m.store.thread(tid) is None:
             raise KeyError(f"no thread {tid}")
+        check_approver(who, m, tid)
         value = (await body(request)).get("value")
         approver = who.session.user.username if who.session else "local-cli"
         rid = await m.resume(tid, value, source=f"user:{approver}")
@@ -760,6 +814,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         e = engine()
         if e.manager.store.thread(tid) is None:
             raise KeyError(f"no workflow thread {tid}")
+        check_approver(who, e.manager, tid)
         value = (await body(request)).get("value")
         approver = who.session.user.username if who.session else "local-cli"
         rid = await e.manager.resume(tid, value, source=f"user:{approver}")
@@ -807,6 +862,88 @@ def create_app(cfg: WebConfig) -> Starlette:
             cfg.accounts.audit(who.user_id, "artifact.review", art.id)
         return Json(art.public())
 
+    # ------------------------------------------------------------- approvals · org chart
+
+    async def approvals(request: Request) -> Response:
+        who = need(request, "approvals.list")
+        sources = [("company", m)]
+        if cfg.workflows is not None:
+            sources.append(("workflow", cfg.workflows.manager))
+        out = []
+        for source, mgr in sources:
+            for run in mgr.store.runs(status=RunStatus.INTERRUPTED, limit=200):
+                card = waiting_card(mgr, run["thread_id"])
+                if card is None:
+                    continue
+                out.append(
+                    {
+                        "source": source,
+                        "thread_id": run["thread_id"],
+                        "run_id": run["id"],
+                        "created": run["created"],
+                        "card": card,
+                        "tier": policy().tier(card.get("category")).value,
+                        "can_approve": may_approve(who, card),
+                    }
+                )
+        return Json(sorted(out, key=lambda a: -float(a["created"])))
+
+    async def approval_policy(request: Request) -> Response:
+        if request.method == "PUT":
+            who = need(request, "approval_policy.update")
+            if cfg.approvals_path is None:
+                raise HTTPException(404, "the approval policy is not editable on this office")
+            tiers = (await body(request)).get("tiers")
+            if not isinstance(tiers, dict):
+                raise ValueError("send {tiers: {category: owner|team}}")
+            updated = {**policy().overrides, **{str(k): Tier(str(v)) for k, v in tiers.items()}}
+            # keep only what differs from the recommendation — the file stays a list of choices
+            overrides = {k: v for k, v in updated.items() if RECOMMENDED.get(k) is not v}
+            save_policy(cfg.approvals_path, ApprovalPolicy(overrides))
+            deviations = [r["category"] for r in ApprovalPolicy(overrides).table() if r["deviates"]]
+            accounts().audit(who.user_id, "approval_policy.update", f"deviates={deviations}")
+            return Json(ApprovalPolicy(overrides).table())
+        need(request, "approval_policy.get")
+        return Json(policy().table())
+
+    async def org_chart(request: Request) -> Response:
+        need(request, "org_chart")
+        r = resolver()
+        agents = r.available("agents")
+        people = [u for u in accounts().users() if not u.disabled] if cfg.accounts else []
+
+        def agent_card(name: str) -> dict[str, Any]:
+            res = agents.get(name)
+            appearance = res.spec.extra.get("appearance") if res else None
+            return {
+                "name": name,
+                "description": res.spec.description if res else "",
+                "appearance": appearance if isinstance(appearance, dict) else None,
+            }
+
+        def person_card(u: Any) -> dict[str, Any]:
+            return {"id": u.id, "display": u.display, "title": u.title, "role": u.role.value}
+
+        teams = []
+        named = set()
+        for name, comp in r.teams().items():
+            named.add(name)
+            teams.append(
+                {
+                    "name": name,
+                    "lead_agent": agent_card(comp.main) if comp.main in agents else None,
+                    "agents": [agent_card(a) for a in comp.members if a in agents],
+                    "people": [person_card(u) for u in people if name in u.teams],
+                }
+            )
+        owners = [person_card(u) for u in people if u.role is Role.OWNER]
+        unassigned = [
+            person_card(u)
+            for u in people
+            if u.role is not Role.OWNER and not (set(u.teams) & named)
+        ]
+        return Json({"owners": owners, "teams": teams, "unassigned": unassigned})
+
     # ------------------------------------------------------------------ errors · routes
 
     async def not_found(_request: Request, exc: Exception) -> Response:
@@ -845,6 +982,9 @@ def create_app(cfg: WebConfig) -> Starlette:
         ("/connections", connections, ["GET", "POST"]),
         ("/connections/{cid}", connection_update, ["PATCH", "DELETE"]),
         ("/budget", budget, ["GET"]),
+        ("/approvals", approvals, ["GET"]),
+        ("/approval-policy", approval_policy, ["GET", "PUT"]),
+        ("/org-chart", org_chart, ["GET"]),
         ("/workflows", workflows, ["GET"]),
         ("/workflows/{name}", workflow_update, ["PATCH"]),
         ("/workflows/{name}/run", workflow_run, ["POST"]),

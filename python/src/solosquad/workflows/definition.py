@@ -44,6 +44,9 @@ class Approval(BaseModel):
     title: str
     summary: str = ""
     risk: str = "medium"
+    category: str = "review"
+    """Decision 51: `review` is team-tier by default; purchase · payment · transfer ·
+    delete are owner-tier. The owner can change tiers in the web."""
 
 
 class Step(BaseModel):
@@ -87,6 +90,8 @@ class WorkflowDef(BaseModel):
     description: str = ""
     schedule: str | None = None
     enabled: bool = True
+    team: str | None = None
+    """Team that owns this workflow — its members may approve team-tier steps."""
     inputs: list[Input] = Field(default_factory=list)
     steps: list[Step]
 
@@ -105,6 +110,7 @@ class WorkflowDef(BaseModel):
             "title": self.title or self.name,
             "description": self.description,
             "schedule": self.schedule,
+            "team": self.team,
             "inputs": [i.model_dump() for i in self.inputs],
             "steps": [{"id": s.id, "type": s.type, "title": _step_title(s)} for s in self.steps],
         }

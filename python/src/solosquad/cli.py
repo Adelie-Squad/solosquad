@@ -443,6 +443,7 @@ def serve(
             reload_connections=lambda: connections_for(inst.ctx),
             workflows=inst.workflows,
             artifacts=inst.artifacts,
+            approvals_path=inst.ctx.org_root / "approvals.yaml",
         )
         bound = await api.start(host, port)
         sf = server_file(inst.ctx.data_dir)

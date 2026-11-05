@@ -78,7 +78,7 @@ async def test_crashed_run_is_resumed_on_restart(tmp_path: Path) -> None:
     assert len(resumed) == 1
     run = await restarted.wait(resumed[0], timeout=5)
     await restarted.stop()
-    assert run["status"] == RunStatus.SUCCESS and run["source"] == "crash-resume"
+    assert run["status"] == RunStatus.SUCCESS and run["source"].startswith("crash-resume")
     state = await restarted.thread_state(tid)
     assert state["values"]["messages"][-1].text == "recovered"
     assert [m.text for m in state["values"]["messages"]].count("do the long thing") == 1

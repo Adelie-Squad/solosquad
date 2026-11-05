@@ -33,8 +33,8 @@ from solosquad.runtime.store import RunStore
 from solosquad.workflows.definition import Step, WorkflowDef, load_workflows, render
 from solosquad.workflows.tools import TOOLS
 
-AskAgent = Callable[[str, str, str], Awaitable[str]]
-"""(agent, prompt, workflow thread id) → the company's final answer."""
+AskAgent = Callable[[str, str, str, str], Awaitable[str]]
+"""(agent, prompt, workflow thread id, step id) → the company's final answer."""
 
 UPLOAD_LIMIT = 20 * 1024 * 1024
 UPLOAD_TYPES = (".xlsx", ".csv")
@@ -275,6 +275,8 @@ class WorkflowEngine:
                     "reason": str(render(step.approval.title, scope)),
                     "summary": str(render(step.approval.summary, scope)),
                     "risk": step.approval.risk,
+                    "category": step.approval.category,
+                    "team": wf.team,
                 }
             )
             card["title"] = str(render(step.approval.title, scope))
@@ -289,18 +291,29 @@ class WorkflowEngine:
         if self.ask_agent is None:
             raise RuntimeError("this office has no agent company to hand the step to")
         prompt = str(render(step.prompt, scope))
-        text = await self.ask_agent(step.agent, prompt, tid)
+        text = await self.ask_agent(step.agent, prompt, tid, step.id)
         return {"text": text, "agent": step.agent}
 
 
 def company_asker(company: RunManager, timeout_s: float = 30 * 60) -> AskAgent:
     """An agent step = a message to the company on a thread tied to the workflow run."""
 
-    async def ask(agent: str, prompt: str, wf_thread: str) -> str:
+    async def ask(agent: str, prompt: str, wf_thread: str, step_id: str) -> str:
         tid = f"{wf_thread}-agent"
+        tag = f"workflow:{wf_thread}:{step_id}"
         if company.store.thread(tid) is None:
             company.create_thread(f"workflow step ({agent})", {"workflow_thread": wf_thread}, tid)
-        rid = await company.submit(tid, f"[workflow job for {agent}] {prompt}", source="workflow")
+        # A step re-runs after a crash (the graph re-executes the node): reuse the company
+        # run already made for this step instead of asking twice — a recovered run keeps
+        # the tag as `crash-resume|<tag>`.
+        mine = [
+            r
+            for r in company.store.runs(thread_id=tid, limit=200)
+            if r["source"] in (tag, f"crash-resume|{tag}") and r["status"] != "cancelled"
+        ]
+        rid = mine[0]["id"] if mine else None
+        if rid is None or mine[0]["status"] == "error":
+            rid = await company.submit(tid, f"[workflow job for {agent}] {prompt}", source=tag)
         run = await company.wait(rid, timeout_s)
         if run["status"] != "success":
             raise RuntimeError(f"agent step ended {run['status']}: {run.get('error')}")

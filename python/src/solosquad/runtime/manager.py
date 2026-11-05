@@ -118,19 +118,23 @@ class RunManager:
         ids = {m.id for m in snap.values.get("messages") or [] if isinstance(m, Message)}
         if run["kind"] == "message" and _input_id(run["id"]) not in ids:
             return self.store.create_run(
-                tid, "message", run["input"], "crash-resume", created=run["created"]
+                tid,
+                "message",
+                run["input"],
+                f"crash-resume|{run['source']}",
+                created=run["created"],
             )
         if run["kind"] == "input" and not snap.values:
             return self.store.create_run(
-                tid, "input", run["input"], "crash-resume", created=run["created"]
+                tid, "input", run["input"], f"crash-resume|{run['source']}", created=run["created"]
             )
         if run["kind"] == "resume" and snap.interrupts:
             return self.store.create_run(
-                tid, "resume", run["input"], "crash-resume", created=run["created"]
+                tid, "resume", run["input"], f"crash-resume|{run['source']}", created=run["created"]
             )
         if snap.next:
             return self.store.create_run(
-                tid, "continue", None, "crash-resume", created=run["created"]
+                tid, "continue", None, f"crash-resume|{run['source']}", created=run["created"]
             )
         return None
 

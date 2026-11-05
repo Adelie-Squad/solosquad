@@ -82,7 +82,7 @@ async def test_compressed_soak(tmp_path: Path) -> None:
     assert not open_runs, f"{len(open_runs)} runs never finished"
     assert not m.store.runs(status=RunStatus.ERROR, limit=1000), "no run may fail"
     all_runs = m.store.runs(limit=1000)
-    assert any(r["source"] == "crash-resume" for r in all_runs), (
+    assert any(r["source"].startswith("crash-resume") for r in all_runs), (
         "the crashes must hit runs in flight"
     )
     assert any(r["error"] == "engine restarted" for r in all_runs)

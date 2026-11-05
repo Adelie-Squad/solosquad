@@ -41,6 +41,7 @@ from solosquad.swarm import SwarmState, create_handoff_tool, create_swarm, hando
 MAX_HANDOFFS = 6
 DEFAULT_ENTRY = "chief"
 APPROVAL = re.compile(rf"{MARKER}:([0-9a-f]+):(.*)")
+CATEGORY = re.compile(r"^\[([a-z_]+)\]\s*(.*)$", re.DOTALL)
 
 
 class CompanyState(SwarmState, total=False):
@@ -90,6 +91,8 @@ def approval_card(pending: dict[str, Any]) -> dict[str, Any]:
         "risk": str(pending.get("risk") or "high"),
         "agent": agent,
         "signature": pending.get("signature"),
+        "category": str(pending.get("category") or "other"),
+        "team": pending.get("team"),
     }
 
 
@@ -155,6 +158,19 @@ class AgentNode:
 
     # ------------------------------------------------------------------ run
 
+    def _pending(self, signature: str, raw_reason: str) -> dict[str, Any]:
+        """A guard stop → the pending approval: `[category] reason` from the marker, plus the
+        team of this agent (decision 51 — team members may approve their team's requests)."""
+        cat = CATEGORY.match(raw_reason)
+        category, reason = (cat.group(1), cat.group(2)) if cat else ("other", raw_reason)
+        return {
+            "agent": self.name,
+            "signature": signature,
+            "reason": reason,
+            "category": category,
+            "team": self.rt.resolver.team_of(self.name),
+        }
+
     def _stream_guard(
         self, event: ToolUse, granted: set[str]
     ) -> tuple[dict[str, Any] | None, str | None] | None:
@@ -165,7 +181,7 @@ class AgentNode:
         reason = str(out["hookSpecificOutput"]["permissionDecisionReason"])
         m = APPROVAL.search(reason)
         if m:
-            return {"agent": self.name, "signature": m.group(1), "reason": m.group(2)}, None
+            return self._pending(m.group(1), m.group(2)), None
         return None, reason
 
     def _guard_files(self, thread_id: str, grants: list[str]) -> tuple[Path, Path]:
@@ -173,7 +189,13 @@ class AgentNode:
         d.mkdir(parents=True, exist_ok=True)
         policy = d / "policy.json"
         rules = [
-            {"tool": r.tool, "command": r.command, "action": r.action.value, "reason": r.reason}
+            {
+                "tool": r.tool,
+                "command": r.command,
+                "action": r.action.value,
+                "reason": r.reason,
+                "category": r.category,
+            }
             for r in self.rt.customization.guard.rules
         ]
         policy.write_text(json.dumps({"rules": rules, "include_defaults": False}), encoding="utf-8")
@@ -269,11 +291,7 @@ class AgentNode:
                         elif isinstance(event, ToolResult):
                             m = APPROVAL.search(event.content)
                             if m and approval is None:
-                                approval = {
-                                    "agent": self.name,
-                                    "signature": m.group(1),
-                                    "reason": m.group(2),
-                                }
+                                approval = self._pending(m.group(1), m.group(2))
                         elif isinstance(event, RateLimit) and event.status == "exceeded":
                             self.rt.router.mark_limited(selection.connection.id, event.resets_at)
                             limited = True
