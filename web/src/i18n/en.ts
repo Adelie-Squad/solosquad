@@ -293,7 +293,7 @@ export const en: Record<MessageKey, string> = {
   'users.display': 'Display name',
   'users.initialPassword': 'First password (10+ characters)',
   'users.add': 'Add person',
-  'users.addHint': 'They set up a one-time code at first login. Teams and titles are set in the org chart.',
+  'users.addHint': 'They set up a passkey or a one-time code at first login. Teams and titles are set in the org chart.',
 
   'screen.unknownWidget': 'This web does not know the widget: {widget}',
   'screen.badWidgetVersion': 'Version {version} of the {widget} widget cannot be drawn yet',

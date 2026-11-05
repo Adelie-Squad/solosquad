@@ -289,6 +289,10 @@
   gap: 16px;
 }
 
+.panel.settings-body {
+  padding: 16px 22px 20px;
+}
+
 /* ── approvals ─────────────────────────────────────────────── */
 
 .approval-card {

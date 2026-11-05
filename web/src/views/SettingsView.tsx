@@ -147,7 +147,11 @@ function AccountSettings() {
       }}
     >
       <p>
-        <strong>{me.user?.display}</strong> · {me.user?.username} · {me.user?.title}
+        <strong>{me.user?.display}</strong>
+        {[me.user?.display !== me.user?.username ? me.user?.username : null, me.user?.title]
+          .filter(Boolean)
+          .map((part) => ` · ${part}`)
+          .join('')}
       </p>
       <label className="field">
         <span>{t('settings.newPassword')}</span>
