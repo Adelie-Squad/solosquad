@@ -116,6 +116,9 @@ def plan(spec: ServiceSpec, home: Path, system: str | None = None) -> ServicePla
             path,
             systemd_unit(spec),
             [
+                # a cloud VM usually has nobody logged in: without lingering, a user unit
+                # would not start at boot (decision 46 W1 — the office runs on that VM)
+                ["loginctl", "enable-linger"],
                 ["systemctl", "--user", "daemon-reload"],
                 ["systemctl", "--user", "enable", "--now", name],
             ],
