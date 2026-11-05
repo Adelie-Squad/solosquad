@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from solosquad import storage
 from solosquad.check import doctor_checks
 from solosquad.cli import app
 from solosquad.context.ledger import LedgerEntry
@@ -178,6 +179,35 @@ def test_backup_copies_both_databases_with_a_manifest(tmp_path: Path) -> None:
     assert json.loads((tmp_path / "bk" / "manifest.json").read_text())["schema_version"] == 1
     res = CliRunner().invoke(app, ["backup", "-s", str(sol), "--to", str(tmp_path / "bk2")])
     assert res.exit_code == 0 and "office:" in res.output
+
+
+def test_backup_pins_every_database_to_one_moment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A write that lands while the first file is being copied is in neither copy (I36)."""
+    org, office = tmp_path / "org.db", tmp_path / "office.db"
+    for p in (org, office):
+        db = storage.connect(p)
+        db.execute("CREATE TABLE t (x)")
+        db.execute("INSERT INTO t VALUES (1)")
+    writer = storage.connect(office)
+    real = storage._copy_pinned
+    calls: list[Path] = []
+
+    def copy_then_write(source: sqlite3.Connection, dest: Path) -> None:
+        real(source, dest)
+        if not calls:  # org copied, office not yet: the engine writes meanwhile
+            writer.execute("INSERT INTO t VALUES (2)")
+        calls.append(dest)
+
+    monkeypatch.setattr(storage, "_copy_pinned", copy_then_write)
+    manifest = storage.backup({"org": org, "office": office}, tmp_path / "bk")
+    assert [c.name for c in calls] == ["org.db", "office.db"]
+    copied = sqlite3.connect(tmp_path / "bk" / "office.db").execute("SELECT x FROM t")
+    assert copied.fetchall() == [(1,)]  # the later write is not in this backup
+    assert writer.execute("SELECT count(*) FROM t").fetchone() == (2,)  # but it was kept
+    assert manifest["consistent"] is True
+    assert {f["copied_at"] for f in manifest["files"]} == {manifest["taken_at"]}
 
 
 def test_doctor_reports_leftover_per_component_files(tmp_path: Path, repo_root: Path) -> None:
