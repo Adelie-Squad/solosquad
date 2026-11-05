@@ -96,3 +96,32 @@ jobs:
       - run: npx tsx scripts/dump-validate-golden.ts > python/tests/golden/validate-v1.4.3.json
       - run: npx tsx scripts/dump-parse-edge-golden.ts > python/tests/golden/parse-edge-v1.4.3.json
       - run: git diff --exit-code -- python/tests/golden
+
+  # v2.1.0 — the customer web (web/). Its API types are generated from the Python
+  # contract (PRD v2.1.0 I6): regenerate schema → TS types and fail if they drifted.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+        working-directory: python
+      - run: npm ci
+      - name: Contract fresh — schema.json and types.gen.ts match the pydantic models
+        run: npm run check:types
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: The engine serves the build (same origin, client routes → index.html)
+        working-directory: python
+        run: uv run pytest -q tests/test_web_contract.py

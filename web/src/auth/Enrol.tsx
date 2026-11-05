@@ -1,0 +1,101 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { api, ApiError } from '../api/client';
+import { keys } from '../api/queries';
+import type { Ok, TotpBegin } from '../api/types.gen';
+import { LocalePicker } from '../components/LocalePicker';
+import { QrCode } from '../components/QrCode';
+import { useI18n, type MessageKey } from '../i18n';
+
+/** First login: set up the one-time code before anything else opens (decision 41 · I19). */
+export function Enrol() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const [uri, setUri] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<MessageKey | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Once per mount — every call makes a new pending secret, so StrictMode's double effect
+  // must not ask twice (the ref survives the simulated remount).
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    api
+      .post<TotpBegin>('/auth/totp/begin')
+      .then((r) => setUri(r.uri))
+      .catch(() => setError('enrol.beginFailed'));
+  }, []);
+
+  const secret = uri ? (new URL(uri).searchParams.get('secret') ?? '') : '';
+
+  const confirm = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post<Ok>('/auth/totp/confirm', { code });
+      await qc.invalidateQueries({ queryKey: keys.me });
+    } catch (err) {
+      setError(err instanceof ApiError && err.status === 400 ? 'auth.wrongCode' : 'auth.failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logout = async () => {
+    await api.post('/auth/logout').catch(() => undefined);
+    qc.setQueryData(keys.me, undefined);
+    await qc.invalidateQueries({ queryKey: keys.me });
+  };
+
+  return (
+    <div className="auth-page">
+      <form className="auth-card is-wide" onSubmit={confirm}>
+        <h1>{t('enrol.title')}</h1>
+        <ol className="enrol-steps">
+          <li>{t('enrol.step1')}</li>
+          <li>{t('enrol.step2')}</li>
+          <li>{t('enrol.step3')}</li>
+        </ol>
+        {uri ? (
+          <div className="enrol-qr">
+            <QrCode value={uri} label={t('enrol.qrLabel')} />
+            <div>
+              <p className="settings-hint">{t('enrol.manual')}</p>
+              <code className="secret">{secret.replace(/(.{4})/g, '$1 ').trim()}</code>
+            </div>
+          </div>
+        ) : (
+          !error && <p>{t('common.loading')}</p>
+        )}
+        <label className="field">
+          <span>{t('auth.code')}</span>
+          <input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]{6}"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            required
+            autoFocus
+          />
+        </label>
+        {error && (
+          <p className="form-error" role="alert">
+            {t(error)}
+          </p>
+        )}
+        <button className="btn is-primary is-block" disabled={busy || code.length !== 6 || !uri}>
+          {t('enrol.confirm')}
+        </button>
+        <button type="button" className="btn is-block is-quiet" onClick={logout}>
+          {t('nav.logout')}
+        </button>
+        <LocalePicker />
+      </form>
+    </div>
+  );
+}

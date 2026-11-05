@@ -103,6 +103,13 @@ class ExecutionPolicy(BaseModel):
     allow_local_llm: bool = True
 
 
+class WebPrefs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    locale: str = "ko"
+    """The org's default web language (I31 · decision 53): ko · en · zh-CN. A person's own
+    choice (`users.locale`) wins over it."""
+
+
 class WorkspaceConfig(_Doc):
     name: str
     type: WorkspaceType = WorkspaceType.LOCAL
@@ -117,6 +124,7 @@ class WorkspaceConfig(_Doc):
     retention: RetentionPolicy = Field(default_factory=RetentionPolicy)
     snapshot: SnapshotTarget = Field(default_factory=SnapshotTarget)
     """Where the daily snapshot goes — the customer's own bucket (decision 54)."""
+    web: WebPrefs = Field(default_factory=WebPrefs)
 
 
 def _read[M: BaseModel](path: Path, model: type[M]) -> M:

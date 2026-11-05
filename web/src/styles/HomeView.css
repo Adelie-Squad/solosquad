@@ -1,0 +1,321 @@
+/* 홈은 카드 높이를 꽉 채운다 — 위 영역만 스크롤, 아래 입력부는 고정 */
+.home {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* 스크롤 영역과 하단 입력부가 같은 폭(콘텐츠 820px)을 쓴다 */
+.home-inner,
+.home-footer {
+  width: 100%;
+  max-width: 916px;
+  margin: 0 auto;
+  padding-left: 48px;
+  padding-right: 48px;
+}
+
+.home-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 40px;
+  padding-bottom: 24px;
+}
+
+/* 이어 보는 대화 — 인사 · 보고 대신 제목 한 줄 */
+.chat-head h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.chat-head p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.home-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  padding-bottom: 20px;
+}
+
+.home-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-top: 8px;
+}
+
+.home-bubble {
+  position: relative;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 7%, white);
+  font-size: 15.5px;
+  line-height: 1.6;
+  animation: bubble-in 0.5s ease 0.2s both;
+}
+
+.home-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 28px;
+  border-width: 8px 10px 8px 0;
+  border-style: solid;
+  border-color: transparent color-mix(in srgb, var(--accent) 7%, white) transparent transparent;
+}
+
+.home-bubble p {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.home-bubble .home-greeting {
+  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.report {
+  padding: 20px 22px 8px;
+}
+
+.report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.report-header .panel-title {
+  margin: 0;
+}
+
+.report-counts {
+  display: flex;
+  gap: 6px;
+}
+
+.report-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.report-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-item:last-child {
+  border-bottom: 0;
+}
+
+.report-icon {
+  width: 26px;
+  height: 26px;
+  justify-content: center;
+  padding: 0;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.report-title {
+  margin: 2px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.report-detail {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* 대화 */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.chat-row.is-user {
+  justify-content: flex-end;
+}
+
+.chat-avatar {
+  font-size: 20px;
+}
+
+.chat-bubble {
+  max-width: 78%;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  white-space: pre-line;
+  animation: bubble-in 0.25s ease both;
+}
+
+.is-agent .chat-bubble {
+  background: var(--surface-2);
+  border-bottom-left-radius: 4px;
+}
+
+.is-user .chat-bubble {
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-typing {
+  display: flex;
+  gap: 4px;
+  padding: 16px;
+}
+
+.chat-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  animation: typing 1s infinite;
+}
+
+.chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* 추천 프롬프트 — 한 줄 가로 스크롤, 가려진 쪽 끝만 그라데이션으로 사라진다 */
+.suggestions {
+  --fade: 40px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestions.fade-right {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+}
+
+.suggestions.fade-left {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+}
+
+.suggestions.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+}
+
+.suggestion {
+  flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13.5px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.suggestion:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, white);
+  background: color-mix(in srgb, var(--accent) 5%, white);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  padding: 8px 8px 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 4px 18px rgba(40, 20, 90, 0.07);
+}
+
+.composer:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 50%, white);
+}
+
+.composer input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+}
+
+.composer .btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 860px) {
+  .home-inner,
+  .home-footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-bubble, .chat-bubble, .chat-typing span { animation: none; }
+}
+
+/* 입력창 아래 — 실제 AI 응답인지, 데모 응답인지 */
+.composer-note {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}

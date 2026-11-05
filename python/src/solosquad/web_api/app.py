@@ -22,6 +22,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import webauthn
+from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
@@ -62,6 +63,8 @@ from solosquad.routing.eligibility import Entity, judge
 from solosquad.routing.router import Router
 from solosquad.routing.vault import SecretStore
 from solosquad.runtime import RunManager, RunStatus
+from solosquad.screens import load_screen
+from solosquad.web_api import schemas as S
 from solosquad.web_api.access import Origin, allowed, origin, parse_networks
 from solosquad.web_api.accounts import (
     SESSION_TTL_S,
@@ -119,12 +122,17 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "uploads.create": EVERYONE,
     "artifacts.list": EVERYONE,
     "artifacts.review": EVERYONE,
+    "screens": EVERYONE,
+    "settings.get": EVERYONE,
+    "settings.update": OWNER,
 }
 
 
 def _json_default(obj: Any) -> Any:
     if isinstance(obj, ChatMessage):
         return obj.to_dict()
+    if isinstance(obj, BaseModel):
+        return obj.model_dump(mode="json")
     if hasattr(obj, "__dict__"):
         return obj.__dict__
     return str(obj)
@@ -137,6 +145,25 @@ def dumps(obj: Any) -> bytes:
 class Json(JSONResponse):
     def render(self, content: Any) -> bytes:
         return dumps(content)
+
+
+def respond(tp: Any, data: Any, status_code: int = 200) -> Json:
+    """Send `data` through its contract model (I6) — the shape the web's types are made from."""
+    return Json(S.conform(tp, json.loads(dumps(data))), status_code=status_code)
+
+
+class SpaFiles(StaticFiles):
+    """The built web; a client-side route (`/chat/th-1`, no file extension) gets
+    `index.html` so a reload or a shared link opens the right screen."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except HTTPException as e:
+            last = path.rsplit("/", 1)[-1]
+            if e.status_code != 404 or "." in last or path.startswith("api"):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 @dataclass(frozen=True)
@@ -207,6 +234,23 @@ class SecurityHeaders:
         await self.app(scope, receive, wrapped)
 
 
+def _access_public(policy: Any) -> dict[str, Any]:
+    return {
+        "require_login": policy.require_login,
+        "two_factor": policy.two_factor,
+        "allowed_networks": list(policy.allowed_networks),
+    }
+
+
+def _artifact_public(art: Any) -> dict[str, Any]:
+    """An artifact whose kind has a contract (`finance.pnl`, `brief`) is checked against it."""
+    out: dict[str, Any] = art.public()
+    model = S.ARTIFACT_DATA.get(art.kind)
+    if model is not None:
+        out["data"] = S.conform(model, json.loads(dumps(out["data"])))
+    return out
+
+
 def create_app(cfg: WebConfig) -> Starlette:
     m = cfg.manager
     hub = EventHub(m, others={"workflow": cfg.workflows.manager} if cfg.workflows else None)
@@ -261,18 +305,34 @@ def create_app(cfg: WebConfig) -> Starlette:
             raise ValueError("expected a JSON object")
         return data
 
+    def org_root() -> Path | None:
+        if cfg.workspace is not None:
+            return cfg.workspace.org.root
+        return cfg.workflows.org_root if cfg.workflows else None
+
+    def org_locale() -> str:
+        loc = cfg.workspace.config().web.locale if cfg.workspace else S.DEFAULT_LOCALE
+        return loc if loc in S.LOCALES else S.DEFAULT_LOCALE
+
     def me_payload(session: Session) -> dict[str, Any]:
-        return {"user": session.user.public(), "stage": session.stage.value, "csrf": session.csrf}
+        own = session.user.locale
+        return {
+            "user": session.user.public(),
+            "stage": session.stage.value,
+            "csrf": session.csrf,
+            "locale": own if own in S.LOCALES else org_locale(),
+            "org_locale": org_locale(),
+        }
 
     # ------------------------------------------------------------------ health · auth
 
     async def health(request: Request) -> Response:
         policy_check(request)
-        return Json({"ok": True})
+        return respond(S.Health, {"ok": True})
 
     async def version(request: Request) -> Response:
         principal(request)
-        return Json({"version": __version__})
+        return respond(S.Version, {"version": __version__})
 
     async def login(request: Request) -> Response:
         w = policy_check(request)
@@ -290,7 +350,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         except AuthError as e:
             raise HTTPException(401, str(e)) from e
         accounts().audit(session.user.id, "login", w.address)
-        resp = Json(me_payload(session))
+        resp = respond(S.Me, me_payload(session))
         resp.set_cookie(
             SESSION_COOKIE,
             token,
@@ -308,32 +368,38 @@ def create_app(cfg: WebConfig) -> Starlette:
         if token:
             accounts().logout(token)
             accounts().audit(who.user_id, "logout")
-        resp = Json({"ok": True})
+        resp = respond(S.Ok, {"ok": True})
         resp.delete_cookie(SESSION_COOKIE, path="/")
         return resp
 
     async def me(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
-            return Json({"user": None, "stage": "full", "csrf": None, "local": True})
+            local = {"user": None, "stage": "full", "csrf": None, "local": True}
+            return respond(S.Me, {**local, "locale": org_locale(), "org_locale": org_locale()})
         if request.method == "PATCH":
             data = await body(request)
             if "locale" in data:
-                accounts().set_locale(who.session.user.id, str(data["locale"]))
+                # null or "" = follow the org default (I31)
+                loc = str(data["locale"] or "")
+                if loc and loc not in S.LOCALES:
+                    raise ValueError(f"locale must be one of {list(S.LOCALES)} or null")
+                accounts().set_locale(who.session.user.id, loc)
             if "password" in data:
                 accounts().set_password(who.session.user.id, str(data["password"]))
                 accounts().audit(who.user_id, "password.change")
             session = accounts().session(request.cookies.get(SESSION_COOKIE))
             if session is None:  # a password change ends every session, this one too
-                return Json({"ok": True, "relogin": True})
-            return Json(me_payload(session))
-        return Json(me_payload(who.session))
+                gone = {"user": None, "stage": "full", "csrf": None, "relogin": True}
+                return respond(S.Me, {**gone, "locale": org_locale(), "org_locale": org_locale()})
+            return respond(S.Me, me_payload(session))
+        return respond(S.Me, me_payload(who.session))
 
     async def totp_begin(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
             raise HTTPException(400, "log in with an account to set up a one-time code")
-        return Json({"uri": accounts().begin_totp(who.session.user.id)})
+        return respond(S.TotpBegin, {"uri": accounts().begin_totp(who.session.user.id)})
 
     async def totp_confirm(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
@@ -346,7 +412,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         if token:
             accounts().promote_session(token)
         accounts().audit(who.user_id, "totp.enrol")
-        return Json({"ok": True})
+        return respond(S.Ok, {"ok": True})
 
     # ------------------------------------------------------------------ approval rights
 
@@ -354,7 +420,11 @@ def create_app(cfg: WebConfig) -> Starlette:
         return load_policy(cfg.approvals_path) if cfg.approvals_path else ApprovalPolicy({})
 
     def waiting_card(mgr: RunManager, tid: str) -> dict[str, Any] | None:
-        for run in mgr.store.runs(thread_id=tid, status=RunStatus.INTERRUPTED, limit=1):
+        # only the thread's newest run can be waiting: once answered, the resume run is
+        # newer and the old interrupted run stays in the store as history
+        for run in mgr.store.runs(thread_id=tid, limit=1):
+            if run["status"] != RunStatus.INTERRUPTED:
+                return None
             for item in run.get("interrupts") or []:
                 value = item.get("value")
                 if isinstance(value, dict):
@@ -539,12 +609,12 @@ def create_app(cfg: WebConfig) -> Starlette:
                 str(data.get("password") or ""),
                 Role(str(data.get("role") or Role.STAFF.value)),
                 display=str(data.get("display") or ""),
-                locale=str(data.get("locale") or "ko"),
+                locale=str(data.get("locale") or ""),  # "" = follow the org default
             )
             accounts().audit(who.user_id, "user.create", f"{user.username} as {user.role.value}")
-            return Json(user.public(), status_code=201)
+            return respond(S.PublicUser, user.public(), 201)
         need(request, "users.list")
-        return Json([u.public() for u in accounts().users()])
+        return respond(list[S.PublicUser], [u.public() for u in accounts().users()])
 
     async def user_update(request: Request) -> Response:
         who = need(request, "users.update")
@@ -579,7 +649,7 @@ def create_app(cfg: WebConfig) -> Starlette:
             store.audit(
                 who.user_id, "user.profile", f"{uid} teams={teams} title={data.get('title')!r}"
             )
-        return Json(store.user(uid).public())
+        return respond(S.PublicUser, store.user(uid).public())
 
     # ------------------------------------------------------------------ access policy
 
@@ -612,13 +682,35 @@ def create_app(cfg: WebConfig) -> Starlette:
                 "access.update",
                 json.dumps(proposed.model_dump(mode="json"), ensure_ascii=False),
             )
-            return Json(proposed.model_dump(mode="json"))
+            return respond(S.AccessPolicy, _access_public(proposed))
         need(request, "access.get")
-        return Json(ws_cfg.access.model_dump(mode="json"))
+        return respond(S.AccessPolicy, _access_public(ws_cfg.access))
 
     async def audit(request: Request) -> Response:
         need(request, "audit")
-        return Json(accounts().audit_log(int(request.query_params.get("limit", "200"))))
+        rows = accounts().audit_log(int(request.query_params.get("limit", "200")))
+        return respond(list[S.AuditEntry], rows)
+
+    async def settings(request: Request) -> Response:
+        if cfg.workspace is None:
+            raise HTTPException(404, "no workspace configuration")
+        ws_cfg = cfg.workspace.config()
+        if request.method == "PUT":
+            who = need(request, "settings.update")
+            data = await body(request)
+            loc = str(data.get("locale") or "")
+            if loc not in S.LOCALES:
+                raise ValueError(f"locale must be one of {list(S.LOCALES)}")
+            web = ws_cfg.web.model_copy(update={"locale": loc})
+            cfg.workspace.save_config(ws_cfg.model_copy(update={"web": web}))
+            accounts().audit(who.user_id, "settings.update", f"locale={loc}")
+            return respond(S.WebSettings, {"locale": loc})
+        need(request, "settings.get")
+        return respond(S.WebSettings, {"locale": org_locale()})
+
+    async def screen(request: Request) -> Response:
+        need(request, "screens")
+        return respond(S.ScreenResponse, load_screen(org_root(), request.path_params["name"]))
 
     # ------------------------------------------------------------------ operations
 
@@ -627,23 +719,24 @@ def create_app(cfg: WebConfig) -> Starlette:
             need(request, "threads.create")
             data = await body(request)
             tid = m.create_thread(str(data.get("title") or "task"), data.get("metadata"))
-            return Json({"thread_id": tid}, status_code=201)
+            return respond(S.ThreadCreated, {"thread_id": tid}, 201)
         need(request, "threads.list")
-        return Json(m.store.threads(int(request.query_params.get("limit", "50"))))
+        limit = int(request.query_params.get("limit", "50"))
+        return respond(list[S.Thread], m.store.threads(limit))
 
     async def thread_state(request: Request) -> Response:
         need(request, "threads.state")
         tid = request.path_params["tid"]
         if m.store.thread(tid) is None:
             raise KeyError(f"no thread {tid}")
-        return Json(await m.thread_state(tid))
+        return respond(S.ThreadState, await m.thread_state(tid))
 
     async def thread_run(request: Request) -> Response:
         need(request, "threads.run")
         text = (await body(request)).get("input")
         tid = request.path_params["tid"]
         rid = await m.submit(tid, text if isinstance(text, str) else None)
-        return Json({"run_id": rid}, status_code=201)
+        return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def thread_resume(request: Request) -> Response:
         who = need(request, "threads.resume")
@@ -656,19 +749,20 @@ def create_app(cfg: WebConfig) -> Starlette:
         rid = await m.resume(tid, value, source=f"user:{approver}")
         if cfg.accounts is not None:
             cfg.accounts.audit(who.user_id, "approval", f"{tid} → {value!r}")
-        return Json({"run_id": rid}, status_code=201)
+        return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def runs(request: Request) -> Response:
         need(request, "runs.list")
         q = request.query_params
         since = float(q["since"]) if q.get("since") else None
-        return Json(
+        return respond(
+            list[S.Run],
             m.store.runs(
                 thread_id=q.get("thread_id"),
                 status=q.get("status"),
                 since=since,
                 limit=int(q.get("limit", "50")),
-            )
+            ),
         )
 
     async def run(request: Request) -> Response:
@@ -677,11 +771,12 @@ def create_app(cfg: WebConfig) -> Starlette:
         found = m.store.run(rid)
         if found is None:
             raise KeyError(f"no run {rid}")
-        return Json(found)
+        return respond(S.Run, found)
 
     async def ledger(request: Request) -> Response:
         need(request, "ledger")
-        return Json(cfg.ledger.totals(request.query_params.get("by", "agent")))
+        totals = cfg.ledger.totals(request.query_params.get("by", "agent"))
+        return respond(S.LedgerTotals, totals)
 
     async def events(request: Request) -> Response:
         need(request, "events")
@@ -725,11 +820,12 @@ def create_app(cfg: WebConfig) -> Starlette:
 
     async def teams(request: Request) -> Response:
         need(request, "teams")
-        return Json(
+        return respond(
+            list[S.Team],
             [
                 {"name": name, "main": comp.main, "members": comp.members}
                 for name, comp in resolver().teams().items()
-            ]
+            ],
         )
 
     async def agents(request: Request) -> Response:
@@ -756,7 +852,7 @@ def create_app(cfg: WebConfig) -> Starlette:
                     "working_on": working.get(name, []),
                 }
             )
-        return Json(out)
+        return respond(list[S.Agent], out)
 
     # ------------------------------------------------------------------ connections · budget
 
@@ -831,9 +927,9 @@ def create_app(cfg: WebConfig) -> Starlette:
             save_connections(path, [*existing, conn])
             refresh_router()
             accounts().audit(who.user_id, "connection.create", cid)
-            return Json(conn_public(conn), status_code=201)
+            return respond(S.ConnectionOut, conn_public(conn), 201)
         need(request, "connections.list")
-        return Json([conn_public(c) for c in all_connections()])
+        return respond(list[S.ConnectionOut], [conn_public(c) for c in all_connections()])
 
     async def connection_update(request: Request) -> Response:
         cid = request.path_params["cid"]
@@ -849,7 +945,7 @@ def create_app(cfg: WebConfig) -> Starlette:
                 cfg.secrets.delete(found.secret_ref)
             refresh_router()
             accounts().audit(who.user_id, "connection.delete", cid)
-            return Json({"ok": True})
+            return respond(S.Ok, {"ok": True})
         who = need(request, "connections.update")
         data = await body(request)
         update: dict[str, Any] = {}
@@ -868,7 +964,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         save_connections(path, [changed if c.id == cid else c for c in existing])
         refresh_router()
         accounts().audit(who.user_id, "connection.update", f"{cid} {sorted(update)}")
-        return Json(conn_public(changed))
+        return respond(S.ConnectionOut, conn_public(changed))
 
     async def budget(request: Request) -> Response:
         need(request, "budget")
@@ -892,7 +988,8 @@ def create_app(cfg: WebConfig) -> Starlette:
                     "exhausted": cap is not None and spent >= cap,
                 }
             )
-        return Json(
+        return respond(
+            S.Budget,
             {
                 "month_start": since,
                 "warn_at": warn_at,
@@ -904,7 +1001,7 @@ def create_app(cfg: WebConfig) -> Starlette:
                     "exhausted": org_cap is not None and total >= org_cap,
                 },
                 "connections": rows,
-            }
+            },
         )
 
     # ------------------------------------------------------------- workflows · uploads · artifacts
@@ -922,7 +1019,7 @@ def create_app(cfg: WebConfig) -> Starlette:
     async def workflows(request: Request) -> Response:
         need(request, "workflows.list")
         e = engine()
-        return Json({"workflows": e.summaries(), "errors": e.errors})
+        return respond(S.WorkflowList, {"workflows": e.summaries(), "errors": e.errors})
 
     async def workflow_update(request: Request) -> Response:
         who = need(request, "workflows.update")
@@ -934,7 +1031,8 @@ def create_app(cfg: WebConfig) -> Starlette:
         accounts().audit(
             who.user_id, "workflow.enable" if data["enabled"] else "workflow.disable", name
         )
-        return Json(next(w for w in engine().summaries() if w["name"] == name))
+        found = next(w for w in engine().summaries() if w["name"] == name)
+        return respond(S.WorkflowSummary, found)
 
     async def workflow_run(request: Request) -> Response:
         who = need(request, "workflows.run")
@@ -946,32 +1044,40 @@ def create_app(cfg: WebConfig) -> Starlette:
         tid, rid = await engine().run_now(name, inputs, source=f"user:{by}")
         if cfg.accounts is not None:
             cfg.accounts.audit(who.user_id, "workflow.run", name)
-        return Json({"thread_id": tid, "run_id": rid}, status_code=201)
+        return respond(S.WorkflowRunCreated, {"thread_id": tid, "run_id": rid}, 201)
 
     async def workflow_runs(request: Request) -> Response:
         need(request, "workflows.list")
         q = request.query_params
-        return Json(
-            engine().manager.store.runs(
-                thread_id=q.get("thread_id"),
-                status=q.get("status"),
-                limit=int(q.get("limit", "50")),
-            )
+        store = engine().manager.store
+        limit = int(q.get("limit", "50"))
+        name = q.get("workflow")
+        found = store.runs(
+            thread_id=q.get("thread_id"),
+            status=q.get("status"),
+            limit=limit if name is None else max(limit, 200),
         )
+        if name is not None:  # the run's thread remembers which workflow it belongs to
+            found = [
+                r
+                for r in found
+                if (store.thread(r["thread_id"]) or {}).get("metadata", {}).get("workflow") == name
+            ][:limit]
+        return respond(list[S.Run], found)
 
     async def workflow_run_get(request: Request) -> Response:
         need(request, "workflows.list")
         found = engine().manager.store.run(request.path_params["rid"])
         if found is None:
             raise KeyError(f"no workflow run {request.path_params['rid']}")
-        return Json(found)
+        return respond(S.Run, found)
 
     async def workflow_state(request: Request) -> Response:
         need(request, "workflows.list")
         tid = request.path_params["tid"]
         if engine().manager.store.thread(tid) is None:
             raise KeyError(f"no workflow thread {tid}")
-        return Json(await engine().manager.thread_state(tid))
+        return respond(S.WorkflowThreadState, await engine().manager.thread_state(tid))
 
     async def workflow_resume(request: Request) -> Response:
         who = need(request, "workflows.approve")
@@ -985,7 +1091,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         rid = await e.manager.resume(tid, value, source=f"user:{approver}")
         if cfg.accounts is not None:
             cfg.accounts.audit(who.user_id, "approval", f"workflow {tid} → {value!r}")
-        return Json({"run_id": rid}, status_code=201)
+        return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def uploads(request: Request) -> Response:
         if request.method == "POST":
@@ -997,9 +1103,9 @@ def create_app(cfg: WebConfig) -> Starlette:
             meta = engine().save_upload(filename, await request.body())
             if cfg.accounts is not None:
                 cfg.accounts.audit(who.user_id, "upload", f"{meta['filename']} ({meta['size']} B)")
-            return Json(meta, status_code=201)
+            return respond(S.Upload, meta, 201)
         need(request, "uploads.list")
-        return Json(engine().uploads_list())
+        return respond(list[S.Upload], engine().uploads_list())
 
     async def artifacts(request: Request) -> Response:
         need(request, "artifacts.list")
@@ -1013,11 +1119,11 @@ def create_app(cfg: WebConfig) -> Starlette:
             since=float(q["since"]) if q.get("since") else None,
             limit=int(q.get("limit", "50")),
         )
-        return Json([a.public() for a in found])
+        return respond(list[S.Artifact], [_artifact_public(a) for a in found])
 
     async def artifact_get(request: Request) -> Response:
         need(request, "artifacts.list")
-        return Json(store().get(request.path_params["aid"]).public())
+        return respond(S.Artifact, _artifact_public(store().get(request.path_params["aid"])))
 
     async def artifact_review(request: Request) -> Response:
         who = need(request, "artifacts.review")
@@ -1025,7 +1131,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         art = store().mark_reviewed(request.path_params["aid"], by)
         if cfg.accounts is not None:
             cfg.accounts.audit(who.user_id, "artifact.review", art.id)
-        return Json(art.public())
+        return respond(S.Artifact, _artifact_public(art))
 
     # ------------------------------------------------------------- approvals · org chart
 
@@ -1038,7 +1144,8 @@ def create_app(cfg: WebConfig) -> Starlette:
         for source, mgr in sources:
             for run in mgr.store.runs(status=RunStatus.INTERRUPTED, limit=200):
                 card = waiting_card(mgr, run["thread_id"])
-                if card is None:
+                newest = mgr.store.runs(thread_id=run["thread_id"], limit=1)
+                if card is None or newest[0]["id"] != run["id"]:
                     continue
                 out.append(
                     {
@@ -1051,7 +1158,7 @@ def create_app(cfg: WebConfig) -> Starlette:
                         "can_approve": may_approve(who, card),
                     }
                 )
-        return Json(sorted(out, key=lambda a: -float(a["created"])))
+        return respond(list[S.ApprovalItem], sorted(out, key=lambda a: -float(a["created"])))
 
     async def approval_policy(request: Request) -> Response:
         if request.method == "PUT":
@@ -1067,9 +1174,9 @@ def create_app(cfg: WebConfig) -> Starlette:
             save_policy(cfg.approvals_path, ApprovalPolicy(overrides))
             deviations = [r["category"] for r in ApprovalPolicy(overrides).table() if r["deviates"]]
             accounts().audit(who.user_id, "approval_policy.update", f"deviates={deviations}")
-            return Json(ApprovalPolicy(overrides).table())
+            return respond(list[S.ApprovalPolicyRow], ApprovalPolicy(overrides).table())
         need(request, "approval_policy.get")
-        return Json(policy().table())
+        return respond(list[S.ApprovalPolicyRow], policy().table())
 
     async def org_chart(request: Request) -> Response:
         need(request, "org_chart")
@@ -1107,7 +1214,8 @@ def create_app(cfg: WebConfig) -> Starlette:
             for u in people
             if u.role is not Role.OWNER and not (set(u.teams) & named)
         ]
-        return Json({"owners": owners, "teams": teams, "unassigned": unassigned})
+        chart = {"owners": owners, "teams": teams, "unassigned": unassigned}
+        return respond(S.OrgChart, chart)
 
     # ------------------------------------------------------------------ errors · routes
 
@@ -1167,12 +1275,14 @@ def create_app(cfg: WebConfig) -> Starlette:
         ("/artifacts", artifacts, ["GET"]),
         ("/artifacts/{aid}", artifact_get, ["GET"]),
         ("/artifacts/{aid}/review", artifact_review, ["POST"]),
+        ("/screens/{name}", screen, ["GET"]),
+        ("/settings", settings, ["GET", "PUT"]),
     ]
     routes: list[Route | Mount] = [
         Mount("/api", routes=[Route(path, fn, methods=methods) for path, fn, methods in api])
     ]
     if cfg.static_dir is not None and cfg.static_dir.is_dir():
-        routes.append(Mount("/", app=StaticFiles(directory=cfg.static_dir, html=True)))
+        routes.append(Mount("/", app=SpaFiles(directory=cfg.static_dir, html=True)))
 
     return Starlette(
         routes=routes,
