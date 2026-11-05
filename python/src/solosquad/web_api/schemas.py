@@ -44,6 +44,9 @@ class Ok(Closed):
 
 class Health(Closed):
     ok: bool
+    passkeys: bool = False
+    """Passkey sign-in is possible here (the office has its `public_url`) — the login
+    screen shows the passkey button only then."""
 
 
 class Version(Closed):
@@ -452,6 +455,100 @@ class BriefData(Open):
 ARTIFACT_DATA: dict[str, type[BaseModel]] = {"finance.pnl": PnlData, "brief": BriefData}
 
 
+# ---------------------------------------------------------------------- passkeys (W3)
+
+
+class PasskeyOptions(Closed):
+    """`navigator.credentials.create()` / `.get()` options (WebAuthn JSON, base64url)."""
+
+    challenge_id: str
+    options: dict[str, Any]
+
+
+class Passkey(Closed):
+    id: str
+    name: str
+    transports: list[str]
+    created: float
+    last_used: float | None
+
+
+class PasskeyAdded(Closed):
+    ok: bool
+    passkeys: list[Passkey]
+
+
+# ---------------------------------------------------------------------- profile · snapshot
+
+
+class ProfileServer(Open):
+    country: str | None = None
+    cloud: str | None = None
+    region: str | None = None
+    access: str | None = None
+
+
+class ProfileEntity(Closed):
+    id: str
+    name: str
+    country: str
+    controlled_by: str | None = None
+
+
+class ProfileLanguages(Closed):
+    default: Locale
+    enabled: list[Locale]
+
+
+class ProfilePrivacy(Closed):
+    regimes: list[str]
+    reviewer: str | None = None
+
+
+class CustomerProfile(Open):
+    """`core/profile.yaml` (decision 50) — facts about the customer, no secrets."""
+
+    schema_version: int
+    server: ProfileServer
+    entities: list[ProfileEntity]
+    languages: ProfileLanguages
+    privacy: ProfilePrivacy
+
+
+class ChecklistItem(Closed):
+    item: str
+    """Stable id — the web names it in the reader's language."""
+    label: str
+    done: bool
+
+
+class ProfileResponse(Closed):
+    profile: CustomerProfile
+    checklist: list[ChecklistItem]
+
+
+class SnapshotSettings(Closed):
+    """`workspace.yaml snapshot` — the keys themselves are never sent, only whether
+    they are stored."""
+
+    type: Literal["s3", "dir"] | None
+    endpoint: str | None
+    region: str
+    bucket: str | None
+    prefix: str
+    path: str | None
+    keep_days: int
+    has_secret: bool
+
+
+class SnapshotRunResult(Open):
+    target: Literal["s3", "dir"] | None = None
+    location: str | None = None
+    files: int | None = None
+    pruned: list[str] = Field(default_factory=list)
+    skipped: str | None = None
+
+
 # ---------------------------------------------------------------------- screens (I30)
 
 
@@ -549,6 +646,13 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     Screen,
     ScreenResponse,
     EngineEvent,
+    PasskeyOptions,
+    Passkey,
+    PasskeyAdded,
+    CustomerProfile,
+    ProfileResponse,
+    SnapshotSettings,
+    SnapshotRunResult,
 )
 
 

@@ -53,6 +53,40 @@ class SnapshotTarget(BaseModel):
     keep_days: int = 30
 
 
+S3_SECRET_REF = "snapshot-s3"
+
+
+def build_target(
+    kind: str | None,
+    *,
+    endpoint: str | None = None,
+    region: str = "us-east-1",
+    bucket: str | None = None,
+    prefix: str = "solosquad",
+    path: str | None = None,
+    keep_days: int = 30,
+) -> SnapshotTarget:
+    """The one check `snapshot set` (CLI) and `PUT /api/snapshot` (web) share.
+
+    `kind` None switches snapshots off. An s3 target needs an endpoint and a bucket (its
+    keys go to the secret store under `S3_SECRET_REF`); a dir target needs a path."""
+    if kind is None:
+        return SnapshotTarget()
+    if kind not in ("s3", "dir"):
+        raise ValueError("snapshot type must be s3 or dir")
+    if kind == "s3" and not (endpoint and bucket):
+        raise ValueError("an s3 target needs an endpoint and a bucket")
+    if kind == "dir" and not path:
+        raise ValueError("a dir target needs a path")
+    if keep_days < 1:
+        raise ValueError("keep_days must be at least 1")
+    return SnapshotTarget.model_validate(
+        {"type": kind, "endpoint": endpoint, "region": region or "us-east-1", "bucket": bucket,
+         "prefix": prefix or "solosquad", "path": path, "keep_days": keep_days,
+         "secret_ref": S3_SECRET_REF if kind == "s3" else None}
+    )  # fmt: skip
+
+
 # ---------------------------------------------------------------------- SigV4
 
 

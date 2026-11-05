@@ -1,0 +1,206 @@
+"""v2.1.0 slice 4b — passkeys, the customer profile and snapshots through the web API.
+
+PRD v2.1.0: decision 46 W3 (passkeys) · decision 50 (customer profile) · decision 54 /
+I36 (snapshots). Reads are open to everyone; every change is the owner's and audited.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import AsyncIterator
+from pathlib import Path
+from typing import Any
+
+import httpx
+import pytest
+from soft_authenticator import SoftAuthenticator
+from test_passkeys import ORIGIN
+from test_web_api import PASSWORD, TOKEN, Office, _next_code, _secret
+
+from solosquad.profile import load_profile
+from solosquad.routing.vault import SecretStore
+from solosquad.web_api import schemas as S
+from solosquad.web_api import totp
+from solosquad.web_api.accounts import Role
+from solosquad.web_api.app import CSRF_HEADER, WebConfig, create_app
+
+
+class Settings(Office):
+    def __init__(self, tmp: Path) -> None:
+        super().__init__(tmp)
+        self.secrets = SecretStore(tmp / "secrets.json")
+        self.runs: list[str] = []
+
+        def run_now() -> dict[str, Any]:
+            target = self.workspace.config().snapshot
+            self.runs.append(str(target.type))
+            if target.type is None:
+                return {"target": None, "skipped": "no snapshot target configured"}
+            return {"target": target.type, "location": "x", "files": 3, "pruned": []}
+
+        self.app = create_app(
+            WebConfig(self.manager, self.company.ledger, TOKEN, self.accounts, self.workspace,
+                      secrets=self.secrets, run_snapshot=run_now)
+        )  # fmt: skip
+
+    async def login(self, c: httpx.AsyncClient, name: str, role: Role) -> dict[str, str]:
+        user = self.accounts.create_user(name, PASSWORD, role)
+        secret = _secret(self.accounts.begin_totp(user.id))
+        assert self.accounts.confirm_totp(user.id, totp.code_at(secret, totp.current_step()))
+        r = await c.post(
+            "/api/auth/login",
+            json={"username": name, "password": PASSWORD, "otp": _next_code(secret)},
+        )
+        assert r.status_code == 200, r.text
+        return {CSRF_HEADER: r.json()["csrf"]}
+
+
+@pytest.fixture
+async def office(tmp_path: Path) -> AsyncIterator[Settings]:
+    o = Settings(tmp_path)
+    await o.manager.start()
+    yield o
+    await o.manager.stop()
+
+
+def _actions(o: Office) -> list[str]:
+    return [e["action"] for e in o.accounts.audit_log()]
+
+
+# ---------------------------------------------------------------------- passkeys
+
+
+async def test_passkey_flow_through_the_contract(office: Settings) -> None:
+    cfg = office.workspace.config()
+    async with office.client() as c:
+        assert (await c.get("/api/health")).json() == {"ok": True, "passkeys": False}
+        office.workspace.save_config(cfg.model_copy(update={"public_url": ORIGIN}))
+        assert (await c.get("/api/health")).json() == {"ok": True, "passkeys": True}
+
+    phone = SoftAuthenticator()
+    office.accounts.create_user("kim", PASSWORD, Role.STAFF)
+    async with office.client() as c:
+        r = await c.post("/api/auth/login", json={"username": "kim", "password": PASSWORD})
+        assert r.json()["stage"] == "enroll"
+        h = {CSRF_HEADER: r.json()["csrf"]}
+        begin = (await c.post("/api/auth/passkey/register/begin", headers=h)).json()
+        S.PasskeyOptions.model_validate(begin)
+        cred = phone.create(begin["options"], ORIGIN)
+        added = await c.post(
+            "/api/auth/passkey/register/finish",
+            json={"challenge_id": begin["challenge_id"], "credential": cred, "name": "Pixel"},
+            headers=h,
+        )
+        S.PasskeyAdded.model_validate(added.json())
+        mine = (await c.get("/api/me/passkeys")).json()
+        assert [p["name"] for p in mine] == ["Pixel"] and mine[0]["last_used"] is None
+        assert (await c.get("/api/me")).json()["stage"] == "full"
+
+    async with office.client() as c:  # discoverable: no username
+        begin = (await c.post("/api/auth/passkey/login/begin", json={})).json()
+        assert begin["options"].get("allowCredentials", []) == []
+        cred = phone.get(begin["options"], ORIGIN, rp_id="office.example")
+        r = await c.post(
+            "/api/auth/passkey/login/finish",
+            json={"challenge_id": begin["challenge_id"], "credential": cred},
+        )
+        me = S.Me.model_validate(r.json())
+        assert me.user is not None and me.user.username == "kim" and me.stage == "full"
+        h = {CSRF_HEADER: str(me.csrf)}
+        pid = (await c.get("/api/me/passkeys")).json()[0]["id"]
+        assert (await c.delete(f"/api/me/passkeys/{pid}", headers=h)).json() == {"ok": True}
+        assert (await c.get("/api/me/passkeys")).json() == []
+    assert {"passkey.add", "login.passkey", "passkey.remove"} <= set(_actions(office))
+
+
+async def test_owner_resets_someone_elses_passkeys(office: Settings) -> None:
+    office.workspace.save_config(
+        office.workspace.config().model_copy(update={"public_url": ORIGIN})
+    )
+    kim = office.accounts.create_user("kim", PASSWORD, Role.STAFF)
+    office.accounts.add_passkey(kim.id, "cred-1", b"pk", 0, [], "old phone")
+    async with office.client() as boss:
+        hb = await office.login(boss, "boss", Role.OWNER)
+        r = await boss.patch(f"/api/users/{kim.id}", json={"reset_passkeys": True}, headers=hb)
+        assert r.status_code == 200
+    assert office.accounts.passkeys(kim.id) == []
+    assert "user.passkeys.reset" in _actions(office)
+
+
+# ---------------------------------------------------------------------- customer profile
+
+
+async def test_profile_read_by_all_written_by_the_owner(office: Settings) -> None:
+    root = office.workspace.org.solution.root
+    async with office.client() as boss, office.client("203.0.113.9") as kim:
+        hb = await office.login(boss, "boss", Role.OWNER)
+        hk = await office.login(kim, "kim", Role.STAFF)
+        first = (await kim.get("/api/profile")).json()
+        S.ProfileResponse.model_validate(first)
+        assert {i["item"] for i in first["checklist"]} >= {"server_country", "entities"}
+        assert not any(i["done"] for i in first["checklist"] if i["item"] == "entities")
+        change = {
+            "server": {"country": "kr", "cloud": "aws", "region": "ap-northeast-2"},
+            "entities": [{"id": "moa-qd", "name": "Moa Qingdao 3PL", "country": "cn"}],
+            "privacy": {"regimes": ["PIPA", "PIPL"], "reviewer": "legal team"},
+        }
+        assert (await kim.put("/api/profile", json=change, headers=hk)).status_code == 403
+        r = await boss.put("/api/profile", json=change, headers=hb)
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["profile"]["server"]["country"] == "KR"
+        assert body["profile"]["entities"][0]["country"] == "CN"
+        done = {i["item"]: i["done"] for i in body["checklist"]}
+        assert done["server_country"] and done["entities"] and done["privacy"]
+        assert load_profile(root).server.region == "ap-northeast-2"
+        assert office.workspace.config().server_country == "KR"  # like `profile set`
+        for bad in (
+            {"languages": {"default": "fr"}},
+            {"entities": [{"id": "a", "name": "A", "country": "KR"}] * 2},
+            {"notes": "free text"},
+        ):
+            assert (await boss.put("/api/profile", json=bad, headers=hb)).status_code == 400
+    assert _actions(office).count("profile.update") == 1
+
+
+# ---------------------------------------------------------------------- snapshots
+
+
+async def test_snapshot_settings_keep_the_keys_out_of_every_response(
+    office: Settings, tmp_path: Path
+) -> None:
+    async with office.client() as boss, office.client("203.0.113.9") as kim:
+        hb = await office.login(boss, "boss", Role.OWNER)
+        hk = await office.login(kim, "kim", Role.STAFF)
+        first = (await kim.get("/api/snapshot")).json()
+        assert first["type"] is None and first["has_secret"] is False
+        s3 = {"type": "s3", "endpoint": "https://s3.example", "bucket": "bk", "region": "kr"}
+        assert (await kim.put("/api/snapshot", json=s3, headers=hk)).status_code == 403
+        # the same checks as `snapshot set`: s3 needs endpoint, bucket — and keys
+        for bad in ({"type": "s3", "bucket": "bk"}, {"type": "dir"}, s3, {"type": "ftp"}):
+            r = await boss.put("/api/snapshot", json=bad, headers=hb)
+            assert r.status_code == 400, (bad, r.text)
+        keys = {"access_key": "AKIAEXAMPLE", "secret_key": "very-secret-value"}
+        r = await boss.put("/api/snapshot", json={**s3, **keys}, headers=hb)
+        assert r.status_code == 200, r.text
+        assert r.json()["has_secret"] is True and r.json()["bucket"] == "bk"
+        assert office.secrets.get("snapshot-s3") == "AKIAEXAMPLE:very-secret-value"
+        r = await boss.put("/api/snapshot", json={**s3, "keep_days": 7}, headers=hb)
+        assert r.json()["keep_days"] == 7 and r.json()["has_secret"] is True  # keys kept
+        for resp in (r, await kim.get("/api/snapshot")):
+            text = json.dumps(resp.json())
+            assert "very-secret" not in text and "AKIA" not in text
+            assert "secret_ref" not in resp.json()
+        assert (await kim.post("/api/snapshot/run", headers=hk)).status_code == 403
+        ran = await boss.post("/api/snapshot/run", headers=hb)
+        assert ran.status_code == 200 and ran.json()["target"] == "s3"
+        folder = tmp_path / "vault"
+        r = await boss.put("/api/snapshot", json={"type": "dir", "path": str(folder)}, headers=hb)
+        assert r.json()["type"] == "dir" and r.json()["has_secret"] is False
+        assert (await boss.post("/api/snapshot/run", headers=hb)).json()["target"] == "dir"
+        r = await boss.put("/api/snapshot", json={"type": None}, headers=hb)
+        assert r.json()["type"] is None
+    assert office.runs == ["s3", "dir"]
+    log = office.accounts.audit_log()
+    assert {"snapshot.update", "snapshot.run"} <= {e["action"] for e in log}
+    assert not any("very-secret" in str(e["detail"]) for e in log)

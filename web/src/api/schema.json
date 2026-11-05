@@ -114,6 +114,27 @@
     },
     "EngineEvent": {
       "$ref": "#/$defs/EngineEvent"
+    },
+    "PasskeyOptions": {
+      "$ref": "#/$defs/PasskeyOptions"
+    },
+    "Passkey": {
+      "$ref": "#/$defs/Passkey"
+    },
+    "PasskeyAdded": {
+      "$ref": "#/$defs/PasskeyAdded"
+    },
+    "CustomerProfile": {
+      "$ref": "#/$defs/CustomerProfile"
+    },
+    "ProfileResponse": {
+      "$ref": "#/$defs/ProfileResponse"
+    },
+    "SnapshotSettings": {
+      "$ref": "#/$defs/SnapshotSettings"
+    },
+    "SnapshotRunResult": {
+      "$ref": "#/$defs/SnapshotRunResult"
     }
   },
   "required": [
@@ -153,7 +174,14 @@
     "BriefData",
     "Screen",
     "ScreenResponse",
-    "EngineEvent"
+    "EngineEvent",
+    "PasskeyOptions",
+    "Passkey",
+    "PasskeyAdded",
+    "CustomerProfile",
+    "ProfileResponse",
+    "SnapshotSettings",
+    "SnapshotRunResult"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -699,6 +727,27 @@
       "type": "object",
       "title": "ChatMessage"
     },
+    "ChecklistItem": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "done": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "item",
+        "label",
+        "done"
+      ],
+      "type": "object",
+      "title": "ChecklistItem"
+    },
     "ConnectionBudget": {
       "additionalProperties": false,
       "properties": {
@@ -853,6 +902,39 @@
       ],
       "type": "object",
       "title": "ConnectionOut"
+    },
+    "CustomerProfile": {
+      "additionalProperties": true,
+      "description": "`core/profile.yaml` (decision 50) — facts about the customer, no secrets.",
+      "properties": {
+        "schema_version": {
+          "type": "integer"
+        },
+        "server": {
+          "$ref": "#/$defs/ProfileServer"
+        },
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/ProfileEntity"
+          },
+          "type": "array"
+        },
+        "languages": {
+          "$ref": "#/$defs/ProfileLanguages"
+        },
+        "privacy": {
+          "$ref": "#/$defs/ProfilePrivacy"
+        }
+      },
+      "required": [
+        "schema_version",
+        "server",
+        "entities",
+        "languages",
+        "privacy"
+      ],
+      "type": "object",
+      "title": "CustomerProfile"
     },
     "EngineEvent": {
       "additionalProperties": true,
@@ -1027,10 +1109,15 @@
       "properties": {
         "ok": {
           "type": "boolean"
+        },
+        "passkeys": {
+          "default": false,
+          "type": "boolean"
         }
       },
       "required": [
-        "ok"
+        "ok",
+        "passkeys"
       ],
       "type": "object",
       "title": "Health"
@@ -1258,6 +1345,84 @@
       "type": "object",
       "title": "OrgTeam"
     },
+    "Passkey": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "transports": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "created": {
+          "type": "number"
+        },
+        "last_used": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "transports",
+        "created",
+        "last_used"
+      ],
+      "type": "object",
+      "title": "Passkey"
+    },
+    "PasskeyAdded": {
+      "additionalProperties": false,
+      "properties": {
+        "ok": {
+          "type": "boolean"
+        },
+        "passkeys": {
+          "items": {
+            "$ref": "#/$defs/Passkey"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "ok",
+        "passkeys"
+      ],
+      "type": "object",
+      "title": "PasskeyAdded"
+    },
+    "PasskeyOptions": {
+      "additionalProperties": false,
+      "description": "`navigator.credentials.create()` / `.get()` options (WebAuthn JSON, base64url).",
+      "properties": {
+        "challenge_id": {
+          "type": "string"
+        },
+        "options": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "required": [
+        "challenge_id",
+        "options"
+      ],
+      "type": "object",
+      "title": "PasskeyOptions"
+    },
     "Person": {
       "additionalProperties": false,
       "properties": {
@@ -1423,6 +1588,174 @@
       ],
       "type": "object",
       "title": "PnlReviewRow"
+    },
+    "ProfileEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "controlled_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "country",
+        "controlled_by"
+      ],
+      "type": "object",
+      "title": "ProfileEntity"
+    },
+    "ProfileLanguages": {
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "enum": [
+            "ko",
+            "en",
+            "zh-CN"
+          ],
+          "type": "string"
+        },
+        "enabled": {
+          "items": {
+            "enum": [
+              "ko",
+              "en",
+              "zh-CN"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "default",
+        "enabled"
+      ],
+      "type": "object",
+      "title": "ProfileLanguages"
+    },
+    "ProfilePrivacy": {
+      "additionalProperties": false,
+      "properties": {
+        "regimes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "regimes",
+        "reviewer"
+      ],
+      "type": "object",
+      "title": "ProfilePrivacy"
+    },
+    "ProfileResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/CustomerProfile"
+        },
+        "checklist": {
+          "items": {
+            "$ref": "#/$defs/ChecklistItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "checklist"
+      ],
+      "type": "object",
+      "title": "ProfileResponse"
+    },
+    "ProfileServer": {
+      "additionalProperties": true,
+      "properties": {
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "cloud": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "access": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "country",
+        "cloud",
+        "region",
+        "access"
+      ],
+      "type": "object",
+      "title": "ProfileServer"
     },
     "PublicUser": {
       "additionalProperties": false,
@@ -1662,6 +1995,148 @@
       ],
       "type": "object",
       "title": "ScreenResponse"
+    },
+    "SnapshotRunResult": {
+      "additionalProperties": true,
+      "properties": {
+        "target": {
+          "anyOf": [
+            {
+              "enum": [
+                "s3",
+                "dir"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "files": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "pruned": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "skipped": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "target",
+        "location",
+        "files",
+        "pruned",
+        "skipped"
+      ],
+      "type": "object",
+      "title": "SnapshotRunResult"
+    },
+    "SnapshotSettings": {
+      "additionalProperties": false,
+      "description": "`workspace.yaml snapshot` — the keys themselves are never sent, only whether\nthey are stored.",
+      "properties": {
+        "type": {
+          "anyOf": [
+            {
+              "enum": [
+                "s3",
+                "dir"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "region": {
+          "type": "string"
+        },
+        "bucket": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "keep_days": {
+          "type": "integer"
+        },
+        "has_secret": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type",
+        "endpoint",
+        "region",
+        "bucket",
+        "prefix",
+        "path",
+        "keep_days",
+        "has_secret"
+      ],
+      "type": "object",
+      "title": "SnapshotSettings"
     },
     "Team": {
       "additionalProperties": false,

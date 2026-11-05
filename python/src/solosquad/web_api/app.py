@@ -53,6 +53,7 @@ from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
 from solosquad.layout import Workspace
 from solosquad.messages import Message as ChatMessage
+from solosquad.profile import apply_server_country, load_profile, save_profile, update_profile
 from solosquad.routing.connections import (
     Connection,
     ConnectionKind,
@@ -64,6 +65,7 @@ from solosquad.routing.router import Router
 from solosquad.routing.vault import SecretStore
 from solosquad.runtime import RunManager, RunStatus
 from solosquad.screens import load_screen
+from solosquad.snapshots import S3_SECRET_REF, build_target
 from solosquad.web_api import schemas as S
 from solosquad.web_api.access import Origin, allowed, origin, parse_networks
 from solosquad.web_api.accounts import (
@@ -125,6 +127,11 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "screens": EVERYONE,
     "settings.get": EVERYONE,
     "settings.update": OWNER,
+    "profile.get": EVERYONE,
+    "profile.update": OWNER,
+    "snapshot.get": EVERYONE,
+    "snapshot.update": OWNER,
+    "snapshot.run": OWNER,
 }
 
 
@@ -197,6 +204,8 @@ class WebConfig:
     artifacts: ArtifactStore | None = None
     approvals_path: Path | None = None
     """`orgs/<org>/approvals.yaml` — the owner's tier overrides (decision 51)."""
+    run_snapshot: Callable[[], dict[str, Any]] | None = None
+    """Back up and ship now (`maintenance.run_snapshot` with the current workspace.yaml)."""
     """Re-reads every connection file after a change, so routing sees it at once."""
     """Set on shutdown so open event streams end instead of holding the server."""
 
@@ -328,7 +337,7 @@ def create_app(cfg: WebConfig) -> Starlette:
 
     async def health(request: Request) -> Response:
         policy_check(request)
-        return respond(S.Health, {"ok": True})
+        return respond(S.Health, {"ok": True, "passkeys": passkeys_available()})
 
     async def version(request: Request) -> Response:
         principal(request)
@@ -447,6 +456,13 @@ def create_app(cfg: WebConfig) -> Starlette:
 
     # ------------------------------------------------------------- passkeys (W3)
 
+    def passkeys_available() -> bool:
+        try:
+            relying_party()
+        except HTTPException:
+            return False
+        return cfg.accounts is not None
+
     def relying_party() -> tuple[str, str]:
         url = cfg.workspace.config().public_url if cfg.workspace else None
         parts = urlsplit(url or "")
@@ -484,7 +500,8 @@ def create_app(cfg: WebConfig) -> Starlette:
             ),
         )
         cid = accounts().new_challenge("register", options.challenge, user.id)
-        return Json({"challenge_id": cid, "options": json.loads(webauthn.options_to_json(options))})
+        opts = json.loads(webauthn.options_to_json(options))
+        return respond(S.PasskeyOptions, {"challenge_id": cid, "options": opts})
 
     async def passkey_register_finish(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
@@ -521,7 +538,8 @@ def create_app(cfg: WebConfig) -> Starlette:
         if who.session.stage is SessionStage.ENROLL and token:
             accounts().promote_session(token)  # a passkey is a strong factor in itself
         accounts().audit(who.user_id, "passkey.add", str(data.get("name") or ""))
-        return Json({"ok": True, "passkeys": accounts().passkeys(who.session.user.id)})
+        mine = accounts().passkeys(who.session.user.id)
+        return respond(S.PasskeyAdded, {"ok": True, "passkeys": mine})
 
     async def passkey_login_begin(request: Request) -> Response:
         policy_check(request)
@@ -543,7 +561,8 @@ def create_app(cfg: WebConfig) -> Starlette:
             user_verification=UserVerificationRequirement.REQUIRED,
         )
         cid = accounts().new_challenge("login", options.challenge, uid)
-        return Json({"challenge_id": cid, "options": json.loads(webauthn.options_to_json(options))})
+        opts = json.loads(webauthn.options_to_json(options))
+        return respond(S.PasskeyOptions, {"challenge_id": cid, "options": opts})
 
     async def passkey_login_finish(request: Request) -> Response:
         w = policy_check(request)
@@ -579,15 +598,15 @@ def create_app(cfg: WebConfig) -> Starlette:
             uid, SessionStage.FULL, ip=w.address, ua=request.headers.get("user-agent", "")
         )
         store.audit(uid, "login.passkey", w.address)
-        resp = Json(me_payload(session))
+        resp = respond(S.Me, me_payload(session))
         set_session(resp, token)
         return resp
 
     async def my_passkeys(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
-            return Json([])
-        return Json(accounts().passkeys(who.session.user.id))
+            return respond(list[S.Passkey], [])
+        return respond(list[S.Passkey], accounts().passkeys(who.session.user.id))
 
     async def my_passkey_delete(request: Request) -> Response:
         who = principal(request)
@@ -596,7 +615,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         ):
             raise KeyError("no such passkey")
         accounts().audit(who.user_id, "passkey.remove", request.path_params["pid"])
-        return Json({"ok": True})
+        return respond(S.Ok, {"ok": True})
 
     # ------------------------------------------------------------------ users
 
@@ -707,6 +726,89 @@ def create_app(cfg: WebConfig) -> Starlette:
             return respond(S.WebSettings, {"locale": loc})
         need(request, "settings.get")
         return respond(S.WebSettings, {"locale": org_locale()})
+
+    # ------------------------------------------------------------------ profile · snapshot
+
+    def solution_root() -> Path:
+        if cfg.workspace is None:
+            raise HTTPException(404, "no workspace configuration")
+        return cfg.workspace.org.solution.root
+
+    def profile_payload() -> dict[str, Any]:
+        profile = load_profile(solution_root())
+        return {"profile": profile.model_dump(mode="json"), "checklist": profile.checklist()}
+
+    async def profile(request: Request) -> Response:
+        if request.method == "PUT":
+            who = need(request, "profile.update")
+            root = solution_root()
+            before = load_profile(root)
+            updated = update_profile(before, await body(request))  # ValueError → 400
+            save_profile(root, updated)
+            if updated.server.country != before.server.country:
+                apply_server_country(root, updated.server.country)
+            changed = sorted(
+                k for k in ("server", "entities", "languages", "privacy")
+                if getattr(updated, k) != getattr(before, k)
+            )  # fmt: skip
+            accounts().audit(who.user_id, "profile.update", f"sections={changed}")
+            return respond(S.ProfileResponse, profile_payload())
+        need(request, "profile.get")
+        return respond(S.ProfileResponse, profile_payload())
+
+    def snapshot_payload() -> dict[str, Any]:
+        assert cfg.workspace is not None
+        target = cfg.workspace.config().snapshot
+        ref = target.secret_ref
+        has = bool(ref and cfg.secrets is not None and cfg.secrets.get(ref))
+        out = target.model_dump(mode="json", exclude={"secret_ref"})
+        return {**out, "has_secret": has}
+
+    async def snapshot(request: Request) -> Response:
+        if cfg.workspace is None:
+            raise HTTPException(404, "no workspace configuration")
+        if request.method == "PUT":
+            who = need(request, "snapshot.update")
+            data = await body(request)
+            kind = data.get("type")
+            target = build_target(
+                str(kind) if kind else None,
+                endpoint=str(data.get("endpoint") or "") or None,
+                region=str(data.get("region") or "us-east-1"),
+                bucket=str(data.get("bucket") or "") or None,
+                prefix=str(data.get("prefix") or "solosquad"),
+                path=str(data.get("path") or "") or None,
+                keep_days=int(data.get("keep_days") or 30),
+            )  # ValueError → 400, the same check as `snapshot set`
+            access, secret = data.get("access_key"), data.get("secret_key")
+            if target.type == "s3":
+                if cfg.secrets is None:
+                    raise HTTPException(404, "no secret store on this office")
+                if access or secret:
+                    if not (access and secret):
+                        raise ValueError("send both access_key and secret_key")
+                    cfg.secrets.set(S3_SECRET_REF, f"{access}:{secret}")
+                elif not cfg.secrets.get(S3_SECRET_REF):
+                    raise ValueError("an s3 target needs access_key and secret_key")
+            ws_cfg = cfg.workspace.config()
+            cfg.workspace.save_config(ws_cfg.model_copy(update={"snapshot": target}))
+            keys = " · keys replaced" if access else ""
+            accounts().audit(who.user_id, "snapshot.update", f"type={target.type}{keys}")
+            return respond(S.SnapshotSettings, snapshot_payload())
+        need(request, "snapshot.get")
+        return respond(S.SnapshotSettings, snapshot_payload())
+
+    async def snapshot_run(request: Request) -> Response:
+        who = need(request, "snapshot.run")
+        if cfg.run_snapshot is None:
+            raise HTTPException(404, "snapshots cannot be run from this office")
+        try:
+            result = await asyncio.to_thread(cfg.run_snapshot)
+        except (ValueError, OSError) as e:
+            accounts().audit(who.user_id, "snapshot.failed", f"{type(e).__name__}: {e}")
+            raise HTTPException(502, f"snapshot failed: {e}") from e
+        accounts().audit(who.user_id, "snapshot.run", repr(result))
+        return respond(S.SnapshotRunResult, result)
 
     async def screen(request: Request) -> Response:
         need(request, "screens")
@@ -1277,6 +1379,9 @@ def create_app(cfg: WebConfig) -> Starlette:
         ("/artifacts/{aid}/review", artifact_review, ["POST"]),
         ("/screens/{name}", screen, ["GET"]),
         ("/settings", settings, ["GET", "PUT"]),
+        ("/profile", profile, ["GET", "PUT"]),
+        ("/snapshot", snapshot, ["GET", "PUT"]),
+        ("/snapshot/run", snapshot_run, ["POST"]),
     ]
     routes: list[Route | Mount] = [
         Mount("/api", routes=[Route(path, fn, methods=methods) for path, fn, methods in api])

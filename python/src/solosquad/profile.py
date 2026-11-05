@@ -126,3 +126,52 @@ def parse_entity(spec: str) -> ProfileEntity:
         country=parts[1].strip().upper(),
         controlled_by=parts[2].strip().upper() if len(parts) == 3 and parts[2] else None,
     )
+
+
+def update_profile(base: CustomerProfile, change: dict[str, Any]) -> CustomerProfile:
+    """The web's edit (`PUT /api/profile`): each section given replaces or merges into the
+    old one and every rule of the model applies (known languages, upper-case countries,
+    unique entity ids). Unknown sections are refused — the profile holds facts only."""
+    allowed = {"server", "entities", "languages", "privacy"}
+    unknown = sorted(set(change) - allowed)
+    if unknown:
+        raise ValueError(f"unknown profile sections {unknown} (editable: {sorted(allowed)})")
+    data = base.model_dump()
+    if isinstance(change.get("server"), dict):
+        data["server"] = {**data["server"], **change["server"]}
+    if "entities" in change:
+        ents = change["entities"] or []
+        if not isinstance(ents, list):
+            raise ValueError("entities must be a list")
+        clean = []
+        for e in ents:
+            ent = ProfileEntity.model_validate(e)
+            clean.append(
+                ent.model_copy(
+                    update={
+                        "id": ent.id.strip(),
+                        "country": ent.country.strip().upper(),
+                        "controlled_by": (ent.controlled_by or "").strip().upper() or None,
+                    }
+                ).model_dump()
+            )
+        ids = [e["id"] for e in clean]
+        if len(ids) != len(set(ids)) or not all(ids):
+            raise ValueError("every entity needs a unique, non-empty id")
+        data["entities"] = clean
+    if isinstance(change.get("languages"), dict):
+        data["languages"] = {**data["languages"], **change["languages"]}
+        if any(lang not in LANGUAGES for lang in data["languages"].get("enabled") or []):
+            raise ValueError(f"languages must be among {LANGUAGES}")
+    if isinstance(change.get("privacy"), dict):
+        data["privacy"] = {**data["privacy"], **change["privacy"]}
+    return CustomerProfile.model_validate(data)
+
+
+def apply_server_country(solution_root: Path, country: str | None) -> None:
+    """A new server country is the region rule's input for every office (decision 45)."""
+    from solosquad.layout import Solution
+
+    for org in Solution(solution_root).orgs():
+        for ws in org.workspaces():
+            ws.save_config(ws.config().model_copy(update={"server_country": country}))
