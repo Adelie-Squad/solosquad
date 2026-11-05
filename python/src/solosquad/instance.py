@@ -69,8 +69,8 @@ def build_instance(
     ctx.data_dir.mkdir(parents=True, exist_ok=True)
     custom = load_customization(ctx.custom_dir, ctx.engine_version)
     secrets = SecretStore(ctx.data_dir / "secrets.json")
-    ledger = Ledger(ctx.data_dir / "ledger.sqlite")
-    store = RunStore(ctx.data_dir / "runs.sqlite")
+    ledger = Ledger(ctx.db_path)
+    store = RunStore(ctx.db_path)
     router = Router(
         connections_for(ctx),
         ctx.workspace_config.execution,
@@ -98,7 +98,7 @@ def build_instance(
         thread_defaults=thread_defaults,
     )
     router.on_escalation = manager.escalate
-    artifacts = ArtifactStore(ctx.data_dir / "artifacts.sqlite", load_kinds(ctx.org_root))
+    artifacts = ArtifactStore(ctx.db_path, load_kinds(ctx.org_root))
     workflows = WorkflowEngine(
         ctx.org_root,
         ctx.data_dir,

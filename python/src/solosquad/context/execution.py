@@ -40,7 +40,8 @@ class ExecutionContext:
 
     @property
     def db_path(self) -> Path:
-        return self.data_dir / "state.sqlite"
+        """The office database (decision 54) — every engine table of this office."""
+        return self.data_dir / "office.db"
 
 
 def build_context(

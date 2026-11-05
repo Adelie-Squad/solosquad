@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from solosquad.storage import Migration, connect, migrate
 
 Namespace = tuple[str, ...]
 
@@ -61,14 +62,19 @@ class InMemoryStore(BaseStore):
 
 class SqliteStore(BaseStore):
     def __init__(self, path: Path | str) -> None:
-        if str(path) != ":memory:":
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
-        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db = connect(path)
         self._lock = threading.Lock()
-        self._db.execute(
-            "CREATE TABLE IF NOT EXISTS store (ns TEXT, key TEXT, value TEXT, updated_at REAL,"
-            " PRIMARY KEY (ns, key))"
+        migrate(
+            self._db,
+            "store",
+            [
+                Migration(
+                    1,
+                    "CREATE TABLE IF NOT EXISTS store (ns TEXT, key TEXT, value TEXT,"
+                    " updated_at REAL, PRIMARY KEY (ns, key))",
+                )
+            ],
+            path=None if str(path) == ":memory:" else path,
         )
 
     @staticmethod

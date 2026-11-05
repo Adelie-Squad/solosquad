@@ -400,6 +400,6 @@ def build_company(rt: AgentRuntime, agents: list[str] | None = None) -> Compiled
     builder = create_swarm(nodes, default_active_agent=DEFAULT_ENTRY, state_schema=CompanyState)
     return builder.compile(
         checkpointer=SqliteSaver(rt.ctx.db_path),
-        store=SqliteStore(rt.ctx.data_dir / "store.sqlite"),
+        store=SqliteStore(rt.ctx.db_path),
         name=f"{rt.ctx.org}-company",
     )

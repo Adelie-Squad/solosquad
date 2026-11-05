@@ -39,6 +39,7 @@ from solosquad.routing import (
     save_connections,
 )
 from solosquad.service import ServiceSpec, plan
+from solosquad.storage import ORG_DB
 
 if TYPE_CHECKING:
     from solosquad.web_api.accounts import AccountStore
@@ -118,9 +119,7 @@ def _accounts(solution: Path, org: str) -> AccountStore:
     from solosquad.web_api.accounts import AccountStore
 
     sol = Solution(solution)
-    return AccountStore(
-        EngineStore(solosquad_home()).org_data_dir(sol.org(org)) / "accounts.sqlite"
-    )
+    return AccountStore(EngineStore(solosquad_home()).org_data_dir(sol.org(org)) / ORG_DB)
 
 
 def _web_dist() -> Path | None:
@@ -420,6 +419,7 @@ def serve(
         start_instance,
         stop_instance,
     )
+    from solosquad.maintenance import maintenance_loop
     from solosquad.server import ApiServer, load_or_create_token
 
     o, w = _pick(solution, org, workspace)
@@ -429,11 +429,13 @@ def serve(
         resumed = await start_instance(inst)
         token = load_or_create_token(inst.ctx.data_dir)
         ws = Solution(solution).org(o).workspace(w)
+        accounts = _accounts(solution, o)
+        upkeep = asyncio.create_task(maintenance_loop(inst, accounts))
         api = ApiServer(
             inst.manager,
             inst.ledger,
             token,
-            accounts=_accounts(solution, o),
+            accounts=accounts,
             workspace=ws,
             static_dir=_web_dist(),
             resolver=Resolver(inst.ctx),
@@ -458,6 +460,7 @@ def serve(
             with contextlib.suppress(NotImplementedError):
                 loop.add_signal_handler(sig, stop.set)
         await stop.wait()
+        upkeep.cancel()
         await api.stop()
         await stop_instance(inst)
         sf.unlink(missing_ok=True)
@@ -692,6 +695,44 @@ def cron_run(
             await client.close()
 
     _run(main())
+
+
+# ---------------------------------------------------------------------- data upkeep
+
+
+@app.command()
+def maintenance(
+    solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsOpt = None
+) -> None:
+    """Apply the retention rules now (normally daily inside `serve`)."""
+    from solosquad.instance import build_instance
+    from solosquad.maintenance import run_retention
+
+    o, w = _pick(solution, org, workspace)
+    counts = run_retention(build_instance(solution, o, w), _accounts(solution, o))
+    table = Table("removed", "count")
+    for k, v in counts.items():
+        table.add_row(k, str(v))
+    console.print(table)
+
+
+@app.command("backup")
+def backup_cmd(
+    solution: SolutionOpt = Path("."),
+    org: OrgOpt = None,
+    workspace: WsOpt = None,
+    to: Annotated[Path | None, typer.Option(help="Folder for the copies.")] = None,
+) -> None:
+    """Online copy of org.db and office.db with a manifest (safe while the office runs)."""
+    from solosquad.instance import build_instance
+    from solosquad.maintenance import backup_instance
+
+    o, w = _pick(solution, org, workspace)
+    inst = build_instance(solution, o, w)
+    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
+    manifest = backup_instance(inst, org_dir, to)
+    for entry in manifest["files"]:
+        console.print(f"{entry['name']}: {entry['bytes']} B · sha256 {entry['sha256'][:12]}…")
 
 
 # ---------------------------------------------------------------------- workflows

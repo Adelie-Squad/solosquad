@@ -6,12 +6,13 @@ improvement cycle and the agency usage summary (metadata only, v2.3.0).
 
 from __future__ import annotations
 
-import sqlite3
 import threading
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
+
+from solosquad.storage import Migration, connect, migrate
 
 COLUMNS = (
     "ts", "thread_id", "org", "workspace", "agent", "connection_id", "harness", "model",
@@ -42,17 +43,28 @@ class LedgerEntry:
 
 class Ledger:
     def __init__(self, path: Path | str) -> None:
-        if str(path) != ":memory:":
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
-        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db = connect(path)
         self._lock = threading.Lock()
-        self._db.execute(
-            "CREATE TABLE IF NOT EXISTS ledger (ts REAL, thread_id TEXT, org TEXT, workspace TEXT,"
-            " agent TEXT, connection_id TEXT, harness TEXT, model TEXT, input_tokens INTEGER,"
-            " output_tokens INTEGER, cache_read_tokens INTEGER, cache_write_tokens INTEGER,"
-            " cost_usd REAL, estimated INTEGER, duration_ms INTEGER, stop_reason TEXT)"
+        migrate(
+            self._db,
+            "ledger",
+            [
+                Migration(
+                    1,
+                    "CREATE TABLE IF NOT EXISTS ledger (ts REAL, thread_id TEXT, org TEXT,"
+                    " workspace TEXT, agent TEXT, connection_id TEXT, harness TEXT, model TEXT,"
+                    " input_tokens INTEGER, output_tokens INTEGER, cache_read_tokens INTEGER,"
+                    " cache_write_tokens INTEGER, cost_usd REAL, estimated INTEGER,"
+                    " duration_ms INTEGER, stop_reason TEXT);"
+                    " CREATE INDEX IF NOT EXISTS ledger_ts ON ledger (ts)",
+                )
+            ],
+            path=None if str(path) == ":memory:" else path,
         )
+
+    def purge(self, before: float) -> int:
+        with self._lock:
+            return self._db.execute("DELETE FROM ledger WHERE ts < ?", (before,)).rowcount
 
     def record(self, entry: LedgerEntry) -> None:
         row = asdict(entry)
