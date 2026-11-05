@@ -6,6 +6,7 @@ import hashlib
 import json
 import sqlite3
 import stat
+import sys
 import time
 from pathlib import Path
 
@@ -107,7 +108,9 @@ def test_an_office_writes_one_database(tmp_path: Path) -> None:
     data = inst.ctx.data_dir
     assert sorted(p.name for p in data.glob("*.sqlite")) == []
     db = data / "office.db"
-    assert db.is_file() and stat.S_IMODE(db.stat().st_mode) == 0o600
+    assert db.is_file()
+    if sys.platform != "win32":  # Windows protects files with ACLs, not POSIX modes
+        assert stat.S_IMODE(db.stat().st_mode) == 0o600
     tables = {
         r[0]
         for r in sqlite3.connect(db).execute("SELECT name FROM sqlite_master WHERE type='table'")
