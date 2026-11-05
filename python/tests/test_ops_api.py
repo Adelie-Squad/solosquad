@@ -74,6 +74,19 @@ class Office:
         assert r.status_code == 200, r.text
         return {CSRF_HEADER: r.json()["csrf"]}
 
+    async def login_existing(self, c: httpx.AsyncClient, name: str) -> dict[str, str]:
+        """A second session for an existing user — re-enrols the factor (one code per step)."""
+        user = next(u for u in self.accounts.users() if u.username == name)
+        self.accounts.reset_totp(user.id)
+        secret = _secret(self.accounts.begin_totp(user.id))
+        assert self.accounts.confirm_totp(user.id, totp.code_at(secret, totp.current_step()))
+        r = await c.post(
+            "/api/auth/login",
+            json={"username": name, "password": PASSWORD, "otp": _next_code(secret)},
+        )
+        assert r.status_code == 200, r.text
+        return {CSRF_HEADER: r.json()["csrf"]}
+
 
 @pytest.fixture
 async def office(tmp_path: Path) -> AsyncIterator[Office]:

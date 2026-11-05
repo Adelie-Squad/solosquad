@@ -4,6 +4,7 @@ name: monthly-pnl
 title: 월 손익표
 description: 거래 원장(엑셀 · CSV)을 올리면 손익표를 만들고, 대표 확인 뒤 Chief 가 3줄로 요약합니다.
 enabled: true
+team: business
 inputs:
   - name: ledger
     type: upload
@@ -23,6 +24,7 @@ steps:
       title: 손익표 확인
       summary: "{{ steps.compute.summary }}"
       risk: low
+      category: review
   - id: brief
     agent: chief
     prompt: >-

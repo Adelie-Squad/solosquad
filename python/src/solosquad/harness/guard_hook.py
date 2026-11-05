@@ -37,7 +37,9 @@ def decide(
         sig = signature(tool, tool_input)
         if sig in grants:
             return None
-        reason = f"{MARKER}:{sig}:{reason}"
+        rule = policy.rule_for(tool, tool_input)
+        category = rule.category if rule else "other"
+        reason = f"{MARKER}:{sig}:[{category}] {reason}"
     return {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",

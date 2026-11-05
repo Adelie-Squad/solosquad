@@ -179,8 +179,9 @@ async def test_guard_approval_round_trip(tmp_path: Path) -> None:
     first = await app.ainvoke({"messages": [user("tidy the disk")]}, cfg("g"))
     card = first["__interrupt__"][0].value
     assert card == approval_card(
-        {"agent": "chief", "signature": "abc123", "reason": "recursive delete"}
+        {"agent": "chief", "signature": "abc123", "reason": "recursive delete", "team": "core"}
     )
+    assert card["category"] == "other"  # a marker without [category] (older hook output)
     assert card["options"] == ["approved", "declined"] and card["risk"] == "high"
     assert card["title"] == "chief wants to: recursive delete"
     done = await app.ainvoke(Command(resume="approved"), cfg("g"))
@@ -220,6 +221,8 @@ async def test_stream_stop_guard_cuts_the_stream_and_asks(tmp_path: Path) -> Non
             "agent": "chief",
             "signature": signature("command_execution", RM),
             "reason": "recursive delete",
+            "category": "delete",  # from the default rule (decision 51 — owner tier)
+            "team": "core",
         }
     )
     done = await app.ainvoke(Command(resume="approved"), cfg("s"))
