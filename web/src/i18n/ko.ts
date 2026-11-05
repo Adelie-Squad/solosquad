@@ -114,6 +114,7 @@ export const ko = {
   'category.review': '검토 · 확인',
   'category.publish': '게시 · 발송',
   'category.other': '기타',
+  'category.unclassified': '분류 없음 · 대표 승인',
 
   'office.title': '사무실',
   'office.lead': 'Chief 가 팀에 일을 나눠 맡기는 모습이에요. 자리를 누르면 그 팀이 하는 일을 볼 수 있어요.',

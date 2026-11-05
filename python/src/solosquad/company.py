@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Any
 
+from solosquad.approvals import UNCLASSIFIED
 from solosquad.context.execution import ExecutionContext
 from solosquad.context.ledger import Ledger, LedgerEntry
 from solosquad.context.prompt import Candidate, PromptAssembler
@@ -91,7 +92,7 @@ def approval_card(pending: dict[str, Any]) -> dict[str, Any]:
         "risk": str(pending.get("risk") or "high"),
         "agent": agent,
         "signature": pending.get("signature"),
-        "category": str(pending.get("category") or "other"),
+        "category": str(pending.get("category") or UNCLASSIFIED),
         "team": pending.get("team"),
     }
 
@@ -162,7 +163,7 @@ class AgentNode:
         """A guard stop → the pending approval: `[category] reason` from the marker, plus the
         team of this agent (decision 51 — team members may approve their team's requests)."""
         cat = CATEGORY.match(raw_reason)
-        category, reason = (cat.group(1), cat.group(2)) if cat else ("other", raw_reason)
+        category, reason = (cat.group(1), cat.group(2)) if cat else (UNCLASSIFIED, raw_reason)
         return {
             "agent": self.name,
             "signature": signature,

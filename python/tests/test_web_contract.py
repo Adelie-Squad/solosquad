@@ -49,7 +49,7 @@ def test_closed_models_refuse_an_unknown_field() -> None:
     with pytest.raises(ValueError):
         S.conform(S.Version, {"version": "2", "extra": 1})
     card = S.conform(S.ApprovalCard, {"title": "t", "signature": "abc"})
-    assert card["signature"] == "abc" and card["category"] == "other"  # cards stay open
+    assert card["signature"] == "abc" and card["category"] == "unclassified"  # cards stay open
 
 
 def test_pnl_tool_output_fits_the_contract(tmp_path: Path) -> None:

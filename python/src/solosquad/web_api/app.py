@@ -42,6 +42,7 @@ from webauthn.helpers.structs import (
 from solosquad import __version__
 from solosquad.approvals import (
     RECOMMENDED,
+    UNCLASSIFIED,
     ApprovalPolicy,
     Tier,
     can_approve,
@@ -1270,6 +1271,8 @@ def create_app(cfg: WebConfig) -> Starlette:
             tiers = (await body(request)).get("tiers")
             if not isinstance(tiers, dict):
                 raise ValueError("send {tiers: {category: owner|team}}")
+            if UNCLASSIFIED in tiers:
+                raise ValueError("unclassified approvals always go to the owner")
             updated = {**policy().overrides, **{str(k): Tier(str(v)) for k, v in tiers.items()}}
             # keep only what differs from the recommendation — the file stays a list of choices
             overrides = {k: v for k, v in updated.items() if RECOMMENDED.get(k) is not v}

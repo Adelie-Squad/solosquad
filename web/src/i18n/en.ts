@@ -115,6 +115,7 @@ export const en: Record<MessageKey, string> = {
   'category.review': 'Review',
   'category.publish': 'Publish · send',
   'category.other': 'Other',
+  'category.unclassified': 'Unclassified · owner approves',
 
   'office.title': 'Office',
   'office.lead': 'Chief hands work out to the teams. Click a desk to see what that team is doing.',

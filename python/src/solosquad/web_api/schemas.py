@@ -168,7 +168,7 @@ class ApprovalCard(Open):
     options: list[str] = Field(default_factory=list)
     risk: str = "high"
     agent: str | None = None
-    category: str = "other"
+    category: str = "unclassified"
     team: str | None = None
     workflow: str | None = None
     step: str | None = None

@@ -330,7 +330,7 @@
           "default": null
         },
         "category": {
-          "default": "other",
+          "default": "unclassified",
           "type": "string"
         },
         "team": {

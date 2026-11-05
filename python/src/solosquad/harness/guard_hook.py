@@ -38,7 +38,7 @@ def decide(
         if sig in grants:
             return None
         rule = policy.rule_for(tool, tool_input)
-        category = rule.category if rule else "other"
+        category = rule.category if rule else "unclassified"
         reason = f"{MARKER}:{sig}:[{category}] {reason}"
     return {
         "hookSpecificOutput": {

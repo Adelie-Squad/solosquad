@@ -24,7 +24,7 @@ class GuardRule:
     """Regex searched in the tool's command-ish input (`command`, `cmd`, `url`)."""
     action: Verdict = Verdict.INTERRUPT
     reason: str = ""
-    category: str = "other"
+    category: str = "unclassified"
     """Approval category (decision 51) — decides whether a team member may approve."""
 
     def matches(self, name: str, tool_input: dict[str, Any]) -> bool:
@@ -79,7 +79,7 @@ class GuardPolicy:
                 command=i.get("command"),
                 action=Verdict(i.get("action", "interrupt")),
                 reason=str(i.get("reason", "")),
-                category=str(i.get("category", "other")),
+                category=str(i.get("category", "unclassified")),
             )
             for i in items
         )
