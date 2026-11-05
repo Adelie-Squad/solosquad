@@ -352,7 +352,7 @@ def conn_add(
     ] = None,
 ) -> None:
     """Add a subscription login or an API key (decision 22). Keys go in with `set-secret`."""
-    from solosquad.routing.eligibility import Entity, judge
+    from solosquad.routing.eligibility import Entity, judge, providers_reached
 
     holder: Entity | None = None
     if entity is not None:
@@ -362,6 +362,10 @@ def conn_add(
             raise _fail(str(e).strip("'\"")) from e
         holder = Entity(name=pe.name, country=pe.country, controlled_by=pe.controlled_by)
     model_list = [m for m in models.split(",") if m]
+    if holder is None and providers_reached(provider, harness, model_list):
+        raise _fail(
+            "enter the entity that holds this account: --entity <id> (see `solosquad profile`)"
+        )
     verdict = judge(provider, harness, model_list, holder, load_profile(solution).server.country)
     if not verdict.ok:
         raise _fail(f"{verdict.reason} — see {verdict.source}")

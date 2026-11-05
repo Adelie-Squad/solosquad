@@ -231,6 +231,7 @@ export const en: Record<MessageKey, string> = {
   'connections.budget': 'Monthly budget',
   'connections.noBudget': 'No cap',
   'connections.entity': 'Account holder',
+  'connections.entityRequired': 'Enter the legal entity that holds this account.',
   'connections.entityHint': 'The legal entity that holds this account — used to check the provider’s region rules.',
   'connections.entityName': 'Entity name',
   'connections.entityCountry': 'Country of incorporation (e.g. KR)',

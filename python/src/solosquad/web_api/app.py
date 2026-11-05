@@ -61,7 +61,7 @@ from solosquad.routing.connections import (
     load_connections,
     save_connections,
 )
-from solosquad.routing.eligibility import Entity, judge
+from solosquad.routing.eligibility import Entity, judge, providers_reached
 from solosquad.routing.router import Router
 from solosquad.routing.vault import SecretStore
 from solosquad.runtime import RunManager, RunStatus
@@ -82,6 +82,7 @@ from solosquad.workflows.engine import UPLOAD_LIMIT, WorkflowEngine
 
 SESSION_COOKIE = "ss_session"
 CSRF_HEADER = "x-csrf-token"
+ENTITY_REQUIRED = "enter the entity that holds this account (entity: {name, country})"
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 
 OWNER = frozenset({Role.OWNER})
@@ -697,10 +698,16 @@ def create_app(cfg: WebConfig) -> Starlette:
                     " access. Send confirm_lockout: true to save anyway.",
                 )
             cfg.workspace.save_config(ws_cfg.model_copy(update={"access": proposed}))
-            accounts().audit(
+            accounts().audit(  # C14 — who · when (the row) · before · after
                 who.user_id,
                 "access.update",
-                json.dumps(proposed.model_dump(mode="json"), ensure_ascii=False),
+                json.dumps(
+                    {
+                        "before": ws_cfg.access.model_dump(mode="json"),
+                        "after": proposed.model_dump(mode="json"),
+                    },
+                    ensure_ascii=False,
+                ),
             )
             return respond(S.AccessPolicy, _access_public(proposed))
         need(request, "access.get")
@@ -1019,6 +1026,8 @@ def create_app(cfg: WebConfig) -> Starlette:
                 monthly_budget_usd=data.get("monthly_budget_usd"),
                 entity=entity,
             )
+            if entity is None and providers_reached(conn.provider, conn.harness, conn.models):
+                raise ValueError(ENTITY_REQUIRED)  # C18 — eligibility is judged on the holder
             verdict = judge(conn.provider, conn.harness, conn.models, entity, server_country())
             if not verdict.ok:
                 raise HTTPException(422, f"{verdict.reason} — see {verdict.source}")
@@ -1059,6 +1068,12 @@ def create_app(cfg: WebConfig) -> Starlette:
         if "entity" in data:
             update["entity"] = Entity.model_validate(data["entity"]) if data["entity"] else None
         changed = found.model_copy(update=update)
+        if (
+            "entity" in data
+            and changed.entity is None
+            and providers_reached(changed.provider, changed.harness, changed.models)
+        ):
+            raise ValueError(ENTITY_REQUIRED)
         verdict = judge(
             changed.provider, changed.harness, changed.models, changed.entity, server_country()
         )
@@ -1273,12 +1288,23 @@ def create_app(cfg: WebConfig) -> Starlette:
                 raise ValueError("send {tiers: {category: owner|team}}")
             if UNCLASSIFIED in tiers:
                 raise ValueError("unclassified approvals always go to the owner")
-            updated = {**policy().overrides, **{str(k): Tier(str(v)) for k, v in tiers.items()}}
+            before = policy()
+            updated = {**before.overrides, **{str(k): Tier(str(v)) for k, v in tiers.items()}}
             # keep only what differs from the recommendation — the file stays a list of choices
             overrides = {k: v for k, v in updated.items() if RECOMMENDED.get(k) is not v}
             save_policy(cfg.approvals_path, ApprovalPolicy(overrides))
-            deviations = [r["category"] for r in ApprovalPolicy(overrides).table() if r["deviates"]]
-            accounts().audit(who.user_id, "approval_policy.update", f"deviates={deviations}")
+            after = ApprovalPolicy(overrides)
+            changes = [
+                {"category": c, "before": before.tier(c).value, "after": after.tier(c).value}
+                for c in sorted({str(k) for k in tiers})
+                if before.tier(c) is not after.tier(c)
+            ]
+            deviations = [r["category"] for r in after.table() if r["deviates"]]
+            accounts().audit(  # C25 — who · when (the row) · category · before · after
+                who.user_id,
+                "approval_policy.update",
+                json.dumps({"changes": changes, "deviates": deviations}, ensure_ascii=False),
+            )
             return respond(list[S.ApprovalPolicyRow], ApprovalPolicy(overrides).table())
         need(request, "approval_policy.get")
         return respond(list[S.ApprovalPolicyRow], policy().table())
