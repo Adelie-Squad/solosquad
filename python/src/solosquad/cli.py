@@ -63,6 +63,8 @@ profile_app = typer.Typer(no_args_is_help=True, help="The customer profile fille
 app.add_typer(profile_app, name="profile")
 workflows_app = typer.Typer(no_args_is_help=True, help="An org's workflows (steps · approvals).")
 app.add_typer(workflows_app, name="workflows")
+web_app = typer.Typer(no_args_is_help=True, help="The customer web: its API contract.")
+app.add_typer(web_app, name="web")
 app.add_typer(conn_app, name="connections")
 app.add_typer(agents_app, name="agents")
 app.add_typer(service_app, name="service")
@@ -990,6 +992,25 @@ def snapshot_restore(
 # ---------------------------------------------------------------------- workflows
 
 TEMPLATES = Path(__file__).resolve().parent / "workflows" / "templates"
+
+
+@web_app.command("schema")
+def web_schema(
+    out: Annotated[
+        Path | None, typer.Option("--out", "-o", help="Write to a file instead of stdout.")
+    ] = None,
+) -> None:
+    """Print the JSON Schema of every payload the web reads (PRD v2.1.0 I6).
+
+    The web generates its TypeScript types from it: `npm --prefix web run gen:types`.
+    """
+    from solosquad.web_api.schemas import schema_text
+
+    text = schema_text()
+    if out is None:
+        typer.echo(text, nl=False)
+    else:
+        out.write_text(text, encoding="utf-8")
 
 
 @workflows_app.command("templates")

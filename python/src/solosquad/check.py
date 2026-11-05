@@ -30,6 +30,7 @@ from solosquad.profile import load_profile, profile_path
 from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import judge, providers_reached
 from solosquad.routing.policy import load_policy
+from solosquad.screens import parse_screen, screen_issues, screen_path
 from solosquad.storage import legacy_files
 from solosquad.workflows.definition import load_workflows
 from solosquad.workflows.tools import TOOLS
@@ -197,6 +198,17 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
                     "steps",
                     path=where,
                 )
+
+    screens_dir = ctx.org_root / "screens"
+    for path in sorted(screens_dir.glob("*.yaml")) if screens_dir.is_dir() else []:
+        try:
+            screen_path(ctx.org_root, path.stem)
+            screen = parse_screen(path.read_text(encoding="utf-8"))
+        except (ValidationError, ValueError) as e:
+            r.add("SCREEN_INVALID", str(e).splitlines()[0], path=str(path))
+            continue
+        for code, message, severity in screen_issues(screen):
+            r.add(code, message, "widgets", "warn" if severity == "warn" else "error", str(path))
 
     access = ctx.workspace_config.access
     if not access.require_login and not access.allowed_networks:

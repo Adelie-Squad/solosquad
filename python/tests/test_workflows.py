@@ -277,6 +277,7 @@ async def test_workflow_api_roles_and_review(tmp_path: Path) -> None:
                 f"/api/workflow-threads/{tid}/resume", json={"value": "approved"}, headers=hb
             )
             await _status(wf, ok.json()["run_id"], RunStatus.SUCCESS)
+            assert (await boss.get("/api/approvals")).json() == []  # answered → off the list
             arts = (await kim.get("/api/artifacts", params={"needs_review": "true"})).json()
             assert [a["kind"] for a in arts] == ["finance.pnl"]
             reviewed = await kim.post(f"/api/artifacts/{arts[0]['id']}/review", headers=hk)
