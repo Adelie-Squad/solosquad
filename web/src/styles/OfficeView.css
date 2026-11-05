@@ -1,0 +1,349 @@
+/* ── 사무실 ───────────────────────────────────────────────────── */
+
+.view.is-wide {
+  max-width: 1200px;
+}
+
+/* 사무실은 카드 높이를 꽉 채운다 — 머리 · 숫자 줄을 뺀 나머지가 장면(+ 실시간 작업 패널) */
+.view.office {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 24px;
+}
+
+.office.is-fullscreen {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  overflow: auto;
+  background: #f7f1ea;
+  padding: 32px 48px;
+}
+
+.office.is-fullscreen .iso-stage {
+  border: 0;
+}
+
+.office-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.office-clock {
+  margin-right: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.office-stats {
+  display: flex;
+  gap: 22px;
+  margin: -8px 0 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.office-stats b {
+  margin-right: 4px;
+  font-size: 20px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.office-stats .is-warn b {
+  color: var(--warn);
+}
+
+/* 에이전트 카드 — 오른쪽 시트 */
+.command-overlay.is-sheet {
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+
+.agent-sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100vw);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--surface);
+  box-shadow: -20px 0 60px rgba(30, 15, 80, 0.25);
+}
+
+.agent-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  background:
+    radial-gradient(circle, rgba(58, 46, 38, 0.09) 1px, transparent 1.2px) 0 0 / 22px 22px,
+    #f7f1ea;
+  border-bottom: 1px solid #eadfd2;
+}
+
+.agent-sheet-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.agent-sheet-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.agent-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.agent-sheet-head .icon-btn {
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.agent-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 22px 24px;
+}
+
+.agent-sheet-body .dash-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agent-sheet-body .approval-bar {
+  margin-top: 4px;
+}
+
+.agent-now {
+  margin: 0;
+  font-size: 14px;
+}
+
+.agent-ambient {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.stat-row.is-2 {
+  grid-template-columns: 1fr 1fr;
+  margin: 8px 0 4px;
+}
+
+.agent-links {
+  display: flex;
+  gap: 8px;
+}
+
+/* 실시간 작업 패널 — 버튼을 누르면 사무실 | 작업 2열, 좁으면 위아래 */
+.btn-dot {
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+
+.btn.is-primary .btn-dot {
+  background: #b8ffe5;
+}
+
+.office-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.office-main {
+  min-height: 0;
+}
+
+.office-main .iso-stage {
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.office-body.is-split {
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+}
+
+.office.is-split-wide {
+  max-width: 1440px;
+}
+
+.office-live {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+
+.office-live-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+
+.office-live-head strong,
+.office-live-head .btn {
+  white-space: nowrap;
+}
+
+.office-live-head strong {
+  font-size: 14.5px;
+}
+
+.office-live-count {
+  margin-right: auto;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.job-list.is-compact .job {
+  padding: 12px 14px;
+}
+
+.job-list.is-compact .job-icon {
+  display: none;
+}
+
+.job-list.is-compact .job-percent {
+  font-size: 15px;
+}
+
+.job-list.is-compact .job-heading h2 {
+  font-size: 14px;
+}
+
+.job-list.is-compact .steps {
+  flex-wrap: wrap;
+}
+
+/* 좁은 화면 — 높이 채우기를 풀고 장면은 그림 비율, 패널은 아래로 */
+@media (max-width: 1100px) {
+  .view.office {
+    height: auto;
+  }
+
+  .office-body,
+  .office-body.is-split {
+    flex: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+
+  .office-main .iso-stage {
+    height: auto;
+    aspect-ratio: 735 / 584;
+  }
+
+  .office-live {
+    max-height: 70vh;
+  }
+}
+
+/* 실시간 작업 크게 보기 — 모달 */
+.command-overlay.is-modal {
+  align-items: center;
+  padding: 24px;
+}
+
+.live-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  max-height: min(88vh, 100%);
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+}
+
+.live-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.live-modal-head h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.live-modal-head p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.live-modal-body {
+  overflow-y: auto;
+  padding: 18px 24px 24px;
+}
+
+/* 하루 간이 대화창 — 새 대화의 입력부만 */
+.quick-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(720px, 100%);
+  padding: 18px 20px 20px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+}
+
+.quick-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quick-chat-head strong {
+  font-size: 16px;
+}
+
+.quick-chat-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.quick-chat-head .icon-btn {
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.quick-chat-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, white);
+  font-size: 22px;
+}

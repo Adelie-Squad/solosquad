@@ -1,0 +1,37 @@
+{
+  "name": "solosquad-web",
+  "private": true,
+  "version": "2.1.0",
+  "description": "SoloSquad customer web — served by the engine from the same origin (PRD v2.1.0 W5).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "gen:schema": "cd ../python && uv run solosquad web schema -o ../web/src/api/schema.json",
+    "gen:types": "node scripts/gen-types.mjs",
+    "gen": "npm run gen:schema && npm run gen:types",
+    "check:types": "npm run gen && git diff --exit-code -- src/api/schema.json src/api/types.gen.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.106.0",
+    "qrcode-generator": "^2.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "jsdom": "^30.1.3",
+    "json-schema-to-typescript": "^16.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}
