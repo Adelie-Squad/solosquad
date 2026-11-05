@@ -30,8 +30,9 @@ def _codes(sol: Path, repo_root: Path) -> set[str]:
 def test_fresh_solution_has_no_errors(tmp_path: Path, repo_root: Path) -> None:
     sol = _init(tmp_path)
     reports = validate_solution(sol, repo_root)
-    assert set(reports) == {"moa-living/hq"}
-    assert reports["moa-living/hq"].ok
+    assert set(reports) == {"moa-living/hq", ""}
+    assert all(r.ok for r in reports.values())
+    assert [i.code for i in reports[""].issues] == ["PROFILE_INCOMPLETE"]  # a warning
     res = run(app, ["validate", "-s", str(sol)])
     assert res.exit_code == 0, res.output
 
@@ -97,7 +98,8 @@ def test_doctor(tmp_path: Path, repo_root: Path) -> None:
     sol = _init(tmp_path)
     checks = {c.name: c for c in doctor_checks(sol, repo_root)}
     assert checks["python"].status == "ok"
-    assert checks["definitions"].status == "ok"
+    assert checks["definitions"].status == "warn"  # the empty customer profile
+    assert checks["profile"].status == "warn"
     assert checks["connections"].status == "warn"
     assert checks["data:moa-living/hq"].status == "ok"
     assert doctor_checks(sol, None)[-1].status == "fail"
@@ -127,3 +129,50 @@ def test_cron_list_and_run(tmp_path: Path, openai_server: str) -> None:  # noqa:
     assert "chief heard" in res.output and "morning brief please" in res.output
     assert "cron:" not in run(app, ["cron", "run", "nope", "-s", str(sol)]).output
     assert run(app, ["cron", "run", "nope", "-s", str(sol)]).exit_code == 1
+
+
+def test_customer_profile_at_setup(tmp_path: Path, repo_root: Path) -> None:
+    """Decision 50: region, entities, languages, privacy are per customer, set at init."""
+    sol = tmp_path / "moa"
+    res = run(
+        app,
+        [
+            "init", str(sol), "--org", "moa", "--server-country", "kr", "--cloud", "aws",
+            "--region", "ap-northeast-2", "--cloud-access", "FDE IAM role",
+            "--entity", "moa-kr=Moa Korea Co.:KR", "--entity", "moa-qd=Moa Qingdao 3PL:CN",
+            "--language", "ko", "--privacy-regime", "PIPA", "--privacy-regime", "PIPL",
+            "--privacy-reviewer", "고객 법무팀",
+        ],
+    )  # fmt: skip
+    assert res.exit_code == 0, res.output
+    from solosquad.layout import Solution
+    from solosquad.profile import load_profile
+
+    profile = load_profile(sol)
+    assert all(i["done"] for i in profile.checklist())
+    assert Solution(sol).org("moa").workspace("hq").config().server_country == "KR"
+    codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
+    assert "PROFILE_INCOMPLETE" not in codes
+    # an account held by the Korean entity may reach Anthropic; one held from China may not
+    base = ["connections", "add", "--kind", "api_key", "--harness", "lite", "--provider",
+            "anthropic", "--models", "claude-sonnet", "-s", str(sol)]  # fmt: skip
+    ok = run(app, [*base[:2], "claude-kr", *base[2:], "--entity", "moa-kr"])
+    assert ok.exit_code == 0, ok.output
+    bad = run(app, [*base[:2], "claude-qd", *base[2:], "--entity", "moa-qd"])
+    assert bad.exit_code == 1 and "anthropic" in bad.output
+    assert run(app, [*base[:2], "x", *base[2:], "--entity", "nope"]).exit_code == 1
+    # Chinese models for the Chinese entity are fine
+    qwen = run(app, ["connections", "add", "qwen", "--kind", "api_key", "--harness", "lite",
+                     "--provider", "dashscope", "--models", "qwen3", "--entity", "moa-qd", "-s", str(sol)])  # fmt: skip
+    assert qwen.exit_code == 0, qwen.output
+    # moving the server to Hong Kong is applied to every office and blocks the Claude key
+    assert run(app, ["profile", "set", "--server-country", "HK", "-s", str(sol)]).exit_code == 0
+    assert Solution(sol).org("moa").workspace("hq").config().server_country == "HK"
+    codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
+    assert "CONNECTION_INELIGIBLE" in codes
+    assert run(app, ["add", "workspace", "branch", "--org", "moa", "-s", str(sol)]).exit_code == 0
+    assert Solution(sol).org("moa").workspace("branch").config().server_country == "HK"
+    assert (
+        run(app, ["init", str(tmp_path / "bad"), "--org", "x", "--entity", "nonsense"]).exit_code
+        == 1
+    )

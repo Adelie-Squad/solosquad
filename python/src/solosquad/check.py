@@ -26,6 +26,7 @@ from solosquad.assets.validate import Report, validate_skill
 from solosquad.context.execution import ExecutionContext, build_context
 from solosquad.context.resolve import Kind, Resolver
 from solosquad.layout import LayoutError, Solution
+from solosquad.profile import load_profile, profile_path
 from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import judge, providers_reached
 from solosquad.routing.policy import load_policy
@@ -303,6 +304,19 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
                 out[key] = rep
                 continue
             out[key] = validate_definitions(ctx)
+    try:
+        profile = load_profile(solution)
+    except Exception as e:  # yaml and validation errors alike
+        base.add("PROFILE_INVALID", str(e).splitlines()[0], path=str(profile_path(solution)))
+    else:
+        missing = [i["label"] for i in profile.checklist() if not i["done"]]
+        if missing:
+            base.add(
+                "PROFILE_INCOMPLETE",
+                "customer profile still needs: " + ", ".join(missing),
+                severity="warn",
+                path=str(profile_path(solution)),
+            )
     if base.issues or not out:
         out[""] = base
     return out
@@ -372,6 +386,12 @@ def doctor_checks(solution: Path, bundle: Path | None) -> list[Check]:
     warns = sum(len(r.warnings) for r in reports.values())
     status: Status = "fail" if errors else "warn" if warns else "ok"
     out.append(Check("definitions", status, f"{errors} errors · {warns} warnings"))
+    try:
+        todo = [i["label"] for i in load_profile(solution).checklist() if not i["done"]]
+        out.append(Check("profile", "warn" if todo else "ok",
+                         "missing: " + ", ".join(todo) if todo else "complete"))  # fmt: skip
+    except Exception as e:
+        out.append(Check("profile", "fail", str(e).splitlines()[0]))
 
     from solosquad.layout import EngineStore, solosquad_home
 
