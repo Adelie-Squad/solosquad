@@ -160,7 +160,23 @@ def _add_people_columns(db: sqlite3.Connection) -> None:
             db.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
 
 
-MIGRATIONS = (Migration(1, SCHEMA), Migration(2, _add_people_columns))
+PASSKEYS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS passkeys (
+    id TEXT PRIMARY KEY, user_id TEXT NOT NULL, public_key BLOB NOT NULL,
+    sign_count INTEGER NOT NULL, transports TEXT, name TEXT, created REAL NOT NULL,
+    last_used REAL);
+CREATE INDEX IF NOT EXISTS passkeys_user ON passkeys (user_id);
+CREATE TABLE IF NOT EXISTS webauthn_challenges (
+    id TEXT PRIMARY KEY, challenge BLOB NOT NULL, user_id TEXT, kind TEXT NOT NULL,
+    expires REAL NOT NULL)
+"""
+
+MIGRATIONS = (
+    Migration(1, SCHEMA),
+    Migration(2, _add_people_columns),
+    Migration(3, PASSKEYS_SCHEMA),  # passkeys — the default sign-in of decision 46 W3
+)
+CHALLENGE_TTL_S = 5 * 60
 
 
 class AccountStore:
@@ -328,6 +344,11 @@ class AccountStore:
         elif require_second_factor:
             stage = SessionStage.ENROLL
         self._q("DELETE FROM login_failures WHERE key IN (?, ?)", keys)
+        return self.open_session(uid, stage, ip=ip, ua=ua)
+
+    def open_session(
+        self, uid: str, stage: SessionStage, *, ip: str = "", ua: str = ""
+    ) -> tuple[str, Session]:
         token = secrets.token_urlsafe(32)
         now = time.time()
         self._q(
@@ -339,6 +360,82 @@ class AccountStore:
         session = self.session(token)
         assert session is not None
         return token, session
+
+    def throttled(self, *keys: str) -> bool:
+        return self._throttled(*keys)
+
+    def record_failure(self, *keys: str) -> None:
+        self._fail(*keys)
+
+    # ------------------------------------------------------------------ passkeys
+
+    def add_passkey(
+        self, uid: str, cred_id: str, public_key: bytes, sign_count: int,
+        transports: list[str], name: str,
+    ) -> None:  # fmt: skip
+        self._q(
+            "INSERT INTO passkeys (id, user_id, public_key, sign_count, transports, name, created)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (cred_id, uid, public_key, sign_count, json.dumps(transports), name[:60], time.time()),
+        )
+
+    def passkeys(self, uid: str) -> list[dict[str, Any]]:
+        rows = self._q(
+            "SELECT id, name, transports, created, last_used FROM passkeys WHERE user_id = ?"
+            " ORDER BY created",
+            (uid,),
+        )
+        return [
+            {"id": r[0], "name": r[1], "transports": json.loads(r[2] or "[]"), "created": r[3],
+             "last_used": r[4]}
+            for r in rows
+        ]  # fmt: skip
+
+    def passkey(self, cred_id: str) -> tuple[str, bytes, int] | None:
+        """→ (user id, public key, sign count) for a credential id."""
+        rows = self._q(
+            "SELECT user_id, public_key, sign_count FROM passkeys WHERE id = ?", (cred_id,)
+        )
+        return (rows[0][0], bytes(rows[0][1]), int(rows[0][2])) if rows else None
+
+    def touch_passkey(self, cred_id: str, sign_count: int) -> None:
+        self._q(
+            "UPDATE passkeys SET sign_count = ?, last_used = ? WHERE id = ?",
+            (sign_count, time.time(), cred_id),
+        )
+
+    def delete_passkey(self, uid: str, cred_id: str) -> bool:
+        with self._lock:
+            n = self._db.execute(
+                "DELETE FROM passkeys WHERE id = ? AND user_id = ?", (cred_id, uid)
+            ).rowcount
+        return bool(n)
+
+    def clear_passkeys(self, uid: str) -> None:
+        self._q("DELETE FROM passkeys WHERE user_id = ?", (uid,))
+        self.revoke_user_sessions(uid)
+
+    def new_challenge(self, kind: str, challenge: bytes, uid: str | None) -> str:
+        cid = secrets.token_urlsafe(18)
+        now = time.time()
+        self._q("DELETE FROM webauthn_challenges WHERE expires < ?", (now,))
+        self._q(
+            "INSERT INTO webauthn_challenges (id, challenge, user_id, kind, expires)"
+            " VALUES (?,?,?,?,?)",
+            (cid, challenge, uid, kind, now + CHALLENGE_TTL_S),
+        )
+        return cid
+
+    def take_challenge(self, cid: str, kind: str) -> tuple[bytes, str | None] | None:
+        """One use only — a challenge is deleted as it is read."""
+        rows = self._q(
+            "SELECT challenge, user_id, expires FROM webauthn_challenges WHERE id = ? AND kind = ?",
+            (cid, kind),
+        )
+        self._q("DELETE FROM webauthn_challenges WHERE id = ?", (cid,))
+        if not rows or rows[0][2] < time.time():
+            return None
+        return bytes(rows[0][0]), rows[0][1]
 
     def session(self, token: str | None) -> Session | None:
         if not token:

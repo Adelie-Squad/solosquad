@@ -29,7 +29,7 @@ from solosquad.storage import (
     current_version,
     migrate,
 )
-from solosquad.web_api.accounts import AccountStore, Role
+from solosquad.web_api.accounts import MIGRATIONS, AccountStore, Role
 
 # ---------------------------------------------------------------------- migrations
 
@@ -90,7 +90,7 @@ def test_accounts_file_from_before_versioning(tmp_path: Path) -> None:
     )
     legacy.close()
     store = AccountStore(path)
-    assert current_version(connect(path), "accounts") == 2
+    assert current_version(connect(path), "accounts") == len(MIGRATIONS)
     assert store.user("u-1").title == "MD"
 
 

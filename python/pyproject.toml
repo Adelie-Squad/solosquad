@@ -18,6 +18,7 @@ dependencies = [
     "starlette>=0.47",
     "uvicorn>=0.35",
     "openpyxl>=3.1.5",
+    "webauthn>=2.5",
 ]
 
 [project.optional-dependencies]
