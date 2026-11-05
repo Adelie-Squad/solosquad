@@ -108,6 +108,9 @@ class WorkspaceConfig(_Doc):
     type: WorkspaceType = WorkspaceType.LOCAL
     timezone: str = "Asia/Seoul"
     server_country: str | None = None
+    public_url: str | None = None
+    """The office's HTTPS address (e.g. https://ai.example.co.kr) — passkeys are bound
+    to this domain, so they stay off until it is set (decision 47 S4)."""
     """ISO country where this office's server runs (decision 45 region rule), e.g. KR."""
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)

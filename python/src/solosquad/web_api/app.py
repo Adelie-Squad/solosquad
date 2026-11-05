@@ -19,7 +19,9 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
+import webauthn
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
@@ -28,6 +30,13 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from webauthn.helpers import base64url_to_bytes, bytes_to_base64url
+from webauthn.helpers.structs import (
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
 
 from solosquad import __version__
 from solosquad.approvals import (
@@ -366,6 +375,159 @@ def create_app(cfg: WebConfig) -> Starlette:
             raise HTTPException(403, f"this approval needs {whom}")
         return card
 
+    # ------------------------------------------------------------- passkeys (W3)
+
+    def relying_party() -> tuple[str, str]:
+        url = cfg.workspace.config().public_url if cfg.workspace else None
+        parts = urlsplit(url or "")
+        if parts.scheme not in ("https", "http") or not parts.hostname:
+            raise HTTPException(
+                409, "passkeys need the office's public_url (https://…) in workspace.yaml"
+            )
+        return parts.hostname, f"{parts.scheme}://{parts.netloc}"
+
+    def set_session(resp: Response, token: str) -> None:
+        resp.set_cookie(
+            SESSION_COOKIE, token, max_age=SESSION_TTL_S, httponly=True,
+            secure=cfg.secure_cookies, samesite="lax", path="/",
+        )  # fmt: skip
+
+    async def passkey_register_begin(request: Request) -> Response:
+        who = principal(request, allow_enroll=True)
+        if who.session is None:
+            raise HTTPException(400, "log in with an account to add a passkey")
+        rp_id, _origin = relying_party()
+        user = who.session.user
+        options = webauthn.generate_registration_options(
+            rp_id=rp_id,
+            rp_name="SoloSquad",
+            user_name=user.username,
+            user_id=user.id.encode(),
+            user_display_name=user.display,
+            exclude_credentials=[
+                PublicKeyCredentialDescriptor(id=base64url_to_bytes(pk["id"]))
+                for pk in accounts().passkeys(user.id)
+            ],
+            authenticator_selection=AuthenticatorSelectionCriteria(
+                resident_key=ResidentKeyRequirement.REQUIRED,
+                user_verification=UserVerificationRequirement.REQUIRED,
+            ),
+        )
+        cid = accounts().new_challenge("register", options.challenge, user.id)
+        return Json({"challenge_id": cid, "options": json.loads(webauthn.options_to_json(options))})
+
+    async def passkey_register_finish(request: Request) -> Response:
+        who = principal(request, allow_enroll=True)
+        if who.session is None:
+            raise HTTPException(400, "log in with an account to add a passkey")
+        rp_id, origin = relying_party()
+        data = await body(request)
+        taken = accounts().take_challenge(str(data.get("challenge_id") or ""), "register")
+        if taken is None or taken[1] != who.session.user.id:
+            raise HTTPException(400, "the passkey request expired — start again")
+        cred = data.get("credential")
+        if not isinstance(cred, dict):
+            raise ValueError("send the credential from navigator.credentials.create()")
+        try:
+            verified = webauthn.verify_registration_response(
+                credential=cred,
+                expected_challenge=taken[0],
+                expected_origin=origin,
+                expected_rp_id=rp_id,
+                require_user_verification=True,
+            )
+        except Exception as e:  # the library raises its own errors for every bad response
+            raise HTTPException(400, f"passkey was not accepted: {e}") from e
+        transports = (cred.get("response") or {}).get("transports") or []
+        accounts().add_passkey(
+            who.session.user.id,
+            bytes_to_base64url(verified.credential_id),
+            verified.credential_public_key,
+            verified.sign_count,
+            [str(t) for t in transports],
+            str(data.get("name") or "passkey"),
+        )
+        token = request.cookies.get(SESSION_COOKIE)
+        if who.session.stage is SessionStage.ENROLL and token:
+            accounts().promote_session(token)  # a passkey is a strong factor in itself
+        accounts().audit(who.user_id, "passkey.add", str(data.get("name") or ""))
+        return Json({"ok": True, "passkeys": accounts().passkeys(who.session.user.id)})
+
+    async def passkey_login_begin(request: Request) -> Response:
+        policy_check(request)
+        rp_id, _origin = relying_party()
+        username = str((await body(request)).get("username") or "").strip().lower()
+        uid = None
+        allow: list[PublicKeyCredentialDescriptor] = []
+        if username:
+            match = [u for u in accounts().users() if u.username == username and not u.disabled]
+            if match:
+                uid = match[0].id
+                allow = [
+                    PublicKeyCredentialDescriptor(id=base64url_to_bytes(pk["id"]))
+                    for pk in accounts().passkeys(uid)
+                ]
+        options = webauthn.generate_authentication_options(
+            rp_id=rp_id,
+            allow_credentials=allow,
+            user_verification=UserVerificationRequirement.REQUIRED,
+        )
+        cid = accounts().new_challenge("login", options.challenge, uid)
+        return Json({"challenge_id": cid, "options": json.loads(webauthn.options_to_json(options))})
+
+    async def passkey_login_finish(request: Request) -> Response:
+        w = policy_check(request)
+        rp_id, origin = relying_party()
+        store = accounts()
+        if store.throttled(f"ip:{w.address}"):
+            raise HTTPException(401, "too many attempts — try again later")
+        data = await body(request)
+        cred = data.get("credential") or {}
+        taken = store.take_challenge(str(data.get("challenge_id") or ""), "login")
+        found = store.passkey(str(cred.get("id") or "")) if isinstance(cred, dict) else None
+        if taken is None or found is None or (taken[1] is not None and taken[1] != found[0]):
+            store.record_failure(f"ip:{w.address}")
+            raise HTTPException(401, "passkey not recognised")
+        uid, public_key, sign_count = found
+        try:
+            verified = webauthn.verify_authentication_response(
+                credential=cred,
+                expected_challenge=taken[0],
+                expected_rp_id=rp_id,
+                expected_origin=origin,
+                credential_public_key=public_key,
+                credential_current_sign_count=sign_count,
+                require_user_verification=True,
+            )
+        except Exception as e:
+            store.record_failure(f"ip:{w.address}")
+            raise HTTPException(401, "passkey not recognised") from e
+        if store.user(uid).disabled:
+            raise HTTPException(401, "passkey not recognised")
+        store.touch_passkey(str(cred["id"]), verified.new_sign_count)
+        token, session = store.open_session(
+            uid, SessionStage.FULL, ip=w.address, ua=request.headers.get("user-agent", "")
+        )
+        store.audit(uid, "login.passkey", w.address)
+        resp = Json(me_payload(session))
+        set_session(resp, token)
+        return resp
+
+    async def my_passkeys(request: Request) -> Response:
+        who = principal(request, allow_enroll=True)
+        if who.session is None:
+            return Json([])
+        return Json(accounts().passkeys(who.session.user.id))
+
+    async def my_passkey_delete(request: Request) -> Response:
+        who = principal(request)
+        if who.session is None or not accounts().delete_passkey(
+            who.session.user.id, request.path_params["pid"]
+        ):
+            raise KeyError("no such passkey")
+        accounts().audit(who.user_id, "passkey.remove", request.path_params["pid"])
+        return Json({"ok": True})
+
     # ------------------------------------------------------------------ users
 
     async def users(request: Request) -> Response:
@@ -399,6 +561,9 @@ def create_app(cfg: WebConfig) -> Starlette:
         if data.get("password"):
             store.set_password(uid, str(data["password"]))
             store.audit(who.user_id, "user.password.reset", uid)
+        if data.get("reset_passkeys"):
+            store.clear_passkeys(uid)
+            store.audit(who.user_id, "user.passkeys.reset", uid)
         if data.get("reset_totp"):
             store.reset_totp(uid)
             store.audit(who.user_id, "user.totp.reset", uid)
@@ -964,6 +1129,12 @@ def create_app(cfg: WebConfig) -> Starlette:
         ("/auth/logout", logout, ["POST"]),
         ("/auth/totp/begin", totp_begin, ["POST"]),
         ("/auth/totp/confirm", totp_confirm, ["POST"]),
+        ("/auth/passkey/register/begin", passkey_register_begin, ["POST"]),
+        ("/auth/passkey/register/finish", passkey_register_finish, ["POST"]),
+        ("/auth/passkey/login/begin", passkey_login_begin, ["POST"]),
+        ("/auth/passkey/login/finish", passkey_login_finish, ["POST"]),
+        ("/me/passkeys", my_passkeys, ["GET"]),
+        ("/me/passkeys/{pid}", my_passkey_delete, ["DELETE"]),
         ("/me", me, ["GET", "PATCH"]),
         ("/users", users, ["GET", "POST"]),
         ("/users/{uid}", user_update, ["PATCH"]),
