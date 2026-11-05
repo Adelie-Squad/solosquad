@@ -31,6 +31,7 @@ from solosquad.layout import (
     scaffold_workspace,
     solosquad_home,
 )
+from solosquad.profile import CustomerProfile, load_profile, parse_entity, save_profile
 from solosquad.routing import (
     Connection,
     ConnectionKind,
@@ -58,6 +59,8 @@ accounts_app = typer.Typer(
 app.add_typer(add_app, name="add")
 app.add_typer(cron_app, name="cron")
 app.add_typer(accounts_app, name="accounts")
+profile_app = typer.Typer(no_args_is_help=True, help="The customer profile filled in at setup.")
+app.add_typer(profile_app, name="profile")
 workflows_app = typer.Typer(no_args_is_help=True, help="An org's workflows (steps · approvals).")
 app.add_typer(workflows_app, name="workflows")
 app.add_typer(conn_app, name="connections")
@@ -189,16 +192,47 @@ def init(
     org: Annotated[str, typer.Option(help="First org (business) name.")],
     workspace: Annotated[str, typer.Option(help="First workspace (office) name.")] = "hq",
     ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
+    server_country: Annotated[
+        str | None, typer.Option("--server-country", help="ISO country of the server, e.g. KR")
+    ] = None,
+    cloud: Annotated[str | None, typer.Option(help="Cloud provider, e.g. aws · gcp · ncp")] = None,
+    region: Annotated[str | None, typer.Option(help="Cloud region, e.g. ap-northeast-2")] = None,
+    cloud_access: Annotated[
+        str | None, typer.Option("--cloud-access", help="How the agency reaches it (no secrets)")
+    ] = None,
+    entity: Annotated[
+        list[str] | None,
+        typer.Option("--entity", help="Account-holding entity: id=name:country[:controlled_by]"),
+    ] = None,
+    language: Annotated[
+        str | None, typer.Option(help="Default UI language: ko · en · zh-CN")
+    ] = None,
+    privacy_regime: Annotated[
+        list[str] | None, typer.Option("--privacy-regime", help="e.g. PIPA, PIPL")
+    ] = None,
+    privacy_reviewer: Annotated[
+        str | None, typer.Option("--privacy-reviewer", help="A role, e.g. 고객 법무팀")
+    ] = None,
 ) -> None:
-    """Create core/, the first org and its first workspace."""
+    """Create core/, the first org and its first workspace — and the customer profile."""
     bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
     try:
         sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None)
         new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
-        scaffold_workspace(new_org, workspace, ws_type)
-    except LayoutError as e:
+        ws = scaffold_workspace(new_org, workspace, ws_type)
+        profile = _apply_profile(
+            CustomerProfile(), server_country, cloud, region, cloud_access, entity, language,
+            privacy_regime, privacy_reviewer,
+        )  # fmt: skip
+        save_profile(path, profile)
+        if profile.server.country:
+            ws.save_config(
+                ws.config().model_copy(update={"server_country": profile.server.country})
+            )
+    except (LayoutError, ValueError) as e:
         raise _fail(str(e)) from e
     console.print(f"created {path} — org {org!r}, workspace {workspace!r} ({ws_type.value})")
+    _print_checklist(profile)
     console.print("next: solosquad connections add … , then solosquad chat -s " + str(path))
 
 
@@ -245,7 +279,10 @@ def add_workspace(
 ) -> None:
     """Add an office (workspace) to an org."""
     try:
-        scaffold_workspace(Solution(solution).org(org), name, ws_type)
+        ws = scaffold_workspace(Solution(solution).org(org), name, ws_type)
+        country = load_profile(solution).server.country
+        if country:  # a new office sits where the customer profile says (decision 50)
+            ws.save_config(ws.config().model_copy(update={"server_country": country}))
     except LayoutError as e:
         raise _fail(str(e)) from e
     console.print(f"workspace {name!r} ({ws_type.value}) in org {org!r}")
@@ -301,8 +338,25 @@ def conn_add(
     org: Annotated[
         str | None, typer.Option("--org", help="Add to one org only (separate billing).")
     ] = None,
+    entity: Annotated[
+        str | None,
+        typer.Option("--entity", help="Profile entity id that holds this account (decision 45)"),
+    ] = None,
 ) -> None:
     """Add a subscription login or an API key (decision 22). Keys go in with `set-secret`."""
+    from solosquad.routing.eligibility import Entity, judge
+
+    holder: Entity | None = None
+    if entity is not None:
+        try:
+            pe = load_profile(solution).entity(entity)
+        except KeyError as e:
+            raise _fail(str(e).strip("'\"")) from e
+        holder = Entity(name=pe.name, country=pe.country, controlled_by=pe.controlled_by)
+    model_list = [m for m in models.split(",") if m]
+    verdict = judge(provider, harness, model_list, holder, load_profile(solution).server.country)
+    if not verdict.ok:
+        raise _fail(f"{verdict.reason} — see {verdict.source}")
     path = _conn_path(solution, org)
     conns = [c for c in load_connections(path) if c.id != id]
     conns.append(
@@ -318,6 +372,7 @@ def conn_add(
             slots=slots,
             monthly_budget_usd=budget,
             network=network,
+            entity=holder,
         )
     )
     save_connections(path, conns)
@@ -695,6 +750,102 @@ def cron_run(
             await client.close()
 
     _run(main())
+
+
+# ---------------------------------------------------------------------- customer profile
+
+
+def _apply_profile(
+    base: CustomerProfile,
+    server_country: str | None,
+    cloud: str | None,
+    region: str | None,
+    cloud_access: str | None,
+    entity: list[str] | None,
+    language: str | None,
+    privacy_regime: list[str] | None,
+    privacy_reviewer: str | None,
+) -> CustomerProfile:
+    data = base.model_dump()
+    srv = data["server"]
+    for key, val in (("country", server_country), ("cloud", cloud), ("region", region),
+                     ("access", cloud_access)):  # fmt: skip
+        if val is not None:
+            srv[key] = val
+    if entity:
+        by_id = {e["id"]: e for e in data["entities"]}
+        for spec in entity:
+            parsed = parse_entity(spec)
+            by_id[parsed.id] = parsed.model_dump()
+        data["entities"] = list(by_id.values())
+    if language is not None:
+        data["languages"]["default"] = language
+    if privacy_regime:
+        data["privacy"]["regimes"] = sorted({*data["privacy"]["regimes"], *privacy_regime})
+    if privacy_reviewer is not None:
+        data["privacy"]["reviewer"] = privacy_reviewer
+    return CustomerProfile.model_validate(data)
+
+
+def _print_checklist(profile: CustomerProfile) -> None:
+    table = Table("고객 프로필 (결정 50)", "")
+    for item in profile.checklist():
+        table.add_row(
+            item["label"], "[green]✓[/green]" if item["done"] else "[yellow]비어 있음[/yellow]"
+        )
+    console.print(table)
+
+
+@profile_app.command("show")
+def profile_show(solution: SolutionOpt = Path(".")) -> None:
+    """The customer profile and what is still missing for setup."""
+    profile = load_profile(solution)
+    console.print(escape(json.dumps(profile.model_dump(mode="json", exclude_none=True),
+                                    ensure_ascii=False, indent=1)))  # fmt: skip
+    _print_checklist(profile)
+
+
+@profile_app.command("set")
+def profile_set(
+    solution: SolutionOpt = Path("."),
+    server_country: Annotated[
+        str | None, typer.Option("--server-country", help="ISO country of the server, e.g. KR")
+    ] = None,
+    cloud: Annotated[str | None, typer.Option(help="Cloud provider, e.g. aws · gcp · ncp")] = None,
+    region: Annotated[str | None, typer.Option(help="Cloud region, e.g. ap-northeast-2")] = None,
+    cloud_access: Annotated[
+        str | None, typer.Option("--cloud-access", help="How the agency reaches it (no secrets)")
+    ] = None,
+    entity: Annotated[
+        list[str] | None,
+        typer.Option("--entity", help="Account-holding entity: id=name:country[:controlled_by]"),
+    ] = None,
+    language: Annotated[
+        str | None, typer.Option(help="Default UI language: ko · en · zh-CN")
+    ] = None,
+    privacy_regime: Annotated[
+        list[str] | None, typer.Option("--privacy-regime", help="e.g. PIPA, PIPL")
+    ] = None,
+    privacy_reviewer: Annotated[
+        str | None, typer.Option("--privacy-reviewer", help="A role, e.g. 고객 법무팀")
+    ] = None,
+) -> None:
+    """Fill in or change profile items; a new server country is applied to every office."""
+    try:
+        profile = _apply_profile(
+            load_profile(solution), server_country, cloud, region, cloud_access, entity, language,
+            privacy_regime, privacy_reviewer,
+        )  # fmt: skip
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    save_profile(solution, profile)
+    if server_country:
+        for o in Solution(solution).orgs():
+            for ws in o.workspaces():
+                ws.save_config(
+                    ws.config().model_copy(update={"server_country": profile.server.country})
+                )
+    _print_checklist(profile)
 
 
 # ---------------------------------------------------------------------- data upkeep
