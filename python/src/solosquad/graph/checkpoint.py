@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import builtins
-import sqlite3
+import re
 import threading
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from solosquad.graph import serde
+from solosquad.storage import Migration, connect, migrate
 
 Config = dict[str, Any]
 
@@ -150,24 +151,34 @@ class InMemorySaver(BaseCheckpointSaver):
 class SqliteSaver(BaseCheckpointSaver):
     """Stdlib sqlite3 (decision 13). One connection, serialized by a lock; WAL for crash safety."""
 
-    def __init__(self, path: Path | str) -> None:
+    def __init__(self, path: Path | str, *, prefix: str = "") -> None:
+        """`prefix` lets two graphs share one office.db (the company's and `wf_` workflows)."""
+        if prefix and not re.fullmatch(r"[a-z]+_", prefix):
+            raise ValueError(f"table prefix must look like 'wf_', not {prefix!r}")
         self.path = str(path)
-        if self.path != ":memory:":
-            Path(self.path).parent.mkdir(parents=True, exist_ok=True)
+        self.C = f"{prefix}checkpoints"
+        self.W = f"{prefix}writes"
         self._lock = threading.Lock()
-        self._db = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
-        self._db.execute("PRAGMA journal_mode=WAL")
+        self._db = connect(self.path)
         self._db.execute("PRAGMA synchronous=NORMAL")
-        self._db.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS checkpoints (
-              thread_id TEXT, ns TEXT, id TEXT, parent_id TEXT, checkpoint TEXT, metadata TEXT,
-              PRIMARY KEY (thread_id, ns, id));
-            CREATE TABLE IF NOT EXISTS writes (
-              thread_id TEXT, ns TEXT, checkpoint_id TEXT, task_id TEXT, seq INTEGER,
-              channel TEXT, value TEXT,
-              PRIMARY KEY (thread_id, ns, checkpoint_id, task_id, seq));
-            """
+        migrate(
+            self._db,
+            f"{prefix}checkpoints",
+            [
+                Migration(
+                    1,
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {self.C} (
+                      thread_id TEXT, ns TEXT, id TEXT, parent_id TEXT, checkpoint TEXT,
+                      metadata TEXT, PRIMARY KEY (thread_id, ns, id));
+                    CREATE TABLE IF NOT EXISTS {self.W} (
+                      thread_id TEXT, ns TEXT, checkpoint_id TEXT, task_id TEXT, seq INTEGER,
+                      channel TEXT, value TEXT,
+                      PRIMARY KEY (thread_id, ns, checkpoint_id, task_id, seq))
+                    """,
+                )
+            ],
+            path=None if self.path == ":memory:" else self.path,
         )
 
     def close(self) -> None:
@@ -177,7 +188,7 @@ class SqliteSaver(BaseCheckpointSaver):
     def _tuple(self, tid: str, ns: str, row: tuple[str, str | None, str, str]) -> CheckpointTuple:
         cid, parent, cp, md = row
         writes = self._db.execute(
-            "SELECT task_id, channel, value FROM writes"
+            f"SELECT task_id, channel, value FROM {self.W}"
             " WHERE thread_id=? AND ns=? AND checkpoint_id=? ORDER BY task_id, seq",
             (tid, ns, cid),
         ).fetchall()
@@ -194,13 +205,13 @@ class SqliteSaver(BaseCheckpointSaver):
         with self._lock:
             if cid:
                 row = self._db.execute(
-                    "SELECT id, parent_id, checkpoint, metadata FROM checkpoints"
+                    f"SELECT id, parent_id, checkpoint, metadata FROM {self.C}"
                     " WHERE thread_id=? AND ns=? AND id=?",
                     (tid, ns, cid),
                 ).fetchone()
             else:
                 row = self._db.execute(
-                    "SELECT id, parent_id, checkpoint, metadata FROM checkpoints"
+                    f"SELECT id, parent_id, checkpoint, metadata FROM {self.C}"
                     " WHERE thread_id=? AND ns=? ORDER BY id DESC LIMIT 1",
                     (tid, ns),
                 ).fetchone()
@@ -210,9 +221,7 @@ class SqliteSaver(BaseCheckpointSaver):
         self, config: Config, *, limit: int | None = None, before: Config | None = None
     ) -> Iterator[CheckpointTuple]:
         tid, ns = thread_id(config), _ns(config)
-        sql = (
-            "SELECT id, parent_id, checkpoint, metadata FROM checkpoints WHERE thread_id=? AND ns=?"
-        )
+        sql = f"SELECT id, parent_id, checkpoint, metadata FROM {self.C} WHERE thread_id=? AND ns=?"
         args: builtins.list[Any] = [tid, ns]
         if before is not None and (bid := _cid(before)):
             sql += " AND id < ?"
@@ -230,7 +239,7 @@ class SqliteSaver(BaseCheckpointSaver):
         tid, ns = thread_id(config), _ns(config)
         with self._lock:
             self._db.execute(
-                "INSERT OR REPLACE INTO checkpoints VALUES (?,?,?,?,?,?)",
+                f"INSERT OR REPLACE INTO {self.C} VALUES (?,?,?,?,?,?)",
                 (
                     tid,
                     ns,
@@ -248,12 +257,12 @@ class SqliteSaver(BaseCheckpointSaver):
             raise ValueError("put_writes needs a checkpoint_id")
         with self._lock:
             start = self._db.execute(
-                "SELECT COALESCE(MAX(seq), -1) + 1 FROM writes"
+                f"SELECT COALESCE(MAX(seq), -1) + 1 FROM {self.W}"
                 " WHERE thread_id=? AND ns=? AND checkpoint_id=? AND task_id=?",
                 (tid, ns, cid, task_id),
             ).fetchone()[0]
             self._db.executemany(
-                "INSERT INTO writes VALUES (?,?,?,?,?,?,?)",
+                f"INSERT INTO {self.W} VALUES (?,?,?,?,?,?,?)",
                 [
                     (tid, ns, cid, task_id, start + i, ch, serde.dumps(v))
                     for i, (ch, v) in enumerate(writes)
@@ -264,5 +273,10 @@ class SqliteSaver(BaseCheckpointSaver):
         with self._lock:
             return [
                 r[0]
-                for r in self._db.execute("SELECT DISTINCT thread_id FROM checkpoints ORDER BY 1")
+                for r in self._db.execute(f"SELECT DISTINCT thread_id FROM {self.C} ORDER BY 1")
             ]
+
+    def delete_thread(self, thread_id: str) -> None:
+        with self._lock:
+            self._db.execute(f"DELETE FROM {self.C} WHERE thread_id = ?", (thread_id,))
+            self._db.execute(f"DELETE FROM {self.W} WHERE thread_id = ?", (thread_id,))

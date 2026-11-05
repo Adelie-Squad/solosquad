@@ -84,6 +84,16 @@ class AccessPolicy(BaseModel):
     allowed_networks: list[str] = Field(default_factory=list)
 
 
+class RetentionPolicy(BaseModel):
+    """How long each data class is kept (decision 54) — the customer may change it."""
+
+    model_config = ConfigDict(extra="allow")
+    business_records_days: int = 3 * 365
+    """Runs, threads and their checkpoints, the ledger, artifacts."""
+    uploads_days: int = 90
+    audit_days: int = 365
+
+
 class ExecutionPolicy(BaseModel):
     model_config = ConfigDict(extra="allow")
     allow_external_api: bool = True
@@ -100,6 +110,7 @@ class WorkspaceConfig(_Doc):
     """ISO country where this office's server runs (decision 45 region rule), e.g. KR."""
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
+    retention: RetentionPolicy = Field(default_factory=RetentionPolicy)
 
 
 def _read[M: BaseModel](path: Path, model: type[M]) -> M:

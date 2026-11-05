@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import threading
 import time
@@ -10,28 +11,65 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from solosquad.storage import Migration, connect, migrate
+
 
 def _id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:12]}"
 
 
 class RunStore:
-    def __init__(self, path: Path) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
+    """Threads and runs in a shared scope database (decision 54).
+
+    `prefix` keeps two run models apart in one file — the company's (`""`) and the
+    workflow engine's (`"wf_"`).
+    """
+
+    def __init__(self, path: Path, *, prefix: str = "") -> None:
+        if prefix and not re.fullmatch(r"[a-z]+_", prefix):
+            raise ValueError(f"table prefix must look like 'wf_', not {prefix!r}")
+        self.path = path
+        self.T = f"{prefix}threads"
+        self.R = f"{prefix}runs"
+        self._db = connect(path)
         self._db.row_factory = sqlite3.Row
-        self._db.execute("PRAGMA journal_mode=WAL")
         self._lock = threading.Lock()
-        self._db.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS threads (
-              id TEXT PRIMARY KEY, title TEXT, metadata TEXT, created REAL, updated REAL);
-            CREATE TABLE IF NOT EXISTS runs (
-              id TEXT PRIMARY KEY, thread_id TEXT, status TEXT, kind TEXT, input TEXT,
-              error TEXT, interrupts TEXT, created REAL, started REAL, ended REAL, source TEXT);
-            CREATE INDEX IF NOT EXISTS runs_by_thread ON runs (thread_id, created);
-            """
+        migrate(
+            self._db,
+            f"{prefix}runs",
+            [
+                Migration(
+                    1,
+                    f"""
+                    CREATE TABLE IF NOT EXISTS {self.T} (
+                      id TEXT PRIMARY KEY, title TEXT, metadata TEXT, created REAL, updated REAL);
+                    CREATE TABLE IF NOT EXISTS {self.R} (
+                      id TEXT PRIMARY KEY, thread_id TEXT, status TEXT, kind TEXT, input TEXT,
+                      error TEXT, interrupts TEXT, created REAL, started REAL, ended REAL,
+                      source TEXT);
+                    CREATE INDEX IF NOT EXISTS {prefix}runs_by_thread
+                      ON {self.R} (thread_id, created)
+                    """,
+                )
+            ],
+            path=path,
         )
+
+    def purge(self, before: float) -> list[str]:
+        """Delete threads idle since `before` with no run still open → the thread ids removed."""
+        open_ = ("pending", "running", "interrupted")
+        old = [
+            r["id"]
+            for r in self._exec(
+                f"SELECT id FROM {self.T} WHERE updated < ? AND id NOT IN"
+                f" (SELECT thread_id FROM {self.R} WHERE status IN (?,?,?))",
+                (before, *open_),
+            )
+        ]
+        for tid in old:
+            self._exec(f"DELETE FROM {self.R} WHERE thread_id = ?", (tid,))
+            self._exec(f"DELETE FROM {self.T} WHERE id = ?", (tid,))
+        return old
 
     def _exec(self, sql: str, args: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         with self._lock:
@@ -43,13 +81,13 @@ class RunStore:
         tid = thread_id or _id("th")
         now = time.time()
         self._exec(
-            "INSERT OR IGNORE INTO threads VALUES (?,?,?,?,?)",
+            f"INSERT OR IGNORE INTO {self.T} VALUES (?,?,?,?,?)",
             (tid, title, json.dumps(metadata or {}, ensure_ascii=False), now, now),
         )
         return tid
 
     def thread(self, tid: str) -> dict[str, Any] | None:
-        rows = self._exec("SELECT * FROM threads WHERE id = ?", (tid,))
+        rows = self._exec(f"SELECT * FROM {self.T} WHERE id = ?", (tid,))
         if not rows:
             return None
         row = rows[0]
@@ -57,13 +95,13 @@ class RunStore:
         return row
 
     def threads(self, limit: int = 50) -> list[dict[str, Any]]:
-        rows = self._exec("SELECT * FROM threads ORDER BY updated DESC LIMIT ?", (limit,))
+        rows = self._exec(f"SELECT * FROM {self.T} ORDER BY updated DESC LIMIT ?", (limit,))
         for r in rows:
             r["metadata"] = json.loads(r["metadata"] or "{}")
         return rows
 
     def touch(self, tid: str) -> None:
-        self._exec("UPDATE threads SET updated = ? WHERE id = ?", (time.time(), tid))
+        self._exec(f"UPDATE {self.T} SET updated = ? WHERE id = ?", (time.time(), tid))
 
     def create_run(
         self, tid: str, kind: str, payload: Any, source: str, *, created: float | None = None
@@ -72,7 +110,7 @@ class RunStore:
         the crashed run's, so it is not overtaken by input sent after it."""
         rid = _id("run")
         self._exec(
-            "INSERT INTO runs (id, thread_id, status, kind, input, created, source)"
+            f"INSERT INTO {self.R} (id, thread_id, status, kind, input, created, source)"
             " VALUES (?,?,?,?,?,?,?)",
             (
                 rid,
@@ -92,19 +130,19 @@ class RunStore:
         now = time.time()
         if status == "running":
             self._exec(
-                "UPDATE runs SET status=?, started=COALESCE(started, ?) WHERE id=?",
+                f"UPDATE {self.R} SET status=?, started=COALESCE(started, ?) WHERE id=?",
                 (status, now, rid),
             )
         elif status in ("success", "error", "interrupted", "cancelled"):
             self._exec(
-                "UPDATE runs SET status=?, ended=?, error=?, interrupts=? WHERE id=?",
+                f"UPDATE {self.R} SET status=?, ended=?, error=?, interrupts=? WHERE id=?",
                 (status, now, error, json.dumps(interrupts, ensure_ascii=False, default=str), rid),
             )
         else:
-            self._exec("UPDATE runs SET status=? WHERE id=?", (status, rid))
+            self._exec(f"UPDATE {self.R} SET status=? WHERE id=?", (status, rid))
 
     def run(self, rid: str) -> dict[str, Any] | None:
-        rows = self._exec("SELECT * FROM runs WHERE id = ?", (rid,))
+        rows = self._exec(f"SELECT * FROM {self.R} WHERE id = ?", (rid,))
         return self._decode(rows[0]) if rows else None
 
     def runs(
@@ -116,7 +154,7 @@ class RunStore:
         limit: int = 50,
     ) -> list[dict[str, Any]]:
         """Newest first. `since` = runs created at or after that time ("since you last looked")."""
-        sql = "SELECT * FROM runs WHERE 1=1"
+        sql = f"SELECT * FROM {self.R} WHERE 1=1"
         args: list[Any] = []
         if since is not None:
             sql += " AND created >= ?"

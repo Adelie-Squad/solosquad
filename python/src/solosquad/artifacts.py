@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import secrets
-import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
@@ -19,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from solosquad.assets.text import load_yaml
+from solosquad.storage import Migration, connect, migrate
 
 
 @dataclass(frozen=True)
@@ -94,10 +94,8 @@ def _row(r: Any) -> Artifact:
 
 class ArtifactStore:
     def __init__(self, path: Path, kinds: dict[str, ArtifactKind] | None = None) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self._db = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.executescript(SCHEMA)
+        self._db = connect(path)
+        migrate(self._db, "artifacts", [Migration(1, SCHEMA)], path=path)
         self._lock = threading.Lock()
         self.kinds = kinds or dict(BUILT_IN)
 
@@ -172,6 +170,10 @@ class ArtifactStore:
         sql += " ORDER BY created DESC LIMIT ?"
         args.append(limit)
         return [_row(r) for r in self._q(sql, tuple(args))]
+
+    def purge(self, before: float) -> int:
+        with self._lock:
+            return self._db.execute("DELETE FROM artifacts WHERE created < ?", (before,)).rowcount
 
     def mark_reviewed(self, aid: str, by: str) -> Artifact:
         self.get(aid)

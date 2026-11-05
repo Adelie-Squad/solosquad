@@ -29,6 +29,7 @@ from solosquad.layout import LayoutError, Solution
 from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import judge, providers_reached
 from solosquad.routing.policy import load_policy
+from solosquad.storage import legacy_files
 from solosquad.workflows.definition import load_workflows
 from solosquad.workflows.tools import TOOLS
 
@@ -384,6 +385,16 @@ def doctor_checks(solution: Path, bundle: Path | None) -> list[Check]:
                 continue
             probe = data if data.exists() else home
             writable = os.access(probe, os.W_OK) if probe.exists() else True
+            legacy = legacy_files(data) + legacy_files(data.parent)
+            if legacy:
+                out.append(
+                    Check(
+                        f"legacy:{org.name}/{ws.name}",
+                        "warn",
+                        "per-component files from before org.db/office.db: "
+                        + ", ".join(p.name for p in legacy),
+                    )
+                )
             out.append(
                 Check(
                     f"data:{org.name}/{ws.name}",

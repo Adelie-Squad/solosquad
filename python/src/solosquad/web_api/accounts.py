@@ -20,6 +20,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from solosquad.storage import Migration, columns, connect, migrate
 from solosquad.web_api import totp
 
 SESSION_TTL_S = 14 * 24 * 3600
@@ -150,21 +151,23 @@ def _user(row: Any) -> User:
     )
 
 
-# Columns added after the first release of the table — applied to existing files in place.
-LATER_COLUMNS = (("users", "title", "TEXT"), ("users", "teams", "TEXT"))
+def _add_people_columns(db: sqlite3.Connection) -> None:
+    """v2: title and team memberships (decision 55). A file that already got them from the
+    in-place step of PR #19 is left as it is."""
+    have = columns(db, "users")
+    for column in ("title", "teams"):
+        if column not in have:
+            db.execute(f"ALTER TABLE users ADD COLUMN {column} TEXT")
+
+
+MIGRATIONS = (Migration(1, SCHEMA), Migration(2, _add_people_columns))
 
 
 class AccountStore:
     def __init__(self, path: Path) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
-        self._db = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
-        self._db.execute("PRAGMA journal_mode=WAL")
-        self._db.executescript(SCHEMA)
-        for table, column, kind in LATER_COLUMNS:
-            have = {r[1] for r in self._db.execute(f"PRAGMA table_info({table})")}
-            if column not in have:
-                self._db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+        self._db = connect(path)
+        migrate(self._db, "accounts", MIGRATIONS, path=path)
         self._lock = threading.Lock()
         path.chmod(0o600)
 
@@ -362,6 +365,23 @@ class AccountStore:
 
     def revoke_user_sessions(self, uid: str) -> None:
         self._q("DELETE FROM sessions WHERE user_id = ?", (uid,))
+
+    def purge(self, *, audit_days: int, now: float | None = None) -> dict[str, int]:
+        """Expired sessions, stale login failures, audit older than `audit_days`."""
+        t = time.time() if now is None else now
+        with self._lock:
+            out = {
+                "sessions": self._db.execute(
+                    "DELETE FROM sessions WHERE expires < ?", (t,)
+                ).rowcount,
+                "login_failures": self._db.execute(
+                    "DELETE FROM login_failures WHERE ts < ?", (t - FAIL_WINDOW_S,)
+                ).rowcount,
+                "audit": self._db.execute(
+                    "DELETE FROM audit WHERE ts < ?", (t - audit_days * 86400,)
+                ).rowcount,
+            }
+        return out
 
     # ------------------------------------------------------------------ audit
 

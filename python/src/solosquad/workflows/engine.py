@@ -30,6 +30,7 @@ from solosquad.graph.pregel import CompiledStateGraph
 from solosquad.messages import Message
 from solosquad.runtime import CronSpec, RunManager
 from solosquad.runtime.store import RunStore
+from solosquad.storage import OFFICE_DB
 from solosquad.workflows.definition import Step, WorkflowDef, load_workflows, render
 from solosquad.workflows.tools import TOOLS
 
@@ -71,7 +72,7 @@ class WorkflowEngine:
         self.graph = self._build()
         self.manager = RunManager(
             self.graph,
-            RunStore(data_dir / "workflow-runs.sqlite"),
+            RunStore(data_dir / OFFICE_DB, prefix="wf_"),
             timezone=timezone,
             max_concurrency=2,
         )
@@ -195,6 +196,15 @@ class WorkflowEngine:
                 return path
         raise KeyError(f"no upload {uid}")
 
+    def purge_uploads(self, before: float) -> int:
+        removed = 0
+        for meta in self.uploads_list():
+            if float(meta["created"]) < before:
+                for path in self.uploads.glob(f"{meta['id']}.*"):
+                    path.unlink(missing_ok=True)
+                removed += 1
+        return removed
+
     def uploads_list(self) -> list[dict[str, Any]]:
         if not self.uploads.is_dir():
             return []
@@ -212,7 +222,7 @@ class WorkflowEngine:
         )
         self.data_dir.mkdir(parents=True, exist_ok=True)
         return builder.compile(
-            checkpointer=SqliteSaver(self.data_dir / "workflows.sqlite"), name="workflows"
+            checkpointer=SqliteSaver(self.data_dir / OFFICE_DB, prefix="wf_"), name="workflows"
         )
 
     async def _step(self, state: WorkflowState, config: dict[str, Any]) -> dict[str, Any]:
