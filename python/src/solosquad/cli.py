@@ -467,16 +467,10 @@ def conn_check(
 
 
 def _snapshot_now(inst: Any, ws: Any, org_dir: Path) -> dict[str, Any]:
-    """The web's "snapshot now": the target as workspace.yaml says it now — the owner may
-    have just changed it in the web, after this instance was built."""
-    import copy
-    import dataclasses
-
+    """The web's "snapshot now" — `run_snapshot` reads workspace.yaml afresh."""
     from solosquad.maintenance import run_snapshot
 
-    fresh = copy.copy(inst)
-    fresh.ctx = dataclasses.replace(inst.ctx, workspace_config=ws.config())
-    return run_snapshot(fresh, org_dir)
+    return run_snapshot(inst, org_dir)
 
 
 @app.command()
