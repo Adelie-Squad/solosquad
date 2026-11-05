@@ -292,7 +292,7 @@ export const ko = {
   'users.display': '표시 이름',
   'users.initialPassword': '첫 비밀번호 (10자 이상)',
   'users.add': '사람 추가',
-  'users.addHint': '첫 로그인 때 일회용 코드를 등록해요. 팀 소속과 직함은 조직도에서 정해요.',
+  'users.addHint': '첫 로그인 때 패스키나 일회용 코드를 등록해요. 팀 소속과 직함은 조직도에서 정해요.',
 
   'screen.unknownWidget': '이 웹이 모르는 위젯이에요: {widget}',
   'screen.badWidgetVersion': '{widget} 위젯의 버전 {version} 은 아직 그릴 수 없어요',

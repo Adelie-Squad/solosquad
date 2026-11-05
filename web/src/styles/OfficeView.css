@@ -160,8 +160,10 @@
 }
 
 .office-body {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
+  /* the scene keeps its room even when many agents are listed below it — the page
+     scrolls instead of squeezing the office to nothing */
+  min-height: clamp(360px, 62vh, 680px);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);

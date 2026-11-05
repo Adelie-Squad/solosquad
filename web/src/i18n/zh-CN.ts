@@ -294,7 +294,7 @@ export const zhCN: Record<MessageKey, string> = {
   'users.display': '显示名称',
   'users.initialPassword': '初始密码（至少 10 个字符）',
   'users.add': '添加人员',
-  'users.addHint': '首次登录时设置一次性验证码。团队和职位在组织架构中设置。',
+  'users.addHint': '首次登录时设置通行密钥或一次性验证码。团队和职位在组织架构中设置。',
 
   'screen.unknownWidget': '此网页不认识该组件：{widget}',
   'screen.badWidgetVersion': '{widget} 组件的版本 {version} 暂时无法显示',

@@ -30,7 +30,7 @@ export function Enrol() {
   return (
     <div className="auth-page">
       <div className="auth-card is-wide">
-        <h1>{t('enrol.title')}</h1>
+        <h1>{canPasskey ? t('enrol.choose') : t('enrol.title')}</h1>
         {canPasskey && (
           <div className="segmented" role="tablist" aria-label={t('enrol.choose')}>
             <button role="tab" aria-selected={method === 'passkey'} className={method === 'passkey' ? 'is-active' : ''} onClick={() => setChosen('passkey')}>
