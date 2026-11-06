@@ -32,12 +32,12 @@ export const STATUS_CHIP: Record<AgentStatus, string> = {
  * working, the waiting, the failed and the just-finished stay readable in a full office. */
 export const quiet = (st: AgentStatus) => st === 'idle';
 
-function prefersReducedMotion(): boolean {
+export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
 /** WebGL at all? (checked before the 3D chunk loads — no point fetching it otherwise) */
-function hasWebGL(): boolean {
+export function hasWebGL(): boolean {
   if (typeof window === 'undefined' || (typeof WebGLRenderingContext === 'undefined' && typeof WebGL2RenderingContext === 'undefined')) return false;
   try {
     const c = document.createElement('canvas');
@@ -63,12 +63,12 @@ class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode 
   }
 }
 
-function isMobile(): boolean {
+export function isMobile(): boolean {
   return typeof window !== 'undefined' && (window.innerWidth <= 860 || !!window.matchMedia?.('(pointer: coarse)').matches);
 }
 
 /** `?webgl=off` forces the list — to check the fallback without breaking a GPU. */
-function webglForcedOff(): boolean {
+export function webglForcedOff(): boolean {
   try {
     return new URLSearchParams(window.location.search).get('webgl') === 'off';
   } catch {
