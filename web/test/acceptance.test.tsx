@@ -114,20 +114,24 @@ describe('C5 — the office shows every team, its agents and what they are doing
     expect(document.querySelector('.office-stats')?.textContent).toContain(`1 ${t('office.needsAnswer')}`);
   });
 
-  it('the home screen office widget lists who is working and on what', async () => {
+  it('the dashboard office widget lists who is working and on what', async () => {
     await openApp('/o/tesla/w/charging', data());
-    const widget = screen.getByText(t('widget.office', { n: 3 })).closest('section') as HTMLElement;
+    const widget = screen.getByText(t('widget.office')).closest('section') as HTMLElement;
+    const working = t('office.status.typing');
     expect(within(widget).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      'FinanceOctober P&L',
-      'BuyerCompare suppliers, Sample order',
-      'CreativeWinter banner',
+      `FinanceOctober P&L${working}`,
+      `BuyerCompare suppliers, Sample order${working}`,
+      `CreativeWinter banner${working}`,
     ]);
   });
 });
 
 // ---------------------------------------------------------------------- C9
 
-describe('C9 — a connection near its cap is flagged on the spend screen and the home widget', () => {
+// the spend screen moved into the dashboard (2026-11-07): its old address lands on the cost area
+const costArea = () => screen.getByTestId('cost');
+
+describe('C9 — a connection near its cap is flagged in the dashboard cost area', () => {
   const warned = budget({
     org: { spent_usd: 85, budget_usd: 100, remaining_usd: 15, warning: true, exhausted: false },
     connections: [
@@ -136,34 +140,35 @@ describe('C9 — a connection near its cap is flagged on the spend screen and th
     ],
   });
 
-  it('the spend screen marks the 85 % connection and the company line', async () => {
+  it('the cost area (the old spend address) marks the 85 % connection and the company line', async () => {
     await openApp('/o/tesla/w/charging/budget', engineData({ '/budget': warned }));
-    expect(screen.getByText(/80%/)).toBeTruthy(); // the lead names the warning line (warn_at 0.8)
-    const meter = screen.getByRole('meter', { name: 'claude-max' });
+    await waitFor(() => expect(within(costArea()).getByText(/80%/)).toBeTruthy()); // the lead names the warning line (warn_at 0.8)
+    const meter = within(costArea()).getByRole('meter', { name: 'claude-max' });
     expect(meter.getAttribute('aria-valuenow')).toBe('85');
     expect(meter.className).toContain('is-warn');
-    const lineOf = (label: string) => screen.getByText(label, { selector: 'strong' }).closest('.budget-line') as HTMLElement;
+    const lineOf = (label: string) => within(costArea()).getByText(label, { selector: 'strong' }).closest('.budget-line') as HTMLElement;
     expect(within(lineOf('claude-max')).getByText(t('budget.warning'))).toBeTruthy();
     expect(within(lineOf(t('budget.org'))).getByText(t('budget.warning'))).toBeTruthy();
     expect(within(lineOf('local')).queryByText(t('budget.warning'))).toBeNull();
   });
 
-  it('the home widget shows the warning, and a reached cap as such', async () => {
+  it('the dashboard shows the warning, and a reached cap as such', async () => {
     await openApp('/o/tesla/w/charging', engineData({ '/budget': warned }));
-    const widget = () => screen.getByRole('heading', { name: t('budget.title') }).closest('section') as HTMLElement;
-    expect(within(widget()).getByText(t('budget.warning'))).toBeTruthy();
-    expect(within(widget()).getByRole('meter').getAttribute('aria-valuenow')).toBe('85');
+    const company = () => within(costArea()).getByRole('meter', { name: t('budget.org') });
+    await waitFor(() => expect(company().getAttribute('aria-valuenow')).toBe('85'));
+    expect(within(company().closest('.budget-line') as HTMLElement).getByText(t('budget.warning'))).toBeTruthy();
     cleanup();
     vi.unstubAllGlobals();
     const full = budget({ org: { spent_usd: 100, budget_usd: 100, remaining_usd: 0, warning: true, exhausted: true } });
     await openApp('/o/tesla/w/charging', engineData({ '/budget': full }));
-    expect(within(widget()).getByText(t('budget.exhausted'))).toBeTruthy();
-    expect(within(widget()).queryByText(t('budget.warning'))).toBeNull();
+    const line = company().closest('.budget-line') as HTMLElement;
+    expect(within(line).getByText(t('budget.exhausted'))).toBeTruthy();
+    expect(within(line).queryByText(t('budget.warning'))).toBeNull();
   });
 
   it('no warning under the line', async () => {
     await openApp('/o/tesla/w/charging/budget', engineData());
-    expect(screen.queryByText(t('budget.warning'))).toBeNull();
+    expect(within(costArea()).queryByText(t('budget.warning'))).toBeNull();
   });
 });
 
@@ -172,18 +177,36 @@ describe('C9 — a connection near its cap is flagged on the spend screen and th
 describe('C22 — the P&L from the ledger is drawn as a table and bars', () => {
   const won = (n: number) => new Intl.NumberFormat('en', { style: 'currency', currency: 'KRW' }).format(n);
 
-  it('the artifacts screen shows the latest P&L: totals and the month table', async () => {
-    await openApp('/o/tesla/w/charging/screens/artifacts', engineData());
+  it('the dashboard sums the latest P&L up in one line and links to it in Task', async () => {
+    await openApp('/o/tesla/w/charging', engineData());
     const latest = screen.getByRole('heading', { name: '손익표' }).closest('section') as HTMLElement;
-    expect(within(latest).getAllByText(won(1_450_000)).length).toBeGreaterThan(0);
-    const rows = within(latest).getAllByRole('row').map((r) => Array.from(r.children).map((c) => c.textContent));
+    expect(within(latest).getByTestId('pnl-summary').textContent).toBe(
+      `${t('pnl.revenue')}${won(2_000_000)}${t('pnl.expenses')}${won(550_000)}${t('pnl.net')}${won(1_450_000)}`,
+    );
+    expect(within(latest).getByText(t('pnl.needsReview', { n: 1 }))).toBeTruthy();
+    expect(within(latest).queryByRole('table')).toBeNull(); // the table stays on the detail screen
+    expect(within(latest).queryByTestId('needs-review')).toBeNull();
+    expect(within(latest).getByRole('link', { name: t('widget.open') }).getAttribute('href')).toBe('/o/tesla/w/charging/tasks/artifacts/art-pnl-1');
+  });
+
+  it('the old work-products address opens Task, and the P&L detail shows totals and the month table', async () => {
+    await openApp('/o/tesla/w/charging/screens/artifacts', engineData());
+    expect(screen.getByRole('heading', { level: 1, name: t('nav.tasks') })).toBeTruthy();
+    cleanup();
+    vi.unstubAllGlobals();
+    await openApp('/o/tesla/w/charging/tasks/artifacts/art-pnl-1', engineData());
+    expect(screen.getAllByText(won(1_450_000)).length).toBeGreaterThan(0);
+    const month = screen.getByRole('columnheader', { name: t('pnl.month') }).closest('table') as HTMLElement;
+    const rows = within(month).getAllByRole('row').map((r) => Array.from(r.children).map((c) => c.textContent));
     expect(rows).toEqual([
       [t('pnl.month'), t('pnl.revenue'), t('pnl.expenses'), t('pnl.net')],
       ['2026-10', won(1_200_000), won(450_000), won(750_000)],
       ['2026-11', won(800_000), won(100_000), won(700_000)],
       [t('pnl.total'), won(2_000_000), won(550_000), won(1_450_000)],
     ]);
-    expect(within(latest).getByTestId('needs-review').textContent).toContain('금액을 읽을 수 없음');
+    const review = screen.getByTestId('needs-review');
+    expect(review.textContent).toContain('금액을 읽을 수 없음');
+    expect(review.querySelectorAll('li .ledger-flag')).toHaveLength(1); // a plain row with a warn icon, no tinted band
   });
 
   it('the P&L page adds the month bars and the account table', async () => {
@@ -262,7 +285,7 @@ describe('C20 — switching my language redraws the screen, and only the screen'
 
 describe('C26 — the org chart widget follows the people and the teams', () => {
   it('counts agents and people per team from the chart', async () => {
-    const screens = { '/screens/home': { name: 'home', source: 'org', screen: { format_version: 1, title: null, widgets: [{ widget: 'org-chart', version: 1 }] }, error: null } };
+    const screens = { '/screens/dashboard': { name: 'dashboard', source: 'org', screen: { format_version: 1, title: null, widgets: [{ widget: 'org-chart', version: 1 }] }, error: null } };
     await openApp('/o/tesla/w/charging', engineData({ ...screens, '/org-chart': THREE_CHART }));
     const widget = screen.getByRole('heading', { name: t('nav.org') }).closest('section') as HTMLElement;
     expect(within(widget).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
@@ -319,21 +342,23 @@ describe('C25 — a tier that differs from the recommendation is marked in Setti
 // ---------------------------------------------------------------------- C21
 
 describe('C21 — a screen file is drawn by the real widget registry', () => {
-  it('the default home draws its five widgets in order, none as a placeholder', async () => {
+  it('the default dashboard draws its six widgets in order, none as a placeholder', async () => {
     await openApp('/o/tesla/w/charging', engineData({ '/agents': THREE }));
+    expect(screen.getByTestId('stats')).toBeTruthy(); // the number strip leads, without a card head
     const titles = Array.from(document.querySelectorAll('.widget .widget-head h2')).map((h) => h.textContent);
-    expect(titles).toEqual([t('widget.approvals', { n: 0 }), t('widget.office', { n: 3 }), '손익표', t('nav.workflows'), t('budget.title')]);
+    // staff: no card is theirs to answer, one P&L waits to be checked → "1" as a chip, never a 0
+    expect(titles).toEqual([`${t('widget.todo')}1`, t('widget.office'), '손익표', t('widget.schedule'), t('budget.title')]);
     expect(screen.queryByTestId('placeholder')).toBeNull();
   });
 
-  it('an org file with an unknown widget keeps the rest of the screen', async () => {
+  it('an org file (an old home.yaml, served as the dashboard) with an unknown widget keeps the rest of the screen', async () => {
     const home = {
-      name: 'home',
+      name: 'dashboard',
       source: 'org',
       screen: { format_version: 1, title: '모아 첫 화면', widgets: [{ widget: 'budget', version: 1 }, { widget: 'weather', version: 1 }, { widget: 'workflows', version: 1 }] },
       error: null,
     };
-    await openApp('/o/tesla/w/charging', engineData({ '/screens/home': home }));
+    await openApp('/o/tesla/w/charging', engineData({ '/screens/dashboard': home }));
     expect(screen.getByRole('heading', { name: '모아 첫 화면' })).toBeTruthy();
     const titles = Array.from(document.querySelectorAll('.widget .widget-head h2')).map((h) => h.textContent);
     expect(titles).toEqual([t('budget.title'), t('nav.workflows')]);

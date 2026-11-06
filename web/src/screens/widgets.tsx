@@ -6,7 +6,8 @@ import { useLinks } from '../scope';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAgents, useApprovals, useArtifacts, useBudget, useOrgChart, useSchedules, useWorkflows, useWork } from '../api/queries';
-import type { WidgetSpec } from '../api/types.gen';
+import type { Artifact, BriefData, PnlData, WidgetSpec } from '../api/types.gen';
+import { PnlSummary } from '../components/PnlView';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { ArtifactBody } from '../components/ArtifactBody';
@@ -184,15 +185,36 @@ export function ArtifactLatestWidget({ spec }: { spec: WidgetSpec }) {
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : !a ? (
         <p className="dash-hint">{t('widget.noArtifact')}</p>
       ) : (
-        <>
-          <p className="dash-hint widget-meta">
-            {fmt.dateTime(a.created)}
-            {a.needs_review && <span className="chip is-warn">{t('artifact.needsReviewShort')}</span>}
-          </p>
-          <ArtifactBody artifact={a} compact />
-        </>
+        <ArtifactSummary artifact={a} when={fmt.dateTime(a.created)} />
       )}
     </Frame>
+  );
+}
+
+/** A work product in two lines — its date and what to check, then its gist. The whole of it
+ * (the P&L table, the brief) is on its detail screen in Task. */
+function ArtifactSummary({ artifact: a, when }: { artifact: Artifact; when: string }) {
+  const { t } = useI18n();
+  const pnl = a.kind === 'finance.pnl' ? (a.data as unknown as PnlData) : null;
+  const toCheck = pnl ? pnl.needs_review.length : 0;
+  return (
+    <div className="artifact-summary" data-testid="artifact-summary">
+      <p className="dash-hint widget-meta">
+        {when}
+        {toCheck > 0 ? (
+          <span className="chip is-warn">{t('pnl.needsReview', { n: toCheck })}</span>
+        ) : (
+          a.needs_review && <span className="chip is-warn">{t('artifact.needsReviewShort')}</span>
+        )}
+      </p>
+      {pnl ? (
+        <PnlSummary data={pnl} />
+      ) : a.kind === 'brief' ? (
+        <p className="brief-text is-clamped">{(a.data as unknown as BriefData).text}</p>
+      ) : (
+        <ArtifactBody artifact={a} />
+      )}
+    </div>
   );
 }
 

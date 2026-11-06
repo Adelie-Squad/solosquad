@@ -428,11 +428,10 @@
   font-size: 14px;
 }
 
-.ledger li.is-review {
-  margin: 0 -10px;
-  padding: 9px 10px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+/* a row to check is a plain row with a warn icon — no tinted band (DESIGN.md `## 색`) */
+.ledger li.is-review .ledger-flag {
+  color: var(--warn);
+  flex-shrink: 0;
 }
 
 .ledger-main {

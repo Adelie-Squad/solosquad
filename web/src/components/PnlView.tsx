@@ -2,9 +2,31 @@ import type { PnlData } from '../api/types.gen';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 
+/** The P&L in one line for the dashboard: revenue · expenses · net, and how many rows to check.
+ * The table, bars and rows stay on the detail screen. */
+export function PnlSummary({ data }: { data: PnlData }) {
+  const { t, fmt } = useI18n();
+  const money = (n: number) => fmt.money(n, data.currency);
+  const parts: [string, number, boolean][] = [
+    [t('pnl.revenue'), data.revenue, false],
+    [t('pnl.expenses'), data.expenses, false],
+    [t('pnl.net'), data.net_income, data.net_income < 0],
+  ];
+  return (
+    <p className="pnl-summary" data-testid="pnl-summary">
+      {parts.map(([label, value, negative]) => (
+        <span key={label} className="pnl-summary-item">
+          <span className="pnl-summary-label">{label}</span>
+          <strong className={negative ? 'is-negative' : ''}>{money(value)}</strong>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /** Profit and loss (`finance.pnl`, W14) — totals, by month, by account, rows to check.
  * Numbers come from the engine's deterministic tool; account names are shown as written. */
-export function PnlView({ data, compact = false }: { data: PnlData; compact?: boolean }) {
+export function PnlView({ data }: { data: PnlData }) {
   const { t, fmt } = useI18n();
   const money = (n: number) => fmt.money(n, data.currency);
   const max = Math.max(1, ...data.by_month.map((m) => Math.max(m.revenue, m.expenses)));
@@ -34,18 +56,16 @@ export function PnlView({ data, compact = false }: { data: PnlData; compact?: bo
       {data.by_month.length > 0 && (
         <section className="dash-section">
           <h3 className="dash-panel-title">{t('pnl.byMonth')}</h3>
-          {!compact && (
-            <div className="vbars pnl-bars" aria-hidden>
-              {data.by_month.map((m) => (
-                <div key={m.month} className="vbar" title={`${m.month} · ${money(m.revenue)} / ${money(m.expenses)}`}>
-                  <span className="vbar-value">{fmt.number(m.net)}</span>
-                  <span className="vbar-fill" style={{ height: `${(m.revenue / max) * 100}%` }} />
-                  <span className="vbar-fill is-cost" style={{ height: `${(m.expenses / max) * 100}%` }} />
-                  <span className="vbar-label">{m.month}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="vbars pnl-bars" aria-hidden>
+            {data.by_month.map((m) => (
+              <div key={m.month} className="vbar" title={`${m.month} · ${money(m.revenue)} / ${money(m.expenses)}`}>
+                <span className="vbar-value">{fmt.number(m.net)}</span>
+                <span className="vbar-fill" style={{ height: `${(m.revenue / max) * 100}%` }} />
+                <span className="vbar-fill is-cost" style={{ height: `${(m.expenses / max) * 100}%` }} />
+                <span className="vbar-label">{m.month}</span>
+              </div>
+            ))}
+          </div>
           <div className="statement-wrap">
             <table className="statement">
               <thead>
@@ -77,35 +97,33 @@ export function PnlView({ data, compact = false }: { data: PnlData; compact?: bo
         </section>
       )}
 
-      {!compact && (
-        <section className="dash-section">
-          <h3 className="dash-panel-title">{t('pnl.byAccount')}</h3>
-          <div className="statement-wrap">
-            <table className="statement">
-              <tbody>
-                <tr className="is-group">
-                  <th colSpan={2}>{t('pnl.revenue')}</th>
+      <section className="dash-section">
+        <h3 className="dash-panel-title">{t('pnl.byAccount')}</h3>
+        <div className="statement-wrap">
+          <table className="statement">
+            <tbody>
+              <tr className="is-group">
+                <th colSpan={2}>{t('pnl.revenue')}</th>
+              </tr>
+              {revenue.map((a) => (
+                <tr key={`r-${a.account}`}>
+                  <th>{a.account}</th>
+                  <td>{money(a.amount)}</td>
                 </tr>
-                {revenue.map((a) => (
-                  <tr key={`r-${a.account}`}>
-                    <th>{a.account}</th>
-                    <td>{money(a.amount)}</td>
-                  </tr>
-                ))}
-                <tr className="is-group">
-                  <th colSpan={2}>{t('pnl.expenses')}</th>
+              ))}
+              <tr className="is-group">
+                <th colSpan={2}>{t('pnl.expenses')}</th>
+              </tr>
+              {expenses.map((a) => (
+                <tr key={`e-${a.account}`}>
+                  <th>{a.account}</th>
+                  <td>{money(a.amount)}</td>
                 </tr>
-                {expenses.map((a) => (
-                  <tr key={`e-${a.account}`}>
-                    <th>{a.account}</th>
-                    <td>{money(a.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {data.needs_review.length > 0 && (
         <section className="dash-section" data-testid="needs-review">
@@ -116,6 +134,7 @@ export function PnlView({ data, compact = false }: { data: PnlData; compact?: bo
           <ul className="ledger">
             {data.needs_review.map((r) => (
               <li key={r.row} className="ledger-row is-review">
+                <ICON.warn className="ledger-flag" aria-label={t('artifact.needsReviewShort')} />
                 <span className="ledger-main">
                   <strong>{t('pnl.row', { n: r.row })}</strong>
                   <span className="ledger-meta">{r.reason}</span>

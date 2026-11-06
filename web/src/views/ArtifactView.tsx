@@ -57,12 +57,10 @@ export function ArtifactView() {
         )}
       </header>
       {a.needs_review && (
-        <div className="approval-bar">
-          <span className="with-icon">
-            <ICON.warn />
-            {t('artifact.needsReview')}
-          </span>
-        </div>
+        <p className="warn-line review-line with-icon">
+          <ICON.warn />
+          {t('artifact.needsReview')}
+        </p>
       )}
       {review.error && <p className="form-error">{t('common.failed')}</p>}
       <section className="panel">

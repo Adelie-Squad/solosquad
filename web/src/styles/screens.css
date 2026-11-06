@@ -154,6 +154,53 @@
   white-space: nowrap;
 }
 
+/* ── the latest work product, in two lines ───────────────────────────────────────────── */
+
+.artifact-summary .widget-meta {
+  margin-bottom: var(--space-2);
+}
+
+.pnl-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.pnl-summary-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.pnl-summary-label {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.pnl-summary strong {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pnl-summary strong.is-negative {
+  color: var(--danger);
+}
+
+.brief-text.is-clamped {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* the detail screen's "check these rows" line — a warn line, not a tinted band */
+.review-line {
+  margin: 0 0 var(--card-gap);
+}
+
 /* ── the cost area ───────────────────────────────────────────────────────────────────── */
 
 .cost {
