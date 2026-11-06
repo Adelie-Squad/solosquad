@@ -2,7 +2,7 @@
 # Copy into an org with `solosquad workflows add monthly-pnl`; the org owns its copy.
 name: monthly-pnl
 title: 월 손익표
-description: 거래 원장(엑셀 · CSV)을 올리면 손익표를 만들고, 대표 확인 뒤 Chief 가 3줄로 요약합니다.
+description: 거래 원장(엑셀 · CSV)을 올리면 손익표를 만들고, 대표 확인 뒤 재무 에이전트가 3줄로 요약합니다.
 enabled: true
 team: business
 inputs:
@@ -26,9 +26,10 @@ steps:
       risk: low
       category: review
   - id: brief
-    agent: chief
+    agent: finance
     prompt: >-
-      대표에게 이번 손익표를 3줄로 요약해줘. 숫자는 아래 그대로 쓰고 새로 계산하지 마.
+      대표에게 이번 손익표를 3줄로 요약해줘 — 순이익, 지난달과 크게 달라진 항목, 확인이 필요한 행.
+      숫자는 아래 그대로 쓰고 새로 계산하지 마.
       {{ steps.compute.summary }}
     save_as:
       kind: brief

@@ -61,10 +61,11 @@ src/
   engine/                           → v0.4 autonomous engine + stop-hook-adapter (v0.6 §5b)
   migrations/scripts/               → 0.5.0-to-0.6.0.ts (dry-run + apply)
 agents/                             → Agent definitions (v1.1 flat layout — canonical bundle)
-  main/{agent}/SKILL.md             → 5 main bots: chief, pm, engineer, designer, marketer
-  specialists/{agent}/SKILL.md      → 20 specialists, flat (no team folder nesting)
-teams/{team}/                       → 4 teams (product/engineering/design/marketing)
-  composition.yaml                  → Team membership (= data, not folders) + main supervisor
+  main/chief/SKILL.md               → Chief — the org's single entry; hands work to every agent
+  specialists/{agent}/SKILL.md      → 14 agents, flat (no team folder nesting) — decision 58
+teams/{team}/                       → 5 teams (core/product/engineering/business/brand)
+  composition.yaml                  → Team membership only (= data, not folders) — no team lead
+                                       since decision 58; a legacy `main:` is read as a member
   KNOWLEDGE.md                      → Team(=domain) shared knowledge (v0.6 §2.1)
   OKR.md                            → Quarterly OKR (Chief-authored)
 skills/{skill}/SKILL.md             → Reusable skills (PM Tier-1/2 + Chief-invoked)
@@ -156,12 +157,18 @@ Drop policy: `workspace.yaml.spawn.max_context_tokens` (default 80000) —
 
 ## Team Composition
 
+Bundled default — 15 agents, **no team leads** (decision 58, 2026-11-06). Chief hands
+work to every agent directly; teams are groupings for the org chart, team approvals
+(decision 51) and the office scene. Old ids still in a customer repo are mapped by
+`python/src/solosquad/assets/renames.py` (`solosquad check` warns with the new id).
+
 | Team | Agents | Role |
 |------|--------|------|
-| **Strategy** | PMF Planner, Feature Planner, Policy Architect, Data Analyst, Business Strategist, Idea Refiner, Scope Estimator | Strategy, planning, analysis |
-| **Growth** | GTM Strategist, Content Writer, Brand Marketer, Paid Marketer | Marketing, branding |
-| **Experience** | User Researcher, Desk Researcher, UX Designer, UI Designer | Research, design |
-| **Engineering** | Creative Frontend, FDE, Architect, Backend Developer, API Developer, Data Collector, Data Engineer, Cloud Admin, QA Engineer, Security Engineer | Development, infrastructure, quality, security |
+| **Core** | chief | The org's entry: talks with people, turns requests into tasks, assigns every agent, retrospectives |
+| **Product** | product-manager, product-designer, researcher, data-analyst | Problems and hypotheses, concept/PRD/UI, user research, metrics |
+| **Engineering** | frontend-engineer, backend-engineer, data-engineer, infra, quality-assurance | UI, server and system design (ADR), data pipelines, infrastructure and security, testing |
+| **Business** | business-strategy, sales, finance | Strategy and go-to-market, sales pipeline, books / P&L / cash flow / VAT |
+| **Brand** | marketer, creative | Brand voice, content and performance marketing, visual and campaign creative |
 
 ## Messenger Support
 
