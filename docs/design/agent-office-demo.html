@@ -1,0 +1,758 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>SoloSquad 에이전트 오피스</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;600&display=swap">
+<style>
+/* Layout: 데모 스테이지(캔버스 + 이벤트 로그)가 먼저, 그 아래 한 칼럼 가이드 */
+:root {
+  --bg: #ECE6D8;
+  --surface: #F7F3EA;
+  --ink: #1E1C17;
+  --muted: #6A6454;
+  --line: #CFC6B0;
+  --accent: #2C74E0;
+  --code-bg: #1F1E1A;
+  --code-ink: #EDE8DC;
+  --display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #191814; --surface: #23211C; --ink: #EDE8DC; --muted: #A49D8B; --line: #3B372E;
+    --accent: #86A6F2; --code-bg: #0F0E0C; --code-ink: #EDE8DC;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #191814; --surface: #23211C; --ink: #EDE8DC; --muted: #A49D8B; --line: #3B372E;
+  --accent: #86A6F2; --code-bg: #0F0E0C; --code-ink: #EDE8DC;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.65;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+header { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(34px, 6vw, 52px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+
+/* stage */
+.demo { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.stage {
+  position: relative; aspect-ratio: 4 / 3; min-height: 300px; max-width: 100%;
+  border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; background: #D0C5A7;
+}
+.stage canvas { display: block; width: 100%; height: 100%; }
+.stage .fail { display: none; position: absolute; inset: 0; place-items: center; padding: 24px; text-align: center; color: #1E1C17; }
+.stage.failed .fail { display: grid; }
+.tags { position: absolute; inset: 0; pointer-events: none; }
+.tag {
+  position: absolute; transform: translate(-50%, -100%); display: flex; gap: 6px; align-items: center;
+  background: #F0EDE8; color: #111008; border: 2px solid #111008; border-radius: 3px;
+  padding: 1px 6px; font-size: 12px; line-height: 1.35; white-space: nowrap;
+}
+.tag b { font-weight: 600; }
+.tag .st { font-family: var(--mono); font-size: 11px; padding: 0 5px; border-radius: 2px; color: #F0EDE8; background: var(--c, #6A6454); }
+
+aside.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  display: flex; flex-direction: column; gap: 14px; padding: 16px; min-width: 0;
+}
+.panel h2 { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.controls button {
+  font: inherit; font-size: 13px; cursor: pointer; border-radius: 4px; padding: 6px 10px;
+  border: 1.5px solid var(--ink); background: transparent; color: var(--ink);
+}
+.controls button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.log li { display: grid; grid-template-columns: 40px 10px minmax(0, 1fr); gap: 6px; align-items: baseline; border-top: 1px dashed var(--line); padding-top: 8px; }
+.log li:first-child { border-top: 0; padding-top: 0; }
+.log .t { font-family: var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.log .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); border: 1.5px solid #111008; transform: translateY(1px); }
+.log code { font-family: var(--mono); font-size: 12px; }
+.log .m { display: block; color: var(--muted); }
+.note { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+/* guide */
+.guide { max-width: 760px; display: flex; flex-direction: column; gap: 36px; }
+.guide > h2 { font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 1.15; margin: 0; }
+.guide > p { margin: -20px 0 0; color: var(--muted); }
+.step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; }
+.step .n { font-family: var(--display); font-size: 28px; line-height: 1; color: var(--accent); }
+.step h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; line-height: 1.4; text-wrap: balance; }
+.step p { margin: 0 0 10px; }
+.step ul { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.step code, .tbl code { font-family: var(--mono); font-size: 13px; }
+pre {
+  background: var(--code-bg); color: var(--code-ink); border-radius: 6px; padding: 14px 16px; margin: 4px 0 10px;
+  overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+}
+pre .c { color: #9C9480; }
+.tbl { overflow-x: auto; margin: 4px 0 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 520px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--muted); }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; margin: 2px 0 12px; padding: 0; list-style: none; }
+.swatches li { display: flex; flex-direction: column; gap: 4px; font-size: 12px; width: 92px; }
+.swatches i { display: block; height: 40px; border: 2px solid #111008; border-radius: 3px; background: var(--s); }
+.swatches span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+@media (max-width: 860px) {
+  .demo { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">플랫 툰 스타일 · three.js 데모 v3</span>
+    <h1>SoloSquad 툰 오피스</h1>
+    <p class="lede">펭귄 에이전트 3명이 각자 책상에서 일합니다. 자리 이동 없이 상태에 따라 제자리 모션만 바뀝니다. 블록은 키캡처럼 둥근 테두리와 테이퍼를 넣었고, 잉크선은 바깥 윤곽은 굵게, 안쪽 모서리는 얇게 두 단계로 긋습니다.</p>
+  </header>
+
+  <section class="demo" aria-label="툰 오피스 데모">
+    <div class="stage" id="stage">
+      <canvas id="scene" aria-label="베이지 바닥 위 디오라마 사무실에서 펭귄 에이전트 3명이 각자 책상에서 일하는 3D 장면"></canvas>
+      <div class="tags" id="tags"></div>
+      <div class="fail">3D 장면을 불러오지 못했습니다. 페이지를 새로고침해 주세요.</div>
+    </div>
+    <aside class="panel">
+      <h2>스타일 요소</h2>
+      <div class="controls">
+        <button id="btnTone" type="button" aria-pressed="true">면 3톤</button>
+        <button id="btnOutline" type="button" aria-pressed="true">잉크선</button>
+        <button id="btnShadow" type="button" aria-pressed="true">단색 그림자</button>
+        <button id="btnPlay" type="button" aria-pressed="false">일시정지</button>
+      </div>
+      <h2>상태 파일 이벤트</h2>
+      <ul class="log" id="log"></ul>
+      <p class="note">이벤트는 예시 시뮬레이션입니다. 실제로는 SoloSquad의 state 파일 변경이 이 자리에 들어옵니다.</p>
+    </aside>
+  </section>
+
+  <section class="guide">
+    <h2>이 룩으로 만드는 순서</h2>
+
+    <div class="step">
+      <span class="n">01</span>
+      <div>
+        <h3>팔레트를 레퍼런스에서 그대로 뽑는다</h3>
+        <p>오피스 색은 키캡 도시 이미지에서, 볼 색은 펭귄 키링에서 픽셀을 찍어 뽑았습니다. 오브젝트마다 윗면/왼면/오른면 3색을 한 세트로 정해 두면 새 오브젝트를 추가해도 톤이 흐트러지지 않습니다.</p>
+        <ul class="swatches">
+          <li><i style="--s:#D0C5A7"></i>바닥<span>#D0C5A7</span></li>
+          <li><i style="--s:#E1DBC5"></i>윗면<span>#E1DBC5</span></li>
+          <li><i style="--s:#F0EDE8"></i>왼면<span>#F0EDE8</span></li>
+          <li><i style="--s:#7E6E3B"></i>오른면<span>#7E6E3B</span></li>
+          <li><i style="--s:#9AC22D"></i>라임<span>#9AC22D</span></li>
+          <li><i style="--s:#2C74E0"></i>파랑<span>#2C74E0</span></li>
+          <li><i style="--s:#E01FAE"></i>볼 마젠타<span>#E01FAE</span></li>
+          <li><i style="--s:#111008"></i>잉크<span>#111008</span></li>
+        </ul>
+        <p>지정한 hex가 화면에 그대로 찍히도록 three.js 색 관리를 끕니다(<code>ColorManagement.enabled = false</code>, 출력 색공간 Linear).</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="n">02</span>
+      <div>
+        <h3>빛 계산 대신 면 방향으로 색을 칠한다</h3>
+        <p>법선이 위를 보면 윗면색, 카메라 기준 오른쪽(+x)을 보면 오른면색, 나머지는 왼면색입니다. 펭귄처럼 둥근 형태도 같은 규칙으로 색 띠가 나뉩니다. 타원체는 scale을 비균일하게 쓰므로 법선은 normal matrix로 변환해야 띠가 어긋나지 않습니다.</p>
+<pre><span class="c">// vertex: 비균일 scale에도 맞는 월드 법선</span>
+vN = normalize(transpose(inverse(mat3(modelMatrix))) * normal);
+
+<span class="c">// fragment</span>
+float right = smoothstep(-0.08, 0.08, n.x - n.z);
+float top   = smoothstep(0.55, 0.65, n.y);
+vec3 c = mix(mix(uLit, uShade, right), uTop, top);</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="n">03</span>
+      <div>
+        <h3>블록은 둥근 사각형을 베벨로 뽑고 위를 좁힌다</h3>
+        <p>레퍼런스 키캡의 인상은 둥근 모서리, 윗면 테두리, 위로 좁아지는 옆면 세 가지에서 나옵니다. <code>ExtrudeGeometry</code>로 둥근 사각형을 뽑고, 베벨을 2단으로 주면 윗면 테두리에 잉크선이 정확히 한 줄 생깁니다. 마지막에 높이에 비례해 x·z를 줄이면 테이퍼가 됩니다.</p>
+<pre>const g = new THREE.ExtrudeGeometry(roundedRect(w, d, r), {
+  depth: h - 2 * bev, bevelEnabled: true,
+  bevelThickness: bev, bevelSize: bev,
+  bevelSegments: 2,   <span class="c">// 22.5°, 67.5° 두 면 → 가운데에 선 한 줄</span>
+  curveSegments: 8    <span class="c">// 모서리 곡선은 11°씩 → 선 없이 매끈</span>
+})
+g.rotateX(-Math.PI / 2)
+<span class="c">// 높이 t(0~1)에 비례해 위쪽 정점을 안으로</span>
+p.setX(i, x * (1 - t * 2 * inset / w))</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="n">04</span>
+      <div>
+        <h3>잉크선은 두 가지 굵기로 긋는다</h3>
+        <p>장면을 색·깊이 한 번, 법선 한 번 그린 뒤 화면에서 선을 찾습니다. 깊이가 크게 바뀌는 곳은 바깥 윤곽이라 굵게, 법선만 꺾이는 곳은 안쪽 모서리라 얇게 칠합니다. 레퍼런스의 펜 선 위계가 이 차이에서 나옵니다.</p>
+<pre>for (int i = 0; i &lt; 8; i++) {
+  vec2 d = dirs[i] * uTexel;
+  sil   = max(sil,   step(0.18, abs(depth(vUv + d * uThick) - dc)));
+  crease = max(crease, step(0.25, 1.0 - dot(normal(vUv + d * uThick * 0.5), nc)));
+}
+gl_FragColor = vec4(mix(color, uInk, max(sil, crease)), 1.0);</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="n">05</span>
+      <div>
+        <h3>펭귄 에이전트를 부품으로 조립한다</h3>
+        <p>키링처럼 납작하고 통통한 봉제 인형 실루엣이 목표입니다. 얼굴은 별도 메시를 붙이지 않고 몸통 셰이더 안에서 하트 모양 영역을 흰색으로 칠합니다. 메시를 겹치면 경계마다 선이 생겨 눈이 흰자 위 동공처럼 보이기 때문입니다. 셰이더로 그리면 테두리 잉크선과 안쪽 스티치 점선까지 깔끔하게 넣을 수 있습니다.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>부품</th><th>만드는 법</th></tr></thead>
+            <tbody>
+              <tr><td>몸통</td><td><code>LatheGeometry</code>로 서양배 단면을 돌리고 앞뒤를 0.74배로 눌러 납작하게</td></tr>
+              <tr><td>얼굴 패널</td><td>타원 1개 + 원 2개의 거리장(SDF) 합집합. 두 원 사이로 검은 몸이 V자로 내려와 하트 얼굴이 됨. 경계 0에 잉크선, -0.036에 스티치 점선</td></tr>
+              <tr><td>눈 · 볼</td><td>몸 표면에 반쯤 묻힌 세로 타원 눈, 바깥 아래에 마젠타 볼. 눈은 주기적으로 깜빡임</td></tr>
+              <tr><td>부리</td><td>납작한 팔면체. 가운데 꺾임에 선이 생겨 입 모양이 됨</td></tr>
+              <tr><td>날개</td><td>어깨 피벗 그룹 아래 납작한 타원. 피벗 회전만으로 손 흔들기, 타이핑</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>에이전트마다 소품 하나로 구분합니다. 기획 PM은 파란 나비넥타이, 리서처는 동그란 안경, 검증관은 날개에 든 돋보기입니다. 소품은 같은 부품 함수에 붙였다 뗄 수 있어서 에이전트를 늘려도 몸은 공유합니다.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="n">06</span>
+      <div>
+        <h3>상태는 제자리 모션으로 보여 준다</h3>
+        <p>에이전트 코드는 건드리지 않습니다. Node 서버가 <code>state/*.json</code>을 감시하다가 WebSocket으로 보내면, 캐릭터는 자리를 지키고 모션만 바꿉니다. 모션 값은 목표값으로 부드럽게 보간해서 상태가 바뀌어도 튀지 않습니다.</p>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>SoloSquad 이벤트</th><th>상태</th><th>제자리 모션</th></tr></thead>
+            <tbody>
+              <tr><td>파일 작성, 도구 호출</td><td><code>typing</code></td><td>앞으로 살짝 숙이고 양 날개로 번갈아 타자</td></tr>
+              <tr><td>추론 중, 응답 대기</td><td><code>thinking</code></td><td>몸을 좌우로 천천히 기울이고 눈이 위를 봄</td></tr>
+              <tr><td>사람 승인 필요</td><td><code>waiting</code></td><td>한쪽 날개를 높이 들고 흔들며 작게 콩콩</td></tr>
+              <tr><td>작업 완료</td><td><code>done</code></td><td>양 날개를 들고 점프, 착지할 때 찌그러짐</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="n">07</span>
+      <div>
+        <h3>영상 프리토타입은 Blender로 같은 룩을 낸다</h3>
+        <ul>
+          <li>면 톤: Geometry 노드의 Normal을 Separate XYZ로 나눠 Color Ramp(Constant)에 넣고 Emission으로 출력합니다.</li>
+          <li>잉크선: Freestyle에서 Silhouette은 굵게, Crease는 얇게 두 개의 Line Set으로 나눕니다.</li>
+          <li>그림자: Shadow Catcher 바닥과 각도 0에 가까운 Sun 라이트 하나로 가장자리를 딱 끊습니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  window.setTimeout(function () {
+    if (!window.__toonReady) document.getElementById('stage').classList.add('failed');
+  }, 8000);
+</script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('scene');
+const tagsEl = document.getElementById('tags');
+const logEl = document.getElementById('log');
+
+THREE.ColorManagement.enabled = false;
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); }
+catch (e) { stage.classList.add('failed'); throw e; }
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+const PR = 2;
+renderer.setPixelRatio(PR);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.autoUpdate = false;
+
+const P = {
+  bg: '#D0C5A7', ink: '#111008',
+  cream:  ['#E1DBC5', '#F0EDE8', '#7E6E3B'],
+  white:  ['#F4F1EA', '#F0EDE8', '#7E6E3B'],
+  lime:   ['#B3D64A', '#9AC22D', '#6E8A1F'],
+  black:  ['#2A2925', '#151410', '#0B0A07'],
+  blue:   ['#4A8CF0', '#2C74E0', '#1B4FA6'],
+  glass:  ['#2C74E0', '#0E2A1A', '#08180F'],
+  lens:   ['#DDEBFB', '#C9DDF6', '#8FB0D8'],
+  // 펭귄 전용: 검정은 잉크선과 구분되게 살짝 밝게, 흰색은 그늘을 부드럽게
+  pblack: ['#3D3B35', '#2B2A26', '#1C1B17'],
+  pwhite: ['#FAF8F3', '#F3F0EA', '#C9BD98'],
+  pink:   ['#F25CC8', '#E01FAE', '#A8137F'],
+  eye:    ['#1C1B17', '#151410', '#0F0E0B']
+};
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(P.bg);
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 60);
+camera.position.set(10, 8.6, 10);
+camera.lookAt(0.15, 0.8, 0.1);
+
+const sun = new THREE.DirectionalLight(0xffffff, 1);
+sun.position.set(-9, 6.4, 2.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -10, right: 10, top: 10, bottom: -10, near: 1, far: 40 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.012;
+scene.add(sun);
+
+// 면 방향 3톤 머티리얼
+const toneU = { value: 1 };
+const matCache = {};
+function toneMat(key) {
+  if (matCache[key]) return matCache[key];
+  const [t, l, s] = P[key];
+  return (matCache[key] = new THREE.ShaderMaterial({
+    uniforms: { uTop: { value: new THREE.Color(t) }, uLit: { value: new THREE.Color(l) }, uShade: { value: new THREE.Color(s) }, uTone: toneU },
+    vertexShader: `varying vec3 vN;
+      void main(){
+        vN = normalize(transpose(inverse(mat3(modelMatrix))) * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `uniform vec3 uTop, uLit, uShade; uniform float uTone; varying vec3 vN;
+      void main(){
+        vec3 n = normalize(vN);
+        float right = smoothstep(-0.08, 0.08, n.x - n.z);
+        float top = smoothstep(0.55, 0.65, n.y);
+        vec3 c = mix(mix(uLit, uShade, right), uTop, top);
+        gl_FragColor = vec4(mix(uLit, c, uTone), 1.0);
+      }`
+  }));
+}
+
+function mk(geo, key, pos, parent, opts) {
+  opts = opts || {};
+  const m = new THREE.Mesh(geo, typeof key === 'string' ? toneMat(key) : key);
+  m.castShadow = opts.cast !== false;
+  if (pos) m.position.set(pos[0], pos[1], pos[2]);
+  if (opts.scale) m.scale.set(opts.scale[0], opts.scale[1], opts.scale[2]);
+  if (opts.rot) m.rotation.set(opts.rot[0], opts.rot[1], opts.rot[2]);
+  (parent || scene).add(m);
+  return m;
+}
+const sph = (r, a, b) => new THREE.SphereGeometry(r, a || 32, b || 20);
+const cyl = (rt, rb, h, s) => new THREE.CylinderGeometry(rt, rb, h, s || 32);
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+
+// 둥근 사각형 + 2단 베벨 + 테이퍼 (키캡 블록)
+function keycap(w, h, d, r, inset, bev) {
+  const sw = w - 2 * bev, sd = d - 2 * bev, rr = Math.max(0.01, r - bev);
+  const x0 = -sw / 2, y0 = -sd / 2;
+  const s = new THREE.Shape();
+  s.moveTo(x0 + rr, y0);
+  s.lineTo(x0 + sw - rr, y0); s.absarc(x0 + sw - rr, y0 + rr, rr, -Math.PI / 2, 0, false);
+  s.lineTo(x0 + sw, y0 + sd - rr); s.absarc(x0 + sw - rr, y0 + sd - rr, rr, 0, Math.PI / 2, false);
+  s.lineTo(x0 + rr, y0 + sd); s.absarc(x0 + rr, y0 + sd - rr, rr, Math.PI / 2, Math.PI, false);
+  s.lineTo(x0, y0 + rr); s.absarc(x0 + rr, y0 + rr, rr, Math.PI, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(s, {
+    depth: Math.max(0.001, h - 2 * bev), bevelEnabled: true,
+    bevelThickness: bev, bevelSize: bev, bevelSegments: 2, curveSegments: 8
+  });
+  g.rotateX(-Math.PI / 2);
+  g.translate(0, bev, 0);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const t = Math.max(0, p.getY(i)) / h;
+    p.setX(i, p.getX(i) * (1 - t * 2 * inset / w));
+    p.setZ(i, p.getZ(i) * (1 - t * 2 * inset / d));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// 단색 그림자 받는 평면
+const shadowMat = new THREE.ShadowMaterial({ color: '#1C1900', opacity: 0.5 });
+function shadowPlane(w, d, x, y, z) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), shadowMat);
+  m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true;
+  scene.add(m);
+}
+shadowPlane(90, 90, 0, 0, 0);
+
+// 베이스 블록
+const H = 0.6, BW = 7.8, BD = 6.0;
+mk(keycap(BW, H, BD, 0.5, 0.25, 0.09), 'cream', [0, 0, 0]);
+shadowPlane(BW - 0.75, BD - 0.75, 0, H + 0.004, 0);
+
+// 책상 + 노트북 (뚜껑 등이 카메라 쪽, 에이전트는 책상 뒤)
+const DESK_Z = 0.25, AG_Z = -0.8;
+const STATIONS = [-2.15, 0, 2.15];
+STATIONS.forEach((x, i) => {
+  mk(keycap(1.35, 0.42, 0.72, 0.14, 0.05, 0.05), 'cream', [x, H, DESK_Z]);
+  mk(keycap(0.56, 0.035, 0.36, 0.04, 0.0, 0.012), 'black', [x, H + 0.42, DESK_Z - 0.05]);
+  const hinge = new THREE.Group();
+  hinge.position.set(x, H + 0.455, DESK_Z + 0.12);
+  hinge.rotation.x = -0.42;
+  scene.add(hinge);
+  mk(keycap(0.56, 0.3, 0.03, 0.04, 0.0, 0.01), 'white', [0, 0, 0], hinge);
+  const sticker = ['blue', 'lime', 'pink'][i];
+  mk(cyl(0.05, 0.05, 0.012, 24), sticker, [0.12, 0.18, 0.02], hinge, { rot: [Math.PI / 2, 0, 0] });
+});
+
+// 서버 포드: 파란 유리 돔
+const SV = [2.75, -1.95];
+mk(keycap(1.1, 0.42, 1.1, 0.22, 0.05, 0.05), 'cream', [SV[0], H, SV[1]]);
+mk(cyl(0.45, 0.45, 0.07, 40), 'black', [SV[0], H + 0.455, SV[1]]);
+mk(new THREE.SphereGeometry(0.42, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), 'glass', [SV[0], H + 0.49, SV[1]]);
+const hl = mk(sph(0.09, 16, 8), new THREE.MeshBasicMaterial({ color: '#F4F1EA' }), [SV[0] - 0.08, H + 0.49 + 0.33, SV[1] + 0.2], null, { cast: false, scale: [1.5, 0.45, 1] });
+hl.lookAt(SV[0] - 0.35, H + 1.9, SV[1] + 0.8);
+
+// 커피 키오스크: 검은 띠 + 깃대
+const KO = [-2.6, 1.85];
+mk(keycap(1.15, 0.7, 0.92, 0.16, 0.05, 0.05), 'white', [KO[0], H, KO[1]]);
+mk(keycap(1.13, 0.18, 0.9, 0.15, 0.0, 0.02), 'black', [KO[0], H + 0.36, KO[1]]);
+mk(cyl(0.12, 0.12, 0.04, 24), 'white', [KO[0] - 0.2, H + 0.72, KO[1] - 0.1]);
+mk(cyl(0.018, 0.018, 0.58, 8), 'black', [KO[0] - 0.2, H + 1.02, KO[1] - 0.1]);
+mk(sph(0.065, 16, 10), 'blue', [KO[0] - 0.2, H + 1.34, KO[1] - 0.1]);
+
+// 원탁 + 머그
+const TB = [1.15, 1.85];
+mk(cyl(0.07, 0.11, 0.38, 16), 'black', [TB[0], H + 0.19, TB[1]]);
+mk(keycap(1.1, 0.09, 1.1, 0.55, 0.0, 0.03), 'white', [TB[0], H + 0.38, TB[1]]);
+mk(cyl(0.07, 0.065, 0.13, 20), 'white', [TB[0] - 0.2, H + 0.535, TB[1] + 0.05]);
+mk(cyl(0.07, 0.065, 0.13, 20), 'blue', [TB[0] + 0.18, H + 0.535, TB[1] - 0.12]);
+
+// 나무
+function puff(x, z, y, s) {
+  mk(cyl(0.035 * s, 0.06 * s, 0.75 * s, 8), 'black', [x, y + 0.37 * s, z]);
+  mk(sph(0.42 * s, 28, 18), 'lime', [x, y + 0.95 * s, z]);
+  mk(sph(0.28 * s, 24, 14), 'lime', [x + 0.3 * s, y + 1.05 * s, z - 0.12 * s]);
+  mk(sph(0.26 * s, 24, 14), 'lime', [x - 0.24 * s, y + 1.12 * s, z + 0.18 * s]);
+}
+function topiary(x, z, y, s) {
+  mk(cyl(0.025 * s, 0.035 * s, 0.5 * s, 8), 'black', [x, y + 0.25 * s, z]);
+  mk(keycap(0.4 * s, 0.55 * s, 0.4 * s, 0.2 * s - 0.001, 0, 0.05 * s), 'lime', [x, y + 0.45 * s, z]);
+}
+puff(-3.05, -1.85, H, 0.95);
+topiary(3.2, 0.6, H, 0.95);
+topiary(0.2, 3.65, 0, 1.15);
+topiary(1.15, 3.6, 0, 1.15);
+topiary(2.1, 3.55, 0, 1.15);
+puff(-5.0, 0.3, 0, 1.25);
+
+// 펭귄 에이전트
+function lathe(pts, zs) {
+  const g = new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), 56, Math.PI);
+  g.scale(1, 1, zs);
+  g.computeVertexNormals();
+  return g;
+}
+const BODY = lathe([[0.001, 0.04], [0.3, 0.06], [0.43, 0.19], [0.47, 0.41], [0.45, 0.65], [0.39, 0.87], [0.29, 1.05], [0.15, 1.16], [0.001, 1.19]], 0.74);
+
+// 몸통 한 장에 하트 얼굴 패널을 셰이더로 그린다 (테두리 잉크선 + 스티치)
+const outlineU = { value: 1 };
+const col = (h) => new THREE.Color(h);
+const bodyMat = new THREE.ShaderMaterial({
+  uniforms: {
+    bTop: { value: col(P.pblack[0]) }, bLit: { value: col(P.pblack[1]) }, bShade: { value: col(P.pblack[2]) },
+    wTop: { value: col(P.pwhite[0]) }, wLit: { value: col(P.pwhite[1]) }, wShade: { value: col(P.pwhite[2]) },
+    uInk: { value: col(P.ink) }, uStitch: { value: col('#8E8676') }, uTone: toneU, uOutline: outlineU
+  },
+  vertexShader: `varying vec3 vN; varying vec3 vP;
+    void main(){
+      vP = position;
+      vN = normalize(transpose(inverse(mat3(modelMatrix))) * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }`,
+  fragmentShader: `uniform vec3 bTop, bLit, bShade, wTop, wLit, wShade, uInk, uStitch; uniform float uTone, uOutline;
+    varying vec3 vN; varying vec3 vP;
+    float sdE(vec2 p, vec2 c, vec2 r){ vec2 q = (p - c) / r; return (length(q) - 1.0) * min(r.x, r.y); }
+    float sdC(vec2 p, vec2 c, float r){ return length(p - c) - r; }
+    void main(){
+      vec3 n = normalize(vN);
+      float right = smoothstep(-0.08, 0.08, n.x - n.z);
+      float top = smoothstep(0.55, 0.65, n.y);
+      vec2 p = vP.xy;
+      float d = min(sdE(p, vec2(0.0, 0.43), vec2(0.405, 0.39)), min(sdC(p, vec2(-0.155, 0.85), 0.175), sdC(p, vec2(0.155, 0.85), 0.175)));
+      float front = step(0.04, vP.z);
+      float inside = front * (1.0 - smoothstep(-0.003, 0.003, d));
+      vec3 lit = mix(bLit, wLit, inside), sh = mix(bShade, wShade, inside), tp = mix(bTop, wTop, inside);
+      vec3 c = mix(mix(lit, sh, right), tp, top);
+      c = mix(lit, c, uTone);
+      float dash = step(0.0, sin(atan(p.y - 0.5, p.x) * 72.0));
+      float st = inside * (1.0 - smoothstep(0.004, 0.007, abs(d + 0.036))) * dash;
+      c = mix(c, uStitch, st * 0.9);
+      float border = front * (1.0 - smoothstep(0.009, 0.013, abs(d)));
+      c = mix(c, uInk, border * uOutline);
+      gl_FragColor = vec4(c, 1.0);
+    }`
+});
+
+function penguin(a) {
+  const root = new THREE.Group();
+  const rig = new THREE.Group();
+  root.add(rig);
+  mk(BODY, bodyMat, [0, 0, 0], rig);
+  const eyes = [];
+  [-1, 1].forEach((s) => {
+    eyes.push(mk(sph(0.09, 24, 16), 'eye', [s * 0.155, 0.86, 0.275], rig, { scale: [0.95, 1.22, 0.42] }));
+    mk(sph(0.07, 20, 12), 'pink', [s * 0.27, 0.69, 0.25], rig, { scale: [1.25, 0.85, 0.35] });
+    mk(sph(0.12, 20, 12), 'pblack', [s * 0.17, 0.04, 0.13], rig, { scale: [1.05, 0.42, 1.3] });
+  });
+  mk(new THREE.OctahedronGeometry(0.075), 'pwhite', [0, 0.73, 0.315], rig, { scale: [1.2, 0.8, 0.62] });
+
+  const wings = [-1, 1].map((s) => {
+    const pivot = new THREE.Group();
+    pivot.position.set(s * 0.41, 0.74, 0.0);
+    rig.add(pivot);
+    mk(sph(0.22, 24, 16), 'pblack', [s * 0.05, -0.19, 0], pivot, { scale: [0.32, 1, 0.55] });
+    return pivot;
+  });
+
+  if (a.prop === 'bowtie') {
+    [-1, 1].forEach((s) => {
+      mk(new THREE.ConeGeometry(0.075, 0.15, 4), 'blue', [s * 0.075, 0.55, 0.345], rig, { rot: [Math.PI / 4, 0, s * Math.PI / 2], scale: [1, 1, 0.5] });
+    });
+    mk(sph(0.038, 16, 10), 'blue', [0, 0.55, 0.36], rig);
+  }
+  if (a.prop === 'glasses') {
+    [-1, 1].forEach((s) => {
+      mk(new THREE.TorusGeometry(0.13, 0.021, 10, 36), 'black', [s * 0.155, 0.86, 0.31], rig);
+      mk(box(0.02, 0.02, 0.22), 'black', [s * 0.29, 0.87, 0.19], rig);
+    });
+    mk(cyl(0.015, 0.015, 0.06, 8), 'black', [0, 0.88, 0.32], rig, { rot: [0, 0, Math.PI / 2] });
+  }
+  if (a.prop === 'magnifier') {
+    const tool = new THREE.Group();
+    tool.position.set(0.06, -0.36, 0.13);
+    tool.rotation.z = -0.35;
+    wings[1].add(tool);
+    mk(cyl(0.022, 0.026, 0.24, 8), 'black', [0, 0.03, 0], tool);
+    mk(new THREE.TorusGeometry(0.14, 0.026, 10, 36), 'black', [0, 0.29, 0], tool);
+    mk(cyl(0.13, 0.13, 0.012, 36), 'lens', [0, 0.29, 0], tool, { rot: [Math.PI / 2, 0, 0] });
+  }
+  return { root, rig, eyes, wings };
+}
+
+const STATE = {
+  typing:   { label: '작업 중',   c: '#2C74E0' },
+  thinking: { label: '생각 중',   c: '#6A6454' },
+  waiting:  { label: '승인 대기', c: '#C9711F' },
+  done:     { label: '완료',      c: '#5E7F12' }
+};
+const AGENTS = [
+  { id: 'pm',  name: '기획 PM', prop: 'bowtie',    dot: '#2C74E0', station: 0, state: 'typing' },
+  { id: 'res', name: '리서처',  prop: 'glasses',   dot: '#9AC22D', station: 1, state: 'thinking' },
+  { id: 'val', name: '검증관',  prop: 'magnifier', dot: '#E01FAE', station: 2, state: 'waiting' }
+];
+
+AGENTS.forEach((a, i) => {
+  const p = penguin(a);
+  Object.assign(a, p);
+  a.root.position.set(STATIONS[a.station], H, AG_Z);
+  a.root.rotation.y = 0.28;
+  scene.add(a.root);
+  a.phase = i * 1.9;
+  a.blinkAt = 1.2 + i * 1.3;
+  a.m = { lean: 0, sway: 0, hop: 0, squash: 0, wl: 0.15, wr: 0.15, wfx: 0, look: 0 };
+
+  const tag = document.createElement('div');
+  tag.className = 'tag';
+  const nm = document.createElement('b'); nm.textContent = a.name;
+  const st = document.createElement('span'); st.className = 'st';
+  tag.append(nm, st);
+  tagsEl.appendChild(tag);
+  a.tag = tag; a.tagState = st;
+  renderTag(a);
+});
+function renderTag(a) {
+  const s = STATE[a.state];
+  a.tagState.textContent = s.label;
+  a.tagState.style.setProperty('--c', s.c);
+}
+
+// 상태별 제자리 모션 목표값
+function target(a, t) {
+  const p = a.phase;
+  switch (a.state) {
+    case 'typing': {
+      const k = t * 13 + p;
+      return { lean: 0.1, sway: 0, hop: Math.abs(Math.sin(k)) * 0.012, squash: 0,
+        wl: 0.32 + Math.max(0, Math.sin(k)) * 0.18, wr: 0.32 + Math.max(0, -Math.sin(k)) * 0.18, wfx: -0.75, look: -0.01 };
+    }
+    case 'thinking':
+      return { lean: -0.04, sway: Math.sin(t * 1.5 + p) * 0.11, hop: 0, squash: Math.sin(t * 2 + p) * 0.012,
+        wl: 0.12, wr: 0.12, wfx: 0, look: 0.022 };
+    case 'waiting': {
+      const h = Math.max(0, Math.sin(t * 5 + p));
+      return { lean: 0, sway: 0, hop: h * 0.06, squash: 0, wl: 0.18, wr: 2.35 + Math.sin(t * 9 + p) * 0.35, wfx: 0, look: 0.01 };
+    }
+    case 'done': {
+      const s = Math.sin(t * 6.5 + p);
+      return { lean: 0, sway: 0, hop: Math.max(0, s) * 0.26, squash: s < -0.6 ? (-0.6 - s) * 0.18 : 0,
+        wl: 1.3 + Math.sin(t * 13) * 0.35, wr: 1.3 + Math.sin(t * 13 + 1) * 0.35, wfx: 0, look: 0.015 };
+    }
+  }
+}
+
+// 이벤트 스크립트 (시뮬레이션)
+const SCRIPT = [
+  ['res', 'typing', '경쟁 제품 검색'], ['pm', 'thinking', '실험 설계 검토'], ['val', 'typing', '검증 지표 정의'],
+  ['pm', 'done', '설계서 저장'], ['res', 'waiting', '인터뷰 대상 승인 요청'], ['val', 'thinking', '판정 기준 정리'],
+  ['pm', 'typing', 'state.json 업데이트'], ['res', 'done', '리서치 노트 저장'], ['val', 'waiting', '판정 승인 요청'],
+  ['res', 'thinking', '인터뷰 질문 구상'], ['pm', 'waiting', '사람 확인 필요'], ['val', 'done', '판정 완료'],
+  ['pm', 'typing', 'brief.md 작성'], ['res', 'typing', '응답 요약'], ['val', 'typing', '결과 판정 작성']
+];
+const byId = Object.fromEntries(AGENTS.map((a) => [a.id, a]));
+let step = 0, simTime = 0, nextEvent = 2.2;
+const fmt = (t) => { const s = Math.floor(t); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+function logEvent(a, s, msg) {
+  const li = document.createElement('li');
+  const t = document.createElement('span'); t.className = 't'; t.textContent = fmt(simTime);
+  const dot = document.createElement('span'); dot.className = 'dot'; dot.style.setProperty('--c', a.dot);
+  const body = document.createElement('div');
+  const code = document.createElement('code'); code.textContent = 'state/' + a.id + '.json → ' + s;
+  const m = document.createElement('span'); m.className = 'm'; m.textContent = a.name + ' · ' + msg;
+  body.append(code, m); li.append(t, dot, body); logEl.prepend(li);
+  while (logEl.children.length > 7) logEl.lastChild.remove();
+}
+logEvent(byId.pm, 'typing', 'brief.md 작성');
+logEvent(byId.res, 'thinking', '리서치 방향 고민');
+logEvent(byId.val, 'waiting', '가설 승인 요청');
+
+// 렌더 타깃 + 2단 굵기 잉크선 합성
+const rtColor = new THREE.WebGLRenderTarget(4, 4, { depthTexture: new THREE.DepthTexture(4, 4) });
+const rtNormal = new THREE.WebGLRenderTarget(4, 4);
+const normalMat = new THREE.MeshNormalMaterial();
+const compU = {
+  tColor: { value: rtColor.texture }, tNormal: { value: rtNormal.texture }, tDepth: { value: rtColor.depthTexture },
+  uTexel: { value: new THREE.Vector2() }, uThick: { value: 1.45 * PR }, uNear: { value: camera.near }, uFar: { value: camera.far },
+  uInk: { value: new THREE.Color(P.ink) }, uOutline: outlineU
+};
+const quadScene = new THREE.Scene();
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+  uniforms: compU, depthTest: false, depthWrite: false,
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+  fragmentShader: `uniform sampler2D tColor, tNormal, tDepth; uniform vec2 uTexel; uniform float uThick, uNear, uFar, uOutline; uniform vec3 uInk;
+    varying vec2 vUv;
+    float dep(vec2 uv){ return uNear + texture2D(tDepth, uv).x * (uFar - uNear); }
+    vec3 nor(vec2 uv){ return normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0); }
+    void main(){
+      vec3 col = texture2D(tColor, vUv).rgb;
+      float dc = dep(vUv); vec3 nc = nor(vUv);
+      float sil = 0.0, crease = 0.0;
+      for (int i = 0; i < 12; i++) {
+        float a = float(i) * 0.5235988;
+        vec2 d = vec2(cos(a), sin(a)) * uTexel;
+        sil = max(sil, step(0.14, abs(dep(vUv + d * uThick) - dc)));
+        crease = max(crease, step(0.25, 1.0 - dot(nor(vUv + d * uThick * 0.5), nc)));
+      }
+      gl_FragColor = vec4(mix(col, uInk, max(sil, crease) * uOutline), 1.0);
+    }`
+})));
+
+// 토글
+function toggle(id, fn) {
+  const b = document.getElementById(id);
+  b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); fn(on); });
+}
+toggle('btnTone', (on) => { toneU.value = on ? 1 : 0; });
+toggle('btnOutline', (on) => { compU.uOutline.value = on ? 1 : 0; });
+toggle('btnShadow', (on) => { shadowMat.visible = on; });
+const btnPlay = document.getElementById('btnPlay');
+let paused = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const syncPlay = () => { btnPlay.setAttribute('aria-pressed', String(paused)); btnPlay.textContent = paused ? '재생' : '일시정지'; };
+syncPlay();
+btnPlay.addEventListener('click', () => { paused = !paused; syncPlay(); });
+
+// 크기
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  rtColor.setSize(w * PR, h * PR);
+  rtNormal.setSize(w * PR, h * PR);
+  compU.uTexel.value.set(1 / (w * PR), 1 / (h * PR));
+  const asp = w / h;
+  const fh = Math.max(6.6, 10.6 / asp);
+  camera.left = -fh * asp / 2; camera.right = fh * asp / 2; camera.top = fh / 2; camera.bottom = -fh / 2;
+  camera.updateProjectionMatrix();
+}
+resize();
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else window.addEventListener('resize', resize);
+
+const v = new THREE.Vector3();
+let last = performance.now(), t = 0;
+
+function animate(dt) {
+  const k = 1 - Math.exp(-9 * dt);
+  AGENTS.forEach((a) => {
+    const g = target(a, t), m = a.m;
+    for (const key in g) m[key] += (g[key] - m[key]) * k;
+    a.rig.position.y = m.hop;
+    a.rig.rotation.x = m.lean;
+    a.rig.rotation.z = m.sway;
+    a.rig.scale.set(1 + m.squash * 0.6, 1 - m.squash, 1 + m.squash * 0.6);
+    a.wings[0].rotation.z = -m.wl;
+    a.wings[1].rotation.z = m.wr;
+    a.wings[0].rotation.x = a.wings[1].rotation.x = m.wfx;
+    // 깜빡임
+    let open = 1;
+    if (t > a.blinkAt) { open = 0.12; if (t > a.blinkAt + 0.13) a.blinkAt = t + 2.6 + Math.random() * 2.4; }
+    a.eyes.forEach((e) => { e.scale.y = 1.2 * open; e.position.y = 0.86 + m.look; });
+  });
+}
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!paused) {
+    t += dt; simTime += dt;
+    if (simTime >= nextEvent) {
+      const [id, s, msg] = SCRIPT[step % SCRIPT.length];
+      const a = byId[id];
+      a.state = s; renderTag(a); logEvent(a, s, msg);
+      step++; nextEvent = simTime + 2.8;
+    }
+    animate(dt);
+  }
+
+  renderer.shadowMap.needsUpdate = true;
+  renderer.setRenderTarget(rtColor);
+  renderer.render(scene, camera);
+  const bg = scene.background;
+  scene.background = null; scene.overrideMaterial = normalMat;
+  renderer.setClearColor(0x8080ff, 1);
+  renderer.setRenderTarget(rtNormal);
+  renderer.render(scene, camera);
+  scene.overrideMaterial = null; scene.background = bg;
+  renderer.setRenderTarget(null);
+  renderer.render(quadScene, quadCam);
+
+  const w = stage.clientWidth, h = stage.clientHeight;
+  AGENTS.forEach((a) => {
+    v.set(a.root.position.x, H + 1.5 + a.rig.position.y, a.root.position.z).project(camera);
+    a.tag.style.left = ((v.x + 1) / 2 * w).toFixed(1) + 'px';
+    a.tag.style.top = ((1 - v.y) / 2 * h).toFixed(1) + 'px';
+  });
+  requestAnimationFrame(frame);
+}
+window.__toonReady = true;
+animate(0.016);
+requestAnimationFrame(frame);
+</script>
+
+</body></html>
