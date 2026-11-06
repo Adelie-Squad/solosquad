@@ -77,10 +77,14 @@ def test_dashboard_is_the_first_screen_and_home_is_its_alias(tmp_path: Path) -> 
     assert load_screen(None, "home").name == "dashboard"
     folder = tmp_path / "screens"
     folder.mkdir()
-    (folder / "home.yaml").write_text("format_version: 1\ntitle: 옛 홈\nwidgets: []\n")
+    (folder / "home.yaml").write_text(
+        "format_version: 1\ntitle: 옛 홈\nwidgets: []\n", encoding="utf-8"
+    )
     r = load_screen(tmp_path, "dashboard")
     assert r.source == "org" and r.screen is not None and r.screen.title == "옛 홈"
-    (folder / "dashboard.yaml").write_text("format_version: 1\ntitle: 새 화면\nwidgets: []\n")
+    (folder / "dashboard.yaml").write_text(
+        "format_version: 1\ntitle: 새 화면\nwidgets: []\n", encoding="utf-8"
+    )
     r = load_screen(tmp_path, "home")
     assert r.screen is not None and r.screen.title == "새 화면"  # its own file wins
     with pytest.raises(ValueError):
