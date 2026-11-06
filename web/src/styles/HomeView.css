@@ -62,7 +62,7 @@
   position: relative;
   padding: 18px 22px;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--accent) 7%, white);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
   font-size: 15.5px;
   line-height: 1.6;
   animation: bubble-in 0.5s ease 0.2s both;
@@ -75,7 +75,7 @@
   top: 28px;
   border-width: 8px 10px 8px 0;
   border-style: solid;
-  border-color: transparent color-mix(in srgb, var(--accent) 7%, white) transparent transparent;
+  border-color: transparent color-mix(in srgb, var(--accent) 7%, var(--surface)) transparent transparent;
 }
 
 .home-bubble p {
@@ -195,7 +195,7 @@
 
 .is-user .chat-bubble {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-bottom-right-radius: 4px;
 }
 
@@ -235,24 +235,24 @@
 }
 
 .suggestions.fade-right {
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, var(--ink) calc(100% - var(--fade)), transparent);
 }
 
 .suggestions.fade-left {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade));
-  mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) var(--fade));
+  mask-image: linear-gradient(to right, transparent, var(--ink) var(--fade));
 }
 
 .suggestions.fade-left.fade-right {
   -webkit-mask-image: linear-gradient(
     to right,
     transparent,
-    #000 var(--fade),
-    #000 calc(100% - var(--fade)),
+    var(--ink) var(--fade),
+    var(--ink) calc(100% - var(--fade)),
     transparent
   );
-  mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, transparent, var(--ink) var(--fade), var(--ink) calc(100% - var(--fade)), transparent);
 }
 
 .suggestion {
@@ -269,8 +269,8 @@
 }
 
 .suggestion:hover {
-  border-color: color-mix(in srgb, var(--accent) 40%, white);
-  background: color-mix(in srgb, var(--accent) 5%, white);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--surface));
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
 }
 
 .composer {
@@ -280,11 +280,11 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
-  box-shadow: 0 4px 18px rgba(40, 20, 90, 0.07);
+  box-shadow: var(--shadow-2);
 }
 
 .composer:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 50%, white);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--surface));
 }
 
 .composer input {

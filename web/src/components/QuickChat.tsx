@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
 import type { PromptHandoff } from './CommandBar';
 import { SuggestionStrip } from './SuggestionStrip';
+import { AgentIcon } from '../characters/PenguinIcon';
 
 /** Quick chat — opens over the office when Chief is clicked; sending starts a new conversation. */
 export function QuickChat({ agent, onClose }: { agent: string; onClose: () => void }) {
@@ -33,7 +34,7 @@ export function QuickChat({ agent, onClose }: { agent: string; onClose: () => vo
       <div className="quick-chat" role="dialog" aria-label={t('chat.talkTo', { name: agent })} onMouseDown={(e) => e.stopPropagation()}>
         <header className="quick-chat-head">
           <span className="quick-chat-avatar" aria-hidden>
-            🤖
+            <AgentIcon agent={agent} size={40} label="" />
           </span>
           <div>
             <strong>{t('chat.talkTo', { name: agent })}</strong>

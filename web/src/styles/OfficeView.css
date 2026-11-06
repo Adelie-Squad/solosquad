@@ -17,11 +17,11 @@
   flex-direction: column;
   max-width: none;
   overflow: auto;
-  background: #f7f1ea;
+  background: var(--surface-2);
   padding: 32px 48px;
 }
 
-.office.is-fullscreen .iso-stage {
+.office.is-fullscreen .office-stage {
   border: 0;
 }
 
@@ -72,7 +72,7 @@
   height: 100%;
   overflow-y: auto;
   background: var(--surface);
-  box-shadow: -20px 0 60px rgba(30, 15, 80, 0.25);
+  box-shadow: var(--shadow-3);
 }
 
 .agent-sheet-head {
@@ -81,9 +81,8 @@
   gap: 16px;
   padding: 20px 22px;
   background:
-    radial-gradient(circle, rgba(58, 46, 38, 0.09) 1px, transparent 1.2px) 0 0 / 22px 22px,
-    #f7f1ea;
-  border-bottom: 1px solid #eadfd2;
+    var(--surface-2);
+  border-bottom: 1px solid var(--line);
 }
 
 .agent-sheet-head h2 {
@@ -156,7 +155,7 @@
 }
 
 .btn.is-primary .btn-dot {
-  background: #b8ffe5;
+  background: var(--accent);
 }
 
 .office-body {
@@ -174,7 +173,7 @@
   min-height: 0;
 }
 
-.office-main .iso-stage {
+.office-main .office-stage {
   height: 100%;
   aspect-ratio: auto;
 }
@@ -255,7 +254,7 @@
     grid-template-rows: auto;
   }
 
-  .office-main .iso-stage {
+  .office-main .office-stage {
     height: auto;
     aspect-ratio: 735 / 584;
   }
@@ -279,7 +278,7 @@
   overflow: hidden;
   border-radius: 16px;
   background: var(--surface);
-  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+  box-shadow: var(--shadow-3);
 }
 
 .live-modal-head {
@@ -316,7 +315,7 @@
   padding: 18px 20px 20px;
   border-radius: 16px;
   background: var(--surface);
-  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+  box-shadow: var(--shadow-3);
 }
 
 .quick-chat-head {
@@ -346,6 +345,6 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 10%, white);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   font-size: 22px;
 }

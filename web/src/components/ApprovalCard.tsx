@@ -4,6 +4,7 @@ import { ApiError } from '../api/client';
 import { decide, keys, useAction, type Decision } from '../api/queries';
 import type { ApprovalItem } from '../api/types.gen';
 import { categoryLabel, useI18n, type MessageKey } from '../i18n';
+import { AgentIcon } from '../characters/PenguinIcon';
 
 /** Why this person cannot answer the card — the same rule the server applies (decision 51). */
 export function blockedReason(item: ApprovalItem): { key: MessageKey; team?: string } | null {
@@ -37,6 +38,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
   return (
     <article className={`panel approval-card ${compact ? 'is-compact' : ''}`} data-testid="approval-card">
       <header className="approval-card-head">
+        <AgentIcon agent={card.agent && !card.agent.startsWith('workflow:') ? card.agent : 'workflow'} team={card.team} size={28} label="" />
         <strong className="approval-title">{card.title}</strong>
         <span className="approval-chips">
           <span className="chip">{categoryLabel(locale, card.category)}</span>
