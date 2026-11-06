@@ -1656,6 +1656,32 @@ def create_app(cfg: AppConfig) -> Starlette:
             )
         return card
 
+    def approval_change(
+        request: Request,
+        source: str,
+        tid: str,
+        rid: str,
+        value: Any,
+        card: dict[str, Any] | None,
+        approver: str,
+    ) -> str:
+        # C6 · C23 — who (the row and `approver`) · when (the row) · what kind and whose team,
+        # read from the card that was waiting, so the record stands without the run
+        c = card or {}
+        return json.dumps(
+            {
+                "source": source,
+                "thread": tid,
+                "run": rid,
+                "value": value,
+                "category": c.get("category"),
+                "team": c.get("team"),
+                "tier": policy(request).tier(c.get("category")).value,
+                "approver": approver,
+            },
+            ensure_ascii=False,
+        )
+
     async def threads(request: Request) -> Response:
         m = runtime(request).manager
         if request.method == "POST":
@@ -1691,10 +1717,14 @@ def create_app(cfg: AppConfig) -> Starlette:
         tid = request.path_params["tid"]
         if m.store.thread(tid) is None:
             raise KeyError(f"no thread {tid}")
-        check_approver(request, m, tid)
+        card = check_approver(request, m, tid)
         value = (await body(request)).get("value")
         rid = await m.resume(tid, value, source=f"user:{who.name}")
-        org_audit(in_scope(request), "approval", f"{tid} → {value!r}")
+        org_audit(
+            in_scope(request),
+            "approval",
+            approval_change(request, "company", tid, rid, value, card, who.name),
+        )
         return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def runs(request: Request) -> Response:
@@ -1899,10 +1929,14 @@ def create_app(cfg: AppConfig) -> Starlette:
         e = engine(request)
         if e.manager.store.thread(tid) is None:
             raise KeyError(f"no workflow thread {tid}")
-        check_approver(request, e.manager, tid)
+        card = check_approver(request, e.manager, tid)
         value = (await body(request)).get("value")
         rid = await e.manager.resume(tid, value, source=f"user:{who.name}")
-        org_audit(in_scope(request), "approval", f"workflow {tid} → {value!r}")
+        org_audit(
+            in_scope(request),
+            "approval",
+            approval_change(request, "workflow", tid, rid, value, card, who.name),
+        )
         return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def uploads(request: Request) -> Response:
