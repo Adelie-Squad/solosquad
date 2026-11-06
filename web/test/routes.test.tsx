@@ -108,14 +108,14 @@ describe('landing · login · app addresses', () => {
   it('the landing offers Log in when signed out, Go to my office when signed in — and stays on /', async () => {
     stubApi(() => null);
     app('/');
-    const login = await screen.findByRole('link', { name: /Log in/ });
-    expect(login.getAttribute('href')).toBe('/login');
+    const logins = await screen.findAllByRole('link', { name: /Log in/ });
+    for (const login of logins) expect(login.getAttribute('href')).toBe('/login');
     expect(where()).toBe('/');
     cleanup();
     stubApi(() => me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }));
     app('/');
-    const office = await screen.findByRole('link', { name: /Go to my office/ });
-    expect(office.getAttribute('href')).toBe('/o/tesla/w/vehicles');
+    const offices = await screen.findAllByRole('link', { name: /Go to my office/ });
+    for (const office of offices) expect(office.getAttribute('href')).toBe('/o/tesla/w/vehicles');
     expect(screen.queryByRole('link', { name: /Log in/ })).toBeNull();
     expect(where()).toBe('/');
   });

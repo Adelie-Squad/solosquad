@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
@@ -34,18 +34,70 @@ function officeAssets(): Plugin {
   };
 }
 
+/**
+ * `import catalog from 'virtual:agent-catalog'` → the bundled agents' `display_name` and `summary`
+ * (per language) from `agents/{main,specialists}/<id>/SKILL.md` frontmatter, read at build time.
+ * The landing shows the team before anyone logs in, when `/api/…/agents` cannot answer — the same
+ * words the app shows, from the same files.
+ */
+function agentCatalog(): Plugin {
+  const ID = 'virtual:agent-catalog';
+  const RESOLVED = `\0${ID}`;
+  const agentsDir = join(here, '..', 'agents');
+  const files = () =>
+    ['main', 'specialists'].flatMap((group) => {
+      const dir = join(agentsDir, group);
+      if (!existsSync(dir)) return [];
+      return readdirSync(dir)
+        .map((id) => ({ id, file: join(dir, id, 'SKILL.md') }))
+        .filter((f) => existsSync(f.file));
+    });
+  /** A `key:` block of `  <lang>: "<text>"` lines (YAML double-quoted strings are JSON strings here). */
+  const block = (front: string, key: string): Record<string, string> | null => {
+    const lines = front.split(/\r?\n/);
+    const at = lines.findIndex((l) => l.trimEnd() === `${key}:`);
+    if (at < 0) return null;
+    const out: Record<string, string> = {};
+    for (const line of lines.slice(at + 1)) {
+      const m = /^\s+([A-Za-z-]+):\s*(".*")\s*$/.exec(line);
+      if (!m) break;
+      try {
+        out[m[1]] = JSON.parse(m[2]) as string;
+      } catch {
+        out[m[1]] = m[2].slice(1, -1);
+      }
+    }
+    return Object.keys(out).length ? out : null;
+  };
+  return {
+    name: 'solosquad-agent-catalog',
+    resolveId: (id) => (id === ID ? RESOLVED : null),
+    load(id) {
+      if (id !== RESOLVED) return null;
+      const catalog: Record<string, { display_name: Record<string, string> | null; summary: Record<string, string> | null }> = {};
+      for (const { id: agent, file } of files()) {
+        this.addWatchFile(file);
+        const text = readFileSync(file, 'utf8');
+        const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '';
+        catalog[agent] = { display_name: block(front, 'display_name'), summary: block(front, 'summary') };
+      }
+      return `export default ${JSON.stringify(catalog)};`;
+    },
+  };
+}
+
 // The engine serves the build from the same origin (PRD v2.1.0 W5 · I2). In development,
 // `solosquad serve` runs on 7420 and Vite proxies /api to it — still one origin for the
 // browser, so the session cookie and CSRF token work the same way. No LLM call is ever
 // made from here or from the browser: everything goes through the engine.
 export default defineConfig({
-  plugins: [react(), officeAssets()],
+  plugins: [react(), officeAssets(), agentCatalog()],
   server: {
     port: 5180,
     // SOLOSQUAD_API points the proxy at another engine (a second local demo on its own port)
     proxy: { '/api': { target: process.env.SOLOSQUAD_API ?? 'http://127.0.0.1:7420', changeOrigin: false } },
   },
-  // the office chunk (three.js · R3F · drei) loads only on /office — the warning is expected there
+  // the 3D chunk (three.js · R3F · drei) loads only on the office screen and the landing — the warning is expected there
   build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1100 },
   test: {
     environment: 'jsdom',
