@@ -32,7 +32,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
   const { scope } = useScopedApi();
   const { t, locale, fmt } = useI18n();
   const [error, setError] = useState<string | null>(null);
-  const answer = useAction((value: Decision) => decide(scope, item, value), [keys.approvals, keys.runs, keys.workflowRuns()]);
+  const answer = useAction((value: Decision) => decide(scope, item, value), [keys.approvals, keys.runs, keys.workflowRuns(), keys.work]);
   const nameOf = useAgentName();
   const blocked = blockedReason(item);
   const card = item.card;

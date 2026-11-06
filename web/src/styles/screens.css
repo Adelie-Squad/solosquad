@@ -1,0 +1,527 @@
+/* ══ Menu restructure (2026-11-07) — dashboard · Task · schedule · mail ═════════════════
+   DESIGN.md `## 컴포넌트` 대시보드 / Task / 일정. Tokens only; no colour bands, no shadows. */
+
+/* ── the widget grid: two columns, wide widgets take the row, cells stretch ───────────── */
+
+.widget-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.widget-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.widget-cell > .panel,
+.widget-cell > .placeholder {
+  flex: 1;
+}
+
+.widget-cell.is-wide {
+  grid-column: 1 / -1;
+}
+
+.panel-title.with-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── the number strip: one panel, cells split by hairlines (not four boxes) ──────────── */
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0;
+  overflow: hidden;
+}
+
+.dash-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--card-pad);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.dash-stat + .dash-stat {
+  border-left: 1px solid var(--line);
+}
+
+.dash-stat:hover {
+  background: var(--surface-2);
+}
+
+.dash-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.dash-stat-note {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-stat.is-attention .dash-stat-note {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+/* ── todo rows · office rows · next runs ─────────────────────────────────────────────── */
+
+.todo-row {
+  flex-wrap: nowrap;
+}
+
+.todo-text,
+.office-mini-text,
+.next-run-what {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.todo-text .run-row-title,
+.office-mini-text strong,
+.next-run-what strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-text .dash-hint,
+.office-mini-text .dash-hint,
+.next-run-what .dash-hint {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+}
+
+.office-mini,
+.next-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.office-mini-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: var(--space-2) 0;
+}
+
+.office-mini-row + .office-mini-row,
+.next-run + .next-run {
+  border-top: 1px solid var(--line);
+}
+
+.next-run {
+  display: grid;
+  grid-template-columns: 6.5em minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.next-run-when {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── the cost area ───────────────────────────────────────────────────────────────────── */
+
+.cost {
+  scroll-margin-top: var(--space-6);
+}
+
+.cost-lead {
+  max-width: var(--measure);
+  margin: 0 0 var(--space-4);
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+
+.cost-sub {
+  margin: var(--space-6) 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cost-conns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-4) var(--space-6);
+}
+
+.cost-conns .budget-line + .budget-line {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.budget-head span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Task ────────────────────────────────────────────────────────────────────────────── */
+
+.task-section {
+  margin-bottom: var(--section-gap);
+  scroll-margin-top: var(--space-6);
+}
+
+.task-section-lead {
+  max-width: var(--measure);
+  margin: calc(-1 * var(--space-1)) 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+
+.panel.empty.is-inline {
+  margin: 0;
+  padding: var(--card-pad);
+  text-align: left;
+  color: var(--ink-2);
+}
+
+.review-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--radius-chip);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.approval-actions .btn {
+  text-decoration: none;
+}
+
+.work-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--card-pad);
+}
+
+.work-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.work-row + .work-row {
+  border-top: 1px solid var(--line);
+}
+
+.work-who {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.work-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.work-title {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.work-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.work-meta {
+  display: flex;
+  flex-wrap: wrap;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.work-meta > span + span::before {
+  content: '·';
+  margin: 0 var(--space-1);
+  color: var(--ink-3);
+}
+
+.work-meta .is-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.work-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 420px;
+}
+
+.work-step {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.work-progress .job-bar {
+  margin: 0;
+}
+
+.work-made {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.work-artifact {
+  max-width: 100%;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.work-artifact:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.work-artifact-flag {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.work-row > .chip {
+  flex-shrink: 0;
+}
+
+.task-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.task-agent {
+  min-height: 34px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+/* ── workflows ↔ schedule tabs (links styled as the segmented control) ───────────────── */
+
+.wf-tabs {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.segmented a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.segmented a.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+/* ── the schedule list ───────────────────────────────────────────────────────────────── */
+
+.schedule-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--card-pad);
+}
+
+.schedule-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.schedule-row + .schedule-row {
+  border-top: 1px solid var(--line);
+}
+
+.schedule-row.is-off .schedule-body {
+  opacity: 0.6;
+}
+
+.schedule-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-chip);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.schedule-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.schedule-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.schedule-cadence {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.schedule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-meta .with-icon {
+  gap: var(--space-2);
+}
+
+.schedule-switch {
+  flex-shrink: 0;
+}
+
+/* ── mail (placeholder until mail is connected) ──────────────────────────────────────── */
+
+.mail-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--card-pad);
+}
+
+.mail-pending .panel-title {
+  margin: 0;
+  color: var(--ink);
+}
+
+.mail-pending p {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.mail-pending-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+/* ── phone ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .widget-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dash-stat {
+    padding: var(--space-4);
+  }
+
+  .dash-stat + .dash-stat {
+    border-left: 0;
+  }
+
+  .dash-stat:nth-child(even) {
+    border-left: 1px solid var(--line);
+  }
+
+  .dash-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .dash-stat-value {
+    font-size: 22px;
+  }
+
+  .work-list,
+  .schedule-list {
+    padding: var(--space-1) var(--space-4);
+  }
+
+  .schedule-row {
+    align-items: flex-start;
+  }
+
+  .view-header .wf-tabs {
+    align-self: flex-start;
+  }
+}

@@ -16,7 +16,7 @@ export function ArtifactView() {
   const { id } = useParams<{ id: string }>();
   const { t, fmt } = useI18n();
   const q = useArtifact(id);
-  const review = useAction(() => wsApi.post<Artifact>(`/artifacts/${id}/review`), [keys.artifacts]);
+  const review = useAction(() => wsApi.post<Artifact>(`/artifacts/${id}/review`), [keys.artifacts, keys.work]);
 
   if (q.isPending) return <div className="view"><Loading /></div>;
   if (q.error) return <div className="view"><QueryError error={q.error} /></div>;
@@ -27,9 +27,9 @@ export function ArtifactView() {
       <header className="view-header">
         <div>
           <p className="crumb">
-            <Link className="with-icon" to={toWs('/screens/artifacts')}>
+            <Link className="with-icon" to={toWs('/tasks')}>
               <ICON.back />
-              {t('nav.artifacts')}
+              {t('nav.tasks')}
             </Link>
           </p>
           <h1>{a.title}</h1>

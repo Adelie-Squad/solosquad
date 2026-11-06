@@ -13,7 +13,7 @@ describe('widget registry (I30)', () => {
 
   it('knows the minimal widget set — the same ids as the engine (screens.py WIDGETS)', () => {
     expect(Object.keys(WIDGETS).sort()).toEqual(
-      ['approvals', 'artifact-latest', 'artifact-list', 'budget', 'office', 'org-chart', 'workflows'].sort(),
+      ['approvals', 'artifact-latest', 'artifact-list', 'budget', 'office', 'org-chart', 'schedule', 'stats', 'todo', 'workflows'].sort(),
     );
   });
 

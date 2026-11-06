@@ -100,6 +100,11 @@ class WorkflowEngine:
         else:
             self.manager.remove_cron(f"wf:{name}")
 
+    def scheduled(self, name: str) -> CronSpec | None:
+        """The schedule this workflow runs on (switched on or not) — None when it has none or
+        cannot run unattended."""
+        return self._cron(name)
+
     def _cron(self, name: str) -> CronSpec | None:
         wf = self.defs[name]
         if not wf.schedule or any(i.required and i.type == "upload" for i in wf.inputs):
