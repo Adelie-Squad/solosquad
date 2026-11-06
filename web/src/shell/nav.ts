@@ -11,14 +11,14 @@ export interface NavItem {
 }
 
 /** The fixed menu. Items a role cannot use are not shown (the server still enforces, I25).
- * Connections and logging out live in Settings (rarely used, decided 2026-11-06). */
+ * Connections and logging out live in Settings; the org chart is part of the office
+ * (both decided 2026-11-06). */
 export const NAV: NavItem[] = [
   { to: '', icon: ICON.home, label: 'nav.home' },
   { to: '/office', icon: ICON.office, label: 'nav.office' },
   { to: '/approvals', icon: ICON.approvals, label: 'nav.approvals' },
   { to: '/workflows', icon: ICON.workflows, label: 'nav.workflows' },
   { to: '/screens/artifacts', icon: ICON.artifacts, label: 'nav.artifacts' },
-  { to: '/org', org: true, icon: ICON.org, label: 'nav.org' },
   { to: '/budget', icon: ICON.budget, label: 'nav.budget' },
 ];
 

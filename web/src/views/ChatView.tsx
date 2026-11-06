@@ -10,6 +10,7 @@ import type { PromptHandoff } from '../components/CommandBar';
 import { SuggestionStrip } from '../components/SuggestionStrip';
 import { AgentIcon, Mascot } from '../characters/PenguinIcon';
 import { useI18n } from '../i18n';
+import { useAgentName } from '../lib/agentNames';
 import { useLive } from '../live/LiveProvider';
 
 const TITLE_MAX = 40;
@@ -33,6 +34,7 @@ export function ChatView() {
   const { tid = 'new' } = useParams<{ tid: string }>();
   const isNew = tid === 'new';
   const { t } = useI18n();
+  const nameOf = useAgentName();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -121,7 +123,7 @@ export function ChatView() {
                     </span>
                   )}
                   <div className="chat-bubble">
-                    {m.role !== 'user' && m.name && <span className="chat-name">{m.name}</span>}
+                    {m.role !== 'user' && m.name && <span className="chat-name">{nameOf(m.name)}</span>}
                     {messageText(m)}
                   </div>
                 </div>
@@ -132,7 +134,7 @@ export function ChatView() {
                     <AgentIcon agent={stream.agent ?? 'chief'} size={28} label="" />
                   </span>
                   <div className="chat-bubble">
-                    {stream.agent && <span className="chat-name">{stream.agent}</span>}
+                    {stream.agent && <span className="chat-name">{nameOf(stream.agent)}</span>}
                     {stream.text}
                   </div>
                 </div>

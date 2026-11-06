@@ -293,9 +293,18 @@ class WorkItem(Closed):
     title: str | None
 
 
+Localized = dict[str, str]
+"""Words for people, by language (`ko` · `en` · `zh-CN`) — from the agent's SKILL.md."""
+
+
 class Agent(Closed):
     name: str
     description: str
+    """For routing and other agents (English). People read `summary`."""
+    display_name: Localized = Field(default_factory=dict)
+    """The name people read, per language; empty = the web makes the id readable."""
+    summary: Localized = Field(default_factory=dict)
+    """What the agent does, in two or three plain sentences, per language."""
     team: str | None
     layer: str
     appearance: dict[str, Any] | None
@@ -305,6 +314,8 @@ class Agent(Closed):
 class AgentCard(Closed):
     name: str
     description: str
+    display_name: Localized = Field(default_factory=dict)
+    summary: Localized = Field(default_factory=dict)
     appearance: dict[str, Any] | None
 
 

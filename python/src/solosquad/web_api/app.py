@@ -1245,6 +1245,23 @@ def create_app(cfg: AppConfig) -> Starlette:
             ],
         )
 
+    def localized(value: Any) -> dict[str, str]:
+        """`{ko: …, en: …, zh-CN: …}` from a SKILL.md field — anything else is dropped."""
+        if not isinstance(value, dict):
+            return {}
+        return {
+            k: v.strip()
+            for k, v in value.items()
+            if k in S.LOCALES and isinstance(v, str) and v.strip()
+        }
+
+    def agent_words(res: Any) -> dict[str, Any]:
+        extra = res.spec.extra if res else {}
+        return {
+            "display_name": localized(extra.get("display_name")),
+            "summary": localized(extra.get("summary")),
+        }
+
     def agent_rows(r: Resolver, working: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
         out = []
         for name, res in sorted(r.available("agents").items()):
@@ -1253,6 +1270,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 {
                     "name": name,
                     "description": res.spec.description,
+                    **agent_words(res),
                     "team": r.team_of(name),
                     "layer": res.layer,
                     "appearance": appearance if isinstance(appearance, dict) else None,
@@ -1341,6 +1359,7 @@ def create_app(cfg: AppConfig) -> Starlette:
             return {
                 "name": name,
                 "description": res.spec.description if res else "",
+                **agent_words(res),
                 "appearance": appearance if isinstance(appearance, dict) else None,
             }
 

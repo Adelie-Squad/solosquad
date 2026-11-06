@@ -178,10 +178,10 @@ export function OfficeStage({
                 else tags.current.delete(a.name);
                 scene.current?.setTag(a.name, el);
               }}
-              title={`${a.name} — ${t(STATUS_LABEL[st])}`}
+              title={`${a.label ?? a.name} · ${t(STATUS_LABEL[st])}`}
             >
               <span className="office-tag-pill">
-                <span className="office-tag-name">{a.name}</span>
+                <span className="office-tag-name">{a.label ?? a.name}</span>
                 {st === 'waiting' ? (
                   <span className="office-tag-alert">!</span>
                 ) : st === 'error' ? (

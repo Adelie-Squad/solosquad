@@ -1,6 +1,14 @@
 ---
 name: infra
 description: 인프라 · 보안 — 클라우드 / CI/CD / monitoring / cost + threat model · 보안 audit · secrets · auth. 민감 변경(auth · crypto · secrets · PII · IAM · network) 확인 담당. 구 infra + security 병합(결정 58).
+display_name:
+  ko: "Infra"
+  en: "Infra"
+  zh-CN: "Infra"
+summary:
+  ko: "서버와 클라우드가 멈추지 않고 안전하게 돌아가도록 관리해요. 배포 절차와 감시 설정, 비용 점검과 보안 점검 결과를 내놓아요. 접속 권한이나 비밀 키, 네트워크 설정을 바꾸는 일은 반드시 승인을 받아요."
+  en: "Keeps your servers and cloud running safely without interruption. Delivers release procedures, monitoring, cost checks and security reviews. Always asks for approval before changing access rights, secret keys or network settings."
+  zh-CN: "负责服务器和云端稳定、安全地运行。交付发布流程、监控设置、费用检查和安全检查结果。修改访问权限、密钥或网络设置前一定会请你审批。"
 schema_version: 2
 tier: member
 team: engineering

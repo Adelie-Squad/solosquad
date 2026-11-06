@@ -6,11 +6,13 @@ import { ICON } from '../icons';
 import type { PromptHandoff } from './CommandBar';
 import { SuggestionStrip } from './SuggestionStrip';
 import { AgentIcon } from '../characters/PenguinIcon';
+import { useAgentName } from '../lib/agentNames';
 
 /** Quick chat — opens over the office when Chief is clicked; sending starts a new conversation. */
 export function QuickChat({ agent, onClose }: { agent: string; onClose: () => void }) {
   const { w: toWs } = useLinks();
   const { t } = useI18n();
+  const name = useAgentName()(agent);
   const navigate = useNavigate();
   const [draft, setDraft] = useState('');
 
@@ -34,13 +36,13 @@ export function QuickChat({ agent, onClose }: { agent: string; onClose: () => vo
 
   return (
     <div className="command-overlay is-modal" onMouseDown={onClose}>
-      <div className="quick-chat" role="dialog" aria-label={t('chat.talkTo', { name: agent })} onMouseDown={(e) => e.stopPropagation()}>
+      <div className="quick-chat" role="dialog" aria-label={t('chat.talkTo', { name })} onMouseDown={(e) => e.stopPropagation()}>
         <header className="quick-chat-head">
           <span className="quick-chat-avatar" aria-hidden>
             <AgentIcon agent={agent} size={40} label="" />
           </span>
           <div>
-            <strong>{t('chat.talkTo', { name: agent })}</strong>
+            <strong>{t('chat.talkTo', { name })}</strong>
             <p>{t('chat.quickHint')}</p>
           </div>
           <button className="icon-btn" aria-label={t('common.close')} onClick={onClose}>

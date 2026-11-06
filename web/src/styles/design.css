@@ -48,7 +48,6 @@
   box-shadow: var(--shadow-2);
 }
 
-
 /* ── components ────────────────────────────────────────────────── */
 
 .btn {
@@ -77,7 +76,6 @@
 .panel {
   box-shadow: none;
 }
-
 
 .empty {
   color: var(--ink-3);
@@ -172,7 +170,6 @@ textarea:focus {
 .field .segmented {
   align-self: flex-start;
 }
-
 
 /* ── office (3D stage) ─────────────────────────────────────────── */
 
@@ -334,10 +331,6 @@ textarea:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
-}
-
-.office-roster {
-  margin-top: 16px;
 }
 
 /* ── scope switch (decision 57) ────────────────────────────── */
@@ -602,8 +595,7 @@ textarea:focus {
 .approval-card-head,
 .office-live-head,
 .quick-chat-head,
-.live-modal-head,
-.agent-sheet-head {
+.live-modal-head {
   min-height: 28px;
 }
 
@@ -866,10 +858,6 @@ h3.with-icon {
   padding: var(--space-2) var(--space-4);
 }
 
-.suggestion .lucide {
-  color: var(--ink-2);
-}
-
 /* ── approvals ───────────────────────────────────────────────────── */
 
 .approval-card {
@@ -985,67 +973,6 @@ h3.with-icon {
 }
 
 /* ── org chart: teams are sections on the page, not boxes in boxes ─── */
-
-.panel.org-team {
-  padding: var(--space-5) 0 0;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  background: none;
-}
-
-.org-team .settings-group {
-  margin: var(--space-4) 0 var(--space-2);
-}
-
-.org-agents,
-.org-people {
-  gap: var(--space-3);
-}
-
-.org-agent {
-  flex-wrap: nowrap;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-
-.org-agent-main,
-.org-person-main {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.org-agent-desc {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  font-size: 13px;
-}
-
-.org-person {
-  gap: var(--space-3);
-}
-
-.org-person .dash-hint {
-  margin: 0;
-}
-
-.org-avatar {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  color: var(--ink-2);
-  font-size: 0;
-}
 
 /* ── budget ──────────────────────────────────────────────────────── */
 
@@ -1336,4 +1263,385 @@ h3.with-icon {
 .form-row > input {
   flex: 1 1 160px;
   min-width: 0;
+}
+
+/* ══ org chart infographic · agent and person modal (2026-11-06) ═══════════════════════
+   DESIGN.md `## 컴포넌트` 조직도 인포그래픽. Lines are borders in --line; team colour comes
+   in as --team (characters/colors.ts) and only tints the department head. */
+
+.office-org .section-head {
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.orgchart {
+  --branch: var(--space-6);
+  --node-h: 44px;
+  margin-top: var(--space-2);
+}
+
+.orgchart ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── nodes ─────────────────────────────────────────────────────── */
+
+.org-node {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--node-h);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  font-size: 13.5px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.org-node:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--surface-2);
+}
+
+.org-node:active {
+  transform: translateY(1px);
+}
+
+.org-node-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.org-node .chip {
+  flex-shrink: 0;
+}
+
+.org-node-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+/* ── top: the owner and Chief ──────────────────────────────────── */
+
+.orgchart-top-item {
+  position: relative;
+}
+
+.orgchart-top {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.orgchart-top .org-node {
+  width: auto;
+  min-width: 220px;
+  max-width: 100%;
+}
+
+/* ── departments side by side: a bus across, a stub down to each head ── */
+
+.orgchart.is-rows .orgchart-top {
+  padding-bottom: var(--branch);
+}
+
+.orgchart.is-rows .orgchart-top::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  height: var(--branch);
+  border-left: 2px solid var(--line);
+}
+
+.orgchart.is-rows .orgchart-depts {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-4);
+}
+
+.orgchart.is-rows .orgchart-dept {
+  position: relative;
+  padding-top: var(--branch);
+}
+
+.orgchart.is-rows .orgchart-dept::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: calc(-1 * var(--space-2) - 1px);
+  right: calc(-1 * var(--space-2) - 1px);
+  border-top: 2px solid var(--line);
+}
+
+.orgchart.is-rows .orgchart-dept:first-child::before {
+  left: 50%;
+}
+
+.orgchart.is-rows .orgchart-dept:last-child::before {
+  right: 50%;
+}
+
+.orgchart.is-rows .orgchart-dept:only-child::before {
+  display: none;
+}
+
+.orgchart.is-rows .orgchart-dept::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: var(--branch);
+  border-left: 2px solid var(--line);
+}
+
+/* members hang from a spine under their head */
+.orgchart.is-rows .orgchart-members {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+.orgchart.is-rows .orgchart-members::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: calc(var(--node-h) / 2);
+  left: var(--space-2);
+  border-left: 2px solid var(--line);
+}
+
+.orgchart.is-rows .orgchart-members > li {
+  position: relative;
+  padding-top: var(--space-2);
+}
+
+.orgchart.is-rows .orgchart-members > li::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--space-2) + var(--node-h) / 2);
+  left: calc(var(--space-2) - var(--space-5));
+  width: calc(var(--space-5) - var(--space-2));
+  border-top: 2px solid var(--line);
+}
+
+/* ── department head: the team colour, the name, the head count ─── */
+
+.orgchart-dept-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--team);
+  border-radius: var(--radius-btn);
+  background: color-mix(in srgb, var(--team) 8%, var(--surface));
+  font-size: 14px;
+}
+
+.orgchart-dept-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--team);
+}
+
+.orgchart-dept-head strong {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.orgchart-dept-count {
+  margin-left: auto;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── many departments or a phone: one column, a trunk down the left ── */
+
+.orgchart.is-stacked .orgchart-top {
+  justify-content: flex-start;
+}
+
+.orgchart.is-stacked .orgchart-depts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+  padding-left: var(--branch);
+}
+
+.orgchart.is-stacked .orgchart-dept {
+  position: relative;
+}
+
+/* the trunk: from the row above down through this department… */
+.orgchart.is-stacked .orgchart-dept::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-5));
+  bottom: 0;
+  left: calc(var(--space-3) - var(--branch));
+  border-left: 2px solid var(--line);
+}
+
+/* …and for the last one only down to its head */
+.orgchart.is-stacked .orgchart-dept:last-child::before {
+  bottom: auto;
+  height: calc(var(--space-5) + 20px);
+}
+
+.orgchart.is-stacked .orgchart-dept::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: calc(var(--space-3) - var(--branch));
+  width: calc(var(--branch) - var(--space-3));
+  border-top: 2px solid var(--line);
+}
+
+.orgchart.is-stacked .orgchart-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 860px) {
+  .orgchart-top .org-node {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* ── agent · person modal ──────────────────────────────────────── */
+
+.entity-modal {
+  position: relative;
+  max-height: calc(100vh - 28vh);
+  overflow-y: auto;
+  gap: var(--space-5);
+}
+
+.entity-modal-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 1;
+}
+
+.entity-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) 0;
+  padding: var(--space-6) var(--space-12) var(--space-6) var(--space-6);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.entity-modal-portrait {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.entity-modal-portrait.is-person {
+  color: var(--ink-2);
+}
+
+.entity-modal-title {
+  min-width: 0;
+}
+
+.entity-modal-title h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.entity-modal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.entity-modal-section .settings-group {
+  margin: 0 0 var(--space-2);
+}
+
+.entity-modal-summary {
+  max-width: var(--measure);
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.entity-modal-work {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entity-modal-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  font-size: 14px;
+}
+
+.entity-modal-facts dt {
+  color: var(--ink-2);
+}
+
+.entity-modal-facts dd {
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .command-overlay.is-modal {
+    padding: var(--space-3);
+  }
+
+  .entity-modal {
+    margin-top: var(--space-6);
+    max-height: calc(100vh - var(--space-12));
+  }
+}
+
+/* neutral chips stay visible on the modal head (its ground is --surface-2, like theirs) */
+.entity-modal-head .chip:not(.is-accent):not(.is-ok):not(.is-warn):not(.is-danger) {
+  background: var(--surface);
 }

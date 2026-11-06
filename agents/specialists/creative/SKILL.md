@@ -1,6 +1,14 @@
 ---
 name: creative
 description: 비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브. design-system skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).
+display_name:
+  ko: "Creative"
+  en: "Creative"
+  zh-CN: "Creative"
+summary:
+  ko: "브랜드의 얼굴이 되는 그림과 디자인을 만들어요. 로고와 상세 페이지 이미지, 배너와 캠페인 시안을 준비해요. 밖으로 내보낼 최종 디자인은 대표님의 승인을 받아요."
+  en: "Creates the images and designs that give your brand its face. Prepares logos, product page images, banners and campaign drafts. Final designs that go out to the public need your approval."
+  zh-CN: "制作代表品牌形象的图片和设计。准备标志、商品详情页图片、横幅和活动设计稿。对外发布的最终设计需要你审批。"
 schema_version: 2
 tier: member
 team: brand

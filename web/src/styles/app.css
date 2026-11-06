@@ -289,7 +289,6 @@
   gap: 16px;
 }
 
-
 /* ── approvals ─────────────────────────────────────────────── */
 
 .approval-card {
@@ -410,76 +409,7 @@ a.run-row:hover {
 
 /* ── office roster · agent sheet ───────────────────────────── */
 
-.office-roster {
-  margin-top: 16px;
-}
-
-.office-roster ul,
-.agent-members {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.office-roster li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.agent-members li {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
 /* ── org chart ─────────────────────────────────────────────── */
-
-.org-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
-  gap: var(--section-gap) var(--space-8);
-  margin: var(--section-gap) 0;
-}
-
-.org-people,
-.org-agents {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.org-person,
-.org-agent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.org-agent {
-  flex-wrap: wrap;
-}
-
-.org-person-main {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.org-avatar {
-  font-size: 18px;
-}
 
 /* ── connections ───────────────────────────────────────────── */
 

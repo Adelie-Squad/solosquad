@@ -1,22 +1,24 @@
-import { useLinks } from '../scope';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAgents, useApprovals } from '../api/queries';
-import type { Agent, ApprovalItem } from '../api/types.gen';
+import { useAgents, useApprovals, useOrgChart, usePeople } from '../api/queries';
+import type { Agent, Person } from '../api/types.gen';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { lookOf } from '../characters/roster';
+import { AgentModal, PersonModal } from '../components/AgentModal';
 import { JobList } from '../components/JobList';
+import { OrgChart } from '../components/OrgChart';
 import { LiveModal } from '../components/LiveModal';
 import { QuickChat } from '../components/QuickChat';
 import { Loading, QueryError } from '../components/Status';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
+import { agentName } from '../lib/agentNames';
 import { readable } from '../lib/names';
 import { useJobs } from '../live/jobs';
 import { useLive } from '../live/LiveProvider';
 import { ENTRY } from '../office/layout';
 import { OfficeStage, STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import { agentStatuses, nextChange, type AgentStatus } from '../office/state';
+import { useOrgOwner } from '../scope';
 import { useTheme } from '../theme';
 
 const LIVE_KEY = 'solosquad.office.live';
@@ -53,6 +55,11 @@ export function OfficeView() {
   const live = useLive();
   const { jobs, doneToday } = useJobs();
   const [selected, setSelected] = useState<string | null>(null);
+  const [person, setPerson] = useState<{ person: Person; team: string | null } | null>(null);
+  const isOwner = useOrgOwner();
+  const chart = useOrgChart();
+  const people = usePeople(isOwner);
+  const { locale } = useI18n();
   const [pointed, setPointed] = useState<string | null>(null);
   const [liveOpen, setLiveOpen] = useState(readLiveOpen);
   const [liveModal, setLiveModal] = useState(false);
@@ -75,7 +82,7 @@ export function OfficeView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [list, pending, live.activity, live.outcomes, now],
   );
-  const seats = useMemo(() => list.map((a) => ({ name: a.name, team: a.team })), [list]);
+  const seats = useMemo(() => list.map((a) => ({ name: a.name, team: a.team, label: agentName(a.name, locale, a) })), [list, locale]);
 
   if (agents.isPending) return <div className="view"><Loading /></div>;
   if (agents.error) return <div className="view"><QueryError error={agents.error} /></div>;
@@ -94,7 +101,7 @@ export function OfficeView() {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void officeRef.current?.requestFullscreen?.();
   };
-  const select = (name: string) => (name === ENTRY ? setQuickChat(true) : setSelected(name));
+  const select = (name: string) => setSelected(name);
   const roster = <AgentRoster agents={list} statuses={statuses} onSelect={select} onPoint={setPointed} />;
   const chosen = list.find((a) => a.name === selected) ?? null;
 
@@ -151,20 +158,57 @@ export function OfficeView() {
         )}
       </div>
 
-      {/* what the scene shows, for screen readers and as the plain list */}
-      <section className="panel office-roster" aria-live="polite">
-        <h2 className="panel-title">{t('office.everyone')}</h2>
-        {roster}
+      {/* the org chart (decision 2026-11-06: merged into the office) — the scene's content
+          as a picture of departments, read as nested lists by screen readers */}
+      <section className="panel office-org" aria-live="polite" aria-labelledby="office-org-title">
+        <header className="section-head">
+          <h2 id="office-org-title" className="panel-title with-icon">
+            <ICON.org />
+            {t('nav.org')}
+          </h2>
+          <p className="settings-hint">{t('org.lead')}</p>
+        </header>
+        {chart.isPending ? (
+          <Loading />
+        ) : chart.error ? (
+          <QueryError error={chart.error} />
+        ) : (
+          <OrgChart
+            chart={chart.data}
+            agents={list}
+            statuses={statuses}
+            onAgent={select}
+            onPerson={(p, team) => setPerson({ person: p, team })}
+            onPoint={setPointed}
+          />
+        )}
       </section>
 
       {liveModal && <LiveModal jobs={jobs} doneToday={doneToday} onClose={() => setLiveModal(false)} />}
       {quickChat && <QuickChat agent={ENTRY} onClose={() => setQuickChat(false)} />}
       {chosen && (
-        <AgentSheet
+        <AgentModal
           agent={chosen}
           status={statuses[chosen.name] ?? 'idle'}
           waiting={pending.filter((a) => a.card.agent === chosen.name)}
+          onTalk={
+            chosen.name === ENTRY
+              ? () => {
+                  setSelected(null);
+                  setQuickChat(true);
+                }
+              : undefined
+          }
           onClose={() => setSelected(null)}
+        />
+      )}
+      {person && (
+        <PersonModal
+          person={person.person}
+          team={person.team}
+          editable={(people.data ?? []).find((p) => p.id === person.person.id) ?? null}
+          teams={(chart.data?.teams ?? []).map((tm) => tm.name)}
+          onClose={() => setPerson(null)}
         />
       )}
     </div>
@@ -183,7 +227,7 @@ function AgentRoster({
   onSelect: (n: string) => void;
   onPoint?: (n: string | null) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const teams = new Map<string, Agent[]>();
   for (const a of agents) {
     const key = a.name === ENTRY ? '' : (a.team ?? '—');
@@ -208,7 +252,7 @@ function AgentRoster({
                     onBlur={() => onPoint(null)}
                   >
                     <AgentIcon agent={a.name} team={a.team ?? lookOf(a.name).team} size={28} label="" />
-                    <strong>{a.name}</strong>
+                    <strong>{agentName(a.name, locale, a)}</strong>
                     <span className={`chip ${STATUS_CHIP[st]}`}>{t(STATUS_LABEL[st])}</span>
                     <span className="dash-hint">{a.working_on.map((w) => w.title).filter(Boolean).join(', ')}</span>
                   </button>
@@ -218,70 +262,6 @@ function AgentRoster({
           </ul>
         </div>
       ))}
-    </div>
-  );
-}
-
-function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status: AgentStatus; waiting: ApprovalItem[]; onClose: () => void }) {
-  const { w: toWs, o: toOrg } = useLinks();
-  const { t } = useI18n();
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div className="command-overlay is-sheet" onMouseDown={onClose}>
-      <aside className="agent-sheet" role="dialog" aria-label={agent.name} onMouseDown={(e) => e.stopPropagation()}>
-        <header className="agent-sheet-head">
-          <AgentIcon agent={agent.name} team={agent.team} size={40} label="" />
-          <div>
-            <h2>{agent.name}</h2>
-            <div className="agent-roles">
-              {agent.team && <span className="chip">{readable(agent.team)}</span>}
-              <span className={`chip ${STATUS_CHIP[status]}`}>{t(STATUS_LABEL[status])}</span>
-            </div>
-          </div>
-          <button className="icon-btn" aria-label={t('common.close')} title={t('common.close')} onClick={onClose}>
-            <ICON.close size={18} />
-          </button>
-        </header>
-        <div className="agent-sheet-body">
-          {agent.description && <p className="agent-now">{agent.description}</p>}
-          {waiting.length > 0 && (
-            <div className="approval-bar">
-              <span className="with-icon">
-                <ICON.person />
-                {t('office.waitingN', { n: waiting.length })}
-              </span>
-              <Link className="btn is-primary" to={toWs('/approvals')}>
-                {t('office.goAnswer')}
-              </Link>
-            </div>
-          )}
-          <p className="settings-group">{t('office.now')}</p>
-          {agent.working_on.length ? (
-            <ul className="agent-members">
-              {agent.working_on.map((w) => (
-                <li key={w.run_id}>
-                  <Link className="chip is-accent" to={toWs(`/chat/${w.thread_id}`)}>
-                    <ICON.run size={12} />
-                    {w.title ?? w.thread_id}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="dash-hint">{t('office.idle')}</p>
-          )}
-          <div className="agent-links">
-            <Link className="btn" to={toOrg('/org')}>
-              {t('nav.org')}
-            </Link>
-          </div>
-        </div>
-      </aside>
     </div>
   );
 }
