@@ -1,4 +1,4 @@
-/* ══ Menu restructure (2026-11-07) — dashboard · Task · schedule · mail ═════════════════
+/* ══ Menu restructure (2026-11-07) — dashboard · Task · schedule · messenger ═════════════════
    DESIGN.md `## 컴포넌트` 대시보드 / Task / 일정. Tokens only; no colour bands, no shadows. */
 
 /* ── the widget grid: two columns, wide widgets take the row, cells stretch ───────────── */
@@ -496,9 +496,9 @@
   flex-shrink: 0;
 }
 
-/* ── mail (placeholder until mail is connected) ──────────────────────────────────────── */
+/* ── messenger (placeholder until the channels are connected) ──────────────────────────────────────── */
 
-.mail-pending {
+.messenger-pending {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -506,18 +506,18 @@
   padding: var(--space-12) var(--card-pad);
 }
 
-.mail-pending .panel-title {
+.messenger-pending .panel-title {
   margin: 0;
   color: var(--ink);
 }
 
-.mail-pending p {
+.messenger-pending p {
   max-width: var(--measure);
   margin: 0;
   color: var(--ink-2);
 }
 
-.mail-pending-icon {
+.messenger-pending-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -571,4 +571,14 @@
   .view-header .wf-tabs {
     align-self: flex-start;
   }
+}
+
+.messenger-channels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }

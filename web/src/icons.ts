@@ -25,7 +25,7 @@ import {
   ListChecks,
   Lock,
   LogOut,
-  Mail,
+  MessagesSquare,
   Maximize2,
   Menu,
   MessageSquare,
@@ -53,7 +53,7 @@ export type { LucideIcon };
 export const ICON = {
   dashboard: LayoutDashboard,
   office: BuildingComplex,
-  mail: Mail,
+  messenger: MessagesSquare,
   tasks: ListChecks,
   workflows: Workflow,
   artifacts: FileText,
