@@ -366,19 +366,6 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 | `clay.sky` | 환경광 `#FFFFFF` · 주광 따뜻한 흰색 | 환경광 `#3A4566` 약하게 | 조명 |
 | `clay.penguin_body` | `#2B2A26`(2D 아이콘과 같음) | `#474855` | 펭귄 몸(재질 `penguin.body`). 저녁에는 남색 방에서 실루엣이 사라지지 않게 몸 톤만 밝힌다(캐릭터 규칙 "몸 톤만 장면 팔레트를 따른다") |
 
-**전환 전 구현(v2 키캡 디오라마) 팔레트** — `web/src/office/palette.ts` 가 아직 쓰는 값. 점토 전환(위 제작 절차 6단계)이 끝나면 이 표와 동기화 테스트를 새 팔레트로 함께 바꾸고 이 표는 지운다. `[윗면, 왼면, 오른면]`.
-
-| 키 | 낮(라이트) | 저녁 야근(다크) | 용도 |
-|---|---|---|---|
-| `floor` | `#D0C5A7` | `#1C1E27` | 무한 바닥 · 장면 바탕 |
-| `shadow` | `#766F53` 결과색(`#1C1900` 50%) | `#0B0C11` 결과색(`#000000` 55%) | 바닥 · 섬 윗면 그림자 |
-| `ink` | `#111008` | `#08090C` | 모든 선 |
-| `block` | `#E1DBC5 · #F0EDE8 · #7E6E3B` | `#4A4B55 · #5B5C66 · #2A2B33` | 섬 · 책상 |
-| `plant` | `#B3D64A · #9AC22D · #6E8A1F` | `#5F7A2C · #4E6822 · #33451A` | 화분 · 나무 |
-| `point` | `#4A8CF0 · #2C74E0 · #1B4FA6` | `#5B8DE8 · #3E72D2 · #24489A` | 포인트 소품 |
-| `screen` | 화면 `#2C74E0` | 화면 발광 `#8FB8FF` | 노트북 화면 |
-| `lamp` | — (끔) | 전구 `#FFC56B` · 빛 웅덩이 `#FFC56B` 30% | 저녁 전용 스탠드 |
-
 **다크 = 저녁 야근 사무실**
 
 - 방은 저녁 톤(짙은 남색 벽 · 바닥), 빛은 **책상 스탠드와 노트북 화면**에서만 온다(별도로 구운 저녁 조명 맵).
@@ -479,7 +466,9 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 - 아이콘: `web/src/icons.ts`(의미 → Lucide) · `main.tsx` 의 `LucideProvider`(기본값). 이름 표기: `web/src/lib/names.ts`. 주소: `web/src/App.tsx` · `web/src/auth/next.ts`.
 - **동기화 검사(아이콘)** — `test/icons.test.ts` 가 `## 아이콘` 표 ↔ `icons.ts`, 고정 버전, 소스의 이모지 · 글자 기호를 검사한다.
 - **동기화 검사** — 테스트가 이 문서 `## 색` 표의 토큰 · 값과 `tokens.css` 를 대조하고, 컴포넌트 CSS 의 하드코딩 색을 찾아 실패시킨다.
-- 사무실 장면: three.js(번들 포함, CDN 금지) 컴포넌트 하나 — `web/src/office/`. 상태는 엔진 SSE 이벤트를 `## 사무실 장면` 의 상태 표로 바꾸는 어댑터에서 온다.
+- 사무실 장면: React Three Fiber + drei(번들 포함, CDN 금지) — `web/src/office/`. 사무실 화면에서만 지연 로딩(`OfficeCanvas` 청크). 상태는 엔진 SSE 이벤트를 `## 사무실 장면` 의 상태 표로 바꾸는 어댑터(`state.ts`)에서 온다.
+  - GLB: `import … from 'office-asset:<파일>'` — `assets/office/export/` 에 진짜 GLB 가 있으면 그것, 없으면 같은 이름 규격의 대역(`web/office-placeholder/`, `npm --prefix web run gen:office-placeholder` 로 생성). 교체 = 파일만 넣기.
+  - 규격 검사: `web/src/office/contract.ts`(이름 목록 + `checkGltf`) — 개발 모드 콘솔 경고 · 테스트 · `npm --prefix web run check:office-assets -- <폴더|파일>`.
 - 참고 구현: [`web/src/styles/`](web/src/styles/) · 장면 원형 [`docs/design/agent-office-demo.html`](docs/design/agent-office-demo.html).
 
 ## 프로토타입 추가 규칙
