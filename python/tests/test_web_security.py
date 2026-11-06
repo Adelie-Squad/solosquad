@@ -106,6 +106,8 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "ws_access.get": ("GET", f"{WS}/access", None),
     "ws_access.update": ("PUT", f"{WS}/access", {"allowed_networks": []}),
     "working": ("GET", f"{WS}/agents", None),
+    "schedules.list": ("GET", f"{WS}/schedules", None),
+    "work.list": ("GET", f"{WS}/work", None),
 }
 """Each role key → one route that checks it (`need(request, key)`). Other routes check the
 same key too (`workflows.list` guards the run lists), see `ALSO`."""

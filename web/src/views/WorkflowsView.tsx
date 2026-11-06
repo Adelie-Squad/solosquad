@@ -9,6 +9,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { Loading, Placeholder, QueryError, SavedLine } from '../components/Status';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
+import { cronText } from '../lib/cron';
 import { readable } from '../lib/names';
 import { useOrgOwner } from '../scope';
 
@@ -20,6 +21,26 @@ export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string
   error: { label: 'run.error', chip: 'is-danger' },
   cancelled: { label: 'run.cancelled', chip: '' },
 };
+
+/** The two views of the workflows screen — the workflows, and their schedule (2026-11-07). */
+export function WorkflowTabs({ current }: { current: 'workflows' | 'schedule' }) {
+  const { w: toWs } = useLinks();
+  const { t } = useI18n();
+  const tabs = [
+    { id: 'workflows', to: toWs('/workflows'), label: t('workflows.tabFlows'), icon: ICON.workflows },
+    { id: 'schedule', to: toWs('/schedule'), label: t('schedule.tab'), icon: ICON.schedule },
+  ] as const;
+  return (
+    <nav className="segmented wf-tabs" aria-label={t('workflows.views')}>
+      {tabs.map((tab) => (
+        <Link key={tab.id} to={tab.to} className={`with-icon ${current === tab.id ? 'is-active' : ''}`} aria-current={current === tab.id ? 'page' : undefined}>
+          <tab.icon />
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 /** Workflows — list, switch (owner), run with an upload, and each run's status (I12 · I26 · I27). */
 export function WorkflowsView() {
@@ -41,6 +62,7 @@ export function WorkflowsView() {
           <h1>{t('workflows.title')}</h1>
           <p>{t('workflows.lead')}</p>
         </div>
+        <WorkflowTabs current="workflows" />
       </header>
       {q.data.errors.length > 0 && <Placeholder title={t('workflows.brokenFiles')} detail={q.data.errors.join(' · ')} />}
       {list.length === 0 ? (
@@ -72,10 +94,10 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
   const keys = useKeys();
   const { w: toWs } = useLinks();
   const { org: orgApi } = useScopedApi();
-  const { t, fmt } = useI18n();
+  const { t, fmt, locale } = useI18n();
   const isOwner = useOrgOwner();
   const runs = useWorkflowRuns(wf.name);
-  const toggle = useAction((on: boolean) => orgApi.patch<WorkflowSummary>(`/workflows/${wf.name}`, { enabled: on }), [keys.workflows]);
+  const toggle = useAction((on: boolean) => orgApi.patch<WorkflowSummary>(`/workflows/${wf.name}`, { enabled: on }), [keys.workflows, keys.schedules]);
 
   return (
     <>
@@ -107,10 +129,10 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
             </span>
           )}
           {wf.schedule && (
-            <span className="chip">
+            <Link className="chip" to={toWs('/schedule')} title={wf.schedule}>
               <ICON.schedule size={14} />
-              {wf.schedule}
-            </span>
+              {cronText(wf.schedule, locale, t)}
+            </Link>
           )}
           <span className={`chip ${wf.enabled ? 'is-ok' : ''}`}>{wf.enabled ? t('workflows.on') : t('workflows.off')}</span>
         </div>
@@ -293,7 +315,7 @@ export function WorkflowRunView() {
           <ul className="run-list">
             {v.artifacts.map((id) => (
               <li key={id}>
-                <Link className="run-row" to={toWs(`/artifacts/${id}`)}>
+                <Link className="run-row" to={toWs(`/tasks/artifacts/${id}`)}>
                   <ICON.artifacts className="run-row-icon" />
                   <span className="run-row-title is-id">{id}</span>
                 </Link>

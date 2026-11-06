@@ -12,6 +12,9 @@ import {
   BudgetWidget,
   OfficeWidget,
   OrgChartWidget,
+  ScheduleWidget,
+  StatsWidget,
+  TodoWidget,
   WorkflowsWidget,
 } from './widgets';
 
@@ -29,6 +32,9 @@ export const WIDGETS: Record<string, ComponentType<WidgetProps>> = {
   office: OfficeWidget,
   workflows: WorkflowsWidget,
   'org-chart': OrgChartWidget,
+  schedule: ScheduleWidget,
+  stats: StatsWidget,
+  todo: TodoWidget,
 };
 
 export type Resolved =

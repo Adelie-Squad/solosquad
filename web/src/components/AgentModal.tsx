@@ -75,7 +75,7 @@ export function AgentModal({
             <ICON.person />
             {t('office.waitingN', { n: waiting.length })}
           </span>
-          <Link className="btn is-primary" to={toWs('/approvals')}>
+          <Link className="btn is-primary" to={toWs('/tasks')}>
             {t('office.goAnswer')}
           </Link>
         </div>

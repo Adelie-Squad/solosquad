@@ -108,6 +108,8 @@ export interface SoloSquadWebApi {
   Budget: Budget;
   WorkflowList: WorkflowList;
   WorkflowThreadState: WorkflowThreadState;
+  ScheduleList: ScheduleList;
+  WorkList: WorkList;
   Upload: Upload;
   Artifact: Artifact;
   PnlData: PnlData;
@@ -686,6 +688,71 @@ export interface WorkflowValues {
   artifacts: string[];
   status: string | null;
   [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ScheduleList".
+ */
+export interface ScheduleList {
+  timezone: string;
+  schedules: ScheduleEntry[];
+  errors: string[];
+}
+/**
+ * One scheduled run of the workspace (2026-11-07 — the scheduler joined the workflows).
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ScheduleEntry".
+ */
+export interface ScheduleEntry {
+  id: string;
+  kind: 'workflow' | 'goal' | 'routine';
+  name: string;
+  title: string;
+  schedule: string;
+  enabled: boolean;
+  next_run: number | null;
+  last_run: LastRun | null;
+  workflow: string | null;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "WorkList".
+ */
+export interface WorkList {
+  items: WorkEntry[];
+}
+/**
+ * One piece of agent work for Task — a conversation or a workflow run, by its newest run.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "WorkEntry".
+ */
+export interface WorkEntry {
+  source: 'chat' | 'workflow';
+  thread_id: string;
+  run_id: string;
+  title: string | null;
+  workflow: string | null;
+  cron: string | null;
+  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled';
+  created: number;
+  ended: number | null;
+  agents: string[];
+  step: number | null;
+  steps: number | null;
+  current_step: string | null;
+  artifacts: WorkArtifact[];
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "WorkArtifact".
+ */
+export interface WorkArtifact {
+  id: string;
+  kind: string;
+  title: string;
+  needs_review: boolean;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema

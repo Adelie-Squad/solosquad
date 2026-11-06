@@ -8,17 +8,43 @@ import { LiveProvider } from '../live/LiveProvider';
 import { DeclarativeScreen } from '../screens/DeclarativeScreen';
 import { defaultScope, defaultWorkspace, findOrg, findWorkspace, routes, ScopeContext, useScope } from '../scope';
 import { useSession } from '../session';
-import { ApprovalsView } from '../views/ApprovalsView';
 import { ArtifactView } from '../views/ArtifactView';
-import { BudgetView } from '../views/BudgetView';
 import { ChatView } from '../views/ChatView';
+import { MailView } from '../views/MailView';
 import { OfficeView } from '../views/OfficeView';
+import { ScheduleView } from '../views/ScheduleView';
 import { SettingsView } from '../views/SettingsView';
+import { TasksView } from '../views/TasksView';
 import { WorkflowRunView, WorkflowsView } from '../views/WorkflowsView';
 import { Shell } from './Shell';
 
 /** First path segments of the pre-scope addresses (slice 4) — sent to the current scope. */
-export const LEGACY_WS = ['office', 'approvals', 'workflows', 'chat', 'artifacts', 'screens', 'budget'];
+export const LEGACY_WS = ['office', 'approvals', 'workflows', 'chat', 'artifacts', 'screens', 'budget', 'home'];
+
+/** Workspace screens the menu of 2026-11-07 folded into others: home → dashboard, the cost
+ * screen → the dashboard's cost area, approvals and work products → Task. `:id` is carried over. */
+export const MOVED: Record<string, string> = {
+  home: '/dashboard',
+  budget: '/dashboard#cost',
+  approvals: '/tasks',
+  artifacts: '/tasks',
+  'screens/artifacts': '/tasks',
+  'screens/home': '/dashboard',
+  'artifacts/:id': '/tasks/artifacts/:id',
+};
+
+/** Where a moved workspace address goes now (inside the workspace, `:id` filled in). */
+export function movedTarget(pattern: string, params: Record<string, string | undefined>): string {
+  return MOVED[pattern].replace(/:(\w+)/g, (_m, name: string) => encodeURIComponent(params[name] ?? ''));
+}
+
+function Moved({ from }: { from: string }) {
+  const { org, ws = '', ...params } = useParams();
+  const location = useLocation();
+  const target = routes.ws(org ?? '', ws, movedTarget(from, params));
+  const [pathname, hash] = target.split('#');
+  return <Navigate to={{ pathname, search: location.search, hash: hash ? `#${hash}` : '' }} replace />;
+}
 export const LEGACY_ORG = ['org', 'connections', 'settings'];
 
 /** Where an old, unscoped address goes now — null when it is not one of them. */
@@ -65,17 +91,23 @@ export function ScopeLayout() {
       <Route element={<Shell />}>
         <Route index element={<Navigate to={routes.ws(org, shown)} replace />} />
         <Route path="w/:ws" element={<WorkspaceGate />}>
-          <Route index element={<DeclarativeScreen name="home" />} />
+          <Route index element={<Navigate to={routes.ws(org, shown, '/dashboard')} replace />} />
+          <Route path="dashboard" element={<DeclarativeScreen name="dashboard" />} />
           <Route path="screens/:name" element={<DeclarativeScreen />} />
           <Route path="chat" element={<Navigate to="new" replace />} />
           <Route path="chat/:tid" element={<ChatView />} />
-          <Route path="approvals" element={<ApprovalsView />} />
           <Route path="office" element={<OfficeView />} />
+          <Route path="mail" element={<MailView />} />
+          <Route path="tasks" element={<TasksView />} />
+          <Route path="tasks/artifacts/:id" element={<ArtifactView />} />
           <Route path="workflows" element={<WorkflowsView />} />
           <Route path="workflows/:name" element={<WorkflowsView />} />
           <Route path="workflows/:name/runs/:tid" element={<WorkflowRunView />} />
-          <Route path="artifacts/:id" element={<ArtifactView />} />
-          <Route path="budget" element={<BudgetView />} />
+          <Route path="schedule" element={<ScheduleView />} />
+          {/* the menu of 2026-11-07 — old addresses keep working */}
+          {Object.keys(MOVED).map((from) => (
+            <Route key={from} path={from} element={<Moved from={from} />} />
+          ))}
           <Route path="*" element={<NotFoundInShell />} />
         </Route>
         {/* the org chart moved into the office (2026-11-06) — old addresses keep working */}

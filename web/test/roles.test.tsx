@@ -70,9 +70,9 @@ const OWNER_ONLY: Record<string, { path: string; probe: () => HTMLElement | null
     probe: () => screen.queryByRole('switch', { name: t('workflows.switch', { name: 'Monthly P&L' }) }),
   },
   'answer an owner-tier card (approval needs owner)': {
-    path: '/o/tesla/w/charging/approvals',
+    // approvals live in Task (2026-11-07): staff sees the card under "someone else's turn", without buttons
+    path: '/o/tesla/w/charging/tasks',
     probe: () => {
-      fireEvent.click(screen.getByRole('tab', { name: new RegExp(t('approvals.all', { n: 2 })) })); // staff's "mine" is empty
       const card = screen.getByText('send the payment').closest('[data-testid="approval-card"]') as HTMLElement;
       return within(card).queryByRole('button', { name: t('approvals.approve') });
     },
@@ -137,7 +137,7 @@ describe('C15 — what staff is not shown', () => {
   it('staff still gives work and reads reports: new request, run a workflow, open the P&L', async () => {
     await open('/o/tesla/w/charging', staffMe);
     expect(screen.getByRole('button', { name: t('chat.new') })).toBeTruthy();
-    expect(screen.getAllByText('손익표').length).toBeGreaterThan(0); // the latest report on the home screen
+    expect(screen.getAllByText('손익표').length).toBeGreaterThan(0); // the latest report on the dashboard
     cleanup();
     vi.unstubAllGlobals();
     await open('/o/tesla/w/charging/workflows/monthly-pnl', staffMe);
