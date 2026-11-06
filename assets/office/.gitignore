@@ -1,0 +1,5 @@
+# .blend files are rebuilt from scripts/ (contract §1) — never committed
+src/*.blend
+src/*.blend1
+scripts/__pycache__/
+export/*.png
