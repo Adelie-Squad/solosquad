@@ -4,7 +4,7 @@
 
 > A 24/7 AI assistant system for solo founders, small teams, and n-jobbers — Discord bot + scheduled crons + team-based agents, distributed as a single npm package.
 
-Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team — **1 Chief** (org-level supervisor, the only user-facing agent), **4 main bots** (pm / engineer / designer / marketer), and **20 specialists** across 4 teams (product, engineering, design, marketing) — reachable from your messenger, with automated daily crons, per-org memory isolation, and a 6+1 stage decision loop (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT).
+Running a company alone doesn't mean working alone. SoloSquad gives you a virtual team — **1 Chief** (the only user-facing agent) and **14 agents** across 4 teams (product, engineering, business, brand) — no team leads; Chief routes to each agent directly — reachable from your messenger, with automated daily crons, per-org memory isolation, and a 6+1 stage decision loop (TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT).
 
 ```
 Output ≠ Goal. Output = Means to achieve the goal.
@@ -184,20 +184,24 @@ manually after the migration. Migration LLM fallback costs accumulate in
 
 ## What you get
 
-### 25 agents across 4 teams, frontmatter-routed automatically
+### 15 agents across 5 teams, no team leads, frontmatter-routed automatically
+
+Chief is the only user-facing agent and hands work to every other agent directly (decision 58 — teams have no lead; a team is a grouping for the org chart, team-tier approvals and the office).
 
 | Team | Agents | Role |
 |---|---|---|
-| **Strategy** (7) | PMF Planner · Feature Planner · Data Analyst · Business Strategist · Idea Refiner · Scope Estimator · Policy Architect | Market analysis, hypothesis design, planning |
-| **Growth** (4) | GTM Strategist · Content Writer · Brand Marketer · Paid Marketer | Marketing, branding, copy, paid acquisition |
-| **Experience** (4) | User Researcher · Desk Researcher · UX Designer · UI Designer | Research, design |
-| **Engineering** (10) | Creative Frontend · FDE · Architect · Backend · API · Data Collector · Data Engineer · Cloud Admin · QA · Security | Development, infra, quality, security |
+| **Core** (1) | Chief | Talks to you, triages, routes to every agent, retrospects |
+| **Product** (4) | Product Manager · Product Designer · Researcher · Data Analyst | Problem definition, PMF hypotheses, PRD, research, metrics |
+| **Engineering** (5) | Frontend Engineer · Backend Engineer (incl. system design · ADR) · Data Engineer · Infra (incl. security) · Quality Assurance | Development, architecture, data, infra and security, quality |
+| **Business** (3) | Business Strategy (incl. go-to-market) · Sales · Finance | Strategy and GTM, pipeline, books · P&L · VAT (KR) · 增值税 (CN) |
+| **Brand** (2) | Marketer (incl. brand communication) · Creative | Brand voice, content, performance marketing, visuals |
 
 ```
-You: "Write landing page copy"        → Content Writer (Growth)
-You: "Analyze the signup funnel"      → Data Analyst (Strategy)
-You: "Design the login UI"            → UI Designer (Experience)
-You: "Design the signup API"          → API Developer (Engineering)
+You: "Write landing page copy"        → Marketer (Brand)
+You: "Analyze the signup funnel"      → Data Analyst (Product)
+You: "Design the login UI"            → Product Designer (Product)
+You: "Design the signup API"          → Backend Engineer (Engineering)
+You: "Close this month's books"       → Finance (Business)
 ```
 
 **v0.5 4-channel routing** (priority: `slash > explicit > keyword > freq`) decides which specialist's `SKILL.md` is injected each turn. Triggers live in each agent's frontmatter (`triggers.slash` / `.keyword` / `.freq`), collected at bot boot via a 3-tier scan (`<org>/.agents/` > `~/.solosquad/agents/` > bundled). The old hard-coded `AGENT_ROUTES` constant was removed in v0.5.

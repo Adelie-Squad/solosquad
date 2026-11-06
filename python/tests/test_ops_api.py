@@ -145,7 +145,7 @@ async def test_teams_and_who_is_working(office: Office) -> None:
     async with office.client() as web:
         h = await office.login(web, "boss", Role.OWNER)
         teams = {t["name"]: t for t in (await web.get("/api/teams")).json()}
-        assert teams["product"] == {"name": "product", "main": "pm", "members": ["engineer"]}
+        assert teams["product"] == {"name": "product", "main": None, "members": ["pm", "engineer"]}
         agents = {a["name"]: a for a in (await web.get("/api/agents")).json()}
         assert set(agents) == {"chief", "pm", "engineer"}
         assert agents["engineer"]["team"] == "product" and agents["chief"]["layer"] == "package"

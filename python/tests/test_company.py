@@ -63,9 +63,45 @@ def test_swarm_api_mirrors_langgraph_swarm() -> None:
 def test_derived_handoffs(tmp_path: Path) -> None:
     c = Company(tmp_path)
     h = derive_handoffs(c.rt.resolver, ["chief", "pm", "engineer"])
-    assert set(h["chief"]) == {"pm"}
+    assert set(h["chief"]) == {"pm", "engineer"}
     assert set(h["pm"]) == {"chief", "engineer"}
     assert set(h["engineer"]) == {"pm", "chief"}
+
+
+def test_derived_handoffs_without_leads(tmp_path: Path) -> None:
+    """Decision 58: Chief reaches every agent (uncapped), teammates reach each other, and a
+    member's list starts with Chief and stops at six."""
+    c = Company(tmp_path)
+    team = [f"dev-{i}" for i in range(8)]
+    for name in [*team, "seller"]:
+        d = c.bundle / "agents" / "specialists" / name
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: {name}\n---\nbody\n", encoding="utf-8"
+        )
+    (c.bundle / "teams" / "engineering").mkdir()
+    (c.bundle / "teams" / "engineering" / "composition.yaml").write_text(
+        "members: [" + ", ".join(team) + "]\n", encoding="utf-8"
+    )
+    names = ["chief", "pm", "engineer", *team, "seller"]
+    h = derive_handoffs(c.rt.resolver, names)
+    assert set(h["chief"]) == set(names) - {"chief"}  # 11 targets — no cap for Chief
+    assert next(iter(h["dev-0"])) == "chief" and len(h["dev-0"]) == 6
+    assert set(h["dev-0"]) <= {"chief", *team} and "pm" not in h["dev-0"]
+    assert set(h["seller"]) == {"chief"}  # in no team: only the way back to Chief
+
+
+def test_legacy_main_is_read_as_a_member(tmp_path: Path) -> None:
+    c = Company(tmp_path)
+    (c.bundle / "teams" / "product" / "composition.yaml").write_text(
+        "main: pm\nmembers: [engineer]\n", encoding="utf-8"
+    )
+    comp = c.rt.resolver.team("product")
+    assert comp is not None and comp.members == ["pm", "engineer"]
+    assert comp.main is None and comp.legacy_main == "pm"
+    assert c.rt.resolver.team_of("pm") == "product"
+    h = derive_handoffs(c.rt.resolver, ["chief", "pm", "engineer"])
+    assert set(h["engineer"]) == {"chief", "pm"}
 
 
 async def test_chief_hands_off_and_next_turn_goes_to_active_agent(tmp_path: Path) -> None:

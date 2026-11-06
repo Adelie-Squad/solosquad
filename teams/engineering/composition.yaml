@@ -1,13 +1,10 @@
-# teams/engineering/composition.yaml — v2.0 (engineer 생략 suffix)
-main: engineer
+# teams/engineering/composition.yaml — v2.1 (결정 58: 팀장 engineer 폐기 · `main:` 필드 폐기)
 members:
-  - system-architect
-  - backend
-  - frontend
+  - frontend-engineer
+  - backend-engineer
   - data-engineer
   - infra
-  - qa
-  - security
+  - quality-assurance
 shared_skills:
   - code-review
   - verify

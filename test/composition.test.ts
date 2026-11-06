@@ -59,11 +59,13 @@ test("loadComposition: returns null on malformed yaml", () => {
   assert.equal(c, null);
 });
 
-test("loadComposition: returns null when 'main' missing", () => {
+test("loadComposition: 'main' is optional (v2.1 decision 58 — no team leads)", () => {
   const ws = mkWorkspace();
   writeComposition(ws, "product", `members: [pmf-planner]\n`);
   const c = loadComposition("product", { workspaceRoot: ws });
-  assert.equal(c, null);
+  assert.ok(c);
+  assert.equal(c.main, undefined);
+  assert.deepEqual(c.members, ["pmf-planner"]);
 });
 
 test("loadComposition: org override beats workspace bundle", () => {

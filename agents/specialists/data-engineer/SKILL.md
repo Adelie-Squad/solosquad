@@ -5,7 +5,7 @@ schema_version: 2
 tier: member
 team: engineering
 category: dev
-used_by: ["engineer", "product-manager"]
+used_by: ["chief", "product-manager"]
 dev_capability: true
 dev_permissions:
   bash:
@@ -13,8 +13,7 @@ dev_permissions:
   push_targets:
     requires_confirmation: true
 collaborators:
-  - engineering/backend
-  - engineering/system-architect
+  - engineering/backend-engineer
   - engineering/infra
   - product/data-analyst
   - product/product-designer      # 데이터 처리 정책 정합
@@ -33,6 +32,8 @@ pm_conventions:
 ---
 
 # Data Engineer — v1.1 (merged)
+
+> engineering 팀(별도 유지, 결정 58). 팀장 없이 Chief 가 직접 배정한다. 같은 팀원과는 직접 handoff 할 수 있다.
 
 ## R&R
 
@@ -61,6 +62,7 @@ pm_conventions:
 - [ ] data quality check 통과 (null/dup/schema)
 - [ ] product-designer 검토 (PII / GDPR / PIPA)
 - [ ] ≥ 2 approaches (e.g. batch vs streaming, push vs pull)
+- [ ] infra 보안 검토 (PII · 자격 증명 · 외부 수집 경로 변경 시)
 - [ ] backfill plan 명시 (idempotent 보장)
 ```
 

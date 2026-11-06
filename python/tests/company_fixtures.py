@@ -18,8 +18,8 @@ from solosquad.routing.router import Escalation
 
 AGENT = "---\nname: {name}\ndescription: {desc}\n{extra}---\n{body}\n"
 TEAMS = {
-    "core": "main: chief\nmembers: []\n",
-    "product": "main: pm\nmembers: [engineer]\n",
+    "core": "members: [chief]\n",
+    "product": "members: [pm, engineer]\n",
 }
 
 

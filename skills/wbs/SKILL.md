@@ -49,11 +49,11 @@ milestones:
     okr_kr_ref: "Q2-KR2"
     exit_criteria:
       - "discord-adapter 가 config 없을 때 자동 생성"
-      - "qa test 통과"
+      - "quality-assurance test 통과"
     workstreams:
       - id: m1.w1
         title: "discord-adapter lazy-create"
-        owner_specialist: "backend"
+        owner_specialist: "backend-engineer"
         target_date: "2026-06-07"
         tasks:
           - { id: "m1.w1.t1", title: "loadOrEmpty + mkdir 헬퍼", estimate: "2h", depends_on: [] }
@@ -61,7 +61,7 @@ milestones:
           - { id: "m1.w1.t3", title: "test 작성", estimate: "1h", depends_on: ["m1.w1.t1"] }
       - id: m1.w2
         title: "add-repo CLI seed"
-        owner_specialist: "frontend"
+        owner_specialist: "frontend-engineer"
         ...
 
 dependency_graph:
@@ -97,7 +97,7 @@ PM 호출 wbs({
   critical_path: [...],
   total_estimate: "...",
   open_questions: [
-    // capacity 미확인 (e.g. backend 가용 시간)
+    // capacity 미확인 (e.g. backend-engineer 가용 시간)
     // priority tie-break 필요
   ]
 }
@@ -106,7 +106,7 @@ PM 호출 wbs({
 ## Anti-Sycophancy
 
 - ❌ "약 4주 정도 걸릴 것 같습니다"
-- ✅ "Critical path 추정 4주. backend task throughput 가정 5h/day. 가정 깨지면 6주."
+- ✅ "Critical path 추정 4주. backend-engineer task throughput 가정 5h/day. 가정 깨지면 6주."
 
 ## Reference
 

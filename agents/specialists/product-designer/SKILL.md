@@ -11,9 +11,9 @@ collaborators:
   - product/product-manager      # PMF·로드맵 정합
   - product/data-analyst         # 우선순위·메트릭 입력
   - product/researcher           # user research·UX flow handoff
-  - engineering/system-architect # 기술 feasibility
-  - engineering/frontend         # UI 구현 handoff
-  - brand/creative-designer      # 비주얼 아이덴티티 정합
+  - engineering/backend-engineer # 기술 feasibility (설계 단계)
+  - engineering/frontend-engineer # UI 구현 handoff
+  - brand/creative               # 비주얼 아이덴티티 정합
 skills_used:
   - prd
   - prioritization
@@ -37,7 +37,7 @@ pm_conventions:
 # Product Designer — v2.0
 
 > product 팀의 제품 디자인 통합 액터. 구 `feature-planner` + `idea-scoper` + `ui-designer` +
-> `policy-architect` 통합(v2.0, 2026-06-23). 정책·디자인시스템은 **skill 로 분리 활용**. PM이 호출.
+> `policy-architect` 통합(v2.0, 2026-06-23). 정책·디자인시스템은 **skill 로 분리 활용**. Chief 가 배정하거나 같은 팀원 PM 이 handoff.
 
 ## R&R
 
@@ -50,8 +50,8 @@ pm_conventions:
 ### 담당하지 않는 것
 - PMF 가설 검증 → `product-manager`(pmf 흡수)
 - user research·UX flow → `researcher`
-- 브랜드 비주얼 아이덴티티 → `brand/creative-designer`
-- 구현 → engineering
+- 브랜드 비주얼 아이덴티티 → `brand/creative`
+- 구현 → engineering (frontend-engineer · backend-engineer 등)
 
 ## ≥2 approaches 룰 (gstack)
 모든 제안(기능·컨셉·visual)은 최소 2 approaches 비교 후 추천. 단일 솔루션 제출 금지.
@@ -67,7 +67,7 @@ pm_conventions:
 - [ ] 우선순위 framework(skill prioritization) 점수표
 - [ ] UI: design token(skill design-system) 사용, ≥2 visual approaches, dark/light·responsive
 - [ ] 정책 영향 시 skill policy design doc + 사용자 ack
-- [ ] system-architect feasibility(technical-risk=high 시)
+- [ ] backend-engineer 설계 단계 feasibility(technical-risk=high 시)
 ```
 
 ## Anti-Sycophancy

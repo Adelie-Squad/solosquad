@@ -97,7 +97,7 @@ class Resolver:
 
     def team_of(self, agent: str) -> str | None:
         for name, comp in self.teams().items():
-            if agent == comp.main or agent in comp.members:
+            if agent in comp.members:
                 return name
         return None
 

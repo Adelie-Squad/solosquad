@@ -71,6 +71,31 @@ def test_broken_wiring_is_reported(tmp_path: Path, repo_root: Path) -> None:
     assert res.exit_code == 1 and "HANDOFF_UNKNOWN" in res.output
 
 
+def test_renamed_agents_and_old_team_leads_are_flagged(tmp_path: Path, repo_root: Path) -> None:
+    """Decision 58: a customer repo still on the 19-agent ids gets told the new id."""
+    sol = _init(tmp_path)
+    team = _org(sol) / "team"
+    (team / "teams" / "engineering").mkdir(parents=True, exist_ok=True)
+    (team / "teams" / "engineering" / "composition.yaml").write_text(
+        "main: engineer\nmembers: [qa, backend-engineer]\n", encoding="utf-8"
+    )
+    custom = team / "agents" / "creative-designer"
+    custom.mkdir(parents=True)
+    (custom / "SKILL.md").write_text(
+        "---\nname: creative-designer\nschema_version: 1\n"
+        "description: Draws. 사용 시점 — 그릴 때\n---\nbody\n",
+        encoding="utf-8",
+    )
+    issues = [i for r in validate_solution(sol, repo_root).values() for i in r.issues]
+    by_code = {i.code: i.message for i in issues}
+    assert {"TEAM_MAIN_IGNORED", "TEAM_MEMBER_RENAMED", "AGENT_RENAMED"} <= set(by_code)
+    renamed = [i.message for i in issues if i.code == "TEAM_MEMBER_RENAMED"]
+    assert any("'quality-assurance'" in m for m in renamed)
+    assert any("no lead" in m for m in renamed)  # engineer, folded in from `main:`
+    assert "'creative'" in by_code["AGENT_RENAMED"]
+    assert all(i.severity == "warn" for i in issues if i.code in by_code and "RENAMED" in i.code)
+
+
 def test_customer_layers_get_the_strict_name_gate(tmp_path: Path, repo_root: Path) -> None:
     sol = _init(tmp_path)
     skill = _org(sol) / "team" / "skills" / "Claude_Notes"

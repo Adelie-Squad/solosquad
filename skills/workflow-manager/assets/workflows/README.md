@@ -46,8 +46,8 @@
 ## Agent 참조 형식
 
 stages[].agent:
-- `<team>/<specialist>` — e.g. `product/product-manager`, `engineering/backend`
-- `_main/<main-bot>` — e.g. `_main/chief`, `_main/engineer`
+- `<team>/<specialist>` — e.g. `product/product-manager`, `engineering/backend-engineer`
+- `_main/<main-bot>` — e.g. `_main/chief` (v2.1 결정 58 — main 에는 chief 만 남는다)
 - `_skill/<skill>` — leader tier 직접 호출
 - `_workflow/<id>` — 서브워크플로(깊이 ≤2, 순환 금지 — `workflow validate --all` 검사)
 

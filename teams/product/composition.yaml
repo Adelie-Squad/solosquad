@@ -1,6 +1,6 @@
-# teams/product/composition.yaml — v2.0
-main: product-manager
+# teams/product/composition.yaml — v2.1 (결정 58: 팀장 없음 · `main:` 필드 폐기)
 members:
+  - product-manager
   - product-designer
   - researcher
   - data-analyst

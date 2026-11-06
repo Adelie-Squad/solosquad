@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from solosquad import __version__
 from solosquad.artifacts import load_kinds
 from solosquad.assets.composition import KNOWN_TEAMS, read_composition
+from solosquad.assets.renames import RENAMED_AGENTS, renamed_hint
 from solosquad.assets.skill import SkillParseError, parse_skill_md
 from solosquad.assets.text import load_yaml, match_frontmatter, normalize_line
 from solosquad.assets.validate import Report, validate_skill
@@ -87,9 +88,11 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
             continue
         for target in declared:
             if target not in agents:
+                hint = renamed_hint(target) if isinstance(target, str) else None
                 r.add(
                     "HANDOFF_UNKNOWN",
-                    f"{name} hands off to unknown agent {target!r}",
+                    f"{name} hands off to unknown agent {target!r}"
+                    + (f" — {hint}" if hint else ""),
                     "handoffs",
                     path=str(res.path),
                 )
@@ -103,15 +106,44 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
             if comp is None:
                 r.add("TEAM_MALFORMED", f"team {team!r} composition does not parse", path=str(path))
                 break
-            for member in [comp.main, *comp.members]:
+            if comp.legacy_main is not None:
+                r.add(
+                    "TEAM_MAIN_IGNORED",
+                    f"team {team!r} names a lead `main: {comp.legacy_main}` — teams have no "
+                    "lead (decision 58); it is read as a member. List it under `members:` "
+                    "and drop `main:`",
+                    "main",
+                    "warn",
+                    str(path),
+                )
+            for member in comp.members:
                 if member and member not in agents:
+                    hint = renamed_hint(member)
                     r.add(
-                        "TEAM_MEMBER_UNKNOWN",
-                        f"team {team!r} lists unknown agent {member!r}",
+                        "TEAM_MEMBER_RENAMED" if hint else "TEAM_MEMBER_UNKNOWN",
+                        f"team {team!r} lists unknown agent {member!r}"
+                        + (f" — {hint}" if hint else ""),
                         severity="warn",
                         path=str(path),
                     )
             break
+
+    for name, res in agents.items():
+        if res.layer != "package" and name in RENAMED_AGENTS and name != ENTRY_AGENT:
+            r.add(
+                "AGENT_RENAMED",
+                f"{res.layer} agent {name!r} uses a bundled id that changed — "
+                f"{renamed_hint(name)}"
+                + (
+                    ""
+                    if name == "engineer"
+                    else f"; rename the folder to {RENAMED_AGENTS[name]!r} (and `name:`) "
+                    "to keep inheriting package updates"
+                ),
+                "name",
+                "warn",
+                str(res.path),
+            )
 
     for res in resolver.unattributed_overrides():
         r.add(

@@ -1,8 +1,7 @@
-# teams/brand/composition.yaml — v2.0 (구 design + marketing 실행부)
-main: marketer
+# teams/brand/composition.yaml — v2.1 (결정 58: 팀장 없음 · communication 병합 · creative-designer → creative)
 members:
-  - creative-designer
-  - communication
+  - marketer
+  - creative
 shared_skills:
   - content-writing
   - design-system

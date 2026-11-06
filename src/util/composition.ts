@@ -38,8 +38,11 @@ export const KNOWN_TEAMS = [
 export type TeamName = (typeof KNOWN_TEAMS)[number];
 
 export interface Composition {
-  /** Main bot name (e.g. "pm", "engineer", "designer", "marketer"). */
-  main: string;
+  /**
+   * Legacy team lead. v2.1 decision 58 removed team leads — the bundled
+   * compositions no longer set it; older files still parse.
+   */
+  main?: string;
   /** Specialist names that belong to this team. */
   members: string[];
   /** Skill names the team's main bot can call directly (leader tier). */
@@ -71,10 +74,10 @@ function readYaml(filePath: string): Composition | null {
     return null;
   }
   if (!parsed || typeof parsed !== "object") return null;
-  if (typeof parsed.main !== "string" || parsed.main.length === 0) return null;
+  if (parsed.main != null && typeof parsed.main !== "string") return null;
   if (!Array.isArray(parsed.members)) return null;
   return {
-    main: parsed.main,
+    main: parsed.main || undefined,
     members: parsed.members.filter((m): m is string => typeof m === "string"),
     shared_skills: Array.isArray(parsed.shared_skills)
       ? parsed.shared_skills.filter((s): s is string => typeof s === "string")

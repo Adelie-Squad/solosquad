@@ -50,8 +50,8 @@ failure_modes:
 ## Launch Checklist — {{project}}
 
 ### Pre-launch (T-3d)
-- [ ] qa regression test 통과
-- [ ] security audit (auth/data 변경 시)
+- [ ] quality-assurance regression test 통과
+- [ ] infra 보안 audit (auth/data 변경 시)
 - [ ] product-designer 검토 (정책 영향 시)
 - [ ] data-analyst instrumentation 검증
 - [ ] (premortem risks → 대응 완료 확인) × 5

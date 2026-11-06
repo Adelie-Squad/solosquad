@@ -1,6 +1,6 @@
 # Bot Health Check (v1.1 schedule)
 
-> 매일 1회 실행. 4 main bot + 20 specialist + N skill 의 health 상태 점검.
+> 매일 1회 실행. Chief + 14 에이전트(결정 58) + N skill 의 health 상태 점검.
 
 ## 점검 항목
 
