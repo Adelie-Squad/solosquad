@@ -23,7 +23,7 @@ from typing import Any
 
 from solosquad.graph.checkpoint import SqliteSaver
 from solosquad.instance import Instance
-from solosquad.layout import WorkspaceConfig
+from solosquad.layout import ServerConfig, WorkspaceConfig
 from solosquad.snapshots import ship
 from solosquad.storage import OFFICE_DB, ORG_DB, backup
 from solosquad.web_api.accounts import AccountStore
@@ -41,6 +41,14 @@ def current_config(inst: Instance) -> WorkspaceConfig:
         return ctx.solution.org(ctx.org).workspace(ctx.workspace).config()
     except Exception:  # unreadable for a moment (being saved) — the last known config
         return ctx.workspace_config
+
+
+def current_server(inst: Instance) -> ServerConfig:
+    """core/server.yaml as it is now (the snapshot target lives there since I41)."""
+    try:
+        return inst.ctx.solution.server_config()
+    except Exception:
+        return inst.ctx.server
 
 
 def run_retention(
@@ -80,7 +88,7 @@ def backup_instance(inst: Instance, org_dir: Path, dest: Path | None = None) -> 
 
 def run_snapshot(inst: Instance, org_dir: Path, *, now: float | None = None) -> dict[str, Any]:
     """Back up both databases to a temporary folder and ship it to the configured target."""
-    target = current_config(inst).snapshot
+    target = current_server(inst).snapshot
     if target.type is None:
         return {"target": None, "skipped": "no snapshot target configured"}
     with tempfile.TemporaryDirectory(prefix="solosquad-snap-") as tmp:

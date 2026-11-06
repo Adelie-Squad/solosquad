@@ -7,12 +7,16 @@ no secrets, no personal data) and the engine follows whatever combination they d
 refusing only what the provider-eligibility rules forbid (decision 45).
 
     schema_version: 1
-    server: {country: KR, cloud: aws, region: ap-northeast-2, access: "FDE IAM role"}
+    server: {cloud: aws, region: ap-northeast-2, access: "FDE IAM role"}
     entities:
       - {id: moa-kr, name: Moa Korea Co., country: KR}
       - {id: moa-qd, name: Moa Qingdao 3PL, country: CN}
     languages: {default: ko, enabled: [ko, en, zh-CN]}
     privacy: {regimes: [PIPA, PIPL], reviewer: 고객 법무팀}
+
+The server's country is one value in one place since decision 57 ⑷: `server_country` in
+`core/server.yaml` (I41). `server.country` here is a view of it — read from the server
+settings, written back to them — so the profile and the region rule can never disagree.
 """
 
 from __future__ import annotations
@@ -24,6 +28,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from solosquad.assets.text import load_yaml
+from solosquad.layout import Solution
 from solosquad.routing.eligibility import Entity
 
 LANGUAGES = ("ko", "en", "zh-CN")
@@ -101,17 +106,28 @@ def profile_path(solution_root: Path) -> Path:
 
 
 def load_profile(solution_root: Path) -> CustomerProfile:
+    """The profile with `server.country` taken from the server settings (I41)."""
     path = profile_path(solution_root)
-    if not path.is_file():
-        return CustomerProfile()
-    return CustomerProfile.model_validate(load_yaml(path.read_text(encoding="utf-8")) or {})
+    raw = load_yaml(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    profile = CustomerProfile.model_validate(raw or {})
+    if (solution_root / "core").is_dir():
+        country = Solution(solution_root).server_config(strict=False).server_country
+        profile = profile.model_copy(
+            update={"server": profile.server.model_copy(update={"country": country})}
+        )
+    return profile
 
 
 def save_profile(solution_root: Path, profile: CustomerProfile) -> None:
+    """`server.country` goes to `core/server.yaml`; everything else to the profile file."""
     doc = profile.model_dump(mode="json", exclude_none=True)
+    doc.get("server", {}).pop("country", None)
     profile_path(solution_root).write_text(
         yaml.safe_dump(doc, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
+    sol = Solution(solution_root)
+    if sol.server_config(strict=False).server_country != profile.server.country:
+        apply_server_country(solution_root, profile.server.country)
 
 
 def parse_entity(spec: str) -> ProfileEntity:
@@ -169,9 +185,6 @@ def update_profile(base: CustomerProfile, change: dict[str, Any]) -> CustomerPro
 
 
 def apply_server_country(solution_root: Path, country: str | None) -> None:
-    """A new server country is the region rule's input for every office (decision 45)."""
-    from solosquad.layout import Solution
-
-    for org in Solution(solution_root).orgs():
-        for ws in org.workspaces():
-            ws.save_config(ws.config().model_copy(update={"server_country": country}))
+    """The server's country — the region rule's input for every workspace (decision 45) —
+    is written once, to `core/server.yaml` (I41); nothing is copied per workspace."""
+    Solution(solution_root).update_server_country(country)

@@ -33,7 +33,6 @@ from solosquad.layout import (
 )
 from solosquad.profile import (
     CustomerProfile,
-    apply_server_country,
     load_profile,
     parse_entity,
     save_profile,
@@ -225,18 +224,14 @@ def init(
     """Create core/, the first org and its first workspace — and the customer profile."""
     bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
     try:
-        sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None)
-        new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
-        ws = scaffold_workspace(new_org, workspace, ws_type)
         profile = _apply_profile(
             CustomerProfile(), server_country, cloud, region, cloud_access, entity, language,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
-        save_profile(path, profile)
-        if profile.server.country:
-            ws.save_config(
-                ws.config().model_copy(update={"server_country": profile.server.country})
-            )
+        sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None, ws_type)
+        new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
+        scaffold_workspace(new_org, workspace)
+        save_profile(path, profile)  # the server country lands in core/server.yaml (I41)
     except (LayoutError, ValueError) as e:
         raise _fail(str(e)) from e
     console.print(f"created {path} — org {org!r}, workspace {workspace!r} ({ws_type.value})")
@@ -254,25 +249,25 @@ def layout(
         lock, meta = sol.engine_lock(), sol.meta()
     except LayoutError as e:
         raise _fail(str(e)) from e
-    tree = Tree(f"{path} · {meta.id} · engine {lock.version}")
+    try:
+        server = sol.server_config(strict=False)
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    tree = Tree(f"{path} · {meta.id} · engine {lock.version} · server {server.type.value}")
     for o in sol.orgs():
         node = tree.add(f"org {o.name} · {o.lock().package}@{o.lock().version}")
         for ws in o.workspaces():
-            node.add(f"workspace {ws.name} · {ws.config().type.value}")
+            placed = "" if server.placement.places(o.name, ws.name) else " · not placed here"
+            node.add(f"workspace {ws.name}{placed}")
     console.print(tree)
 
 
 @add_app.command("org")
-def add_org(
-    name: str,
-    solution: SolutionOpt = Path("."),
-    workspace: str = "hq",
-    ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
-) -> None:
+def add_org(name: str, solution: SolutionOpt = Path("."), workspace: str = "hq") -> None:
     """Create an org from the bundled org package (core is not touched)."""
     try:
         org = scaffold_org(Solution(solution), name, BUNDLED_PACKAGE, __version__)
-        scaffold_workspace(org, workspace, ws_type)
+        scaffold_workspace(org, workspace)
     except LayoutError as e:
         raise _fail(str(e)) from e
     console.print(f"org {name!r} with workspace {workspace!r}")
@@ -283,17 +278,14 @@ def add_workspace(
     name: str,
     org: Annotated[str, typer.Option("--org")],
     solution: SolutionOpt = Path("."),
-    ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
 ) -> None:
-    """Add an office (workspace) to an org."""
+    """Add a workspace (business unit) to an org — it runs on this customer's server, whose
+    address, country and type are in core/server.yaml (I41)."""
     try:
-        ws = scaffold_workspace(Solution(solution).org(org), name, ws_type)
-        country = load_profile(solution).server.country
-        if country:  # a new office sits where the customer profile says (decision 50)
-            ws.save_config(ws.config().model_copy(update={"server_country": country}))
+        scaffold_workspace(Solution(solution).org(org), name)
     except LayoutError as e:
         raise _fail(str(e)) from e
-    console.print(f"workspace {name!r} ({ws_type.value}) in org {org!r}")
+    console.print(f"workspace {name!r} in org {org!r}")
 
 
 # ---------------------------------------------------------------------- connections
@@ -851,17 +843,15 @@ def profile_set(
         str | None, typer.Option("--privacy-reviewer", help="A role, e.g. 고객 법무팀")
     ] = None,
 ) -> None:
-    """Fill in or change profile items; a new server country is applied to every office."""
+    """Fill in or change profile items; the server country is kept in core/server.yaml."""
     try:
         profile = _apply_profile(
             load_profile(solution), server_country, cloud, region, cloud_access, entity, language,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
-    except ValueError as e:
+        save_profile(solution, profile)
+    except (ValueError, LayoutError) as e:
         raise _fail(str(e)) from e
-    save_profile(solution, profile)
-    if server_country:
-        apply_server_country(solution, profile.server.country)
     _print_checklist(profile)
 
 
@@ -940,7 +930,10 @@ def snapshot_set(
         SecretStore(_data_dir(solution, o, w) / "secrets.json").set(
             S3_SECRET_REF, f"{access}:{secret}"
         )
-    ws.save_config(ws.config().model_copy(update={"snapshot": cfg}))
+    try:
+        ws.org.solution.update_server_config(snapshot=cfg)
+    except LayoutError as e:
+        raise _fail(str(e)) from e
     console.print(f"snapshot target: {target} · keep {keep_days} days")
 
 
@@ -982,8 +975,7 @@ def snapshot_restore(
     data = _data_dir(solution, o, w)
     if server_file(data).is_file():
         raise _fail("stop the office first (`solosquad service uninstall` or stop `serve`)")
-    ws = Solution(solution).org(o).workspace(w)
-    target = ws.config().snapshot
+    target = Solution(solution).server_config().snapshot
     secrets = SecretStore(data / "secrets.json")
     sid = Solution(solution).meta().id
     with tempfile.TemporaryDirectory(prefix="solosquad-restore-") as tmp:

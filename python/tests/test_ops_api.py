@@ -244,14 +244,13 @@ async def test_connections_record_the_entity_and_refuse_ineligible(office: Offic
         r = await web.patch("/api/connections/claude-kr", json={"entity": None}, headers=h)
         assert r.status_code == 400  # nor can the holder be erased afterwards
         # the server moves to Hong Kong: the same connection is now ineligible, and says why
-        cfg = office.workspace.config()
-        office.workspace.save_config(cfg.model_copy(update={"server_country": "HK"}))
+        office.workspace.org.solution.update_server_country("HK")
         listed = {c["id"]: c for c in (await web.get("/api/connections")).json()}
         assert (
             listed["claude-kr"]["eligible"] is False
             and "HK" in listed["claude-kr"]["eligibility_reason"]
         )
-        office.workspace.save_config(cfg)
+        office.workspace.org.solution.update_server_country(None)
         r = await web.patch("/api/connections/claude-kr", json={"active": False}, headers=h)
         assert r.status_code == 200 and r.json()["active"] is False
         assert (await web.delete("/api/connections/claude-kr", headers=h)).status_code == 200

@@ -197,8 +197,10 @@ async def test_access_policy_allow_list(office: Office) -> None:
         assert (
             await boss.put("/api/access", json={"allowed_networks": ["nope"]}, headers=h)
         ).status_code == 400
-    # saved to the office's workspace.yaml
-    assert office.workspace.config().access.allowed_networks == ["203.0.113.0/24"]
+    # saved as the customer default in core/server.yaml (I41)
+    assert office.workspace.org.solution.server_config().access.allowed_networks == [
+        "203.0.113.0/24"
+    ]
     # outside the list: refused before anything, login included
     async with office.client("198.51.100.7") as outsider:
         assert (await outsider.get("/api/health")).status_code == 403
@@ -229,7 +231,7 @@ async def test_saving_a_list_that_locks_you_out_needs_confirmation(office: Offic
         body: dict[str, Any] = {"allowed_networks": ["203.0.113.0/24"]}
         r = await boss.put("/api/access", json=body, headers=h)
         assert r.status_code == 409 and "198.51.100.7" in r.json()["error"]
-        assert office.workspace.config().access.allowed_networks == []
+        assert office.workspace.org.solution.server_config().access.allowed_networks == []
         r = await boss.put("/api/access", json={**body, "confirm_lockout": True}, headers=h)
         assert r.status_code == 200
         assert (await boss.get("/api/me")).status_code == 403

@@ -170,7 +170,7 @@ async def test_locale_per_person_with_an_org_default(tmp_path: Path) -> None:
         assert (await boss.put("/api/settings", json={"locale": "zh-CN"}, headers=hb)).json() == {
             "locale": "zh-CN"
         }
-        assert o.workspace.config().web.locale == "zh-CN"  # stored in workspace.yaml
+        assert o.workspace.org.solution.server_config().web.locale == "zh-CN"  # core/server.yaml
         me = (await kim.get("/api/me")).json()
         assert me["org_locale"] == "zh-CN" and me["locale"] == "ko"  # kim's own choice (ko)
         me = (await kim.patch("/api/me", json={"locale": None}, headers=hk)).json()

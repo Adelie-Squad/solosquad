@@ -168,8 +168,6 @@ def test_cli_end_to_end_with_a_real_api_connection(tmp_path: Path, openai_server
                 "busan",
                 "--org",
                 "moa-living",
-                "--type",
-                "intranet",
                 "-s",
                 str(sol),
             ],

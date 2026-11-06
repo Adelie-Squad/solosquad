@@ -18,8 +18,7 @@ ORIGIN = "https://office.example"
 @pytest.fixture
 async def office(tmp_path: Path) -> AsyncIterator[Office]:
     o = Office(tmp_path)
-    cfg = o.workspace.config()
-    o.workspace.save_config(cfg.model_copy(update={"public_url": ORIGIN}))
+    o.workspace.org.solution.update_server_config(public_url=ORIGIN)
     await o.manager.start()
     yield o
     await o.manager.stop()
@@ -94,8 +93,7 @@ async def test_owner_reset_and_disabled_accounts(office: Office) -> None:
 
 
 async def test_passkeys_need_the_public_url(office: Office) -> None:
-    cfg = office.workspace.config()
-    office.workspace.save_config(cfg.model_copy(update={"public_url": None}))
+    office.workspace.org.solution.update_server_config(public_url=None)
     async with office.client() as c:
         r = await c.post("/api/auth/passkey/login/begin", json={})
         assert r.status_code == 409 and "public_url" in r.json()["error"]

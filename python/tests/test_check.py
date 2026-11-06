@@ -175,7 +175,7 @@ def test_customer_profile_at_setup(tmp_path: Path, repo_root: Path) -> None:
 
     profile = load_profile(sol)
     assert all(i["done"] for i in profile.checklist())
-    assert Solution(sol).org("moa").workspace("hq").config().server_country == "KR"
+    assert Solution(sol).server_config().server_country == "KR"
     codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
     assert "PROFILE_INCOMPLETE" not in codes
     # an account held by the Korean entity may reach Anthropic; one held from China may not
@@ -194,11 +194,13 @@ def test_customer_profile_at_setup(tmp_path: Path, repo_root: Path) -> None:
     assert qwen.exit_code == 0, qwen.output
     # moving the server to Hong Kong is applied to every office and blocks the Claude key
     assert run(app, ["profile", "set", "--server-country", "HK", "-s", str(sol)]).exit_code == 0
-    assert Solution(sol).org("moa").workspace("hq").config().server_country == "HK"
+    assert Solution(sol).server_config().server_country == "HK"
     codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
     assert "CONNECTION_INELIGIBLE" in codes
     assert run(app, ["add", "workspace", "branch", "--org", "moa", "-s", str(sol)]).exit_code == 0
-    assert Solution(sol).org("moa").workspace("branch").config().server_country == "HK"
+    assert "server_country" not in (sol / "orgs/moa/workspaces/branch/workspace.yaml").read_text(
+        encoding="utf-8"
+    )
     assert (
         run(app, ["init", str(tmp_path / "bad"), "--org", "x", "--entity", "nonsense"]).exit_code
         == 1

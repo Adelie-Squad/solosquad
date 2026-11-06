@@ -169,16 +169,14 @@ def test_an_office_snapshot_end_to_end(tmp_path: Path) -> None:
     assert "office.db" in names and "manifest.json" in names
     assert CliRunner().invoke(app, ["snapshot", "run", "-s", str(sol)]).exit_code == 0
     # without a target the job reports that it skipped instead of failing
-    ws = Solution(sol).org("moa").workspace("hq")
-    ws.save_config(ws.config().model_copy(update={"snapshot": SnapshotTarget()}))
+    server = Solution(sol)
+    server.update_server_config(snapshot=SnapshotTarget())
     assert run_snapshot(build_instance(sol, "moa", "hq"), org_dir)["target"] is None
-    # the running instance follows workspace.yaml: a target set in the web after `serve`
+    # the running instance follows core/server.yaml: a target set in the web after `serve`
     # started is used by the next daily run without a restart
     assert run_snapshot(inst, org_dir)["target"] is None
     later = tmp_path / "vault2"
-    ws.save_config(
-        ws.config().model_copy(update={"snapshot": SnapshotTarget(type="dir", path=str(later))})
-    )
+    server.update_server_config(snapshot=SnapshotTarget(type="dir", path=str(later)))
     assert later in Path(run_snapshot(inst, org_dir)["location"]).parents
 
 

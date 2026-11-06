@@ -49,13 +49,13 @@ def test_scaffold_creates_decision_40_tree(tmp_path: Path) -> None:
 
 def test_discovery(tmp_path: Path) -> None:
     sol = make(tmp_path)
-    scaffold_workspace(sol.org("tesla"), "busan", WorkspaceType.INTRANET)
+    scaffold_workspace(sol.org("tesla"), "busan")
     scaffold_org(sol, "spacex", "bundled", "2.0.0")
     assert [o.name for o in sol.orgs()] == ["spacex", "tesla"]
     tesla = sol.org("tesla")
     assert tesla.lock().package == "commerce-ax"
     assert [w.name for w in tesla.workspaces()] == ["busan", "hq"]
-    assert tesla.workspace("busan").config().type is WorkspaceType.INTRANET
+    assert sol.server_config().type is WorkspaceType.LOCAL  # a server property (I41)
     assert tesla.workspace("hq").config().execution.allow_external_api is True
 
 
@@ -92,7 +92,7 @@ def test_cli_init_and_layout(tmp_path: Path) -> None:
     target = tmp_path / "moa"
     res = runner.invoke(app, ["init", str(target), "--org", "moa-living", "--type", "cloud"])
     assert res.exit_code == 0, res.output
-    assert Solution(target).org("moa-living").workspace("hq").config().type is WorkspaceType.CLOUD
+    assert Solution(target).server_config().type is WorkspaceType.CLOUD
     res = runner.invoke(app, ["layout", str(target)])
     assert res.exit_code == 0, res.output
     assert "moa-living" in res.output

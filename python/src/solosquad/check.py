@@ -26,7 +26,7 @@ from solosquad.assets.text import load_yaml, match_frontmatter, normalize_line
 from solosquad.assets.validate import Report, validate_skill
 from solosquad.context.execution import ExecutionContext, build_context
 from solosquad.context.resolve import Kind, Resolver
-from solosquad.layout import LayoutError, Solution
+from solosquad.layout import AccessPolicy, LayoutError, ServerConfig, Solution
 from solosquad.profile import load_profile, profile_path
 from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import judge, providers_reached
@@ -45,6 +45,32 @@ def _skill_dirs(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
     return sorted(p for p in root.iterdir() if (p / "SKILL.md").is_file())
+
+
+def _check_access(r: Report, access: AccessPolicy, where: str) -> None:
+    if not access.require_login and not access.allowed_networks:
+        r.add(
+            "ACCESS_OPEN",
+            "require_login: false with no allowed_networks — the server would be"
+            " open to the internet without a login (decision 41)",
+            "access.require_login",
+            path=where,
+        )
+    elif not access.require_login:
+        r.add(
+            "ACCESS_NO_LOGIN_IGNORED",
+            "require_login: false is not supported in v2.1 — every"
+            " web request still needs an account",
+            "access.require_login",
+            "warn",
+            where,
+        )
+    try:
+        from solosquad.web_api.access import parse_networks
+
+        parse_networks(access.allowed_networks)
+    except ValueError as e:
+        r.add("ACCESS_NETWORK_INVALID", str(e), "access.allowed_networks", path=where)
 
 
 def validate_definitions(ctx: ExecutionContext, report: Report | None = None) -> Report:
@@ -243,31 +269,10 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
         for code, message, severity in screen_issues(screen):
             r.add(code, message, "widgets", "warn" if severity == "warn" else "error", str(path))
 
-    access = ctx.workspace_config.access
-    if not access.require_login and not access.allowed_networks:
-        r.add(
-            "ACCESS_OPEN",
-            "require_login: false with no allowed_networks — the office would be"
-            " open to the internet without a login (decision 41)",
-            "access.require_login",
-        )
-    elif not access.require_login:
-        r.add(
-            "ACCESS_NO_LOGIN_IGNORED",
-            "require_login: false is not supported in v2.1 — every"
-            " web request still needs an account",
-            "access.require_login",
-            "warn",
-        )
-    try:
-        from solosquad.web_api.access import parse_networks
-
-        parse_networks(access.allowed_networks)
-    except ValueError as e:
-        r.add("ACCESS_NETWORK_INVALID", str(e), "access.allowed_networks")
+    _check_access(r, ctx.workspace_config.access, "workspace.yaml")
 
     known_conn: set[str] = set()
-    server = ctx.workspace_config.server_country
+    server = ctx.server.server_country
     for path in (ctx.solution.connections_path, ctx.org_root / "connections.yaml"):
         try:
             conns = load_connections(path)
@@ -332,6 +337,29 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
     except LayoutError as e:
         base.add("LAYOUT", str(e))
         return {"": base}
+    server_path = str(sol.server_config_path)
+    for field, places in sorted(sol.server_conflicts().items()):
+        found = ", ".join(f"{where}={value!r}" for where, value in places.items())
+        base.add(  # C33 · K50 — never merged automatically; the FDE picks one value
+            "SERVER_CONFIG_CONFLICT",
+            f"{field} differs between places ({found}) — keep one value in core/server.yaml",
+            field,
+            path=server_path,
+        )
+    if sol.has_legacy_server_fields():
+        base.add(
+            "SERVER_CONFIG_LEGACY",
+            "workspace.yaml still carries server settings (public_url · server_country ·"
+            " type · snapshot · web) — `serve` moves them to core/server.yaml",
+            severity="warn",
+            path=server_path,
+        )
+    try:
+        server = sol.server_config(strict=False)
+    except ValidationError as e:
+        base.add("SERVER_CONFIG_INVALID", str(e).splitlines()[0], path=server_path)
+        server = ServerConfig()
+    _check_access(base, server.access, server_path)
     for org in sol.orgs():
         try:
             org.lock()
@@ -342,7 +370,7 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
         for ws in org.workspaces():
             key = f"{org.name}/{ws.name}"
             try:
-                ctx = build_context(solution, org.name, ws.name, bundle)
+                ctx = build_context(solution, org.name, ws.name, bundle, server=server)
             except (LayoutError, ValidationError) as e:
                 rep = Report()
                 rep.add("LAYOUT", str(e).splitlines()[0])

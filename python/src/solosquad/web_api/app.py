@@ -52,9 +52,9 @@ from solosquad.approvals import (
 from solosquad.artifacts import ArtifactStore
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
-from solosquad.layout import Workspace
+from solosquad.layout import ServerConfig, Workspace
 from solosquad.messages import Message as ChatMessage
-from solosquad.profile import apply_server_country, load_profile, save_profile, update_profile
+from solosquad.profile import load_profile, save_profile, update_profile
 from solosquad.routing.connections import (
     Connection,
     ConnectionKind,
@@ -270,9 +270,17 @@ def create_app(cfg: WebConfig) -> Starlette:
         peer = request.client.host if request.client else None
         return origin(peer, request.headers.get("x-forwarded-for"))
 
+    def server_cfg() -> ServerConfig:
+        """core/server.yaml as it is now (I41) — the web may have just changed it."""
+        if cfg.workspace is None:
+            return ServerConfig()
+        return cfg.workspace.org.solution.server_config(strict=False)
+
     def policy_check(request: Request) -> Origin:
         w = where(request)
-        if cfg.workspace is not None and not allowed(cfg.workspace.config().access, w):
+        if cfg.workspace is not None and not (
+            allowed(server_cfg().access, w) and allowed(cfg.workspace.config().access, w)
+        ):
             raise HTTPException(403, "this office does not accept connections from here")
         return w
 
@@ -322,7 +330,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         return cfg.workflows.org_root if cfg.workflows else None
 
     def org_locale() -> str:
-        loc = cfg.workspace.config().web.locale if cfg.workspace else S.DEFAULT_LOCALE
+        loc = server_cfg().web.locale if cfg.workspace else S.DEFAULT_LOCALE
         return loc if loc in S.LOCALES else S.DEFAULT_LOCALE
 
     def me_payload(session: Session) -> dict[str, Any]:
@@ -348,7 +356,7 @@ def create_app(cfg: WebConfig) -> Starlette:
     async def login(request: Request) -> Response:
         w = policy_check(request)
         data = await body(request)
-        require = cfg.workspace.config().access.two_factor if cfg.workspace else True
+        require = server_cfg().access.two_factor if cfg.workspace else True
         try:
             token, session = accounts().login(
                 str(data.get("username") or ""),
@@ -466,11 +474,11 @@ def create_app(cfg: WebConfig) -> Starlette:
         return cfg.accounts is not None
 
     def relying_party() -> tuple[str, str]:
-        url = cfg.workspace.config().public_url if cfg.workspace else None
+        url = server_cfg().public_url if cfg.workspace else None
         parts = urlsplit(url or "")
         if parts.scheme not in ("https", "http") or not parts.hostname:
             raise HTTPException(
-                409, "passkeys need the office's public_url (https://…) in workspace.yaml"
+                409, "passkeys need the server's public_url (https://…) in core/server.yaml"
             )
         return parts.hostname, f"{parts.scheme}://{parts.netloc}"
 
@@ -677,16 +685,16 @@ def create_app(cfg: WebConfig) -> Starlette:
     async def access(request: Request) -> Response:
         if cfg.workspace is None:
             raise HTTPException(404, "no workspace configuration")
-        ws_cfg = cfg.workspace.config()
+        srv = server_cfg()
         if request.method == "PUT":
             who = need(request, "access.update")
             data = await body(request)
-            nets = [str(x) for x in data.get("allowed_networks", ws_cfg.access.allowed_networks)]
+            nets = [str(x) for x in data.get("allowed_networks", srv.access.allowed_networks)]
             parse_networks(nets)  # ValueError → 400 on a malformed entry
-            proposed = ws_cfg.access.model_copy(
+            proposed = srv.access.model_copy(
                 update={
                     "allowed_networks": nets,
-                    "two_factor": bool(data.get("two_factor", ws_cfg.access.two_factor)),
+                    "two_factor": bool(data.get("two_factor", srv.access.two_factor)),
                 }
             )
             here = where(request)
@@ -697,13 +705,13 @@ def create_app(cfg: WebConfig) -> Starlette:
                     f"your address {here.address} is not in the new list — you would lose"
                     " access. Send confirm_lockout: true to save anyway.",
                 )
-            cfg.workspace.save_config(ws_cfg.model_copy(update={"access": proposed}))
+            cfg.workspace.org.solution.update_server_config(access=proposed)
             accounts().audit(  # C14 — who · when (the row) · before · after
                 who.user_id,
                 "access.update",
                 json.dumps(
                     {
-                        "before": ws_cfg.access.model_dump(mode="json"),
+                        "before": srv.access.model_dump(mode="json"),
                         "after": proposed.model_dump(mode="json"),
                     },
                     ensure_ascii=False,
@@ -711,7 +719,7 @@ def create_app(cfg: WebConfig) -> Starlette:
             )
             return respond(S.AccessPolicy, _access_public(proposed))
         need(request, "access.get")
-        return respond(S.AccessPolicy, _access_public(ws_cfg.access))
+        return respond(S.AccessPolicy, _access_public(srv.access))
 
     async def audit(request: Request) -> Response:
         need(request, "audit")
@@ -721,15 +729,14 @@ def create_app(cfg: WebConfig) -> Starlette:
     async def settings(request: Request) -> Response:
         if cfg.workspace is None:
             raise HTTPException(404, "no workspace configuration")
-        ws_cfg = cfg.workspace.config()
         if request.method == "PUT":
             who = need(request, "settings.update")
             data = await body(request)
             loc = str(data.get("locale") or "")
             if loc not in S.LOCALES:
                 raise ValueError(f"locale must be one of {list(S.LOCALES)}")
-            web = ws_cfg.web.model_copy(update={"locale": loc})
-            cfg.workspace.save_config(ws_cfg.model_copy(update={"web": web}))
+            web = server_cfg().web.model_copy(update={"locale": loc})
+            cfg.workspace.org.solution.update_server_config(web=web)
             accounts().audit(who.user_id, "settings.update", f"locale={loc}")
             return respond(S.WebSettings, {"locale": loc})
         need(request, "settings.get")
@@ -752,9 +759,9 @@ def create_app(cfg: WebConfig) -> Starlette:
             root = solution_root()
             before = load_profile(root)
             updated = update_profile(before, await body(request))  # ValueError → 400
-            save_profile(root, updated)
-            if updated.server.country != before.server.country:
-                apply_server_country(root, updated.server.country)
+            save_profile(root, updated)  # the country goes to core/server.yaml (I41)
+            if cfg.router is not None:
+                cfg.router.server_country = updated.server.country
             changed = sorted(
                 k for k in ("server", "entities", "languages", "privacy")
                 if getattr(updated, k) != getattr(before, k)
@@ -765,8 +772,7 @@ def create_app(cfg: WebConfig) -> Starlette:
         return respond(S.ProfileResponse, profile_payload())
 
     def snapshot_payload() -> dict[str, Any]:
-        assert cfg.workspace is not None
-        target = cfg.workspace.config().snapshot
+        target = server_cfg().snapshot
         ref = target.secret_ref
         has = bool(ref and cfg.secrets is not None and cfg.secrets.get(ref))
         out = target.model_dump(mode="json", exclude={"secret_ref"})
@@ -798,8 +804,7 @@ def create_app(cfg: WebConfig) -> Starlette:
                     cfg.secrets.set(S3_SECRET_REF, f"{access}:{secret}")
                 elif not cfg.secrets.get(S3_SECRET_REF):
                     raise ValueError("an s3 target needs access_key and secret_key")
-            ws_cfg = cfg.workspace.config()
-            cfg.workspace.save_config(ws_cfg.model_copy(update={"snapshot": target}))
+            cfg.workspace.org.solution.update_server_config(snapshot=target)
             keys = " · keys replaced" if access else ""
             accounts().audit(who.user_id, "snapshot.update", f"type={target.type}{keys}")
             return respond(S.SnapshotSettings, snapshot_payload())
@@ -967,7 +972,7 @@ def create_app(cfg: WebConfig) -> Starlette:
     # ------------------------------------------------------------------ connections · budget
 
     def server_country() -> str | None:
-        return cfg.workspace.config().server_country if cfg.workspace else None
+        return server_cfg().server_country if cfg.workspace else None
 
     def all_connections() -> list[Connection]:
         if cfg.reload_connections is not None:
