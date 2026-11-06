@@ -1,12 +1,15 @@
+import { useLinks } from '../scope';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { NavLink, Navigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
-import { keys, useAccess, useAction, useApprovalPolicy, useSettings, useUsers } from '../api/queries';
+import { keys, useAccess, useAction, useApprovalPolicy, useKeys, useScopedApi, useSettings, useUsers } from '../api/queries';
 import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser, WebSettings } from '../api/types.gen';
 import { Loading, QueryError } from '../components/Status';
 import { categoryLabel, LOCALE_NAMES, LOCALES, useI18n, type Locale, type MessageKey } from '../i18n';
 import { useSession } from '../session';
+import { useOrgOwner, useScope } from '../scope';
+import { AssignmentChips, AssignmentsDialog, AssignmentsEditor, type Assignment } from './settings/Assignments';
 import { PasskeySettings } from './settings/PasskeySettings';
 import { ProfileSettings } from './settings/ProfileSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
@@ -15,7 +18,8 @@ import { ThemeSettings } from './settings/ThemeSettings';
 interface Tab {
   id: string;
   label: MessageKey;
-  ownerOnly: boolean;
+  /** customer = the customer's owner (accounts · server settings); org = this org's owner. */
+  ownerOnly: false | 'customer' | 'org';
 }
 
 const TABS: Tab[] = [
@@ -24,18 +28,20 @@ const TABS: Tab[] = [
   { id: 'account', label: 'settings.account', ownerOnly: false },
   { id: 'profile', label: 'settings.profile', ownerOnly: false },
   { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
-  { id: 'access', label: 'settings.access', ownerOnly: true },
-  { id: 'approvals', label: 'settings.tiers', ownerOnly: true },
-  { id: 'users', label: 'settings.users', ownerOnly: true },
+  { id: 'access', label: 'settings.access', ownerOnly: 'customer' },
+  { id: 'approvals', label: 'settings.tiers', ownerOnly: 'org' },
+  { id: 'users', label: 'settings.users', ownerOnly: 'customer' },
 ];
 
 /** Settings — language for everyone; access policy, approval tiers and people for the owner. */
 export function SettingsView() {
+  const { o: toOrg } = useLinks();
   const { tab = 'language' } = useParams<{ tab?: string }>();
   const { t } = useI18n();
   const { isOwner } = useSession();
-  const tabs = TABS.filter((x) => isOwner || !x.ownerOnly);
-  if (!tabs.some((x) => x.id === tab)) return <Navigate to="/settings" replace />;
+  const orgOwner = useOrgOwner();
+  const tabs = TABS.filter((x) => !x.ownerOnly || (x.ownerOnly === 'org' ? orgOwner : isOwner));
+  if (!tabs.some((x) => x.id === tab)) return <Navigate to={toOrg('/settings')} replace />;
 
   return (
     <div className="view">
@@ -258,9 +264,11 @@ function TierSettings() {
 }
 
 function TierForm({ rows }: { rows: ApprovalPolicyRow[] }) {
+  const keys = useKeys();
+  const { org: orgApi } = useScopedApi();
   const { t, locale } = useI18n();
   const [tiers, setTiers] = useState<Record<string, ApprovalPolicyRow['tier']>>(() => Object.fromEntries(rows.map((r) => [r.category, r.tier])));
-  const save = useAction(() => api.put<ApprovalPolicyRow[]>('/approval-policy', { tiers }), [keys.approvalPolicy, keys.approvals]);
+  const save = useAction(() => orgApi.put<ApprovalPolicyRow[]>('/approval-policy', { tiers }), [keys.approvalPolicy, keys.approvals]);
   const changed = rows.some((r) => tiers[r.category] !== r.tier);
 
   return (
@@ -311,12 +319,14 @@ function TierForm({ rows }: { rows: ApprovalPolicyRow[] }) {
 // ------------------------------------------------------------------ users (I25)
 
 function UserSettings() {
+  const keys = useKeys();
   const { t } = useI18n();
-  const { user: me } = useSession();
+  const { user: me, me: session } = useSession();
   const q = useUsers(true);
+  const [assigning, setAssigning] = useState<PublicUser | null>(null);
   const update = useAction(
     ({ id, body }: { id: string; body: Record<string, unknown> }) => api.patch<PublicUser>(`/users/${id}`, body),
-    [keys.users, keys.orgChart],
+    [keys.users, keys.orgChart, keys.people],
   );
   const [error, setError] = useState<string | null>(null);
   const onError = (e: unknown) => setError(e instanceof ApiError ? e.message : t('common.failed'));
@@ -336,6 +346,7 @@ function UserSettings() {
           <tr>
             <th>{t('users.name')}</th>
             <th>{t('users.role')}</th>
+            <th>{t('assign.column')}</th>
             <th>{t('users.twoFactor')}</th>
             <th>{t('users.status')}</th>
             <th />
@@ -352,6 +363,14 @@ function UserSettings() {
                   <option value="owner">{t('role.owner')}</option>
                   <option value="staff">{t('role.staff')}</option>
                 </select>
+              </td>
+              <td>
+                <AssignmentChips list={u.assignments} scopes={session.scopes} />{' '}
+                {u.role !== 'owner' && (
+                  <button className="btn is-small" onClick={() => setAssigning(u)}>
+                    {t('assign.edit')}
+                  </button>
+                )}
               </td>
               <td>{u.two_factor ? '✓' : t('users.notEnrolled')}</td>
               <td>{u.disabled ? t('users.disabled') : t('users.enabled')}</td>
@@ -389,15 +408,37 @@ function UserSettings() {
           ))}
         </tbody>
       </table>
+      {assigning && (
+        <AssignmentsDialog
+          name={assigning.display}
+          initial={assigning.assignments}
+          scopes={session.scopes}
+          busy={update.isPending}
+          error={error}
+          onClose={() => setAssigning(null)}
+          onSave={(assignments) => {
+            setError(null);
+            update.mutate({ id: assigning.id, body: { assignments } }, { onError, onSuccess: () => setAssigning(null) });
+          }}
+        />
+      )}
     </section>
   );
 }
 
 function NewUser() {
+  const keys = useKeys();
   const { t } = useI18n();
-  const [form, setForm] = useState({ username: '', display: '', password: '', role: 'staff' });
+  const scope = useScope();
+  const { me: session } = useSession();
+  const blank = { username: '', display: '', password: '', role: 'staff' };
+  const [form, setForm] = useState(blank);
+  const [assignments, setAssignments] = useState<Assignment[]>([{ org: scope.org, workspace: null, role: 'staff' }]);
   const [error, setError] = useState<string | null>(null);
-  const create = useAction(() => api.post<PublicUser>('/users', form), [keys.users, keys.orgChart]);
+  const create = useAction(
+    () => api.post<PublicUser>('/users', { ...form, assignments: form.role === 'owner' ? [] : assignments }),
+    [keys.users, keys.orgChart, keys.people],
+  );
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
   return (
     <form
@@ -406,7 +447,7 @@ function NewUser() {
         e.preventDefault();
         setError(null);
         create.mutate(undefined, {
-          onSuccess: () => setForm({ username: '', display: '', password: '', role: 'staff' }),
+          onSuccess: () => setForm(blank),
           onError: (err) => setError(err instanceof ApiError ? err.message : t('common.failed')),
         });
       }}
@@ -421,6 +462,12 @@ function NewUser() {
       <button className="btn is-primary" disabled={create.isPending}>
         + {t('users.add')}
       </button>
+      {form.role !== 'owner' && (
+        <div className="assign-new">
+          <span className="dash-hint">{t('assign.column')}</span>
+          <AssignmentsEditor value={assignments} scopes={session.scopes} onChange={setAssignments} />
+        </div>
+      )}
       {error && <p className="form-error">{error}</p>}
       <p className="dash-hint">{t('users.addHint')}</p>
     </form>

@@ -1,8 +1,9 @@
+import { useLinks } from '../scope';
 import { useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
-import { useSession } from '../session';
-import { visibleNav } from '../shell/nav';
+import { useOrgOwner } from '../scope';
+import { navHref, visibleNav } from '../shell/nav';
 
 interface Props {
   onClose: () => void;
@@ -23,15 +24,17 @@ export interface PromptHandoff {
 
 /** Arc-style command bar (⌘K): ask Chief anything, or jump to a screen. */
 export function CommandBar({ onClose }: Props) {
+  const links = useLinks();
+  const { w: toWs } = links;
   const { t } = useI18n();
-  const { isOwner } = useSession();
+  const isOwner = useOrgOwner();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
 
   const ask = (prompt: string) => {
     const state: PromptHandoff = { prompt };
-    navigate('/chat/new', { state });
+    navigate(toWs('/chat/new'), { state });
     onClose();
   };
   const go = (to: string) => {
@@ -46,7 +49,7 @@ export function CommandBar({ onClose }: Props) {
       icon: n.icon,
       label: t(n.label),
       hint: t('command.go'),
-      run: () => go(n.to),
+      run: () => go(navHref(n, links)),
     })),
     { id: 'go-settings', icon: '⚙️', label: t('nav.settings'), hint: t('command.go'), run: () => go('/settings') },
   ];

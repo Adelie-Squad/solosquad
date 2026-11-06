@@ -269,8 +269,9 @@ class LedgerTotals(RootModel[dict[str, LedgerTotal]]):
 
 
 class Team(Closed):
+    """Decision 58: a team is its members — no lead agent."""
+
     name: str
-    main: str | None
     members: list[str]
 
 
@@ -317,7 +318,6 @@ class OrgPerson(Closed):
 
 class OrgTeam(Closed):
     name: str
-    lead_agent: AgentCard | None
     agents: list[AgentCard]
     people: list[Person]
 

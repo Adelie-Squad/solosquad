@@ -4,7 +4,7 @@
 // the API is the truth — so events only invalidate queries (I8 · K20).
 import type { QueryKey } from '@tanstack/react-query';
 import type { EngineEvent } from '../api/types.gen';
-import { keys } from '../api/queries';
+import type { ScopedKeys } from '../api/queries';
 
 export interface EventSourceLike {
   onopen: ((ev: Event) => unknown) | null;
@@ -22,7 +22,8 @@ export interface StreamOptions {
   cancel?: (handle: unknown) => void;
 }
 
-export const EVENTS_URL = '/api/events';
+/** The workspace's stream: `/api/o/<org>/w/<ws>/events` — replay numbers are per workspace. */
+export const eventsUrl = (wsPrefix: string) => `/api${wsPrefix}/events`;
 
 export class LiveStream {
   lastId = 0;
@@ -37,6 +38,7 @@ export class LiveStream {
   private readonly cancel: (handle: unknown) => void;
 
   constructor(
+    private readonly base_url: string,
     private readonly factory: EventSourceFactory,
     private readonly onEvent: (event: EngineEvent, id: number) => void,
     private readonly onStatus: (connected: boolean) => void = () => {},
@@ -49,7 +51,7 @@ export class LiveStream {
   }
 
   url(): string {
-    return this.lastId > 0 ? `${EVENTS_URL}?last_event_id=${this.lastId}` : EVENTS_URL;
+    return this.lastId > 0 ? `${this.base_url}?last_event_id=${this.lastId}` : this.base_url;
   }
 
   /** Delay before the next reconnect attempt: base · 2^n, capped. */
@@ -116,7 +118,7 @@ export class LiveStream {
 
 /** Which cached queries an event makes stale. Streaming text and step updates change no
  * list — they feed the live view directly — so a busy office does not refetch on every token. */
-export function invalidationsFor(ev: EngineEvent): QueryKey[] {
+export function invalidationsFor(ev: EngineEvent, keys: ScopedKeys): QueryKey[] {
   const lifecycle = ['run.created', 'run.started', 'run.interrupted', 'run.completed', 'run.failed'];
   if (ev.event === 'escalation') return [keys.budget, keys.connections];
   if (!lifecycle.includes(ev.event)) return [];

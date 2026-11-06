@@ -40,7 +40,7 @@ describe('approval card buttons follow can_approve (decision 51)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('/api/workflow-threads/wf-th/resume');
+    expect(url).toBe('/api/o/tesla/w/charging/workflow-threads/wf-th/resume'); // the workspace on screen
     expect(JSON.parse(String(init.body))).toEqual({ value: 'approved' });
     expect((init.headers as Record<string, string>)[CSRF_HEADER]).toBe('csrf-1');
   });

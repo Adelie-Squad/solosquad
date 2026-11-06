@@ -1,3 +1,4 @@
+import { useLinks } from '../scope';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
@@ -7,6 +8,7 @@ import { AgentIcon } from '../characters/PenguinIcon';
 
 /** Quick chat — opens over the office when Chief is clicked; sending starts a new conversation. */
 export function QuickChat({ agent, onClose }: { agent: string; onClose: () => void }) {
+  const { w: toWs } = useLinks();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [draft, setDraft] = useState('');
@@ -21,7 +23,7 @@ export function QuickChat({ agent, onClose }: { agent: string; onClose: () => vo
     const prompt = text.trim();
     if (!prompt) return;
     const state: PromptHandoff = { prompt };
-    navigate('/chat/new', { state });
+    navigate(toWs('/chat/new'), { state });
   };
 
   const onSubmit = (e: FormEvent) => {

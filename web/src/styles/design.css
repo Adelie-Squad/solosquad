@@ -233,6 +233,10 @@ textarea:focus {
   will-change: transform;
 }
 
+.office-tag.is-quiet {
+  visibility: hidden;
+}
+
 .office-tag-pill {
   display: flex;
   align-items: center;
@@ -338,6 +342,149 @@ textarea:focus {
 
 .office-roster {
   margin-top: 16px;
+}
+
+/* ── scope switch (decision 57) ────────────────────────────── */
+
+.scope-switch {
+  position: relative;
+  margin: 0 0 4px;
+}
+
+.scope-switch.is-single,
+.scope-switch-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-btn);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.scope-switch-button {
+  position: relative;
+  padding-right: 28px;
+}
+
+.scope-switch-button:hover,
+.scope-switch-button[aria-expanded='true'] {
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.scope-switch strong {
+  font-size: 15px;
+}
+
+.scope-switch span {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.scope-switch-button > span[aria-hidden] {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+}
+
+.scope-switch-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.scope-switch-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 41;
+  max-height: 60vh;
+  overflow: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
+}
+
+.scope-switch-menu:focus {
+  outline: none;
+}
+
+.scope-switch-org {
+  margin: 6px 8px 2px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scope-switch-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.scope-switch-option.is-cursor {
+  background: var(--surface-2);
+}
+
+.scope-switch-option.is-current {
+  font-weight: 700;
+}
+
+.scope-switch-option > span[aria-hidden] {
+  margin-left: auto;
+  color: var(--accent);
+}
+
+.scope-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.scope-notice h1 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.scope-notice p {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.dialog.is-wide {
+  width: min(640px, calc(100% - 32px));
+}
+
+.assign-row select {
+  flex: 1 1 120px;
+}
+
+.assign-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.assign-new {
+  flex-basis: 100%;
 }
 
 /* ── phone ─────────────────────────────────────────────────────── */

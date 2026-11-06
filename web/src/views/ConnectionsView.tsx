@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { api, ApiError } from '../api/client';
-import { keys, useAction, useConnections } from '../api/queries';
+import { ApiError } from '../api/client';
+import { useAction, useConnections, useKeys, useScopedApi } from '../api/queries';
 import type { ConnectionOut, Ok } from '../api/types.gen';
 import { Loading, QueryError } from '../components/Status';
 import { useI18n } from '../i18n';
-import { useSession } from '../session';
+import { useOrgOwner } from '../scope';
 
 const KINDS: ConnectionOut['kind'][] = ['api_key', 'subscription', 'local_llm'];
 
@@ -14,13 +14,15 @@ const KINDS: ConnectionOut['kind'][] = ['api_key', 'subscription', 'local_llm'];
  * adding, switching and removing are the owner's.
  */
 export function ConnectionsView() {
+  const keys = useKeys();
+  const { org: orgApi } = useScopedApi();
   const { t, fmt } = useI18n();
-  const { isOwner } = useSession();
+  const isOwner = useOrgOwner();
   const q = useConnections();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const toggle = useAction((c: ConnectionOut) => api.patch<ConnectionOut>(`/connections/${c.id}`, { active: !c.active }), [keys.connections, keys.budget]);
-  const remove = useAction((id: string) => api.del<Ok>(`/connections/${id}`), [keys.connections, keys.budget]);
+  const toggle = useAction((c: ConnectionOut) => orgApi.patch<ConnectionOut>(`/connections/${c.id}`, { active: !c.active }), [keys.connections, keys.budget]);
+  const remove = useAction((id: string) => orgApi.del<Ok>(`/connections/${id}`), [keys.connections, keys.budget]);
   const onError = (e: unknown) => setError(e instanceof ApiError ? e.message : t('common.failed'));
 
   return (
@@ -55,7 +57,8 @@ export function ConnectionsView() {
                   {c.provider} · {c.harness}
                 </span>
                 <span className={`chip ${c.active ? 'is-ok' : ''}`}>{c.active ? t('connections.active') : t('connections.inactive')}</span>
-                {isOwner && (
+                {c.source === 'core' && <span className="chip is-muted">{t('connections.fromCore')}</span>}
+                {isOwner && c.source !== 'core' && (
                   <span className="conn-actions">
                     <button
                       className="toggle"
@@ -110,6 +113,8 @@ export function ConnectionsView() {
 }
 
 function AddConnection({ onDone }: { onDone: () => void }) {
+  const keys = useKeys();
+  const { org: orgApi } = useScopedApi();
   const { t } = useI18n();
   const [form, setForm] = useState({
     id: '',
@@ -127,7 +132,7 @@ function AddConnection({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const add = useAction(
     () =>
-      api.post<ConnectionOut>('/connections', {
+      orgApi.post<ConnectionOut>('/connections', {
         id: form.id.trim(),
         kind: form.kind,
         provider: form.provider.trim(),

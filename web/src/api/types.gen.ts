@@ -350,12 +350,13 @@ export interface LedgerTotal {
   cost_usd: number;
 }
 /**
+ * Decision 58: a team is its members — no lead agent.
+ *
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
  * via the `definition` "Team".
  */
 export interface Team {
   name: string;
-  main: string | null;
   members: string[];
 }
 /**
@@ -406,7 +407,6 @@ export interface Person {
  */
 export interface OrgTeam {
   name: string;
-  lead_agent: AgentCard | null;
   agents: AgentCard[];
   people: Person[];
 }
