@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import pytest
 from company_fixtures import Company
+from web_fixtures import web_office
 
 from solosquad.check import validate_solution
 from solosquad.company import build_company
@@ -21,8 +22,8 @@ from solosquad.layout import Solution
 from solosquad.runtime import RunManager
 from solosquad.runtime.store import RunStore
 from solosquad.web_api import totp
-from solosquad.web_api.accounts import AccountStore, Role
-from solosquad.web_api.app import CSRF_HEADER, SESSION_COOKIE, WebConfig, create_app
+from solosquad.web_api.accounts import Role
+from solosquad.web_api.app import CSRF_HEADER, SESSION_COOKIE
 
 PASSWORD = "correct horse battery"
 TOKEN = "local-cli-token"
@@ -35,18 +36,16 @@ class Office:
         self.manager = RunManager(
             build_company(self.company.rt), RunStore(ctx.data_dir / "runs.sqlite")
         )
-        self.accounts = AccountStore(ctx.data_dir.parent / "accounts.sqlite")
-        self.workspace = Solution(ctx.solution_root).org("tesla").workspace("hq")
-        self.app = create_app(
-            WebConfig(self.manager, self.company.ledger, TOKEN, self.accounts, self.workspace)
-        )
+        self.web = web_office(self.company, self.manager, token=TOKEN)
+        self.accounts = self.web.accounts
+        self.workspace = self.web.workspace
+        self.app = self.web.app
 
     def client(self, ip: str = "203.0.113.5", **headers: str) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=self.app, client=(ip, 50000)),
-            base_url="https://office.example",
-            headers=headers,
-        )
+        return self.web.client(ip, **headers)
+
+    def staff(self, name: str) -> Any:
+        return self.web.staff(name, PASSWORD)
 
 
 @pytest.fixture
@@ -140,11 +139,14 @@ async def test_roles_owner_manages_staff_works(office: Office) -> None:
     async with office.client() as boss:
         csrf, _ = await _owner(office, boss)
         h = {CSRF_HEADER: csrf}
-        r = await boss.post(
-            "/api/users", json={"username": "kim", "password": PASSWORD, "role": "staff"}, headers=h
-        )
+        kim_body = {"username": "kim", "password": PASSWORD, "role": "staff",
+                    "assignments": [{"org": "tesla"}]}  # fmt: skip
+        r = await boss.post("/api/users", json=kim_body, headers=h)
         assert r.status_code == 201 and r.json()["role"] == "staff"
+        assert r.json()["assignments"] == [{"org": "tesla", "workspace": None, "role": "staff"}]
         staff_id = r.json()["id"]
+        bad = {**kim_body, "username": "lee", "assignments": [{"org": "nope"}]}
+        assert (await boss.post("/api/users", json=bad, headers=h)).status_code == 400
         assert [u["username"] for u in (await boss.get("/api/users")).json()] == ["boss", "kim"]
 
     async with office.client("203.0.113.9") as kim:
@@ -197,8 +199,10 @@ async def test_access_policy_allow_list(office: Office) -> None:
         assert (
             await boss.put("/api/access", json={"allowed_networks": ["nope"]}, headers=h)
         ).status_code == 400
-    # saved to the office's workspace.yaml
-    assert office.workspace.config().access.allowed_networks == ["203.0.113.0/24"]
+    # saved as the customer default in core/server.yaml (I41)
+    assert office.workspace.org.solution.server_config().access.allowed_networks == [
+        "203.0.113.0/24"
+    ]
     # outside the list: refused before anything, login included
     async with office.client("198.51.100.7") as outsider:
         assert (await outsider.get("/api/health")).status_code == 403
@@ -229,7 +233,7 @@ async def test_saving_a_list_that_locks_you_out_needs_confirmation(office: Offic
         body: dict[str, Any] = {"allowed_networks": ["203.0.113.0/24"]}
         r = await boss.put("/api/access", json=body, headers=h)
         assert r.status_code == 409 and "198.51.100.7" in r.json()["error"]
-        assert office.workspace.config().access.allowed_networks == []
+        assert office.workspace.org.solution.server_config().access.allowed_networks == []
         r = await boss.put("/api/access", json={**body, "confirm_lockout": True}, headers=h)
         assert r.status_code == 200
         assert (await boss.get("/api/me")).status_code == 403

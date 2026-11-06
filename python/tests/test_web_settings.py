@@ -15,14 +15,14 @@ import httpx
 import pytest
 from soft_authenticator import SoftAuthenticator
 from test_passkeys import ORIGIN
-from test_web_api import PASSWORD, TOKEN, Office, _next_code, _secret
+from test_web_api import PASSWORD, Office, _next_code, _secret
 
 from solosquad.profile import load_profile
 from solosquad.routing.vault import SecretStore
 from solosquad.web_api import schemas as S
 from solosquad.web_api import totp
-from solosquad.web_api.accounts import Role
-from solosquad.web_api.app import CSRF_HEADER, WebConfig, create_app
+from solosquad.web_api.accounts import Assignment, Role
+from solosquad.web_api.app import CSRF_HEADER
 
 
 class Settings(Office):
@@ -32,19 +32,19 @@ class Settings(Office):
         self.runs: list[str] = []
 
         def run_now() -> dict[str, Any]:
-            target = self.workspace.config().snapshot
+            target = self.workspace.org.solution.server_config().snapshot
             self.runs.append(str(target.type))
             if target.type is None:
                 return {"target": None, "skipped": "no snapshot target configured"}
             return {"target": target.type, "location": "x", "files": 3, "pruned": []}
 
-        self.app = create_app(
-            WebConfig(self.manager, self.company.ledger, TOKEN, self.accounts, self.workspace,
-                      secrets=self.secrets, run_snapshot=run_now)
-        )  # fmt: skip
+        self.web.rebuild(secrets=self.secrets, run_snapshot=run_now)
+        self.app = self.web.app
 
     async def login(self, c: httpx.AsyncClient, name: str, role: Role) -> dict[str, str]:
-        user = self.accounts.create_user(name, PASSWORD, role)
+        user = self.accounts.create_user(
+            name, PASSWORD, role, assignments=[Assignment("tesla", None, role)]
+        )
         secret = _secret(self.accounts.begin_totp(user.id))
         assert self.accounts.confirm_totp(user.id, totp.code_at(secret, totp.current_step()))
         r = await c.post(
@@ -71,10 +71,9 @@ def _actions(o: Office) -> list[str]:
 
 
 async def test_passkey_flow_through_the_contract(office: Settings) -> None:
-    cfg = office.workspace.config()
     async with office.client() as c:
         assert (await c.get("/api/health")).json() == {"ok": True, "passkeys": False}
-        office.workspace.save_config(cfg.model_copy(update={"public_url": ORIGIN}))
+        office.workspace.org.solution.update_server_config(public_url=ORIGIN)
         assert (await c.get("/api/health")).json() == {"ok": True, "passkeys": True}
 
     phone = SoftAuthenticator()
@@ -114,9 +113,7 @@ async def test_passkey_flow_through_the_contract(office: Settings) -> None:
 
 
 async def test_owner_resets_someone_elses_passkeys(office: Settings) -> None:
-    office.workspace.save_config(
-        office.workspace.config().model_copy(update={"public_url": ORIGIN})
-    )
+    office.workspace.org.solution.update_server_config(public_url=ORIGIN)
     kim = office.accounts.create_user("kim", PASSWORD, Role.STAFF)
     office.accounts.add_passkey(kim.id, "cred-1", b"pk", 0, [], "old phone")
     async with office.client() as boss:
@@ -153,7 +150,9 @@ async def test_profile_read_by_all_written_by_the_owner(office: Settings) -> Non
         done = {i["item"]: i["done"] for i in body["checklist"]}
         assert done["server_country"] and done["entities"] and done["privacy"]
         assert load_profile(root).server.region == "ap-northeast-2"
-        assert office.workspace.config().server_country == "KR"  # like `profile set`
+        assert (
+            office.workspace.org.solution.server_config().server_country == "KR"
+        )  # one place (I41)
         for bad in (
             {"languages": {"default": "fr"}},
             {"entities": [{"id": "a", "name": "A", "country": "KR"}] * 2},

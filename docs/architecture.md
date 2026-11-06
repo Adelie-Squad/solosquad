@@ -1488,6 +1488,23 @@ templates/
 
 롤링 상태는 `docs/prd/product-roadmap.md`.
 
+### 13.11 v2.1 — 고객사 계정 · 엔진 서버 1개 · 범위 주소 (결정 57, `python/`)
+
+정본: ideation `260803` 결정 57 · `docs/prd/v2.1.0_customer-web.md` rev7(W19 · I38 ~ I41 · K48 ~ K51 · C3 · C30 ~ C33).
+
+```
+엔진 서버 (`solosquad serve` 1개 — engine_server.py)
+├─ 로그인 · 웹 · 계정 (core.db) · 보존 정리 · 스냅샷 — 고객사 단위로 한 번
+└─ 워크스페이스 런타임 × N (instance.py `Instance`) — 배치된 워크스페이스마다 1개
+     자기 데이터 폴더 · office.db · 실행 관리자 · cron · 워크플로 · 가계부 · 산출물 · 동시 실행 한도
+```
+
+- **배치** — `core/server.yaml` `placement.include`(비면 전부, 항목은 `org` 또는 `org/ws`). `serve --org/--workspace` 는 이번 기동만 좁힌다. 한 런타임의 빌드 · 기동 실패는 `EngineServer.failed` 에 남고 서버와 다른 런타임은 계속 돈다(K49) — 그 범위는 할당된 사람에게 503.
+- **설정 위치(I41)** — 서버 성질(`public_url` · `server_country` · `type` · `snapshot` · 고객사 기본 `access` · `placement` · 기본 웹 언어 `web.locale`)은 `core/server.yaml` 하나, 사업 성질(`execution` · `timezone` · `retention` · 추가 접속 제한 `access`)은 `workspace.yaml`. rev6 `workspace.yaml` · `core/profile.yaml` 의 서버 값은 읽을 때 올리고(`Solution.server_config`), `serve` 가 한 번 옮겨 적는다(`lift_server_config`). 자리마다 값이 다르면 `ServerConfigConflict` · `validate` 의 `SERVER_CONFIG_CONFLICT` — 자동 병합하지 않는다(C33 · K50).
+- **DB 3층(I39)** — `data/<solution-id>/core.db`(사람 · 비밀번호 해시 · TOTP · 패스키 · 세션 · 로그인 실패 · 로그인 감사 · **할당 표** 사람 × org × 워크스페이스(빈 값 = org 전체) × 역할 · 사람별 마지막 범위) · `data/<id>/<org>/org.db`(그 org 의 팀 소속 · 직함 `org_members`, org 감사 `org_audit`) · `data/<id>/<org>/<ws>/office.db`(그대로). rev6 `org.db` 의 계정 표는 첫 기동에 `core.db` 로 옮긴다(`org_store.open_accounts` — 전 org 사전 검사 → 스냅샷 → 한 트랜잭션 복사 → 그 org 에 같은 역할로 할당 → 옛 표 삭제, 실패 시 기동 거부 · 원본 불변, C32 · K51).
+- **범위 주소(I40)** — `/api/…`(고객사) · `/api/o/{org}/…`(org) · `/api/o/{org}/w/{ws}/…`(워크스페이스). 범위 검사는 라우트마다가 아니라 `web_api/app.py` 의 `ScopeGate` 한 곳(K48): 할당 → 고객사 기본 접속 정책 → 워크스페이스 추가 제한. 할당 밖 · 없는 범위 = 같은 404, 접속 경로 위반 = 403 + 안내. 역할 · `can_approve` 는 요청 범위 org 기준, 고객사 오너는 모든 org 에서 대표. `route_table(app)` 이 모든 라우트를 범위와 함께 내놓고, 범위 테스트가 그것을 순회한다(C3 · C30).
+- **백업 · 스냅샷(I36 · I38)** — `core.db` · 모든 `org.db` · 모든 `office.db` 를 읽기 트랜잭션으로 같은 시점에 고정해 찍고(`maintenance.backup_customer`), `<prefix>/<solution-id>/<UTC stamp>/` 로 보낸다. 파일 이름 `core.db` · `org~<org>.db` · `office~<org>~<ws>.db`. 스냅샷 키는 고객사 비밀 저장소 `data/<id>/secrets.json`.
+
 ---
 
 ## 14. 솔로스쿼드 개발 규칙 (이 저장소 전용)

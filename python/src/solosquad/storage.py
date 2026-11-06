@@ -1,9 +1,11 @@
 """The storage layer (decision 54 · PRD v2.1.0 I33 · I34 · I36).
 
-One SQLite file per scope instead of one per component:
+One SQLite file per scope instead of one per component — three scopes since decision 57:
 
-    <data>/<solution>/<org>/org.db            accounts · sessions · audit (people)
-    <data>/<solution>/<org>/<office>/office.db runs · checkpoints · store · ledger · artifacts
+    <data>/<solution>/core.db                 people · logins · sessions · assignments · login
+                                              audit (the customer, I39)
+    <data>/<solution>/<org>/org.db            the org's teams · titles · org audit
+    <data>/<solution>/<org>/<ws>/office.db    runs · checkpoints · store · ledger · artifacts
                                               (workflow runs/checkpoints under a `wf_` prefix)
 
 Components keep their own connection to the shared file (WAL lets them coexist), and
@@ -32,6 +34,7 @@ BUSY_TIMEOUT_MS = 10_000
 SNAPSHOT_KEEP = 3
 """Pre-migration snapshots kept per file; older ones are removed after a successful run."""
 
+CORE_DB = "core.db"
 ORG_DB = "org.db"
 OFFICE_DB = "office.db"
 LEGACY_FILES = (

@@ -1,28 +1,38 @@
-"""On-disk layout of a customer solution (ideation 260803 decision 40).
+"""On-disk layout of a customer solution (ideation 260803 decisions 40 · 57).
 
     <solution>/                    one customer = one private git repo
-      core/                        engine + tools (by version) and the owner
+      core/                        what the whole customer shares (decision 57)
         engine.lock                which engine version this customer runs
         solution.yaml              pseudonymous solution id (decision 38)
+        server.yaml                the engine server: address · country · type · snapshot
+                                   target · customer access default · placement (I41)
         custom/{config,policies,hooks,tools,patches}/   engine customization
         owner/                     owner profile · traits · principles
         connections.yaml           the owner's LLM connections (secrets live elsewhere)
-      orgs/<org>/                  one business
+      orgs/<org>/                  one organisation (e.g. a company of the owner)
         org.lock                   org package @ version it started from
-        org.yaml                   business info · logins · budget
+        org.yaml                   business info · budget
         team/{agents,skills}/  team/teams.yaml
         knowledge/ workflows/ goals/ crons/
-        workspaces/<ws>/           one office = one execution environment
-          workspace.yaml           type (cloud|intranet|local) · access · execution
+        workspaces/<ws>/           one business unit inside the org (decision 57)
+          workspace.yaml           execution · timezone · retention · extra access limits
           local.yaml               folders/apps the FDE may analyze
           repositories/
 
 Outside the repo, under SOLOSQUAD_HOME (default ~/.solosquad/v2 — v1 owns ~/.solosquad):
-    engines/<version>/             engine releases, side by side, shared per machine
-    data/<solution-id>/<org>/<ws>/ checkpoints · conversations · ledger · secrets
+    engines/<version>/                      engine releases, side by side, per machine
+    data/<solution-id>/core.db              people · logins · sessions · assignments (I39)
+    data/<solution-id>/<org>/org.db         the org's teams · titles · org audit
+    data/<solution-id>/<org>/<ws>/office.db runs · checkpoints · ledger · artifacts
 
-One running instance serves exactly one workspace; every path is passed in, never
-assumed global, so one machine can host many customers on different engines.
+One engine server (`serve`) runs every workspace placed on it — one workspace runtime
+each (decision 57 · I38) — behind one login and one web. Every path is still passed in,
+never assumed global, so one machine can host many customers on different engines.
+
+Server-natured settings live once, in `core/server.yaml`; `workspace.yaml` keeps only
+what differs per business (I41). A rev6 `workspace.yaml` that still carries a server
+field is lifted into the server settings when read; two places that disagree are a
+`validate` error and stop the server — they are never merged silently (C33 · K50).
 """
 
 from __future__ import annotations
@@ -52,6 +62,10 @@ class WorkspaceType(StrEnum):
     CLOUD = "cloud"
     INTRANET = "intranet"
     LOCAL = "local"
+
+
+ServerType = WorkspaceType
+"""cloud · intranet · local — a property of the engine server since decision 57 ⑷."""
 
 
 class _Doc(BaseModel):
@@ -106,25 +120,73 @@ class ExecutionPolicy(BaseModel):
 class WebPrefs(BaseModel):
     model_config = ConfigDict(extra="allow")
     locale: str = "ko"
-    """The org's default web language (I31 · decision 53): ko · en · zh-CN. A person's own
-    choice (`users.locale`) wins over it."""
+    """The customer's default web language (I31 · decision 53): ko · en · zh-CN. A person's
+    own choice (`users.locale`) wins over it."""
+
+
+class Placement(BaseModel):
+    """Which orgs and workspaces this engine server runs (I38). Each entry is `org` (all of
+    its workspaces) or `org/workspace`; empty = everything in the repository."""
+
+    model_config = ConfigDict(extra="allow")
+    include: list[str] = Field(default_factory=list)
+
+    def places(self, org: str, workspace: str) -> bool:
+        if not self.include:
+            return True
+        return org in self.include or f"{org}/{workspace}" in self.include
+
+
+class ServerConfig(_Doc):
+    """`core/server.yaml` — what belongs to the engine server, not to one business (I41)."""
+
+    public_url: str | None = None
+    """The server's HTTPS address (e.g. https://ai.example.co.kr) — passkeys are bound
+    to this domain, so they stay off until it is set (decision 47 S4)."""
+    server_country: str | None = None
+    """ISO country where the server runs (decision 45 region rule), e.g. KR."""
+    type: ServerType = ServerType.LOCAL
+    snapshot: SnapshotTarget = Field(default_factory=SnapshotTarget)
+    """Where the daily snapshot goes — the customer's own bucket (decision 54)."""
+    access: AccessPolicy = Field(default_factory=AccessPolicy)
+    """The customer's default access policy; a workspace can only narrow it."""
+    placement: Placement = Field(default_factory=Placement)
+    web: WebPrefs = Field(default_factory=WebPrefs)
+    """The default web language — a person's own choice wins over it."""
+
+
+SERVER_FIELDS = ("public_url", "server_country", "type", "snapshot", "web")
+"""Fields a rev6 `workspace.yaml` may still carry; read once and lifted into the server."""
 
 
 class WorkspaceConfig(_Doc):
     name: str
-    type: WorkspaceType = WorkspaceType.LOCAL
     timezone: str = "Asia/Seoul"
-    server_country: str | None = None
-    public_url: str | None = None
-    """The office's HTTPS address (e.g. https://ai.example.co.kr) — passkeys are bound
-    to this domain, so they stay off until it is set (decision 47 S4)."""
-    """ISO country where this office's server runs (decision 45 region rule), e.g. KR."""
     access: AccessPolicy = Field(default_factory=AccessPolicy)
+    """Extra limits for this business on top of the server's default (`allowed_networks`)."""
     execution: ExecutionPolicy = Field(default_factory=ExecutionPolicy)
     retention: RetentionPolicy = Field(default_factory=RetentionPolicy)
-    snapshot: SnapshotTarget = Field(default_factory=SnapshotTarget)
-    """Where the daily snapshot goes — the customer's own bucket (decision 54)."""
-    web: WebPrefs = Field(default_factory=WebPrefs)
+    # rev6 leftovers — read for the lift into `core/server.yaml`, never written back
+    type: WorkspaceType | None = None
+    server_country: str | None = None
+    public_url: str | None = None
+    snapshot: SnapshotTarget | None = None
+    web: WebPrefs | None = None
+
+
+class ServerConfigConflict(LayoutError):
+    """Places disagree on a server-natured value — the FDE has to pick one (K50)."""
+
+    def __init__(self, conflicts: dict[str, dict[str, Any]]) -> None:
+        self.conflicts = conflicts
+        parts = [
+            f"{field}: " + ", ".join(f"{where}={value!r}" for where, value in found.items())
+            for field, found in sorted(conflicts.items())
+        ]
+        super().__init__(
+            "server settings differ between places — keep one value in core/server.yaml"
+            " and remove the others: " + "; ".join(parts)
+        )
 
 
 def _read[M: BaseModel](path: Path, model: type[M]) -> M:
@@ -136,9 +198,38 @@ def _read[M: BaseModel](path: Path, model: type[M]) -> M:
     return model.model_validate(data)
 
 
-def _write(path: Path, model: BaseModel) -> None:
-    payload: dict[str, Any] = model.model_dump(mode="json")
+def _dump(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+
+def _write(path: Path, model: BaseModel, *, drop: tuple[str, ...] = ()) -> None:
+    payload: dict[str, Any] = model.model_dump(mode="json")
+    for key in drop:
+        payload.pop(key, None)
+    _dump(path, payload)
+
+
+def _raw(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    data = load_yaml(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def _normal(field: str, value: Any) -> Any:
+    """A server value as the server model stores it — `None` when it was left unset."""
+    if value is None:
+        return None
+    if field == "snapshot":
+        target = SnapshotTarget.model_validate(value)
+        return target.model_dump(mode="json") if target.type is not None else None
+    if field == "web":
+        return WebPrefs.model_validate(value).model_dump(mode="json")
+    if field == "type":
+        return WorkspaceType(value).value
+    if field == "server_country":
+        return str(value).upper()
+    return value
 
 
 def solosquad_home() -> Path:
@@ -170,8 +261,12 @@ class EngineStore:
         return self.org_data_dir(ws.org) / ws.name
 
     def org_data_dir(self, org: Org) -> Path:
-        """Shared by the org's offices — accounts live here (one login per org, W6)."""
-        return self.data_root / org.solution.meta().id / org.name
+        """The org's folder — `org.db` (teams · titles · org audit) and its workspaces."""
+        return self.solution_data_dir(org.solution) / org.name
+
+    def solution_data_dir(self, sol: Solution) -> Path:
+        """The customer's folder — `core.db` (people · logins · assignments, I39)."""
+        return self.data_root / sol.meta().id
 
 
 @dataclass(frozen=True)
@@ -195,6 +290,14 @@ class Solution:
         return self.core_dir / "connections.yaml"
 
     @property
+    def server_config_path(self) -> Path:
+        return self.core_dir / "server.yaml"
+
+    @property
+    def profile_path(self) -> Path:
+        return self.core_dir / "profile.yaml"
+
+    @property
     def orgs_dir(self) -> Path:
         return self.root / "orgs"
 
@@ -214,6 +317,91 @@ class Solution:
         if not org.root.is_dir():
             raise LayoutError(f"no org {name!r} in {self.root}")
         return org
+
+    def workspaces(self) -> list[Workspace]:
+        return [ws for org in self.orgs() for ws in org.workspaces()]
+
+    # ------------------------------------------------------------------ server settings (I41)
+
+    def _server_sources(self) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+        """→ (what core/server.yaml says, {field: {place: value}} still kept elsewhere)."""
+        explicit = _raw(self.server_config_path)
+        found: dict[str, dict[str, Any]] = {}
+        for ws in self.workspaces():
+            raw = _raw(ws.root / "workspace.yaml")
+            for field in SERVER_FIELDS:
+                value = _normal(field, raw.get(field))
+                if value is not None:
+                    found.setdefault(field, {})[f"{ws.org.name}/{ws.name}"] = value
+        server = _raw(self.profile_path).get("server")
+        country = server.get("country") if isinstance(server, dict) else None
+        if country:  # the customer profile kept its own copy until rev7 (I28 · I32)
+            found.setdefault("server_country", {})["core/profile.yaml"] = str(country).upper()
+        return explicit, found
+
+    def server_conflicts(self) -> dict[str, dict[str, Any]]:
+        """Every server field that two places (server.yaml included) give differently."""
+        explicit, found = self._server_sources()
+        out: dict[str, dict[str, Any]] = {}
+        for field, places in found.items():
+            values = dict(places)
+            if explicit.get(field) is not None:
+                values["core/server.yaml"] = _normal(field, explicit[field])
+            if len({repr(v) for v in values.values()}) > 1:
+                out[field] = values
+        return out
+
+    def has_legacy_server_fields(self) -> bool:
+        return bool(self._server_sources()[1])
+
+    def server_config(self, *, strict: bool = True) -> ServerConfig:
+        """The server settings with any rev6 leftovers lifted in. `strict` raises on a
+        disagreement (C33); otherwise server.yaml, then the first place, wins — for
+        `validate`, which reports the conflict itself."""
+        explicit, found = self._server_sources()
+        if strict:
+            conflicts = self.server_conflicts()
+            if conflicts:
+                raise ServerConfigConflict(conflicts)
+        merged = dict(explicit)
+        for field, places in found.items():
+            if _normal(field, merged.get(field)) is None and places:
+                merged[field] = next(iter(places.values()))
+        return ServerConfig.model_validate(merged)
+
+    def save_server_config(self, cfg: ServerConfig) -> None:
+        """Write the server settings and drop every leftover copy — one value, one place."""
+        _write(self.server_config_path, cfg)
+        for ws in self.workspaces():
+            path = ws.root / "workspace.yaml"
+            raw = _raw(path)
+            if any(field in raw for field in SERVER_FIELDS):
+                _dump(path, {k: v for k, v in raw.items() if k not in SERVER_FIELDS})
+        profile = _raw(self.profile_path)
+        server = profile.get("server")
+        if isinstance(server, dict) and "country" in server:
+            server.pop("country")
+            _dump(self.profile_path, profile)
+
+    def lift_server_config(self) -> ServerConfig:
+        """Make the lift permanent (at `serve`) — raises `ServerConfigConflict` first."""
+        cfg = self.server_config()
+        if self.has_legacy_server_fields() or not self.server_config_path.is_file():
+            self.save_server_config(cfg)
+        return cfg
+
+    def update_server_config(self, **changes: Any) -> ServerConfig:
+        """Set some server fields. Setting a field settles a disagreement about it; one
+        about any other field still stops the write (K50)."""
+        left = {k: v for k, v in self.server_conflicts().items() if k not in changes}
+        if left:
+            raise ServerConfigConflict(left)
+        cfg = self.server_config(strict=False).model_copy(update=changes)
+        self.save_server_config(ServerConfig.model_validate(cfg.model_dump(mode="json")))
+        return self.server_config()
+
+    def update_server_country(self, country: str | None) -> ServerConfig:
+        return self.update_server_config(server_country=country.upper() if country else None)
 
 
 @dataclass(frozen=True)
@@ -270,7 +458,11 @@ class Workspace:
         return _read(self.root / "workspace.yaml", WorkspaceConfig)
 
     def save_config(self, cfg: WorkspaceConfig) -> None:
-        _write(self.root / "workspace.yaml", cfg)
+        """Business settings only. A rev6 file is lifted into `core/server.yaml` first, so
+        dropping its server fields here never loses a value."""
+        if self.org.solution.has_legacy_server_fields():
+            self.org.solution.lift_server_config()
+        _write(self.root / "workspace.yaml", cfg, drop=SERVER_FIELDS)
 
 
 def _mkdirs(*paths: Path) -> None:
@@ -282,7 +474,10 @@ def _mkdirs(*paths: Path) -> None:
 
 
 def scaffold_solution(
-    root: Path, engine_version: str, owner_templates: Path | None = None
+    root: Path,
+    engine_version: str,
+    owner_templates: Path | None = None,
+    server_type: ServerType = ServerType.LOCAL,
 ) -> Solution:
     """Create `core/` for a new customer. Refuses to touch a non-empty directory.
 
@@ -298,6 +493,7 @@ def scaffold_solution(
     _mkdirs(sol.owner_dir, *(sol.custom_dir / d for d in CUSTOM_DIRS), sol.orgs_dir)
     _write(sol.core_dir / "engine.lock", EngineLock(version=engine_version))
     _write(sol.core_dir / "solution.yaml", SolutionMeta(id=f"sol-{secrets.token_hex(6)}"))
+    _write(sol.server_config_path, ServerConfig(type=server_type))
     sol.connections_path.write_text("schema_version: 1\nconnections: []\n", encoding="utf-8")
     return sol
 
@@ -319,14 +515,12 @@ def scaffold_org(sol: Solution, name: str, package: str, package_version: str) -
     return org
 
 
-def scaffold_workspace(
-    org: Org, name: str, ws_type: WorkspaceType = WorkspaceType.LOCAL
-) -> Workspace:
+def scaffold_workspace(org: Org, name: str) -> Workspace:
     ws = Workspace(org, name)
     if ws.root.exists():
         raise LayoutError(f"workspace {name!r} already exists in org {org.name!r}")
     _mkdirs(ws.repositories_dir)
-    _write(ws.root / "workspace.yaml", WorkspaceConfig(name=name, type=ws_type))
+    _write(ws.root / "workspace.yaml", WorkspaceConfig(name=name), drop=SERVER_FIELDS)
     (ws.root / "local.yaml").write_text(
         "schema_version: 1\nanalysis_allowed_paths: []\nlocal_apps: []\n", encoding="utf-8"
     )

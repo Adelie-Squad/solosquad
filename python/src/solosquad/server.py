@@ -2,9 +2,10 @@
 
 Starlette on uvicorn since v2.1.0 (W2 — the stdlib server of v2.0.0 could not carry
 cookie sessions, CSRF and security headers safely on the internet). Binds 127.0.0.1;
-a reverse proxy on the same VM terminates TLS (W1). The CLI authenticates with the
-bearer token in the workspace data folder, which only works from the machine itself;
-people use accounts (`web_api/`). Routes: see `web_api/app.py`.
+a reverse proxy on the same VM terminates TLS (W1). One engine server serves the whole
+customer: every placed workspace under `/api/o/{org}/w/{ws}` (decision 57 · I40). The
+CLI authenticates with the bearer token in the customer's data folder, which only works
+from the machine itself; people use accounts (`web_api/`). Routes: see `web_api/app.py`.
 """
 
 from __future__ import annotations
@@ -14,16 +15,16 @@ import contextlib
 import secrets as pysecrets
 import socket
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import uvicorn
 
-from solosquad.context.ledger import Ledger
-from solosquad.layout import Workspace
-from solosquad.runtime import RunManager
-from solosquad.web_api.accounts import AccountStore
-from solosquad.web_api.app import WebConfig, create_app, dumps
+from solosquad.web_api.app import AppConfig, create_app, dumps
+
+if TYPE_CHECKING:
+    from solosquad.engine_server import EngineServer
 
 __all__ = ["ApiServer", "dumps", "load_or_create_token"]
 
@@ -48,35 +49,19 @@ class _Server(uvicorn.Server):
 
 
 class ApiServer:
-    def __init__(
-        self,
-        manager: RunManager,
-        ledger: Ledger,
-        token: str,
-        *,
-        accounts: AccountStore | None = None,
-        workspace: Workspace | None = None,
-        static_dir: Path | None = None,
-        secure_cookies: bool = True,
-        **extra: Any,
-    ) -> None:
-        """`extra` = the remaining `WebConfig` fields (resolver, router, secrets, …)."""
+    def __init__(self, cfg: AppConfig) -> None:
         self._closing = asyncio.Event()
-        self.app = create_app(
-            WebConfig(
-                manager,
-                ledger,
-                token,
-                accounts,
-                workspace,
-                static_dir,
-                secure_cookies,
-                self._closing,
-                **extra,
-            )
-        )
+        self.config = replace(cfg, closing=self._closing)
+        self.app = create_app(self.config)
         self._server: _Server | None = None
         self._task: asyncio.Task[None] | None = None
+
+    @classmethod
+    def for_engine(
+        cls, engine: EngineServer, token: str, *, static_dir: Path | None = None
+    ) -> ApiServer:
+        """The web of an engine server: every runtime it runs, one login."""
+        return cls(AppConfig.for_engine(engine, token, static_dir=static_dir))
 
     async def start(self, host: str = "127.0.0.1", port: int = 0) -> int:
         sock = socket.socket(socket.AF_INET6 if ":" in host else socket.AF_INET)

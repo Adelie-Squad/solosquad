@@ -1,4 +1,4 @@
-"""Decision 54 — storage layer: two scope databases, migrations, retention, backup."""
+"""Decision 54 · 57 — storage layer: three scope databases, migrations, retention, backup."""
 
 from __future__ import annotations
 
@@ -17,9 +17,10 @@ from solosquad import storage
 from solosquad.check import doctor_checks
 from solosquad.cli import app
 from solosquad.context.ledger import LedgerEntry
+from solosquad.engine_server import build_engine
 from solosquad.instance import build_instance
 from solosquad.layout import EngineStore, Solution, solosquad_home
-from solosquad.maintenance import DAY, backup_instance, run_retention
+from solosquad.maintenance import DAY, backup_customer, run_customer_retention, run_retention
 from solosquad.runtime import RunStatus
 from solosquad.storage import (
     SNAPSHOT_KEEP,
@@ -30,7 +31,7 @@ from solosquad.storage import (
     current_version,
     migrate,
 )
-from solosquad.web_api.accounts import MIGRATIONS, AccountStore, Role
+from solosquad.web_api.accounts import COMPONENT, MIGRATIONS, AccountStore, Role
 
 # ---------------------------------------------------------------------- migrations
 
@@ -91,8 +92,8 @@ def test_accounts_file_from_before_versioning(tmp_path: Path) -> None:
     )
     legacy.close()
     store = AccountStore(path)
-    assert current_version(connect(path), "accounts") == len(MIGRATIONS)
-    assert store.user("u-1").title == "MD"
+    assert current_version(connect(path), COMPONENT) == len(MIGRATIONS)
+    assert store.user("u-1").username == "kim"  # the title stays a column, moved by org_store
 
 
 # ---------------------------------------------------------------------- one office · one file
@@ -162,23 +163,50 @@ async def test_retention_removes_only_what_has_aged_out(tmp_path: Path) -> None:
     assert accounts.audit_log()[0]["action"] == "retention.purge"
 
 
-def test_backup_copies_both_databases_with_a_manifest(tmp_path: Path) -> None:
+def test_backup_copies_every_database_of_the_customer(tmp_path: Path) -> None:
     sol = _solution(tmp_path)
-    inst = build_instance(sol, "moa", "hq")
-    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(sol).org("moa"))
-    AccountStore(org_dir / "org.db").create_user("boss", "correct horse battery", Role.OWNER)
-    inst.manager.store.create_thread("t")
-    manifest = backup_instance(inst, org_dir, tmp_path / "bk")
-    assert [f["name"] for f in manifest["files"]] == ["org", "office"]
+    assert CliRunner().invoke(app, ["add", "workspace", "busan", "--org", "moa", "-s", str(sol)])
+    engine = build_engine(sol)
+    engine.accounts.create_user("boss", "correct horse battery", Role.OWNER)
+    engine.runtimes[("moa", "hq")].manager.store.create_thread("t")
+    manifest = backup_customer(engine, tmp_path / "bk")
+    assert [f["name"] for f in manifest["files"]] == [
+        "core", "org~moa", "office~moa~busan", "office~moa~hq"
+    ]  # fmt: skip
+    assert {f["copied_at"] for f in manifest["files"]} == {manifest["taken_at"]}  # one moment
     for f in manifest["files"]:
         copy = tmp_path / "bk" / f["file"]
         assert hashlib.sha256(copy.read_bytes()).hexdigest() == f["sha256"]
-    assert sqlite3.connect(tmp_path / "bk" / "org.db").execute(
+    assert sqlite3.connect(tmp_path / "bk" / "core.db").execute(
         "SELECT username FROM users"
     ).fetchall() == [("boss",)]
     assert json.loads((tmp_path / "bk" / "manifest.json").read_text())["schema_version"] == 1
     res = CliRunner().invoke(app, ["backup", "-s", str(sol), "--to", str(tmp_path / "bk2")])
-    assert res.exit_code == 0 and "office:" in res.output
+    assert res.exit_code == 0 and "core:" in res.output and "office~moa~hq:" in res.output
+
+
+async def test_customer_retention_runs_every_workspace_and_scope(tmp_path: Path) -> None:
+    sol = _solution(tmp_path)
+    assert CliRunner().invoke(app, ["add", "org", "tesla", "-s", str(sol)]).exit_code == 0
+    engine = build_engine(sol)
+    now = time.time()
+    for inst in engine.runtimes.values():
+        tid = inst.manager.store.create_thread("old")
+        rid = inst.manager.store.create_run(tid, "message", "hi", "user")
+        inst.manager.store.set_status(rid, RunStatus.SUCCESS)
+        inst.manager.store._exec(
+            f"UPDATE {inst.manager.store.T} SET updated = ?", (now - 4 * 365 * DAY,)
+        )
+    broken = engine.runtimes[("tesla", "hq")]
+    broken.ledger.purge = None  # type: ignore[assignment,method-assign]  # one runtime fails
+    counts = run_customer_retention(engine, now=now)
+    assert counts["moa/hq"]["threads"] == 1  # the other runtime is not held up (K49)
+    assert "error" in counts["tesla/hq"]
+    assert "core" in counts and "moa:audit" in counts
+    assert engine.orgs["moa"].audit_log()[0]["action"] == "retention.purge"
+    assert engine.accounts.audit_log()[0]["action"] == "retention.purge"
+    res = CliRunner().invoke(app, ["maintenance", "-s", str(sol)])
+    assert res.exit_code == 0 and "moa/hq" in res.output
 
 
 def test_backup_pins_every_database_to_one_moment(

@@ -19,8 +19,7 @@ from solosquad.harness.base import SpawnRequest
 from solosquad.harness.events import End, Start, TextDelta, ToolResult
 from solosquad.harness.guard_hook import MARKER
 from solosquad.runtime import RunStatus
-from solosquad.web_api.accounts import AccountStore, Role
-from solosquad.web_api.app import WebConfig, create_app
+from solosquad.web_api.accounts import AccountStore, Assignment, Role
 from solosquad.workflows.engine import WorkflowEngine, company_asker
 
 # ---------------------------------------------------------------------- the rule
@@ -59,12 +58,7 @@ def test_policy_tiers_and_who_may_approve() -> None:
 
 
 async def _office(tmp: Path) -> Office:
-    o = Office(tmp)
-    cfg_path = o.company.ctx.org_root / "approvals.yaml"
-    o.app = create_app(
-        WebConfig(o.manager, o.company.ledger, "tok", o.accounts, o.workspace,
-                  resolver=o.company.rt.resolver, approvals_path=cfg_path)
-    )  # fmt: skip
+    o = Office(tmp)  # the policy file is the org's: orgs/tesla/approvals.yaml
     await o.manager.start()
     return o
 
@@ -75,16 +69,22 @@ async def test_org_chart_shows_agents_and_people(tmp_path: Path) -> None:
         async with o.client() as boss:
             h = await o.login(boss, "boss", Role.OWNER)
             kim = o.accounts.create_user(
-                "kim", "correct horse battery", Role.STAFF, display="김대리"
-            )
+                "kim", "correct horse battery", Role.STAFF, display="김대리",
+                assignments=[Assignment("tesla", None, Role.STAFF)],
+            )  # fmt: skip
+            # a title and teams are per org since decision 57: the org's people, not the account
+            moved = await boss.patch(f"/api/users/{kim.id}", json={"teams": ["x"]}, headers=h)
+            assert moved.status_code == 400 and "/people/" in moved.json()["error"]
             r = await boss.patch(
-                f"/api/users/{kim.id}", json={"teams": ["product"], "title": "MD"}, headers=h
+                f"/api/people/{kim.id}", json={"teams": ["product"], "title": "MD"}, headers=h
             )
             assert (
                 r.status_code == 200
                 and r.json()["teams"] == ["product"]
                 and r.json()["title"] == "MD"
+                and r.json()["workspaces"] is None
             )
+            assert o.web.org.member(kim.id) == ("MD", ("product",))  # kept in org.db
             chart = (await boss.get("/api/org-chart")).json()
             product = next(t for t in chart["teams"] if t["name"] == "product")
             assert product["lead_agent"] is None  # decision 58: teams have no lead
@@ -94,12 +94,12 @@ async def test_org_chart_shows_agents_and_people(tmp_path: Path) -> None:
             ]
             assert [p["display"] for p in chart["owners"]] == ["boss"] and chart["unassigned"] == []
             # move kim: the chart follows
-            await boss.patch(f"/api/users/{kim.id}", json={"teams": ["core"]}, headers=h)
+            await boss.patch(f"/api/people/{kim.id}", json={"teams": ["core"]}, headers=h)
             chart = (await boss.get("/api/org-chart")).json()
             assert [
                 p["id"] for t in chart["teams"] if t["name"] == "core" for p in t["people"]
             ] == [kim.id]
-            await boss.patch(f"/api/users/{kim.id}", json={"teams": []}, headers=h)
+            await boss.patch(f"/api/people/{kim.id}", json={"teams": []}, headers=h)
             assert [p["id"] for p in (await boss.get("/api/org-chart")).json()["unassigned"]] == [
                 kim.id
             ]
@@ -151,7 +151,7 @@ async def test_staff_approve_their_team_only_and_never_owner_tier(tmp_path: Path
             assert listed[0]["can_approve"] is False  # kim is in no team yet
             r = await kim.post(f"/api/threads/{tid}/resume", json={"value": "approved"}, headers=hk)
             assert r.status_code == 403 and "team core" in r.json()["error"]
-            await boss.patch(f"/api/users/{kim_id}", json={"teams": ["core"]}, headers=hb)
+            await boss.patch(f"/api/people/{kim_id}", json={"teams": ["core"]}, headers=hb)
             async with o.client("203.0.113.9") as kim2:  # a fresh session sees the new teams
                 hk2 = await o.login_existing(kim2, "kim")
                 assert (await kim2.get("/api/approvals")).json()[0]["can_approve"] is True
@@ -190,7 +190,7 @@ async def test_staff_approve_their_team_only_and_never_owner_tier(tmp_path: Path
                 }
                 # C25 — who and when (the row), the category, the old and the new tier
                 entry = next(
-                    e for e in o.accounts.audit_log() if e["action"] == "approval_policy.update"
+                    e for e in o.web.org.audit_log() if e["action"] == "approval_policy.update"
                 )
                 assert entry["user_id"] and entry["ts"]
                 assert json.loads(entry["detail"])["changes"] == [
@@ -218,14 +218,16 @@ async def test_workflow_review_is_approved_by_its_team(tmp_path: Path) -> None:
     shutil.copy(TEMPLATE, c.ctx.org_root / "workflows" / "monthly-pnl.yaml")  # team: business
     wf = WorkflowEngine(c.ctx.org_root, c.ctx.data_dir, ArtifactStore(c.ctx.data_dir / "a.sqlite"),
                         company_asker(o.manager))  # fmt: skip
-    o.app = create_app(WebConfig(o.manager, c.ledger, "tok", o.accounts, o.workspace, workflows=wf))
+    o.web.config.runtimes[("tesla", "hq")].workflows = wf
+    o.web.rebuild()
+    o.app = o.web.app
     await o.manager.start()
     await wf.start()
     try:
         async with o.client() as boss, o.client("203.0.113.9") as lee:
             hb = await o.login(boss, "boss", Role.OWNER)
-            lee_user = o.accounts.create_user("lee", "correct horse battery", Role.STAFF)
-            o.accounts.set_profile(lee_user.id, teams=["business"])
+            lee_user = o.web.staff("lee", "correct horse battery")
+            o.web.org.set_member(lee_user.id, teams=["business"])
             hl = await o.login_existing(lee, "lee")
             up = wf.save_upload("원장.csv", LEDGER_CSV.encode())
             tid, rid = await wf.run_now("monthly-pnl", {"ledger": up["id"]})
@@ -276,5 +278,7 @@ def test_an_older_accounts_file_gains_the_new_columns(tmp_path: Path) -> None:
     db.commit()
     db.close()
     store = AccountStore(path)
-    user = store.set_profile("u-1", title="팀장", teams=["brand", "product", "brand"])
-    assert (user.title, user.teams) == ("팀장", ("brand", "product"))
+    assert store.user("u-1").username == "old"
+    assert {"title", "teams"} <= {r[1] for r in sqlite3.connect(path).execute(
+        "PRAGMA table_info(users)"
+    )}  # fmt: skip  # rev6 columns, read once by the move into org.db (org_store)

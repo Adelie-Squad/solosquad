@@ -33,7 +33,6 @@ from solosquad.layout import (
 )
 from solosquad.profile import (
     CustomerProfile,
-    apply_server_country,
     load_profile,
     parse_entity,
     save_profile,
@@ -49,6 +48,7 @@ from solosquad.service import ServiceSpec, plan
 from solosquad.storage import ORG_DB
 
 if TYPE_CHECKING:
+    from solosquad.engine_server import EngineServer
     from solosquad.web_api.accounts import AccountStore
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
@@ -57,10 +57,10 @@ conn_app = typer.Typer(
     no_args_is_help=True, help="LLM connections: subscription logins and API keys."
 )
 agents_app = typer.Typer(no_args_is_help=True, help="Watch the agents work.")
-service_app = typer.Typer(no_args_is_help=True, help="Run a workspace 24/7 as an OS service.")
+service_app = typer.Typer(no_args_is_help=True, help="Run the engine server 24/7 as an OS service.")
 cron_app = typer.Typer(no_args_is_help=True, help="An org's scheduled runs.")
 accounts_app = typer.Typer(
-    no_args_is_help=True, help="People who log in to the web — one set per org (owner · staff)."
+    no_args_is_help=True, help="People who log in to the web — one account each for the customer."
 )
 app.add_typer(add_app, name="add")
 app.add_typer(cron_app, name="cron")
@@ -126,11 +126,15 @@ def _data_dir(solution: Path, org: str, workspace: str) -> Path:
     return EngineStore(solosquad_home()).data_dir(Solution(solution).org(org).workspace(workspace))
 
 
-def _accounts(solution: Path, org: str) -> AccountStore:
-    from solosquad.web_api.accounts import AccountStore
+def _accounts(solution: Path) -> AccountStore:
+    """The customer's `core.db` — a rev6 org's accounts are moved in first (C32)."""
+    from solosquad.storage import MigrationFailed
+    from solosquad.web_api.org_store import open_accounts
 
-    sol = Solution(solution)
-    return AccountStore(EngineStore(solosquad_home()).org_data_dir(sol.org(org)) / ORG_DB)
+    try:
+        return open_accounts(Solution(solution))
+    except MigrationFailed as e:
+        raise _fail(str(e)) from e
 
 
 def _web_dist() -> Path | None:
@@ -140,12 +144,17 @@ def _web_dist() -> Path | None:
     return dist if dist is not None and dist.is_dir() else None
 
 
+def _customer_dir(solution: Path) -> Path:
+    """`data/<solution-id>/` — `core.db`, the engine server's token and `server.json`."""
+    return EngineStore(solosquad_home()).solution_data_dir(Solution(solution))
+
+
 def _client(solution: Path, org: str | None, workspace: str | None) -> Client:
     o, w = _pick(solution, org, workspace)
-    sf = server_file(_data_dir(solution, o, w))
+    sf = server_file(_customer_dir(solution))
     if sf.is_file():
         info = json.loads(sf.read_text(encoding="utf-8"))
-        client = HttpClient(f"http://127.0.0.1:{info['port']}", info["token"])
+        client = HttpClient(f"http://127.0.0.1:{info['port']}", info["token"], (o, w))
         try:
             client._call("GET", "/version")
             return client
@@ -225,18 +234,14 @@ def init(
     """Create core/, the first org and its first workspace — and the customer profile."""
     bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
     try:
-        sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None)
-        new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
-        ws = scaffold_workspace(new_org, workspace, ws_type)
         profile = _apply_profile(
             CustomerProfile(), server_country, cloud, region, cloud_access, entity, language,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
-        save_profile(path, profile)
-        if profile.server.country:
-            ws.save_config(
-                ws.config().model_copy(update={"server_country": profile.server.country})
-            )
+        sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None, ws_type)
+        new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
+        scaffold_workspace(new_org, workspace)
+        save_profile(path, profile)  # the server country lands in core/server.yaml (I41)
     except (LayoutError, ValueError) as e:
         raise _fail(str(e)) from e
     console.print(f"created {path} — org {org!r}, workspace {workspace!r} ({ws_type.value})")
@@ -254,25 +259,25 @@ def layout(
         lock, meta = sol.engine_lock(), sol.meta()
     except LayoutError as e:
         raise _fail(str(e)) from e
-    tree = Tree(f"{path} · {meta.id} · engine {lock.version}")
+    try:
+        server = sol.server_config(strict=False)
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    tree = Tree(f"{path} · {meta.id} · engine {lock.version} · server {server.type.value}")
     for o in sol.orgs():
         node = tree.add(f"org {o.name} · {o.lock().package}@{o.lock().version}")
         for ws in o.workspaces():
-            node.add(f"workspace {ws.name} · {ws.config().type.value}")
+            placed = "" if server.placement.places(o.name, ws.name) else " · not placed here"
+            node.add(f"workspace {ws.name}{placed}")
     console.print(tree)
 
 
 @add_app.command("org")
-def add_org(
-    name: str,
-    solution: SolutionOpt = Path("."),
-    workspace: str = "hq",
-    ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
-) -> None:
+def add_org(name: str, solution: SolutionOpt = Path("."), workspace: str = "hq") -> None:
     """Create an org from the bundled org package (core is not touched)."""
     try:
         org = scaffold_org(Solution(solution), name, BUNDLED_PACKAGE, __version__)
-        scaffold_workspace(org, workspace, ws_type)
+        scaffold_workspace(org, workspace)
     except LayoutError as e:
         raise _fail(str(e)) from e
     console.print(f"org {name!r} with workspace {workspace!r}")
@@ -283,17 +288,14 @@ def add_workspace(
     name: str,
     org: Annotated[str, typer.Option("--org")],
     solution: SolutionOpt = Path("."),
-    ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
 ) -> None:
-    """Add an office (workspace) to an org."""
+    """Add a workspace (business unit) to an org — it runs on this customer's server, whose
+    address, country and type are in core/server.yaml (I41)."""
     try:
-        ws = scaffold_workspace(Solution(solution).org(org), name, ws_type)
-        country = load_profile(solution).server.country
-        if country:  # a new office sits where the customer profile says (decision 50)
-            ws.save_config(ws.config().model_copy(update={"server_country": country}))
+        scaffold_workspace(Solution(solution).org(org), name)
     except LayoutError as e:
         raise _fail(str(e)) from e
-    console.print(f"workspace {name!r} ({ws_type.value}) in org {org!r}")
+    console.print(f"workspace {name!r} in org {org!r}")
 
 
 # ---------------------------------------------------------------------- connections
@@ -440,11 +442,23 @@ def conn_remove(
 def conn_set_secret(
     id: str, solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsOpt = None
 ) -> None:
-    """Store an API key in the workspace data folder (outside git, mode 0600)."""
-    o, w = _pick(solution, org, workspace)
+    """Store an API key in each workspace's data folder (outside git, mode 0600) — every
+    workspace by default, or those of `--org` / just `--workspace`."""
+    sol = Solution(solution)
+    try:
+        places = [
+            ws
+            for ws in sol.workspaces()
+            if (org is None or ws.org.name == org) and (workspace is None or ws.name == workspace)
+        ]
+    except LayoutError as e:
+        raise _fail(str(e)) from e
+    if not places:
+        raise _fail("no workspace matches --org / --workspace")
     value = typer.prompt(f"key for {id}", hide_input=True)
-    SecretStore(_data_dir(solution, o, w) / "secrets.json").set(id, value)
-    console.print(f"{id}: key stored")
+    for ws in places:
+        SecretStore(_data_dir(solution, ws.org.name, ws.name) / "secrets.json").set(id, value)
+    console.print(f"{id}: key stored for {', '.join(f'{w.org.name}/{w.name}' for w in places)}")
 
 
 @conn_app.command("check")
@@ -470,66 +484,65 @@ def conn_check(
 # ---------------------------------------------------------------------- run
 
 
-def _snapshot_now(inst: Any, ws: Any, org_dir: Path) -> dict[str, Any]:
-    """The web's "snapshot now" — `run_snapshot` reads workspace.yaml afresh."""
-    from solosquad.maintenance import run_snapshot
+def _engine(solution: Path, include: list[str] | None = None) -> EngineServer:
+    """Every placed workspace's runtime — refuses on a server-settings conflict (C33) or a
+    failed account move (C32), never on one broken workspace (K49)."""
+    from solosquad.engine_server import build_engine
+    from solosquad.storage import MigrationFailed
 
-    return run_snapshot(inst, org_dir)
+    try:
+        return build_engine(solution, include=include)
+    except (LayoutError, MigrationFailed) as e:
+        raise _fail(str(e)) from e
+
+
+def _placement(org: str | None, workspace: str | None) -> list[str] | None:
+    """`--org` / `--workspace` narrow what this `serve` runs (default: everything placed)."""
+    if workspace and not org:
+        raise _fail("--workspace needs --org")
+    if org:
+        return [f"{org}/{workspace}" if workspace else org]
+    return None
 
 
 @app.command()
 def serve(
     solution: SolutionOpt = Path("."),
-    org: OrgOpt = None,
-    workspace: WsOpt = None,
+    org: Annotated[
+        str | None, typer.Option("--org", help="Run only this org (default: every placed one).")
+    ] = None,
+    workspace: Annotated[
+        str | None,
+        typer.Option("--workspace", "-w", help="Run only this workspace of --org."),
+    ] = None,
     port: int = 7420,
     host: str = "127.0.0.1",
 ) -> None:
-    """Run one workspace 24/7: run manager, crons, and the local JSON API."""
-    from solosquad.context.resolve import Resolver
-    from solosquad.instance import (
-        build_instance,
-        connections_for,
-        start_instance,
-        stop_instance,
-    )
+    """Run the customer's engine server 24/7: every placed workspace's runtime (run manager,
+    crons, workflows), the login and web, daily upkeep and snapshots (decision 57 · I38)."""
+    from solosquad.engine_server import start_engine, stop_engine
     from solosquad.maintenance import maintenance_loop
     from solosquad.server import ApiServer, load_or_create_token
 
-    o, w = _pick(solution, org, workspace)
+    include = _placement(org, workspace)
 
     async def main() -> None:
-        inst = build_instance(solution, o, w)
-        resumed = await start_instance(inst)
-        token = load_or_create_token(inst.ctx.data_dir)
-        ws = Solution(solution).org(o).workspace(w)
-        accounts = _accounts(solution, o)
-        org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
-        upkeep = asyncio.create_task(maintenance_loop(inst, accounts, org_dir=org_dir))
-        api = ApiServer(
-            inst.manager,
-            inst.ledger,
-            token,
-            accounts=accounts,
-            workspace=ws,
-            static_dir=_web_dist(),
-            resolver=Resolver(inst.ctx),
-            router=inst.router,
-            secrets=inst.secrets,
-            connections_path=inst.ctx.solution.connections_path,
-            reload_connections=lambda: connections_for(inst.ctx),
-            workflows=inst.workflows,
-            artifacts=inst.artifacts,
-            approvals_path=inst.ctx.org_root / "approvals.yaml",
-            run_snapshot=lambda: _snapshot_now(inst, ws, org_dir),
-        )
+        engine = _engine(solution, include)
+        resumed = await start_engine(engine)
+        for (o, w), why in sorted(engine.failed.items()):
+            console.print(f"[red]workspace {o}/{w} did not start:[/red] {escape(why)}")
+        token = load_or_create_token(engine.data_dir)
+        upkeep = asyncio.create_task(maintenance_loop(engine))
+        api = ApiServer.for_engine(engine, token, static_dir=_web_dist())
         bound = await api.start(host, port)
-        sf = server_file(inst.ctx.data_dir)
+        sf = server_file(engine.data_dir)
         sf.write_text(
             json.dumps({"port": bound, "token": token, "pid": os.getpid()}), encoding="utf-8"
         )
         sf.chmod(0o600)
-        console.print(f"serving {o}/{w} on http://{host}:{bound} · resumed {len(resumed)} run(s)")
+        names = ", ".join(f"{o}/{w}" for o, w in sorted(engine.runtimes)) or "nothing"
+        total = sum(len(r) for r in resumed.values())
+        console.print(f"serving {names} on http://{host}:{bound} · resumed {total} run(s)")
         stop = asyncio.Event()
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
@@ -538,7 +551,7 @@ def serve(
         await stop.wait()
         upkeep.cancel()
         await api.stop()
-        await stop_instance(inst)
+        await stop_engine(engine)
         sf.unlink(missing_ok=True)
 
     _run(main())
@@ -851,17 +864,15 @@ def profile_set(
         str | None, typer.Option("--privacy-reviewer", help="A role, e.g. 고객 법무팀")
     ] = None,
 ) -> None:
-    """Fill in or change profile items; a new server country is applied to every office."""
+    """Fill in or change profile items; the server country is kept in core/server.yaml."""
     try:
         profile = _apply_profile(
             load_profile(solution), server_country, cloud, region, cloud_access, entity, language,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
-    except ValueError as e:
+        save_profile(solution, profile)
+    except (ValueError, LayoutError) as e:
         raise _fail(str(e)) from e
-    save_profile(solution, profile)
-    if server_country:
-        apply_server_country(solution, profile.server.country)
     _print_checklist(profile)
 
 
@@ -869,36 +880,27 @@ def profile_set(
 
 
 @app.command()
-def maintenance(
-    solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsOpt = None
-) -> None:
-    """Apply the retention rules now (normally daily inside `serve`)."""
-    from solosquad.instance import build_instance
-    from solosquad.maintenance import run_retention
+def maintenance(solution: SolutionOpt = Path(".")) -> None:
+    """Apply the retention rules now, for every workspace (normally daily inside `serve`)."""
+    from solosquad.maintenance import run_customer_retention
 
-    o, w = _pick(solution, org, workspace)
-    counts = run_retention(build_instance(solution, o, w), _accounts(solution, o))
-    table = Table("removed", "count")
+    counts = run_customer_retention(_engine(solution))
+    table = Table("scope", "removed")
     for k, v in counts.items():
-        table.add_row(k, str(v))
+        table.add_row(k, escape(json.dumps(v, ensure_ascii=False)))
     console.print(table)
 
 
 @app.command("backup")
 def backup_cmd(
     solution: SolutionOpt = Path("."),
-    org: OrgOpt = None,
-    workspace: WsOpt = None,
     to: Annotated[Path | None, typer.Option(help="Folder for the copies.")] = None,
 ) -> None:
-    """Online copy of org.db and office.db with a manifest (safe while the office runs)."""
-    from solosquad.instance import build_instance
-    from solosquad.maintenance import backup_instance
+    """Online copy of core.db, every org.db and every office.db, all of one moment, with a
+    manifest (safe while the server runs)."""
+    from solosquad.maintenance import backup_customer
 
-    o, w = _pick(solution, org, workspace)
-    inst = build_instance(solution, o, w)
-    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
-    manifest = backup_instance(inst, org_dir, to)
+    manifest = backup_customer(_engine(solution), to)
     for entry in manifest["files"]:
         console.print(f"{entry['name']}: {entry['bytes']} B · sha256 {entry['sha256'][:12]}…")
 
@@ -911,8 +913,6 @@ app.add_typer(snapshot_app, name="snapshot")
 def snapshot_set(
     target: Annotated[str, typer.Option("--type", help="s3 (any S3-compatible store) · dir")],
     solution: SolutionOpt = Path("."),
-    org: OrgOpt = None,
-    workspace: WsOpt = None,
     endpoint: Annotated[
         str | None, typer.Option(help="e.g. https://s3.ap-northeast-2.amazonaws.com")
     ] = None,
@@ -922,11 +922,10 @@ def snapshot_set(
     path: Annotated[str | None, typer.Option(help="Folder for a dir target")] = None,
     keep_days: int = 30,
 ) -> None:
-    """Configure the target; for s3 the keys are asked for and kept in the secret store."""
+    """Configure the customer's target (core/server.yaml); for s3 the keys are asked for and
+    kept in the customer's secret store."""
     from solosquad.snapshots import S3_SECRET_REF, build_target
 
-    o, w = _pick(solution, org, workspace)
-    ws = Solution(solution).org(o).workspace(w)
     try:
         cfg = build_target(
             target, endpoint=endpoint, region=region, bucket=bucket, prefix=prefix, path=path,
@@ -937,26 +936,23 @@ def snapshot_set(
     if target == "s3":
         access: str = typer.prompt("access key id")
         secret: str = typer.prompt("secret access key", hide_input=True)
-        SecretStore(_data_dir(solution, o, w) / "secrets.json").set(
+        SecretStore(_customer_dir(solution) / "secrets.json").set(
             S3_SECRET_REF, f"{access}:{secret}"
         )
-    ws.save_config(ws.config().model_copy(update={"snapshot": cfg}))
+    try:
+        Solution(solution).update_server_config(snapshot=cfg)
+    except LayoutError as e:
+        raise _fail(str(e)) from e
     console.print(f"snapshot target: {target} · keep {keep_days} days")
 
 
 @snapshot_app.command("run")
-def snapshot_run(
-    solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsOpt = None
-) -> None:
-    """Back up and ship now (normally daily inside `serve`)."""
-    from solosquad.instance import build_instance
+def snapshot_run(solution: SolutionOpt = Path(".")) -> None:
+    """Back up every database at one moment and ship it now (normally daily in `serve`)."""
     from solosquad.maintenance import run_snapshot
 
-    o, w = _pick(solution, org, workspace)
-    inst = build_instance(solution, o, w)
-    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
     try:
-        result = run_snapshot(inst, org_dir)
+        result = run_snapshot(_engine(solution))
     except (ValueError, OSError) as e:
         raise _fail(str(e)) from e
     console.print(escape(json.dumps(result, ensure_ascii=False)))
@@ -965,37 +961,39 @@ def snapshot_run(
 @snapshot_app.command("restore")
 def snapshot_restore(
     solution: SolutionOpt = Path("."),
-    org: OrgOpt = None,
-    workspace: WsOpt = None,
     stamp: Annotated[
         str | None, typer.Option(help="UTC stamp, e.g. 20261105T020000Z; newest if omitted")
     ] = None,
     yes: Annotated[bool, typer.Option("--yes", help="Do not ask for confirmation")] = False,
 ) -> None:
-    """Restore org.db and office.db from a snapshot (the office must be stopped)."""
+    """Restore core.db, every org.db and every office.db from one snapshot (the engine
+    server must be stopped)."""
     import tempfile
 
     from solosquad.snapshots import fetch, restore
-    from solosquad.storage import OFFICE_DB, ORG_DB
+    from solosquad.storage import CORE_DB, OFFICE_DB
 
-    o, w = _pick(solution, org, workspace)
-    data = _data_dir(solution, o, w)
+    sol = Solution(solution)
+    store = EngineStore(solosquad_home())
+    data = _customer_dir(solution)
     if server_file(data).is_file():
-        raise _fail("stop the office first (`solosquad service uninstall` or stop `serve`)")
-    ws = Solution(solution).org(o).workspace(w)
-    target = ws.config().snapshot
+        raise _fail("stop the server first (`solosquad service uninstall` or stop `serve`)")
+    target = sol.server_config().snapshot
     secrets = SecretStore(data / "secrets.json")
-    sid = Solution(solution).meta().id
+    targets = {"core": data / CORE_DB}
+    for o in sol.orgs():
+        targets[f"org~{o.name}"] = store.org_data_dir(o) / ORG_DB
+        for ws in o.workspaces():
+            targets[f"office~{o.name}~{ws.name}"] = store.data_dir(ws) / OFFICE_DB
     with tempfile.TemporaryDirectory(prefix="solosquad-restore-") as tmp:
         try:
-            chosen = fetch(target, f"{sid}/{o}/{w}", stamp, Path(tmp), secret=secrets.get)
+            chosen = fetch(target, sol.meta().id, stamp, Path(tmp), secret=secrets.get)
         except (KeyError, ValueError, OSError) as e:
             raise _fail(str(e).strip("'\"")) from e
         if not yes and not typer.confirm(f"restore snapshot {chosen} over the live databases?"):
             raise typer.Exit(1)
-        org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
         try:
-            done = restore(Path(tmp), {"org": org_dir / ORG_DB, "office": data / OFFICE_DB})
+            done = restore(Path(tmp), targets)
         except ValueError as e:
             raise _fail(str(e)) from e
     console.print(
@@ -1083,12 +1081,12 @@ def _ask_password() -> str:
 def accounts_create_owner(
     username: Annotated[str, typer.Argument(help="Login name for the owner (대표).")],
     solution: SolutionOpt = Path("."),
-    org: OrgOpt = None,
     display: Annotated[str, typer.Option(help="Name shown in the web.")] = "",
 ) -> None:
-    """First owner account of an org (done once by the FDE at setup), with its one-time code."""
-    o = _pick_org(solution, org)
-    store = _accounts(solution, o)
+    """The customer's owner account (done once by the FDE at setup), with its one-time code.
+
+    The owner leads every org and workspace of the customer (decision 57 ⑵)."""
+    store = _accounts(solution)
     from solosquad.web_api.accounts import Role
 
     try:
@@ -1096,7 +1094,7 @@ def accounts_create_owner(
     except ValueError as e:
         raise _fail(str(e)) from e
     uri = store.begin_totp(user.id)
-    console.print(f"owner {user.username!r} created for org {o!r}")
+    console.print(f"owner {user.username!r} created for the whole customer")
     console.print("add this to an authenticator app (or show it as a QR code):")
     console.print(escape(uri))
     code: str = typer.prompt("6-digit code from the app")
@@ -1108,57 +1106,95 @@ def accounts_create_owner(
 
 
 @accounts_app.command("list")
-def accounts_list(solution: SolutionOpt = Path("."), org: OrgOpt = None) -> None:
-    """Accounts of an org."""
-    o = _pick_org(solution, org)
-    table = Table("username", "role", "2FA", "disabled")
-    for u in _accounts(solution, o).users():
+def accounts_list(solution: SolutionOpt = Path(".")) -> None:
+    """Accounts of the customer and what each is assigned to."""
+    store = _accounts(solution)
+    table = Table("username", "role", "assigned", "2FA", "disabled")
+    for u in store.users():
+        scope = (
+            "everything"
+            if u.role.value == "owner"
+            else ", ".join(
+                f"{a.org}/{a.workspace or '*'} ({a.role.value})" for a in store.assignments(u.id)
+            )
+        )
         table.add_row(
-            u.username, u.role.value, "yes" if u.has_totp else "no", "yes" if u.disabled else ""
+            u.username,
+            u.role.value,
+            scope or "-",
+            "yes" if u.has_totp else "no",
+            "yes" if u.disabled else "",
         )
     console.print(table)
 
 
-def _find_user(solution: Path, org: str | None, username: str) -> tuple[Any, Any]:
-    o = _pick_org(solution, org)
-    store = _accounts(solution, o)
+def _find_user(solution: Path, username: str) -> tuple[Any, Any]:
+    store = _accounts(solution)
     match = [u for u in store.users() if u.username == username.lower()]
     if not match:
         raise _fail(f"no account {username!r}")
     return store, match[0]
 
 
-@accounts_app.command("reset-totp")
-def accounts_reset_totp(
-    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
+@accounts_app.command("assign")
+def accounts_assign(
+    username: str,
+    org: Annotated[str, typer.Option("--org", help="The org to give access to.")],
+    solution: SolutionOpt = Path("."),
+    workspace: Annotated[
+        str | None,
+        typer.Option("--workspace", "-w", help="Only this workspace (default: the whole org)."),
+    ] = None,
+    role: Annotated[str, typer.Option(help="owner (대표) or staff (직원) in that org")] = "staff",
+    remove: Annotated[bool, typer.Option("--remove", help="Take the assignment away.")] = False,
 ) -> None:
+    """Give a person an org (all its workspaces) or one workspace — or take it away (I39)."""
+    from solosquad.web_api.accounts import Role
+
+    store, user = _find_user(solution, username)
+    try:
+        found = Solution(solution).org(org)  # LayoutError for an org that is not there
+        if workspace:
+            found.workspace(workspace)
+        if remove:
+            store.set_assignments(
+                user.id,
+                [a for a in store.assignments(user.id) if (a.org, a.workspace) != (org, workspace)],
+            )
+        else:
+            store.assign(user.id, org, workspace, Role(role))
+    except (LayoutError, ValueError) as e:
+        raise _fail(str(e)) from e
+    where = f"{org}/{workspace or '*'}"
+    store.audit(None, "user.assign", f"{user.username} {'-' if remove else '+'}{where} via CLI")
+    console.print(f"{user.username!r}: {'removed from' if remove else 'assigned to'} {where}")
+
+
+@accounts_app.command("reset-totp")
+def accounts_reset_totp(username: str, solution: SolutionOpt = Path(".")) -> None:
     """Lost phone: clear the one-time code; the next login enrols a new one."""
-    store, user = _find_user(solution, org, username)
+    store, user = _find_user(solution, username)
     store.reset_totp(user.id)
     store.audit(None, "user.totp.reset", f"{user.username} via CLI")
     console.print(f"one-time code cleared for {user.username!r}")
 
 
 @accounts_app.command("reset-passkeys")
-def accounts_reset_passkeys(
-    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
-) -> None:
+def accounts_reset_passkeys(username: str, solution: SolutionOpt = Path(".")) -> None:
     """Lost phone: remove the account's passkeys and sign it out everywhere.
 
     The recovery path when the owner loses their own device — whoever can reach the
     server's shell can run it (PRD v2.1.0 K30)."""
-    store, user = _find_user(solution, org, username)
+    store, user = _find_user(solution, username)
     store.clear_passkeys(user.id)
     store.audit(None, "user.passkeys.reset", f"{user.username} via CLI")
     console.print(f"passkeys removed for {user.username!r} — sign in with password + code")
 
 
 @accounts_app.command("set-password")
-def accounts_set_password(
-    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
-) -> None:
+def accounts_set_password(username: str, solution: SolutionOpt = Path(".")) -> None:
     """Set a new password (ends that account's sessions)."""
-    store, user = _find_user(solution, org, username)
+    store, user = _find_user(solution, username)
     try:
         store.set_password(user.id, _ask_password())
     except ValueError as e:
@@ -1198,8 +1234,16 @@ def agents_watch(
 def _service(
     solution: Path, org: str | None, workspace: str | None, port: int
 ) -> tuple[ServiceSpec, Any]:
-    o, w = _pick(solution, org, workspace)
-    spec = ServiceSpec(solution.resolve(), o, w, port)
+    """One service for the customer's engine server; `--org/--workspace` narrow what it runs."""
+    _placement(org, workspace)
+    if org:
+        try:
+            found = Solution(solution).org(org)
+            if workspace:
+                found.workspace(workspace)
+        except LayoutError as e:
+            raise _fail(str(e)) from e
+    spec = ServiceSpec(solution.resolve(), org, workspace, port)
     return spec, plan(spec, Path.home())
 
 
@@ -1219,7 +1263,7 @@ def service_print(
 def service_install(
     solution: SolutionOpt = Path("."), org: OrgOpt = None, workspace: WsOpt = None, port: int = 7420
 ) -> None:
-    """Register and start the workspace as a login service (restarts on failure and reboot)."""
+    """Register and start the engine server as a login service (restarts on failure, reboot)."""
     _, p = _service(solution, org, workspace, port)
     if p.path and p.content:
         p.path.parent.mkdir(parents=True, exist_ok=True)

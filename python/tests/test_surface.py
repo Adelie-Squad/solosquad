@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from company_fixtures import Company
 from typer.testing import CliRunner
+from web_fixtures import web_office
 
 from solosquad.cli import app
 from solosquad.client import HttpClient, message_text
@@ -29,9 +30,9 @@ async def test_http_boundary(tmp_path: Path) -> None:
     await m.start()
     token = load_or_create_token(c.ctx.data_dir)
     assert load_or_create_token(c.ctx.data_dir) == token
-    api = ApiServer(m, c.ledger, token)
+    api = ApiServer(web_office(c, m, token=token).config)
     port = await api.start()
-    client = HttpClient(f"http://127.0.0.1:{port}", token)
+    client = HttpClient(f"http://127.0.0.1:{port}", token, ("tesla", "hq"))
     events: list[dict[str, Any]] = []
 
     async def watch() -> None:
@@ -44,7 +45,8 @@ async def test_http_boundary(tmp_path: Path) -> None:
             break
         await asyncio.sleep(0.02)
     try:
-        assert (await client._a("GET", "/health"))["ok"] is True
+        root = HttpClient(f"http://127.0.0.1:{port}", token)  # customer-level paths
+        assert (await root._a("GET", "/health"))["ok"] is True
         with pytest.raises(urllib.error.HTTPError) as e:
             await HttpClient(f"http://127.0.0.1:{port}", "wrong")._a("GET", "/version")
         assert e.value.code == 401
@@ -168,8 +170,6 @@ def test_cli_end_to_end_with_a_real_api_connection(tmp_path: Path, openai_server
                 "busan",
                 "--org",
                 "moa-living",
-                "--type",
-                "intranet",
                 "-s",
                 str(sol),
             ],

@@ -41,8 +41,11 @@ class Resolved:
 
 
 class Resolver:
-    def __init__(self, ctx: ExecutionContext) -> None:
+    def __init__(self, ctx: ExecutionContext, *, workspace_layer: bool = True) -> None:
+        """`workspace_layer=False` = what the org defines, without one workspace's
+        overrides (the org-scope view of the web, decision 57)."""
         self.ctx = ctx
+        self.workspace_layer = workspace_layer
 
     def _roots(self, kind: Kind) -> list[tuple[Layer, Path]]:
         ws = self.ctx.workspace_root / "overrides" / kind
@@ -54,7 +57,8 @@ class Resolver:
             ]
         else:
             pkg = [self.ctx.bundle_root / "skills"]
-        return [("workspace", ws), ("org", org), *(("package", p) for p in pkg)]
+        own: list[tuple[Layer, Path]] = [("workspace", ws)] if self.workspace_layer else []
+        return [*own, ("org", org), *(("package", p) for p in pkg)]
 
     def find(self, kind: Kind, name: str) -> Resolved | None:
         for layer, root in self._roots(kind):

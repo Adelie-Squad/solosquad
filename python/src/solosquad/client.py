@@ -35,9 +35,12 @@ def server_file(data_dir: Path) -> Path:
 
 
 class HttpClient:
-    def __init__(self, base: str, token: str) -> None:
+    def __init__(self, base: str, token: str, scope: tuple[str, str] | None = None) -> None:
+        """`scope` = the (org, workspace) the workspace calls go to (`/api/o/…/w/…`, I40);
+        `_call` itself takes customer-level paths as they are."""
         self.base = base.rstrip("/")
         self.token = token
+        self.prefix = f"/o/{scope[0]}/w/{scope[1]}" if scope else ""
 
     def _call(self, method: str, path: str, body: Any = None) -> Any:
         data = json.dumps(body).encode() if body is not None else None
@@ -51,7 +54,8 @@ class HttpClient:
             return json.loads(resp.read() or b"null")
 
     async def _a(self, method: str, path: str, body: Any = None) -> Any:
-        return await asyncio.to_thread(self._call, method, path, body)
+        """A workspace-scope call (threads · runs · ledger)."""
+        return await asyncio.to_thread(self._call, method, self.prefix + path, body)
 
     async def create_thread(self, title: str, metadata: dict[str, Any] | None = None) -> str:
         return str(
@@ -92,7 +96,8 @@ class HttpClient:
 
     async def events(self) -> AsyncIterator[dict[str, Any]]:
         req = urllib.request.Request(
-            self.base + "/api/events", headers={"Authorization": f"Bearer {self.token}"}
+            self.base + "/api" + self.prefix + "/events",
+            headers={"Authorization": f"Bearer {self.token}"},
         )
         resp = await asyncio.to_thread(urllib.request.urlopen, req)
         while True:

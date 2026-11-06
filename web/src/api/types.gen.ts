@@ -12,7 +12,11 @@ export interface SoloSquadWebApi {
   Health: Health;
   Version: Version;
   ErrorBody: ErrorBody;
+  AssignmentOut: AssignmentOut;
   PublicUser: PublicUser;
+  ScopeWorkspace: ScopeWorkspace;
+  ScopeOrg: ScopeOrg;
+  ScopeRef: ScopeRef;
   Me: Me;
   TotpBegin: TotpBegin;
   AccessPolicy: AccessPolicy;
@@ -31,6 +35,7 @@ export interface SoloSquadWebApi {
   Team: Team;
   Agent: Agent;
   OrgChart: OrgChart;
+  OrgPerson: OrgPerson;
   ApprovalItem: ApprovalItem;
   ApprovalPolicyRow: ApprovalPolicyRow;
   Entity: Entity;
@@ -83,6 +88,17 @@ export interface ErrorBody {
   error: string;
 }
 /**
+ * One row of the assignment table (I39): `workspace` null = the whole org.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "AssignmentOut".
+ */
+export interface AssignmentOut {
+  org: string;
+  workspace: string | null;
+  role: 'owner' | 'staff';
+}
+/**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
  * via the `definition` "PublicUser".
  */
@@ -96,6 +112,37 @@ export interface PublicUser {
   disabled: boolean;
   title: string;
   teams: string[];
+  assignments: AssignmentOut[];
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ScopeWorkspace".
+ */
+export interface ScopeWorkspace {
+  name: string;
+  role: 'owner' | 'staff';
+  running: boolean;
+}
+/**
+ * An org the person may open, with the workspaces of it they may open (I40).
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ScopeOrg".
+ */
+export interface ScopeOrg {
+  org: string;
+  display: string;
+  role: 'owner' | 'staff';
+  whole_org: boolean;
+  workspaces: ScopeWorkspace[];
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "ScopeRef".
+ */
+export interface ScopeRef {
+  org: string;
+  workspace: string;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -109,6 +156,8 @@ export interface Me {
   locale: 'ko' | 'en' | 'zh-CN';
   org_locale: 'ko' | 'en' | 'zh-CN';
   relogin: boolean;
+  scopes: ScopeOrg[];
+  last_scope: ScopeRef | null;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -135,9 +184,10 @@ export interface AuditEntry {
   user_id: string | null;
   action: string;
   detail: string | null;
+  workspace: string | null;
 }
 /**
- * Org-wide web settings (I31) — owner-only to change.
+ * The customer's default web settings (I31 · I41) — the customer owner changes them.
  *
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
  * via the `definition` "WebSettings".
@@ -372,6 +422,21 @@ export interface AgentCard {
   } | null;
 }
 /**
+ * A person as this org knows them (`/api/o/{org}/people`): role, title and teams here.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "OrgPerson".
+ */
+export interface OrgPerson {
+  id: string;
+  username: string;
+  display: string;
+  role: 'owner' | 'staff';
+  title: string;
+  teams: string[];
+  workspaces: string[] | null;
+}
+/**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
  * via the `definition` "ApprovalItem".
  */
@@ -423,6 +488,7 @@ export interface ConnectionOut {
   eligible: boolean;
   eligibility_reason: string | null;
   eligibility_source: string | null;
+  source: 'core' | 'org';
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
