@@ -362,3 +362,26 @@ async def test_c32_rev6_logins_still_work_after_the_move(tmp_path: Path) -> None
             "MD", ["product"]
         )  # fmt: skip
         assert (await kim.get("/api/o/spacex/people")).status_code == 404
+
+
+# ---------------------------------------------------------------------- display names
+
+
+async def test_display_names_come_from_org_and_workspace_yaml(web: Web) -> None:
+    """The switch menu reads names people use; without one, the id (the web makes it
+    readable)."""
+    org = web.engine.solution.org("spacex")
+    org.root.joinpath("org.yaml").write_text(
+        "schema_version: 1\nname: spacex\ndisplay_name: SpaceX\n", encoding="utf-8"
+    )
+    ws = org.workspace("rocket")
+    ws.save_config(ws.config().model_copy(update={"display_name": "Rocket Lab"}))
+    async with web.client() as boss:
+        await web.login(boss, "elon", Role.OWNER)
+        me = (await boss.get("/api/me")).json()
+    shown = {s["org"]: (s["display"], {w["name"]: w["display"] for w in s["workspaces"]})
+             for s in me["scopes"]}  # fmt: skip
+    assert shown == {
+        "spacex": ("SpaceX", {"rocket": "Rocket Lab"}),
+        "tesla": ("tesla", {"cars": "cars", "charging": "charging"}),
+    }

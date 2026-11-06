@@ -2,6 +2,7 @@ import { useLinks } from '../scope';
 import { useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import { ICON, type LucideIcon } from '../icons';
 import { useOrgOwner } from '../scope';
 import { navHref, visibleNav } from '../shell/nav';
 
@@ -11,7 +12,7 @@ interface Props {
 
 interface Command {
   id: string;
-  icon: string;
+  icon: LucideIcon;
   label: string;
   hint: string;
   run: () => void;
@@ -22,10 +23,10 @@ export interface PromptHandoff {
   prompt: string;
 }
 
-/** Arc-style command bar (⌘K): ask Chief anything, or jump to a screen. */
+/** Arc-style command bar (Cmd/Ctrl+K): ask Chief anything, or jump to a screen. */
 export function CommandBar({ onClose }: Props) {
   const links = useLinks();
-  const { w: toWs } = links;
+  const { w: toWs, o: toOrg } = links;
   const { t } = useI18n();
   const isOwner = useOrgOwner();
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export function CommandBar({ onClose }: Props) {
   };
 
   const base: Command[] = [
-    { id: 'go-chat', icon: '💬', label: t('chat.new'), hint: t('command.go'), run: () => go('/chat/new') },
+    { id: 'go-chat', icon: ICON.chat, label: t('chat.new'), hint: t('command.go'), run: () => go(toWs('/chat/new')) },
     ...visibleNav(isOwner).map((n) => ({
       id: `go-${n.to}`,
       icon: n.icon,
@@ -51,12 +52,13 @@ export function CommandBar({ onClose }: Props) {
       hint: t('command.go'),
       run: () => go(navHref(n, links)),
     })),
-    { id: 'go-settings', icon: '⚙️', label: t('nav.settings'), hint: t('command.go'), run: () => go('/settings') },
+    { id: 'go-connections', icon: ICON.connections, label: t('nav.connections'), hint: t('command.go'), run: () => go(toOrg('/settings/connections')) },
+    { id: 'go-settings', icon: ICON.settings, label: t('nav.settings'), hint: t('command.go'), run: () => go(toOrg('/settings')) },
   ];
   const q = query.trim();
   const filtered = q ? base.filter((c) => c.label.toLowerCase().includes(q.toLowerCase())) : base;
   const commands: Command[] = q
-    ? [{ id: 'ask-free', icon: '✨', label: q, hint: t('command.ask'), run: () => ask(q) }, ...filtered]
+    ? [{ id: 'ask-free', icon: ICON.ask, label: q, hint: t('command.ask'), run: () => ask(q) }, ...filtered]
     : filtered;
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -89,7 +91,7 @@ export function CommandBar({ onClose }: Props) {
           {commands.map((c, i) => (
             <li key={c.id}>
               <button className={i === cursor ? 'is-active' : ''} onMouseEnter={() => setCursor(i)} onClick={c.run}>
-                <span className="command-icon">{c.icon}</span>
+                <c.icon className="command-icon" size={18} />
                 <span className="command-label">{c.label}</span>
                 <span className="command-hint">{c.hint}</span>
               </button>

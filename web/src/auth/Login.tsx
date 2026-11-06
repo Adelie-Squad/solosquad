@@ -6,6 +6,7 @@ import { keys, useHealth } from '../api/queries';
 import type { Me } from '../api/types.gen';
 import { LocalePicker } from '../components/LocalePicker';
 import { Mascot } from '../characters/PenguinIcon';
+import { ICON } from '../icons';
 import { useI18n, type MessageKey } from '../i18n';
 import { loginWithPasskey, passkeySupported, showPasskeyButton } from './passkeys';
 
@@ -128,8 +129,9 @@ export function Login() {
             <div className="auth-or">
               <span>{t('auth.or')}</span>
             </div>
-            <button type="button" className="btn is-block" disabled={busy} onClick={() => void withPasskey()} data-testid="passkey-login">
-              🔑 {t('passkey.login')}
+            <button type="button" className="btn is-block with-icon" disabled={busy} onClick={() => void withPasskey()} data-testid="passkey-login">
+              <ICON.passkey />
+              {t('passkey.login')}
             </button>
           </>
         )}

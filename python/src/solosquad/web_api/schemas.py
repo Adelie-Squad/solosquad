@@ -92,6 +92,9 @@ class PublicUser(Closed):
 
 class ScopeWorkspace(Closed):
     name: str
+    display: str = ""
+    """The name people read — `workspace.yaml` `display_name`, else the id (the web then
+    makes the id readable)."""
     role: Role
     """The person's role there — `can_approve` and the role table follow it."""
     running: bool = True
@@ -103,6 +106,8 @@ class ScopeOrg(Closed):
 
     org: str
     display: str
+    """The name people read — `org.yaml` `display_name`, else the id (the web then makes
+    the id readable)."""
     role: Role
     """The role at org scope (org chart · approval policy · connections · workflows)."""
     whole_org: bool

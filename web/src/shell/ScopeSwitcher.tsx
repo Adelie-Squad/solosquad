@@ -1,10 +1,13 @@
 // The switch menu at the top of the sidebar (DESIGN.md `## 레이아웃` · `## 컴포넌트` 전환 메뉴):
 // org → workspace, only what the person is assigned (decision 57 ⑵). One choice only = just
-// the names. ↑↓ moves, Enter opens, Esc closes; the current scope is bold with ✓.
+// the names. Arrow keys move, Enter opens, Esc closes; the current scope is bold with a check.
+// Names are the display names (lib/names.ts), never the raw ids.
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ScopeOrg } from '../api/types.gen';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
+import { orgName as orgNameOf, shownName, workspaceName } from '../lib/names';
 import { routes, useScope } from '../scope';
 import { useSession } from '../session';
 
@@ -12,12 +15,21 @@ export interface ScopeChoice {
   org: string;
   orgDisplay: string;
   ws: string;
+  wsDisplay: string;
   running: boolean;
 }
 
 /** Flatten the assignments into the menu's rows, in the server's order. */
 export function scopeChoices(scopes: ScopeOrg[]): ScopeChoice[] {
-  return scopes.flatMap((o) => o.workspaces.map((w) => ({ org: o.org, orgDisplay: o.display || o.org, ws: w.name, running: w.running })));
+  return scopes.flatMap((o) =>
+    o.workspaces.map((w) => ({
+      org: o.org,
+      orgDisplay: shownName(o.org, o.display),
+      ws: w.name,
+      wsDisplay: shownName(w.name, w.display),
+      running: w.running,
+    })),
+  );
 }
 
 export function ScopeSwitcher() {
@@ -31,7 +43,8 @@ export function ScopeSwitcher() {
   const [cursor, setCursor] = useState(Math.max(0, here));
   const listRef = useRef<HTMLUListElement>(null);
   const current = choices[here];
-  const orgName = me.scopes.find((o) => o.org === scope.org)?.display || scope.org;
+  const orgName = orgNameOf(me.scopes, scope.org);
+  const wsName = workspaceName(me.scopes, scope.org, scope.ws);
 
   useEffect(() => {
     if (open) {
@@ -43,8 +56,8 @@ export function ScopeSwitcher() {
   if (choices.length <= 1) {
     return (
       <div className="scope-switch is-single" aria-label={t('scope.current')}>
-        <strong>{orgName}</strong>
-        <span>{scope.ws}</span>
+        <strong title={orgName}>{orgName}</strong>
+        <span title={wsName}>{wsName}</span>
       </div>
     );
   }
@@ -85,9 +98,9 @@ export function ScopeSwitcher() {
           }
         }}
       >
-        <strong>{orgName}</strong>
-        <span>{current?.ws ?? scope.ws}</span>
-        <span aria-hidden>▾</span>
+        <strong title={orgName}>{orgName}</strong>
+        <span title={wsName}>{current?.wsDisplay ?? wsName}</span>
+        <ICON.switch className="scope-switch-caret" />
       </button>
       {open && (
         <>
@@ -115,9 +128,9 @@ export function ScopeSwitcher() {
                     onMouseEnter={() => setCursor(i)}
                     onClick={() => go(c)}
                   >
-                    <span>{c.ws}</span>
+                    <span className="scope-switch-name">{c.wsDisplay}</span>
                     {!c.running && <span className="chip is-muted">{t('scope.stopped')}</span>}
-                    {isHere && <span aria-hidden>✓</span>}
+                    {isHere && <ICON.check className="scope-switch-check" />}
                   </div>
                 </li>
               );

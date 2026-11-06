@@ -1,19 +1,21 @@
 import { useState, type FormEvent } from 'react';
-import { errorText } from '../api/errors';
-import { useAction, useConnections, useKeys, useScopedApi } from '../api/queries';
-import type { ConnectionOut, Ok } from '../api/types.gen';
-import { Loading, QueryError } from '../components/Status';
-import { useI18n } from '../i18n';
-import { useOrgOwner } from '../scope';
+import { errorText } from '../../api/errors';
+import { useAction, useConnections, useKeys, useScopedApi } from '../../api/queries';
+import type { ConnectionOut, Ok } from '../../api/types.gen';
+import { Loading, QueryError } from '../../components/Status';
+import { useI18n } from '../../i18n';
+import { ICON } from '../../icons';
+import { useOrgOwner } from '../../scope';
 
 const KINDS: ConnectionOut['kind'][] = ['api_key', 'subscription', 'local_llm'];
 
 /**
  * LLM connections — which accounts the agents run on, whose legal entity holds them, and
  * whether the region rule allows them (decision 45 · I23 · I32). Everyone sees the list;
- * adding, switching and removing are the owner's.
+ * adding, switching and removing are the owner's. Lives in Settings › Connections
+ * (`/o/<org>/settings/connections`) since it is set up once and rarely visited.
  */
-export function ConnectionsView() {
+export function ConnectionsSettings() {
   const keys = useKeys();
   const { org: orgApi } = useScopedApi();
   const { t, fmt } = useI18n();
@@ -26,15 +28,13 @@ export function ConnectionsView() {
   const onError = (e: unknown) => setError(errorText(e, t));
 
   return (
-    <div className="view">
-      <header className="view-header">
-        <div>
-          <h1>{t('connections.title')}</h1>
-          <p>{t('connections.lead')}</p>
-        </div>
+    <div className="settings-stack">
+      <header className="section-head">
+        <p className="settings-hint">{t('connections.lead')}</p>
         {isOwner && !adding && (
-          <button className="btn is-primary" onClick={() => setAdding(true)}>
-            + {t('connections.add')}
+          <button className="btn is-primary with-icon" onClick={() => setAdding(true)}>
+            <ICON.new />
+            {t('connections.add')}
           </button>
         )}
       </header>
@@ -51,7 +51,7 @@ export function ConnectionsView() {
           {q.data.map((c) => (
             <article key={c.id} className={`panel conn ${c.active ? '' : 'is-off'}`}>
               <header className="conn-head">
-                <strong>{c.id}</strong>
+                <strong className="conn-name">{c.id}</strong>
                 <span className="chip">{t(`connections.kind.${c.kind}`)}</span>
                 <span className="chip">
                   {c.provider} · {c.harness}
@@ -95,10 +95,17 @@ export function ConnectionsView() {
                 <dt>{t('connections.eligibility')}</dt>
                 <dd>
                   {c.eligible ? (
-                    <span className="chip is-ok">✓ {t('connections.eligible')}</span>
+                    <span className="chip is-ok">
+                      <ICON.done size={14} />
+                      {t('connections.eligible')}
+                    </span>
                   ) : (
                     <span className="eligibility-reason">
-                      <span className="chip is-danger">✕ {t('connections.ineligible')}</span> {c.eligibility_reason}
+                      <span className="chip is-danger">
+                        <ICON.error size={14} />
+                        {t('connections.ineligible')}
+                      </span>{' '}
+                      {c.eligibility_reason}
                       {c.eligibility_source && <span className="dash-hint"> — {c.eligibility_source}</span>}
                     </span>
                   )}

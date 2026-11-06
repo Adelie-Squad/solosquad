@@ -2211,6 +2211,10 @@
         "name": {
           "type": "string"
         },
+        "display": {
+          "default": "",
+          "type": "string"
+        },
         "role": {
           "enum": [
             "owner",
@@ -2225,6 +2229,7 @@
       },
       "required": [
         "name",
+        "display",
         "role",
         "running"
       ],

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n, type MessageKey } from '../i18n';
 import { AgentIcon } from '../characters/PenguinIcon';
+import { ICON } from '../icons';
 import type { LogLine } from '../live/LiveProvider';
 
 /** A job card's view of one run — built from the API (runs, workflows) plus live notes. */
@@ -109,9 +110,7 @@ export function JobList({ jobs, compact }: { jobs: Job[]; compact?: boolean }) {
                   title={expanded.has(job.id) ? t('job.fold') : t('job.unfold')}
                   onClick={() => toggle(job.id)}
                 >
-                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
-                    <path d="M3 5.5 L7 9.5 L11 5.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <ICON.expand size={14} />
                 </button>
               </div>
             )}

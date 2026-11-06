@@ -7,6 +7,8 @@ import { decide, type Decision, useAction, useKeys, useScopedApi } from '../api/
 import type { ApprovalItem } from '../api/types.gen';
 import { categoryLabel, useI18n, type MessageKey } from '../i18n';
 import { AgentIcon } from '../characters/PenguinIcon';
+import { ICON } from '../icons';
+import { readable } from '../lib/names';
 
 /** Why this person cannot answer the card — the same rule the server applies (decision 51). */
 export function blockedReason(item: ApprovalItem): { key: MessageKey; team?: string } | null {
@@ -16,6 +18,7 @@ export function blockedReason(item: ApprovalItem): { key: MessageKey; team?: str
 }
 
 const RISK: Record<string, string> = { high: 'is-danger', medium: 'is-warn', low: 'is-ok' };
+const RISK_LABEL: Record<string, MessageKey> = { high: 'risk.high', medium: 'risk.medium', low: 'risk.low' };
 
 /**
  * One approval card (W12 + decision 51): what is asked, who asked, its category and tier.
@@ -49,9 +52,9 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
           <span className="chip">{categoryLabel(locale, card.category)}</span>
           <span className={`chip ${item.tier === 'owner' ? 'is-accent' : ''}`}>
             {item.tier === 'owner' ? t('tier.owner') : t('tier.team')}
-            {card.team ? ` · ${card.team}` : ''}
+            {card.team ? ` · ${readable(card.team)}` : ''}
           </span>
-          <span className={`chip ${RISK[card.risk] ?? ''}`}>{t('approvals.risk', { risk: card.risk })}</span>
+          <span className={`chip ${RISK[card.risk] ?? ''}`}>{t('approvals.risk', { risk: RISK_LABEL[card.risk] ? t(RISK_LABEL[card.risk]) : card.risk })}</span>
         </span>
       </header>
       {card.summary && <p className="approval-summary">{card.summary}</p>}
@@ -73,8 +76,9 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
         )}
       </p>
       {blocked ? (
-        <p className="approval-blocked" data-testid="approval-blocked">
-          🔒 {t(blocked.key, { team: blocked.team ?? '' })}
+        <p className="approval-blocked with-icon" data-testid="approval-blocked">
+          <ICON.locked />
+          {t(blocked.key, { team: blocked.team ? readable(blocked.team) : '' })}
         </p>
       ) : (
         <div className="approval-actions">

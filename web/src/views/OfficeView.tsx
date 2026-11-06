@@ -10,6 +10,8 @@ import { LiveModal } from '../components/LiveModal';
 import { QuickChat } from '../components/QuickChat';
 import { Loading, QueryError } from '../components/Status';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
+import { readable } from '../lib/names';
 import { useJobs } from '../live/jobs';
 import { useLive } from '../live/LiveProvider';
 import { ENTRY } from '../office/layout';
@@ -104,8 +106,9 @@ export function OfficeView() {
           <p>{t('office.lead')}</p>
         </div>
         <div className="office-actions">
-          <button className="btn" onClick={toggleFullscreen}>
-            {fullscreen ? t('office.exitFullscreen') : `⛶ ${t('office.fullscreen')}`}
+          <button className="btn with-icon" onClick={toggleFullscreen}>
+            {fullscreen ? <ICON.exitFullscreen /> : <ICON.fullscreen />}
+            {fullscreen ? t('office.exitFullscreen') : t('office.fullscreen')}
           </button>
           <button className={`btn ${liveOpen ? 'is-primary' : ''}`} aria-pressed={liveOpen} onClick={toggleLive}>
             <span className="live-dot btn-dot" /> {t('office.live')} {running}
@@ -139,8 +142,8 @@ export function OfficeView() {
               <button className="btn" onClick={() => setLiveModal(true)}>
                 {t('office.enlarge')}
               </button>
-              <button className="icon-btn" aria-label={t('common.close')} onClick={toggleLive}>
-                ✕
+              <button className="icon-btn" aria-label={t('common.close')} title={t('common.close')} onClick={toggleLive}>
+                <ICON.close />
               </button>
             </header>
             <JobList jobs={jobs} compact />
@@ -190,7 +193,7 @@ function AgentRoster({
     <div className="roster">
       {[...teams.entries()].map(([team, members]) => (
         <div key={team} className="roster-team">
-          <p className="settings-group">{team || 'core'}</p>
+          <p className="settings-group">{readable(team || 'core')}</p>
           <ul>
             {members.map((a) => {
               const st = statuses[a.name] ?? 'idle';
@@ -236,19 +239,22 @@ function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status:
           <div>
             <h2>{agent.name}</h2>
             <div className="agent-roles">
-              {agent.team && <span className="chip">{agent.team}</span>}
+              {agent.team && <span className="chip">{readable(agent.team)}</span>}
               <span className={`chip ${STATUS_CHIP[status]}`}>{t(STATUS_LABEL[status])}</span>
             </div>
           </div>
-          <button className="icon-btn" aria-label={t('common.close')} onClick={onClose}>
-            ✕
+          <button className="icon-btn" aria-label={t('common.close')} title={t('common.close')} onClick={onClose}>
+            <ICON.close size={18} />
           </button>
         </header>
         <div className="agent-sheet-body">
           {agent.description && <p className="agent-now">{agent.description}</p>}
           {waiting.length > 0 && (
             <div className="approval-bar">
-              <span>👤 {t('office.waitingN', { n: waiting.length })}</span>
+              <span className="with-icon">
+                <ICON.person />
+                {t('office.waitingN', { n: waiting.length })}
+              </span>
               <Link className="btn is-primary" to={toWs('/approvals')}>
                 {t('office.goAnswer')}
               </Link>
@@ -260,7 +266,8 @@ function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status:
               {agent.working_on.map((w) => (
                 <li key={w.run_id}>
                   <Link className="chip is-accent" to={toWs(`/chat/${w.thread_id}`)}>
-                    ▶ {w.title ?? w.thread_id}
+                    <ICON.run size={12} />
+                    {w.title ?? w.thread_id}
                   </Link>
                 </li>
               ))}

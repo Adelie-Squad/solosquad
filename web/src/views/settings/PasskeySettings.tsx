@@ -4,6 +4,7 @@ import { keys, useAction, useHealth, usePasskeys } from '../../api/queries';
 import type { Ok } from '../../api/types.gen';
 import { defaultPasskeyName, passkeySupported, registerPasskey } from '../../auth/passkeys';
 import { useI18n, type MessageKey } from '../../i18n';
+import { ICON } from '../../icons';
 
 /** My passkeys — list, add one for this device, remove one (decision 46 W3). */
 export function PasskeySettings() {
@@ -18,7 +19,10 @@ export function PasskeySettings() {
 
   return (
     <section className="settings-body passkeys" aria-label={t('passkey.title')}>
-      <h2 className="panel-title">🔑 {t('passkey.title')}</h2>
+      <h2 className="panel-title with-icon">
+        <ICON.passkey />
+        {t('passkey.title')}
+      </h2>
       <p className="settings-hint">{t('passkey.lead')}</p>
       {(list.data ?? []).length === 0 ? (
         <p className="dash-hint">{t('passkey.none')}</p>
@@ -61,7 +65,8 @@ export function PasskeySettings() {
         >
           <input aria-label={t('passkey.name')} value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
           <button className="btn is-primary" disabled={add.isPending}>
-            + {t('passkey.add')}
+            <ICON.new />
+            {t('passkey.add')}
           </button>
         </form>
       ) : (

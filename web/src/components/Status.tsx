@@ -1,5 +1,6 @@
 import { errorText } from '../api/errors';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 
 export function Loading() {
   const { t } = useI18n();
@@ -19,11 +20,25 @@ export function QueryError({ error }: { error: unknown }) {
   );
 }
 
+/** "Saved." after a form — the check carries the colour, the word carries the meaning. */
+export function SavedLine({ text }: { text?: string }) {
+  const { t } = useI18n();
+  return (
+    <p className="ok-line with-icon" role="status">
+      <ICON.done />
+      {text ?? t('common.saved')}
+    </p>
+  );
+}
+
 /** A widget or screen this web cannot draw — visible, never a crash (I30 · K35). */
 export function Placeholder({ title, detail }: { title: string; detail?: string }) {
   return (
     <div className="panel placeholder" data-testid="placeholder">
-      <strong>⚠️ {title}</strong>
+      <strong className="with-icon">
+        <ICON.warn />
+        {title}
+      </strong>
       {detail && <p>{detail}</p>}
     </div>
   );

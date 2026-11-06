@@ -35,6 +35,26 @@
   /* dimmed backdrop behind modals — ink at 30% */
   --scrim: color-mix(in srgb, var(--ink) 30%, transparent);
 
+  /* spacing — a 4px grid (DESIGN.md `## 간격·모서리·그림자`) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  /* card rhythm (DESIGN.md `## 컴포넌트` — 카드 · 패널 간격) */
+  --card-pad: var(--space-5);
+  --card-pad-compact: var(--space-4);
+  --title-gap: var(--space-3);
+  --card-gap: var(--space-4);
+  --section-gap: var(--space-8);
+  /* line length of a descriptive paragraph (DESIGN.md `## 타이포그래피`) */
+  --measure: 46em;
+
   --radius-chip: 6px;
   --radius-btn: 10px;
   --radius: 12px;
@@ -99,6 +119,19 @@
 }
 
 /* Chinese: system fonts in front of the stack (not embedded — size), a looser line. */
+:root:lang(en) {
+  --measure: 70ch;
+}
+
+/* phone: cards keep 16px inside so a 390px screen still has room for the words */
+@media (max-width: 860px) {
+  :root {
+    --card-pad: var(--space-4);
+    --card-pad-compact: var(--space-3);
+    --section-gap: var(--space-6);
+  }
+}
+
 :root:lang(zh-CN) {
   --font: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Pretendard Variable', -apple-system, sans-serif;
   --leading: 1.7;

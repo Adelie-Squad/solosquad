@@ -1,16 +1,24 @@
 import { useEffect } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { ApiError, setCsrf } from './api/client';
 import { useMe } from './api/queries';
 import { Enrol } from './auth/Enrol';
+import { Landing } from './auth/Landing';
 import { Login } from './auth/Login';
+import { loginFor, officeHref, safeNext, signedIn } from './auth/next';
 import { isLocale, useI18n } from './i18n';
 import { SessionContext, sessionFrom } from './session';
 import { LegacyRedirect, RootRedirect, ScopeLayout } from './shell/ScopeLayout';
 
+/**
+ * Addresses (DESIGN.md `## 레이아웃`): `/` the landing (outside the shell, signed in or not) ·
+ * `/login` login and first-login enrolment · `/o/<org>/…` the app. A signed-out visit to an
+ * app address goes to `/login?next=<it>`; after login, `next` (same-origin paths only) or
+ * the last scope.
+ */
 export function App() {
   const me = useMe();
-  const { t, setLocale } = useI18n();
+  const { setLocale } = useI18n();
 
   useEffect(() => {
     if (me.data) {
@@ -19,15 +27,40 @@ export function App() {
     }
   }, [me.data, setLocale]);
 
-  if (me.isPending) return <div className="splash">{t('common.loading')}</div>;
-  if (me.error) {
-    if (me.error instanceof ApiError && me.error.status === 401) return <Login />;
-    if (me.error instanceof ApiError && me.error.status === 403) return <div className="splash">{t('auth.blocked')}</div>;
-    return <div className="splash">{t('common.offline')}</div>;
-  }
-  if (me.data.relogin || (!me.data.user && !me.data.local)) return <Login />;
-  if (me.data.stage === 'enroll') return <Enrol />;
+  return (
+    <Routes>
+      <Route index element={<Landing />} />
+      <Route path="login" element={<LoginRoute />} />
+      <Route path="*" element={<AppRoute />} />
+    </Routes>
+  );
+}
 
+/** What `/api/me` says when it did not answer with a person: splash, blocked or offline. */
+function MeProblem() {
+  const me = useMe();
+  const { t } = useI18n();
+  if (me.isPending) return <div className="splash">{t('common.loading')}</div>;
+  if (me.error instanceof ApiError && me.error.status === 403) return <div className="splash">{t('auth.blocked')}</div>;
+  return <div className="splash">{t('common.offline')}</div>;
+}
+
+const loggedOut = (error: unknown) => error instanceof ApiError && error.status === 401;
+
+function LoginRoute() {
+  const me = useMe();
+  const [params] = useSearchParams();
+  if (me.isPending || (me.error && !loggedOut(me.error))) return <MeProblem />;
+  if (me.data && signedIn(me.data)) return <Navigate to={safeNext(params.get('next')) ?? officeHref(me.data)} replace />;
+  if (me.data && !me.data.relogin && me.data.stage === 'enroll') return <Enrol />;
+  return <Login />;
+}
+
+function AppRoute() {
+  const me = useMe();
+  const location = useLocation();
+  if (me.isPending || (me.error && !loggedOut(me.error))) return <MeProblem />;
+  if (!me.data || !signedIn(me.data)) return <Navigate to={loginFor(`${location.pathname}${location.search}${location.hash}`)} replace />;
   return (
     <SessionContext.Provider value={sessionFrom(me.data)}>
       <AppRoutes />
@@ -35,11 +68,11 @@ export function App() {
   );
 }
 
-/** Addresses: `/` → the last scope · `/o/<org>/…` scoped screens · old unscoped addresses → the current scope. */
+/** Signed-in addresses: `/o` → the last scope · `/o/<org>/…` scoped screens · old unscoped addresses → the current scope. */
 export function AppRoutes() {
   return (
     <Routes>
-      <Route index element={<RootRedirect />} />
+      <Route path="o" element={<RootRedirect />} />
       <Route path="o/:org/*" element={<ScopeLayout />} />
       <Route path="*" element={<LegacyRedirect />} />
     </Routes>
