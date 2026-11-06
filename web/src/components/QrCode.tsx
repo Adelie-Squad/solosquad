@@ -24,9 +24,9 @@ export function QrCode({ value, size = 200, label }: { value: string; size?: num
       viewBox={`0 0 ${box} ${box}`}
       shapeRendering="crispEdges"
     >
-      <rect width={box} height={box} fill="#fff" />
+      <rect width={box} height={box} style={{ fill: 'var(--qr-light)' }} />
       <path
-        fill="#000"
+        style={{ fill: 'var(--qr-dark)' }}
         d={cells.dark.map(([x, y]) => `M${x + quiet} ${y + quiet}h1v1h-1z`).join('')}
       />
     </svg>

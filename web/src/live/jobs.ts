@@ -44,7 +44,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
     .filter((r) => ACTIVE.has(r.status))
     .map((r) => ({
       id: r.id,
-      icon: '💬',
+      agent: live.runAgent[r.id] ?? 'chief',
       title: titles.get(r.thread_id) || t('chat.untitled'),
       who: live.current[r.id] ?? t('office.company'),
       status: status(r),
@@ -61,7 +61,8 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
     const def = values?.workflow ? defs.get(values.workflow) : undefined;
     return {
       id: r.id,
-      icon: '🧩',
+      agent: 'workflow',
+      team: def?.team ?? null,
       title: def?.title ?? values?.workflow ?? t('nav.workflows'),
       who: def?.team ? t('office.team', { team: def.team }) : t('nav.workflows'),
       status: status(r),

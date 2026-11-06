@@ -17,9 +17,24 @@ export interface LiveState {
   logs: Record<string, LogLine[]>;
   /** Run id → the agent or step it is on now. */
   current: Record<string, string>;
+  /** Run id → the agent last seen speaking or acting in it (for the office states). */
+  runAgent: Record<string, string>;
+  /** Agent → when it last streamed text or took a step (client ms) — `typing`. */
+  activity: Record<string, number>;
+  /** Agent → its last finished run (client ms) — `done` · `error`. */
+  outcomes: Record<string, { kind: 'done' | 'error'; at: number }>;
 }
 
-const empty: LiveState = { connected: false, streaming: {}, logs: {}, current: {} };
+export const emptyLive: LiveState = {
+  connected: false,
+  streaming: {},
+  logs: {},
+  current: {},
+  runAgent: {},
+  activity: {},
+  outcomes: {},
+};
+const empty = emptyLive;
 const LiveContext = createContext<LiveState>(empty);
 const LOG_MAX = 8;
 
@@ -42,7 +57,7 @@ export function LiveProvider({ children, factory = browserFactory }: { children:
   return <LiveContext.Provider value={state}>{children}</LiveContext.Provider>;
 }
 
-export function reduce(s: LiveState, ev: EngineEvent): LiveState {
+export function reduce(s: LiveState, ev: EngineEvent, clock: number = Date.now()): LiveState {
   const rid = ev.run_id ?? '';
   const tid = ev.thread_id ?? '';
   const now = (ev.ts ?? Date.now() / 1000) * 1000;
@@ -53,26 +68,44 @@ export function reduce(s: LiveState, ev: EngineEvent): LiveState {
       if (!tid) return s;
       const prev = s.streaming[tid];
       const text = (prev && prev.runId === rid ? prev.text : '') + (ev.text ?? '');
-      return { ...s, streaming: { ...s.streaming, [tid]: { runId: rid, agent: ev.agent ?? null, text } } };
+      const agent = ev.agent ?? null;
+      return {
+        ...s,
+        streaming: { ...s.streaming, [tid]: { runId: rid, agent, text } },
+        ...(agent ? seen(s, rid, agent, clock) : {}),
+      };
     }
     case 'run.update': {
       const summary = (ev.summary ?? {}) as { text?: string | null; active_agent?: string | null; step?: string | null };
       const where = summary.step ?? summary.active_agent ?? ev.node ?? '';
       const current = rid && where ? { ...s.current, [rid]: String(where) } : s.current;
       const line = summary.text ? `${where ? `${where}: ` : ''}${summary.text}` : where ? String(where) : '';
-      return { ...s, current, logs: line ? note(line) : s.logs };
+      const agent = summary.active_agent ?? (ev.source === 'workflow' ? null : ev.node) ?? null;
+      return { ...s, current, logs: line ? note(line) : s.logs, ...(agent ? seen(s, rid, agent, clock) : {}) };
     }
     case 'run.completed':
     case 'run.failed':
     case 'run.interrupted': {
-      if (!tid || !s.streaming[tid]) return s;
+      const agent = rid ? s.runAgent[rid] : undefined;
+      const outcomes =
+        agent && ev.event !== 'run.interrupted'
+          ? { ...s.outcomes, [agent]: { kind: ev.event === 'run.failed' ? ('error' as const) : ('done' as const), at: clock } }
+          : s.outcomes;
+      if (!tid || !s.streaming[tid]) return outcomes === s.outcomes ? s : { ...s, outcomes };
       const streaming = { ...s.streaming };
       delete streaming[tid];
-      return { ...s, streaming };
+      return { ...s, streaming, outcomes };
     }
     default:
       return s;
   }
+}
+
+function seen(s: LiveState, rid: string, agent: string, clock: number): Pick<LiveState, 'runAgent' | 'activity'> {
+  return {
+    runAgent: rid && s.runAgent[rid] !== agent ? { ...s.runAgent, [rid]: agent } : s.runAgent,
+    activity: { ...s.activity, [agent]: clock },
+  };
 }
 
 export const useLive = () => useContext(LiveContext);

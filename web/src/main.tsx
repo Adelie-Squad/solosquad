@@ -5,12 +5,15 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { ApiError } from './api/client';
 import { I18nProvider } from './i18n';
+import { enableThemeTransitions } from './theme';
+import './styles/tokens.css';
 import './styles/global.css';
 import './styles/Workspace.css';
 import './styles/views.css';
 import './styles/HomeView.css';
 import './styles/OfficeView.css';
 import './styles/app.css';
+import './styles/design.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +25,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+enableThemeTransitions();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

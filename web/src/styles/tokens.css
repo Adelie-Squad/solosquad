@@ -1,0 +1,105 @@
+/* Design tokens — DESIGN.md v2 `## 색` · `## 간격·모서리·그림자` · `## 타이포그래피`, 1:1.
+   The only file (with office/palette.ts and the character colours) that may hold colour
+   values; test/design-sync.test.ts compares it with DESIGN.md. */
+
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/PretendardVariable.woff2') format('woff2-variations');
+}
+
+:root {
+  --bg: #EEE9DF;
+  --surface: #FBF9F4;
+  --surface-2: #F3EFE6;
+  --line: #DED6C6;
+  --ink: #1E1C17;
+  --ink-2: #575143;
+  --ink-3: #8A8371;
+  --accent: #2867D0;
+  --on-accent: #FFFFFF;
+  --ok: #4F6B0E;
+  --warn: #A85A12;
+  --danger: #C2362B;
+  --cheek: #E01FAE;
+  --focus: #2867D0;
+
+  --shadow-1: 0 1px 3px rgba(30,28,23,.08);
+  --shadow-2: 0 4px 18px rgba(30,28,23,.08);
+  --shadow-3: 0 24px 70px rgba(30,28,23,.28);
+  /* QR codes stay dark-on-light in both themes — authenticator scanners need it */
+  --qr-dark: #000000;
+  --qr-light: #FFFFFF;
+  /* dimmed backdrop behind modals — ink at 30% */
+  --scrim: color-mix(in srgb, var(--ink) 30%, transparent);
+
+  --radius-chip: 6px;
+  --radius-btn: 10px;
+  --radius: 12px;
+  --radius-overlay: 16px;
+  --radius-pill: 999px;
+
+  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --leading: 1.6;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161B;
+    --surface: #1E1F26;
+    --surface-2: #272832;
+    --line: #353745;
+    --ink: #ECE8DF;
+    --ink-2: #B7B2A6;
+    --ink-3: #858174;
+    --accent: #7FA6F5;
+    --on-accent: #15161B;
+    --ok: #A3C65A;
+    --warn: #F0AE5E;
+    --danger: #F2857A;
+    --cheek: #F25CC8;
+    --focus: #7FA6F5;
+
+    --shadow-1: none;
+    --shadow-2: 0 0 0 1px var(--line);
+    --shadow-3: 0 24px 70px rgba(0,0,0,.55);
+    --scrim: color-mix(in srgb, #000000 55%, transparent);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15161B;
+  --surface: #1E1F26;
+  --surface-2: #272832;
+  --line: #353745;
+  --ink: #ECE8DF;
+  --ink-2: #B7B2A6;
+  --ink-3: #858174;
+  --accent: #7FA6F5;
+  --on-accent: #15161B;
+  --ok: #A3C65A;
+  --warn: #F0AE5E;
+  --danger: #F2857A;
+  --cheek: #F25CC8;
+  --focus: #7FA6F5;
+
+  --shadow-1: none;
+  --shadow-2: 0 0 0 1px var(--line);
+  --shadow-3: 0 24px 70px rgba(0,0,0,.55);
+  --scrim: color-mix(in srgb, #000000 55%, transparent);
+
+  color-scheme: dark;
+}
+
+/* Chinese: system fonts in front of the stack (not embedded — size), a looser line. */
+:root:lang(zh-CN) {
+  --font: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', 'Pretendard Variable', -apple-system, sans-serif;
+  --leading: 1.7;
+}

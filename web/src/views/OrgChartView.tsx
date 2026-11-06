@@ -3,6 +3,7 @@ import { api } from '../api/client';
 import { keys, useAction, useOrgChart } from '../api/queries';
 import type { AgentCard, OrgChart, Person, PublicUser } from '../api/types.gen';
 import { Loading, QueryError } from '../components/Status';
+import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n } from '../i18n';
 import { useSession } from '../session';
 
@@ -64,11 +65,11 @@ export function OrgChartView() {
           <section key={team.name} className="panel org-team">
             <h2 className="panel-title">{team.name}</h2>
             <p className="settings-group">{t('org.leadAgent')}</p>
-            {team.lead_agent ? <ul className="org-agents"><AgentRow agent={team.lead_agent} lead /></ul> : <p className="dash-hint">{t('org.noLead')}</p>}
+            {team.lead_agent ? <ul className="org-agents"><AgentRow agent={team.lead_agent} team={team.name} lead /></ul> : <p className="dash-hint">{t('org.noLead')}</p>}
             <p className="settings-group">{t('org.agents', { n: team.agents.length })}</p>
             <ul className="org-agents">
               {team.agents.map((a) => (
-                <AgentRow key={a.name} agent={a} />
+                <AgentRow key={a.name} agent={a} team={team.name} />
               ))}
             </ul>
             <p className="settings-group">{t('org.people', { n: team.people.length })}</p>
@@ -97,10 +98,11 @@ export function OrgChartView() {
   );
 }
 
-function AgentRow({ agent, lead = false }: { agent: AgentCard; lead?: boolean }) {
+function AgentRow({ agent, team, lead = false }: { agent: AgentCard; team: string; lead?: boolean }) {
   return (
     <li className="org-agent">
-      <span aria-hidden>{lead ? '⭐' : '🤖'}</span>
+      <AgentIcon agent={agent.name} team={team} size={28} label="" />
+      {lead && <span aria-hidden>⭐</span>}
       <strong>{agent.name}</strong>
       {agent.description && <span className="dash-hint">{agent.description}</span>}
     </li>

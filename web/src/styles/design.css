@@ -1,0 +1,367 @@
+/* DESIGN.md v2 — layout and component rules on top of the ported CSS (loaded last).
+   Tokens only; no colour values here. */
+
+/* ── shell: sidebar on --bg + one content card ─────────────────── */
+
+.workspace {
+  background: var(--bg);
+}
+
+.sidebar {
+  color: var(--ink);
+}
+
+.pinned-tile,
+.session-item,
+.new-request,
+.viewer-chip {
+  color: var(--ink);
+}
+
+.pinned-tile:hover,
+.session-item:hover,
+.new-request:hover,
+.viewer-chip:hover,
+.icon-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 80%, transparent);
+}
+
+.pinned-tile.active,
+.session-item.active {
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.session-meta,
+.chat-section-head,
+.live-count {
+  color: var(--ink-2);
+}
+
+.new-request {
+  border-color: var(--line);
+}
+
+.workspace-card {
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+
+.view {
+  padding: 40px 48px 64px;
+}
+
+/* ── components ────────────────────────────────────────────────── */
+
+.btn {
+  border-radius: var(--radius-btn);
+  color: var(--ink);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.chip {
+  border-radius: var(--radius-chip);
+}
+
+.chip.is-muted {
+  color: var(--ink-3);
+}
+
+.chip.is-quiet {
+  color: var(--ink-2);
+}
+
+.panel {
+  box-shadow: none;
+}
+
+.panel.widget,
+.panel.approval-card,
+.panel.conn,
+.panel.wf-detail,
+.panel.settings-body {
+  padding: 16px 18px;
+}
+
+.empty {
+  color: var(--ink-3);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+
+/* settings tabs = a segmented track (DESIGN 설정 탭) */
+.tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--radius-btn);
+  background: var(--surface-2);
+  max-width: 100%;
+}
+
+.tab {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.tab.active {
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+/* status words only on --surface (never on the light --bg sidebar) */
+.sidebar .pinned-badge {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ── penguins ──────────────────────────────────────────────────── */
+
+.penguin {
+  display: block;
+  flex-shrink: 0;
+}
+
+.chat-avatar,
+.quick-chat-avatar,
+.job-icon {
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  width: auto;
+  height: auto;
+  font-size: 0;
+}
+
+.mascot {
+  animation: mascot-float 4s ease-in-out infinite;
+}
+
+@keyframes mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.home-hero .mascot {
+  margin: 0 auto 12px;
+}
+
+.approval-card-head .penguin {
+  margin-right: 2px;
+}
+
+.approval-card-head .approval-title {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.field .segmented {
+  align-self: flex-start;
+}
+
+.panel.office-roster {
+  padding: 16px 18px;
+}
+
+/* ── office (3D stage) ─────────────────────────────────────────── */
+
+.office-stage {
+  position: relative;
+  height: 100%;
+  min-height: clamp(360px, 62vh, 680px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-overlay);
+  background: var(--surface-2);
+}
+
+.office-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.office-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.office-tags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.office-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.office-tag-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.office-tag-pill .chip {
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.office-tag-alert {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 1px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.office-tag-dot {
+  width: 9px;
+  height: 9px;
+  margin: 0 5px 0 1px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+.office-tag-bar {
+  position: relative;
+  width: 44px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+
+.office-tag-bar span {
+  position: absolute;
+  inset: 0 60% 0 0;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+.office-fallback {
+  min-height: clamp(360px, 62vh, 680px);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-overlay);
+  background: var(--surface-2);
+  overflow: auto;
+}
+
+.roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px 20px;
+}
+
+.roster ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-btn);
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+}
+
+.roster-row:hover {
+  background: var(--surface-2);
+}
+
+.roster-row .dash-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.office-roster {
+  margin-top: 16px;
+}
+
+/* ── phone ─────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .workspace-card {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .view {
+    padding: 24px 16px 40px;
+  }
+
+  .office-body.is-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot,
+  .office-tag-bar span,
+  .live-dot {
+    animation: none;
+  }
+}

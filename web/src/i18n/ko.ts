@@ -389,6 +389,21 @@ export const ko = {
   'snapshot.skipped': '보낼 곳이 설정되지 않아 건너뛰었어요.',
   'snapshot.pruned': '오래된 스냅샷 {n}개 정리',
   'snapshot.dailyHint': '켜 두면 사무실이 매일 자동으로 보내고, 결과는 감사 기록에 남아요.',
+  'office.status.idle': '쉬는 중',
+  'office.status.thinking': '생각 중',
+  'office.status.typing': '작업 중',
+  'office.status.waiting': '승인 대기',
+  'office.status.done': '완료',
+  'office.status.error': '실패',
+  'office.everyone': '모든 에이전트',
+  'office.now': '지금 하는 일',
+  'settings.display': '화면',
+  'theme.title': '테마',
+  'theme.system': '시스템',
+  'theme.light': '라이트',
+  'theme.dark': '다크',
+  'theme.followingSystem': '기기 설정을 따라요 — 지금은 {now}',
+  'theme.deviceOnly': '이 기기의 브라우저에만 저장돼요.',
 } as const;
 
 export type MessageKey = keyof typeof ko;

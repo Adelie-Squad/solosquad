@@ -3,7 +3,6 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { CommandBar } from '../components/CommandBar';
 import { useLive } from '../live/LiveProvider';
 import { useI18n } from '../i18n';
-import { theme } from '../theme';
 import { Sidebar } from './Sidebar';
 
 /**
@@ -32,10 +31,7 @@ export function Shell() {
   }, []);
 
   return (
-    <div
-      className={`workspace ${drawer ? 'is-drawer-open' : ''}`}
-      style={{ background: theme.gradient, ['--accent' as string]: theme.accent }}
-    >
+    <div className={`workspace ${drawer ? 'is-drawer-open' : ''}`}>
       <button className="drawer-toggle icon-btn" aria-label={t('nav.menu')} onClick={() => setDrawer((d) => !d)}>
         ☰
       </button>

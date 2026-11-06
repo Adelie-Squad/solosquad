@@ -133,7 +133,7 @@
 
 .step.is-done {
   color: var(--ok);
-  background: #e9f8f1;
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
 }
 
 .step.is-done::before {
@@ -142,7 +142,7 @@
 
 .step.is-current {
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, white);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   font-weight: 700;
 }
 
@@ -205,16 +205,16 @@
   padding: 12px 14px;
   list-style: none;
   border-radius: 10px;
-  background: #1d1a2b;
-  color: #d9d5ea;
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.8;
 }
 
 .job-log time {
   margin-right: 10px;
-  color: #8f8aa3;
+  color: var(--ink-3);
 }
 
 /* ── 메일 ─────────────────────────────────────────────────────── */
@@ -413,7 +413,7 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  border: 1.5px solid #cfcbdc;
+  border: 1.5px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
   font-size: 12px;
@@ -423,7 +423,7 @@
 .task.is-done .task-check {
   border-color: var(--ok);
   background: var(--ok);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .task-title {
@@ -536,7 +536,7 @@
 
 .schedule-form input:focus,
 .schedule-form select:focus {
-  border-color: color-mix(in srgb, var(--accent) 50%, white);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--surface));
 }
 
 .schedule-form-actions {
@@ -581,8 +581,8 @@
 }
 
 .perm-chip.is-on {
-  border-color: color-mix(in srgb, var(--accent) 40%, white);
-  background: color-mix(in srgb, var(--accent) 10%, white);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--surface));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   color: var(--accent);
 }
 
@@ -726,7 +726,7 @@
 }
 
 .vbar.is-partial .vbar-fill {
-  background: color-mix(in srgb, var(--accent) 45%, white);
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
 }
 
 .vbar-value {
@@ -750,7 +750,7 @@
 }
 
 .vbars.is-dense .vbar-fill {
-  background: color-mix(in srgb, var(--accent) 55%, white);
+  background: color-mix(in srgb, var(--accent) 55%, var(--surface));
 }
 
 .vbars.is-dense .vbar.is-today .vbar-fill {
@@ -852,7 +852,7 @@
   gap: 6px;
   margin: 10px;
   padding: 28px 20px;
-  border: 1.5px dashed color-mix(in srgb, var(--accent) 35%, white);
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 35%, var(--surface));
   border-radius: 10px;
   text-align: center;
   font-size: 13.5px;
@@ -867,7 +867,7 @@
 
 .dropzone.is-dragging,
 .dropzone:hover {
-  background: color-mix(in srgb, var(--accent) 5%, white);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
 }
 
 .dropzone .btn {
@@ -977,7 +977,7 @@
   margin: 0 -10px;
   padding: 9px 10px;
   border-radius: 8px;
-  background: #fff8ec;
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
 }
 
 .ledger-main {
@@ -1018,7 +1018,7 @@
 }
 
 .wf-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 30%, white);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--surface));
 }
 
 .wf-card.is-selected {
@@ -1117,7 +1117,7 @@
 
 .pipe-step.has-approval {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--warn) 55%, white);
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--surface));
 }
 
 .pipe-approval {
@@ -1128,19 +1128,19 @@
 
 .pipe-step.is-done {
   border-color: transparent;
-  background: #e4f7ef;
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
   color: var(--ok);
 }
 
 .pipe-step.is-current {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, white);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
   color: var(--accent);
 }
 
 .pipe-step.is-waiting {
   border-color: var(--warn);
-  background: #fff1dc;
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
   color: var(--warn);
 }
 
@@ -1156,12 +1156,12 @@
   margin-top: 14px;
   padding: 10px 14px;
   border-radius: 10px;
-  background: #fff6e6;
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
   font-size: 13.5px;
 }
 
 .approval-bar.is-done {
-  background: #e4f7ef;
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
   color: var(--ok);
   font-weight: 600;
 }
@@ -1303,7 +1303,7 @@
 }
 
 .quote-table tr.is-chosen td {
-  background: color-mix(in srgb, var(--accent) 6%, white);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
 }
 
 .quote-table .is-warn-text {
@@ -1403,9 +1403,9 @@
 
 .inquiry {
   margin-bottom: 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 25%, white);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--surface));
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 4%, white);
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
 }
 
 .inquiry-head {

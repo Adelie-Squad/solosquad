@@ -11,7 +11,8 @@ export default defineConfig({
     port: 5180,
     proxy: { '/api': { target: 'http://127.0.0.1:7420', changeOrigin: false } },
   },
-  build: { outDir: 'dist', sourcemap: false },
+  // the office chunk (three.js, ~590 kB) loads only on /office — the warning is expected there
+  build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 650 },
   test: {
     environment: 'jsdom',
     include: ['test/**/*.test.{ts,tsx}'],

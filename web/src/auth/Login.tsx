@@ -4,6 +4,7 @@ import { api, ApiError, setCsrf } from '../api/client';
 import { keys, useHealth } from '../api/queries';
 import type { Me } from '../api/types.gen';
 import { LocalePicker } from '../components/LocalePicker';
+import { Mascot } from '../characters/PenguinIcon';
 import { useI18n, type MessageKey } from '../i18n';
 import { loginWithPasskey, passkeySupported, showPasskeyButton } from './passkeys';
 
@@ -74,7 +75,7 @@ export function Login() {
     <div className="auth-page">
       <form className="auth-card" onSubmit={submit}>
         <div className="auth-brand">
-          <img src="/icon.svg" alt="" width={44} height={44} />
+          <Mascot size={56} />
           <div>
             <h1>SoloSquad</h1>
             <p>{t('auth.subtitle')}</p>

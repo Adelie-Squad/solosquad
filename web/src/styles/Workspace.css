@@ -13,9 +13,7 @@
   overflow: auto;
   border-radius: 10px;
   background: var(--surface);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.04),
-    0 8px 30px rgba(40, 20, 90, 0.16);
+  box-shadow: var(--shadow-2);
 }
 
 /* ── 사이드바(LNB) ────────────────────────────────────────────── */
@@ -27,7 +25,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 6px 10px 4px 14px;
-  color: #241c3f;
+  color: var(--ink);
   overflow: hidden;
 }
 
@@ -51,12 +49,12 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: rgba(36, 28, 63, 0.7);
+  color: var(--ink-2);
   font-size: 15px;
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.35);
+  background: transparent;
 }
 
 .icon-btn:disabled {
@@ -67,10 +65,10 @@
 kbd {
   padding: 2px 6px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-2);
   font-family: inherit;
   font-size: 11px;
-  color: rgba(36, 28, 63, 0.6);
+  color: var(--ink-2);
 }
 
 /* 즐겨찾기 타일 */
@@ -88,19 +86,19 @@ kbd {
   height: 46px;
   padding: 0 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.3);
+  background: transparent;
   font-size: 14px;
   font-weight: 600;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .pinned-tile:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .pinned-tile.active {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(40, 20, 90, 0.12);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
 
 .pinned-icon {
@@ -114,7 +112,7 @@ kbd {
   padding: 0 6px;
   border-radius: 10px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 700;
   line-height: 20px;
@@ -130,7 +128,7 @@ kbd {
   position: absolute;
   top: -6px;
   right: -4px;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 2px var(--bg);
 }
 
 .space-title {
@@ -138,7 +136,7 @@ kbd {
   padding: 0 6px;
   font-size: 13px;
   font-weight: 700;
-  color: rgba(36, 28, 63, 0.75);
+  color: var(--ink-2);
 }
 
 /* 하루와 나눈 대화 — Arc 의 탭 목록 자리 */
@@ -158,7 +156,7 @@ kbd {
   padding: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: rgba(36, 28, 63, 0.6);
+  color: var(--ink-2);
   letter-spacing: 0.02em;
 }
 
@@ -172,14 +170,14 @@ kbd {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #18c08f;
-  box-shadow: 0 0 0 0 rgba(24, 192, 143, 0.6);
+  background: var(--accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
   animation: live-ping 1.6s infinite;
 }
 
 @keyframes live-ping {
-  0% { box-shadow: 0 0 0 0 rgba(24, 192, 143, 0.6); }
-  80%, 100% { box-shadow: 0 0 0 7px rgba(24, 192, 143, 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); }
+  80%, 100% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 0%, transparent); }
 }
 
 .session-list {
@@ -202,12 +200,12 @@ kbd {
 }
 
 .session-item:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: transparent;
 }
 
 .session-item.active {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(40, 20, 90, 0.12);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
 }
 
 .session-title {
@@ -221,22 +219,22 @@ kbd {
 
 .session-meta {
   font-size: 12px;
-  color: rgba(36, 28, 63, 0.6);
+  color: var(--ink-2);
 }
 
 .new-request {
   padding: 8px 10px;
-  border: 1px dashed rgba(36, 28, 63, 0.22);
+  border: 1px dashed var(--line);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.25);
+  background: transparent;
   text-align: left;
   font-size: 13.5px;
   font-weight: 600;
-  color: rgba(36, 28, 63, 0.75);
+  color: var(--ink-2);
 }
 
 .new-request:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .sidebar-bottom {
@@ -255,13 +253,13 @@ kbd {
   min-width: 0;
   padding: 6px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.3);
+  background: transparent;
   font-size: 13px;
-  color: #241c3f;
+  color: var(--ink);
 }
 
 .viewer-chip:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .viewer-chip-name {
@@ -286,8 +284,8 @@ kbd {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 20px;
-  border-bottom: 1px solid #f3dfb8;
-  background: #fff6e6;
+  border-bottom: 1px solid color-mix(in srgb, var(--warn) 30%, var(--surface));
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
   font-size: 13.5px;
 }
 
@@ -297,7 +295,7 @@ kbd {
   width: min(520px, 92vw);
   border-radius: 16px;
   background: var(--surface);
-  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+  box-shadow: var(--shadow-3);
 }
 
 .settings-header {
@@ -342,7 +340,7 @@ kbd {
 
 .settings-row input:focus,
 .settings-row select:focus {
-  border-color: color-mix(in srgb, var(--accent) 50%, white);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--surface));
 }
 
 .settings-hint {
@@ -402,15 +400,15 @@ kbd {
   justify-content: center;
   align-items: flex-start;
   padding-top: 16vh;
-  background: rgba(20, 12, 50, 0.18);
+  background: var(--scrim);
   backdrop-filter: blur(2px);
 }
 
 .command-bar {
   width: min(620px, 92vw);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 70px rgba(30, 15, 80, 0.35);
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
   overflow: hidden;
 }
 
@@ -445,7 +443,7 @@ kbd {
 }
 
 .command-bar li button.is-active {
-  background: color-mix(in srgb, var(--accent) 12%, white);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
 
 .command-icon {
@@ -517,22 +515,22 @@ kbd {
 }
 
 .chip.is-accent {
-  background: color-mix(in srgb, var(--accent) 12%, white);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color: var(--accent);
 }
 
 .chip.is-ok {
-  background: #e4f7ef;
+  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
   color: var(--ok);
 }
 
 .chip.is-warn {
-  background: #fff1dc;
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
   color: var(--warn);
 }
 
 .chip.is-danger {
-  background: #fde7eb;
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   color: var(--danger);
 }
 
@@ -556,7 +554,7 @@ kbd {
 .segmented button.is-active {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-1);
 }
 
 .toggle {
@@ -566,7 +564,7 @@ kbd {
   flex-shrink: 0;
   border: 0;
   border-radius: 12px;
-  background: #d8d5e2;
+  background: var(--line);
   transition: background 0.2s ease;
 }
 
@@ -578,8 +576,8 @@ kbd {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
   transition: transform 0.2s ease;
 }
 
@@ -607,7 +605,7 @@ kbd {
 .btn.is-primary {
   border-color: transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn.is-primary:hover {

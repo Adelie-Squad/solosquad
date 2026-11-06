@@ -10,6 +10,7 @@ import { useSession } from '../session';
 import { PasskeySettings } from './settings/PasskeySettings';
 import { ProfileSettings } from './settings/ProfileSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
+import { ThemeSettings } from './settings/ThemeSettings';
 
 interface Tab {
   id: string;
@@ -19,6 +20,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: 'language', label: 'settings.language', ownerOnly: false },
+  { id: 'display', label: 'settings.display', ownerOnly: false },
   { id: 'account', label: 'settings.account', ownerOnly: false },
   { id: 'profile', label: 'settings.profile', ownerOnly: false },
   { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
@@ -50,6 +52,7 @@ export function SettingsView() {
         ))}
       </nav>
       {tab === 'language' && <LanguageSettings />}
+      {tab === 'display' && <ThemeSettings />}
       {tab === 'account' && <AccountSettings />}
       {tab === 'profile' && <ProfileSettings />}
       {tab === 'snapshot' && <SnapshotSettings />}

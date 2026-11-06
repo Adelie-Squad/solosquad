@@ -1,21 +1,24 @@
-:root {
-  --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-    'Segoe UI', sans-serif;
-  --ink: #1d1a2b;
-  --ink-2: #57526b;
-  --ink-3: #8f8aa3;
-  --line: #ece9f3;
-  --surface: #ffffff;
-  --surface-2: #f7f6fb;
-  --accent: #6d4aff;
-  --ok: #17a673;
-  --warn: #e8890c;
-  --danger: #e2445c;
-  --radius: 12px;
+/* Base elements. Colours come from tokens.css only. */
 
+:root {
   font-family: var(--font);
+  font-size: 14.5px;
+  line-height: var(--leading);
   color: var(--ink);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Theme switches animate their colours — but not the first paint (no flash). */
+:root.theme-ready,
+:root.theme-ready body,
+:root.theme-ready .workspace-card,
+:root.theme-ready .sidebar,
+:root.theme-ready .panel {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 *,
@@ -31,14 +34,23 @@ body,
   height: 100%;
 }
 
+body {
+  background: var(--bg);
+}
+
 button {
   font: inherit;
   color: inherit;
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: default;
+}
+
 input,
-textarea {
+textarea,
+select {
   font: inherit;
   color: inherit;
 }
@@ -48,7 +60,28 @@ a {
   text-decoration: none;
 }
 
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+}
+
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+.tabular,
+td,
+.stat-value {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+    animation-duration: 0.001s !important;
+  }
 }

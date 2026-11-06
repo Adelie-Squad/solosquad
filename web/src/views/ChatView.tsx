@@ -7,6 +7,7 @@ import type { ChatMessage, RunCreated, ThreadCreated } from '../api/types.gen';
 import { ApprovalCard } from '../components/ApprovalCard';
 import type { PromptHandoff } from '../components/CommandBar';
 import { SuggestionStrip } from '../components/SuggestionStrip';
+import { AgentIcon, Mascot } from '../characters/PenguinIcon';
 import { useI18n } from '../i18n';
 import { useLive } from '../live/LiveProvider';
 
@@ -98,6 +99,7 @@ export function ChatView() {
         <div className="home-inner">
           {isNew && messages.length === 0 && (
             <section className="home-hero">
+              <Mascot size={88} />
               <div className="home-bubble">
                 <h1>{t('chat.helloTitle')}</h1>
                 <p>{t('chat.helloBody')}</p>
@@ -109,7 +111,11 @@ export function ChatView() {
             <section className="chat" aria-live="polite">
               {messages.map((m) => (
                 <div key={m.id} className={`chat-row ${m.role === 'user' ? 'is-user' : 'is-agent'}`}>
-                  {m.role !== 'user' && <span className="chat-avatar">🤖</span>}
+                  {m.role !== 'user' && (
+                    <span className="chat-avatar">
+                      <AgentIcon agent={m.name ?? 'chief'} size={28} label="" />
+                    </span>
+                  )}
                   <div className="chat-bubble">
                     {m.role !== 'user' && m.name && <span className="chat-name">{m.name}</span>}
                     {messageText(m)}
@@ -118,7 +124,9 @@ export function ChatView() {
               ))}
               {stream && stream.text && (
                 <div className="chat-row is-agent">
-                  <span className="chat-avatar">🤖</span>
+                  <span className="chat-avatar">
+                    <AgentIcon agent={stream.agent ?? 'chief'} size={28} label="" />
+                  </span>
                   <div className="chat-bubble">
                     {stream.agent && <span className="chat-name">{stream.agent}</span>}
                     {stream.text}
@@ -127,7 +135,9 @@ export function ChatView() {
               )}
               {busy && !stream?.text && (
                 <div className="chat-row is-agent">
-                  <span className="chat-avatar">🤖</span>
+                  <span className="chat-avatar">
+                    <AgentIcon agent="chief" size={28} label="" />
+                  </span>
                   <p className="chat-bubble chat-typing" aria-label={t('chat.typing')}>
                     <span />
                     <span />
