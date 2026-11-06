@@ -2,9 +2,9 @@
 name: product-designer
 description: 제품 디자인 — 컨셉 발산·수렴(scope), 기능 기획(PRD·우선순위), UI/visual·prototype 을 단일 thread 로. design-system·policy skill 활용. ≥2 approaches 강제.
 display_name:
-  ko: "프로덕트 디자이너"
+  ko: "Product Designer"
   en: "Product Designer"
-  zh-CN: "产品设计师"
+  zh-CN: "Product Designer"
 summary:
   ko: "막연한 아이디어를 실제로 만들 수 있는 기능 계획과 화면 설계로 바꿔요. 기획서와 화면 시안을 두 가지 이상 방향으로 준비해 비교해 드려요. 어떤 방향으로 갈지는 대표님이 승인해요."
   en: "Turns a rough idea into a feature plan and screen designs that can actually be built. Prepares the plan and at least two design directions so you can compare them. You approve which direction to take."

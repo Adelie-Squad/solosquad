@@ -2,9 +2,9 @@
 name: business-strategy
 description: 비즈니스 전략 + Go-to-market — 시장·수익화·경쟁 전략(Lean Canvas · Value Proposition · Monetization) + 채널 mix · launch plan · 초기 사용자 획득. "Status quo is your real competitor". 구 business-strategy + go-to-market 병합(결정 58).
 display_name:
-  ko: "사업 전략가"
-  en: "Business Strategist"
-  zh-CN: "业务战略师"
+  ko: "Business Strategy"
+  en: "Business Strategy"
+  zh-CN: "Business Strategy"
 summary:
   ko: "어떤 시장에서 누구에게 얼마에 팔지 전략을 세워요. 시장 분석과 가격 제안, 출시 계획과 첫 고객을 모으는 방법을 정리해 드려요. 가격을 정하거나 출시 일정을 확정할 때는 승인을 받아요."
   en: "Works out which market to sell in, to whom and at what price. Delivers market analysis, pricing proposals, launch plans and ways to win your first customers. Asks for approval before setting a price or fixing a launch date."

@@ -2,9 +2,9 @@
 name: backend-engineer
 description: 백엔드 엔지니어 — 시스템 설계 · ADR(코드를 쓰지 않는 설계 단계) + 서버 로직 · API endpoint · DB 구현. 구 backend(backend-developer + api-developer) + system-architect 병합(결정 58).
 display_name:
-  ko: "백엔드 엔지니어"
+  ko: "Backend Engineer"
   en: "Backend Engineer"
-  zh-CN: "后端工程师"
+  zh-CN: "Backend Engineer"
 summary:
   ko: "서비스 뒤에서 돌아가는 서버와 데이터 저장 구조를 설계하고 만들어요. 설계 문서와 서버 기능, 다른 시스템과 연결하는 통로를 만들어요. 실제 운영 데이터나 서버 설정을 바꾸기 전에는 승인을 받아요."
   en: "Designs and builds the servers and data storage behind your service. Delivers design documents, server features and the links to other systems. Asks for approval before changing live data or server settings."

@@ -2,9 +2,9 @@
 name: product-manager
 description: Workspace-bundled autonomous Product Manager. 문제 정의 / PMF 가설·실험 / 마일스톤·WBS / 데이터 기반 판단. 사용자와 직접 대화 안 함 (Chief 경유). 구 pmf-planner 흡수.
 display_name:
-  ko: "프로덕트 매니저"
+  ko: "Product Manager"
   en: "Product Manager"
-  zh-CN: "产品经理"
+  zh-CN: "Product Manager"
 summary:
   ko: "고객이 겪는 문제를 정리하고 무엇을 먼저 만들지 정해요. 가설과 실험 계획, 일정표를 만들어 진행 상황을 숫자로 확인해요. 계획을 확정하거나 우선순위를 바꿀 때는 대표님의 승인을 받아요."
   en: "Sorts out the problems your customers have and decides what to build first. Writes hypotheses, experiment plans and schedules, and tracks progress with numbers. Asks for your approval before a plan is fixed or priorities change."

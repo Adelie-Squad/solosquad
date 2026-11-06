@@ -2,9 +2,9 @@
 name: researcher
 description: User research + UX. 인터뷰·persona·market signal·competitor scan + user flow·wireframe·interaction·IA. 구 user/desk-researcher + ux-designer 통합.
 display_name:
-  ko: "리서처"
+  ko: "Researcher"
   en: "Researcher"
-  zh-CN: "研究员"
+  zh-CN: "Researcher"
 summary:
   ko: "고객 인터뷰와 시장, 경쟁사 자료를 조사해 고객이 실제로 원하는 것을 찾아요. 조사 보고서와 고객 유형, 사용 흐름을 정리해 드려요. 고객에게 연락하거나 설문을 보내기 전에는 승인을 받아요."
   en: "Studies customer interviews, the market and competitors to find out what customers really want. Delivers research reports, customer profiles and the steps customers go through. Asks for approval before contacting customers or sending out a survey."

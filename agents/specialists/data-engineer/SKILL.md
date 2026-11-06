@@ -2,9 +2,9 @@
 name: data-engineer
 description: 데이터 수집 + 파이프라인 + warehouse. v1.0.x data-collector + data-engineer 병합 (데이터 lifecycle 단일).
 display_name:
-  ko: "데이터 엔지니어"
+  ko: "Data Engineer"
   en: "Data Engineer"
-  zh-CN: "数据工程师"
+  zh-CN: "Data Engineer"
 summary:
   ko: "흩어진 판매, 재고, 고객 데이터를 모아 한곳에서 볼 수 있게 정리해요. 데이터를 자동으로 모으고 다듬는 흐름과 분석용 표를 만들어요. 새 데이터 출처를 연결하거나 기존 기록을 지울 때는 승인을 받아요."
   en: "Gathers scattered sales, stock and customer data into one place you can look at. Builds the steps that collect and clean data automatically, and the tables used for analysis. Asks for approval before connecting a new data source or deleting existing records."
