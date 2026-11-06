@@ -439,6 +439,12 @@ export interface Team {
 export interface Agent {
   name: string;
   description: string;
+  display_name: {
+    [k: string]: string;
+  };
+  summary: {
+    [k: string]: string;
+  };
   team: string | null;
   layer: string;
   appearance: {
@@ -490,6 +496,12 @@ export interface OrgTeam {
 export interface AgentCard {
   name: string;
   description: string;
+  display_name: {
+    [k: string]: string;
+  };
+  summary: {
+    [k: string]: string;
+  };
   appearance: {
     [k: string]: unknown;
   } | null;

@@ -4,6 +4,8 @@
 export interface SeatAgent {
   name: string;
   team: string | null;
+  /** The name people read on the tag (display name); the id when absent. */
+  label?: string;
 }
 
 export interface Desk {

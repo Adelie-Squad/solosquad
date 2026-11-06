@@ -9,6 +9,7 @@ import { ArtifactBody } from '../components/ArtifactBody';
 import { Loading, Placeholder, QueryError } from '../components/Status';
 import { kindLabel, useI18n } from '../i18n';
 import { ICON } from '../icons';
+import { agentName } from '../lib/agentNames';
 import { readable } from '../lib/names';
 import { BudgetBar } from '../views/BudgetView';
 import { RUN_STATUS } from '../views/WorkflowsView';
@@ -119,7 +120,7 @@ export function BudgetWidget() {
 
 export function OfficeWidget() {
   const { w: toWs } = useLinks();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const q = useAgents();
   const working = (q.data ?? []).filter((a) => a.working_on.length > 0);
   return (
@@ -132,7 +133,7 @@ export function OfficeWidget() {
             <li key={a.name}>
               <span className="run-row">
                 <span className="live-dot" />
-                <strong className="run-row-title">{a.name}</strong>
+                <strong className="run-row-title">{agentName(a.name, locale, a)}</strong>
                 <span className="dash-hint">{a.working_on.map((w) => w.title).join(', ')}</span>
               </span>
             </li>
@@ -176,11 +177,11 @@ export function WorkflowsWidget() {
 }
 
 export function OrgChartWidget() {
-  const { o: toOrg } = useLinks();
+  const { w: toWs } = useLinks();
   const { t } = useI18n();
   const q = useOrgChart();
   return (
-    <Frame title={t('nav.org')} to={toOrg('/org')} more={t('widget.open')}>
+    <Frame title={t('nav.org')} to={toWs('/office')} more={t('widget.open')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : (
         <ul className="run-list">
           {q.data.teams.map((tm) => (

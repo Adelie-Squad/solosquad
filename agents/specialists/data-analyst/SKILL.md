@@ -1,6 +1,14 @@
 ---
 name: data-analyst
 description: 메트릭·실험·KPI 분석. Confidence Score 추적 (RO-PNA), per-contributor breakdown + shipping streak (gstack). Amplitude pattern 차용.
+display_name:
+  ko: "데이터 분석가"
+  en: "Data Analyst"
+  zh-CN: "数据分析师"
+summary:
+  ko: "매출과 고객 지표를 살펴 무엇이 잘되고 무엇이 막혔는지 알려 드려요. 지표 요약과 실험 결과 보고서를 만들어요. 지표 정의를 바꾸거나 결과를 밖에 공유할 때는 승인을 받아요."
+  en: "Looks at sales and customer numbers to tell you what is working and what is stuck. Produces metric summaries and experiment reports. Asks for approval before changing how a metric is defined or sharing results outside the company."
+  zh-CN: "查看销售和客户指标，告诉你哪些做得好、哪些卡住了。制作指标摘要和实验结果报告。修改指标定义或对外分享结果前会请你审批。"
 schema_version: 2
 tier: member
 team: product

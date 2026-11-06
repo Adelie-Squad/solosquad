@@ -17,6 +17,11 @@ from solosquad.routing import ChiefPolicy, Connection, ConnectionKind, Router, S
 from solosquad.routing.router import Escalation
 
 AGENT = "---\nname: {name}\ndescription: {desc}\n{extra}---\n{body}\n"
+# words people read (display name · summary per language); `fr` is not a web language
+WORDS = {
+    "pm": "display_name:\n  ko: 프로덕트 매니저\n  en: Product Manager\n  fr: Chef de produit\n"
+    "summary:\n  en: Plans the work. Asks before changing the plan.\n  ko: 42\n",
+}
 TEAMS = {
     "core": "members: [chief]\n",
     "product": "members: [pm, engineer]\n",
@@ -36,7 +41,9 @@ def make_bundle(root: Path) -> Path:
         )
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(
-            AGENT.format(name=name, desc=desc, extra="", body=f"{name} instructions"),
+            AGENT.format(
+                name=name, desc=desc, extra=WORDS.get(name, ""), body=f"{name} instructions"
+            ),
             encoding="utf-8",
         )
     for team, comp in TEAMS.items():

@@ -13,7 +13,6 @@ import { ArtifactView } from '../views/ArtifactView';
 import { BudgetView } from '../views/BudgetView';
 import { ChatView } from '../views/ChatView';
 import { OfficeView } from '../views/OfficeView';
-import { OrgChartView } from '../views/OrgChartView';
 import { SettingsView } from '../views/SettingsView';
 import { WorkflowRunView, WorkflowsView } from '../views/WorkflowsView';
 import { Shell } from './Shell';
@@ -28,6 +27,7 @@ export function legacyTarget(pathname: string, scope: { org: string; ws: string 
   const first = pathname.split('/').filter(Boolean)[0] ?? '';
   if (LEGACY_WS.includes(first)) return routes.ws(scope.org, scope.ws, pathname);
   if (first === 'connections') return routes.org(scope.org, '/settings/connections');
+  if (first === 'org') return routes.ws(scope.org, scope.ws, '/office');
   if (LEGACY_ORG.includes(first)) return routes.org(scope.org, pathname);
   return null;
 }
@@ -78,7 +78,8 @@ export function ScopeLayout() {
           <Route path="budget" element={<BudgetView />} />
           <Route path="*" element={<NotFoundInShell />} />
         </Route>
-        <Route path="org" element={<OrgChartView />} />
+        {/* the org chart moved into the office (2026-11-06) — old addresses keep working */}
+        <Route path="org" element={<Navigate to={routes.ws(org, shown, '/office')} replace />} />
         {/* connections moved into Settings (2026-11-06) — old addresses keep working */}
         <Route path="connections" element={<Navigate to={routes.org(org, '/settings/connections')} replace />} />
         <Route path="settings" element={<SettingsView />} />

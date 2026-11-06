@@ -38,8 +38,10 @@ describe('approval card buttons follow can_approve (decision 51)', () => {
     setCsrf('csrf-1');
     renderWith(<ApprovalCard item={approval({ source: 'workflow', thread_id: 'wf-th' }, { workflow: 'monthly-pnl' })} />, 'en');
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
-    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    // the card also reads the agents (for their display names) — find the answer itself
+    const calls = () => (fetch.mock.calls as unknown as [string, RequestInit][]).filter(([u]) => u.endsWith('/resume'));
+    await waitFor(() => expect(calls()).toHaveLength(1));
+    const [url, init] = calls()[0];
     expect(url).toBe('/api/o/tesla/w/charging/workflow-threads/wf-th/resume'); // the workspace on screen
     expect(JSON.parse(String(init.body))).toEqual({ value: 'approved' });
     expect((init.headers as Record<string, string>)[CSRF_HEADER]).toBe('csrf-1');

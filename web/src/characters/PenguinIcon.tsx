@@ -4,7 +4,7 @@ import { useId, type ReactNode } from 'react';
 import { PENGUIN_2D as C, teamColor } from './colors';
 import { lookOf, type Prop } from './roster';
 
-export type IconSize = 20 | 28 | 40;
+export type IconSize = 20 | 28 | 40 | 64;
 
 const L = C.line;
 const SW = 0.9;

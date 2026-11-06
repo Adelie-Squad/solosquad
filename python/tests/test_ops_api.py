@@ -135,6 +135,10 @@ async def test_teams_and_who_is_working(office: Office) -> None:
         agents = {a["name"]: a for a in (await web.get("/api/agents")).json()}
         assert set(agents) == {"chief", "pm", "engineer"}
         assert agents["engineer"]["team"] == "product" and agents["chief"]["layer"] == "package"
+        # names and summaries for people, per web language; anything else is dropped
+        assert agents["pm"]["display_name"] == {"ko": "프로덕트 매니저", "en": "Product Manager"}
+        assert agents["pm"]["summary"] == {"en": "Plans the work. Asks before changing the plan."}
+        assert agents["engineer"]["display_name"] == {} and agents["engineer"]["summary"] == {}
         tid = (await web.post("/api/threads", json={"title": "launch"}, headers=h)).json()[
             "thread_id"
         ]

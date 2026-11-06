@@ -238,6 +238,18 @@
         "description": {
           "type": "string"
         },
+        "display_name": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "summary": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "team": {
           "anyOf": [
             {
@@ -272,6 +284,8 @@
       "required": [
         "name",
         "description",
+        "display_name",
+        "summary",
         "team",
         "layer",
         "appearance",
@@ -289,6 +303,18 @@
         "description": {
           "type": "string"
         },
+        "display_name": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "summary": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "appearance": {
           "anyOf": [
             {
@@ -304,6 +330,8 @@
       "required": [
         "name",
         "description",
+        "display_name",
+        "summary",
         "appearance"
       ],
       "type": "object",

@@ -8,6 +8,7 @@ import type { ApprovalItem } from '../api/types.gen';
 import { categoryLabel, useI18n, type MessageKey } from '../i18n';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { ICON } from '../icons';
+import { useAgentName } from '../lib/agentNames';
 import { readable } from '../lib/names';
 
 /** Why this person cannot answer the card — the same rule the server applies (decision 51). */
@@ -32,6 +33,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
   const { t, locale, fmt } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const answer = useAction((value: Decision) => decide(scope, item, value), [keys.approvals, keys.runs, keys.workflowRuns()]);
+  const nameOf = useAgentName();
   const blocked = blockedReason(item);
   const card = item.card;
   const workflowLink = item.source === 'workflow' && card.workflow ? `/workflows/${card.workflow}/runs/${item.thread_id}` : null;
@@ -59,7 +61,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
       </header>
       {card.summary && <p className="approval-summary">{card.summary}</p>}
       <p className="approval-meta">
-        {item.source === 'workflow' ? t('approvals.fromWorkflow', { name: card.workflow ?? '' }) : t('approvals.fromAgent', { name: card.agent ?? '' })}
+        {item.source === 'workflow' ? t('approvals.fromWorkflow', { name: card.workflow ?? '' }) : t('approvals.fromAgent', { name: nameOf(card.agent) })}
         {' · '}
         {fmt.relative(item.created)}
         {workflowLink && (

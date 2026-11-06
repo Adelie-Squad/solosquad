@@ -1,6 +1,14 @@
 ---
 name: frontend-engineer
 description: 프론트엔드 엔지니어 — UI 컴포넌트 / 시각화 / interaction. design system 구현. product-designer 와 1:1 협업. 구 frontend(결정 58 에서 id 변경).
+display_name:
+  ko: "프론트엔드 엔지니어"
+  en: "Frontend Engineer"
+  zh-CN: "前端工程师"
+summary:
+  ko: "디자이너가 만든 화면을 실제로 동작하는 웹 화면으로 만들어요. 화면 코드와 그래프, 눌러 볼 수 있는 시안을 내놓아요. 고객이 쓰는 화면에 반영하기 전에는 승인을 받아요."
+  en: "Builds the designer’s screens into web pages that actually work. Delivers the screen code, charts and clickable previews. Asks for approval before a change goes live on screens your customers use."
+  zh-CN: "把设计师做好的页面做成真正能用的网页。交付页面代码、图表和可点击的预览。上线到客户使用的页面前会请你审批。"
 schema_version: 2
 tier: member
 team: engineering
