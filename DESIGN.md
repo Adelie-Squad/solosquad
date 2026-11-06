@@ -398,11 +398,13 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 
 **제작 절차 — Blender → GLB → 웹**
 
+> 이름 · 단위 · 모듈 · 재질 · 동작 클립 · 예산의 상세 규격은 [`docs/design/office-asset-contract.md`](docs/design/office-asset-contract.md).
+
 1. **스타일 프레임**: Blender(MCP for Blender)로 방 한 칸 + 펭귄 4명 장면을 라이트 · 저녁 두 장 렌더 → 사용자 확정 → 팔레트 실측값을 위 표에 반영.
 2. **에셋 키트**: 방 조각(바닥 타일 · 벽 조각) · 책상 세트 · 공용 소품 · 펭귄 몸(리그) · 역할 소품을 따로 모델링. 재질 이름 = 팔레트 키(웹에서 테마별로 재질을 바꿔 끼운다).
 3. **동작**: 펭귄 리그에 상태 6개 클립(반복 1~2초). 소품은 뼈(손 · 머리)에 붙여 같이 움직인다.
 4. **조명 굽기**: 고정 물체의 AO · 부드러운 그림자를 라이트 · 저녁 두 벌 텍스처로 굽는다(웹에서 실시간 그림자는 캐릭터 접지 그림자만).
-5. **내보내기**: GLB(meshopt 압축 · KTX2 텍스처) — 전체 3~5MB 이내, 지연 로딩. Blender 원본(`assets/office/*.blend`, Git LFS)과 내보내기 스크립트(Blender Python)를 저장소에 두어 다시 만들 수 있게 한다. 외부 모델 · 텍스처 · HDRI 내려받기(Poly Haven 등)는 쓰지 않는다(전부 원본).
+5. **내보내기**: GLB(meshopt 압축 · WebP 텍스처) — 전체 3~5MB 이내, 지연 로딩. 원본은 빈 장면에서 에셋을 만드는 Blender Python 빌드 스크립트(`assets/office/scripts/`)이고 `.blend` 는 커밋하지 않는다 — 텍스트만으로 다시 만들 수 있게 한다. 외부 모델 · 텍스처 · HDRI 내려받기(Poly Haven 등)는 쓰지 않는다(전부 원본).
 6. **웹**: React Three Fiber + drei(`useGLTF` · 환경광 · 접지 그림자)로 띄운다. 레이아웃 계산(팀 무리 배치) · 상태 어댑터는 지금 코드를 그대로 쓴다.
 
 **성능 · 대체 · 접근성**
