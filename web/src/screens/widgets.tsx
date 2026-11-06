@@ -1,3 +1,4 @@
+import { useLinks } from '../scope';
 // The first widget set (I30 · W8): compact, data-wired versions of the fixed screens.
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
@@ -32,11 +33,12 @@ const prop = (spec: WidgetSpec, key: string): string | undefined => {
 };
 
 export function ApprovalsWidget() {
+  const { w: toWs } = useLinks();
   const { t } = useI18n();
   const q = useApprovals();
   const mine = (q.data ?? []).filter((a) => a.can_approve);
   return (
-    <Frame title={t('widget.approvals', { n: mine.length })} to="/approvals" more={t('widget.all')}>
+    <Frame title={t('widget.approvals', { n: mine.length })} to={toWs('/approvals')} more={t('widget.all')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : mine.length === 0 ? (
         <p className="dash-hint">{t('approvals.none')}</p>
       ) : (
@@ -74,6 +76,7 @@ export function ArtifactLatestWidget({ spec }: { spec: WidgetSpec }) {
 }
 
 export function ArtifactListWidget({ spec }: { spec: WidgetSpec }) {
+  const { w: toWs } = useLinks();
   const { t, fmt } = useI18n();
   const q = useArtifacts({ kind: prop(spec, 'kind'), limit: 20 });
   return (
@@ -84,7 +87,7 @@ export function ArtifactListWidget({ spec }: { spec: WidgetSpec }) {
         <ul className="run-list">
           {(q.data ?? []).map((a) => (
             <li key={a.id}>
-              <Link className="run-row" to={`/artifacts/${a.id}`}>
+              <Link className="run-row" to={toWs(`/artifacts/${a.id}`)}>
                 <span>📄 {a.title}</span>
                 <span className="chip">{a.kind}</span>
                 {a.needs_review && <span className="chip is-warn">{t('artifact.needsReviewShort')}</span>}
@@ -99,21 +102,23 @@ export function ArtifactListWidget({ spec }: { spec: WidgetSpec }) {
 }
 
 export function BudgetWidget() {
+  const { w: toWs } = useLinks();
   const { t } = useI18n();
   const q = useBudget();
   return (
-    <Frame title={t('budget.title')} to="/budget" more={t('widget.details')}>
+    <Frame title={t('budget.title')} to={toWs('/budget')} more={t('widget.details')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : <BudgetBar label={t('budget.org')} line={q.data.org} />}
     </Frame>
   );
 }
 
 export function OfficeWidget() {
+  const { w: toWs } = useLinks();
   const { t } = useI18n();
   const q = useAgents();
   const working = (q.data ?? []).filter((a) => a.working_on.length > 0);
   return (
-    <Frame title={t('widget.office', { n: working.length })} to="/office" more={t('widget.enter')}>
+    <Frame title={t('widget.office', { n: working.length })} to={toWs('/office')} more={t('widget.enter')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : working.length === 0 ? (
         <p className="dash-hint">{t('widget.allIdle')}</p>
       ) : (
@@ -133,17 +138,18 @@ export function OfficeWidget() {
 }
 
 export function WorkflowsWidget() {
+  const { w: toWs } = useLinks();
   const { t, fmt } = useI18n();
   const q = useWorkflows();
   return (
-    <Frame title={t('nav.workflows')} to="/workflows" more={t('widget.all')}>
+    <Frame title={t('nav.workflows')} to={toWs('/workflows')} more={t('widget.all')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : q.data.workflows.length === 0 ? (
         <p className="dash-hint">{t('workflows.none')}</p>
       ) : (
         <ul className="run-list">
           {q.data.workflows.map((w) => (
             <li key={w.name}>
-              <Link className="run-row" to={`/workflows/${w.name}`}>
+              <Link className="run-row" to={toWs(`/workflows/${w.name}`)}>
                 <span>🧩 {w.title}</span>
                 {w.last_run ? (
                   <>
@@ -163,17 +169,17 @@ export function WorkflowsWidget() {
 }
 
 export function OrgChartWidget() {
+  const { o: toOrg } = useLinks();
   const { t } = useI18n();
   const q = useOrgChart();
   return (
-    <Frame title={t('nav.org')} to="/org" more={t('widget.open')}>
+    <Frame title={t('nav.org')} to={toOrg('/org')} more={t('widget.open')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : (
         <ul className="run-list">
           {q.data.teams.map((tm) => (
             <li key={tm.name}>
               <span className="run-row">
                 <strong>{tm.name}</strong>
-                {tm.lead_agent && <span className="chip">⭐ {tm.lead_agent.name}</span>}
                 <span className="dash-hint">{t('widget.teamCounts', { agents: tm.agents.length, people: tm.people.length })}</span>
               </span>
             </li>

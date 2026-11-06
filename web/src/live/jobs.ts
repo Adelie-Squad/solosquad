@@ -1,6 +1,7 @@
+import { useLinks } from '../scope';
 import { useQueries } from '@tanstack/react-query';
-import { api } from '../api/client';
-import { keys, useRuns, useThreads, useWorkflowRuns, useWorkflows } from '../api/queries';
+
+import { useKeys, useRuns, useScopedApi, useThreads, useWorkflowRuns, useWorkflows } from '../api/queries';
 import type { Run, WorkflowThreadState } from '../api/types.gen';
 import type { Job } from '../components/JobList';
 import { useI18n } from '../i18n';
@@ -22,6 +23,9 @@ function status(run: Run): Job['status'] {
 
 /** The office's live work: company runs and workflow runs, newest first, with live notes. */
 export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } {
+  const keys = useKeys();
+  const { w: toWs } = useLinks();
+  const { ws: wsApi } = useScopedApi();
   const { t } = useI18n();
   const live = useLive();
   const runs = useRuns({ limit: 50 });
@@ -35,7 +39,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
   const states = useQueries({
     queries: activeWf.map((r) => ({
       queryKey: keys.workflowState(r.thread_id),
-      queryFn: () => api.get<WorkflowThreadState>(`/workflow-threads/${r.thread_id}/state`),
+      queryFn: () => wsApi.get<WorkflowThreadState>(`/workflow-threads/${r.thread_id}/state`),
     })),
   });
 
@@ -52,7 +56,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
       steps: [],
       stepIndex: 0,
       log: live.logs[r.id] ?? [],
-      link: `/chat/${r.thread_id}`,
+      link: toWs(`/chat/${r.thread_id}`),
     }));
 
   const defs = new Map((workflows.data?.workflows ?? []).map((w) => [w.name, w]));
@@ -70,7 +74,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
       steps: def?.steps.map((s) => s.title) ?? [],
       stepIndex: values?.step ?? 0,
       log: live.logs[r.id] ?? [],
-      link: def ? `/workflows/${def.name}/runs/${r.thread_id}` : undefined,
+      link: def ? toWs(`/workflows/${def.name}/runs/${r.thread_id}`) : undefined,
     };
   });
 

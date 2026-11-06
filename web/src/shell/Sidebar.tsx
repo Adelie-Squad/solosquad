@@ -1,17 +1,23 @@
+import { useLinks } from '../scope';
 import { useQueryClient } from '@tanstack/react-query';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { keys, useApprovals, useThreads } from '../api/queries';
 import { useI18n } from '../i18n';
 import { useSession } from '../session';
-import { visibleNav } from './nav';
+import { useOrgOwner } from '../scope';
+import { navHref, visibleNav } from './nav';
+import { ScopeSwitcher } from './ScopeSwitcher';
 
 /** Sidebar — pinned tiles (2 columns), the conversations, and who is logged in. */
 export function Sidebar({ onCommand }: { onCommand: () => void }) {
+  const links = useLinks();
+  const { w: toWs, o: toOrg } = links;
   const { t, fmt } = useI18n();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { user, isOwner } = useSession();
+  const { user } = useSession();
+  const isOwner = useOrgOwner();
   const threads = useThreads();
   const approvals = useApprovals();
   const mine = (approvals.data ?? []).filter((a) => a.can_approve).length;
@@ -40,9 +46,11 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
         </div>
       </div>
 
+      <ScopeSwitcher />
+
       <nav className="pinned" aria-label={t('nav.main')}>
         {visibleNav(isOwner).map((p) => (
-          <NavLink key={p.to} to={p.to} end={p.to === '/'} className="pinned-tile">
+          <NavLink key={p.to} to={navHref(p, links)} end={p.to === ''} className="pinned-tile">
             <span className="pinned-icon">{p.icon}</span>
             <span className="pinned-label">{t(p.label)}</span>
             {p.to === '/approvals' && mine > 0 && <span className="pinned-badge">{mine}</span>}
@@ -55,13 +63,13 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
           <span>💬 {t('chat.title')}</span>
           <span className="live-count">{t('chat.count', { n: chats.length })}</span>
         </div>
-        <button className="new-request" onClick={() => navigate('/chat/new')}>
+        <button className="new-request" onClick={() => navigate(toWs('/chat/new'))}>
           + {t('chat.new')}
         </button>
         <ul className="session-list">
           {chats.map((s) => (
             <li key={s.id}>
-              <NavLink to={`/chat/${s.id}`} className="session-item">
+              <NavLink to={toWs(`/chat/${s.id}`)} className="session-item">
                 <span className="session-title">{s.title || t('chat.untitled')}</span>
                 <span className="session-meta">{fmt.relative(s.updated)}</span>
               </NavLink>
@@ -71,12 +79,12 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
       </section>
 
       <div className="sidebar-bottom">
-        <NavLink to="/settings" className="viewer-chip" title={t('nav.settings')}>
+        <NavLink to={toOrg('/settings')} className="viewer-chip" title={t('nav.settings')}>
           <span>{isOwner ? '👑' : '🙂'}</span>
           <span className="viewer-chip-name">{user?.display || user?.username || t('role.local')}</span>
           <span className="viewer-chip-role">{isOwner ? t('role.owner') : t('role.staff')}</span>
         </NavLink>
-        <NavLink className="icon-btn" aria-label={t('nav.settings')} title={t('nav.settings')} to="/settings">
+        <NavLink className="icon-btn" aria-label={t('nav.settings')} title={t('nav.settings')} to={toOrg('/settings')}>
           ⚙️
         </NavLink>
         <button className="icon-btn" aria-label={t('nav.logout')} title={t('nav.logout')} onClick={logout}>

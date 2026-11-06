@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { keys } from '../src/api/queries';
+import { scopedKeys } from '../src/api/queries';
+
+const keys = scopedKeys({ org: 'tesla', ws: 'hq' });
+const EVENTS_URL = eventsUrl('/o/tesla/w/hq');
 import type { EngineEvent } from '../src/api/types.gen';
 import { emptyLive, reduce, type LiveState } from '../src/live/LiveProvider';
-import { EVENTS_URL, invalidationsFor, LiveStream, type EventSourceLike } from '../src/live/stream';
+import { eventsUrl, invalidationsFor, LiveStream, type EventSourceLike } from '../src/live/stream';
 
 class FakeSource implements EventSourceLike {
   onopen: EventSourceLike['onopen'] = null;
@@ -30,6 +33,7 @@ function harness() {
   const got: [string, number][] = [];
   const status: boolean[] = [];
   const stream = new LiveStream(
+    EVENTS_URL,
     (url) => {
       const s = new FakeSource(url);
       sources.push(s);
@@ -93,12 +97,12 @@ describe('live event stream (I9)', () => {
 
   it('invalidates queries only on run lifecycle and approval events', () => {
     const ev = (e: Partial<EngineEvent>) => ({ ts: 1, event: 'run.started', ...e }) as EngineEvent;
-    expect(invalidationsFor(ev({ event: 'run.message', thread_id: 't' }))).toEqual([]);
-    expect(invalidationsFor(ev({ event: 'run.update', thread_id: 't' }))).toEqual([]);
-    const done = invalidationsFor(ev({ event: 'run.interrupted', thread_id: 't' }));
+    expect(invalidationsFor(ev({ event: 'run.message', thread_id: 't' }), keys)).toEqual([]);
+    expect(invalidationsFor(ev({ event: 'run.update', thread_id: 't' }), keys)).toEqual([]);
+    const done = invalidationsFor(ev({ event: 'run.interrupted', thread_id: 't' }), keys);
     expect(done).toContainEqual(keys.approvals);
     expect(done).toContainEqual(keys.thread('t'));
-    const wf = invalidationsFor(ev({ event: 'run.completed', thread_id: 'w', source: 'workflow' }));
+    const wf = invalidationsFor(ev({ event: 'run.completed', thread_id: 'w', source: 'workflow' }), keys);
     expect(wf).toContainEqual(keys.workflowState('w'));
     expect(wf).toContainEqual(keys.artifacts);
     expect(wf).not.toContainEqual(keys.threads);

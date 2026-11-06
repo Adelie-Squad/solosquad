@@ -27,6 +27,10 @@ export const STATUS_CHIP: Record<AgentStatus, string> = {
   error: 'is-danger',
 };
 
+/** Idle agents keep their tag hidden until pointed at (scene hover, or the list below) — the
+ * working, the waiting, the failed and the just-finished stay readable in a full office. */
+export const quiet = (st: AgentStatus) => st === 'idle';
+
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
@@ -50,12 +54,15 @@ export function OfficeStage({
   theme,
   onSelect,
   fallback,
+  highlight = null,
 }: {
   agents: SeatAgent[];
   statuses: Record<string, AgentStatus>;
   theme: Theme;
   onSelect: (agent: string) => void;
   fallback: ReactNode;
+  /** An agent pointed at elsewhere (the list below) — its quiet tag shows. */
+  highlight?: string | null;
 }) {
   const { t } = useI18n();
   const wrap = useRef<HTMLDivElement>(null);
@@ -64,6 +71,7 @@ export function OfficeStage({
   const tags = useRef(new Map<string, HTMLElement>());
   const [failed, setFailed] = useState(webglForcedOff);
   const [ready, setReady] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
   // `?office-debug`: `dispatchEvent(new CustomEvent('solosquad:office-debug', {detail: {chief: 'typing'}}))`
@@ -97,6 +105,7 @@ export function OfficeStage({
           return;
         }
         instance.onFail = () => setFailed(true);
+        instance.onHover = (a) => setHovered(a);
         scene.current = instance;
         // `?office-debug` exposes the scene for checking poses and frame rate by hand
         if (new URLSearchParams(window.location.search).has('office-debug')) {
@@ -163,7 +172,7 @@ export function OfficeStage({
           return (
             <div
               key={a.name}
-              className={`office-tag is-${st}`}
+              className={`office-tag is-${st} ${quiet(st) && a.name !== hovered && a.name !== highlight ? 'is-quiet' : ''}`}
               ref={(el) => {
                 if (el) tags.current.set(a.name, el);
                 else tags.current.delete(a.name);

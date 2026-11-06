@@ -1,3 +1,4 @@
+import { useLinks } from '../scope';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAgents, useApprovals } from '../api/queries';
@@ -50,6 +51,7 @@ export function OfficeView() {
   const live = useLive();
   const { jobs, doneToday } = useJobs();
   const [selected, setSelected] = useState<string | null>(null);
+  const [pointed, setPointed] = useState<string | null>(null);
   const [liveOpen, setLiveOpen] = useState(readLiveOpen);
   const [liveModal, setLiveModal] = useState(false);
   const [quickChat, setQuickChat] = useState(false);
@@ -91,7 +93,7 @@ export function OfficeView() {
     else void officeRef.current?.requestFullscreen?.();
   };
   const select = (name: string) => (name === ENTRY ? setQuickChat(true) : setSelected(name));
-  const roster = <AgentRoster agents={list} statuses={statuses} onSelect={select} />;
+  const roster = <AgentRoster agents={list} statuses={statuses} onSelect={select} onPoint={setPointed} />;
   const chosen = list.find((a) => a.name === selected) ?? null;
 
   return (
@@ -125,7 +127,7 @@ export function OfficeView() {
 
       <div className={`office-body ${liveOpen ? 'is-split' : ''}`}>
         <div className="office-main">
-          <OfficeStage agents={seats} statuses={statuses} theme={theme} onSelect={select} fallback={roster} />
+          <OfficeStage agents={seats} statuses={statuses} theme={theme} onSelect={select} fallback={roster} highlight={pointed} />
         </div>
         {liveOpen && (
           <aside className="office-live" aria-label={t('office.live')}>
@@ -167,7 +169,17 @@ export function OfficeView() {
 }
 
 /** Teams · agents · status chips — the scene's content as a list (also the WebGL fallback). */
-function AgentRoster({ agents, statuses, onSelect }: { agents: Agent[]; statuses: Record<string, AgentStatus>; onSelect: (n: string) => void }) {
+function AgentRoster({
+  agents,
+  statuses,
+  onSelect,
+  onPoint = () => {},
+}: {
+  agents: Agent[];
+  statuses: Record<string, AgentStatus>;
+  onSelect: (n: string) => void;
+  onPoint?: (n: string | null) => void;
+}) {
   const { t } = useI18n();
   const teams = new Map<string, Agent[]>();
   for (const a of agents) {
@@ -184,7 +196,14 @@ function AgentRoster({ agents, statuses, onSelect }: { agents: Agent[]; statuses
               const st = statuses[a.name] ?? 'idle';
               return (
                 <li key={a.name}>
-                  <button className="roster-row" onClick={() => onSelect(a.name)}>
+                  <button
+                    className="roster-row"
+                    onClick={() => onSelect(a.name)}
+                    onMouseEnter={() => onPoint(a.name)}
+                    onMouseLeave={() => onPoint(null)}
+                    onFocus={() => onPoint(a.name)}
+                    onBlur={() => onPoint(null)}
+                  >
                     <AgentIcon agent={a.name} team={a.team ?? lookOf(a.name).team} size={28} label="" />
                     <strong>{a.name}</strong>
                     <span className={`chip ${STATUS_CHIP[st]}`}>{t(STATUS_LABEL[st])}</span>
@@ -201,6 +220,7 @@ function AgentRoster({ agents, statuses, onSelect }: { agents: Agent[]; statuses
 }
 
 function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status: AgentStatus; waiting: ApprovalItem[]; onClose: () => void }) {
+  const { w: toWs, o: toOrg } = useLinks();
   const { t } = useI18n();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -229,7 +249,7 @@ function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status:
           {waiting.length > 0 && (
             <div className="approval-bar">
               <span>👤 {t('office.waitingN', { n: waiting.length })}</span>
-              <Link className="btn is-primary" to="/approvals">
+              <Link className="btn is-primary" to={toWs('/approvals')}>
                 {t('office.goAnswer')}
               </Link>
             </div>
@@ -239,7 +259,7 @@ function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status:
             <ul className="agent-members">
               {agent.working_on.map((w) => (
                 <li key={w.run_id}>
-                  <Link className="chip is-accent" to={`/chat/${w.thread_id}`}>
+                  <Link className="chip is-accent" to={toWs(`/chat/${w.thread_id}`)}>
                     ▶ {w.title ?? w.thread_id}
                   </Link>
                 </li>
@@ -249,7 +269,7 @@ function AgentSheet({ agent, status, waiting, onClose }: { agent: Agent; status:
             <p className="dash-hint">{t('office.idle')}</p>
           )}
           <div className="agent-links">
-            <Link className="btn" to="/org">
+            <Link className="btn" to={toOrg('/org')}>
               {t('nav.org')}
             </Link>
           </div>

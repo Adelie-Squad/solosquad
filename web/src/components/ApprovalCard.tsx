@@ -1,7 +1,8 @@
+import { useLinks } from '../scope';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
-import { decide, keys, useAction, type Decision } from '../api/queries';
+import { decide, type Decision, useAction, useKeys, useScopedApi } from '../api/queries';
 import type { ApprovalItem } from '../api/types.gen';
 import { categoryLabel, useI18n, type MessageKey } from '../i18n';
 import { AgentIcon } from '../characters/PenguinIcon';
@@ -21,9 +22,12 @@ const RISK: Record<string, string> = { high: 'is-danger', medium: 'is-warn', low
  * (`can_approve`); otherwise the reason is shown instead.
  */
 export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; compact?: boolean }) {
+  const keys = useKeys();
+  const { w: toWs } = useLinks();
+  const { scope } = useScopedApi();
   const { t, locale, fmt } = useI18n();
   const [error, setError] = useState<string | null>(null);
-  const answer = useAction((value: Decision) => decide(item, value), [keys.approvals, keys.runs, keys.workflowRuns()]);
+  const answer = useAction((value: Decision) => decide(scope, item, value), [keys.approvals, keys.runs, keys.workflowRuns()]);
   const blocked = blockedReason(item);
   const card = item.card;
   const workflowLink = item.source === 'workflow' && card.workflow ? `/workflows/${card.workflow}/runs/${item.thread_id}` : null;
@@ -63,7 +67,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
         {item.source === 'company' && (
           <>
             {' · '}
-            <Link to={`/chat/${item.thread_id}`}>{t('approvals.openChat')}</Link>
+            <Link to={toWs(`/chat/${item.thread_id}`)}>{t('approvals.openChat')}</Link>
           </>
         )}
       </p>

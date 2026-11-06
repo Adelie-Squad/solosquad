@@ -1,8 +1,9 @@
+import { useLinks } from '../scope';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api/client';
-import { keys, useApprovals, useRuns, useThreadState } from '../api/queries';
+
+import { useApprovals, useKeys, useRuns, useScopedApi, useThreadState } from '../api/queries';
 import type { ChatMessage, RunCreated, ThreadCreated } from '../api/types.gen';
 import { ApprovalCard } from '../components/ApprovalCard';
 import type { PromptHandoff } from '../components/CommandBar';
@@ -26,6 +27,9 @@ export function messageText(m: ChatMessage): string {
  * `/chat/new` is an empty conversation; the first message creates the thread.
  */
 export function ChatView() {
+  const keys = useKeys();
+  const { w: toWs } = useLinks();
+  const { ws: wsApi } = useScopedApi();
   const { tid = 'new' } = useParams<{ tid: string }>();
   const isNew = tid === 'new';
   const { t } = useI18n();
@@ -58,16 +62,16 @@ export function ChatView() {
       let target = tid;
       if (isNew) {
         const title = input.length > TITLE_MAX ? `${input.slice(0, TITLE_MAX)}…` : input;
-        target = (await api.post<ThreadCreated>('/threads', { title })).thread_id;
+        target = (await wsApi.post<ThreadCreated>('/threads', { title })).thread_id;
       }
-      await api.post<RunCreated>(`/threads/${target}/runs`, { input });
+      await wsApi.post<RunCreated>(`/threads/${target}/runs`, { input });
       setDraft('');
       await Promise.all([
         qc.invalidateQueries({ queryKey: keys.threads }),
         qc.invalidateQueries({ queryKey: keys.runs }),
         qc.invalidateQueries({ queryKey: keys.thread(target) }),
       ]);
-      if (isNew) navigate(`/chat/${target}`, { replace: true });
+      if (isNew) navigate(toWs(`/chat/${target}`), { replace: true });
     } catch {
       setError(t('chat.sendFailed'));
     } finally {

@@ -1158,7 +1158,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         return respond(
             list[S.Team],
             [
-                {"name": name, "main": comp.main, "members": comp.members}
+                {"name": name, "members": comp.members}
                 for name, comp in org_resolver(request).teams().items()
             ],
         )
@@ -1271,7 +1271,6 @@ def create_app(cfg: AppConfig) -> Starlette:
             teams.append(
                 {
                     "name": name,
-                    "lead_agent": agent_card(comp.main) if comp.main in agents else None,
                     "agents": [agent_card(a) for a in comp.members if a in agents],
                     "people": [person_card(u) for u in people if name in member[u.id][1]],
                 }

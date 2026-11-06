@@ -87,7 +87,7 @@ async def test_org_chart_shows_agents_and_people(tmp_path: Path) -> None:
             assert o.web.org.member(kim.id) == ("MD", ("product",))  # kept in org.db
             chart = (await boss.get("/api/org-chart")).json()
             product = next(t for t in chart["teams"] if t["name"] == "product")
-            assert product["lead_agent"] is None  # decision 58: teams have no lead
+            assert "lead_agent" not in product  # decision 58: teams have no lead
             assert [a["name"] for a in product["agents"]] == ["pm", "engineer"]
             assert product["people"] == [
                 {"id": kim.id, "display": "김대리", "title": "MD", "role": "staff"}

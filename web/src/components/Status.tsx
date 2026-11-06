@@ -1,19 +1,27 @@
 import { ApiError } from '../api/client';
-import { useI18n } from '../i18n';
+import { useI18n, type MessageKey } from '../i18n';
 
 export function Loading() {
   const { t } = useI18n();
   return <div className="panel empty">{t('common.loading')}</div>;
 }
 
-/** A query that failed. 404 from a feature switched off on this office reads differently. */
+/** What a failed request means to a person (decision 57): outside the assignments or gone =
+ * "no such page" (the server answers both with the same 404), a workspace whose runtime is
+ * down = "not started yet", a network the office does not accept = the network notice. */
+export function errorKey(error: unknown): MessageKey {
+  if (!(error instanceof ApiError)) return 'common.failed';
+  if (error.status === 404) return error.message === 'Not Found' ? 'scope.notFoundTitle' : 'common.notEnabled';
+  if (error.status === 503) return 'scope.notStartedTitle';
+  if (error.status === 403) return /network|connections from here/i.test(error.message) ? 'scope.network' : 'common.denied';
+  return 'common.failed';
+}
+
 export function QueryError({ error }: { error: unknown }) {
   const { t } = useI18n();
-  const off = error instanceof ApiError && error.status === 404;
-  const denied = error instanceof ApiError && error.status === 403;
   return (
     <div className="panel empty" role="alert">
-      {off ? t('common.notEnabled') : denied ? t('common.denied') : t('common.failed')}
+      {t(errorKey(error))}
     </div>
   );
 }

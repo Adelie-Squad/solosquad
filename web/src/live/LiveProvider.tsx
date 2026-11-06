@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { EngineEvent } from '../api/types.gen';
-import { invalidationsFor, LiveStream, type EventSourceFactory } from './stream';
+import { scopedKeys } from '../api/queries';
+import { apiPath, useScope } from '../scope';
+import { eventsUrl, invalidationsFor, LiveStream, type EventSourceFactory } from './stream';
 
 export interface LogLine {
   at: number;
@@ -40,19 +42,29 @@ const LOG_MAX = 8;
 
 const browserFactory: EventSourceFactory = (url) => new EventSource(url, { withCredentials: true });
 
+/**
+ * The live view of ONE workspace. Mounted per scope (keyed by it), so switching org or
+ * workspace closes this stream and opens the new one — events and replay numbers never mix.
+ */
 export function LiveProvider({ children, factory = browserFactory }: { children: ReactNode; factory?: EventSourceFactory }) {
   const qc = useQueryClient();
+  const scope = useScope();
   const [state, setState] = useState<LiveState>(empty);
+  const { org, ws } = scope;
 
   useEffect(() => {
+    const k = scopedKeys({ org, ws });
     const onEvent = (ev: EngineEvent) => {
-      for (const queryKey of invalidationsFor(ev)) void qc.invalidateQueries({ queryKey });
+      for (const queryKey of invalidationsFor(ev, k)) void qc.invalidateQueries({ queryKey });
       setState((s) => reduce(s, ev));
     };
-    const stream = new LiveStream(factory, onEvent, (connected) => setState((s) => ({ ...s, connected })));
+    setState(empty);
+    const stream = new LiveStream(eventsUrl(apiPath.ws({ org, ws }, '')), factory, onEvent, (connected) =>
+      setState((s) => ({ ...s, connected })),
+    );
     stream.start();
     return () => stream.stop();
-  }, [qc, factory]);
+  }, [qc, factory, org, ws]);
 
   return <LiveContext.Provider value={state}>{children}</LiveContext.Provider>;
 }

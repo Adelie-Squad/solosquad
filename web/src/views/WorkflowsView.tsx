@@ -1,13 +1,14 @@
+import { useLinks } from '../scope';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { api, ApiError } from '../api/client';
-import { keys, useAction, useApprovals, useWorkflowRuns, useWorkflows, useWorkflowState } from '../api/queries';
+import { ApiError } from '../api/client';
+import { useAction, useApprovals, useKeys, useScopedApi, useWorkflowRuns, useWorkflows, useWorkflowState } from '../api/queries';
 import type { Run, Upload, WorkflowRunCreated, WorkflowSummary } from '../api/types.gen';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { Loading, Placeholder, QueryError } from '../components/Status';
 import { useI18n, type MessageKey } from '../i18n';
-import { useSession } from '../session';
+import { useOrgOwner } from '../scope';
 
 export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string }> = {
   pending: { label: 'run.pending', chip: '' },
@@ -20,6 +21,7 @@ export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string
 
 /** Workflows — list, switch (owner), run with an upload, and each run's status (I12 · I26 · I27). */
 export function WorkflowsView() {
+  const { w: toWs } = useLinks();
   const { name } = useParams<{ name?: string }>();
   const { t, fmt } = useI18n();
   const q = useWorkflows();
@@ -27,7 +29,7 @@ export function WorkflowsView() {
   if (q.isPending) return <div className="view"><Loading /></div>;
   if (q.error) return <div className="view"><QueryError error={q.error} /></div>;
   const list = q.data.workflows;
-  if (!name && list.length) return <Navigate to={`/workflows/${list[0].name}`} replace />;
+  if (!name && list.length) return <Navigate to={toWs(`/workflows/${list[0].name}`)} replace />;
   const current = list.find((w) => w.name === name);
 
   return (
@@ -44,7 +46,7 @@ export function WorkflowsView() {
       ) : (
         <nav className="wf-cards" aria-label={t('workflows.title')}>
           {list.map((w) => (
-            <Link key={w.name} to={`/workflows/${w.name}`} className={`panel wf-card ${w.name === name ? 'is-selected' : ''}`}>
+            <Link key={w.name} to={toWs(`/workflows/${w.name}`)} className={`panel wf-card ${w.name === name ? 'is-selected' : ''}`}>
               <span className="wf-card-icon">🧩</span>
               <span className="wf-card-body">
                 <strong>{w.title}</strong>
@@ -63,10 +65,13 @@ export function WorkflowsView() {
 }
 
 function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
+  const keys = useKeys();
+  const { w: toWs } = useLinks();
+  const { org: orgApi } = useScopedApi();
   const { t, fmt } = useI18n();
-  const { isOwner } = useSession();
+  const isOwner = useOrgOwner();
   const runs = useWorkflowRuns(wf.name);
-  const toggle = useAction((on: boolean) => api.patch<WorkflowSummary>(`/workflows/${wf.name}`, { enabled: on }), [keys.workflows]);
+  const toggle = useAction((on: boolean) => orgApi.patch<WorkflowSummary>(`/workflows/${wf.name}`, { enabled: on }), [keys.workflows]);
 
   return (
     <>
@@ -114,7 +119,7 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
           <ul className="run-list">
             {(runs.data ?? []).map((r) => (
               <li key={r.id}>
-                <Link to={`/workflows/${wf.name}/runs/${r.thread_id}`} className="run-row">
+                <Link to={toWs(`/workflows/${wf.name}/runs/${r.thread_id}`)} className="run-row">
                   <span className={`chip ${RUN_STATUS[r.status].chip}`}>{t(RUN_STATUS[r.status].label)}</span>
                   <span>{fmt.dateTime(r.created)}</span>
                   <span className="dash-hint">{r.source ?? ''}</span>
@@ -130,6 +135,9 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
 
 /** Inputs → (upload files first) → run. The file goes to the engine, never anywhere else. */
 function RunForm({ wf }: { wf: WorkflowSummary }) {
+  const keys = useKeys();
+  const { w: toWs } = useLinks();
+  const { ws: wsApi } = useScopedApi();
   const { t } = useI18n();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -148,15 +156,15 @@ function RunForm({ wf }: { wf: WorkflowSummary }) {
         if (input.type === 'upload') {
           const file = files[input.name];
           if (!file) continue;
-          const up = await api.upload<Upload>('/uploads', file, { filename: file.name });
+          const up = await wsApi.upload<Upload>('/uploads', file, { filename: file.name });
           inputs[input.name] = up.id;
         } else if (values[input.name] !== undefined && values[input.name] !== '') {
           inputs[input.name] = input.type === 'number' ? Number(values[input.name]) : values[input.name];
         }
       }
-      const run = await api.post<WorkflowRunCreated>(`/workflows/${wf.name}/run`, { inputs });
+      const run = await wsApi.post<WorkflowRunCreated>(`/workflows/${wf.name}/run`, { inputs });
       await qc.invalidateQueries({ queryKey: keys.workflowRuns() });
-      navigate(`/workflows/${wf.name}/runs/${run.thread_id}`);
+      navigate(toWs(`/workflows/${wf.name}/runs/${run.thread_id}`));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('common.failed'));
     } finally {
@@ -201,6 +209,7 @@ function RunForm({ wf }: { wf: WorkflowSummary }) {
 
 /** One workflow run: where it is, what it waits for, what it made. */
 export function WorkflowRunView() {
+  const { w: toWs } = useLinks();
   const { name = '', tid } = useParams<{ name: string; tid: string }>();
   const { t } = useI18n();
   const wfs = useWorkflows();
@@ -227,7 +236,7 @@ export function WorkflowRunView() {
       <header className="view-header">
         <div>
           <p className="crumb">
-            <Link to={`/workflows/${name}`}>← {wf?.title ?? name}</Link>
+            <Link to={toWs(`/workflows/${name}`)}>← {wf?.title ?? name}</Link>
           </p>
           <h1>{t('workflows.runTitle', { name: wf?.title ?? name })}</h1>
         </div>
@@ -255,7 +264,7 @@ export function WorkflowRunView() {
           <ul className="run-list">
             {v.artifacts.map((id) => (
               <li key={id}>
-                <Link className="run-row" to={`/artifacts/${id}`}>
+                <Link className="run-row" to={toWs(`/artifacts/${id}`)}>
                   📄 {id}
                 </Link>
               </li>

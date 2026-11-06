@@ -1461,16 +1461,6 @@
         "name": {
           "type": "string"
         },
-        "lead_agent": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/AgentCard"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "agents": {
           "items": {
             "$ref": "#/$defs/AgentCard"
@@ -1486,7 +1476,6 @@
       },
       "required": [
         "name",
-        "lead_agent",
         "agents",
         "people"
       ],
@@ -2376,19 +2365,10 @@
     },
     "Team": {
       "additionalProperties": false,
+      "description": "Decision 58: a team is its members — no lead agent.",
       "properties": {
         "name": {
           "type": "string"
-        },
-        "main": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
         },
         "members": {
           "items": {
@@ -2399,7 +2379,6 @@
       },
       "required": [
         "name",
-        "main",
         "members"
       ],
       "type": "object",
