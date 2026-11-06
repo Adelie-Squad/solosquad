@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n, type MessageKey } from '../i18n';
+import { AgentIcon } from '../characters/PenguinIcon';
 import type { LogLine } from '../live/LiveProvider';
 
 /** A job card's view of one run — built from the API (runs, workflows) plus live notes. */
 export interface Job {
   id: string;
-  icon: string;
+  /** The penguin on the card: the agent (or, for a workflow, its team's scarf penguin). */
+  agent: string;
+  team?: string | null;
   title: string;
   who: string;
   status: 'running' | 'queued' | 'waiting' | 'done';
@@ -63,7 +66,9 @@ export function JobList({ jobs, compact }: { jobs: Job[]; compact?: boolean }) {
         return (
           <article key={job.id} className={`panel job is-${job.status}`}>
             <header className="job-header">
-              <span className="job-icon">{job.icon}</span>
+              <span className="job-icon">
+                <AgentIcon agent={job.agent} team={job.team} size={28} label="" />
+              </span>
               <div className="job-heading">
                 <h2>{job.link ? <Link to={job.link}>{job.title}</Link> : job.title}</h2>
                 <span className="job-meta">

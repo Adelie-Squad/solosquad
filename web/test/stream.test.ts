@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { keys } from '../src/api/queries';
 import type { EngineEvent } from '../src/api/types.gen';
-import { reduce, type LiveState } from '../src/live/LiveProvider';
+import { emptyLive, reduce, type LiveState } from '../src/live/LiveProvider';
 import { EVENTS_URL, invalidationsFor, LiveStream, type EventSourceLike } from '../src/live/stream';
 
 class FakeSource implements EventSourceLike {
@@ -105,7 +105,7 @@ describe('live event stream (I9)', () => {
   });
 
   it('streams answer text per thread and drops it when the run settles', () => {
-    let s: LiveState = { connected: true, streaming: {}, logs: {}, current: {} };
+    let s: LiveState = { ...emptyLive, connected: true };
     s = reduce(s, { ts: 1, event: 'run.message', run_id: 'r', thread_id: 't', agent: 'chief', text: 'Hel' });
     s = reduce(s, { ts: 1, event: 'run.message', run_id: 'r', thread_id: 't', agent: 'chief', text: 'lo' });
     expect(s.streaming.t.text).toBe('Hello');
