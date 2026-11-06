@@ -155,7 +155,7 @@ async def test_monthly_pnl_runs_end_to_end(engines: Engines) -> None:
     rid2 = await wf.manager.resume(tid, "approved")
     await _status(wf, rid2, RunStatus.SUCCESS)
     [brief] = engines.artifacts.find(kind="brief")
-    assert brief.data == {"text": "chief done", "agent": "chief"}
+    assert brief.data == {"text": "chief done", "agent": "finance"}  # the brief is finance's
     state = (await wf.manager.thread_state(tid))["values"]
     assert state["status"] == "done" and state["artifacts"] == [pnl.id, brief.id]
     company_threads = [t["id"] for t in engines.company.store.threads(50)]
