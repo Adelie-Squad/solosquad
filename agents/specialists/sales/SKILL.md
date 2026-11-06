@@ -2,9 +2,9 @@
 name: sales
 description: 세일즈 — 아웃바운드/인바운드 파이프라인, 리드 자격검증(BANT/MEDDIC), 딜 클로징, 전환 funnel. business-strategy 의 전략 · GTM 을 매출로 실행.
 display_name:
-  ko: "Sales"
+  ko: "세일즈"
   en: "Sales"
-  zh-CN: "Sales"
+  zh-CN: "销售"
 summary:
   ko: "가능성 있는 거래처를 찾고 문의를 계약까지 이어 가요. 거래처 목록과 제안서, 견적 초안과 진행 상황표를 만들어요. 견적을 보내거나 할인을 약속하기 전에는 승인을 받아요."
   en: "Finds promising customers and moves inquiries all the way to a signed deal. Prepares customer lists, proposals, draft quotes and a progress board. Asks for approval before sending a quote or promising a discount."

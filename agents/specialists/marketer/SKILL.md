@@ -2,9 +2,9 @@
 name: marketer
 description: 마케터 — 브랜드 voice · positioning · messaging + 콘텐츠·퍼포먼스 마케팅(유료광고·그로스·전환). content-writing skill 직접 호출. 구 marketer(+ performance-marketer) + communication 병합(결정 58).
 display_name:
-  ko: "Marketer"
+  ko: "마케터"
   en: "Marketer"
-  zh-CN: "Marketer"
+  zh-CN: "市场营销"
 summary:
   ko: "브랜드가 어떤 말투로 무엇을 말할지 정하고 고객을 모으는 마케팅을 맡아요. 홍보 문구와 게시물, 광고 계획과 성과 보고서를 만들어요. 게시물을 올리거나 광고비를 쓰기 전에는 승인을 받아요."
   en: "Decides what your brand says and how it sounds, and runs the marketing that brings in customers. Writes copy and posts, plans ads and reports on results. Asks for approval before publishing a post or spending on ads."

@@ -213,6 +213,11 @@ export const zhCN: Record<MessageKey, string> = {
   'org.top': '负责人与 Chief',
   'org.departments': '部门',
   'org.deptCount': '{n} 名成员',
+  'team.core': '管理层',
+  'team.product': '产品',
+  'team.engineering': '工程',
+  'team.business': '商务',
+  'team.brand': '品牌',
   'agent.role': '负责的工作',
   'agent.noSummary': '这个代理还没有介绍。',
 

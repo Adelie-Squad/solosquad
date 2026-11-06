@@ -97,8 +97,8 @@ describe('C5 — the office shows every team, its agents and what they are doing
     renderWith(<OfficeView />, 'en', { me: staffMe, path: '/o/tesla/w/charging/office' });
     await settled();
     const list = within(screen.getByTestId('office-stage'));
-    expect(list.getAllByText(/^(Core|Finance|Sourcing|Marketing)$/, { selector: '.settings-group' }).map((e) => e.textContent)).toEqual([
-      'Core',
+    expect(list.getAllByText(/^(Leadership|Finance|Sourcing|Marketing)$/, { selector: '.settings-group' }).map((e) => e.textContent)).toEqual([
+      'Leadership', // core, in the reader's language
       'Finance',
       'Sourcing',
       'Marketing',
@@ -289,7 +289,7 @@ describe('C26 — the org chart widget follows the people and the teams', () => 
     await openApp('/o/tesla/w/charging', engineData({ ...screens, '/org-chart': THREE_CHART }));
     const widget = screen.getByRole('heading', { name: t('nav.org') }).closest('section') as HTMLElement;
     expect(within(widget).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      `Core${t('widget.teamCounts', { agents: 1, people: 0 })}`,
+      `Leadership${t('widget.teamCounts', { agents: 1, people: 0 })}`,
       `Finance${t('widget.teamCounts', { agents: 2, people: 1 })}`,
       `Sourcing${t('widget.teamCounts', { agents: 2, people: 0 })}`,
       `Marketing${t('widget.teamCounts', { agents: 2, people: 1 })}`,

@@ -6,7 +6,7 @@ import type { Run, WorkflowThreadState } from '../api/types.gen';
 import type { Job } from '../components/JobList';
 import { useI18n } from '../i18n';
 import { useAgentName } from '../lib/agentNames';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { useLive } from './LiveProvider';
 
 const ACTIVE = new Set(['pending', 'running', 'interrupted']);
@@ -71,7 +71,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
       agent: 'workflow',
       team: def?.team ?? null,
       title: def?.title ?? values?.workflow ?? t('nav.workflows'),
-      who: def?.team ? t('office.team', { team: readable(def.team) }) : t('nav.workflows'),
+      who: def?.team ? t('office.team', { team: teamName(def.team, t) }) : t('nav.workflows'),
       status: status(r),
       startedAt: r.started ?? r.created,
       steps: def?.steps.map((s) => s.title) ?? [],

@@ -212,6 +212,11 @@ export const en: Record<MessageKey, string> = {
   'org.top': 'Owner and Chief',
   'org.departments': 'Departments',
   'org.deptCount': '{n} members',
+  'team.core': 'Leadership',
+  'team.product': 'Product',
+  'team.engineering': 'Engineering',
+  'team.business': 'Business',
+  'team.brand': 'Brand',
   'agent.role': 'What it does',
   'agent.noSummary': 'There is no introduction for this agent yet.',
 

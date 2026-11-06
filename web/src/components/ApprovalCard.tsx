@@ -9,7 +9,7 @@ import { categoryLabel, useI18n, type MessageKey } from '../i18n';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { ICON } from '../icons';
 import { useAgentName } from '../lib/agentNames';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 
 /** Why this person cannot answer the card — the same rule the server applies (decision 51). */
 export function blockedReason(item: ApprovalItem): { key: MessageKey; team?: string } | null {
@@ -54,7 +54,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
           <span className="chip">{categoryLabel(locale, card.category)}</span>
           <span className={`chip ${item.tier === 'owner' ? 'is-accent' : ''}`}>
             {item.tier === 'owner' ? t('tier.owner') : t('tier.team')}
-            {card.team ? ` · ${readable(card.team)}` : ''}
+            {card.team ? ` · ${teamName(card.team, t)}` : ''}
           </span>
           <span className={`chip ${RISK[card.risk] ?? ''}`}>{t('approvals.risk', { risk: RISK_LABEL[card.risk] ? t(RISK_LABEL[card.risk]) : card.risk })}</span>
         </span>
@@ -80,7 +80,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
       {blocked ? (
         <p className="approval-blocked with-icon" data-testid="approval-blocked">
           <ICON.locked />
-          {t(blocked.key, { team: blocked.team ? readable(blocked.team) : '' })}
+          {t(blocked.key, { team: blocked.team ? teamName(blocked.team, t) : '' })}
         </p>
       ) : (
         <div className="approval-actions">

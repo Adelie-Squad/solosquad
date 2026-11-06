@@ -211,6 +211,11 @@ export const ko = {
   'org.top': '대표와 Chief',
   'org.departments': '부서',
   'org.deptCount': '{n}명',
+  'team.core': '경영',
+  'team.product': '프로덕트',
+  'team.engineering': '엔지니어링',
+  'team.business': '비즈니스',
+  'team.brand': '브랜드',
   'agent.role': '하는 일',
   'agent.noSummary': '아직 이 에이전트의 소개가 없어요.',
 
