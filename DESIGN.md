@@ -229,9 +229,9 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 |---|---|
 | core · 금색 `#C9A227` | chief → 작은 왕관 + 나비넥타이 |
 | product · 파랑 `#2C74E0` | product-manager → 클립보드 · product-designer → 베레모 · researcher → 동그란 안경 · data-analyst → 막대 차트 패널 |
-| engineering · 라임 `#9AC22D` | frontend-engineer → 비니 · backend-engineer → 헤드셋 · data-engineer → 데이터 큐브 · infra-security → 안전모 + 방패 배지 · qa → 돋보기 |
+| engineering · 라임 `#9AC22D` | frontend-engineer → 비니 · backend-engineer → 헤드셋 · data-engineer → 데이터 큐브 · infra → 안전모 + 방패 배지 · quality-assurance → 돋보기 |
 | business · 갈색 `#9B6A3C` | business-strategy → 넥타이 · sales → 명함 · finance → 금테 안경 + 계산기 |
-| brand · 마젠타 `#E01FAE` | marketer → 메가폰 · creative-designer → 붓 |
+| brand · 마젠타 `#E01FAE` | marketer → 메가폰 · creative → 붓 |
 
 - 고객 org 에 새 역할이 생기면: 가까운 역할의 소품을 쓰고, 고유 소품이 필요하면 이 표에 먼저 추가한다(FDE). 소품이 없는 역할은 팀 대표색 스카프.
 - **UI 아이콘**(대화 아바타 · 승인 카드 · 실시간 작업 항목 · 알림)도 같은 펭귄의 2D 아이콘(정면 · 상반신, SVG)을 쓴다 — 역할 소품 + 팀 대표색 테두리. 크기 20 / 28 / 40.
