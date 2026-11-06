@@ -1,8 +1,10 @@
-"""One running instance = one workspace (office) of one org (decision 40).
+"""A workspace runtime — one per workspace placed on the engine server (decision 57 ⑶ · I38).
 
-Assembles everything a 24/7 office needs from the customer-solution repo and the data
-folder: context, customization, connections, Chief's policy, router, the company graph and
-the run manager. Paths are always passed in; nothing assumes a single global company.
+Assembles everything a 24/7 business unit needs from the customer-solution repo and its
+own data folder: context, customization, connections, Chief's policy, router, the company
+graph and the run manager. The engine server (`engine_server.py`) builds one of these per
+workspace; a runtime never reaches into another's data. Paths are always passed in;
+nothing assumes a single global company.
 """
 
 from __future__ import annotations
