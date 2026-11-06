@@ -47,6 +47,7 @@ class ErrorCode(StrEnum):
     LOGIN_THROTTLED = "login_throttled"
     OTP_REQUIRED = "otp_required"
     OTP_INVALID = "otp_invalid"
+    OTP_CURRENT_REQUIRED = "otp_current_required"
     ACCOUNT_REQUIRED = "account_required"
     PASSKEYS_UNAVAILABLE = "passkeys_unavailable"
     PASSKEY_EXPIRED = "passkey_expired"

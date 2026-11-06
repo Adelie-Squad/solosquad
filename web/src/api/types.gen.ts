@@ -31,6 +31,7 @@ export type ErrorCode =
   | 'login_throttled'
   | 'otp_required'
   | 'otp_invalid'
+  | 'otp_current_required'
   | 'account_required'
   | 'passkeys_unavailable'
   | 'passkey_expired'

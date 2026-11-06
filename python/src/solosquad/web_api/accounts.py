@@ -418,6 +418,10 @@ class AccountStore:
         )
         self.revoke_user_sessions(uid)
 
+    def check_current_totp(self, uid: str, code: str) -> bool:
+        """The code from the factor already in use — asked before it can be replaced."""
+        return self._check_totp(uid, code)
+
     def _check_totp(self, uid: str, code: str) -> bool:
         rows = self._q("SELECT totp_secret, totp_last_step FROM users WHERE id = ?", (uid,))
         if not rows or rows[0][0] is None:

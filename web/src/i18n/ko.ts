@@ -66,6 +66,7 @@ export const ko = {
   'error.feature_disabled': '이 사무실에서는 아직 켜지 않은 기능이에요.',
   'error.login_failed': '아이디나 비밀번호가 맞지 않아요.',
   'error.login_throttled': '시도가 너무 많아요. 잠시 뒤 다시 해 주세요.',
+  'error.otp_current_required': '지금 쓰는 인증 앱의 코드를 먼저 입력하세요.',
   'error.otp_required': '일회용 코드를 입력해 주세요.',
   'error.otp_invalid': '일회용 코드가 맞지 않아요.',
   'error.account_required': '계정으로 로그인해야 할 수 있어요.',

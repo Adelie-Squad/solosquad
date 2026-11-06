@@ -67,6 +67,7 @@ export const en: Record<MessageKey, string> = {
   'error.feature_disabled': 'This feature is not switched on in this office yet.',
   'error.login_failed': 'Wrong username or password.',
   'error.login_throttled': 'Too many attempts. Please try again later.',
+  'error.otp_current_required': 'First enter the code from the authenticator app you use now.',
   'error.otp_required': 'Please enter your one-time code.',
   'error.otp_invalid': 'That one-time code is not right.',
   'error.account_required': 'Log in with an account to do this.',

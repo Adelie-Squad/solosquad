@@ -721,7 +721,23 @@ def create_app(cfg: AppConfig) -> Starlette:
             raise ApiError(
                 400, E.ACCOUNT_REQUIRED, "log in with an account to set up a one-time code"
             )
-        return respond(S.TotpBegin, {"uri": accounts().begin_totp(who.session.user.id)})
+        user = who.session.user
+        store, key = accounts(), f"totp:{user.id}"
+        if user.has_totp:
+            # replacing a factor in use needs that factor: a taken-over session alone must
+            # not be able to swap the second factor for someone else's
+            if store.throttled(key):
+                raise ApiError(429, E.LOGIN_THROTTLED, "too many attempts — try again later")
+            current = str((await body(request)).get("current_code") or "")
+            if not current:
+                raise ApiError(
+                    400, E.OTP_CURRENT_REQUIRED, "enter the code from the one-time code app in use"
+                )
+            if not store.check_current_totp(user.id, current):
+                store.record_failure(key)
+                raise ApiError(400, E.OTP_INVALID, "wrong one-time code")
+            store.audit(who.user_id, "totp.replace.begin")
+        return respond(S.TotpBegin, {"uri": store.begin_totp(user.id)})
 
     async def totp_confirm(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
@@ -729,8 +745,12 @@ def create_app(cfg: AppConfig) -> Starlette:
             raise ApiError(
                 400, E.ACCOUNT_REQUIRED, "log in with an account to set up a one-time code"
             )
+        key = f"totp:{who.session.user.id}"
+        if accounts().throttled(key):  # guessing the six digits is limited like a login
+            raise ApiError(429, E.LOGIN_THROTTLED, "too many attempts — try again later")
         code = str((await body(request)).get("code") or "")
         if not accounts().confirm_totp(who.session.user.id, code):
+            accounts().record_failure(key)
             raise ApiError(400, E.OTP_INVALID, "wrong one-time code")
         token = request.cookies.get(SESSION_COOKIE)
         if token:

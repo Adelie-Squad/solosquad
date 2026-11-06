@@ -28,6 +28,7 @@ export const ERROR_KEYS: Record<ErrorCode, MessageKey> = {
   feature_disabled: 'error.feature_disabled',
   login_failed: 'error.login_failed',
   login_throttled: 'error.login_throttled',
+  otp_current_required: 'error.otp_current_required',
   otp_required: 'error.otp_required',
   otp_invalid: 'error.otp_invalid',
   account_required: 'error.account_required',

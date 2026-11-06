@@ -68,6 +68,7 @@ export const zhCN: Record<MessageKey, string> = {
   'error.feature_disabled': '此办公室尚未启用该功能。',
   'error.login_failed': '用户名或密码错误。',
   'error.login_throttled': '尝试次数过多，请稍后再试。',
+  'error.otp_current_required': '请先输入当前验证器应用中的验证码。',
   'error.otp_required': '请输入一次性验证码。',
   'error.otp_invalid': '一次性验证码不正确。',
   'error.account_required': '请使用账户登录后再操作。',
