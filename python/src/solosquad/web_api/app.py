@@ -109,6 +109,10 @@ UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 NOT_FOUND = "Not Found"
 """The one answer for a scope that is not yours and for one that does not exist (C3 · C30) —
 Starlette's own text, so an unknown route inside your scope reads the same."""
+THEME_SCRIPT_HASH = "sha256-Tw8gxlCxr/CHgowPx8fOQaU9j9JOSiBiOuJpPMlkEuk="
+"""The one inline script the web has: `web/index.html` picks light or dark before the
+first paint (DESIGN.md `## 테마`, no flash). CSP allows exactly that script by hash —
+no 'unsafe-inline'. A test recomputes it from index.html."""
 
 OWNER = frozenset({Role.OWNER})
 EVERYONE = frozenset({Role.OWNER, Role.STAFF})
@@ -348,8 +352,9 @@ class SecurityHeaders:
                     (b"x-frame-options", b"DENY"),
                     (
                         b"content-security-policy",
-                        b"default-src 'self'; frame-ancestors 'none'; base-uri 'self';"
-                        b" object-src 'none'",
+                        b"default-src 'self'; script-src 'self' '"
+                        + THEME_SCRIPT_HASH.encode()
+                        + b"'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
                     ),
                 ]
                 if self.hsts:
