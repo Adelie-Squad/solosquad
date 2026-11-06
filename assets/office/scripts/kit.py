@@ -190,12 +190,12 @@ def _leaf_cluster(col, centre, count, spread, size, seed):
         h = rnd.uniform(-spread * 0.6, spread * 0.9)
         s = size * rnd.uniform(0.75, 1.2)
         p = Vector(centre) + Vector((math.cos(a) * r, math.sin(a) * r, h))
-        parts.append(ellipsoid('leaf', (s, s, s * 0.85), p, col, M('clay.plant'), 16, 10))
+        parts.append(ellipsoid('leaf', (s, s, s * 0.85), p, col, M('clay.plant'), 12, 7))
     return parts
 
 
 def plant(col):
-    parts = [cylinder('pot', 0.17, 0.36, (0, 0, 0.18), col, M('clay.furniture'), 32, 0.02),
+    parts = [cylinder('pot', 0.17, 0.36, (0, 0, 0.18), col, M('clay.furniture'), 24, 0.02),
              cylinder('soil', 0.15, 0.02, (0, 0, 0.35), col, M('clay.wood'), 24, 0.0),
              cylinder('trunk', 0.018, 0.5, (0, 0, 0.6), col, M('clay.wood'), 10, 0.0)]
     parts += _leaf_cluster(col, (0, 0, 0.95), 9, 0.17, 0.13, 3)
@@ -206,7 +206,7 @@ def plant(col):
 
 def shelf(col):
     w, d, h = 1.5, 0.38, 0.82
-    parts = [box('shelf_body', (w, d, h), (0, 0, h / 2), col, M('clay.furniture'), 0.02)]
+    parts = [box('shelf_body', (w, d, h), (0, 0, h / 2), col, M('clay.furniture'), 0.02, 2)]
     # two open cubbies cut visually by wood inner panels
     for i, x in enumerate((-0.37, 0.37)):
         parts.append(box('cubby', (w / 2 - 0.08, 0.02, h - 0.12), (x, -d / 2 + 0.005, h / 2), col,
@@ -217,7 +217,7 @@ def shelf(col):
                          M('clay.wood' if i == 1 else 'clay.furniture'), 0.008, 2))
     parts.append(box('tray', (0.3, 0.2, 0.06), (0.35, 0, h + 0.03), col, M('clay.wood'), 0.015))
     parts += _leaf_cluster(col, (0.0, 0.0, h + 0.14), 4, 0.06, 0.07, 7)
-    parts.append(cylinder('mini_pot', 0.07, 0.11, (0.0, 0, h + 0.055), col, M('clay.furniture'), 20, 0.008))
+    parts.append(cylinder('mini_pot', 0.07, 0.11, (0.0, 0, h + 0.055), col, M('clay.furniture'), 16, 0.006))
     ob = join(parts, 'prop.shelf')
     set_auto_smooth(ob)
     return ob
@@ -240,13 +240,13 @@ def whiteboard(col):
 
 def sofa(col):
     w = 1.6
-    parts = [box('sofa_base', (w, 0.78, 0.26), (0, 0, 0.21), col, M('clay.furniture'), 0.08, 4),
-             box('sofa_back', (w, 0.22, 0.42), (0, 0.29, 0.5), col, M('clay.furniture'), 0.1, 4)]
+    parts = [box('sofa_base', (w, 0.78, 0.26), (0, 0, 0.21), col, M('clay.furniture'), 0.08, 3),
+             box('sofa_back', (w, 0.22, 0.42), (0, 0.29, 0.5), col, M('clay.furniture'), 0.1, 3)]
     for sx in (-1, 1):
         parts.append(box('arm', (0.2, 0.78, 0.38), (sx * (w / 2 - 0.1), 0, 0.37), col,
-                         M('clay.furniture'), 0.09, 4))
+                         M('clay.furniture'), 0.09, 3))
     for x in (-0.33, 0.33):
-        parts.append(box('cushion', (0.62, 0.56, 0.12), (x, -0.06, 0.39), col, M('clay.furniture'), 0.05, 4))
+        parts.append(box('cushion', (0.62, 0.56, 0.12), (x, -0.06, 0.39), col, M('clay.furniture'), 0.05, 3))
     for sx in (-1, 1):
         for sy in (-1, 1):
             parts.append(cylinder('foot', 0.025, 0.08, (sx * (w / 2 - 0.12), sy * 0.3, 0.04), col,

@@ -13,9 +13,15 @@ B=/Applications/Blender.app/Contents/MacOS/Blender
 $B -b -P assets/office/scripts/build_kit.py     -- --save assets/office/src/office-kit.blend
 $B -b -P assets/office/scripts/build_penguin.py -- --save assets/office/src/penguin.blend
 $B -b -P assets/office/scripts/frames.py        -- --out  assets/office/frames   # style frames + palette measurement
+$B -b -P assets/office/scripts/export.py        -- --out  assets/office/export   # office-kit.glb + penguin.glb
+python3 assets/office/scripts/check_glb.py assets/office/export                  # contract check, exits 1 on failure
 ```
 
-`export.py` (GLB + meshopt + WebP) comes in the next stage, after the style frames are approved.
+`export.py` builds everything from scratch (it does not read `src/*.blend`), bakes AO in Cycles,
+exports GLB with WebP textures and custom properties as extras, then runs
+`npx -y @gltf-transform/cli@4.5.1 meshopt` (the same version the web pins). It needs Node for that
+step; `--no-meshopt` skips it and `--keep-ao` also writes the baked AO PNGs (gitignored) for
+inspection.
 
 | Script | What it builds |
 |---|---|
@@ -24,6 +30,9 @@ $B -b -P assets/office/scripts/frames.py        -- --out  assets/office/frames  
 | `penguin.py` | Mesh `penguin` (body · heart felt face · stitch · eyes · cheeks · beak · wings · feet), rig `penguin_rig`, state key poses `POSES` |
 | `props.py` | 19 role-prop meshes `prop.<agent-id>.<part>` + `prop.scarf`, with custom property `socket` |
 | `frames.py` | Style frames: 2×2-tile room, 4 penguins, ortho 30°/45°, light and evening, Cycles |
+| `anim.py` | The 7 state clips as actions + NLA tracks (sums of whole-cycle sines, so frame 0 = last frame) |
+| `export.py` | Per-module materials `<key>#<module>`, `uv_main` + `uv_ao`, AO bake, GLB export, meshopt |
+| `check_glb.py` | Checks names, sockets, clips, materials (metallic 0, roughness ≥ 0.8), AO texCoord 1, WebP, 5 MB |
 
 ## Conventions (as built)
 
@@ -46,18 +55,47 @@ $B -b -P assets/office/scripts/frames.py        -- --out  assets/office/frames  
   non-deforming sockets `socket.head` · `socket.chest` · `socket.hand.R`. Bone-local rotations:
   head and body X− lean forward, wing X− swings forward, and wings rise outward on Z− (L) or
   Z+ (R).
-- **Triangle counts** (measured) against the contract §8 budget. Items marked over are trimmed
-  in the kit stage:
+- **Triangle counts** (measured, as exported) against the contract §8 budget. All are within it.
 
   | Item | Triangles | Budget |
   |---|---|---|
-  | `penguin` | 12,260 | 8k, **over** |
+  | `penguin` | 6,546 | 8k |
   | `desk.set` / `desk.chief` | 2,636 | 3k |
   | `lamp.desk` | 1,228 | 2k |
-  | `prop.plant` / `prop.sofa` / `prop.shelf` | 3,228 / 2,552 / 2,384 | 2k, **over** |
+  | `prop.sofa` / `prop.plant` / `prop.shelf` | 1,880 / 1,804 / 1,664 | 2k |
   | `prop.coffee_bar` / `prop.whiteboard` | 1,428 / 624 | 2k |
   | `room.*` | 12 to 36 | 500 |
-  | Role props | under 800, apart from headset 860 / hardhat 828 / beanie 820 | 800, **slightly over** |
+  | Role props | 156 (shield) to 780 (hardhat) | 800 |
+
+## Exported files
+
+| File | Size (meshopt) | Contents |
+|---|---|---|
+| `export/office-kit.glb` | 659 KB | 12 module roots; 29 materials `<key>#<module>`; 8 AO maps `<module>_ao` (WebP; 1024 px for desks, sofa and shelf, 512 for coffee bar, plant and whiteboard, 256 for the lamp) |
+| `export/penguin.glb` | 186 KB | Skinned `penguin` + `penguin_rig` (10 joints); 19 props parented to socket bones with extras `socket`; 7 clips |
+| **Total** | **825 KB** | Budget 5 MB |
+
+- **Kit materials** are per module, named `<palette key>#<module>` (contract §4, PR #57): for
+  example `clay.furniture#desk.set` and `team_sticker#desk.chief`. Match the palette key with
+  `name.split('#')[0]`. Each one has `occlusionTexture` with `texCoord: 1` (`uv_ao`), metallic 0
+  and roughness 0.9. `room.*` pieces have no AO map, because a lone slab or wall bakes to plain
+  white.
+- **meshopt quantization** may move a module's mesh onto an unnamed child node that carries the
+  dequantization transform (for example under `lamp.desk`). Find modules by root name, not by mesh
+  node.
+- **Penguin and prop materials** keep bare keys (`penguin.body`, `team_accent`, `prop.gold` and so
+  on). The wooden parts of the clipboard and brush use `clay.wood`.
+- **Clips** (30 fps, frame 0 = the pose that stands for the state, last frame = frame 0):
+
+  | Clip | Length | Motion |
+  |---|---|---|
+  | `idle` | 2 s | slow breath, slight head bob |
+  | `idle_doze` | 2 s | head bowed, nodding, slow breath |
+  | `thinking` | 2 s | looks up, sways side to side, right wing tapping the chin |
+  | `typing` | 1 s | leans in, wings alternate on the desk 3× per second |
+  | `waiting` | 1 s | right wing raised and waving, two small hops |
+  | `done` | 1 s | both wings up, one jump with a squash on landing |
+  | `error` | 2 s | head down, nearly still, heavy breath |
 
 ## Measured palette (style frames, sRGB)
 

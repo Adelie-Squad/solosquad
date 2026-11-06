@@ -173,8 +173,8 @@ def beanie(col, body):
     rx, ry = _head_size(body, z)
     top = body.top().z
     cap = _half_shell(col, rx * 0.97, ry * 0.97 + 0.01, top - z + 0.085, z, M(ACC), 'beanie_cap')
-    rim = _ellipse_tube(col, rx * 0.97 + 0.006, ry * 0.97 + 0.016, z + 0.01, 0.024, M(ACC), 'beanie_rim', seg=20)
-    pom = ellipsoid('pom', (0.038,) * 3, (0, 0, top + 0.1), col, M('prop.paper'), 10, 6)
+    rim = _ellipse_tube(col, rx * 0.97 + 0.006, ry * 0.97 + 0.016, z + 0.01, 0.024, M(ACC), 'beanie_rim', seg=16)
+    pom = ellipsoid('pom', (0.038,) * 3, (0, 0, top + 0.1), col, M('prop.paper'), 8, 5)
     ob = join([cap, rim, pom], 'beanie')
     return _finish(ob, 'prop.frontend-engineer.beanie', 'head')
 
@@ -184,7 +184,7 @@ def hardhat(col, body):
     rx, ry = _head_size(body, z)
     top = body.top().z
     cap = _half_shell(col, rx * 0.98, ry * 0.98 + 0.012, top - z + 0.07, z, M('prop.helmet'), 'hat')
-    brim = _ellipse_tube(col, rx * 0.98 + 0.035, ry * 0.98 + 0.045, z + 0.005, 0.014, M('prop.helmet'), 'brim', flat=0.45, seg=20)
+    brim = _ellipse_tube(col, rx * 0.98 + 0.035, ry * 0.98 + 0.045, z + 0.005, 0.014, M('prop.helmet'), 'brim', flat=0.45, seg=16)
     ridge = box('ridge', (0.03, 2 * ry * 0.75, 0.02), (0, 0, top + 0.072), col, M('prop.helmet'), 0.009, 2)
     ob = join([cap, brim, ridge], 'hardhat')
     return _finish(ob, 'prop.infra.hardhat', 'head')
@@ -234,7 +234,7 @@ def headset(col, body):
     band.data.transform(Matrix.Translation((0, 0, z_ear + 0.02)) @ Matrix.Diagonal((1, 1, scale_z, 1)) @ Matrix.Translation((0, 0, -(z_ear + 0.02))))
     parts.append(band)
     for p, sx in ((right, -1), (left, 1)):
-        cup = cylinder('cup', 0.045, 0.035, (0, 0, 0), col, M(ACC), 14, 0.006)
+        cup = cylinder('cup', 0.045, 0.035, (0, 0, 0), col, M(ACC), 12, 0.006)
         cup.matrix_world = Matrix.Translation(p + Vector((sx * 0.012, 0, 0))) @ Matrix.Rotation(math.radians(90), 4, 'Y')
         parts.append(cup)
     # mic boom from the right cup toward the beak
@@ -243,7 +243,7 @@ def headset(col, body):
                         Matrix.Rotation(math.radians(70), 4, 'X') @ Matrix.Rotation(math.radians(-35), 4, 'Y'))
     parts.append(mic)
     tip_x = right.x + 0.035 + 0.08 * math.sin(math.radians(35))
-    parts.append(ellipsoid('mic', (0.015,) * 3, (tip_x + 0.03, right.y - 0.15, right.z - 0.09), col, M('prop.black'), 12, 8))
+    parts.append(ellipsoid('mic', (0.015,) * 3, (tip_x + 0.03, right.y - 0.15, right.z - 0.09), col, M('prop.black'), 8, 5))
     ob = join(parts, 'headset')
     return _finish(ob, 'prop.backend-engineer.headset', 'head')
 

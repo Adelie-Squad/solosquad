@@ -76,7 +76,7 @@ def _profile(t):
 def body_mesh():
     """UV-sphere remapped to the plush pear: flat front/back, round edges."""
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=48, v_segments=28, radius=1.0)
+    bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=22, radius=1.0)
     for v in bm.verts:
         x, y, z = v.co
         t = (z + 1) / 2                      # 0..1 bottom..top
@@ -111,10 +111,10 @@ def _project_front(bvh, x, z, offset=0.0):
 def face_patch(col, body, mat, thickness=0.010):
     """Heart felt patch: outline -> concentric rings -> projected onto the body front."""
     bvh = _bvh(body)
-    outline = [icon_to_xz(*p) for p in heart_outline(14)]
+    outline = [icon_to_xz(*p) for p in heart_outline(9)]
     cx, cz = icon_to_xz(20.0, 24.0)
     bm = bmesh.new()
-    rings = 9
+    rings = 6
     ring_verts = []
     for r in range(rings):
         f = 1 - r / rings
@@ -157,7 +157,7 @@ def face_patch(col, body, mat, thickness=0.010):
     return ob
 
 
-def stitch(col, face, mat, inset=0.86, dash=0.010, gap=0.008, r=0.0035):
+def stitch(col, face, mat, inset=0.86, dash=0.012, gap=0.009, r=0.0035):
     """Dashed stitch just inside the face edge, sunk into the felt (reads as a groove)."""
     bvh = _bvh(face)
     cx, cz = icon_to_xz(20.0, 24.0)
@@ -199,7 +199,7 @@ def stitch(col, face, mat, inset=0.86, dash=0.010, gap=0.008, r=0.0035):
         d = (p1 - p0)
         ln = d.length
         bm = bmesh.new()
-        bmesh.ops.create_uvsphere(bm, u_segments=8, v_segments=4, radius=1.0)
+        bmesh.ops.create_uvsphere(bm, u_segments=6, v_segments=3, radius=1.0)
         bmesh.ops.scale(bm, vec=(ln / 2 + r * 0.3, r, r * 0.6), verts=bm.verts)
         x_ax = d.normalized()
         z_ax = nrm
@@ -214,7 +214,7 @@ def stitch(col, face, mat, inset=0.86, dash=0.010, gap=0.008, r=0.0035):
 
 def _feature(col, name, radii, x, z, mat, bvh, lift, tilt_to_normal=True):
     hit, nrm = _project_front(bvh, x, z)
-    ob = ellipsoid(name, radii, (0, 0, 0), col, mat, 20, 10)
+    ob = ellipsoid(name, radii, (0, 0, 0), col, mat, 14, 7)
     # orient local Y along -normal so the flat side hugs the surface
     y_ax = -nrm
     z_ax = Vector((0, 0, 1))
@@ -329,14 +329,14 @@ def build(col, name='penguin'):
     parts.append(beak)
     # wings: flat paddles hugging the sides
     for sx in (-1, 1):
-        w = ellipsoid('wing', (0.035, 0.085, 0.14), (0, 0, 0), col, mats['penguin.body'], 24, 12)
+        w = ellipsoid('wing', (0.035, 0.085, 0.14), (0, 0, 0), col, mats['penguin.body'], 16, 10)
         w.matrix_world = (Matrix.Translation((sx * (W / 2 - 0.03), 0.0, H * 0.40)) @
                           Matrix.Rotation(math.radians(-sx * 9), 4, 'Y'))
         parts.append(w)
     # feet: little orange paddles poking out front
     for sx in (-1, 1):
         f = ellipsoid('foot', (0.05, 0.065, 0.022), (sx * 0.085, -D / 2 + 0.035, 0.022), col,
-                      mats['penguin.feet'], 20, 10)
+                      mats['penguin.feet'], 14, 7)
         parts.append(f)
     from lib import apply_modifiers
     for p in parts:
@@ -375,6 +375,7 @@ def apply_pose(rig_ob, state):
         pb.rotation_mode = 'XYZ'
         pb.rotation_euler = (0, 0, 0)
         pb.location = (0, 0, 0)
+        pb.scale = (1, 1, 1)
     for key, val in POSES.get(state, {}).items():
         if key.endswith('@loc'):
             rig_ob.pose.bones[key[:-4]].location = val

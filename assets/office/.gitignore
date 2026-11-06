@@ -2,3 +2,4 @@
 src/*.blend
 src/*.blend1
 scripts/__pycache__/
+export/*.png
