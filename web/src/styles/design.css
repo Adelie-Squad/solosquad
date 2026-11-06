@@ -1376,6 +1376,57 @@ h3.with-icon {
   font-variant-numeric: tabular-nums;
 }
 
+/* departments side by side, members listed below each (user, 2026-11-07) — columns wrap
+   to a new line when they run out of room, one column on a phone */
+.orgchart-depts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-6) var(--space-5);
+  align-items: start;
+}
+
+.orgchart-depts .orgchart-dept {
+  min-width: 0;
+}
+
+.orgchart-depts .orgchart-row + .orgchart-row {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.orgchart-depts .orgchart-label {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.orgchart-depts .orgchart-members {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* in a column the name gets the whole line; the status tag sits under it */
+.orgchart-depts .org-node {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'icon name' 'icon chip';
+  column-gap: var(--space-2);
+  row-gap: 2px;
+  align-items: center;
+  padding-block: var(--space-2);
+}
+
+.orgchart-depts .org-node > :first-child {
+  grid-area: icon;
+}
+
+.orgchart-depts .org-node-name {
+  grid-area: name;
+}
+
+.orgchart-depts .org-node .chip {
+  grid-area: chip;
+  justify-self: start;
+}
+
 .orgchart-members {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
