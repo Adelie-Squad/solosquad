@@ -128,14 +128,9 @@ export const zhCN: Record<MessageKey, string> = {
   'office.exitFullscreen': '退出全屏',
   'office.needsAnswer': '待确认',
   'office.doneToday': '今日完成',
-  'office.workingOn': '{name} — 正在：{what}',
-  'office.idleAs': '{name} — 空闲',
   'office.idle': '空闲',
   'office.waitingN': '待确认 {n}',
   'office.goAnswer': '去处理',
-  'office.members': '成员',
-  'office.leadAgent': '负责代理 {name}',
-  'office.others': '其他代理',
   'office.company': '代理公司',
   'office.team': '{team} 团队',
 
@@ -150,8 +145,6 @@ export const zhCN: Record<MessageKey, string> = {
 
   'org.title': '组织架构',
   'org.lead': '在一页上显示各团队的代理和人员。人员所属团队决定其可审批的团队事项。',
-  'org.leadAgent': '负责代理',
-  'org.noLead': '没有负责代理。',
   'org.agents': '代理 {n}',
   'org.people': '人员 {n}',
   'org.noPeople': '该团队暂无人员。',
@@ -427,4 +420,9 @@ export const zhCN: Record<MessageKey, string> = {
   'assign.wholeOrg': '整个组织',
   'assign.none': '未分配',
   'connections.fromCore': '公司共用 · 只读',
+  'access.defaultTitle': '公司默认策略',
+  'access.defaultLead': '适用于所有组织和工作区。只有公司负责人可以修改。',
+  'access.extraTitle': '此工作区的附加限制 — {ws}',
+  'access.extraLead': '在默认策略之上仅对此工作区追加的限制（如仅限内网）。不能放宽默认策略。',
+  'assign.everything': '全部组织与工作区（负责人）',
 };

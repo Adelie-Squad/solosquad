@@ -29,6 +29,26 @@ describe('dictionaries (I31 · K36)', () => {
   });
 });
 
+describe('no unused keys', () => {
+  it('every key is used somewhere in src (or built from a known prefix)', () => {
+    const src = fileURLToPath(new URL('../src', import.meta.url));
+    const code: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) {
+          if (name !== 'i18n') walk(p);
+        } else if (/\.tsx?$/.test(name)) code.push(readFileSync(p, 'utf8'));
+      }
+    };
+    walk(src);
+    const all = code.join('\n');
+    const built = ['category.', 'connections.kind.']; // `category.${c}` · `connections.kind.${k}`
+    const unused = Object.keys(ko).filter((k) => !all.includes(`'${k}'`) && !built.some((p) => k.startsWith(p)));
+    expect(unused).toEqual([]);
+  });
+});
+
 describe('no hard-coded Korean in components', () => {
   const src = fileURLToPath(new URL('../src', import.meta.url));
   const files: string[] = [];
