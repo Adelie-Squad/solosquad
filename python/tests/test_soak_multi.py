@@ -41,12 +41,15 @@ async def _settle(c: Customer) -> None:
 
 
 async def _until_running(c: Customer) -> None:
+    """Every workspace's harness holds a slow call — blocked on its gate, so it is still
+    in flight when the server dies (a run merely marked running may be a fast one that
+    ends before the crash on a slow machine)."""
     for _ in range(400):
-        busy = [s for s in SCOPES if c.runtime(s).manager.store.runs(status=RunStatus.RUNNING)]
+        busy = [s for s in SCOPES if any("slow" in p for p in c.harnesses[s].prompts)]
         if len(busy) == len(SCOPES):
             return
         await asyncio.sleep(0.025)
-    raise AssertionError(f"slow runs never started everywhere: running in {busy}")
+    raise AssertionError(f"slow runs never started everywhere: holding in {busy}")
 
 
 async def test_one_server_soak_keeps_every_workspace_whole(tmp_path: Path) -> None:
