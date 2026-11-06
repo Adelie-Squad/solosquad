@@ -1275,7 +1275,6 @@ h3.with-icon {
 }
 
 .orgchart {
-  --branch: var(--space-6);
   --node-h: 44px;
   margin-top: var(--space-2);
 }
@@ -1337,204 +1336,55 @@ h3.with-icon {
   color: var(--ink-2);
 }
 
-/* ── top: the owner and Chief ──────────────────────────────────── */
+/* ── rows, top to bottom: the owner and Chief, then one row per department ──
+   No tree lines, no tinted bands, no shadows (user, 2026-11-07): a quiet label over a
+   row of nodes that wraps on a narrow screen. */
 
-.orgchart-top-item {
-  position: relative;
-}
-
-.orgchart-top {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-3);
-}
-
-.orgchart-top .org-node {
-  width: auto;
-  min-width: 220px;
-  max-width: 100%;
-}
-
-/* ── departments side by side: a bus across, a stub down to each head ── */
-
-.orgchart.is-rows .orgchart-top {
-  padding-bottom: var(--branch);
-}
-
-.orgchart.is-rows .orgchart-top::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  height: var(--branch);
-  border-left: 2px solid var(--line);
-}
-
-.orgchart.is-rows .orgchart-depts {
-  display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
-  gap: var(--space-4);
-}
-
-.orgchart.is-rows .orgchart-dept {
-  position: relative;
-  padding-top: var(--branch);
-}
-
-.orgchart.is-rows .orgchart-dept::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: calc(-1 * var(--space-2) - 1px);
-  right: calc(-1 * var(--space-2) - 1px);
-  border-top: 2px solid var(--line);
-}
-
-.orgchart.is-rows .orgchart-dept:first-child::before {
-  left: 50%;
-}
-
-.orgchart.is-rows .orgchart-dept:last-child::before {
-  right: 50%;
-}
-
-.orgchart.is-rows .orgchart-dept:only-child::before {
-  display: none;
-}
-
-.orgchart.is-rows .orgchart-dept::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  height: var(--branch);
-  border-left: 2px solid var(--line);
-}
-
-/* members hang from a spine under their head */
-.orgchart.is-rows .orgchart-members {
-  position: relative;
-  padding-left: var(--space-5);
-}
-
-.orgchart.is-rows .orgchart-members::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: calc(var(--node-h) / 2);
-  left: var(--space-2);
-  border-left: 2px solid var(--line);
-}
-
-.orgchart.is-rows .orgchart-members > li {
-  position: relative;
-  padding-top: var(--space-2);
-}
-
-.orgchart.is-rows .orgchart-members > li::before {
-  content: '';
-  position: absolute;
-  top: calc(var(--space-2) + var(--node-h) / 2);
-  left: calc(var(--space-2) - var(--space-5));
-  width: calc(var(--space-5) - var(--space-2));
-  border-top: 2px solid var(--line);
-}
-
-/* ── department head: the team colour, the name, the head count ─── */
-
-.orgchart-dept-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 40px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line);
-  border-top: 4px solid var(--team);
-  border-radius: var(--radius-btn);
-  background: color-mix(in srgb, var(--team) 8%, var(--surface));
-  font-size: 14px;
-}
-
-.orgchart-dept-dot {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--team);
-}
-
-.orgchart-dept-head strong {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.orgchart-dept-count {
-  margin-left: auto;
-  color: var(--ink-2);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* ── many departments or a phone: one column, a trunk down the left ── */
-
-.orgchart.is-stacked .orgchart-top {
-  justify-content: flex-start;
-}
-
-.orgchart.is-stacked .orgchart-depts {
+.orgchart-rows {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  margin-top: var(--space-5);
-  padding-left: var(--branch);
+  gap: var(--space-6);
 }
 
-.orgchart.is-stacked .orgchart-dept {
-  position: relative;
+.orgchart-row + .orgchart-row {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
 }
 
-/* the trunk: from the row above down through this department… */
-.orgchart.is-stacked .orgchart-dept::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--space-5));
-  bottom: 0;
-  left: calc(var(--space-3) - var(--branch));
-  border-left: 2px solid var(--line);
-}
-
-/* …and for the last one only down to its head */
-.orgchart.is-stacked .orgchart-dept:last-child::before {
-  bottom: auto;
-  height: calc(var(--space-5) + 20px);
-}
-
-.orgchart.is-stacked .orgchart-dept::after {
-  content: '';
-  position: absolute;
-  top: 20px;
-  left: calc(var(--space-3) - var(--branch));
-  width: calc(var(--branch) - var(--space-3));
-  border-top: 2px solid var(--line);
-}
-
-.orgchart.is-stacked .orgchart-members {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+.orgchart-label {
+  display: flex;
+  align-items: baseline;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.orgchart-label-dot {
+  flex-shrink: 0;
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--team, var(--ink-3));
+}
+
+.orgchart-count {
+  color: var(--ink-2);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.orgchart-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-2);
 }
 
 @media (max-width: 860px) {
-  .orgchart-top .org-node {
-    min-width: 0;
-    width: 100%;
+  .orgchart-members {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

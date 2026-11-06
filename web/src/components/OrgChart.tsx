@@ -1,8 +1,8 @@
-// The org chart as a picture (DESIGN.md `## 컴포넌트` — 조직도 인포그래픽): the owner and
-// Chief on top, the departments branching below, each with its team colour and its agents
-// and people. Nodes show an icon, a name and a status tag only — everything else is in the
-// modal a node opens. The structure is nested lists, so it reads as one without the lines.
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+// The org chart (DESIGN.md `## 컴포넌트` — 조직도): rows from top to bottom — the owner and
+// Chief, then one row per department laid out side by side. Nodes show an icon, a name and a
+// status tag only; everything else is in the modal a node opens. Nested lists carry the
+// structure for screen readers.
+import { type CSSProperties } from 'react';
 import type { Agent, AgentCard, OrgChart as OrgChartData, Person } from '../api/types.gen';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { teamColor } from '../characters/colors';
@@ -14,8 +14,6 @@ import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import { ENTRY } from '../office/layout';
 import type { AgentStatus } from '../office/state';
 
-/** Below this many pixels per department the branches stack in one column. */
-const MIN_COLUMN = 200;
 
 interface Dept {
   key: string;
@@ -37,7 +35,6 @@ export interface OrgChartProps {
 
 export function OrgChart({ chart, agents, statuses, onAgent, onPerson, onPoint = () => {} }: OrgChartProps) {
   const { t, locale } = useI18n();
-  const wrap = useRef<HTMLDivElement>(null);
   const known = new Map(agents.map((a) => [a.name, a]));
   const nameOf = (a: AgentCard) => agentName(a.name, locale, known.get(a.name) ?? a);
 
@@ -61,18 +58,6 @@ export function OrgChart({ chart, agents, statuses, onAgent, onPerson, onPoint =
   if (chart.unassigned.length) {
     depts.push({ key: '__unassigned', name: t('org.unassigned'), team: null, agents: [], people: chart.unassigned });
   }
-
-  // side by side while each department gets MIN_COLUMN px, else one column (lines never break)
-  const [stacked, setStacked] = useState(false);
-  useEffect(() => {
-    const el = wrap.current;
-    if (!el) return;
-    const measure = () => setStacked(el.clientWidth / Math.max(1, depts.length) < MIN_COLUMN);
-    measure();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    ro?.observe(el);
-    return () => ro?.disconnect();
-  }, [depts.length]);
 
   const agentNode = (a: AgentCard, team: string | null) => {
     const st = statuses[a.name] ?? 'idle';
@@ -111,24 +96,27 @@ export function OrgChart({ chart, agents, statuses, onAgent, onPerson, onPoint =
   };
 
   return (
-    <div ref={wrap} className={`orgchart ${stacked ? 'is-stacked' : 'is-rows'}`} data-testid="orgchart">
-      <ul className="orgchart-root" aria-label={t('nav.org')}>
-        <li className="orgchart-top-item">
-          <ul className="orgchart-top" aria-label={t('org.top')}>
+    <div className="orgchart" data-testid="orgchart">
+      <ul className="orgchart-rows" aria-label={t('nav.org')}>
+        <li className="orgchart-row">
+          <p className="orgchart-label">{t('org.top')}</p>
+          <ul className="orgchart-members orgchart-top" aria-label={t('org.top')}>
             {chart.owners.map((p) => (
               <li key={p.id}>{personNode(p, null)}</li>
             ))}
             <li>{agentNode(chiefCard, 'core')}</li>
           </ul>
-          {depts.length > 0 && (
-            <ul className="orgchart-depts" aria-label={t('org.departments')}>
+        </li>
+        {depts.length > 0 && (
+          <li className="orgchart-row">
+            <ul className="orgchart-rows" aria-label={t('org.departments')}>
               {depts.map((d) => (
-                <li key={d.key} className="orgchart-dept" style={{ '--team': teamColor(d.team) } as CSSProperties}>
-                  <div className="orgchart-dept-head">
-                    <span className="orgchart-dept-dot" aria-hidden />
-                    <strong>{d.name}</strong>
-                    <span className="orgchart-dept-count">{t('org.deptCount', { n: d.agents.length + d.people.length })}</span>
-                  </div>
+                <li key={d.key} className="orgchart-row orgchart-dept" style={{ '--team': teamColor(d.team) } as CSSProperties}>
+                  <p className="orgchart-label">
+                    <span className="orgchart-label-dot" aria-hidden />
+                    <span>{d.name}</span>
+                    <span className="orgchart-count">{t('org.deptCount', { n: d.agents.length + d.people.length })}</span>
+                  </p>
                   <ul className="orgchart-members" aria-label={d.name}>
                     {d.agents.map((a) => (
                       <li key={a.name}>{agentNode(a, d.team)}</li>
@@ -140,8 +128,8 @@ export function OrgChart({ chart, agents, statuses, onAgent, onPerson, onPoint =
                 </li>
               ))}
             </ul>
-          )}
-        </li>
+          </li>
+        )}
       </ul>
     </div>
   );

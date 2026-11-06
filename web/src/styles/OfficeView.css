@@ -79,6 +79,12 @@
   min-height: 0;
 }
 
+/* cards on the office page keep the card gap between them (user, 2026-11-07) */
+.office-body + .office-org,
+.office-org {
+  margin-top: var(--card-gap);
+}
+
 .office-main .office-stage {
   height: 100%;
   aspect-ratio: auto;
