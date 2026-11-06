@@ -1,5 +1,5 @@
-// The org chart (DESIGN.md `## 컴포넌트` — 조직도): rows from top to bottom — the owner and
-// Chief, then one row per department laid out side by side. Nodes show an icon, a name and a
+// The org chart (DESIGN.md `## 컴포넌트` — 조직도): the owner and Chief on top, then the
+// departments side by side as columns, each listing its agents and people below it. Nodes show an icon, a name and a
 // status tag only; everything else is in the modal a node opens. Nested lists carry the
 // structure for screen readers.
 import { type CSSProperties } from 'react';
@@ -109,7 +109,7 @@ export function OrgChart({ chart, agents, statuses, onAgent, onPerson, onPoint =
         </li>
         {depts.length > 0 && (
           <li className="orgchart-row">
-            <ul className="orgchart-rows" aria-label={t('org.departments')}>
+            <ul className="orgchart-depts" aria-label={t('org.departments')}>
               {depts.map((d) => (
                 <li key={d.key} className="orgchart-row orgchart-dept" style={{ '--team': teamColor(d.team) } as CSSProperties}>
                   <p className="orgchart-label">
