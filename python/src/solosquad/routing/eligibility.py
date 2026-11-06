@@ -81,6 +81,11 @@ class Verdict:
     ok: bool
     reason: str = ""
     source: str = ""
+    provider: str = ""
+    """The provider that refuses — with `country`, what the web puts in its own words."""
+    country: str = ""
+    by: str = ""
+    """`entity` (the holder is controlled from `country`) or `server` (the server is there)."""
 
 
 def judge(
@@ -99,10 +104,13 @@ def judge(
                 f"{prov} does not serve entities controlled from {entity.control_country}"
                 f" ({entity.name})",
                 rule.source,
+                prov,
+                str(entity.control_country),
+                "entity",
             )
         if server_country and server_country.upper() in rule.blocked_regions:
             return Verdict(
                 False, f"{prov} is not reachable from a server in {server_country.upper()}",
-                rule.source,
+                rule.source, prov, server_country.upper(), "server",
             )  # fmt: skip
     return Verdict(True)

@@ -258,7 +258,8 @@ async def test_workflow_api_roles_and_review(tmp_path: Path) -> None:
             bad = await kim.post(
                 "/api/uploads", params={"filename": "x.exe"}, content=b"MZ", headers=hk
             )
-            assert bad.status_code == 400
+            assert bad.status_code == 400 and bad.json()["code"] == "upload_type"
+            assert bad.json()["params"] == {"types": ".xlsx, .csv"}
             run = await kim.post("/api/workflows/monthly-pnl/run",
                                  json={"inputs": {"ledger": up.json()["id"]}}, headers=hk)  # fmt: skip
             assert run.status_code == 201
@@ -268,7 +269,7 @@ async def test_workflow_api_roles_and_review(tmp_path: Path) -> None:
             denied = await kim.post(
                 f"/api/workflow-threads/{tid}/resume", json={"value": "approved"}, headers=hk
             )
-            assert denied.status_code == 403
+            assert denied.status_code == 403 and denied.json()["code"] == "approval_needs_team"
             assert (
                 await kim.patch("/api/workflows/monthly-pnl", json={"enabled": False}, headers=hk)
             ).status_code == 403

@@ -19,6 +19,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, RootModel, TypeAdapter
 from pydantic.json_schema import models_json_schema
 
+from solosquad.web_api.errors import ErrorCode
+
 Locale = Literal["ko", "en", "zh-CN"]
 LOCALES: tuple[str, ...] = ("ko", "en", "zh-CN")
 DEFAULT_LOCALE: Locale = "ko"
@@ -54,7 +56,12 @@ class Version(Closed):
 
 
 class ErrorBody(Closed):
+    """Every error answer (`web_api/errors.py`). The web shows `code` in the person's language
+    (`error.<code>`, `params` in its placeholders) — never `error`, which is for logs."""
+
     error: str
+    code: ErrorCode
+    params: dict[str, str | int | float] = Field(default_factory=dict)
 
 
 class AssignmentOut(Closed):

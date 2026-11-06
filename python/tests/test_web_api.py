@@ -94,13 +94,14 @@ async def test_first_login_must_enrol_the_second_factor(office: Office) -> None:
         r = await c.post("/api/auth/login", json={"username": "boss", "password": PASSWORD})
         assert r.status_code == 200 and r.json()["stage"] == "enroll"
         csrf = {CSRF_HEADER: r.json()["csrf"]}
-        assert (await c.get("/api/threads")).status_code == 403  # only enrolment until done
+        early = await c.get("/api/threads")
+        assert early.status_code == 403  # only enrolment until done
+        assert early.json()["code"] == "enrol_required"
         uri = (await c.post("/api/auth/totp/begin", headers=csrf)).json()["uri"]
         assert uri.startswith("otpauth://totp/SoloSquad:boss?")
         code = totp.code_at(_secret(uri), totp.current_step())
-        assert (
-            await c.post("/api/auth/totp/confirm", json={"code": "000000"}, headers=csrf)
-        ).status_code == 400
+        wrong = await c.post("/api/auth/totp/confirm", json={"code": "000000"}, headers=csrf)
+        assert wrong.status_code == 400 and wrong.json()["code"] == "otp_invalid"
         assert (
             await c.post("/api/auth/totp/confirm", json={"code": code}, headers=csrf)
         ).status_code == 200
@@ -109,6 +110,11 @@ async def test_first_login_must_enrol_the_second_factor(office: Office) -> None:
         await c.post("/api/auth/logout", headers=csrf)
         r = await c.post("/api/auth/login", json={"username": "boss", "password": PASSWORD})
         assert r.status_code == 401 and "one-time code" in r.json()["error"]
+        assert r.json()["code"] == "otp_required"
+        r = await c.post(
+            "/api/auth/login", json={"username": "boss", "password": PASSWORD, "otp": "000000"}
+        )
+        assert r.status_code == 401 and r.json()["code"] == "otp_invalid"
 
 
 async def test_cookie_flags_and_security_headers(office: Office) -> None:
@@ -130,7 +136,8 @@ async def test_cookie_flags_and_security_headers(office: Office) -> None:
 async def test_writes_need_the_csrf_token(office: Office) -> None:
     async with office.client() as c:
         csrf, _ = await _owner(office, c)
-        assert (await c.post("/api/threads", json={"title": "x"})).status_code == 403
+        r = await c.post("/api/threads", json={"title": "x"})
+        assert r.status_code == 403 and r.json()["code"] == "csrf_invalid"
         r = await c.post("/api/threads", json={"title": "x"}, headers={CSRF_HEADER: csrf})
         assert r.status_code == 201
 
@@ -146,7 +153,16 @@ async def test_roles_owner_manages_staff_works(office: Office) -> None:
         assert r.json()["assignments"] == [{"org": "tesla", "workspace": None, "role": "staff"}]
         staff_id = r.json()["id"]
         bad = {**kim_body, "username": "lee", "assignments": [{"org": "nope"}]}
-        assert (await boss.post("/api/users", json=bad, headers=h)).status_code == 400
+        r = await boss.post("/api/users", json=bad, headers=h)
+        assert r.status_code == 400 and r.json()["code"] == "assignment_unknown_scope"
+        assert r.json()["params"] == {"scope": "nope/*"}
+        short = {**kim_body, "username": "lee", "password": "short"}
+        r = await boss.post("/api/users", json=short, headers=h)
+        assert r.status_code == 400 and r.json()["code"] == "password_too_short"
+        assert r.json()["params"] == {"min": 10}
+        r = await boss.post("/api/users", json=kim_body, headers=h)
+        assert r.status_code == 400 and r.json()["code"] == "username_taken"
+        assert r.json()["params"] == {"username": "kim"}
         assert [u["username"] for u in (await boss.get("/api/users")).json()] == ["boss", "kim"]
 
     async with office.client("203.0.113.9") as kim:
@@ -171,6 +187,9 @@ async def test_roles_owner_manages_staff_works(office: Office) -> None:
         ):
             r = await kim.request(method, path, json=body, headers=h)
             assert r.status_code == 403, (method, path, r.text)
+            # the role table refuses — or, for resume, the card (nothing waits = the owner's)
+            want = "approval_needs_owner" if path.endswith("/resume") else "role_forbidden"
+            assert r.json()["code"] == want, (method, path, r.text)
 
 
 async def test_last_owner_is_protected_and_disable_ends_sessions(office: Office) -> None:
@@ -178,9 +197,8 @@ async def test_last_owner_is_protected_and_disable_ends_sessions(office: Office)
         csrf, _ = await _owner(office, boss)
         h = {CSRF_HEADER: csrf}
         me = (await boss.get("/api/me")).json()["user"]["id"]
-        assert (
-            await boss.patch(f"/api/users/{me}", json={"role": "staff"}, headers=h)
-        ).status_code == 400
+        r = await boss.patch(f"/api/users/{me}", json={"role": "staff"}, headers=h)
+        assert r.status_code == 400 and r.json()["code"] == "last_owner"
         staff = office.accounts.create_user("lee", PASSWORD, Role.STAFF)
     async with office.client() as lee:
         await lee.post("/api/auth/login", json={"username": "lee", "password": PASSWORD})
@@ -196,18 +214,33 @@ async def test_access_policy_allow_list(office: Office) -> None:
         r = await boss.put("/api/access", json={"allowed_networks": ["203.0.113.0/24"]}, headers=h)
         assert r.status_code == 200 and r.json()["allowed_networks"] == ["203.0.113.0/24"]
         assert (await boss.get("/api/threads")).status_code == 200
-        assert (
-            await boss.put("/api/access", json={"allowed_networks": ["nope"]}, headers=h)
-        ).status_code == 400
+        session = httpx.Cookies(boss.cookies)
+        r = await boss.put("/api/access", json={"allowed_networks": ["nope"]}, headers=h)
+        assert r.status_code == 400 and r.json()["code"] == "network_invalid"
+        assert r.json()["params"] == {"entry": "nope"}
     # saved as the customer default in core/server.yaml (I41)
     assert office.workspace.org.solution.server_config().access.allowed_networks == [
         "203.0.113.0/24"
     ]
     # outside the list: refused before anything, login included
     async with office.client("198.51.100.7") as outsider:
-        assert (await outsider.get("/api/health")).status_code == 403
+        r = await outsider.get("/api/health")
+        assert r.status_code == 403 and r.json()["code"] == "network_blocked"
         r = await outsider.post("/api/auth/login", json={"username": "boss", "password": PASSWORD})
-        assert r.status_code == 403
+        assert r.status_code == 403 and r.json()["code"] == "network_blocked"
+    # C13 · K17 — a forwarded address is believed only from the local proxy: a direct peer
+    # outside the list that claims an address inside it is still refused, login included
+    forged = {"x-forwarded-for": "203.0.113.44"}
+    async with office.client("198.51.100.7", **forged) as spoofer:
+        for method, path in (("GET", "/api/health"), ("POST", "/api/auth/login")):
+            body = {"username": "boss", "password": PASSWORD} if method == "POST" else None
+            r = await spoofer.request(method, path, json=body)
+            assert r.status_code == 403 and r.json()["code"] == "network_blocked", path
+    async with office.client("198.51.100.7", **forged) as spoofer:  # a stolen session too
+        spoofer.cookies = session
+        for path in ("/api/me", "/api/threads"):
+            r = await spoofer.get(path)
+            assert r.status_code == 403 and r.json()["code"] == "network_blocked", path
     # through the local reverse proxy, the forwarded address is what counts
     async with office.client("127.0.0.1", **{"x-forwarded-for": "198.51.100.7"}) as proxied:
         assert (await proxied.get("/api/health")).status_code == 403
@@ -233,6 +266,8 @@ async def test_saving_a_list_that_locks_you_out_needs_confirmation(office: Offic
         body: dict[str, Any] = {"allowed_networks": ["203.0.113.0/24"]}
         r = await boss.put("/api/access", json=body, headers=h)
         assert r.status_code == 409 and "198.51.100.7" in r.json()["error"]
+        assert r.json()["code"] == "access_lockout"
+        assert r.json()["params"] == {"address": "198.51.100.7"}
         assert office.workspace.org.solution.server_config().access.allowed_networks == []
         r = await boss.put("/api/access", json={**body, "confirm_lockout": True}, headers=h)
         assert r.status_code == 200
@@ -245,7 +280,8 @@ async def test_cli_token_only_from_the_machine(office: Office) -> None:
         assert (await local.get("/api/version")).status_code == 200
         assert (await local.post("/api/threads", json={"title": "cli"})).status_code == 201
     async with office.client("203.0.113.5", **bearer) as remote:
-        assert (await remote.get("/api/version")).status_code == 401
+        r = await remote.get("/api/version")
+        assert r.status_code == 401 and r.json()["code"] == "unauthorized"
     async with office.client(
         "127.0.0.1", **{**bearer, "x-forwarded-for": "203.0.113.5"}
     ) as proxied:
@@ -259,9 +295,10 @@ async def test_repeated_failures_are_throttled(office: Office) -> None:
             r = await c.post(
                 "/api/auth/login", json={"username": "boss", "password": "wrong password"}
             )
-            assert r.status_code == 401
+            assert r.status_code == 401 and r.json()["code"] == "login_failed"
         r = await c.post("/api/auth/login", json={"username": "boss", "password": PASSWORD})
         assert r.status_code == 401 and "too many" in r.json()["error"]
+        assert r.json()["code"] == "login_throttled"
 
 
 def test_validate_flags_an_office_open_without_login(tmp_path: Path, repo_root: Path) -> None:

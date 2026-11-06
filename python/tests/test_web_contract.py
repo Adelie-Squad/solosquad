@@ -166,7 +166,7 @@ async def test_locale_per_person_with_an_org_default(tmp_path: Path) -> None:
             await kim.put("/api/settings", json={"locale": "en"}, headers=hk)
         ).status_code == 403
         bad = await boss.put("/api/settings", json={"locale": "fr"}, headers=hb)
-        assert bad.status_code == 400
+        assert bad.status_code == 400 and bad.json()["code"] == "locale_invalid"
         assert (await boss.put("/api/settings", json={"locale": "zh-CN"}, headers=hb)).json() == {
             "locale": "zh-CN"
         }

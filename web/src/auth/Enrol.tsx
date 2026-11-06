@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, ApiError } from '../api/client';
+import { errorCode, errorKey } from '../api/errors';
 import { keys, useHealth } from '../api/queries';
 import type { Ok, TotpBegin } from '../api/types.gen';
 import { LocalePicker } from '../components/LocalePicker';
@@ -70,8 +71,9 @@ function PasskeyEnrol({ onRefused }: { onRefused: () => void }) {
       await registerPasskey(name.trim() || defaultPasskeyName());
       await qc.invalidateQueries({ queryKey: keys.me }); // the session is now full
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) onRefused();
-      else setError(err instanceof ApiError ? 'passkey.notAccepted' : 'passkey.cancelled');
+      if (errorCode(err) === 'passkeys_unavailable') onRefused();
+      else if (errorCode(err) === 'passkey_rejected') setError('passkey.notAccepted');
+      else setError(err instanceof ApiError ? errorKey(err) : 'passkey.cancelled');
     } finally {
       setBusy(false);
     }
@@ -126,7 +128,7 @@ function OtpEnrol() {
       await api.post<Ok>('/auth/totp/confirm', { code });
       await qc.invalidateQueries({ queryKey: keys.me });
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 400 ? 'auth.wrongCode' : 'auth.failed');
+      setError(errorCode(err) === 'otp_invalid' ? 'auth.wrongCode' : err instanceof ApiError ? errorKey(err) : 'auth.failed');
     } finally {
       setBusy(false);
     }

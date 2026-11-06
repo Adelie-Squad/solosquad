@@ -2,6 +2,7 @@ import { useLinks } from '../scope';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
+import { errorText } from '../api/errors';
 import { decide, type Decision, useAction, useKeys, useScopedApi } from '../api/queries';
 import type { ApprovalItem } from '../api/types.gen';
 import { categoryLabel, useI18n, type MessageKey } from '../i18n';
@@ -35,7 +36,7 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
   const run = (value: Decision) => {
     setError(null);
     answer.mutate(value, {
-      onError: (e) => setError(e instanceof ApiError && e.status === 403 ? t('approvals.denied') : t('common.failed')),
+      onError: (e) => setError(e instanceof ApiError ? errorText(e, t) : t('common.failed')),
     });
   };
 

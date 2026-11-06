@@ -1167,16 +1167,103 @@
     },
     "ErrorBody": {
       "additionalProperties": false,
+      "description": "Every error answer (`web_api/errors.py`). The web shows `code` in the person's language\n(`error.<code>`, `params` in its placeholders) — never `error`, which is for logs.",
       "properties": {
         "error": {
           "type": "string"
+        },
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "params": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "type": "object"
         }
       },
       "required": [
-        "error"
+        "error",
+        "code",
+        "params"
       ],
       "type": "object",
       "title": "ErrorBody"
+    },
+    "ErrorCode": {
+      "enum": [
+        "invalid_request",
+        "unauthorized",
+        "forbidden",
+        "not_found",
+        "method_not_allowed",
+        "conflict",
+        "too_large",
+        "unprocessable",
+        "server_error",
+        "network_blocked",
+        "workspace_network_blocked",
+        "csrf_invalid",
+        "enrol_required",
+        "role_forbidden",
+        "workspace_not_started",
+        "org_not_running",
+        "org_records_unavailable",
+        "feature_disabled",
+        "login_failed",
+        "login_throttled",
+        "otp_required",
+        "otp_invalid",
+        "otp_current_required",
+        "account_required",
+        "passkeys_unavailable",
+        "passkey_expired",
+        "passkey_rejected",
+        "passkey_not_recognised",
+        "username_invalid",
+        "username_taken",
+        "password_too_short",
+        "last_owner",
+        "assignment_invalid",
+        "assignment_duplicate",
+        "assignment_unknown_scope",
+        "user_fields_moved",
+        "teams_invalid",
+        "locale_invalid",
+        "access_lockout",
+        "network_invalid",
+        "profile_invalid",
+        "snapshot_invalid",
+        "snapshot_keys_required",
+        "snapshot_unavailable",
+        "snapshot_failed",
+        "secret_store_missing",
+        "approval_policy_invalid",
+        "unclassified_owner_only",
+        "approval_needs_owner",
+        "approval_needs_team",
+        "connection_id_required",
+        "connection_exists",
+        "entity_required",
+        "connection_ineligible_entity",
+        "connection_ineligible_server",
+        "workflow_input_invalid",
+        "upload_type",
+        "upload_empty",
+        "upload_too_large"
+      ],
+      "type": "string",
+      "title": "ErrorCode"
     },
     "Health": {
       "additionalProperties": false,

@@ -75,6 +75,7 @@ async def test_org_chart_shows_agents_and_people(tmp_path: Path) -> None:
             # a title and teams are per org since decision 57: the org's people, not the account
             moved = await boss.patch(f"/api/users/{kim.id}", json={"teams": ["x"]}, headers=h)
             assert moved.status_code == 400 and "/people/" in moved.json()["error"]
+            assert moved.json()["code"] == "user_fields_moved"
             r = await boss.patch(
                 f"/api/people/{kim.id}", json={"teams": ["product"], "title": "MD"}, headers=h
             )
@@ -151,6 +152,9 @@ async def test_staff_approve_their_team_only_and_never_owner_tier(tmp_path: Path
             assert listed[0]["can_approve"] is False  # kim is in no team yet
             r = await kim.post(f"/api/threads/{tid}/resume", json={"value": "approved"}, headers=hk)
             assert r.status_code == 403 and "team core" in r.json()["error"]
+            assert r.json()["code"] == "approval_needs_team" and r.json()["params"] == {
+                "team": "core"
+            }
             await boss.patch(f"/api/people/{kim_id}", json={"teams": ["core"]}, headers=hb)
             async with o.client("203.0.113.9") as kim2:  # a fresh session sees the new teams
                 hk2 = await o.login_existing(kim2, "kim")
@@ -167,6 +171,7 @@ async def test_staff_approve_their_team_only_and_never_owner_tier(tmp_path: Path
                     f"/api/threads/{tid2}/resume", json={"value": "approved"}, headers=hk2
                 )
                 assert r.status_code == 403 and "owner" in r.json()["error"]
+                assert r.json()["code"] == "approval_needs_owner"
                 assert (
                     await boss.post(
                         f"/api/threads/{tid2}/resume", json={"value": "approved"}, headers=hb

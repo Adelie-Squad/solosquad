@@ -15,14 +15,33 @@ export function getCsrf(): string | null {
   return csrfToken;
 }
 
+/** A refused request. `code` is the contract (`ErrorBody.code`) — the screen shows it in the
+ * person's language (`api/errors.ts`); `message` is the server's English sentence, for the
+ * console only, never for the screen (DESIGN.md `## 문구`). A body without a code (a proxy's
+ * HTML page, an older server) has `code` null. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code: string | null = null,
+    readonly params: Record<string, string | number> = {},
   ) {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+function errorParts(data: unknown): { code: string | null; params: Record<string, string | number> } {
+  if (!data || typeof data !== 'object') return { code: null, params: {} };
+  const body = data as { code?: unknown; params?: unknown };
+  const code = typeof body.code === 'string' ? body.code : null;
+  const params: Record<string, string | number> = {};
+  if (body.params && typeof body.params === 'object') {
+    for (const [k, v] of Object.entries(body.params as Record<string, unknown>)) {
+      if (typeof v === 'string' || typeof v === 'number') params[k] = v;
+    }
+  }
+  return { code, params };
 }
 
 export interface RequestOptions {
@@ -62,7 +81,8 @@ export async function request<T>(method: string, path: string, opts: RequestOpti
   if (!res.ok) {
     const msg =
       data && typeof data === 'object' && 'error' in data ? String((data as { error: unknown }).error) : res.statusText;
-    throw new ApiError(res.status, msg);
+    const { code, params } = errorParts(data);
+    throw new ApiError(res.status, msg, code, params);
   }
   return data as T;
 }
