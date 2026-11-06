@@ -23,7 +23,7 @@ from solosquad.runtime import RunManager
 from solosquad.runtime.store import RunStore
 from solosquad.web_api import totp
 from solosquad.web_api.accounts import Role
-from solosquad.web_api.app import CSRF_HEADER, SESSION_COOKIE
+from solosquad.web_api.app import CSP, CSRF_HEADER, SESSION_COOKIE
 
 PASSWORD = "correct horse battery"
 TOKEN = "local-cli-token"
@@ -125,6 +125,7 @@ async def test_cookie_flags_and_security_headers(office: Office) -> None:
     assert SESSION_COOKIE in cookie
     assert r.headers["x-content-type-options"] == "nosniff"
     assert "frame-ancestors 'none'" in r.headers["content-security-policy"]
+    assert r.headers["content-security-policy"] == CSP
     assert r.headers["strict-transport-security"].startswith("max-age=")
     async with office.client() as c:
         office.accounts.create_user("viewer", PASSWORD, Role.STAFF)

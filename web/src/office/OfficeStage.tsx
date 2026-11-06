@@ -1,13 +1,14 @@
-// The office scene on the page: lazy-loads three.js (only this screen pays for it), lays the
-// name tags over the canvas, pauses when hidden or scrolled away, and falls back to a list
-// when WebGL is missing or fails. The scene is decoration (aria-hidden); the list next to it
-// is what a screen reader reads.
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+// The office scene on the page: lazy-loads the 3D chunk (three.js · R3F · drei · the GLBs — only
+// this screen pays for it), lays the name tags over the canvas, pauses when hidden or scrolled
+// away, and falls back to a list when WebGL is missing or fails. The scene is decoration
+// (aria-hidden); the list next to it is what a screen reader reads.
+import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useI18n, type MessageKey } from '../i18n';
 import type { Theme } from '../theme';
 import type { SeatAgent } from './layout';
-import type { OfficeScene } from './scene';
 import type { AgentStatus } from './state';
+
+const OfficeCanvas = lazy(() => import('./OfficeCanvas'));
 
 export const STATUS_LABEL: Record<AgentStatus, MessageKey> = {
   idle: 'office.status.idle',
@@ -33,6 +34,33 @@ export const quiet = (st: AgentStatus) => st === 'idle';
 
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** WebGL at all? (checked before the 3D chunk loads — no point fetching it otherwise) */
+function hasWebGL(): boolean {
+  if (typeof window === 'undefined' || (typeof WebGLRenderingContext === 'undefined' && typeof WebGL2RenderingContext === 'undefined')) return false;
+  try {
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2') ?? c.getContext('webgl');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
+/** A throw while loading or drawing the scene (no context, a bad GLB) — the list takes over. */
+class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onFail();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 function isMobile(): boolean {
@@ -66,117 +94,85 @@ export function OfficeStage({
 }) {
   const { t } = useI18n();
   const wrap = useRef<HTMLDivElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const scene = useRef<OfficeScene | null>(null);
   const tags = useRef(new Map<string, HTMLElement>());
-  const [failed, setFailed] = useState(webglForcedOff);
+  const [failed, setFailed] = useState(() => webglForcedOff() || !hasWebGL());
   const [ready, setReady] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [reduced, setReduced] = useState(prefersReducedMotion);
+  const [mobile] = useState(isMobile);
+  const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.visibilityState === 'hidden');
+  const [offScreen, setOffScreen] = useState(false);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
+  const select = useCallback((a: string) => selectRef.current(a), []);
+  const fail = useCallback(() => setFailed(true), []);
+  const onReady = useCallback(() => setReady(true), []);
   // `?office-debug`: `dispatchEvent(new CustomEvent('solosquad:office-debug', {detail: {chief: 'typing'}}))`
-  // overrides statuses by hand — to look at every pose without a live engine
+  // overrides statuses by hand — to look at every pose without a live engine; `window.__office.fps`
+  const debugOn = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('office-debug');
+  const [stats] = useState(() => (debugOn ? { fps: 0 } : undefined));
   const [debug, setDebug] = useState<Record<string, AgentStatus>>({});
   useEffect(() => {
-    if (!new URLSearchParams(window.location.search).has('office-debug')) return;
+    if (!debugOn) return;
+    (window as unknown as { __office?: unknown }).__office = stats;
     const on = (e: Event) => setDebug((e as CustomEvent<Record<string, AgentStatus>>).detail ?? {});
     window.addEventListener('solosquad:office-debug', on);
     return () => window.removeEventListener('solosquad:office-debug', on);
-  }, []);
+  }, [debugOn, stats]);
   statuses = Object.keys(debug).length ? { ...statuses, ...debug } : statuses;
 
-  // create once: load three.js on demand and build the scene
+  // reduced motion, hidden tab and off-screen all stop the loop
   useEffect(() => {
-    if (failed) return;
-    let cancelled = false;
-    let instance: OfficeScene | null = null;
-    import('./scene')
-      .then(({ OfficeScene }) => {
-        if (cancelled || !canvas.current) return;
-        try {
-          instance = new OfficeScene(canvas.current, {
-            theme,
-            reducedMotion: prefersReducedMotion(),
-            mobile: isMobile(),
-            onSelect: (a) => selectRef.current(a),
-          });
-        } catch {
-          setFailed(true);
-          return;
-        }
-        instance.onFail = () => setFailed(true);
-        instance.onHover = (a) => setHovered(a);
-        scene.current = instance;
-        // `?office-debug` exposes the scene for checking poses and frame rate by hand
-        if (new URLSearchParams(window.location.search).has('office-debug')) {
-          (window as unknown as { __office?: OfficeScene }).__office = instance;
-        }
-        setReady(true);
-      })
-      .catch(() => setFailed(true));
-    return () => {
-      cancelled = true;
-      instance?.dispose();
-      scene.current = null;
-      setReady(false);
-    };
-    // the scene is built once; theme · agents · statuses flow in through the effects below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [failed]);
-
-  useEffect(() => {
-    const s = scene.current;
-    if (!s || !ready) return;
-    s.setAgents(agents);
-    for (const [name, el] of tags.current) s.setTag(name, el);
-    s.setStatuses(statuses);
-  }, [agents, statuses, ready]);
-
-  useEffect(() => {
-    if (ready) scene.current?.setTheme(theme);
-  }, [theme, ready]);
-
-  // size, reduced motion, and pausing off-screen
-  useEffect(() => {
-    const s = scene.current;
-    const el = wrap.current;
-    if (!s || !ready || !el) return;
-    const fit = () => s.resize(el.clientWidth, el.clientHeight);
-    fit();
-    s.start();
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
-    ro?.observe(el);
-    const io =
-      typeof IntersectionObserver !== 'undefined'
-        ? new IntersectionObserver((entries) => s.setOnScreen(entries.some((e) => e.isIntersecting)))
-        : null;
-    io?.observe(el);
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    const onMotion = () => s.setReducedMotion(!!mq?.matches);
+    const onMotion = () => setReduced(!!mq?.matches);
     mq?.addEventListener?.('change', onMotion);
+    const onVis = () => setHidden(document.visibilityState === 'hidden');
+    document.addEventListener('visibilitychange', onVis);
     return () => {
-      ro?.disconnect();
-      io?.disconnect();
       mq?.removeEventListener?.('change', onMotion);
+      document.removeEventListener('visibilitychange', onVis);
     };
-  }, [ready]);
+  }, []);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el || failed || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => setOffScreen(!entries.some((e) => e.isIntersecting)));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [failed]);
 
   if (failed) return <div className="office-fallback">{fallback}</div>;
 
   return (
     <div className="office-stage" ref={wrap}>
-      <canvas ref={canvas} className="office-canvas" aria-hidden="true" />
+      <SceneBoundary onFail={fail}>
+        <Suspense fallback={null}>
+          <OfficeCanvas
+            agents={agents}
+            statuses={statuses}
+            theme={theme}
+            reducedMotion={reduced}
+            mobile={mobile}
+            paused={hidden || offScreen}
+            tags={tags}
+            onSelect={select}
+            onHover={setHovered}
+            onReady={onReady}
+            onFail={fail}
+            stats={stats}
+          />
+        </Suspense>
+      </SceneBoundary>
       <div className="office-tags" aria-hidden="true">
         {agents.map((a) => {
           const st = statuses[a.name] ?? 'idle';
           return (
             <div
               key={a.name}
-              className={`office-tag is-${st} ${quiet(st) && a.name !== hovered && a.name !== highlight ? 'is-quiet' : ''}`}
+              className={`office-tag is-${st} ${quiet(st) && a.name !== hovered && a.name !== highlight ? 'is-quiet' : ''} ${ready ? '' : 'is-pending'}`}
               ref={(el) => {
                 if (el) tags.current.set(a.name, el);
                 else tags.current.delete(a.name);
-                scene.current?.setTag(a.name, el);
               }}
               title={`${a.label ?? a.name} · ${t(STATUS_LABEL[st])}`}
             >

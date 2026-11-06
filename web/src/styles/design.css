@@ -226,7 +226,8 @@ textarea:focus {
   will-change: transform;
 }
 
-.office-tag.is-quiet {
+.office-tag.is-quiet,
+.office-tag.is-pending {
   visibility: hidden;
 }
 

@@ -92,21 +92,38 @@ describe('scene palette and team colours follow DESIGN.md', () => {
   const row = (key: string) => scene.split('\n').find((l) => l.startsWith(`| \`${key}\``)) ?? '';
   const hexes = (s: string) => (s.match(/#[0-9A-Fa-f]{6}/g) ?? []).map((h) => h.toUpperCase());
 
-  it.each([
-    ['floor', [DAY.floor], [EVENING.floor]],
-    ['ink', [DAY.ink], [EVENING.ink]],
-    ['block', [...DAY.block], [...EVENING.block]],
-    ['plant', [...DAY.plant], [...EVENING.plant]],
-    ['point', [...DAY.point], [...EVENING.point]],
-    ['screen', [DAY.screen], [EVENING.screen]],
-  ] as const)('%s', (key, day, evening) => {
-    const all = hexes(row(key));
-    expect(all).toEqual([...day, ...evening].map((h) => h.toUpperCase()));
+  it('lists every clay key of the table in palette.ts', () => {
+    const keys = scene
+      .split('\n')
+      .map((l) => l.match(/^\|\s*`(clay\.[a-z_]+)`/)?.[1])
+      .filter(Boolean);
+    expect(keys).toEqual(['clay.backdrop', 'clay.wall', 'clay.floor', 'clay.furniture', 'clay.wood', 'clay.plant', 'clay.screen', 'clay.lamp', 'clay.sky', 'clay.penguin_body']);
+    // the v2 keycap palette is gone with its code
+    expect(scene).not.toMatch(/^\|\s*`(floor|ink|block|point)`/m);
   });
 
-  it('lamp only in the evening, with the table colour', () => {
+  it.each([
+    ['clay.backdrop', [DAY.backdrop], [EVENING.backdrop]],
+    ...(['clay.wall', 'clay.floor', 'clay.furniture', 'clay.wood', 'clay.plant'] as const).map(
+      (k) => [k, [DAY.materials[k]], [EVENING.materials[k]]] as const,
+    ),
+    // day: the plain blue face; evening: the glow of a working screen
+    ['clay.screen', [DAY.materials['clay.screen']], [EVENING.screenGlow!]],
+    ['clay.lamp', [], [EVENING.lamp!.bulb]],
+    ['clay.sky', [DAY.sky.ambient], [EVENING.sky.ambient]],
+    ['clay.penguin_body', [DAY.penguinBody], [EVENING.penguinBody]],
+  ] as const)('%s', (key, day, evening) => {
+    expect(hexes(row(key))).toEqual([...day, ...evening].map((h) => h.toUpperCase()));
+  });
+
+  it('lamps, screen glow and the per-agent lights only in the evening', () => {
     expect(DAY.lamp).toBeNull();
-    expect(hexes(row('lamp'))).toContain(EVENING.lamp!.bulb.toUpperCase());
+    expect(DAY.screenGlow).toBeNull();
+    expect(DAY.agentLights).toBeNull();
+    // the lights carry the table's lamp and screen colours
+    expect(EVENING.agentLights?.lamp.color).toBe(EVENING.lamp?.bulb);
+    expect(EVENING.agentLights?.screen.color).toBe(EVENING.screenGlow);
+    expect(EVENING.lamp?.pool).toBe(EVENING.lamp?.bulb);
   });
 
   it('team colours', () => {

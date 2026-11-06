@@ -7,3 +7,4 @@
 *.yml text eol=lf
 *.tsv text eol=lf
 *.jsonl text eol=lf
+*.glb binary
