@@ -33,7 +33,8 @@ assets/office/
 - 바닥 타일 = 2 × 2 m. 벽 높이 2.4 m. 방은 타일을 붙여 넓힌다(웹이 인원에 맞춰 배치).
 - 각 모듈의 원점 = 바닥 면 가운데. 앞(열린 쪽) = +Z(glTF 기준). 책상 세트는 앉는 사람이 +Z 를 본다.
 - 기준 시점: 직교 · 위 30° · 옆 45°. 스타일 프레임은 이 시점으로 렌더한다.
-- 펭귄 크기: 의자에 앉은 키 약 0.55 m, 책상 상판 높이 0.72 m 에 날개가 닿는 비례.
+- 펭귄 크기: 의자에 앉은 키 **0.60 m**(폭 0.53 · 깊이 0.33), 책상 상판 높이 0.72 m 에 날개가 닿는 비례. 0.55 m 이면 위 30° 시점에서 얼굴이 노트북 뚜껑에 가려져 올렸다(스타일 프레임 실측, 2026-11-07).
+- 축: Blender Z-up 에서 glTF +Z(열린 앞쪽, 앉은 에이전트가 보는 쪽) = Blender −Y. 벽은 Blender −X(왼쪽) · +Y(뒤).
 
 ## 3. 모듈 (office-kit.glb) — 루트 노드 이름 = 아래 이름 그대로
 
@@ -47,6 +48,9 @@ assets/office/
 | `lamp.desk` | 책상 스탠드 — 전구 메시 + 빛 위치 빈 노드 `lamp.desk.light` |
 | `prop.plant` · `prop.shelf` · `prop.whiteboard` · `prop.sofa` · `prop.coffee_bar` | 공용 소품 |
 
+- **벽 모듈의 원점** = 그 벽이 맞닿는 바닥 타일의 가운데. `room.wall_left` · `room.wall_back` · `room.corner` 는 그 타일의 `room.floor_tile` 과 **같은 위치**에 놓는다. 벽은 그 타일의 −X(왼쪽) 또는 뒤 가장자리 바깥에 선다. 바닥 타일은 모서리가 각지고 벽은 윗변만 둥글어서, 타일끼리 이음매 없이 붙는다.
+- **앉는 자리**: 펭귄은 `desk.set` · `desk.chief` 의 로컬 Blender (0, +0.27, 0.42)(glTF 로는 위 0.42 m · −Z 쪽 0.27 m)에 앉는다. 의자 높이 0.42 m, 상판 0.72 m. 노트북 뚜껑 뒷면(`team_sticker` 원)이 카메라 쪽을 본다.
+- **스탠드 자리**: `lamp.desk` 는 책상 뒤 왼쪽 모서리, 책상 로컬 Blender (−w/2 + 0.12, −0.02, 0.72)에 둔다. w = 0.96(`desk.set`) · 1.30(`desk.chief`). 빛 위치는 자식 빈 노드 `lamp.desk.light`.
 - 모듈마다 메시는 재질 단위로 합친다(그리기 호출 줄이기).
 
 ## 4. 재질 이름 = 팔레트 키
@@ -63,7 +67,8 @@ assets/office/
 | `penguin.body` · `penguin.face` · `penguin.cheek` · `penguin.eye` · `penguin.beak` · `penguin.feet` | 펭귄 |
 | `prop.<색 이름>` | 소품의 고정 색(예: `prop.gold` · `prop.black`) |
 
-- 모든 재질 = 무광(roughness 0.8 이상) · metallic 0 · 텍스처 무늬 없음.
+- 모든 재질 = 무광(roughness 0.8 이상) · metallic 0(glTF 기본값이 1 이므로 꼭 명시) · 텍스처 무늬 없음.
+- **모듈별 재질 인스턴스(AO 때문에)** — 구운 AO 는 모듈마다 다른데 재질은 여러 모듈이 같이 쓴다. 그래서 `office-kit.glb` 의 재질은 모듈마다 따로 두고 이름을 **`<팔레트 키>#<모듈>`** 로 짓는다(예: `clay.furniture#desk.set` · `team_sticker#desk.set`). AO 는 그 재질의 `occlusionTexture`(texCoord 1 = `uv_ao`)로 넣는다. 웹은 `name.split('#')[0]` 을 팔레트 키로 쓴다. 펭귄 · 역할 소품 재질은 AO 가 없으므로 `#` 없는 키 그대로(2026-11-07 결정).
 
 ## 5. 펭귄 (penguin.glb)
 
