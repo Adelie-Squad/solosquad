@@ -54,7 +54,7 @@ export function LivePreview() {
 export function ApprovalPreview() {
   const { t, locale } = useI18n();
   return (
-    <Frame title={t('landing.preview.approvals')} icon={ICON.approvals}>
+    <Frame title={t('landing.preview.approvals')} icon={ICON.tasks}>
       <div className="landing-approval">
         <div className="landing-approval-head">
           <AgentIcon agent="finance" size={28} label="" />
