@@ -59,7 +59,7 @@ agents_app = typer.Typer(no_args_is_help=True, help="Watch the agents work.")
 service_app = typer.Typer(no_args_is_help=True, help="Run a workspace 24/7 as an OS service.")
 cron_app = typer.Typer(no_args_is_help=True, help="An org's scheduled runs.")
 accounts_app = typer.Typer(
-    no_args_is_help=True, help="People who log in to the web — one set per org (owner · staff)."
+    no_args_is_help=True, help="People who log in to the web — one account each for the customer."
 )
 app.add_typer(add_app, name="add")
 app.add_typer(cron_app, name="cron")
@@ -125,11 +125,15 @@ def _data_dir(solution: Path, org: str, workspace: str) -> Path:
     return EngineStore(solosquad_home()).data_dir(Solution(solution).org(org).workspace(workspace))
 
 
-def _accounts(solution: Path, org: str) -> AccountStore:
-    from solosquad.web_api.accounts import AccountStore
+def _accounts(solution: Path) -> AccountStore:
+    """The customer's `core.db` — a rev6 org's accounts are moved in first (C32)."""
+    from solosquad.storage import MigrationFailed
+    from solosquad.web_api.org_store import open_accounts
 
-    sol = Solution(solution)
-    return AccountStore(EngineStore(solosquad_home()).org_data_dir(sol.org(org)) / ORG_DB)
+    try:
+        return open_accounts(Solution(solution))
+    except MigrationFailed as e:
+        raise _fail(str(e)) from e
 
 
 def _web_dist() -> Path | None:
@@ -495,7 +499,7 @@ def serve(
         resumed = await start_instance(inst)
         token = load_or_create_token(inst.ctx.data_dir)
         ws = Solution(solution).org(o).workspace(w)
-        accounts = _accounts(solution, o)
+        accounts = _accounts(solution)
         org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(solution).org(o))
         upkeep = asyncio.create_task(maintenance_loop(inst, accounts, org_dir=org_dir))
         api = ApiServer(
@@ -867,7 +871,7 @@ def maintenance(
     from solosquad.maintenance import run_retention
 
     o, w = _pick(solution, org, workspace)
-    counts = run_retention(build_instance(solution, o, w), _accounts(solution, o))
+    counts = run_retention(build_instance(solution, o, w), _accounts(solution))
     table = Table("removed", "count")
     for k, v in counts.items():
         table.add_row(k, str(v))
@@ -969,7 +973,7 @@ def snapshot_restore(
     import tempfile
 
     from solosquad.snapshots import fetch, restore
-    from solosquad.storage import OFFICE_DB, ORG_DB
+    from solosquad.storage import OFFICE_DB
 
     o, w = _pick(solution, org, workspace)
     data = _data_dir(solution, o, w)
@@ -1075,12 +1079,12 @@ def _ask_password() -> str:
 def accounts_create_owner(
     username: Annotated[str, typer.Argument(help="Login name for the owner (대표).")],
     solution: SolutionOpt = Path("."),
-    org: OrgOpt = None,
     display: Annotated[str, typer.Option(help="Name shown in the web.")] = "",
 ) -> None:
-    """First owner account of an org (done once by the FDE at setup), with its one-time code."""
-    o = _pick_org(solution, org)
-    store = _accounts(solution, o)
+    """The customer's owner account (done once by the FDE at setup), with its one-time code.
+
+    The owner leads every org and workspace of the customer (decision 57 ⑵)."""
+    store = _accounts(solution)
     from solosquad.web_api.accounts import Role
 
     try:
@@ -1088,7 +1092,7 @@ def accounts_create_owner(
     except ValueError as e:
         raise _fail(str(e)) from e
     uri = store.begin_totp(user.id)
-    console.print(f"owner {user.username!r} created for org {o!r}")
+    console.print(f"owner {user.username!r} created for the whole customer")
     console.print("add this to an authenticator app (or show it as a QR code):")
     console.print(escape(uri))
     code: str = typer.prompt("6-digit code from the app")
@@ -1100,57 +1104,95 @@ def accounts_create_owner(
 
 
 @accounts_app.command("list")
-def accounts_list(solution: SolutionOpt = Path("."), org: OrgOpt = None) -> None:
-    """Accounts of an org."""
-    o = _pick_org(solution, org)
-    table = Table("username", "role", "2FA", "disabled")
-    for u in _accounts(solution, o).users():
+def accounts_list(solution: SolutionOpt = Path(".")) -> None:
+    """Accounts of the customer and what each is assigned to."""
+    store = _accounts(solution)
+    table = Table("username", "role", "assigned", "2FA", "disabled")
+    for u in store.users():
+        scope = (
+            "everything"
+            if u.role.value == "owner"
+            else ", ".join(
+                f"{a.org}/{a.workspace or '*'} ({a.role.value})" for a in store.assignments(u.id)
+            )
+        )
         table.add_row(
-            u.username, u.role.value, "yes" if u.has_totp else "no", "yes" if u.disabled else ""
+            u.username,
+            u.role.value,
+            scope or "-",
+            "yes" if u.has_totp else "no",
+            "yes" if u.disabled else "",
         )
     console.print(table)
 
 
-def _find_user(solution: Path, org: str | None, username: str) -> tuple[Any, Any]:
-    o = _pick_org(solution, org)
-    store = _accounts(solution, o)
+def _find_user(solution: Path, username: str) -> tuple[Any, Any]:
+    store = _accounts(solution)
     match = [u for u in store.users() if u.username == username.lower()]
     if not match:
         raise _fail(f"no account {username!r}")
     return store, match[0]
 
 
-@accounts_app.command("reset-totp")
-def accounts_reset_totp(
-    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
+@accounts_app.command("assign")
+def accounts_assign(
+    username: str,
+    org: Annotated[str, typer.Option("--org", help="The org to give access to.")],
+    solution: SolutionOpt = Path("."),
+    workspace: Annotated[
+        str | None,
+        typer.Option("--workspace", "-w", help="Only this workspace (default: the whole org)."),
+    ] = None,
+    role: Annotated[str, typer.Option(help="owner (대표) or staff (직원) in that org")] = "staff",
+    remove: Annotated[bool, typer.Option("--remove", help="Take the assignment away.")] = False,
 ) -> None:
+    """Give a person an org (all its workspaces) or one workspace — or take it away (I39)."""
+    from solosquad.web_api.accounts import Role
+
+    store, user = _find_user(solution, username)
+    try:
+        found = Solution(solution).org(org)  # LayoutError for an org that is not there
+        if workspace:
+            found.workspace(workspace)
+        if remove:
+            store.set_assignments(
+                user.id,
+                [a for a in store.assignments(user.id) if (a.org, a.workspace) != (org, workspace)],
+            )
+        else:
+            store.assign(user.id, org, workspace, Role(role))
+    except (LayoutError, ValueError) as e:
+        raise _fail(str(e)) from e
+    where = f"{org}/{workspace or '*'}"
+    store.audit(None, "user.assign", f"{user.username} {'-' if remove else '+'}{where} via CLI")
+    console.print(f"{user.username!r}: {'removed from' if remove else 'assigned to'} {where}")
+
+
+@accounts_app.command("reset-totp")
+def accounts_reset_totp(username: str, solution: SolutionOpt = Path(".")) -> None:
     """Lost phone: clear the one-time code; the next login enrols a new one."""
-    store, user = _find_user(solution, org, username)
+    store, user = _find_user(solution, username)
     store.reset_totp(user.id)
     store.audit(None, "user.totp.reset", f"{user.username} via CLI")
     console.print(f"one-time code cleared for {user.username!r}")
 
 
 @accounts_app.command("reset-passkeys")
-def accounts_reset_passkeys(
-    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
-) -> None:
+def accounts_reset_passkeys(username: str, solution: SolutionOpt = Path(".")) -> None:
     """Lost phone: remove the account's passkeys and sign it out everywhere.
 
     The recovery path when the owner loses their own device — whoever can reach the
     server's shell can run it (PRD v2.1.0 K30)."""
-    store, user = _find_user(solution, org, username)
+    store, user = _find_user(solution, username)
     store.clear_passkeys(user.id)
     store.audit(None, "user.passkeys.reset", f"{user.username} via CLI")
     console.print(f"passkeys removed for {user.username!r} — sign in with password + code")
 
 
 @accounts_app.command("set-password")
-def accounts_set_password(
-    username: str, solution: SolutionOpt = Path("."), org: OrgOpt = None
-) -> None:
+def accounts_set_password(username: str, solution: SolutionOpt = Path(".")) -> None:
     """Set a new password (ends that account's sessions)."""
-    store, user = _find_user(solution, org, username)
+    store, user = _find_user(solution, username)
     try:
         store.set_password(user.id, _ask_password())
     except ValueError as e:

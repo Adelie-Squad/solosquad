@@ -1,8 +1,15 @@
-"""Accounts, sessions and the audit log — `accounts.sqlite` in the org data folder.
+"""People, logins, sessions, assignments and the login audit — `core.db` of the customer.
 
-PRD v2.1.0: one login per org (I15 · W6), SQLite like runs.sqlite (I16), scrypt from the
-standard library (I18), server-side sessions with a 256-bit id (I20), two roles — owner
-and staff (I25 · W7). The session id never touches disk in clear: only its SHA-256.
+PRD v2.1.0 rev7: one customer account per person (decision 57 · I15 · I39) in the
+customer's data folder (`data/<solution-id>/core.db`), scrypt from the standard library
+(I18), server-side sessions with a 256-bit id (I20). The session id never touches disk in
+clear: only its SHA-256.
+
+Who may enter what is the **assignment table** — person x org x workspace (none = the
+whole org) x role (I39 · I25 rev7). A customer owner (`users.role = owner`) is the owner
+of every org and needs no rows. Everyone else sees only what they are assigned; the role
+is per org, so the same person can lead one org and be staff in another. A person's
+title and teams are per org too and live in that org's `org.db` (`org_store`).
 """
 
 from __future__ import annotations
@@ -171,21 +178,60 @@ CREATE TABLE IF NOT EXISTS webauthn_challenges (
     expires REAL NOT NULL)
 """
 
-MIGRATIONS = (
+LEGACY_MIGRATIONS = (
     Migration(1, SCHEMA),
     Migration(2, _add_people_columns),
     Migration(3, PASSKEYS_SCHEMA),  # passkeys — the default sign-in of decision 46 W3
 )
+"""The account tables as rev6 kept them in each `org.db` (component `accounts`)."""
+LEGACY_COMPONENT = "accounts"
+
+SCOPES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS assignments (
+    user_id TEXT NOT NULL, org TEXT NOT NULL, workspace TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL, created REAL NOT NULL, PRIMARY KEY (user_id, org, workspace));
+CREATE TABLE IF NOT EXISTS last_scope (
+    user_id TEXT PRIMARY KEY, org TEXT NOT NULL, workspace TEXT NOT NULL, ts REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS migrated_orgs (
+    org TEXT PRIMARY KEY, users INTEGER NOT NULL, ts REAL NOT NULL)
+"""
+
+MIGRATIONS = (
+    *LEGACY_MIGRATIONS,
+    Migration(4, SCOPES_SCHEMA),  # decision 57 — assignments · last scope (I39)
+)
+COMPONENT = "core"
+"""The component name of these tables in `core.db`."""
 CHALLENGE_TTL_S = 5 * 60
+
+
+@dataclass(frozen=True)
+class Assignment:
+    """One row of the assignment table: `workspace` None = the whole org."""
+
+    org: str
+    workspace: str | None
+    role: Role
+
+    def public(self) -> dict[str, Any]:
+        return {"org": self.org, "workspace": self.workspace, "role": self.role.value}
 
 
 class AccountStore:
     def __init__(self, path: Path) -> None:
         self.path = path
         self._db = connect(path)
-        migrate(self._db, "accounts", MIGRATIONS, path=path)
+        migrate(self._db, COMPONENT, MIGRATIONS, path=path)
         self._lock = threading.Lock()
         path.chmod(0o600)
+
+    def connection(self) -> sqlite3.Connection:
+        """The raw connection — for the one-time move of rev6 accounts (`org_store`)."""
+        return self._db
+
+    @property
+    def lock(self) -> threading.Lock:
+        return self._lock
 
     def _q(self, sql: str, args: tuple[Any, ...] = ()) -> list[Any]:
         with self._lock:
@@ -194,8 +240,16 @@ class AccountStore:
     # ------------------------------------------------------------------ users
 
     def create_user(
-        self, username: str, password: str, role: Role, display: str = "", locale: str = "ko"
+        self,
+        username: str,
+        password: str,
+        role: Role,
+        display: str = "",
+        locale: str = "ko",
+        *,
+        assignments: list[Assignment] | None = None,
     ) -> User:
+        """`role` = the customer-level role: owner = every org; staff = only `assignments`."""
         username = username.strip().lower()
         if not username or len(username) > 64:
             raise ValueError("username must be 1 to 64 characters")
@@ -211,7 +265,91 @@ class AccountStore:
             )  # fmt: skip
         except sqlite3.IntegrityError as e:
             raise ValueError(f"username {username!r} is taken") from e
+        if assignments:
+            self.set_assignments(uid, assignments)
         return self.user(uid)
+
+    # ------------------------------------------------------------------ assignments (I39)
+
+    def assignments(self, uid: str) -> list[Assignment]:
+        rows = self._q(
+            "SELECT org, workspace, role FROM assignments WHERE user_id = ?"
+            " ORDER BY org, workspace",
+            (uid,),
+        )
+        return [Assignment(r[0], r[1] or None, Role(r[2])) for r in rows]
+
+    def set_assignments(self, uid: str, items: list[Assignment]) -> None:
+        """Replace the person's rows. Takes effect on their next request (C30)."""
+        self.user(uid)
+        seen: set[tuple[str, str]] = set()
+        for a in items:
+            if not a.org.strip():
+                raise ValueError("an assignment needs an org")
+            key = (a.org, a.workspace or "")
+            if key in seen:
+                raise ValueError(f"assigned twice to {a.org}/{a.workspace or '*'}")
+            seen.add(key)
+        now = time.time()
+        with self._lock:
+            self._db.execute("BEGIN IMMEDIATE")
+            try:
+                self._db.execute("DELETE FROM assignments WHERE user_id = ?", (uid,))
+                for a in items:
+                    self._db.execute(
+                        "INSERT INTO assignments (user_id, org, workspace, role, created)"
+                        " VALUES (?,?,?,?,?)",
+                        (uid, a.org, a.workspace or "", a.role.value, now),
+                    )
+                self._db.execute("COMMIT")
+            except Exception:
+                self._db.execute("ROLLBACK")
+                raise
+
+    def assign(
+        self, uid: str, org: str, workspace: str | None = None, role: Role = Role.STAFF
+    ) -> None:
+        rest = [
+            a for a in self.assignments(uid) if (a.org, a.workspace) != (org, workspace or None)
+        ]
+        self.set_assignments(uid, [*rest, Assignment(org, workspace or None, role)])
+
+    def role_in(self, user: User, org: str, workspace: str | None = None) -> Role | None:
+        """The person's role in a scope — None when it is not theirs (→ 404, I22 rev7).
+
+        Org scope (`workspace` None): an org row gives its role; rows for single
+        workspaces only make the person staff of the org (they see its definitions).
+        Workspace scope: the org row or that workspace's row; owner if either says so.
+        """
+        if user.disabled:
+            return None
+        if user.role is Role.OWNER:
+            return Role.OWNER  # the customer's owner leads every org (decision 57 ⑵)
+        rows = [a for a in self.assignments(user.id) if a.org == org]
+        whole = [a.role for a in rows if a.workspace is None]
+        if workspace is None:
+            if whole:
+                return whole[0]
+            return Role.STAFF if rows else None
+        mine = whole + [a.role for a in rows if a.workspace == workspace]
+        if not mine:
+            return None
+        return Role.OWNER if Role.OWNER in mine else Role.STAFF
+
+    def last_scope(self, uid: str) -> tuple[str, str] | None:
+        rows = self._q("SELECT org, workspace FROM last_scope WHERE user_id = ?", (uid,))
+        return (rows[0][0], rows[0][1]) if rows else None
+
+    def set_last_scope(self, uid: str, org: str, workspace: str) -> None:
+        self._q(
+            "INSERT INTO last_scope (user_id, org, workspace, ts) VALUES (?,?,?,?)"
+            " ON CONFLICT(user_id) DO UPDATE SET org = excluded.org,"
+            " workspace = excluded.workspace, ts = excluded.ts",
+            (uid, org, workspace, time.time()),
+        )
+
+    def migrated_orgs(self) -> dict[str, int]:
+        return {r[0]: int(r[1]) for r in self._q("SELECT org, users FROM migrated_orgs")}
 
     def user(self, uid: str) -> User:
         rows = self._q(f"SELECT {_USER_COLS} FROM users WHERE id = ?", (uid,))
