@@ -1,32 +1,40 @@
-"""Daily upkeep of an office's data (decision 54 · PRD v2.1.0 I35 · I36).
+"""Daily upkeep of the customer's data (decision 54 · PRD v2.1.0 I35 · I36 · I38).
 
-- **retention** — delete what has outlived its data class: business records (threads that
-  are idle and closed, with their runs and checkpoints; ledger rows; artifacts) after
-  `retention.business_records_days`, uploads after `retention.uploads_days`, the org's
-  audit after `retention.audit_days`, expired sessions and stale login failures always.
-  A thread with a run still open (pending · running · waiting for approval) is never
-  touched, whatever its age.
-- **backup** — online copies of `org.db` and `office.db` with a manifest; slice 5 ships the
-  folder to the customer's object storage and keeps 30 days.
+Since decision 57 one engine server runs every workspace of the customer, so upkeep runs
+once for the customer, over three scopes:
+
+- **retention** — per workspace runtime, by that workspace's `retention` rules: business
+  records (threads that are idle and closed, with their runs and checkpoints; ledger rows;
+  artifacts) after `business_records_days`, uploads after `uploads_days`. A thread with a
+  run still open (pending · running · waiting for approval) is never touched, whatever its
+  age. Then each org's audit (`org.db`) and the customer's login audit, expired sessions
+  and stale login failures (`core.db`) — audit kept for the longest `audit_days` of the
+  workspaces it covers, so no business loses audit it asked to keep.
+- **backup** — online copies of `core.db`, every `org.db` and every `office.db`, all pinned
+  to the same moment (PR #29 · I36), with a manifest; the snapshot job ships the folder to
+  the customer's object storage and keeps `keep_days`.
 
 Every purge is written to the audit log with its counts, so a deletion is never silent.
+One runtime's failure is recorded and never stops the others (K49).
 """
 
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from solosquad.graph.checkpoint import SqliteSaver
 from solosquad.instance import Instance
 from solosquad.layout import ServerConfig, WorkspaceConfig
 from solosquad.snapshots import ship
-from solosquad.storage import OFFICE_DB, ORG_DB, backup
+from solosquad.storage import CORE_DB, OFFICE_DB, ORG_DB, backup
 from solosquad.web_api.accounts import AccountStore
+
+if TYPE_CHECKING:
+    from solosquad.engine_server import EngineServer
 
 DAY = 86400.0
 FIRST_RUN_DELAY_S = 10 * 60
@@ -34,8 +42,8 @@ FIRST_RUN_DELAY_S = 10 * 60
 
 
 def current_config(inst: Instance) -> WorkspaceConfig:
-    """workspace.yaml as it is now — the owner may have changed retention or the snapshot
-    target in the web after this instance was built; upkeep follows the file."""
+    """workspace.yaml as it is now — the owner may have changed retention in the web after
+    this runtime was built; upkeep follows the file."""
     ctx = inst.ctx
     try:
         return ctx.solution.org(ctx.org).workspace(ctx.workspace).config()
@@ -43,17 +51,20 @@ def current_config(inst: Instance) -> WorkspaceConfig:
         return ctx.workspace_config
 
 
-def current_server(inst: Instance) -> ServerConfig:
+def current_server(sol_root: Path, fallback: ServerConfig) -> ServerConfig:
     """core/server.yaml as it is now (the snapshot target lives there since I41)."""
+    from solosquad.layout import Solution
+
     try:
-        return inst.ctx.solution.server_config()
+        return Solution(sol_root).server_config()
     except Exception:
-        return inst.ctx.server
+        return fallback
 
 
 def run_retention(
-    inst: Instance, accounts: AccountStore | None, *, now: float | None = None
+    inst: Instance, accounts: AccountStore | None = None, *, now: float | None = None
 ) -> dict[str, Any]:
+    """One workspace's business records; with `accounts`, also the login data (one office)."""
     t = time.time() if now is None else now
     rules = current_config(inst).retention
     before = t - rules.business_records_days * DAY
@@ -81,40 +92,69 @@ def run_retention(
     return out
 
 
-def backup_instance(inst: Instance, org_dir: Path, dest: Path | None = None) -> dict[str, Any]:
-    target = dest or inst.ctx.data_dir / "backups" / time.strftime("%Y%m%d-%H%M%S")
-    return backup({"org": org_dir / ORG_DB, "office": inst.ctx.data_dir / OFFICE_DB}, target)
+def run_customer_retention(engine: EngineServer, *, now: float | None = None) -> dict[str, Any]:
+    """Retention for every runtime, every org and the customer — once, together (I38)."""
+    t = time.time() if now is None else now
+    out: dict[str, Any] = {}
+    days: dict[str, int] = {}
+    for (org, ws), inst in sorted(engine.runtimes.items()):
+        key = f"{org}/{ws}"
+        days[org] = max(days.get(org, 0), current_config(inst).retention.audit_days)
+        try:
+            counts = run_retention(inst, now=t)
+        except Exception as e:  # one workspace never stops the others' upkeep (K49)
+            out[key] = {"error": f"{type(e).__name__}: {e}"}
+            continue
+        out[key] = counts
+        if org in engine.orgs:
+            engine.orgs[org].audit(None, "retention.purge", repr(counts), workspace=ws)
+    for org, store in engine.orgs.items():
+        if org in days:
+            out[f"{org}:audit"] = store.purge(audit_days=days[org], now=t)
+    longest = max(days.values(), default=WorkspaceConfig(name="-").retention.audit_days)
+    out["core"] = engine.accounts.purge(audit_days=longest, now=t)
+    engine.accounts.audit(None, "retention.purge", repr(out))
+    return out
 
 
-def run_snapshot(inst: Instance, org_dir: Path, *, now: float | None = None) -> dict[str, Any]:
-    """Back up both databases to a temporary folder and ship it to the configured target."""
-    target = current_server(inst).snapshot
+def backup_files(engine: EngineServer) -> dict[str, Path]:
+    """Every database of the customer under a stable name: `core`, `org~<org>`,
+    `office~<org>~<ws>` — `~` keeps the names apart whatever the org is called."""
+    files = {"core": engine.data_dir / CORE_DB}
+    for org in sorted(engine.orgs):
+        files[f"org~{org}"] = engine.org_dir(org) / ORG_DB
+    for org, ws in sorted(engine.runtimes):
+        files[f"office~{org}~{ws}"] = engine.runtimes[(org, ws)].ctx.data_dir / OFFICE_DB
+    return files
+
+
+def backup_customer(engine: EngineServer, dest: Path | None = None) -> dict[str, Any]:
+    target = dest or engine.data_dir / "backups" / time.strftime("%Y%m%d-%H%M%S")
+    return backup(backup_files(engine), target)
+
+
+def run_snapshot(engine: EngineServer, *, now: float | None = None) -> dict[str, Any]:
+    """Back up every database at one moment to a temporary folder and ship it."""
+    target = current_server(engine.solution.root, engine.server).snapshot
     if target.type is None:
         return {"target": None, "skipped": "no snapshot target configured"}
     with tempfile.TemporaryDirectory(prefix="solosquad-snap-") as tmp:
-        backup_instance(inst, org_dir, Path(tmp))
-        scope = f"{inst.ctx.solution_id}/{inst.ctx.org}/{inst.ctx.workspace}"
-        return ship(Path(tmp), target, scope, secret=inst.secrets.get, now=now)
+        backup_customer(engine, Path(tmp))
+        return ship(Path(tmp), target, engine.solution_id, secret=engine.secrets.get, now=now)
 
 
-async def maintenance_loop(
-    inst: Instance,
-    accounts: AccountStore | None,
-    *,
-    org_dir: Path | None = None,
-    interval_s: float = DAY,
-) -> None:
+async def maintenance_loop(engine: EngineServer, *, interval_s: float = DAY) -> None:
     """Runs inside `serve`: once after `FIRST_RUN_DELAY_S`, then every `interval_s`."""
     await asyncio.sleep(FIRST_RUN_DELAY_S)
     while True:
-        with contextlib.suppress(Exception):  # upkeep never takes the office down
-            await asyncio.to_thread(run_retention, inst, accounts)
-        if org_dir is not None:
-            try:
-                result = await asyncio.to_thread(run_snapshot, inst, org_dir)
-                if accounts is not None and result.get("target"):
-                    accounts.audit(None, "snapshot", repr(result))
-            except Exception as e:  # a failed upload is recorded, never fatal (K47)
-                if accounts is not None:
-                    accounts.audit(None, "snapshot.failed", f"{type(e).__name__}: {e}")
+        try:
+            await asyncio.to_thread(run_customer_retention, engine)
+        except Exception as e:  # upkeep never takes the server down
+            engine.accounts.audit(None, "retention.failed", f"{type(e).__name__}: {e}")
+        try:
+            result = await asyncio.to_thread(run_snapshot, engine)
+            if result.get("target"):
+                engine.accounts.audit(None, "snapshot", repr(result))
+        except Exception as e:  # a failed upload is recorded, never fatal (K47)
+            engine.accounts.audit(None, "snapshot.failed", f"{type(e).__name__}: {e}")
         await asyncio.sleep(interval_s)

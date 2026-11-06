@@ -14,8 +14,8 @@ import pytest
 from typer.testing import CliRunner
 
 from solosquad.cli import app
-from solosquad.instance import build_instance
-from solosquad.layout import EngineStore, Solution, solosquad_home
+from solosquad.engine_server import build_engine
+from solosquad.layout import Solution
 from solosquad.maintenance import run_snapshot
 from solosquad.snapshots import EMPTY_SHA256, STAMP, SnapshotTarget, ship, sign_v4
 
@@ -162,22 +162,25 @@ def test_an_office_snapshot_end_to_end(tmp_path: Path) -> None:
         app, ["snapshot", "set", "--type", "dir", "--path", str(vault), "-s", str(sol)]
     )
     assert res.exit_code == 0, res.output
-    inst = build_instance(sol, "moa", "hq")
-    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(sol).org("moa"))
-    result = run_snapshot(inst, org_dir, now=time.time())
+    assert CliRunner().invoke(app, ["add", "org", "tesla", "-s", str(sol)]).exit_code == 0
+    engine = build_engine(sol)
+    result = run_snapshot(engine, now=time.time())
+    # one snapshot for the customer: core.db, every org.db, every office.db (I38)
     names = sorted(p.name for p in Path(result["location"]).iterdir())
-    assert "office.db" in names and "manifest.json" in names
+    assert names == ["core.db", "manifest.json", "office~moa~hq.db", "office~tesla~hq.db",
+                     "org~moa.db", "org~tesla.db"]  # fmt: skip
+    assert Path(result["location"]).parent == vault / "solosquad" / Solution(sol).meta().id
     assert CliRunner().invoke(app, ["snapshot", "run", "-s", str(sol)]).exit_code == 0
     # without a target the job reports that it skipped instead of failing
     server = Solution(sol)
     server.update_server_config(snapshot=SnapshotTarget())
-    assert run_snapshot(build_instance(sol, "moa", "hq"), org_dir)["target"] is None
-    # the running instance follows core/server.yaml: a target set in the web after `serve`
+    assert run_snapshot(build_engine(sol))["target"] is None
+    # the running server follows core/server.yaml: a target set in the web after `serve`
     # started is used by the next daily run without a restart
-    assert run_snapshot(inst, org_dir)["target"] is None
+    assert run_snapshot(engine)["target"] is None
     later = tmp_path / "vault2"
     server.update_server_config(snapshot=SnapshotTarget(type="dir", path=str(later)))
-    assert later in Path(run_snapshot(inst, org_dir)["location"]).parents
+    assert later in Path(run_snapshot(engine)["location"]).parents
 
 
 def test_restore_round_trip_and_refuses_a_corrupt_copy(tmp_path: Path) -> None:
@@ -196,14 +199,14 @@ def test_restore_round_trip_and_refuses_a_corrupt_copy(tmp_path: Path) -> None:
         ).exit_code
         == 0
     )
-    inst = build_instance(sol, "moa", "hq")
+    engine = build_engine(sol)
+    inst = engine.runtimes[("moa", "hq")]
     kept = inst.manager.store.create_thread("before the snapshot")
-    org_dir = EngineStore(solosquad_home()).org_data_dir(Solution(sol).org("moa"))
-    stamp = Path(run_snapshot(inst, org_dir)["location"]).name
+    stamp = Path(run_snapshot(engine)["location"]).name
     inst.manager.store.create_thread("after the snapshot")  # work that the restore rolls back
     office = inst.ctx.data_dir / OFFICE_DB
-    data_dir = inst.ctx.data_dir
-    del inst  # the office is stopped: no open connections to the files being replaced
+    data_dir = engine.data_dir
+    del inst, engine  # the server is stopped: no open connections to the files replaced
     import gc
 
     gc.collect()
@@ -213,14 +216,14 @@ def test_restore_round_trip_and_refuses_a_corrupt_copy(tmp_path: Path) -> None:
     assert titles == ["before the snapshot"] and kept
     assert (office.parent / "office.db.before-restore").is_file()
     # a damaged copy is refused before anything is replaced
-    snap = vault / "solosquad" / Solution(sol).meta().id / "moa/hq" / stamp
-    (snap / "office.db").write_bytes(b"garbage")
+    snap = vault / "solosquad" / Solution(sol).meta().id / stamp
+    (snap / "office~moa~hq.db").write_bytes(b"garbage")
     res = run(app, ["snapshot", "restore", "--yes", "--stamp", stamp, "-s", str(sol)])
     assert res.exit_code == 1 and "checksum" in res.output
     assert json.loads((snap / "manifest.json").read_text())["files"]
-    # a running office is never restored underneath
+    # a running server is never restored underneath
     (data_dir / "server.json").write_text("{}")
-    assert "stop the office" in run(app, ["snapshot", "restore", "--yes", "-s", str(sol)]).output
+    assert "stop the server" in run(app, ["snapshot", "restore", "--yes", "-s", str(sol)]).output
 
 
 def test_fetch_from_s3(tmp_path: Path, fake_s3: tuple[str, dict[str, bytes]]) -> None:

@@ -15,7 +15,7 @@ import secrets as pysecrets
 import socket
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import uvicorn
 
@@ -24,6 +24,9 @@ from solosquad.layout import Workspace
 from solosquad.runtime import RunManager
 from solosquad.web_api.accounts import AccountStore
 from solosquad.web_api.app import WebConfig, create_app, dumps
+
+if TYPE_CHECKING:
+    from solosquad.engine_server import EngineServer
 
 __all__ = ["ApiServer", "dumps", "load_or_create_token"]
 
@@ -77,6 +80,36 @@ class ApiServer:
         )
         self._server: _Server | None = None
         self._task: asyncio.Task[None] | None = None
+
+    @classmethod
+    def for_engine(
+        cls, engine: EngineServer, token: str, *, static_dir: Path | None = None
+    ) -> ApiServer:
+        """The web of an engine server."""
+        from solosquad.context.resolve import Resolver
+        from solosquad.instance import connections_for
+        from solosquad.maintenance import run_snapshot
+
+        if not engine.runtimes:
+            raise RuntimeError("no workspace runtime started — nothing to serve")
+        (o, w), inst = sorted(engine.runtimes.items())[0]
+        return cls(
+            inst.manager,
+            inst.ledger,
+            token,
+            accounts=engine.accounts,
+            workspace=engine.solution.org(o).workspace(w),
+            static_dir=static_dir,
+            resolver=Resolver(inst.ctx),
+            router=inst.router,
+            secrets=inst.secrets,
+            connections_path=inst.ctx.solution.connections_path,
+            reload_connections=lambda: connections_for(inst.ctx),
+            workflows=inst.workflows,
+            artifacts=inst.artifacts,
+            approvals_path=inst.ctx.org_root / "approvals.yaml",
+            run_snapshot=lambda: run_snapshot(engine),
+        )
 
     async def start(self, host: str = "127.0.0.1", port: int = 0) -> int:
         sock = socket.socket(socket.AF_INET6 if ":" in host else socket.AF_INET)

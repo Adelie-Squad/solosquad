@@ -1,15 +1,18 @@
 """Daily snapshots to the customer's own object storage (decision 54 · PRD v2.1.0 I29 · I36).
 
-`storage.backup` makes consistent copies of `org.db` and `office.db`; this module ships
-that folder off the VM — to the customer's bucket, in the customer's account (P1) — and
-keeps `keep_days` (30) of them. Any S3-compatible store works: AWS S3, NCP Object
-Storage, Alibaba OSS, GCS interoperability, Cloudflare R2, MinIO. The client signs
+`storage.backup` makes copies of the customer's databases — `core.db`, every `org.db`
+and every `office.db`, all of one moment (I36 · I38); this module ships that folder off
+the VM — to the customer's bucket, in the customer's account (P1), under
+`<prefix>/<solution-id>/<UTC stamp>/` — and keeps `keep_days` (30) of them. Any
+S3-compatible store works: AWS S3, NCP Object Storage, Alibaba OSS, GCS
+interoperability, Cloudflare R2, MinIO. The client signs
 requests with AWS Signature V4 using the standard library only (decision 13); keys live
-in the office's secret store as `ACCESS_KEY:SECRET_KEY`, never in a file in git.
+in the customer's secret store (`data/<id>/secrets.json`) as `ACCESS_KEY:SECRET_KEY`,
+never in a file in git.
 
 A `dir` target copies to a folder instead (a mounted disk, or tests).
 
-    snapshot:                         # workspace.yaml
+    snapshot:                         # core/server.yaml (I41)
       type: s3
       endpoint: https://s3.ap-northeast-2.amazonaws.com
       region: ap-northeast-2
@@ -213,7 +216,7 @@ def ship(
 ) -> dict[str, Any]:
     """Upload one `storage.backup` folder under `<prefix>/<scope>/<UTC stamp>/` and prune."""
     if target.type is None:
-        raise ValueError("no snapshot target configured (workspace.yaml `snapshot:`)")
+        raise ValueError("no snapshot target configured (core/server.yaml `snapshot:`)")
     t = dt.datetime.fromtimestamp(time.time() if now is None else now, dt.UTC)
     stamp = t.strftime(STAMP)
     base = f"{target.prefix.strip('/')}/{scope.strip('/')}"
@@ -284,7 +287,9 @@ def fetch(
     access, _, secret_key = pair.partition(":")
     client = S3Client(target.endpoint, target.bucket, target.region, access, secret_key)
     keys = client.list(f"{base}/")
-    stamps = sorted({k[len(base) + 1 :].split("/", 1)[0] for k in keys} - {""})
+    stamps = sorted(
+        s for s in {k[len(base) + 1 :].split("/", 1)[0] for k in keys} if _stamp_of(s)
+    )  # rev6 per-office snapshots sit one level down (`<id>/<org>/<ws>/…`) — not these
     chosen = stamp or (stamps[-1] if stamps else None)
     if chosen is None or chosen not in stamps:
         raise KeyError(f"no snapshot {stamp or ''} under s3://{target.bucket}/{base}/")
@@ -324,6 +329,7 @@ def restore(folder: Path, targets: dict[str, Path]) -> list[str]:
             shutil.copy2(dest, dest.with_suffix(dest.suffix + ".before-restore"))
         for side in ("-wal", "-shm"):
             Path(f"{dest}{side}").unlink(missing_ok=True)
+        dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(folder / entry["file"], dest)
         done.append(entry["name"])
     return done

@@ -1,8 +1,9 @@
-"""24/7 on a local machine: register one workspace instance as an OS service ([4]).
+"""24/7 on a local machine: register a customer's engine server as an OS service ([4]).
 
 macOS launchd (user agent), Linux systemd (user unit), Windows Task Scheduler (at logon,
 restart on failure). The unit runs `solosquad serve` with explicit paths, so several
-customers' offices can be registered side by side on one machine.
+customers' servers can be registered side by side on one machine. One unit runs every
+workspace placed on that server (decision 57 · I38); `org` / `workspace` narrow it.
 """
 
 from __future__ import annotations
@@ -19,22 +20,28 @@ from xml.sax.saxutils import escape
 @dataclass(frozen=True)
 class ServiceSpec:
     solution: Path
-    org: str
-    workspace: str
+    org: str | None
+    workspace: str | None
     port: int
     python: str = sys.executable
 
     @property
     def label(self) -> str:
-        raw = f"{self.solution.name}.{self.org}.{self.workspace}"
+        raw = ".".join(p for p in (self.solution.name, self.org, self.workspace) if p)
         return "ai.solosquad." + re.sub(r"[^A-Za-z0-9.-]+", "-", raw)
 
     @property
     def argv(self) -> list[str]:
+        scope = [*(["--org", self.org] if self.org else []),
+                 *(["--workspace", self.workspace] if self.workspace else [])]  # fmt: skip
         return [
             self.python, "-m", "solosquad", "serve", "--solution", str(self.solution),
-            "--org", self.org, "--workspace", self.workspace, "--port", str(self.port),
+            *scope, "--port", str(self.port),
         ]  # fmt: skip
+
+    @property
+    def title(self) -> str:
+        return "/".join(p for p in (self.org, self.workspace) if p) or self.solution.name
 
 
 def launchd_plist(spec: ServiceSpec, log_dir: Path) -> str:
@@ -60,7 +67,7 @@ def launchd_plist(spec: ServiceSpec, log_dir: Path) -> str:
 
 def systemd_unit(spec: ServiceSpec) -> str:
     return f"""[Unit]
-Description=SoloSquad {spec.org}/{spec.workspace}
+Description=SoloSquad {spec.title}
 After=network-online.target
 
 [Service]
