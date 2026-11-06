@@ -154,7 +154,7 @@ def _client(solution: Path, org: str | None, workspace: str | None) -> Client:
     sf = server_file(_customer_dir(solution))
     if sf.is_file():
         info = json.loads(sf.read_text(encoding="utf-8"))
-        client = HttpClient(f"http://127.0.0.1:{info['port']}", info["token"])
+        client = HttpClient(f"http://127.0.0.1:{info['port']}", info["token"], (o, w))
         try:
             client._call("GET", "/version")
             return client

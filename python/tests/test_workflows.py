@@ -21,7 +21,6 @@ from solosquad.company import build_company
 from solosquad.runtime import RunManager, RunStatus
 from solosquad.runtime.store import RunStore
 from solosquad.web_api.accounts import Role
-from solosquad.web_api.app import WebConfig, create_app
 from solosquad.workflows import WorkflowDef, render
 from solosquad.workflows.engine import WorkflowEngine, company_asker
 from solosquad.workflows.tools import finance_pnl
@@ -236,10 +235,10 @@ async def test_workflow_api_roles_and_review(tmp_path: Path) -> None:
     shutil.copy(TEMPLATE, c.ctx.org_root / "workflows" / "monthly-pnl.yaml")
     artifacts = ArtifactStore(c.ctx.data_dir / "artifacts.sqlite")
     wf = WorkflowEngine(c.ctx.org_root, c.ctx.data_dir, artifacts, company_asker(office.manager))
-    office.app = create_app(
-        WebConfig(office.manager, c.ledger, "tok", office.accounts, office.workspace,
-                  workflows=wf, artifacts=artifacts)
-    )  # fmt: skip
+    view = office.web.config.runtimes[("tesla", "hq")]
+    view.workflows, view.artifacts = wf, artifacts
+    office.web.rebuild()
+    office.app = office.web.app
     await office.manager.start()
     await wf.start()
     try:

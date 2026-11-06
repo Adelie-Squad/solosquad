@@ -9,7 +9,6 @@ import pytest
 from soft_authenticator import SoftAuthenticator
 from test_web_api import PASSWORD, Office
 
-from solosquad.web_api.accounts import Role
 from solosquad.web_api.app import CSRF_HEADER
 
 ORIGIN = "https://office.example"
@@ -25,7 +24,7 @@ async def office(tmp_path: Path) -> AsyncIterator[Office]:
 
 
 async def _register(o: Office, phone: SoftAuthenticator, name: str = "kim") -> None:
-    o.accounts.create_user(name, PASSWORD, Role.STAFF)
+    o.staff(name)  # assigned to tesla, as a rev6 staff account was
     async with o.client() as c:
         r = await c.post("/api/auth/login", json={"username": name, "password": PASSWORD})
         assert r.json()["stage"] == "enroll"  # first login: a strong factor is still missing

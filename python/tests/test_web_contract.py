@@ -24,7 +24,7 @@ from solosquad.runtime import RunStatus
 from solosquad.screens import DEFAULTS, WIDGETS, load_screen
 from solosquad.web_api import schemas as S
 from solosquad.web_api.accounts import Role
-from solosquad.web_api.app import CSRF_HEADER, WebConfig, create_app, dumps
+from solosquad.web_api.app import CSRF_HEADER, dumps
 from solosquad.workflows.tools import finance_pnl
 
 # ---------------------------------------------------------------------- the contract (I6)
@@ -205,14 +205,12 @@ async def _get(app: Any, path: str) -> httpx.Response:
 
 async def test_the_engine_serves_the_web_and_the_api_same_origin(tmp_path: Path) -> None:
     o = Office(tmp_path)
-    app = create_app(
-        WebConfig(o.manager, o.company.ledger, "tok", o.accounts, o.workspace,
-                  static_dir=_spa(tmp_path))
-    )  # fmt: skip
+    o.web.rebuild(static_dir=_spa(tmp_path))
+    app = o.web.app
     root = await _get(app, "/")
     assert root.status_code == 200 and "SoloSquad" in root.text
     assert "default-src 'self'" in root.headers["content-security-policy"]
-    deep = await _get(app, "/chat/th-123")  # a client-side route → index.html
+    deep = await _get(app, "/o/tesla/w/hq/chat/th-123")  # a client-side route → index.html
     assert deep.status_code == 200 and "SoloSquad" in deep.text
     assert (await _get(app, "/assets/app.js")).text == "console.log(1)"
     assert (await _get(app, "/assets/missing.js")).status_code == 404  # files are not faked
@@ -228,9 +226,8 @@ async def test_the_built_web_when_present(tmp_path: Path) -> None:
     if dist is None or not (dist / "index.html").is_file():
         pytest.skip("web/dist not built (npm --prefix web run build)")
     o = Office(tmp_path)
-    app = create_app(
-        WebConfig(o.manager, o.company.ledger, "tok", o.accounts, o.workspace, static_dir=dist)
-    )
+    o.web.rebuild(static_dir=dist)
+    app = o.web.app
     root = await _get(app, "/")
     assert root.status_code == 200 and '<div id="root">' in root.text
     assert (await _get(app, "/approvals")).text == root.text

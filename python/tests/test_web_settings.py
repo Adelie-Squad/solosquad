@@ -15,14 +15,14 @@ import httpx
 import pytest
 from soft_authenticator import SoftAuthenticator
 from test_passkeys import ORIGIN
-from test_web_api import PASSWORD, TOKEN, Office, _next_code, _secret
+from test_web_api import PASSWORD, Office, _next_code, _secret
 
 from solosquad.profile import load_profile
 from solosquad.routing.vault import SecretStore
 from solosquad.web_api import schemas as S
 from solosquad.web_api import totp
-from solosquad.web_api.accounts import Role
-from solosquad.web_api.app import CSRF_HEADER, WebConfig, create_app
+from solosquad.web_api.accounts import Assignment, Role
+from solosquad.web_api.app import CSRF_HEADER
 
 
 class Settings(Office):
@@ -38,13 +38,13 @@ class Settings(Office):
                 return {"target": None, "skipped": "no snapshot target configured"}
             return {"target": target.type, "location": "x", "files": 3, "pruned": []}
 
-        self.app = create_app(
-            WebConfig(self.manager, self.company.ledger, TOKEN, self.accounts, self.workspace,
-                      secrets=self.secrets, run_snapshot=run_now)
-        )  # fmt: skip
+        self.web.rebuild(secrets=self.secrets, run_snapshot=run_now)
+        self.app = self.web.app
 
     async def login(self, c: httpx.AsyncClient, name: str, role: Role) -> dict[str, str]:
-        user = self.accounts.create_user(name, PASSWORD, role)
+        user = self.accounts.create_user(
+            name, PASSWORD, role, assignments=[Assignment("tesla", None, role)]
+        )
         secret = _secret(self.accounts.begin_totp(user.id))
         assert self.accounts.confirm_totp(user.id, totp.code_at(secret, totp.current_step()))
         r = await c.post(

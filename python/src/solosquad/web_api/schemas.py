@@ -57,17 +57,56 @@ class ErrorBody(Closed):
     error: str
 
 
+class AssignmentOut(Closed):
+    """One row of the assignment table (I39): `workspace` null = the whole org."""
+
+    org: str
+    workspace: str | None
+    role: Role
+
+
 class PublicUser(Closed):
     id: str
     username: str
     display: str
     role: Role
+    """The customer-level role: `owner` = the customer's owner, owner of every org;
+    `staff` = only what `assignments` give (decision 57 ⑵)."""
     locale: str
-    """The person's own choice; empty = follow the org default (`Me.locale` resolves it)."""
+    """The person's own choice; empty = follow the customer default (`Me.locale`)."""
     two_factor: bool
     disabled: bool
-    title: str
-    teams: list[str]
+    title: str = ""
+    """Deprecated since rev7 — always empty. A title is per org: `OrgPerson.title`."""
+    teams: list[str] = Field(default_factory=list)
+    """Deprecated since rev7 — always empty. Teams are per org: `OrgPerson.teams`."""
+    assignments: list[AssignmentOut] = Field(default_factory=list)
+
+
+class ScopeWorkspace(Closed):
+    name: str
+    role: Role
+    """The person's role there — `can_approve` and the role table follow it."""
+    running: bool = True
+    """False when the workspace is placed on this server but its runtime did not start."""
+
+
+class ScopeOrg(Closed):
+    """An org the person may open, with the workspaces of it they may open (I40)."""
+
+    org: str
+    display: str
+    role: Role
+    """The role at org scope (org chart · approval policy · connections · workflows)."""
+    whole_org: bool
+    """Assigned the whole org (every workspace of it, now and later) — false = only the
+    listed workspaces."""
+    workspaces: list[ScopeWorkspace]
+
+
+class ScopeRef(Closed):
+    org: str
+    workspace: str
 
 
 class Me(Closed):
@@ -78,10 +117,17 @@ class Me(Closed):
     local: bool = False
     """The local CLI token (no account) — owner rights on its own machine."""
     locale: Locale = DEFAULT_LOCALE
-    """The language the web shows: the person's choice, else the org default (I31)."""
+    """The language the web shows: the person's choice, else the customer default (I31)."""
     org_locale: Locale = DEFAULT_LOCALE
+    """The customer's default language (`core/server.yaml` `web.locale`)."""
     relogin: bool = False
     """A password change ended every session — log in again."""
+    scopes: list[ScopeOrg] = Field(default_factory=list)
+    """What this person may open, org → workspaces (I40) — the switcher lists exactly this;
+    anything else answers 404."""
+    last_scope: ScopeRef | None = None
+    """Where to open after login: the last workspace this person used, or their first one
+    when that is gone or they never used one; null = nothing assigned."""
 
 
 class TotpBegin(Closed):
@@ -100,10 +146,12 @@ class AuditEntry(Closed):
     user_id: str | None
     action: str
     detail: str | None
+    workspace: str | None = None
+    """In an org's audit: the workspace the action was in (null = the org itself)."""
 
 
 class WebSettings(Closed):
-    """Org-wide web settings (I31) — owner-only to change."""
+    """The customer's default web settings (I31 · I41) — the customer owner changes them."""
 
     locale: Locale = DEFAULT_LOCALE
 
@@ -254,6 +302,19 @@ class Person(Closed):
     role: Role
 
 
+class OrgPerson(Closed):
+    """A person as this org knows them (`/api/o/{org}/people`): role, title and teams here."""
+
+    id: str
+    username: str
+    display: str
+    role: Role
+    title: str
+    teams: list[str]
+    workspaces: list[str] | None
+    """null = the whole org; else only these workspaces of it."""
+
+
 class OrgTeam(Closed):
     name: str
     lead_agent: AgentCard | None
@@ -313,6 +374,9 @@ class ConnectionOut(Closed):
     eligible: bool
     eligibility_reason: str | None
     eligibility_source: str | None
+    source: Literal["core", "org"] = "core"
+    """`core` = the customer's shared connection (read-only here); `org` = this org's own,
+    editable at org scope."""
 
 
 class BudgetLine(Closed):
@@ -613,7 +677,11 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     Health,
     Version,
     ErrorBody,
+    AssignmentOut,
     PublicUser,
+    ScopeWorkspace,
+    ScopeOrg,
+    ScopeRef,
     Me,
     TotpBegin,
     AccessPolicy,
@@ -632,6 +700,7 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     Team,
     Agent,
     OrgChart,
+    OrgPerson,
     ApprovalItem,
     ApprovalPolicyRow,
     Entity,

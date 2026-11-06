@@ -16,8 +16,20 @@
     "ErrorBody": {
       "$ref": "#/$defs/ErrorBody"
     },
+    "AssignmentOut": {
+      "$ref": "#/$defs/AssignmentOut"
+    },
     "PublicUser": {
       "$ref": "#/$defs/PublicUser"
+    },
+    "ScopeWorkspace": {
+      "$ref": "#/$defs/ScopeWorkspace"
+    },
+    "ScopeOrg": {
+      "$ref": "#/$defs/ScopeOrg"
+    },
+    "ScopeRef": {
+      "$ref": "#/$defs/ScopeRef"
     },
     "Me": {
       "$ref": "#/$defs/Me"
@@ -72,6 +84,9 @@
     },
     "OrgChart": {
       "$ref": "#/$defs/OrgChart"
+    },
+    "OrgPerson": {
+      "$ref": "#/$defs/OrgPerson"
     },
     "ApprovalItem": {
       "$ref": "#/$defs/ApprovalItem"
@@ -142,7 +157,11 @@
     "Health",
     "Version",
     "ErrorBody",
+    "AssignmentOut",
     "PublicUser",
+    "ScopeWorkspace",
+    "ScopeOrg",
+    "ScopeRef",
     "Me",
     "TotpBegin",
     "AccessPolicy",
@@ -161,6 +180,7 @@
     "Team",
     "Agent",
     "OrgChart",
+    "OrgPerson",
     "ApprovalItem",
     "ApprovalPolicyRow",
     "Entity",
@@ -547,6 +567,39 @@
       "type": "object",
       "title": "Artifact"
     },
+    "AssignmentOut": {
+      "additionalProperties": false,
+      "description": "One row of the assignment table (I39): `workspace` null = the whole org.",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "workspace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "staff"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "org",
+        "workspace",
+        "role"
+      ],
+      "type": "object",
+      "title": "AssignmentOut"
+    },
     "AuditEntry": {
       "additionalProperties": false,
       "properties": {
@@ -575,13 +628,25 @@
               "type": "null"
             }
           ]
+        },
+        "workspace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "ts",
         "user_id",
         "action",
-        "detail"
+        "detail",
+        "workspace"
       ],
       "type": "object",
       "title": "AuditEntry"
@@ -882,6 +947,14 @@
               "type": "null"
             }
           ]
+        },
+        "source": {
+          "default": "core",
+          "enum": [
+            "core",
+            "org"
+          ],
+          "type": "string"
         }
       },
       "required": [
@@ -898,7 +971,8 @@
         "secret_last4",
         "eligible",
         "eligibility_reason",
-        "eligibility_source"
+        "eligibility_source",
+        "source"
       ],
       "type": "object",
       "title": "ConnectionOut"
@@ -1249,6 +1323,23 @@
         "relogin": {
           "default": false,
           "type": "boolean"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/$defs/ScopeOrg"
+          },
+          "type": "array"
+        },
+        "last_scope": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScopeRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1258,7 +1349,9 @@
         "local",
         "locale",
         "org_locale",
-        "relogin"
+        "relogin",
+        "scopes",
+        "last_scope"
       ],
       "type": "object",
       "title": "Me"
@@ -1306,6 +1399,61 @@
       ],
       "type": "object",
       "title": "OrgChart"
+    },
+    "OrgPerson": {
+      "additionalProperties": false,
+      "description": "A person as this org knows them (`/api/o/{org}/people`): role, title and teams here.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "staff"
+          ],
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "teams": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "workspaces": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "display",
+        "role",
+        "title",
+        "teams",
+        "workspaces"
+      ],
+      "type": "object",
+      "title": "OrgPerson"
     },
     "OrgTeam": {
       "additionalProperties": false,
@@ -1786,11 +1934,18 @@
           "type": "boolean"
         },
         "title": {
+          "default": "",
           "type": "string"
         },
         "teams": {
           "items": {
             "type": "string"
+          },
+          "type": "array"
+        },
+        "assignments": {
+          "items": {
+            "$ref": "#/$defs/AssignmentOut"
           },
           "type": "array"
         }
@@ -1804,7 +1959,8 @@
         "two_factor",
         "disabled",
         "title",
-        "teams"
+        "teams",
+        "assignments"
       ],
       "type": "object",
       "title": "PublicUser"
@@ -1918,6 +2074,86 @@
       ],
       "type": "object",
       "title": "RunCreated"
+    },
+    "ScopeOrg": {
+      "additionalProperties": false,
+      "description": "An org the person may open, with the workspaces of it they may open (I40).",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "staff"
+          ],
+          "type": "string"
+        },
+        "whole_org": {
+          "type": "boolean"
+        },
+        "workspaces": {
+          "items": {
+            "$ref": "#/$defs/ScopeWorkspace"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "org",
+        "display",
+        "role",
+        "whole_org",
+        "workspaces"
+      ],
+      "type": "object",
+      "title": "ScopeOrg"
+    },
+    "ScopeRef": {
+      "additionalProperties": false,
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "org",
+        "workspace"
+      ],
+      "type": "object",
+      "title": "ScopeRef"
+    },
+    "ScopeWorkspace": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "owner",
+            "staff"
+          ],
+          "type": "string"
+        },
+        "running": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "role",
+        "running"
+      ],
+      "type": "object",
+      "title": "ScopeWorkspace"
     },
     "Screen": {
       "additionalProperties": false,
@@ -2396,7 +2632,7 @@
     },
     "WebSettings": {
       "additionalProperties": false,
-      "description": "Org-wide web settings (I31) — owner-only to change.",
+      "description": "The customer's default web settings (I31 · I41) — the customer owner changes them.",
       "properties": {
         "locale": {
           "default": "ko",

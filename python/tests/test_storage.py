@@ -93,7 +93,7 @@ def test_accounts_file_from_before_versioning(tmp_path: Path) -> None:
     legacy.close()
     store = AccountStore(path)
     assert current_version(connect(path), COMPONENT) == len(MIGRATIONS)
-    assert store.user("u-1").title == "MD"
+    assert store.user("u-1").username == "kim"  # the title stays a column, moved by org_store
 
 
 # ---------------------------------------------------------------------- one office · one file

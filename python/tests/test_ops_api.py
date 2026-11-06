@@ -15,20 +15,19 @@ import httpx
 import pytest
 from company_fixtures import Company, agent_of, reply
 from test_web_api import PASSWORD, _next_code, _secret
+from web_fixtures import web_office
 
 from solosquad.company import build_company
 from solosquad.context.ledger import LedgerEntry
 from solosquad.harness.base import SpawnRequest
 from solosquad.harness.events import End, Start, TextDelta, ToolResult
 from solosquad.harness.guard_hook import MARKER
-from solosquad.layout import Solution
-from solosquad.routing.connections import load_connections
 from solosquad.routing.eligibility import Entity, judge
 from solosquad.runtime import RunManager, RunStatus
 from solosquad.runtime.store import RunStore
 from solosquad.web_api import totp
-from solosquad.web_api.accounts import AccountStore, Role
-from solosquad.web_api.app import CSRF_HEADER, WebConfig, create_app
+from solosquad.web_api.accounts import Assignment, Role
+from solosquad.web_api.app import CSRF_HEADER
 from solosquad.web_api.events import EventHub
 
 KR = {"name": "Moa Korea Co.", "country": "KR"}
@@ -39,32 +38,19 @@ class Office:
     def __init__(self, tmp: Path) -> None:
         self.company = c = Company(tmp)
         self.manager = RunManager(build_company(c.rt), RunStore(c.ctx.data_dir / "runs.sqlite"))
-        self.accounts = AccountStore(c.ctx.data_dir.parent / "accounts.sqlite")
-        self.workspace = Solution(c.ctx.solution_root).org("tesla").workspace("hq")
-        self.conn_file = c.ctx.solution.connections_path
-        self.app = create_app(
-            WebConfig(
-                self.manager,
-                c.ledger,
-                "tok",
-                self.accounts,
-                self.workspace,
-                resolver=c.rt.resolver,
-                router=c.router,
-                secrets=c.secrets,
-                connections_path=self.conn_file,
-                reload_connections=lambda: load_connections(self.conn_file),
-            )
-        )
+        self.web = web_office(c, self.manager)
+        self.accounts = self.web.accounts
+        self.workspace = self.web.workspace
+        self.conn_file = c.ctx.org_root / "connections.yaml"  # the web adds to the org's file
+        self.app = self.web.app
 
     def client(self, ip: str = "203.0.113.5") -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=self.app, client=(ip, 50000)),
-            base_url="https://office.example",
-        )
+        return self.web.client(ip)
 
     async def login(self, c: httpx.AsyncClient, name: str, role: Role) -> dict[str, str]:
-        user = self.accounts.create_user(name, PASSWORD, role)
+        user = self.accounts.create_user(
+            name, PASSWORD, role, assignments=[Assignment("tesla", None, role)]
+        )
         secret = _secret(self.accounts.begin_totp(user.id))
         assert self.accounts.confirm_totp(user.id, totp.code_at(secret, totp.current_step()))
         r = await c.post(
@@ -202,7 +188,7 @@ async def test_approval_card_and_approver(office: Office) -> None:
         ).json()
         run = (await web.get(f"/api/runs/{resume['run_id']}")).json()
         assert run["source"] == "user:boss"
-        assert any(e["action"] == "approval" for e in office.accounts.audit_log())
+        assert any(e["action"] == "approval" for e in office.web.org.audit_log())  # org audit
         recent = (await web.get("/api/runs", params={"since": str(started)})).json()
         assert {r["id"] for r in recent} >= {rid, resume["run_id"]}
         future = (await web.get("/api/runs", params={"since": str(time.time() + 60)})).json()
