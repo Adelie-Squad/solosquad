@@ -109,6 +109,8 @@ export class OfficeScene {
 
     canvas.addEventListener('webglcontextlost', this.onLost);
     canvas.addEventListener('pointerup', this.onPointer);
+    canvas.addEventListener('pointermove', this.onMove);
+    canvas.addEventListener('pointerleave', this.onLeave);
     document.addEventListener('visibilitychange', this.onVisibility);
     this.applyPalette();
   }
@@ -116,14 +118,16 @@ export class OfficeScene {
   // ------------------------------------------------------------------ public
 
   /** Rebuild the seating when the set of agents or teams changes. */
-  setAgents(agents: SeatAgent[]): void {
+  setAgents(agents: SeatAgent[], force = false): void {
     const key = (list: SeatAgent[]) => list.map((a) => `${a.name}@${a.team ?? ''}`).sort().join('|');
     const now = [...this.seats.values()].map((s) => ({ name: s.name, team: s.team }));
-    if (key(now) === key(agents) && this.seats.size) return;
+    if (!force && key(now) === key(agents) && this.seats.size) return;
+    this.agentList = agents;
+    this.layoutAspect = this.width / this.height;
     const keepTags = new Map([...this.seats].map(([n, s]) => [n, s.tag]));
     const keepStatus = new Map([...this.seats].map(([n, s]) => [n, s.status]));
     this.clearWorld();
-    const islands = layoutOffice(agents);
+    const islands = layoutOffice(agents, this.layoutAspect);
     islands.forEach((island) => this.buildIsland(island));
     for (const [name, seat] of this.seats) {
       seat.tag = keepTags.get(name) ?? null;
@@ -174,10 +178,15 @@ export class OfficeScene {
     this.rtColor.setSize(w * this.pr, h * this.pr);
     this.rtNormal.setSize(w * this.pr, h * this.pr);
     this.ink.uniforms.uTexel.value.set(1 / (w * this.pr), 1 / (h * this.pr));
+    // a much wider or taller stage re-arranges the islands so the office fills it
+    if (this.agentList.length && Math.abs(Math.log(w / h / this.layoutAspect)) > 0.25) this.setAgents(this.agentList, true);
     this.fitFrustum();
     this.dirty = true;
     this.kick();
   }
+
+  private agentList: SeatAgent[] = [];
+  private layoutAspect = 1.6;
 
   start(): void {
     this.running = true;
@@ -189,6 +198,8 @@ export class OfficeScene {
     cancelAnimationFrame(this.frame);
     this.canvas.removeEventListener('webglcontextlost', this.onLost);
     this.canvas.removeEventListener('pointerup', this.onPointer);
+    this.canvas.removeEventListener('pointermove', this.onMove);
+    this.canvas.removeEventListener('pointerleave', this.onLeave);
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.clearWorld();
     this.tones.dispose();
@@ -589,13 +600,43 @@ export class OfficeScene {
 
   // ------------------------------------------------------------------ events
 
-  private onPointer = (e: PointerEvent): void => {
-    if (!this.onSelect) return;
+  private agentAt(e: PointerEvent): string | null {
     const rect = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     const hit = this.raycaster.intersectObjects(this.world.children, true).find((h) => h.object.userData.agent);
-    if (hit) this.onSelect(hit.object.userData.agent as string);
+    return hit ? (hit.object.userData.agent as string) : null;
+  }
+
+  private onPointer = (e: PointerEvent): void => {
+    const name = this.onSelect ? this.agentAt(e) : null;
+    if (name) this.onSelect?.(name);
+  };
+
+  /** Hovered agent (its quiet tag shows) — at most one ray per frame. */
+  onHover?: (agent: string | null) => void;
+  private hovered: string | null = null;
+  private moveQueued = false;
+
+  private onMove = (e: PointerEvent): void => {
+    if (this.moveQueued || !this.onHover) return;
+    this.moveQueued = true;
+    requestAnimationFrame(() => {
+      this.moveQueued = false;
+      const name = this.agentAt(e);
+      if (name !== this.hovered) {
+        this.hovered = name;
+        this.canvas.style.cursor = name ? 'pointer' : 'default';
+        this.onHover?.(name);
+      }
+    });
+  };
+
+  private onLeave = (): void => {
+    if (this.hovered !== null) {
+      this.hovered = null;
+      this.onHover?.(null);
+    }
   };
 
   private onVisibility = (): void => {
