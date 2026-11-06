@@ -8,18 +8,24 @@
 
 ```
 assets/office/
-  src/office-kit.blend        방 조각 · 책상 세트 · 소품 · 조명 (Git LFS)
-  src/penguin.blend           펭귄 몸 · 리그 · 동작 · 역할 소품 (Git LFS)
-  scripts/export.py           Blender Python — 두 .blend 를 GLB 로 내보내고 압축까지
-  export/office-kit.glb       웹이 읽는 결과물
+  scripts/build_kit.py        Blender Python — 방 조각 · 책상 세트 · 소품 · 조명을 빈 장면에서 만들어 .blend 로 저장
+  scripts/build_penguin.py    Blender Python — 펭귄 몸 · 리그 · 동작 · 역할 소품을 만들어 .blend 로 저장
+  scripts/export.py           Blender Python — .blend 를 GLB 로 내보내고 압축까지
+  src/                        .blend 작업 파일 — 커밋하지 않음(.gitignore). build_*.py 로 언제든 다시 만든다
+  export/office-kit.glb       웹이 읽는 결과물(커밋)
   export/penguin.glb
-  frames/style-light.png      스타일 프레임(사용자 확정용)
+  frames/style-light.png      스타일 프레임(사용자 확정용, 커밋)
   frames/style-evening.png
   README.md                   다시 만드는 명령 · 확정된 팔레트 실측값
 ```
 
-- 다시 만들기: `blender -b assets/office/src/office-kit.blend -P assets/office/scripts/export.py -- --out assets/office/export` (펭귄도 같은 방식). 사람이 Blender 를 열지 않고도 같은 GLB 가 나와야 한다.
-- **외부 에셋 금지** — Poly Haven 등에서 내려받은 모델 · 텍스처 · HDRI 를 쓰지 않는다. 모든 형태 · 재질은 이 저장소에서 만든다.
+- **원본은 텍스트(빌드 스크립트)** 다(2026-11-07 — 이 맥에 Git LFS 가 없어 `.blend` 를 저장소에 두지 않기로). 형태 · 재질 · 리그 · 동작을 모두 `build_*.py` 가 빈 장면에서 만든다. 손으로 고친 것이 있으면 스크립트에 옮긴 뒤에만 결과물로 낸다.
+- 다시 만들기(사람이 Blender 를 열지 않고도 같은 결과):
+  - `blender -b -P assets/office/scripts/build_kit.py -- --save assets/office/src/office-kit.blend`
+  - `blender -b -P assets/office/scripts/build_penguin.py -- --save assets/office/src/penguin.blend`
+  - `blender -b assets/office/src/office-kit.blend -P assets/office/scripts/export.py -- --out assets/office/export` (펭귄도 같은 방식)
+- 커밋하는 이진 파일은 `export/*.glb` · `frames/*.png` 뿐이다(예산 5 MB 안이라 LFS 없이 둔다).
+- **외부 에셋 금지** — Poly Haven 등에서 내려받은 모델 · 텍스처 · HDRI 를 쓰지 않는다. 모든 형태 · 재질은 이 저장소의 스크립트가 만든다.
 
 ## 2. 단위 · 좌표 · 시점
 
