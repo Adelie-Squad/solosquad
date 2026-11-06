@@ -131,8 +131,13 @@ describe('office layout — one desk pod per team, Chief in the middle, a tiled 
     }
     const tiles = roomTiles(room);
     expect(tiles.floor).toHaveLength(room.cols * room.rows);
-    expect(tiles.wallLeft.every((w) => w.x === room.minX)).toBe(true);
-    expect(tiles.wallBack.every((w) => w.z === room.minZ)).toBe(true);
+    // wall modules sit on the floor tile they border (contract §3): same position as that tile
+    const isTile = (p: { x: number; z: number }) => tiles.floor.some((t) => t.x === p.x && t.z === p.z);
+    expect(tiles.wallLeft.every((w) => w.x === room.minX + TILE / 2 && isTile(w))).toBe(true);
+    expect(tiles.wallBack.every((w) => w.z === room.minZ + TILE / 2 && isTile(w))).toBe(true);
+    expect(tiles.wallLeft).toHaveLength(room.rows);
+    expect(tiles.wallBack).toHaveLength(room.cols);
+    expect(tiles.corner).toEqual({ x: room.minX + TILE / 2, z: room.minZ + TILE / 2 });
     const bigger = roomFor(layoutOffice(Array.from({ length: 40 }, (_, i) => ({ name: `a${i}`, team: `t${i % 6}` }))));
     expect(bigger.cols * bigger.rows).toBeGreaterThan(room.cols * room.rows);
   });

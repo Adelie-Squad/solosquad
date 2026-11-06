@@ -16,7 +16,7 @@ import { quantize } from '@gltf-transform/functions';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BONES, CLIPS, LAMP_LIGHT, PENGUIN_MESH, PENGUIN_RIG, ROLE_PROPS, SCARF, SOCKETS, propNode, socketBone } from '../src/office/contract.ts';
+import { BONES, CLIPS, DESK_WIDTH, LAMP_LIGHT, PENGUIN_HEIGHT, PENGUIN_MESH, PENGUIN_RIG, ROLE_PROPS, SCARF, SEAT_OFFSET, SOCKETS, lampOffset, propNode, socketBone } from '../src/office/contract.ts';
 import { DAY } from '../src/office/palette.ts';
 import { PENGUIN_2D, TEAM_FALLBACK } from '../src/characters/colors.ts';
 
@@ -31,13 +31,15 @@ const sph = (r, ws = 16, hs = 10) => new THREE.SphereGeometry(r, ws, hs);
 const cone = (r, h, seg = 16) => new THREE.ConeGeometry(r, h, seg);
 
 /** A part: geometry moved into place (position, Euler rotation, scale). */
-function part(geo, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1]) {
+function basePart(geo, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1]) {
   const g = geo.index ? geo.toNonIndexed() : geo.clone();
   for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
   const m = new THREE.Matrix4().compose(new THREE.Vector3(...pos), new THREE.Quaternion().setFromEuler(new THREE.Euler(...rot)), new THREE.Vector3(...scale));
   g.applyMatrix4(m);
   return g;
 }
+
+const part = basePart;
 
 // ------------------------------------------------------------------ gltf-transform helpers
 
@@ -49,12 +51,14 @@ const doc = () => {
   return d;
 };
 
+const material = (d, name, hex) => {
+  const c = new THREE.Color(hex); // sRGB hex → linear factors, as Blender writes them
+  return d.createMaterial(name).setBaseColorFactor([c.r, c.g, c.b, 1]).setMetallicFactor(0).setRoughnessFactor(0.9);
+};
+
 function materials(d, colours) {
   const map = new Map();
-  for (const [name, hex] of Object.entries(colours)) {
-    const c = new THREE.Color(hex); // sRGB hex → linear factors, as Blender writes them
-    map.set(name, d.createMaterial(name).setBaseColorFactor([c.r, c.g, c.b, 1]).setMetallicFactor(0).setRoughnessFactor(0.9));
-  }
+  for (const [name, hex] of Object.entries(colours)) map.set(name, material(d, name, hex));
   return map;
 }
 
@@ -123,53 +127,61 @@ async function write(d, file) {
 async function kit() {
   const d = doc();
   const p = DAY.materials;
-  const mats = materials(d, { ...p, team_sticker: TEAM_FALLBACK });
-  const scene = d.createScene('office-kit');
-  let slot = 0;
-  /** A module root, laid out side by side in the file (the web resets position and rotation). */
+  const colours = { ...p, team_sticker: TEAM_FALLBACK };
+  const scene = d.createScene('Scene');
+  /**
+   * A module root on the world origin, like the Blender export (quantization then moves each
+   * mesh into its root node's translation / scale, which the web keeps). Its
+   * materials are its own instances, `<palette key>#<module>` (contract §4 — each carries the
+   * module's baked AO in the real kit; the placeholder has no AO, only the names).
+   */
   const module = (name, byMaterial, children = []) => {
-    const n = d.createNode(name).setMesh(mesh(d, name, byMaterial, mats)).setTranslation([(slot++ % 6) * 3, 0, Math.floor(slot / 6) * 3]);
+    const own = new Map(Object.keys(byMaterial).map((key) => [key, material(d, `${key}#${name}`, colours[key])]));
+    const n = d.createNode(name).setMesh(mesh(d, name, byMaterial, own));
     for (const c of children) n.addChild(c);
     scene.addChild(n);
     return n;
   };
   const empty = (name, t) => d.createNode(name).setTranslation(t);
 
-  module('room.floor_tile', { 'clay.floor': [part(rbox(2, 0.1, 2, 0.035), [0, -0.05, 0])] });
-  // walls: the inner face on the module origin, thickness outside the room (−X / −Z)
-  module('room.wall_left', { 'clay.wall': [part(rbox(0.12, 2.4, 2, 0.02), [-0.06, 1.2, 0])] });
-  module('room.wall_back', { 'clay.wall': [part(rbox(2, 2.4, 0.12, 0.02), [0, 1.2, -0.06])] });
-  module('room.corner', { 'clay.wall': [part(rbox(0.14, 2.42, 0.14, 0.03), [-0.07, 1.21, -0.07])] });
+  // square-cornered tiles so neighbours meet without a seam; walls round only on top
+  module('room.floor_tile', { 'clay.floor': [part(new THREE.BoxGeometry(2, 0.1, 2), [0, -0.05, 0])] });
+  // wall modules: origin = centre of the floor tile they border, standing outside its −X / back edge
+  module('room.wall_left', { 'clay.wall': [part(rbox(0.12, 2.4, 2, 0.02), [-1.06, 1.2, 0])] });
+  module('room.wall_back', { 'clay.wall': [part(rbox(2, 2.4, 0.12, 0.02), [0, 1.2, -1.06])] });
+  module('room.corner', { 'clay.wall': [part(rbox(0.12, 2.42, 0.12, 0.03), [-1.06, 1.21, -1.06])] });
 
-  const desk = (name, w) => {
+  // desks: the sitter at SEAT_OFFSET facing +Z, the lamp's spot at lampOffset (contract §3)
+  const desk = (name) => {
+    const w = DESK_WIDTH[name];
     const top = 0.72;
-    const legs = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => part(rbox(0.05, top - 0.04, 0.05, 0.015), [sx * (w / 2 - 0.06), (top - 0.04) / 2, 0.25 + sz * 0.27])));
-    const lid = [0, 0.86, 0.36];
-    module(
-      name,
-      {
-        'clay.furniture': [
-          part(rbox(w, 0.04, 0.62, 0.02), [0, top - 0.02, 0.25]),
-          ...legs,
-          // chair: seat, back, stem
-          part(rbox(0.5, 0.07, 0.48, 0.03), [0, 0.42, -0.42]),
-          part(rbox(0.5, 0.46, 0.06, 0.03), [0, 0.68, -0.66], [-0.08, 0, 0]),
-          part(cyl(0.03, 0.03, 0.38), [0, 0.2, -0.42]),
-          part(cyl(0.24, 0.24, 0.03, 24), [0, 0.015, -0.42]),
-          // laptop base + lid shell
-          part(rbox(0.36, 0.02, 0.25, 0.008), [0, top + 0.01, 0.2]),
-          part(rbox(0.36, 0.24, 0.014, 0.008), lid, [-0.2, 0, 0]),
-        ],
-        'clay.wood': [part(rbox(w + 0.02, 0.025, 0.64, 0.01), [0, top - 0.045, 0.25])],
-        // the screen faces the sitter (−Z), the sticker faces the camera side (+Z)
-        'clay.screen': [part(rbox(0.32, 0.2, 0.004, 0.002), [0, 0.86, 0.352], [-0.2, 0, 0])],
-        team_sticker: [part(cyl(0.05, 0.05, 0.004, 24), [0.08, 0.89, 0.37], [Math.PI / 2 - 0.2, 0, 0])],
-      },
-      [empty(`${name}.seat`, [0, 0.455, -0.42]), empty(`${name}.lamp`, [-(w / 2 - 0.16), top, 0.4])],
-    );
+    const [, seatY, seatZ] = SEAT_OFFSET;
+    const dz = 0.1; // desk top centre, in front of the sitter
+    const legs = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => part(rbox(0.05, top - 0.04, 0.05, 0.015), [sx * (w / 2 - 0.05), (top - 0.04) / 2, dz + sz * 0.25])));
+    const [lx, , lz] = lampOffset(name);
+    module(name, {
+      'clay.furniture': [
+        part(rbox(w, 0.04, 0.6, 0.02), [0, top - 0.02, dz]),
+        ...legs,
+        // chair: seat (its top at the seat height), back, stem, base
+        part(rbox(0.46, 0.07, 0.42, 0.03), [0, seatY - 0.035, seatZ]),
+        part(rbox(0.46, 0.44, 0.06, 0.03), [0, seatY + 0.26, seatZ - 0.24], [-0.08, 0, 0]),
+        part(cyl(0.03, 0.03, seatY - 0.07), [0, (seatY - 0.07) / 2, seatZ]),
+        part(cyl(0.22, 0.22, 0.03, 24), [0, 0.015, seatZ]),
+        // laptop base + lid shell (hinge at the far edge of the base)
+        part(rbox(0.36, 0.02, 0.25, 0.008), [0, top + 0.01, 0.06]),
+        part(rbox(0.36, 0.24, 0.014, 0.008), [0, top + 0.13, 0.2], [-0.2, 0, 0]),
+        // a pad where the lamp stands
+        part(cyl(0.05, 0.05, 0.004, 16), [lx, top + 0.002, lz]),
+      ],
+      'clay.wood': [part(rbox(w + 0.02, 0.025, 0.62, 0.01), [0, top - 0.045, dz])],
+      // the screen faces the sitter (−Z), the sticker faces the camera side (+Z)
+      'clay.screen': [part(rbox(0.32, 0.2, 0.004, 0.002), [0, top + 0.13, 0.19], [-0.2, 0, 0])],
+      team_sticker: [part(cyl(0.05, 0.05, 0.004, 24), [0.08, top + 0.16, 0.21], [Math.PI / 2 - 0.2, 0, 0])],
+    });
   };
-  desk('desk.set', 1.2);
-  desk('desk.chief', 1.6);
+  desk('desk.set');
+  desk('desk.chief');
 
   module(
     'lamp.desk',
@@ -205,6 +217,10 @@ async function kit() {
 
 async function penguin() {
   const d = doc();
+  // drawn at 0.516 m, scaled to the contract's seated height (§2: 0.60 m)
+  const S = PENGUIN_HEIGHT / 0.516;
+  const scaleS = new THREE.Matrix4().makeScale(S, S, S);
+  const part = (...args) => basePart(...args).applyMatrix4(scaleS);
   const mats = materials(d, {
     'penguin.body': PENGUIN_2D.body,
     'penguin.face': PENGUIN_2D.face,
@@ -219,7 +235,7 @@ async function penguin() {
     'prop.metal': PENGUIN_2D.metal,
     'prop.lens': PENGUIN_2D.lens,
   });
-  const scene = d.createScene('penguin');
+  const scene = d.createScene('Scene');
 
   // bones at rest (world positions; the penguin sits on its seat, origin = seat surface, faces +Z)
   const world = {
@@ -250,7 +266,7 @@ async function penguin() {
   for (const name of jointNames) {
     const w = world[name];
     const pw = parent[name] ? world[parent[name]] : [0, 0, 0];
-    nodes.set(name, d.createNode(name).setTranslation([w[0] - pw[0], w[1] - pw[1], w[2] - pw[2]]));
+    nodes.set(name, d.createNode(name).setTranslation([(w[0] - pw[0]) * S, (w[1] - pw[1]) * S, (w[2] - pw[2]) * S]));
   }
   for (const [child, par] of Object.entries(parent)) nodes.get(par).addChild(nodes.get(child));
   const rig = d.createNode(PENGUIN_RIG).addChild(nodes.get('root'));
@@ -260,7 +276,7 @@ async function penguin() {
   const ibm = new Float32Array(jointNames.length * 16);
   jointNames.forEach((n, i) => {
     const [x, y, z] = world[n];
-    ibm.set(new THREE.Matrix4().makeTranslation(-x, -y, -z).elements, i * 16);
+    ibm.set(new THREE.Matrix4().makeTranslation(-x * S, -y * S, -z * S).elements, i * 16);
   });
   const skin = d.createSkin('penguin_rig').setInverseBindMatrices(d.createAccessor().setType('MAT4').setArray(ibm).setBuffer(buffer));
   for (const n of jointNames) skin.addJoint(nodes.get(n));
@@ -346,7 +362,7 @@ async function penguin() {
   const rest = (b) => {
     const w = world[b];
     const p = parent[b] ? world[parent[b]] : [0, 0, 0];
-    return [w[0] - p[0], w[1] - p[1], w[2] - p[2]];
+    return [(w[0] - p[0]) * S, (w[1] - p[1]) * S, (w[2] - p[2]) * S];
   };
   const lift = (b, dy) => {
     const r = rest(b);

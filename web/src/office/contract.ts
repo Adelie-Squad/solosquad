@@ -26,16 +26,31 @@ export type ModuleName = (typeof MODULES)[number];
 /** Empty node inside `lamp.desk` where the bulb's light (and its warm pool) sits. */
 export const LAMP_LIGHT = 'lamp.desk.light';
 
-/** Optional empties the web reads when present (web supplement to §3 — see `ANCHOR_DEFAULTS`). */
+/** Optional empties that override the fixed seat / lamp offsets below (`desk.set.seat` …). */
 export const ANCHORS = {
-  /** Where the penguin's root goes: the chair's seat, in the desk module's space. */
   seat: '.seat',
-  /** Where the desk lamp stands on the desk top. */
   lamp: '.lamp',
 } as const;
 
-/** Desk modules whose anchors are looked up (`desk.set.seat`, `desk.chief.lamp` …). */
 export const DESKS = ['desk.set', 'desk.chief'] as const;
+export type DeskModule = (typeof DESKS)[number];
+
+/** Desk widths (§3) — the lamp stands `w / 2 - 0.12` in from the left edge. */
+export const DESK_WIDTH: Record<DeskModule, number> = { 'desk.set': 0.96, 'desk.chief': 1.3 };
+
+/** Blender (x, y, z) Z-up → glTF (x, z, −y) Y-up (§2: glTF +Z, the open front = Blender −Y). */
+export const fromBlender = ([x, y, z]: readonly [number, number, number]): [number, number, number] => [x, z, -y || 0];
+
+/** §3 seat: the penguin sits at desk-local Blender (0, +0.27, 0.42). */
+export const SEAT_OFFSET = fromBlender([0, 0.27, 0.42]);
+/** §3 lamp: back-left corner of the desk, Blender (−w/2 + 0.12, −0.02, 0.72). */
+export const lampOffset = (desk: DeskModule): [number, number, number] => fromBlender([-DESK_WIDTH[desk] / 2 + 0.12, -0.02, 0.72]);
+
+/** §2 penguin seated height (m). */
+export const PENGUIN_HEIGHT = 0.6;
+
+/** §4: kit materials are per-module instances `<palette key>#<module>`; the key is what the web paints. */
+export const paletteKey = (materialName: string): string => materialName.split('#')[0];
 
 /** Materials the web recolours by name per theme (§4). */
 export const KIT_MATERIALS = [
@@ -148,8 +163,8 @@ export function readGlbJson(bytes: Uint8Array): GltfJson {
   return JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + length))) as GltfJson;
 }
 
-function names<T extends { name?: string }>(list: T[] | undefined): Set<string> {
-  return new Set((list ?? []).map((x) => x.name ?? '').filter(Boolean));
+function names<T extends { name?: string }>(list: T[] | undefined, key: (n: string) => string = (n) => n): Set<string> {
+  return new Set((list ?? []).map((x) => key(x.name ?? '')).filter(Boolean));
 }
 
 /** Indices of the nodes under `root` (inclusive). */
@@ -210,7 +225,7 @@ export function checkGltf(json: GltfJson, kind: AssetKind): ContractReport {
   const missing: string[] = [];
   const warnings: string[] = [];
   const nodeNames = names(json.nodes);
-  const materialNames = names(json.materials);
+  const materialNames = names(json.materials, paletteKey);
   const need = (what: string, list: readonly string[], have: Set<string>) => {
     for (const n of list) if (!have.has(n)) missing.push(`${what} ${n}`);
   };
@@ -223,9 +238,6 @@ export function checkGltf(json: GltfJson, kind: AssetKind): ContractReport {
     }
     if (!nodeNames.has(LAMP_LIGHT)) missing.push(`node ${LAMP_LIGHT}`);
     need('material', KIT_MATERIALS, materialNames);
-    for (const d of DESKS) {
-      for (const a of Object.values(ANCHORS)) if (!nodeNames.has(d + a)) warnings.push(`anchor ${d + a} absent — the web uses a default offset`);
-    }
     // baked AO (§7): every fixed module's materials should carry an occlusion map on uv_ao
     const noAo: string[] = [];
     const wrongUv: string[] = [];
@@ -233,7 +245,7 @@ export function checkGltf(json: GltfJson, kind: AssetKind): ContractReport {
       const idx = roots.get(m);
       if (idx === undefined) continue;
       const mats = [...materialsOf(json, subtree(json, idx))].map((i) => json.materials?.[i]);
-      if (mats.some((x) => x && !x.occlusionTexture && !UNBAKED.has(x.name ?? ''))) noAo.push(m);
+      if (mats.some((x) => x && !x.occlusionTexture && !UNBAKED.has(paletteKey(x.name ?? '')))) noAo.push(m);
       if (mats.some((x) => x?.occlusionTexture && (x.occlusionTexture.texCoord ?? 0) !== 1)) wrongUv.push(m);
     }
     if (noAo.length) warnings.push(`no baked AO (occlusionTexture) on ${noAo.join(', ')}`);

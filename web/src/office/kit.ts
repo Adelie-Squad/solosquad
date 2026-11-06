@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { teamColor } from '../characters/colors';
 import { canonical } from '../characters/roster';
-import { ANCHORS, CLIPS, LAMP_LIGHT, PENGUIN_MESH, ROLE_PROPS, SCARF, SOCKETS, propNode, socketBone, type ClipName, type ModuleName, type Socket } from './contract';
+import { ANCHORS, CLIPS, LAMP_LIGHT, lampOffset, paletteKey, PENGUIN_MESH, ROLE_PROPS, SCARF, SEAT_OFFSET, SOCKETS, propNode, socketBone, type ClipName, type ModuleName, type Socket } from './contract';
 import { layoutOffice, PROP_SPOTS, propPlace, roomFor, roomTiles, type Footprint, type Room, type SeatAgent } from './layout';
 import { CROSSFADE, clipFor, phaseOf, STILL_TIME } from './motion';
 import type { ClayMaterial, OfficePalette } from './palette';
@@ -18,12 +18,21 @@ export const KIT_LAYER = 1;
 /** The name the asset gave a node — three strips `.` from `Object3D.name`, the original stays in userData. */
 export const nameOf = (o: THREE.Object3D): string => (o.userData?.name as string | undefined) ?? o.name;
 
+/** A descendant of `root` by asset name (root itself is skipped — a glTF scene may share a node's name). */
 export function findNode(root: THREE.Object3D, name: string): THREE.Object3D | null {
   let hit: THREE.Object3D | null = null;
   root.traverse((o) => {
-    if (!hit && nameOf(o) === name) hit = o;
+    if (!hit && o !== root && nameOf(o) === name) hit = o;
   });
   return hit;
+}
+
+/**
+ * A kit module by its root node name (contract §3). The mesh may sit on an unnamed child of that
+ * node (meshopt quantization adds one), so the root is what gets cloned, never the mesh.
+ */
+export function moduleNode(scene: THREE.Object3D, name: string): THREE.Object3D | null {
+  return scene.children.find((o) => nameOf(o) === name) ?? findNode(scene, name);
 }
 
 const meshes = (root: THREE.Object3D): THREE.Mesh[] => {
@@ -36,16 +45,17 @@ const meshes = (root: THREE.Object3D): THREE.Mesh[] => {
 
 const matsOf = (m: THREE.Mesh): THREE.Material[] => (Array.isArray(m.material) ? m.material : [m.material]);
 
-/** Swap every material named `name` on `root` for `next(material)`. */
-function swap(root: THREE.Object3D, name: string, next: (m: THREE.Material) => THREE.Material): THREE.Mesh[] {
+/** Swap every material whose palette key is `key` (`clay.furniture`, `clay.furniture#desk.set` …) for `next(material)`. */
+function swap(root: THREE.Object3D, key: string, next: (m: THREE.Material) => THREE.Material): THREE.Mesh[] {
   const hit: THREE.Mesh[] = [];
+  const is = (m: THREE.Material) => paletteKey(m.name) === key;
   for (const mesh of meshes(root)) {
     if (Array.isArray(mesh.material)) {
-      if (mesh.material.some((m) => m.name === name)) {
-        mesh.material = mesh.material.map((m) => (m.name === name ? next(m) : m));
+      if (mesh.material.some(is)) {
+        mesh.material = mesh.material.map((m) => (is(m) ? next(m) : m));
         hit.push(mesh);
       }
-    } else if (mesh.material.name === name) {
+    } else if (is(mesh.material)) {
       mesh.material = next(mesh.material);
       hit.push(mesh);
     }
@@ -99,15 +109,17 @@ export class MaterialBank {
     for (const v of this.variants.values()) this.paintVariant(v.name, v.variant, v.mat);
   }
 
-  private paintBase(name: string, m: Std): void {
+  private paintBase(materialName: string, m: Std): void {
     const p = this.palette;
+    const name = paletteKey(materialName);
     if (name in p.materials) m.color.set(p.materials[name as ClayMaterial]);
     if (name === 'penguin.body') m.color.set(p.penguinBody);
   }
 
-  private paintVariant(name: string, variant: string, m: Std): void {
+  private paintVariant(materialName: string, variant: string, m: Std): void {
     const p = this.palette;
-    this.paintBase(name, m);
+    this.paintBase(materialName, m);
+    const name = paletteKey(materialName);
     if (name === 'team_sticker' || name === 'team_accent') {
       m.color.set(teamColor(variant));
       return;
@@ -132,9 +144,9 @@ export class MaterialBank {
     }
   }
 
+  /** GPU memory only — the cached variants stay usable (see Office.dispose). */
   dispose(): void {
     for (const v of this.variants.values()) v.mat.dispose();
-    this.variants.clear();
   }
 }
 
@@ -172,16 +184,15 @@ interface Sources {
   penguin: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 }
 
-/** Where a desk module puts its sitter and its lamp when the GLB has no anchor empties. */
-const SEAT_DEFAULT = new THREE.Vector3(0, 0.45, -0.35);
-const LAMP_DEFAULT = (fp: Footprint) => new THREE.Vector3(-fp.w * 0.36, 0.72, fp.d * 0.12);
 
-/** A module's floor footprint at rest (origin and rotation reset — modules may sit anywhere in the kit file). */
+/**
+ * A module's floor footprint. The root node keeps its own transform: in an exported kit every
+ * module sits on the world origin and the root's translation / scale is part of its shape
+ * (meshopt quantization moves the vertices into that node transform).
+ */
 export function footprint(module: THREE.Object3D | null, fallback: Footprint): Footprint {
   if (!module) return fallback;
   const c = module.clone(true);
-  c.position.set(0, 0, 0);
-  c.rotation.set(0, 0, 0);
   c.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(c);
   if (box.isEmpty()) return fallback;
@@ -189,12 +200,15 @@ export function footprint(module: THREE.Object3D | null, fallback: Footprint): F
   return { w: s.x, d: s.z };
 }
 
+/** A copy of a module at (x, 0, z) turned by `rotY` — a holder group, so the module's own transform stays. */
 function place(module: THREE.Object3D, parent: THREE.Object3D, x: number, z: number, rotY = 0): THREE.Object3D {
-  const c = module.clone(true);
-  c.position.set(x, 0, z);
-  c.rotation.set(0, rotY, 0);
-  parent.add(c);
-  return c;
+  const holder = new THREE.Group();
+  holder.name = `${nameOf(module)}@`;
+  holder.position.set(x, 0, z);
+  holder.rotation.set(0, rotY, 0);
+  holder.add(module.clone(true));
+  parent.add(holder);
+  return holder;
 }
 
 let poolAlpha: THREE.DataTexture | null = null;
@@ -220,11 +234,11 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
   const root = new THREE.Group();
   const kitRoot = new THREE.Group();
   root.add(kitRoot);
-  const mod = (name: ModuleName) => findNode(src.kit.scene, name);
+  const mod = (name: ModuleName) => moduleNode(src.kit.scene, name);
   const deskSet = mod('desk.set');
   const chiefSet = mod('desk.chief') ?? deskSet;
-  const deskFp = footprint(deskSet, { w: 1.3, d: 1.5 });
-  const chiefFp = footprint(chiefSet, { w: 1.7, d: 1.7 });
+  const deskFp = footprint(deskSet, { w: 0.96, d: 1.0 });
+  const chiefFp = footprint(chiefSet, { w: 1.3, d: 1.0 });
   const pods = layoutOffice(agents, { aspect, desk: deskFp, chiefDesk: chiefFp });
   const room = roomFor(pods);
   const tiles = roomTiles(room);
@@ -256,8 +270,9 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
       const desk = place(module, kitRoot, d.x, d.z);
       desk.updateMatrixWorld(true);
       const deskName = d.chief && mod('desk.chief') ? 'desk.chief' : 'desk.set';
-      const seatAt = findNode(desk, deskName + ANCHORS.seat)?.getWorldPosition(new THREE.Vector3()) ?? desk.localToWorld(SEAT_DEFAULT.clone());
-      const lampAt = findNode(desk, deskName + ANCHORS.lamp)?.getWorldPosition(new THREE.Vector3()) ?? desk.localToWorld(LAMP_DEFAULT(d.chief ? chiefFp : deskFp));
+      // the contract's fixed offsets (§3); optional empties in the GLB override them
+      const seatAt = findNode(desk, deskName + ANCHORS.seat)?.getWorldPosition(new THREE.Vector3()) ?? desk.localToWorld(new THREE.Vector3(...SEAT_OFFSET));
+      const lampAt = findNode(desk, deskName + ANCHORS.lamp)?.getWorldPosition(new THREE.Vector3()) ?? desk.localToWorld(new THREE.Vector3(...lampOffset(deskName)));
       const team = d.team ?? '';
       swap(desk, 'team_sticker', (m) => bank.variant(m, team));
       const screens = swap(desk, 'clay.screen', (m) => m);
@@ -334,14 +349,17 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
     root,
     room,
     seats,
+    // GPU memory only, and safe to call before a reuse: React's StrictMode runs an effect's cleanup
+    // and then the effect again on the same memoised office (three re-uploads a disposed resource on
+    // the next draw). Uncaching the mixer here broke that second run — actions lost their bindings.
     dispose() {
       for (const s of seats.values()) {
         s.mixer.stopAllAction();
-        s.mixer.uncacheRoot(s.penguin);
+        s.current = null;
+        s.status = null;
         s.pool?.geometry.dispose();
         (s.pool?.material as THREE.Material | undefined)?.dispose();
       }
-      root.clear();
     },
   };
 }

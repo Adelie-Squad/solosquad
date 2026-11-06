@@ -46,8 +46,8 @@ export interface LayoutOptions {
 export const TILE = 2;
 export const WALL_H = 2.4;
 export const ENTRY = 'chief';
-const DESK: Footprint = { w: 1.3, d: 1.5 };
-const CHIEF_DESK: Footprint = { w: 1.7, d: 1.7 };
+const DESK: Footprint = { w: 0.96, d: 1.0 };
+const CHIEF_DESK: Footprint = { w: 1.3, d: 1.0 };
 /** Space between desks in a pod (aisle behind the chairs), and between pods. */
 const DESK_GAP_X = 0.25;
 const DESK_GAP_Z = 0.55;
@@ -244,20 +244,27 @@ export function podBounds(pods: Pod[]): { minX: number; maxX: number; minZ: numb
   };
 }
 
-/** Tile centres of the floor, and the wall pieces along the left (x = minX) and back (z = minZ). */
+/**
+ * Tile centres of the floor, and where the wall pieces go. A wall module's origin is the centre of
+ * the floor tile it borders (contract §3): it sits at that tile's position and stands outside the
+ * tile's −X (left) or back (−Z) edge — the first column of tiles carries the left wall, the first
+ * row the back wall, the corner tile the corner post.
+ */
 export function roomTiles(room: Room): {
   floor: { x: number; z: number }[];
   wallLeft: { x: number; z: number }[];
   wallBack: { x: number; z: number }[];
   corner: { x: number; z: number };
 } {
+  const cx = (i: number) => room.minX + TILE * (i + 0.5);
+  const cz = (j: number) => room.minZ + TILE * (j + 0.5);
   const floor: { x: number; z: number }[] = [];
-  for (let i = 0; i < room.cols; i++) for (let j = 0; j < room.rows; j++) floor.push({ x: room.minX + TILE * (i + 0.5), z: room.minZ + TILE * (j + 0.5) });
+  for (let i = 0; i < room.cols; i++) for (let j = 0; j < room.rows; j++) floor.push({ x: cx(i), z: cz(j) });
   return {
     floor,
-    wallLeft: Array.from({ length: room.rows }, (_, j) => ({ x: room.minX, z: room.minZ + TILE * (j + 0.5) })),
-    wallBack: Array.from({ length: room.cols }, (_, i) => ({ x: room.minX + TILE * (i + 0.5), z: room.minZ })),
-    corner: { x: room.minX, z: room.minZ },
+    wallLeft: Array.from({ length: room.rows }, (_, j) => ({ x: cx(0), z: cz(j) })),
+    wallBack: Array.from({ length: room.cols }, (_, i) => ({ x: cx(i), z: cz(0) })),
+    corner: { x: cx(0), z: cz(0) },
   };
 }
 

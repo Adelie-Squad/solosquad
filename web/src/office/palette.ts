@@ -22,7 +22,7 @@ export interface OfficePalette {
   sky: { ambient: string; ambientIntensity: number; sun: string; sunIntensity: number };
   /** The penguin's contact shadow on the floor. */
   contact: { color: string; opacity: number };
-  /** `penguin.body` in this theme (face, cheeks and eyes keep the GLB's colour — identity). */
+  /** `clay.penguin_body` — material `penguin.body` in this theme (face, cheeks and eyes keep the GLB's colour — identity). */
   penguinBody: string;
   /** Evening: idle penguins sink into the dark by this much (0 = not at all). */
   idleDim: number;
@@ -68,7 +68,8 @@ export const EVENING: OfficePalette = {
   // the evening tones are already dark — the light is weak and blue, the key light almost gone
   sky: { ambient: '#3A4566', ambientIntensity: 5.5, sun: '#3A4566', sunIntensity: 0.6 },
   contact: { color: '#000000', opacity: 0.45 },
-  penguinBody: '#201F1C',
+  // lighter than by day, so the silhouette holds in the navy room (DESIGN.md `clay.penguin_body`)
+  penguinBody: '#474855',
   idleDim: 0.35,
 };
 

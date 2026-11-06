@@ -97,7 +97,7 @@ describe('scene palette and team colours follow DESIGN.md', () => {
       .split('\n')
       .map((l) => l.match(/^\|\s*`(clay\.[a-z_]+)`/)?.[1])
       .filter(Boolean);
-    expect(keys).toEqual(['clay.backdrop', 'clay.wall', 'clay.floor', 'clay.furniture', 'clay.wood', 'clay.plant', 'clay.screen', 'clay.lamp', 'clay.sky']);
+    expect(keys).toEqual(['clay.backdrop', 'clay.wall', 'clay.floor', 'clay.furniture', 'clay.wood', 'clay.plant', 'clay.screen', 'clay.lamp', 'clay.sky', 'clay.penguin_body']);
     // the v2 keycap palette is gone with its code
     expect(scene).not.toMatch(/^\|\s*`(floor|ink|block|point)`/m);
   });
@@ -111,6 +111,7 @@ describe('scene palette and team colours follow DESIGN.md', () => {
     ['clay.screen', [DAY.materials['clay.screen']], [EVENING.screenGlow!]],
     ['clay.lamp', [], [EVENING.lamp!.bulb]],
     ['clay.sky', [DAY.sky.ambient, DAY.sky.sun], [EVENING.sky.ambient]],
+    ['clay.penguin_body', [DAY.penguinBody], [EVENING.penguinBody]],
   ] as const)('%s', (key, day, evening) => {
     expect(hexes(row(key))).toEqual([...day, ...evening].map((h) => h.toUpperCase()));
   });

@@ -2,17 +2,17 @@
 // The asset contract (docs/design/office-asset-contract.md): the check finds what a GLB lacks, the
 // placeholder honours every name, a meshopt-compressed file decodes, and the office builds from
 // the GLBs — seats, props on their sockets, clips per state, materials swapped by name.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Document, NodeIO } from '@gltf-transform/core';
-import { EXTMeshoptCompression, KHRMeshQuantization } from '@gltf-transform/extensions';
+import { ALL_EXTENSIONS, EXTMeshoptCompression, KHRMeshQuantization } from '@gltf-transform/extensions';
 import { meshopt } from '@gltf-transform/functions';
 import { MeshoptDecoder as MeshoptCodec, MeshoptEncoder } from 'meshoptimizer';
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { describe, expect, it } from 'vitest';
 import { teamColor } from '../src/characters/colors';
-import { ALL_PROPS, CLIPS, MODULES, checkGltf, checkOfficeAssets, formatReport, readGlbJson, type GltfJson } from '../src/office/contract';
+import { ALL_PROPS, CLIPS, MODULES, PENGUIN_HEIGHT, SEAT_OFFSET, checkGltf, lampOffset, paletteKey, checkOfficeAssets, formatReport, readGlbJson, type GltfJson } from '../src/office/contract';
 import { applyLook, buildOffice, dressPenguin, findNode, MaterialBank, nameOf, playStatus } from '../src/office/kit';
 import { lazyMeshopt } from '../src/office/meshopt';
 import { DAY, EVENING } from '../src/office/palette';
@@ -39,7 +39,8 @@ describe('contract check', () => {
     const broken: GltfJson = {
       ...kit,
       nodes: kit.nodes!.map((n) => (n.name === 'desk.chief' ? { ...n, name: 'desk_chief' } : n)),
-      materials: kit.materials!.filter((m) => m.name !== 'team_sticker'),
+      // every per-module instance of the key gone = the base key is missing
+      materials: kit.materials!.filter((m) => paletteKey(m.name ?? '') !== 'team_sticker'),
     };
     const r = checkGltf(broken, 'kit');
     expect(r.missing).toContain('module desk.chief');
@@ -60,10 +61,10 @@ describe('contract check', () => {
 
   it('warns on the matte look and the budget, without failing', () => {
     const kit = readGlbJson(kitBytes);
-    const shiny: GltfJson = { ...kit, materials: kit.materials!.map((m) => (m.name === 'clay.wood' ? { ...m, pbrMetallicRoughness: { roughnessFactor: 0.3 } } : m)) };
+    const shiny: GltfJson = { ...kit, materials: kit.materials!.map((m) => (m.name === 'clay.wood#desk.set' ? { ...m, pbrMetallicRoughness: { roughnessFactor: 0.3 } } : m)) };
     const r = checkGltf(shiny, 'kit');
     expect(r.missing).toEqual([]);
-    expect(r.warnings).toEqual(expect.arrayContaining(['material clay.wood: metallic 1 (contract: 0)', 'material clay.wood: roughness 0.3 (contract: ≥ 0.8)']));
+    expect(r.warnings).toEqual(expect.arrayContaining(['material clay.wood#desk.set: metallic 1 (contract: 0)', 'material clay.wood#desk.set: roughness 0.3 (contract: ≥ 0.8)']));
     const big = checkOfficeAssets({ kit: kitBytes, penguin: new Uint8Array(6 * 1024 * 1024) });
     expect(big[1].missing[0]).toMatch(/^readable GLB/);
     expect(big[0].warnings.at(-1)).toMatch(/budget 5 MB/);
@@ -132,7 +133,7 @@ describe('the GLBs in three.js', () => {
       let colour = '';
       office.seats.get(name)!.desk.traverse((o) => {
         const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
-        if (m?.name === 'team_sticker') colour = `#${m.color.getHexString()}`;
+        if (m && paletteKey(m.name) === 'team_sticker') colour = `#${m.color.getHexString()}`;
       });
       return colour.toUpperCase();
     };
@@ -170,6 +171,86 @@ describe('the GLBs in three.js', () => {
     bank.dispose();
   });
 
+  it('reads per-module material instances by their palette key (`<key>#<module>`)', async () => {
+    const json = readGlbJson(kitBytes);
+    const names = json.materials!.map((m) => m.name ?? '');
+    expect(names).toEqual(expect.arrayContaining(['clay.furniture#desk.set', 'clay.furniture#desk.chief', 'team_sticker#desk.set', 'clay.wall#room.wall_left']));
+    expect(names.every((n) => n.includes('#'))).toBe(true);
+    expect(paletteKey('clay.furniture#desk.set')).toBe('clay.furniture');
+    expect(paletteKey('penguin.body')).toBe('penguin.body');
+    // plain keys pass the check too (one shared material per key)
+    const plain: GltfJson = { ...json, materials: json.materials!.map((m) => ({ ...m, name: paletteKey(m.name ?? '') })) };
+    expect(checkGltf(plain, 'kit').missing).toEqual([]);
+
+    const kit = await load(kitBytes);
+    const penguin = await load(penguinBytes);
+    const bank = new MaterialBank([kit.scene, penguin.scene], DAY);
+    const office = buildOffice({ kit, penguin }, [{ name: 'chief', team: 'core' }, { name: 'sales', team: 'business' }], bank, 1.6);
+    const colourOf = (root: THREE.Object3D, name: string) => {
+      let hex = '';
+      root.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+        if (m?.name === name) hex = `#${m.color.getHexString()}`.toUpperCase();
+      });
+      return hex;
+    };
+    const desk = office.seats.get('sales')!.desk;
+    expect(colourOf(desk, 'team_sticker#desk.set')).toBe(teamColor('business').toUpperCase());
+    expect(colourOf(office.seats.get('chief')!.desk, 'team_sticker#desk.chief')).toBe(teamColor('core').toUpperCase());
+    expect(colourOf(desk, 'clay.furniture#desk.set')).toBe(DAY.materials['clay.furniture']);
+    bank.setPalette(EVENING);
+    expect(colourOf(desk, 'clay.furniture#desk.set')).toBe(EVENING.materials['clay.furniture']);
+    expect(colourOf(office.root, 'clay.wall#room.wall_back')).toBe(EVENING.materials['clay.wall']);
+    office.dispose();
+    bank.dispose();
+  });
+
+  it('seats the penguin and the lamp at the contract offsets; the penguin is 0.60 m', async () => {
+    const [kit, penguin] = await Promise.all([load(kitBytes), load(penguinBytes)]);
+    const bank = new MaterialBank([kit.scene, penguin.scene], DAY);
+    const office = buildOffice({ kit, penguin }, [{ name: 'chief', team: 'core' }, { name: 'sales', team: 'business' }], bank, 1.6);
+    for (const [name, module] of [['sales', 'desk.set'], ['chief', 'desk.chief']] as const) {
+      const seat = office.seats.get(name)!;
+      const local = (o: THREE.Object3D) => seat.desk.worldToLocal(o.getWorldPosition(new THREE.Vector3())).toArray().map((v) => +v.toFixed(3));
+      expect(local(seat.penguin)).toEqual(SEAT_OFFSET);
+      expect(local(seat.lamp!)).toEqual(lampOffset(module).map((v) => +v.toFixed(3)));
+    }
+    expect(SEAT_OFFSET).toEqual([0, 0.42, -0.27]);
+    expect(lampOffset('desk.set').map((v) => +v.toFixed(3))).toEqual([-0.36, 0.72, 0.02]);
+    const height = new THREE.Box3().setFromObject(findNode(penguin.scene, 'penguin')!, true).getSize(new THREE.Vector3()).y;
+    expect(height).toBeCloseTo(PENGUIN_HEIGHT, 1);
+    office.dispose();
+    bank.dispose();
+  });
+
+  it('keeps each module root\'s own transform (quantization moves the mesh into it)', async () => {
+    const json = readGlbJson(kitBytes);
+    const desk = json.nodes!.find((n) => n.name === 'desk.set') as { translation?: number[]; scale?: number[] };
+    expect(desk.translation?.[1]).toBeGreaterThan(0.1); // the placeholder is quantized like the real kit
+    const [kit, penguin] = await Promise.all([load(kitBytes), load(penguinBytes)]);
+    const bank = new MaterialBank([kit.scene, penguin.scene], DAY);
+    const office = buildOffice({ kit, penguin }, [{ name: 'sales', team: 'business' }], bank, 1.6);
+    const box = (o: THREE.Object3D) => new THREE.Box3().setFromObject(o);
+    office.root.updateMatrixWorld(true);
+    const deskBox = box(office.seats.get('sales')!.desk);
+    expect(deskBox.min.y).toBeCloseTo(0, 1);
+    expect(deskBox.max.y).toBeGreaterThan(0.72);
+    // the left wall stands just outside the room's −X edge, 2.4 m tall, on the floor
+    let wall: THREE.Object3D | null = null;
+    office.root.traverse((o) => {
+      if (!wall && o.name === 'room.wall_left@') wall = o;
+    });
+    const w = box(wall!);
+    expect(w.max.x).toBeCloseTo(office.room.minX, 2);
+    expect(w.min.x).toBeCloseTo(office.room.minX - 0.12, 2);
+    expect(w.min.y).toBeCloseTo(0, 2);
+    expect(w.max.y).toBeCloseTo(2.4, 1);
+    const floorBox = box(office.root.children[0]);
+    expect(floorBox.max.y).toBeGreaterThan(2.3);
+    office.dispose();
+    bank.dispose();
+  });
+
   it('dresses an unknown role in the scarf even when its props are half there', async () => {
     const penguin = await load(penguinBytes);
     const p = penguin.scene.clone(true);
@@ -177,5 +258,45 @@ describe('the GLBs in three.js', () => {
     const q = penguin.scene.clone(true);
     findNode(q, 'prop.finance.calculator')!.removeFromParent();
     expect(dressPenguin(q, 'finance')).toEqual(['prop.scarf']);
+  });
+});
+
+// the Blender session's export (assets/office/export, PR #58) — checked and built when it is there
+const realDir = join(process.cwd(), '..', 'assets', 'office', 'export');
+const real = existsSync(join(realDir, 'office-kit.glb')) && existsSync(join(realDir, 'penguin.glb'));
+
+describe.skipIf(!real)('the delivered GLBs (assets/office/export)', () => {
+  it('honour the contract and build a dressed, animated office', async () => {
+    const kitReal = new Uint8Array(readFileSync(join(realDir, 'office-kit.glb')));
+    const penguinReal = new Uint8Array(readFileSync(join(realDir, 'penguin.glb')));
+    expect(checkOfficeAssets({ kit: kitReal, penguin: penguinReal }).map((r) => r.missing)).toEqual([[], []]);
+    // node has no image decoder: drop the (WebP AO) textures before three reads the files
+    await MeshoptCodec.ready;
+    const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'meshopt.decoder': MeshoptCodec });
+    const untextured = async (bytes: Uint8Array) => {
+      const doc = await io.readBinary(bytes);
+      for (const t of doc.getRoot().listTextures()) t.dispose();
+      for (const e of doc.getRoot().listExtensionsUsed()) if (e.extensionName === 'EXT_meshopt_compression' || e.extensionName === 'EXT_texture_webp') e.dispose();
+      return io.writeBinary(doc);
+    };
+    const [kit, penguin] = await Promise.all([load(await untextured(kitReal)), load(await untextured(penguinReal))]);
+    const bank = new MaterialBank([kit.scene, penguin.scene], DAY);
+    const agents = [
+      { name: 'chief', team: 'core' },
+      { name: 'researcher', team: 'product' },
+      { name: 'noodle-chef', team: 'kitchen' },
+    ];
+    const office = buildOffice({ kit, penguin }, agents, bank, 1.6);
+    expect(office.seats.size).toBe(3);
+    const seat = office.seats.get('researcher')!;
+    expect(seat.lamp).not.toBeNull();
+    expect(seat.screens.length).toBeGreaterThan(0);
+    playStatus(seat, 'typing', false, false);
+    expect(seat.current?.getClip().name).toBe('typing');
+    bank.setPalette(EVENING);
+    applyLook(seat, 'typing', EVENING, bank);
+    expect(seat.pool?.visible).toBe(true);
+    office.dispose();
+    bank.dispose();
   });
 });

@@ -118,6 +118,20 @@ THEME_SCRIPT_HASH = "sha256-Tw8gxlCxr/CHgowPx8fOQaU9j9JOSiBiOuJpPMlkEuk="
 first paint (DESIGN.md `## 테마`, no flash). CSP allows exactly that script by hash —
 no 'unsafe-inline'. A test recomputes it from index.html."""
 
+CSP = (
+    "default-src 'self'; "
+    f"script-src 'self' '{THEME_SCRIPT_HASH}' 'wasm-unsafe-eval'; "
+    "img-src 'self' blob: data:; "
+    "connect-src 'self' blob:; "
+    "frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+)
+"""Same-origin everything, plus exactly what the office scene's GLBs need (asset contract §8):
+`'wasm-unsafe-eval'` lets the meshopt decoder compile its WebAssembly (it does not allow `eval`);
+`blob:` lets GLTFLoader read the WebP textures embedded in a GLB, which it hands to the image
+loader as blob URLs (an `<img>` or a `fetch`, depending on the browser); `data:` in img-src only
+is for GLTFLoader's WebP support probe, a 1-pixel `data:image/webp` image — without it the probe
+fails and the loader refuses the file ("WebP required by asset but unsupported")."""
+
 OWNER = frozenset({Role.OWNER})
 EVERYONE = frozenset({Role.OWNER, Role.STAFF})
 
@@ -354,12 +368,7 @@ class SecurityHeaders:
                     (b"x-content-type-options", b"nosniff"),
                     (b"referrer-policy", b"same-origin"),
                     (b"x-frame-options", b"DENY"),
-                    (
-                        b"content-security-policy",
-                        b"default-src 'self'; script-src 'self' '"
-                        + THEME_SCRIPT_HASH.encode()
-                        + b"'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
-                    ),
+                    (b"content-security-policy", CSP.encode()),
                 ]
                 if self.hsts:
                     headers.append((b"strict-transport-security", b"max-age=31536000"))

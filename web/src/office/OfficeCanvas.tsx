@@ -3,7 +3,7 @@
 // the page side (tags, fallback, pausing); this draws and reports back.
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { ContactShadows, Environment, Lightformer, useGLTF } from '@react-three/drei';
+import { ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import kitUrl from 'office-asset:office-kit.glb';
 import penguinUrl from 'office-asset:penguin.glb';
@@ -175,11 +175,7 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect,
   return (
     <>
       <CameraRig room={room} scale={tagScale} />
-      <Environment key={theme} frames={1} resolution={mobile ? 32 : 64} environmentIntensity={palette.sky.ambientIntensity}>
-        <color attach="background" args={[palette.sky.ambient]} />
-        {/* a brighter sky overhead: tops read lighter than sides, the clay look without a line */}
-        <Lightformer form="rect" intensity={0.6} color={palette.sky.ambient} position={[0, 5, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
-      </Environment>
+      <SkyLight color={palette.sky.ambient} intensity={palette.sky.ambientIntensity} />
       <directionalLight color={palette.sky.sun} intensity={palette.sky.sunIntensity * Math.PI} position={[cx - 6, 10, cz + 4]} />
       <primitive
         object={office.root}
@@ -252,5 +248,38 @@ function CameraRig({ room, scale }: { room: Room; scale: RefObject<number> }) {
     scale.current = Math.min(1, Math.max(0.62, size.width / w / 70));
     invalidate();
   }, [camera, room, size.width, size.height, invalidate, scale]);
+  return null;
+}
+
+/**
+ * The soft environment light (`clay.sky`): a one-colour sky with a brighter panel overhead, baked
+ * once into a PMREM map — tops read lighter than sides, the clay look without a line. Small on
+ * purpose: drei's `<Environment>` would bring its HDR / EXR / gain-map loaders (~54 kB) for this.
+ */
+function SkyLight({ color, intensity }: { color: string; intensity: number }) {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  const invalidate = useThree((s) => s.invalidate);
+  useLayoutEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const sky = new THREE.Scene();
+    sky.background = new THREE.Color(color);
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
+    (panel.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.6);
+    panel.position.y = 5;
+    panel.rotation.x = Math.PI / 2;
+    sky.add(panel);
+    const target = pmrem.fromScene(sky, 0.04);
+    scene.environment = target.texture;
+    scene.environmentIntensity = intensity;
+    invalidate();
+    return () => {
+      scene.environment = null;
+      target.dispose();
+      pmrem.dispose();
+      panel.geometry.dispose();
+      (panel.material as THREE.Material).dispose();
+    };
+  }, [gl, scene, color, intensity, invalidate]);
   return null;
 }
