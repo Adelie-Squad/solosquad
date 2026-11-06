@@ -1,9 +1,8 @@
 import { useLinks } from '../scope';
-import { useQueryClient } from '@tanstack/react-query';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
-import { keys, useApprovals, useThreads } from '../api/queries';
+import { useApprovals, useThreads } from '../api/queries';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 import { useSession } from '../session';
 import { useOrgOwner } from '../scope';
 import { navHref, visibleNav } from './nav';
@@ -15,7 +14,6 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
   const { w: toWs, o: toOrg } = links;
   const { t, fmt } = useI18n();
   const navigate = useNavigate();
-  const qc = useQueryClient();
   const { user } = useSession();
   const isOwner = useOrgOwner();
   const threads = useThreads();
@@ -24,24 +22,18 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
   // workflow agent steps run on their own company threads; they are not conversations
   const chats = (threads.data ?? []).filter((th) => !th.metadata?.workflow_thread);
 
-  const logout = async () => {
-    await api.post('/auth/logout').catch(() => undefined);
-    qc.clear();
-    await qc.invalidateQueries({ queryKey: keys.me });
-  };
-
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
         <div className="history">
-          <button className="icon-btn" onClick={() => navigate(-1)} aria-label={t('nav.back')}>
-            ←
+          <button className="icon-btn" onClick={() => navigate(-1)} aria-label={t('nav.back')} title={t('nav.back')}>
+            <ICON.back />
           </button>
-          <button className="icon-btn" onClick={() => navigate(1)} aria-label={t('nav.forward')}>
-            →
+          <button className="icon-btn" onClick={() => navigate(1)} aria-label={t('nav.forward')} title={t('nav.forward')}>
+            <ICON.forward />
           </button>
           <button className="icon-btn" onClick={onCommand} aria-label={t('command.open')} title={t('command.open')}>
-            ⌘
+            <ICON.command />
           </button>
         </div>
       </div>
@@ -51,8 +43,10 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
       <nav className="pinned" aria-label={t('nav.main')}>
         {visibleNav(isOwner).map((p) => (
           <NavLink key={p.to} to={navHref(p, links)} end={p.to === ''} className="pinned-tile">
-            <span className="pinned-icon">{p.icon}</span>
-            <span className="pinned-label">{t(p.label)}</span>
+            <p.icon className="pinned-icon" size={18} />
+            <span className="pinned-label" title={t(p.label)}>
+              {t(p.label)}
+            </span>
             {p.to === '/approvals' && mine > 0 && <span className="pinned-badge">{mine}</span>}
           </NavLink>
         ))}
@@ -60,11 +54,15 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
 
       <section className="chat-section" aria-label={t('chat.title')}>
         <div className="chat-section-head">
-          <span>💬 {t('chat.title')}</span>
+          <span className="with-icon">
+            <ICON.chat />
+            {t('chat.title')}
+          </span>
           <span className="live-count">{t('chat.count', { n: chats.length })}</span>
         </div>
-        <button className="new-request" onClick={() => navigate(toWs('/chat/new'))}>
-          + {t('chat.new')}
+        <button className="new-request with-icon" onClick={() => navigate(toWs('/chat/new'))}>
+          <ICON.new />
+          {t('chat.new')}
         </button>
         <ul className="session-list">
           {chats.map((s) => (
@@ -80,16 +78,13 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
 
       <div className="sidebar-bottom">
         <NavLink to={toOrg('/settings')} className="viewer-chip" title={t('nav.settings')}>
-          <span>{isOwner ? '👑' : '🙂'}</span>
+          {isOwner ? <ICON.owner className="viewer-chip-icon" /> : <ICON.person className="viewer-chip-icon" />}
           <span className="viewer-chip-name">{user?.display || user?.username || t('role.local')}</span>
           <span className="viewer-chip-role">{isOwner ? t('role.owner') : t('role.staff')}</span>
         </NavLink>
         <NavLink className="icon-btn" aria-label={t('nav.settings')} title={t('nav.settings')} to={toOrg('/settings')}>
-          ⚙️
+          <ICON.settings />
         </NavLink>
-        <button className="icon-btn" aria-label={t('nav.logout')} title={t('nav.logout')} onClick={logout}>
-          ⎋
-        </button>
       </div>
     </aside>
   );

@@ -7,7 +7,9 @@ import type { WidgetSpec } from '../api/types.gen';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { ArtifactBody } from '../components/ArtifactBody';
 import { Loading, Placeholder, QueryError } from '../components/Status';
-import { useI18n } from '../i18n';
+import { kindLabel, useI18n } from '../i18n';
+import { ICON } from '../icons';
+import { readable } from '../lib/names';
 import { BudgetBar } from '../views/BudgetView';
 import { RUN_STATUS } from '../views/WorkflowsView';
 
@@ -18,7 +20,8 @@ function Frame({ title, to, more, children }: { title: string; to?: string; more
         <h2 className="panel-title">{title}</h2>
         {to && more && (
           <Link className="widget-more" to={to}>
-            {more} →
+            {more}
+            <ICON.more size={14} />
           </Link>
         )}
       </header>
@@ -53,20 +56,21 @@ export function ApprovalsWidget() {
 }
 
 export function ArtifactLatestWidget({ spec }: { spec: WidgetSpec }) {
-  const { t, fmt } = useI18n();
+  const { w: toWs } = useLinks();
+  const { t, fmt, locale } = useI18n();
   const kind = prop(spec, 'kind');
   const q = useArtifacts({ kind, limit: 1 });
   if (!kind) return <Placeholder title={t('screen.missingProp', { widget: spec.widget, prop: 'kind' })} />;
   const a = q.data?.[0];
   return (
-    <Frame title={a?.title ?? t('widget.latest', { kind })} to={a ? `/artifacts/${a.id}` : undefined} more={t('widget.open')}>
+    <Frame title={a?.title ?? t('widget.latest', { kind: kindLabel(locale, kind) })} to={a ? toWs(`/artifacts/${a.id}`) : undefined} more={t('widget.open')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : !a ? (
         <p className="dash-hint">{t('widget.noArtifact')}</p>
       ) : (
         <>
-          <p className="dash-hint">
+          <p className="dash-hint widget-meta">
             {fmt.dateTime(a.created)}
-            {a.needs_review && <span className="chip is-warn"> {t('artifact.needsReviewShort')}</span>}
+            {a.needs_review && <span className="chip is-warn">{t('artifact.needsReviewShort')}</span>}
           </p>
           <ArtifactBody artifact={a} compact />
         </>
@@ -77,7 +81,7 @@ export function ArtifactLatestWidget({ spec }: { spec: WidgetSpec }) {
 
 export function ArtifactListWidget({ spec }: { spec: WidgetSpec }) {
   const { w: toWs } = useLinks();
-  const { t, fmt } = useI18n();
+  const { t, fmt, locale } = useI18n();
   const q = useArtifacts({ kind: prop(spec, 'kind'), limit: 20 });
   return (
     <Frame title={t('widget.artifacts')}>
@@ -88,8 +92,9 @@ export function ArtifactListWidget({ spec }: { spec: WidgetSpec }) {
           {(q.data ?? []).map((a) => (
             <li key={a.id}>
               <Link className="run-row" to={toWs(`/artifacts/${a.id}`)}>
-                <span>📄 {a.title}</span>
-                <span className="chip">{a.kind}</span>
+                <ICON.artifacts className="run-row-icon" />
+                <span className="run-row-title">{a.title}</span>
+                <span className="chip">{kindLabel(locale, a.kind)}</span>
                 {a.needs_review && <span className="chip is-warn">{t('artifact.needsReviewShort')}</span>}
                 <span className="dash-hint">{fmt.relative(a.created)}</span>
               </Link>
@@ -126,7 +131,8 @@ export function OfficeWidget() {
           {working.map((a) => (
             <li key={a.name}>
               <span className="run-row">
-                <span className="live-dot" /> <strong>{a.name}</strong>
+                <span className="live-dot" />
+                <strong className="run-row-title">{a.name}</strong>
                 <span className="dash-hint">{a.working_on.map((w) => w.title).join(', ')}</span>
               </span>
             </li>
@@ -150,7 +156,8 @@ export function WorkflowsWidget() {
           {q.data.workflows.map((w) => (
             <li key={w.name}>
               <Link className="run-row" to={toWs(`/workflows/${w.name}`)}>
-                <span>🧩 {w.title}</span>
+                <ICON.workflows className="run-row-icon" />
+                <span className="run-row-title">{w.title}</span>
                 {w.last_run ? (
                   <>
                     <span className={`chip ${RUN_STATUS[w.last_run.status].chip}`}>{t(RUN_STATUS[w.last_run.status].label)}</span>
@@ -179,7 +186,7 @@ export function OrgChartWidget() {
           {q.data.teams.map((tm) => (
             <li key={tm.name}>
               <span className="run-row">
-                <strong>{tm.name}</strong>
+                <strong className="run-row-title">{readable(tm.name)}</strong>
                 <span className="dash-hint">{t('widget.teamCounts', { agents: tm.agents.length, people: tm.people.length })}</span>
               </span>
             </li>

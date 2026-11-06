@@ -12,7 +12,6 @@ import { ApprovalsView } from '../views/ApprovalsView';
 import { ArtifactView } from '../views/ArtifactView';
 import { BudgetView } from '../views/BudgetView';
 import { ChatView } from '../views/ChatView';
-import { ConnectionsView } from '../views/ConnectionsView';
 import { OfficeView } from '../views/OfficeView';
 import { OrgChartView } from '../views/OrgChartView';
 import { SettingsView } from '../views/SettingsView';
@@ -28,6 +27,7 @@ export function legacyTarget(pathname: string, scope: { org: string; ws: string 
   if (!scope) return null;
   const first = pathname.split('/').filter(Boolean)[0] ?? '';
   if (LEGACY_WS.includes(first)) return routes.ws(scope.org, scope.ws, pathname);
+  if (first === 'connections') return routes.org(scope.org, '/settings/connections');
   if (LEGACY_ORG.includes(first)) return routes.org(scope.org, pathname);
   return null;
 }
@@ -79,7 +79,8 @@ export function ScopeLayout() {
           <Route path="*" element={<NotFoundInShell />} />
         </Route>
         <Route path="org" element={<OrgChartView />} />
-        <Route path="connections" element={<ConnectionsView />} />
+        {/* connections moved into Settings (2026-11-06) — old addresses keep working */}
+        <Route path="connections" element={<Navigate to={routes.org(org, '/settings/connections')} replace />} />
         <Route path="settings" element={<SettingsView />} />
         <Route path="settings/:tab" element={<SettingsView />} />
         <Route path="*" element={<NotFoundInShell />} />

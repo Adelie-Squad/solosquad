@@ -31,18 +31,11 @@
   gap: 8px;
 }
 
-.office-clock {
-  margin-right: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-3);
-  font-variant-numeric: tabular-nums;
-}
-
 .office-stats {
   display: flex;
-  gap: 22px;
-  margin: -8px 0 14px;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: calc(-1 * var(--space-4)) 0 var(--space-4);
   font-size: 13px;
   color: var(--ink-2);
 }
@@ -78,8 +71,8 @@
 .agent-sheet-head {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
+  gap: var(--space-4);
+  padding: var(--space-6);
   background:
     var(--surface-2);
   border-bottom: 1px solid var(--line);
@@ -111,14 +104,8 @@
 .agent-sheet-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 6px 22px 24px;
-}
-
-.agent-sheet-body .dash-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-6) var(--space-6);
 }
 
 .agent-sheet-body .approval-bar {
@@ -128,18 +115,6 @@
 .agent-now {
   margin: 0;
   font-size: 14px;
-}
-
-.agent-ambient {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 13.5px;
-  color: var(--ink-2);
-}
-
-.stat-row.is-2 {
-  grid-template-columns: 1fr 1fr;
-  margin: 8px 0 4px;
 }
 
 .agent-links {
@@ -155,7 +130,7 @@
 }
 
 .btn.is-primary .btn-dot {
-  background: var(--accent);
+  background: var(--on-accent);
 }
 
 .office-body {
@@ -189,12 +164,12 @@
 .office-live {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
   min-height: 0;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-overlay);
   background: var(--surface-2);
 }
 
@@ -222,7 +197,7 @@
 }
 
 .job-list.is-compact .job {
-  padding: 12px 14px;
+  padding: var(--card-pad-compact);
 }
 
 .job-list.is-compact .job-icon {
@@ -285,8 +260,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 20px 24px 14px;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6) var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 
@@ -303,16 +278,16 @@
 
 .live-modal-body {
   overflow-y: auto;
-  padding: 18px 24px 24px;
+  padding: var(--space-5) var(--space-6) var(--space-6);
 }
 
 /* 하루 간이 대화창 — 새 대화의 입력부만 */
 .quick-chat {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   width: min(720px, 100%);
-  padding: 18px 20px 20px;
+  padding: var(--space-5);
   border-radius: 16px;
   background: var(--surface);
   box-shadow: var(--shadow-3);

@@ -89,6 +89,7 @@ class OrgLock(_Doc):
 class OrgConfig(_Doc):
     name: str
     display_name: str | None = None
+    """The name people read (e.g. "SpaceX"); the web falls back to the id made readable."""
 
 
 class AccessPolicy(BaseModel):
@@ -161,6 +162,8 @@ SERVER_FIELDS = ("public_url", "server_country", "type", "snapshot", "web")
 
 class WorkspaceConfig(_Doc):
     name: str
+    display_name: str | None = None
+    """The name people read (e.g. "Launch Ops"); the web falls back to the id made readable."""
     timezone: str = "Asia/Seoul"
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     """Extra limits for this business on top of the server's default (`allowed_networks`)."""
@@ -498,7 +501,20 @@ def scaffold_solution(
     return sol
 
 
-def scaffold_org(sol: Solution, name: str, package: str, package_version: str) -> Org:
+def display_name(value: str | None) -> str | None:
+    """A display name as stored: trimmed, one line, at most 60 characters; blank = none."""
+    if value is None:
+        return None
+    text = " ".join(value.split())
+    if len(text) > 60:
+        raise LayoutError("a display name is at most 60 characters")
+    return text or None
+
+
+def scaffold_org(
+    sol: Solution, name: str, package: str, package_version: str, display: str | None = None
+) -> Org:
+    shown = display_name(display)
     org = Org(sol, name)
     if org.root.exists():
         raise LayoutError(f"org {name!r} already exists")
@@ -511,16 +527,18 @@ def scaffold_org(sol: Solution, name: str, package: str, package_version: str) -
     _mkdirs(org.workspaces_dir)
     (t / "teams.yaml").write_text("schema_version: 1\nteams: {}\n", encoding="utf-8")
     _write(org.root / "org.lock", OrgLock(package=package, version=package_version))
-    _write(org.root / "org.yaml", OrgConfig(name=name))
+    _write(org.root / "org.yaml", OrgConfig(name=name, display_name=shown))
     return org
 
 
-def scaffold_workspace(org: Org, name: str) -> Workspace:
+def scaffold_workspace(org: Org, name: str, display: str | None = None) -> Workspace:
+    shown = display_name(display)
     ws = Workspace(org, name)
     if ws.root.exists():
         raise LayoutError(f"workspace {name!r} already exists in org {org.name!r}")
     _mkdirs(ws.repositories_dir)
-    _write(ws.root / "workspace.yaml", WorkspaceConfig(name=name), drop=SERVER_FIELDS)
+    cfg = WorkspaceConfig(name=name, display_name=shown)
+    _write(ws.root / "workspace.yaml", cfg, drop=SERVER_FIELDS)
     (ws.root / "local.yaml").write_text(
         "schema_version: 1\nanalysis_allowed_paths: []\nlocal_apps: []\n", encoding="utf-8"
     )

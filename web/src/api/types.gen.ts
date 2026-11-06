@@ -192,6 +192,7 @@ export interface PublicUser {
  */
 export interface ScopeWorkspace {
   name: string;
+  display: string;
   role: 'owner' | 'staff';
   running: boolean;
 }

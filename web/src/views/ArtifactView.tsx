@@ -6,6 +6,7 @@ import type { Artifact } from '../api/types.gen';
 import { ArtifactBody } from '../components/ArtifactBody';
 import { Loading, QueryError } from '../components/Status';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 
 /** One work product — the P&L table, a brief … — and its "needs review" mark (W11 · W14). */
 export function ArtifactView() {
@@ -26,7 +27,10 @@ export function ArtifactView() {
       <header className="view-header">
         <div>
           <p className="crumb">
-            <Link to={toWs('/screens/artifacts')}>← {t('nav.artifacts')}</Link>
+            <Link className="with-icon" to={toWs('/screens/artifacts')}>
+              <ICON.back />
+              {t('nav.artifacts')}
+            </Link>
           </p>
           <h1>{a.title}</h1>
           <p>
@@ -41,14 +45,25 @@ export function ArtifactView() {
           </p>
         </div>
         {a.needs_review ? (
-          <button className="btn is-primary" disabled={review.isPending} onClick={() => review.mutate(undefined)}>
-            ✓ {t('artifact.markReviewed')}
+          <button className="btn is-primary with-icon" disabled={review.isPending} onClick={() => review.mutate(undefined)}>
+            <ICON.check />
+            {t('artifact.markReviewed')}
           </button>
         ) : (
-          <span className="chip is-ok">✓ {t('artifact.reviewed')}</span>
+          <span className="chip is-ok">
+            <ICON.done size={14} />
+            {t('artifact.reviewed')}
+          </span>
         )}
       </header>
-      {a.needs_review && <div className="approval-bar"><span>⚠️ {t('artifact.needsReview')}</span></div>}
+      {a.needs_review && (
+        <div className="approval-bar">
+          <span className="with-icon">
+            <ICON.warn />
+            {t('artifact.needsReview')}
+          </span>
+        </div>
+      )}
       {review.error && <p className="form-error">{t('common.failed')}</p>}
       <section className="panel">
         <ArtifactBody artifact={a} />

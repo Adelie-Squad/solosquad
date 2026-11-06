@@ -2,6 +2,7 @@ import { useLinks } from '../scope';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 import type { PromptHandoff } from './CommandBar';
 import { SuggestionStrip } from './SuggestionStrip';
 import { AgentIcon } from '../characters/PenguinIcon';
@@ -43,7 +44,7 @@ export function QuickChat({ agent, onClose }: { agent: string; onClose: () => vo
             <p>{t('chat.quickHint')}</p>
           </div>
           <button className="icon-btn" aria-label={t('common.close')} onClick={onClose}>
-            ✕
+            <ICON.close size={18} />
           </button>
         </header>
         <SuggestionStrip onPick={start} />

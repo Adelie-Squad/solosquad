@@ -16,7 +16,7 @@ import { me, renderWith } from './helpers';
 /** C30: staff assigned to one workspace only — tesla/charging. */
 const staff: Me = me({
   user: { id: 'u-2', username: 'kim', display: 'Kim', role: 'staff', locale: 'ko', two_factor: true, disabled: false, title: '', teams: [], assignments: [{ org: 'tesla', workspace: 'charging', role: 'staff' }] },
-  scopes: [{ org: 'tesla', display: 'Tesla', role: 'staff', whole_org: false, workspaces: [{ name: 'charging', role: 'staff', running: true }] }],
+  scopes: [{ org: 'tesla', display: 'Tesla', role: 'staff', whole_org: false, workspaces: [{ name: 'charging', display: 'charging', role: 'staff', running: true }] }],
 });
 
 function Where() {
@@ -148,7 +148,7 @@ describe('switch menu (DESIGN 전환 메뉴)', () => {
     renderWith(<ScopeSwitcher />, 'en', { me: staff });
     expect(screen.queryByRole('button', { expanded: false })).toBeNull();
     expect(screen.getByText('Tesla')).toBeTruthy();
-    expect(screen.getByText('charging')).toBeTruthy();
+    expect(screen.getByText('Charging')).toBeTruthy(); // no display name set: the id made readable
     expect(screen.queryByText('SpaceXAI')).toBeNull();
   });
 
@@ -162,7 +162,9 @@ describe('switch menu (DESIGN 전환 메뉴)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Tesla/ }));
     const list = screen.getByRole('listbox');
-    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['charging✓', 'vehicles', `hq${translate('en', 'scope.stopped')}`]);
+    const options = screen.getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['Charging', 'Vehicles', `Hq${translate('en', 'scope.stopped')}`]);
+    expect(options.map((o) => !!o.querySelector('.scope-switch-check'))).toEqual([true, false, false]);
     fireEvent.keyDown(list, { key: 'Escape' });
     expect(screen.queryByRole('listbox')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Tesla/ }));

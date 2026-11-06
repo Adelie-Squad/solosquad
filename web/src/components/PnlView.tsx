@@ -1,5 +1,6 @@
 import type { PnlData } from '../api/types.gen';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 
 /** Profit and loss (`finance.pnl`, W14) — totals, by month, by account, rows to check.
  * Numbers come from the engine's deterministic tool; account names are shown as written. */
@@ -108,7 +109,10 @@ export function PnlView({ data, compact = false }: { data: PnlData; compact?: bo
 
       {data.needs_review.length > 0 && (
         <section className="dash-section" data-testid="needs-review">
-          <h3 className="dash-panel-title">⚠️ {t('pnl.needsReview', { n: data.needs_review.length })}</h3>
+          <h3 className="dash-panel-title with-icon is-warn">
+            <ICON.warn />
+            {t('pnl.needsReview', { n: data.needs_review.length })}
+          </h3>
           <ul className="ledger">
             {data.needs_review.map((r) => (
               <li key={r.row} className="ledger-row is-review">

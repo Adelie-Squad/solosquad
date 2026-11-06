@@ -4,7 +4,8 @@ import { api } from '../../api/client';
 import { errorText } from '../../api/errors';
 import { keys, useSnapshot } from '../../api/queries';
 import type { SnapshotRunResult, SnapshotSettings as Target } from '../../api/types.gen';
-import { Loading, QueryError } from '../../components/Status';
+import { Loading, QueryError, SavedLine } from '../../components/Status';
+import { ICON } from '../../icons';
 import { useI18n } from '../../i18n';
 import { useSession } from '../../session';
 
@@ -136,12 +137,11 @@ function SnapshotForm({ current }: { current: Target }) {
         )}
       </fieldset>
       {error && <p className="form-error">{error}</p>}
-      {saved && <p className="ok-line">✓ {t('common.saved')}</p>}
+      {saved && <SavedLine />}
       {result && (
-        <p className="ok-line" data-testid="snapshot-result">
-          {result.target
-            ? `✓ ${t('snapshot.done', { files: result.files ?? 0, location: result.location ?? '' })}`
-            : t('snapshot.skipped')}
+        <p className="ok-line with-icon" data-testid="snapshot-result">
+          {result.target && <ICON.done />}
+          {result.target ? t('snapshot.done', { files: result.files ?? 0, location: result.location ?? '' }) : t('snapshot.skipped')}
           {result.pruned.length > 0 && ` · ${t('snapshot.pruned', { n: result.pruned.length })}`}
         </p>
       )}

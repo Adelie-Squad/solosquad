@@ -71,10 +71,89 @@ pre {
   outline-offset: 2px;
 }
 
-.tabular,
+/* ── line breaks (DESIGN.md `## 타이포그래피` — 줄바꿈) ─────────────
+   Korean breaks between words, never inside one; Chinese keeps breaking between characters
+   (keep-all would stop it from wrapping at all). Anything still too long (an address, an id,
+   a long English word) may break anywhere rather than push the layout wider. */
+body {
+  overflow-wrap: break-word;
+}
+
+:root:lang(ko) body {
+  word-break: keep-all;
+}
+
+h1,
+h2,
+h3,
+.panel-title {
+  text-wrap: balance;
+}
+
+p,
+li,
+dd,
+.dash-hint,
+.settings-hint {
+  text-wrap: pretty;
+}
+
+code,
+kbd,
+.secret,
+.is-id,
+.conn-name,
+.conn-facts dd,
+.statement.users th {
+  overflow-wrap: anywhere;
+}
+
+/* a descriptive paragraph stops at a readable length */
+.view-header p,
+.settings-hint,
+.settings-note,
+.approval-summary,
+.landing-lead {
+  max-width: var(--measure);
+}
+
+/* numbers that change or line up never jump in width */
 td,
-.stat-value {
+time,
+.chip,
+.stat-value,
+.office-stats b,
+.pinned-badge,
+.live-count,
+.job-percent,
+.step-count,
+.budget-head span {
   font-variant-numeric: tabular-nums;
+}
+
+/* controls stay on one line: the label is cut with … and the full text is in the tooltip */
+.btn,
+.chip,
+.tab,
+.segmented button,
+.pinned-label,
+.suggestion {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* an icon next to words: centred on the line, never squeezed */
+.lucide {
+  flex-shrink: 0;
+}
+
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 @media (prefers-reduced-motion: reduce) {

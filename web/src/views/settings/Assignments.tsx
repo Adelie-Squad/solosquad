@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import type { AssignmentOut, ScopeOrg } from '../../api/types.gen';
 import { useI18n } from '../../i18n';
+import { ICON } from '../../icons';
+import { orgName, shownName, workspaceName } from '../../lib/names';
 
 export type Assignment = AssignmentOut;
 
@@ -10,13 +12,12 @@ export type Assignment = AssignmentOut;
 export function AssignmentChips({ list, scopes }: { list: Assignment[]; scopes: ScopeOrg[] }) {
   const { t } = useI18n();
   if (!list.length) return <span className="dash-hint">{t('assign.none')}</span>;
-  const name = (org: string) => scopes.find((o) => o.org === org)?.display || org;
   return (
     <span className="assign-chips">
       {list.map((a) => (
         <span key={`${a.org}/${a.workspace ?? ''}`} className="chip">
-          {name(a.org)}
-          {a.workspace ? ` / ${a.workspace}` : ` · ${t('assign.wholeOrg')}`} · {a.role === 'owner' ? t('role.owner') : t('role.staff')}
+          {orgName(scopes, a.org)}
+          {a.workspace ? ` / ${workspaceName(scopes, a.org, a.workspace)}` : ` · ${t('assign.wholeOrg')}`} · {a.role === 'owner' ? t('role.owner') : t('role.staff')}
         </span>
       ))}
     </span>
@@ -45,7 +46,7 @@ export function AssignmentsEditor({
             <select aria-label={t('assign.org')} value={a.org} onChange={(e) => set(i, { org: e.target.value, workspace: null })}>
               {scopes.map((o) => (
                 <option key={o.org} value={o.org}>
-                  {o.display || o.org}
+                  {shownName(o.org, o.display)}
                 </option>
               ))}
             </select>
@@ -57,7 +58,7 @@ export function AssignmentsEditor({
               <option value="">{t('assign.wholeOrg')}</option>
               {(org?.workspaces ?? []).map((w) => (
                 <option key={w.name} value={w.name}>
-                  {w.name}
+                  {shownName(w.name, w.display)}
                 </option>
               ))}
             </select>
@@ -73,7 +74,8 @@ export function AssignmentsEditor({
       })}
       {first && (
         <button type="button" className="btn is-small" onClick={() => onChange([...value, { org: first.org, workspace: null, role: 'staff' }])}>
-          + {t('assign.add')}
+          <ICON.new />
+          {t('assign.add')}
         </button>
       )}
     </div>

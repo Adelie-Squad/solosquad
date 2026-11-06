@@ -1,10 +1,11 @@
 import { useI18n, type MessageKey } from '../../i18n';
+import { ICON, type LucideIcon } from '../../icons';
 import { useTheme, type ThemePref } from '../../theme';
 
-const CHOICES: { id: ThemePref; label: MessageKey }[] = [
-  { id: 'system', label: 'theme.system' },
-  { id: 'light', label: 'theme.light' },
-  { id: 'dark', label: 'theme.dark' },
+const CHOICES: { id: ThemePref; label: MessageKey; icon: LucideIcon }[] = [
+  { id: 'system', label: 'theme.system', icon: ICON.system },
+  { id: 'light', label: 'theme.light', icon: ICON.light },
+  { id: 'dark', label: 'theme.dark', icon: ICON.dark },
 ];
 
 /** Settings › Display: system · light · dark, applied at once and kept on this device. */
@@ -21,10 +22,11 @@ export function ThemeSettings() {
               key={c.id}
               role="radio"
               aria-checked={pref === c.id}
-              className={pref === c.id ? 'is-active' : ''}
+              className={`with-icon ${pref === c.id ? 'is-active' : ''}`}
               onClick={() => setPref(c.id)}
               data-testid={`theme-${c.id}`}
             >
+              <c.icon />
               {t(c.label)}
             </button>
           ))}

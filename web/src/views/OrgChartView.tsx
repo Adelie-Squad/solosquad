@@ -4,6 +4,9 @@ import type { AgentCard, OrgPerson, Person } from '../api/types.gen';
 import { Loading, QueryError } from '../components/Status';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
+import { readable } from '../lib/names';
+import { ScopeEyebrow } from '../components/ScopeEyebrow';
 import { useOrgOwner } from '../scope';
 
 /**
@@ -25,7 +28,7 @@ export function OrgChartView() {
 
   const personRow = (p: Person) => (
     <li key={p.id} className="org-person">
-      <span className="org-avatar">{p.role === 'owner' ? '👑' : '🙂'}</span>
+      <span className="org-avatar">{p.role === 'owner' ? <ICON.owner /> : <ICON.person />}</span>
       <span className="org-person-main">
         <strong>{p.display}</strong>
         <span className="dash-hint">
@@ -44,6 +47,7 @@ export function OrgChartView() {
     <div className="view">
       <header className="view-header">
         <div>
+          <ScopeEyebrow />
           <h1>{t('org.title')}</h1>
           <p>{t('org.lead')}</p>
         </div>
@@ -59,7 +63,7 @@ export function OrgChartView() {
       <div className="org-grid">
         {data.teams.map((team) => (
           <section key={team.name} className="panel org-team">
-            <h2 className="panel-title">{team.name}</h2>
+            <h2 className="panel-title">{readable(team.name)}</h2>
             <p className="settings-group">{t('org.agents', { n: team.agents.length })}</p>
             <ul className="org-agents">
               {team.agents.map((a) => (
@@ -91,8 +95,15 @@ function AgentRow({ agent, team }: { agent: AgentCard; team: string }) {
   return (
     <li className="org-agent">
       <AgentIcon agent={agent.name} team={team} size={28} label="" />
-      <strong>{agent.name}</strong>
-      {agent.description && <span className="dash-hint">{agent.description}</span>}
+      <span className="org-agent-main">
+        <strong>{agent.name}</strong>
+        {/* the role description is long engine text — two lines here, the whole of it on hover */}
+        {agent.description && (
+          <span className="dash-hint org-agent-desc" title={agent.description}>
+            {agent.description}
+          </span>
+        )}
+      </span>
     </li>
   );
 }
@@ -138,7 +149,7 @@ function PersonEditor({ person, teams, onClose }: { person: OrgPerson; teams: st
           <div className="perm-chips">
             {teams.map((name) => (
               <button type="button" key={name} className={`perm-chip ${chosen.has(name) ? 'is-on' : ''}`} aria-pressed={chosen.has(name)} onClick={() => flip(name)}>
-                {name}
+                {readable(name)}
               </button>
             ))}
           </div>

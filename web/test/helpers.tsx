@@ -18,8 +18,8 @@ export function me(over: Partial<Me> = {}): Me {
     org_locale: 'ko',
     relogin: false,
     scopes: [
-      { org: 'tesla', display: 'Tesla', role: 'owner', whole_org: true, workspaces: [{ name: 'charging', role: 'owner', running: true }, { name: 'vehicles', role: 'owner', running: true }] },
-      { org: 'spacexai', display: 'SpaceXAI', role: 'owner', whole_org: true, workspaces: [{ name: 'hq', role: 'owner', running: false }] },
+      { org: 'tesla', display: 'Tesla', role: 'owner', whole_org: true, workspaces: [{ name: 'charging', display: 'charging', role: 'owner', running: true }, { name: 'vehicles', display: 'Vehicles', role: 'owner', running: true }] },
+      { org: 'spacexai', display: 'SpaceXAI', role: 'owner', whole_org: true, workspaces: [{ name: 'hq', display: 'hq', role: 'owner', running: false }] },
     ],
     last_scope: null,
     ...over,

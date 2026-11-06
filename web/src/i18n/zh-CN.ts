@@ -45,6 +45,9 @@ export const zhCN: Record<MessageKey, string> = {
   'auth.throttled': '尝试次数过多，请稍后再试。',
   'auth.blocked': '此网络无法访问办公室，请联系负责人。',
   'auth.failed': '登录失败。',
+  'landing.title': '我们公司的 AI 办公室',
+  'landing.lead': '代理负责日常的重复工作，只把需要你决定的事交给你审批。谁在做什么，在办公室里一目了然。',
+  'landing.goOffice': '进入我的办公室',
 
   // server error codes (python/src/solosquad/web_api/errors.py) — one key per code
   'error.unknown': '未能完成操作，请稍后再试。',
@@ -156,6 +159,9 @@ export const zhCN: Record<MessageKey, string> = {
   'approvals.needsOwner': '只有负责人可以审批此事项。',
   'approvals.needsTeam': '由 {team} 团队的员工或负责人审批。',
   'approvals.risk': '风险 {risk}',
+  'risk.low': '低',
+  'risk.medium': '中',
+  'risk.high': '高',
   'approvals.fromAgent': '请求者：{name}',
   'approvals.fromWorkflow': '工作流：{name}',
   'approvals.openRun': '查看运行',
@@ -248,6 +254,8 @@ export const zhCN: Record<MessageKey, string> = {
   'artifact.needsReview': '有需要人工确认的内容。请查看下方标记的行，然后标记为已确认。',
   'artifact.needsReviewShort': '需确认',
   'artifact.unknownKind': '此网页暂时无法显示该类工作成果：{kind}',
+  'artifact.kind.finance.pnl': '损益表',
+  'artifact.kind.brief': '简报',
 
   'pnl.revenue': '收入',
   'pnl.expenses': '费用',
@@ -313,6 +321,7 @@ export const zhCN: Record<MessageKey, string> = {
   'settings.notTranslated': '对话和工作成果不会翻译，按原文显示。',
   'settings.newPassword': '新密码',
   'settings.passwordHint': '至少 10 个字符。修改后所有设备都需要重新登录。',
+  'settings.logoutHint': '在此设备上退出登录。其他设备的登录不受影响。',
   'settings.changePassword': '修改密码',
   'settings.localToken': '此页面通过本机 CLI 令牌打开，没有账户设置。',
 
@@ -335,6 +344,7 @@ export const zhCN: Record<MessageKey, string> = {
   'users.twoFactor': '一次性验证码',
   'users.status': '状态',
   'users.notEnrolled': '未设置',
+  'users.enrolled': '已设置',
   'users.enabled': '使用中',
   'users.disabled': '已停用',
   'users.enable': '重新启用',
@@ -438,7 +448,7 @@ export const zhCN: Record<MessageKey, string> = {
   'snapshot.keysHint': '仅保存在办公室服务器的密钥库中，不会再显示。',
   'snapshot.keysReplaceHint': '留空则沿用已保存的密钥；两项都填写则替换。',
   'snapshot.runNow': '立即快照',
-  'snapshot.done': '已发送 {files} 个文件 → {location}',
+  'snapshot.done': '已将 {files} 个文件发送到 {location}。',
   'snapshot.skipped': '未设置目标，已跳过。',
   'snapshot.pruned': '已清理 {n} 个旧快照',
   'snapshot.dailyHint': '开启后办公室每天自动发送，结果记录在审计日志中。',

@@ -564,6 +564,12 @@ def create_app(cfg: AppConfig) -> Starlette:
         except LayoutError:
             return org
 
+    def ws_display(org: str, ws: str) -> str:
+        try:
+            return cfg.solution.org(org).workspace(ws).config().display_name or ws
+        except (LayoutError, ValueError):  # a broken workspace.yaml still lists by its id
+            return ws
+
     def scopes_for(who: Principal) -> list[dict[str, Any]]:
         out = []
         for org in sorted(served_orgs()):
@@ -575,7 +581,12 @@ def create_app(cfg: AppConfig) -> Starlette:
                 ws_role = role_for(who, o, w) if o == org else None
                 if ws_role is not None:
                     wss.append(
-                        {"name": w, "role": ws_role.value, "running": (o, w) in cfg.runtimes}
+                        {
+                            "name": w,
+                            "display": ws_display(o, w),
+                            "role": ws_role.value,
+                            "running": (o, w) in cfg.runtimes,
+                        }
                     )
             whole = (
                 who.session is None

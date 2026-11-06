@@ -3,12 +3,12 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { CommandBar } from '../components/CommandBar';
 import { useLive } from '../live/LiveProvider';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 import { Sidebar } from './Sidebar';
 
 /**
- * The shell — the prototype's Arc layout (DESIGN.md): one gradient behind everything, a
- * translucent sidebar on the left, one white card for the content. On a phone the sidebar
- * becomes a drawer behind the ☰ button.
+ * The shell (DESIGN.md `## 레이아웃`): the sidebar on `--bg`, one content card. On a phone the
+ * sidebar becomes a drawer behind the menu button.
  */
 export function Shell() {
   const { t } = useI18n();
@@ -33,7 +33,7 @@ export function Shell() {
   return (
     <div className={`workspace ${drawer ? 'is-drawer-open' : ''}`}>
       <button className="drawer-toggle icon-btn" aria-label={t('nav.menu')} onClick={() => setDrawer((d) => !d)}>
-        ☰
+        <ICON.menu size={20} />
       </button>
       <Sidebar onCommand={() => setCommandOpen(true)} />
       <div className="drawer-scrim" onClick={() => setDrawer(false)} aria-hidden />

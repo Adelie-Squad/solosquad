@@ -123,4 +123,9 @@ export function categoryLabel(locale: Locale, category: string, fallback?: strin
   const key = `category.${category}`;
   return key in ko ? translate(locale, key as MessageKey) : (fallback ?? category);
 }
+/** An artifact kind (`finance.pnl`) in the reader's language; an unknown kind shows as sent. */
+export function kindLabel(locale: Locale, kind: string): string {
+  const key = `artifact.kind.${kind}`;
+  return key in ko ? translate(locale, key as MessageKey) : kind;
+}
 export type { MessageKey };

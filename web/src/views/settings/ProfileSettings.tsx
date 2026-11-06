@@ -4,7 +4,8 @@ import { api } from '../../api/client';
 import { errorText } from '../../api/errors';
 import { keys, useProfile } from '../../api/queries';
 import type { CustomerProfile, ProfileEntity, ProfileResponse } from '../../api/types.gen';
-import { Loading, QueryError } from '../../components/Status';
+import { Loading, QueryError, SavedLine } from '../../components/Status';
+import { ICON } from '../../icons';
 import { LOCALE_NAMES, LOCALES, useI18n, type Locale, type MessageKey } from '../../i18n';
 import { useSession } from '../../session';
 
@@ -84,7 +85,8 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
       <ul className="checklist" aria-label={t('profile.checklist')}>
         {data.checklist.map((c) => (
           <li key={c.item} className={c.done ? 'is-done' : 'is-missing'}>
-            <span aria-hidden>{c.done ? '✓' : '○'}</span> {ITEMS[c.item] ? t(ITEMS[c.item]) : c.label}
+            {c.done ? <ICON.done className="checklist-mark" /> : <ICON.todo className="checklist-mark" />}
+            {ITEMS[c.item] ? t(ITEMS[c.item]) : c.label}
             {!c.done && <span className="chip is-warn">{t('profile.missing')}</span>}
           </li>
         ))}
@@ -130,7 +132,8 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
         ))}
         {!ro && (
           <button type="button" className="btn is-small" onClick={() => setEntities((l) => [...l, { id: '', name: '', country: '', controlled_by: null }])}>
-            + {t('profile.addEntity')}
+            <ICON.new />
+            {t('profile.addEntity')}
           </button>
         )}
       </fieldset>
@@ -186,7 +189,7 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
       </fieldset>
 
       {error && <p className="form-error">{error}</p>}
-      {saved && <p className="ok-line">✓ {t('common.saved')}</p>}
+      {saved && <SavedLine />}
       {isOwner && (
         <button className="btn is-primary" disabled={busy} onClick={() => void save()}>
           {t('common.save')}

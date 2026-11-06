@@ -26,6 +26,7 @@ from solosquad.layout import (
     LayoutError,
     Solution,
     WorkspaceType,
+    display_name,
     scaffold_org,
     scaffold_solution,
     scaffold_workspace,
@@ -208,6 +209,13 @@ def init(
     path: Annotated[Path, typer.Argument(help="Directory for the new customer solution.")],
     org: Annotated[str, typer.Option(help="First org (business) name.")],
     workspace: Annotated[str, typer.Option(help="First workspace (office) name.")] = "hq",
+    display: Annotated[
+        str | None, typer.Option("--display", help='Org name people read, e.g. "SpaceX".')
+    ] = None,
+    workspace_display: Annotated[
+        str | None,
+        typer.Option("--workspace-display", help='Workspace name people read, e.g. "HQ".'),
+    ] = None,
     ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
     server_country: Annotated[
         str | None, typer.Option("--server-country", help="ISO country of the server, e.g. KR")
@@ -238,9 +246,10 @@ def init(
             CustomerProfile(), server_country, cloud, region, cloud_access, entity, language,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
+        display_name(display), display_name(workspace_display)  # refuse before writing anything
         sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None, ws_type)
-        new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__)
-        scaffold_workspace(new_org, workspace)
+        new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__, display)
+        scaffold_workspace(new_org, workspace, workspace_display)
         save_profile(path, profile)  # the server country lands in core/server.yaml (I41)
     except (LayoutError, ValueError) as e:
         raise _fail(str(e)) from e
@@ -265,19 +274,34 @@ def layout(
         raise _fail(str(e)) from e
     tree = Tree(f"{path} · {meta.id} · engine {lock.version} · server {server.type.value}")
     for o in sol.orgs():
-        node = tree.add(f"org {o.name} · {o.lock().package}@{o.lock().version}")
+        shown = f" ({o.config().display_name})" if o.config().display_name else ""
+        node = tree.add(f"org {o.name}{shown} · {o.lock().package}@{o.lock().version}")
         for ws in o.workspaces():
             placed = "" if server.placement.places(o.name, ws.name) else " · not placed here"
-            node.add(f"workspace {ws.name}{placed}")
+            ws_shown = f" ({ws.config().display_name})" if ws.config().display_name else ""
+            node.add(f"workspace {ws.name}{ws_shown}{placed}")
     console.print(tree)
 
 
+DisplayOpt = Annotated[
+    str | None, typer.Option("--display", help="The name people read (default: the id).")
+]
+
+
 @add_app.command("org")
-def add_org(name: str, solution: SolutionOpt = Path("."), workspace: str = "hq") -> None:
+def add_org(
+    name: str,
+    solution: SolutionOpt = Path("."),
+    workspace: str = "hq",
+    display: DisplayOpt = None,
+    workspace_display: Annotated[
+        str | None, typer.Option("--workspace-display", help="The first workspace's name.")
+    ] = None,
+) -> None:
     """Create an org from the bundled org package (core is not touched)."""
     try:
-        org = scaffold_org(Solution(solution), name, BUNDLED_PACKAGE, __version__)
-        scaffold_workspace(org, workspace)
+        org = scaffold_org(Solution(solution), name, BUNDLED_PACKAGE, __version__, display)
+        scaffold_workspace(org, workspace, workspace_display)
     except LayoutError as e:
         raise _fail(str(e)) from e
     console.print(f"org {name!r} with workspace {workspace!r}")
@@ -288,11 +312,12 @@ def add_workspace(
     name: str,
     org: Annotated[str, typer.Option("--org")],
     solution: SolutionOpt = Path("."),
+    display: DisplayOpt = None,
 ) -> None:
     """Add a workspace (business unit) to an org — it runs on this customer's server, whose
     address, country and type are in core/server.yaml (I41)."""
     try:
-        scaffold_workspace(Solution(solution).org(org), name)
+        scaffold_workspace(Solution(solution).org(org), name, display)
     except LayoutError as e:
         raise _fail(str(e)) from e
     console.print(f"workspace {name!r} in org {org!r}")

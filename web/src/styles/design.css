@@ -48,9 +48,6 @@
   box-shadow: var(--shadow-2);
 }
 
-.view {
-  padding: 40px 48px 64px;
-}
 
 /* ── components ────────────────────────────────────────────────── */
 
@@ -81,13 +78,6 @@
   box-shadow: none;
 }
 
-.panel.widget,
-.panel.approval-card,
-.panel.conn,
-.panel.wf-detail,
-.panel.settings-body {
-  padding: 16px 18px;
-}
 
 .empty {
   color: var(--ink-3);
@@ -183,9 +173,6 @@ textarea:focus {
   align-self: flex-start;
 }
 
-.panel.office-roster {
-  padding: 16px 18px;
-}
 
 /* ── office (3D stage) ─────────────────────────────────────────── */
 
@@ -395,7 +382,7 @@ textarea:focus {
   font-size: 13px;
 }
 
-.scope-switch-button > span[aria-hidden] {
+.scope-switch-caret {
   position: absolute;
   top: 50%;
   right: 10px;
@@ -454,7 +441,7 @@ textarea:focus {
   font-weight: 700;
 }
 
-.scope-switch-option > span[aria-hidden] {
+.scope-switch-check {
   margin-left: auto;
   color: var(--accent);
 }
@@ -512,15 +499,15 @@ textarea:focus {
 
 .statement.users tbody {
   display: grid;
-  gap: 10px;
+  gap: var(--card-gap);
 }
 
 .statement.users tr {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 6px 14px;
+  gap: var(--space-2) var(--space-4);
   align-items: center;
-  padding: 14px 16px;
+  padding: var(--card-pad);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -591,10 +578,6 @@ textarea:focus {
     box-shadow: none;
   }
 
-  .view {
-    padding: 24px 16px 40px;
-  }
-
   .office-body.is-split {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -606,4 +589,751 @@ textarea:focus {
   .live-dot {
     animation: none;
   }
+}
+
+/* ══ v2.1 polish (2026-11-06) — card rhythm · icons · headers · states ═══════════════
+   DESIGN.md `## 컴포넌트` 카드 · 패널 간격 / `## 아이콘` / `## 타이포그래피`. Tokens only. */
+
+/* ── header rows: title left, actions right, one centre line ─────────── */
+
+.widget-head,
+.section-head,
+.conn-head,
+.approval-card-head,
+.office-live-head,
+.quick-chat-head,
+.live-modal-head,
+.agent-sheet-head {
+  min-height: 28px;
+}
+
+.widget-head,
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--title-gap);
+}
+
+.widget-head .panel-title,
+.section-head .panel-title,
+.section-head .settings-hint {
+  margin: 0;
+}
+
+.widget-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  border-radius: var(--radius-chip);
+}
+
+.widget-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.widget-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.view-eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* quiet hints are still read — ink-2, not the meta grey (contrast in both themes) */
+.dash-hint {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-2);
+}
+
+.run-row .dash-hint,
+.roster-row .dash-hint {
+  margin: 0;
+}
+
+/* ── list rows inside a card ─────────────────────────────────────── */
+
+.run-row {
+  gap: var(--space-2) var(--space-3);
+  min-height: 40px;
+  margin: 0 calc(-1 * var(--space-2));
+  padding: var(--space-2);
+  border-bottom: 0;
+  border-radius: var(--radius-btn);
+}
+
+.run-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.run-row-icon {
+  color: var(--ink-2);
+}
+
+.run-row-title {
+  min-width: 0;
+  font-weight: 600;
+}
+
+/* ── chips · buttons with icons ──────────────────────────────────── */
+
+.chip {
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  line-height: 1.3;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: var(--space-2) var(--space-4);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn.is-small {
+  min-height: 28px;
+  padding: var(--space-1) var(--space-3);
+}
+
+.btn.is-large {
+  min-height: 48px;
+  padding: var(--space-3) var(--space-6);
+  font-size: 15px;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* a filled button keeps its colour on hover — one tonal step, never a grey swap */
+.btn.is-primary:hover:not(:disabled) {
+  filter: none;
+  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+}
+
+.btn.is-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 88%, var(--ink));
+}
+
+.icon-btn {
+  color: var(--ink-2);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.with-icon.is-warn {
+  color: var(--warn);
+}
+
+h2.with-icon,
+h3.with-icon {
+  display: flex;
+}
+
+.ok-line,
+.warn-line,
+.form-error {
+  margin: 0;
+}
+
+/* ── sidebar ─────────────────────────────────────────────────────── */
+
+.pinned-tile {
+  min-width: 0;
+  height: 44px;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+}
+
+.pinned-icon {
+  color: var(--ink-2);
+}
+
+.pinned-tile.active .pinned-icon {
+  color: var(--accent);
+}
+
+/* an odd number of tiles: the first (Home) takes the whole row, so the grid has no hole */
+.pinned-tile:first-child:nth-last-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.chat-section-head {
+  padding: var(--space-1) var(--space-2);
+}
+
+.chat-section-head .with-icon {
+  gap: var(--space-1);
+}
+
+.new-request {
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
+}
+
+.session-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
+}
+
+.sidebar-bottom {
+  padding: var(--space-2) 0 var(--space-1);
+}
+
+.viewer-chip {
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.viewer-chip-icon {
+  color: var(--ink-2);
+}
+
+.viewer-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scope-switch.is-single,
+.scope-switch-button {
+  padding: var(--space-2) var(--space-3);
+}
+
+.scope-switch-button {
+  padding-right: var(--space-8);
+}
+
+.scope-switch strong,
+.scope-switch span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.scope-switch-caret {
+  right: var(--space-3);
+  color: var(--ink-2);
+}
+
+.scope-switch-org {
+  margin: var(--space-2) var(--space-2) var(--space-1);
+}
+
+.scope-switch-option {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
+}
+
+.scope-switch-name {
+  min-width: 0;
+}
+
+/* ── command bar ─────────────────────────────────────────────────── */
+
+.command-icon {
+  width: auto;
+  color: var(--ink-2);
+}
+
+.command-bar li button.is-active .command-icon {
+  color: var(--accent);
+}
+
+/* ── suggestions ─────────────────────────────────────────────────── */
+
+.suggestion {
+  align-items: center;
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+}
+
+.suggestion .lucide {
+  color: var(--ink-2);
+}
+
+/* ── approvals ───────────────────────────────────────────────────── */
+
+.approval-card {
+  gap: var(--space-3);
+}
+
+.approval-card-head {
+  gap: var(--space-2) var(--space-3);
+}
+
+.approval-blocked {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
+}
+
+/* ── workflows ───────────────────────────────────────────────────── */
+
+.wf-card-icon,
+.wf-detail-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-btn);
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.wf-detail-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.wf-card.is-selected .wf-card-icon {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+}
+
+/* one selected card: a solid step in border and surface, not an accent halo */
+.wf-card.is-selected {
+  box-shadow: none;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+.wf-detail-head {
+  gap: var(--space-4);
+}
+
+.pipeline {
+  gap: var(--space-3) var(--space-6);
+}
+
+.pipe-step {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
+}
+
+/* the arrow between steps — a drawn chevron, not a glyph */
+.pipe-step:not(:last-child)::after {
+  content: '';
+  right: calc(-1 * var(--space-3));
+  width: 6px;
+  height: 6px;
+  border-top: 1.75px solid var(--ink-3);
+  border-right: 1.75px solid var(--ink-3);
+  transform: translate(50%, -50%) rotate(45deg);
+}
+
+.pipe-approval {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.run-form {
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+}
+
+.run-form .field {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+/* ── jobs (office live panel · big view) ─────────────────────────── */
+
+.job-header {
+  gap: var(--space-3);
+}
+
+.job-bar {
+  margin: var(--space-3) 0;
+}
+
+.job-log {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-btn);
+}
+
+.step-row {
+  align-items: center;
+}
+
+.step-count {
+  padding-top: 0;
+}
+
+.office-live-head {
+  padding: 0 var(--space-1);
+}
+
+/* ── org chart: teams are sections on the page, not boxes in boxes ─── */
+
+.panel.org-team {
+  padding: var(--space-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+
+.org-team .settings-group {
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.org-agents,
+.org-people {
+  gap: var(--space-3);
+}
+
+.org-agent {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.org-agent-main,
+.org-person-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.org-agent-desc {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 13px;
+}
+
+.org-person {
+  gap: var(--space-3);
+}
+
+.org-person .dash-hint {
+  margin: 0;
+}
+
+.org-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0;
+}
+
+/* ── budget ──────────────────────────────────────────────────────── */
+
+.budget-line {
+  gap: var(--space-2);
+}
+
+.budget-line + .budget-line {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.budget-line .budget-head {
+  justify-content: flex-start;
+  margin: 0;
+}
+
+.budget-line .budget-head > span:first-of-type {
+  margin-left: auto;
+}
+
+/* ── settings ────────────────────────────────────────────────────── */
+
+.tabs {
+  margin-bottom: var(--space-5);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-3);
+}
+
+.tab:hover:not(.active) {
+  color: var(--ink);
+}
+
+.settings-body {
+  gap: var(--space-4);
+}
+
+.settings-section + .settings-section {
+  margin-top: var(--section-gap);
+}
+
+.settings-section > .panel-title {
+  margin-bottom: var(--space-1);
+}
+
+.settings-section > .settings-hint {
+  margin: 0 0 var(--space-3);
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+.settings-hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.settings-note {
+  margin: 0;
+}
+
+.panel.settings-row.is-spread {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--card-pad);
+}
+
+.checklist-mark {
+  color: var(--ink-3);
+}
+
+.checklist .is-done .checklist-mark {
+  color: var(--ok);
+}
+
+/* connections */
+.conn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.conn-head {
+  gap: var(--space-2);
+}
+
+.conn-name {
+  min-width: 0;
+  margin-right: var(--space-1);
+}
+
+.conn-facts {
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+
+/* dialogs */
+.dialog {
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-overlay);
+}
+
+.auth-card {
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border-radius: var(--radius-overlay);
+}
+
+/* ── states: hover · press · focus in both themes ────────────────── */
+
+.roster-row,
+.session-item,
+.scope-switch-option,
+.run-row {
+  transition: background-color 0.15s ease;
+}
+
+.perm-chip.is-on {
+  font-weight: 700;
+}
+
+.pinned-tile:focus-visible,
+.session-item:focus-visible,
+.run-row:focus-visible,
+.roster-row:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ── landing (`/`, outside the shell): one section, copy | penguin ─── */
+
+.landing {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--space-12);
+  background: var(--bg);
+}
+
+.landing-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-12);
+  width: min(1080px, 100%);
+  padding: var(--space-16) var(--space-12);
+  border-radius: var(--radius-overlay);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+}
+
+.landing-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.landing-brand {
+  margin: 0;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.landing-copy h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.035em;
+}
+
+.landing-lead {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.landing-copy .btn {
+  margin-top: var(--space-3);
+}
+
+.landing-visual {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.landing-locale {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-6);
+}
+
+@media (max-width: 860px) {
+  .landing {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .landing-hero {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: var(--space-6);
+    padding: var(--space-16) var(--space-6) var(--space-10);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .landing-visual {
+    order: -1;
+    width: 160px;
+    justify-self: start;
+  }
+
+  .landing-visual .penguin {
+    width: 128px;
+    height: 128px;
+  }
+
+  .landing-lead {
+    font-size: 15px;
+  }
+
+  .landing-locale {
+    top: var(--space-4);
+    right: var(--space-4);
+  }
+}
+
+/* a card's own padding is the only space at its edges — children bring no outer margin */
+.panel > :first-child {
+  margin-top: 0;
+}
+
+.panel > :last-child {
+  margin-bottom: 0;
+}
+
+.settings-body > p,
+.settings-body > .dash-hint,
+.settings-body > .settings-hint {
+  margin: 0;
+}
+
+/* a form's main button hugs its label instead of spanning the card */
+.settings-body > .btn,
+.form-grid > .btn {
+  align-self: flex-start;
+}
+
+.landing-visual {
+  width: min(100%, 360px);
+  justify-self: center;
+}
+
+/* inside a flex column the gap already separates the title from what follows */
+.settings-body > .panel-title,
+.settings-body > legend.panel-title {
+  margin: 0;
+}
+
+/* phone landing: a small penguin above the copy, so the one section fits one screen */
+@media (max-width: 860px) {
+  .landing-visual {
+    width: 160px;
+    justify-self: start;
+  }
+}
+
+/* inline forms (new person · assignments): fields share the row and fill it, no ragged edge */
+.form-row > input {
+  flex: 1 1 160px;
+  min-width: 0;
 }

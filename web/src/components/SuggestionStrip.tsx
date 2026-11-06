@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n, type MessageKey } from '../i18n';
+import { ICON, type LucideIcon } from '../icons';
 
 export interface Suggestion {
   id: string;
-  icon: string;
+  icon: LucideIcon;
   text: MessageKey;
 }
 
 /** Starter requests — the web's own words, so they are translated; what Chief replies is not. */
 export const SUGGESTIONS: Suggestion[] = [
-  { id: 's1', icon: '📋', text: 'suggest.today' },
-  { id: 's2', icon: '📊', text: 'suggest.pnl' },
-  { id: 's3', icon: '🧭', text: 'suggest.team' },
-  { id: 's4', icon: '✍️', text: 'suggest.draft' },
+  { id: 's1', icon: ICON.today, text: 'suggest.today' },
+  { id: 's2', icon: ICON.report, text: 'suggest.pnl' },
+  { id: 's3', icon: ICON.explore, text: 'suggest.team' },
+  { id: 's4', icon: ICON.draft, text: 'suggest.draft' },
 ];
 
 /**
@@ -57,7 +58,8 @@ export function SuggestionStrip({ onPick }: { onPick: (text: string) => void }) 
     <div ref={ref} className={`suggestions ${fadeClass}`} onScroll={updateFades} aria-label={t('chat.suggestions')}>
       {SUGGESTIONS.map((p) => (
         <button key={p.id} type="button" className="suggestion" onClick={() => onPick(t(p.text))}>
-          <span>{p.icon}</span> {t(p.text)}
+          <p.icon />
+          {t(p.text)}
         </button>
       ))}
     </div>

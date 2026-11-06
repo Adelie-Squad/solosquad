@@ -44,6 +44,9 @@ export const en: Record<MessageKey, string> = {
   'auth.throttled': 'Too many attempts. Please try again later.',
   'auth.blocked': 'This office does not accept connections from this network. Please ask the owner.',
   'auth.failed': 'Could not log in.',
+  'landing.title': 'Your company’s AI office',
+  'landing.lead': 'Agents take on the routine work and bring you only the decisions that need your approval. The office shows who is doing what, at a glance.',
+  'landing.goOffice': 'Go to my office',
 
   // server error codes (python/src/solosquad/web_api/errors.py) — one key per code
   'error.unknown': 'Could not do that. Please try again in a moment.',
@@ -155,6 +158,9 @@ export const en: Record<MessageKey, string> = {
   'approvals.needsOwner': 'Only the owner can approve this.',
   'approvals.needsTeam': 'Staff of team {team}, or the owner, approve this.',
   'approvals.risk': 'Risk {risk}',
+  'risk.low': 'low',
+  'risk.medium': 'medium',
+  'risk.high': 'high',
   'approvals.fromAgent': 'Asked by {name}',
   'approvals.fromWorkflow': 'Workflow: {name}',
   'approvals.openRun': 'Open run',
@@ -247,6 +253,8 @@ export const en: Record<MessageKey, string> = {
   'artifact.needsReview': 'Some of this needs a person’s check. Look at the rows marked below, then mark it as reviewed.',
   'artifact.needsReviewShort': 'Needs review',
   'artifact.unknownKind': 'This web cannot draw this kind of work product yet: {kind}',
+  'artifact.kind.finance.pnl': 'P&L',
+  'artifact.kind.brief': 'Brief',
 
   'pnl.revenue': 'Revenue',
   'pnl.expenses': 'Expenses',
@@ -312,6 +320,7 @@ export const en: Record<MessageKey, string> = {
   'settings.notTranslated': 'Conversations and work products are never translated — they show as written.',
   'settings.newPassword': 'New password',
   'settings.passwordHint': 'At least 10 characters. Changing it logs you out everywhere.',
+  'settings.logoutHint': 'Log out on this device. Other devices stay logged in.',
   'settings.changePassword': 'Change password',
   'settings.localToken': 'Opened with this computer’s CLI token — there is no account to set up.',
 
@@ -334,6 +343,7 @@ export const en: Record<MessageKey, string> = {
   'users.twoFactor': 'One-time code',
   'users.status': 'Status',
   'users.notEnrolled': 'not set up',
+  'users.enrolled': 'Set up',
   'users.enabled': 'Active',
   'users.disabled': 'Suspended',
   'users.enable': 'Reactivate',
@@ -437,7 +447,7 @@ export const en: Record<MessageKey, string> = {
   'snapshot.keysHint': 'They go only into the office server’s secret store and are never shown again.',
   'snapshot.keysReplaceHint': 'Leave empty to keep the stored keys; fill both to replace them.',
   'snapshot.runNow': 'Snapshot now',
-  'snapshot.done': 'Sent {files} files → {location}',
+  'snapshot.done': 'Sent {files} files to {location}.',
   'snapshot.skipped': 'Skipped — no destination is set.',
   'snapshot.pruned': '{n} old snapshots removed',
   'snapshot.dailyHint': 'When on, the office sends one every day by itself; results go to the audit log.',

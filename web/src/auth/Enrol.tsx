@@ -6,6 +6,7 @@ import { keys, useHealth } from '../api/queries';
 import type { Ok, TotpBegin } from '../api/types.gen';
 import { LocalePicker } from '../components/LocalePicker';
 import { QrCode } from '../components/QrCode';
+import { ICON } from '../icons';
 import { useI18n, type MessageKey } from '../i18n';
 import { defaultPasskeyName, passkeySupported, registerPasskey, showPasskeyButton } from './passkeys';
 
@@ -35,10 +36,12 @@ export function Enrol() {
         {canPasskey && (
           <div className="segmented" role="tablist" aria-label={t('enrol.choose')}>
             <button role="tab" aria-selected={method === 'passkey'} className={method === 'passkey' ? 'is-active' : ''} onClick={() => setChosen('passkey')}>
-              🔑 {t('passkey.title')}
+              <ICON.passkey />
+              {t('passkey.title')}
             </button>
             <button role="tab" aria-selected={method === 'otp'} className={method === 'otp' ? 'is-active' : ''} onClick={() => setChosen('otp')}>
-              🔢 {t('auth.code')}
+              <ICON.code />
+              {t('auth.code')}
             </button>
           </div>
         )}

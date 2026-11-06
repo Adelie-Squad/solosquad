@@ -5,11 +5,16 @@ import { api } from '../api/client';
 import { errorCode, errorText } from '../api/errors';
 import { keys, useAccess, useAction, useApprovalPolicy, useKeys, useScopedApi, useSettings, useUsers } from '../api/queries';
 import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser, WebSettings } from '../api/types.gen';
-import { Loading, QueryError } from '../components/Status';
+import { Loading, QueryError, SavedLine } from '../components/Status';
 import { categoryLabel, LOCALE_NAMES, LOCALES, useI18n, type Locale, type MessageKey } from '../i18n';
 import { useSession } from '../session';
 import { useLinks, useOrgOwner, useScope } from '../scope';
+import { useLogout } from '../auth/logout';
+import { ScopeEyebrow } from '../components/ScopeEyebrow';
+import { ICON } from '../icons';
+import { workspaceName } from '../lib/names';
 import { AssignmentChips, AssignmentsDialog, AssignmentsEditor, type Assignment } from './settings/Assignments';
+import { ConnectionsSettings } from './settings/ConnectionsSettings';
 import { PasskeySettings } from './settings/PasskeySettings';
 import { ProfileSettings } from './settings/ProfileSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
@@ -28,6 +33,7 @@ const TABS: Tab[] = [
   { id: 'account', label: 'settings.account', ownerOnly: false },
   { id: 'profile', label: 'settings.profile', ownerOnly: false },
   { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
+  { id: 'connections', label: 'connections.title', ownerOnly: false },
   { id: 'access', label: 'settings.access', ownerOnly: 'org' },
   { id: 'approvals', label: 'settings.tiers', ownerOnly: 'org' },
   { id: 'users', label: 'settings.users', ownerOnly: 'customer' },
@@ -47,12 +53,13 @@ export function SettingsView() {
     <div className="view">
       <header className="view-header">
         <div>
+          <ScopeEyebrow />
           <h1>{t('nav.settings')}</h1>
         </div>
       </header>
       <nav className="tabs" aria-label={t('nav.settings')}>
         {tabs.map((x) => (
-          <NavLink key={x.id} to={x.id === 'language' ? '/settings' : `/settings/${x.id}`} end className="tab">
+          <NavLink key={x.id} to={toOrg(x.id === 'language' ? '/settings' : `/settings/${x.id}`)} end className="tab" title={t(x.label)}>
             {t(x.label)}
           </NavLink>
         ))}
@@ -62,6 +69,7 @@ export function SettingsView() {
       {tab === 'account' && <AccountSettings />}
       {tab === 'profile' && <ProfileSettings />}
       {tab === 'snapshot' && <SnapshotSettings />}
+      {tab === 'connections' && <ConnectionsSettings />}
       {tab === 'access' && <AccessSettings />}
       {tab === 'approvals' && <TierSettings />}
       {tab === 'users' && <UserSettings />}
@@ -172,7 +180,32 @@ function AccountSettings() {
         {t('settings.changePassword')}
       </button>
     </form>
+    <LogoutPanel />
     </>
+  );
+}
+
+/** Log out of this device — at the end of My account, the one place it lives (2026-11-06). */
+function LogoutPanel() {
+  const { t } = useI18n();
+  const logout = useLogout();
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="panel settings-row is-spread">
+      <span className="settings-hint">{t('settings.logoutHint')}</span>
+      <button
+        type="button"
+        className="btn with-icon"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void logout();
+        }}
+      >
+        <ICON.logout />
+        {t('nav.logout')}
+      </button>
+    </section>
   );
 }
 
@@ -186,7 +219,7 @@ function AccountSettings() {
  */
 function AccessSettings() {
   const { t } = useI18n();
-  const { isOwner } = useSession();
+  const { isOwner, me } = useSession();
   const scope = useScope();
   const keys = useKeys();
   const { ws: wsApi } = useScopedApi();
@@ -212,7 +245,7 @@ function AccessSettings() {
         )}
       </section>
       <section className="settings-section" aria-labelledby="access-extra">
-        <h2 id="access-extra" className="panel-title">{t('access.extraTitle', { ws: scope.ws })}</h2>
+        <h2 id="access-extra" className="panel-title">{t('access.extraTitle', { ws: workspaceName(me.scopes, scope.org, scope.ws) })}</h2>
         <p className="settings-hint">{t('access.extraLead')}</p>
         {extra.isPending ? (
           <Loading />
@@ -290,13 +323,16 @@ function AccessForm({
         </label>
       </fieldset>
       {error && <p className="form-error">{error}</p>}
-      {saved && <p className="ok-line">✓ {t('common.saved')}</p>}
+      {saved && <SavedLine />}
       {!readOnly && <button className="btn is-primary">{t('common.save')}</button>}
 
       {lockout && (
         <div className="command-overlay is-modal" onMouseDown={() => setLockout(null)}>
           <div className="dialog" role="alertdialog" aria-label={t('access.lockoutTitle')} onMouseDown={(e) => e.stopPropagation()}>
-            <h2>⚠️ {t('access.lockoutTitle')}</h2>
+            <h2 className="with-icon is-warn">
+              <ICON.warn size={20} />
+              {t('access.lockoutTitle')}
+            </h2>
             <p>{t('access.lockoutBody')}</p>
             <p className="dash-hint">{lockout}</p>
             <div className="dialog-actions">
@@ -368,7 +404,7 @@ function TierForm({ rows }: { rows: ApprovalPolicyRow[] }) {
         </tbody>
       </table>
       {save.error && <p className="form-error">{t('common.failed')}</p>}
-      {save.isSuccess && !changed && <p className="ok-line">✓ {t('common.saved')}</p>}
+      {save.isSuccess && !changed && <SavedLine />}
       <button className="btn is-primary" disabled={!changed || save.isPending} onClick={() => save.mutate(undefined)}>
         {t('common.save')}
       </button>
@@ -398,8 +434,10 @@ function UserSettings() {
   if (q.isPending) return <Loading />;
   if (q.error) return <QueryError error={q.error} />;
   return (
-    <section className="panel settings-body">
-      <NewUser />
+    <div className="settings-stack">
+      <section className="panel settings-body">
+        <NewUser />
+      </section>
       {error && <p className="form-error">{error}</p>}
       <table className="statement users">
         <thead>
@@ -438,7 +476,16 @@ function UserSettings() {
                   )}
                 </span>
               </td>
-              <td data-label={t('users.twoFactor')}>{u.two_factor ? '✓' : t('users.notEnrolled')}</td>
+              <td data-label={t('users.twoFactor')}>
+                {u.two_factor ? (
+                  <span className="chip is-ok">
+                    <ICON.done size={14} />
+                    {t('users.enrolled')}
+                  </span>
+                ) : (
+                  t('users.notEnrolled')
+                )}
+              </td>
               <td data-label={t('users.status')}>{u.disabled ? t('users.disabled') : t('users.enabled')}</td>
               <td className="row-actions">
                 {u.id !== me?.id && (
@@ -488,7 +535,7 @@ function UserSettings() {
           }}
         />
       )}
-    </section>
+    </div>
   );
 }
 
@@ -525,8 +572,9 @@ function NewUser() {
         <option value="staff">{t('role.staff')}</option>
         <option value="owner">{t('role.owner')}</option>
       </select>
-      <button className="btn is-primary" disabled={create.isPending}>
-        + {t('users.add')}
+      <button className="btn is-primary with-icon" disabled={create.isPending}>
+        <ICON.new />
+        {t('users.add')}
       </button>
       {form.role !== 'owner' && (
         <div className="assign-new">

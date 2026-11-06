@@ -100,6 +100,33 @@ def test_cli_init_and_layout(tmp_path: Path) -> None:
     assert runner.invoke(app, ["init", str(target), "--org", "x"]).exit_code == 1
 
 
+def test_cli_display_names(tmp_path: Path) -> None:
+    runner = CliRunner()
+    target = tmp_path / "elon"
+    res = runner.invoke(
+        app,
+        ["init", str(target), "--org", "spacex", "--display", " SpaceX ",
+         "--workspace-display", "HQ"],
+    )  # fmt: skip
+    assert res.exit_code == 0, res.output
+    sol = Solution(target)
+    assert sol.org("spacex").config().display_name == "SpaceX"
+    assert sol.org("spacex").workspace("hq").config().display_name == "HQ"
+    res = runner.invoke(
+        app, ["add", "workspace", "launch-ops", "--org", "spacex", "-s", str(target),
+              "--display", "Launch Ops"],
+    )  # fmt: skip
+    assert res.exit_code == 0, res.output
+    res = runner.invoke(app, ["add", "org", "blue_origin", "-s", str(target)])
+    assert res.exit_code == 0, res.output
+    assert sol.org("spacex").workspace("launch-ops").config().display_name == "Launch Ops"
+    assert sol.org("blue_origin").config().display_name is None  # the web makes the id readable
+    out = runner.invoke(app, ["layout", str(target)]).output
+    assert "spacex (SpaceX)" in out and "launch-ops (Launch Ops)" in out
+    too_long = runner.invoke(app, ["add", "org", "x", "-s", str(target), "--display", "a" * 61])
+    assert too_long.exit_code == 1 and not (target / "orgs" / "x").exists()
+
+
 def test_cli_assets(repo_root: Path) -> None:
     res = CliRunner().invoke(app, ["assets", "--root", str(repo_root)])
     assert res.exit_code == 0, res.output

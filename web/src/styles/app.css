@@ -245,7 +245,7 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--card-gap);
 }
 
 .crumb {
@@ -289,9 +289,6 @@
   gap: 16px;
 }
 
-.panel.settings-body {
-  padding: 16px 22px 20px;
-}
 
 /* ── approvals ─────────────────────────────────────────────── */
 
@@ -302,7 +299,7 @@
 }
 
 .approval-card.is-compact {
-  padding: 14px 16px;
+  padding: var(--card-pad-compact);
 }
 
 .approval-card-head {
@@ -398,8 +395,7 @@ a.run-row:hover {
   line-height: 1.6;
 }
 
-.job-bar.is-indeterminate span,
-.iso-tag-bar.is-indeterminate span {
+.job-bar.is-indeterminate span {
   animation: indeterminate 1.4s ease-in-out infinite;
 }
 
@@ -447,9 +443,9 @@ a.run-row:hover {
 
 .org-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-  margin: 14px 0;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--section-gap) var(--space-8);
+  margin: var(--section-gap) 0;
 }
 
 .org-people,
@@ -586,7 +582,7 @@ a.run-row:hover {
 .widget-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
-  gap: 14px;
+  gap: var(--card-gap);
   align-items: start;
 }
 
@@ -618,7 +614,7 @@ a.run-row:hover {
 .view > .panel,
 .view > .stack,
 .view > .placeholder {
-  margin-bottom: 14px;
+  margin-bottom: var(--card-gap);
 }
 
 .pnl .stat-row {

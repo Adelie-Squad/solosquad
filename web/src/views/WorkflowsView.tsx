@@ -6,8 +6,10 @@ import { errorText } from '../api/errors';
 import { useAction, useApprovals, useKeys, useScopedApi, useWorkflowRuns, useWorkflows, useWorkflowState } from '../api/queries';
 import type { Run, Upload, WorkflowRunCreated, WorkflowSummary } from '../api/types.gen';
 import { ApprovalCard } from '../components/ApprovalCard';
-import { Loading, Placeholder, QueryError } from '../components/Status';
+import { Loading, Placeholder, QueryError, SavedLine } from '../components/Status';
 import { useI18n, type MessageKey } from '../i18n';
+import { ICON } from '../icons';
+import { readable } from '../lib/names';
 import { useOrgOwner } from '../scope';
 
 export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string }> = {
@@ -47,7 +49,9 @@ export function WorkflowsView() {
         <nav className="wf-cards" aria-label={t('workflows.title')}>
           {list.map((w) => (
             <Link key={w.name} to={toWs(`/workflows/${w.name}`)} className={`panel wf-card ${w.name === name ? 'is-selected' : ''}`}>
-              <span className="wf-card-icon">🧩</span>
+              <span className="wf-card-icon">
+                <ICON.workflows size={20} />
+              </span>
               <span className="wf-card-body">
                 <strong>{w.title}</strong>
                 <span className="wf-card-meta">
@@ -77,7 +81,9 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
     <>
       <section className="panel wf-detail">
         <header className="wf-detail-head">
-          <span className="wf-detail-icon">🧩</span>
+          <span className="wf-detail-icon">
+            <ICON.workflows size={24} />
+          </span>
           <div className="wf-detail-title">
             <h2>{wf.title}</h2>
             <p>{wf.description}</p>
@@ -94,15 +100,30 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
           )}
         </header>
         <div className="wf-meta">
-          {wf.team && <span className="chip">👥 {wf.team}</span>}
-          {wf.schedule && <span className="chip">🕒 {wf.schedule}</span>}
+          {wf.team && (
+            <span className="chip">
+              <ICON.team size={14} />
+              {readable(wf.team)}
+            </span>
+          )}
+          {wf.schedule && (
+            <span className="chip">
+              <ICON.schedule size={14} />
+              {wf.schedule}
+            </span>
+          )}
           <span className={`chip ${wf.enabled ? 'is-ok' : ''}`}>{wf.enabled ? t('workflows.on') : t('workflows.off')}</span>
         </div>
         <ol className="pipeline">
           {wf.steps.map((s) => (
             <li key={s.id} className={`pipe-step is-idle ${s.type === 'approval' ? 'has-approval' : ''}`}>
               <span className="pipe-name">{s.title}</span>
-              {s.type === 'approval' && <span className="pipe-approval">👤 {t('workflows.approvalStep')}</span>}
+              {s.type === 'approval' && (
+                <span className="pipe-approval">
+                  <ICON.person size={14} />
+                  {t('workflows.approvalStep')}
+                </span>
+              )}
             </li>
           ))}
         </ol>
@@ -236,7 +257,10 @@ export function WorkflowRunView() {
       <header className="view-header">
         <div>
           <p className="crumb">
-            <Link to={toWs(`/workflows/${name}`)}>← {wf?.title ?? name}</Link>
+            <Link className="with-icon" to={toWs(`/workflows/${name}`)}>
+              <ICON.back />
+              {wf?.title ?? name}
+            </Link>
           </p>
           <h1>{t('workflows.runTitle', { name: wf?.title ?? name })}</h1>
         </div>
@@ -247,11 +271,16 @@ export function WorkflowRunView() {
           {(wf?.steps ?? []).map((s, i) => (
             <li key={s.id} className={`pipe-step ${stepClass(i)} ${s.type === 'approval' ? 'has-approval' : ''}`}>
               <span className="pipe-name">{s.title}</span>
-              {s.type === 'approval' && <span className="pipe-approval">👤 {t('workflows.approvalStep')}</span>}
+              {s.type === 'approval' && (
+                <span className="pipe-approval">
+                  <ICON.person size={14} />
+                  {t('workflows.approvalStep')}
+                </span>
+              )}
             </li>
           ))}
         </ol>
-        {status === 'done' && <p className="ok-line">✓ {t('workflows.done')}</p>}
+        {status === 'done' && <SavedLine text={t('workflows.done')} />}
         {status === 'declined' && <p className="warn-line">{t('workflows.declined')}</p>}
         {run?.status === 'error' && <p className="form-error">{run.error}</p>}
       </section>
@@ -265,7 +294,8 @@ export function WorkflowRunView() {
             {v.artifacts.map((id) => (
               <li key={id}>
                 <Link className="run-row" to={toWs(`/artifacts/${id}`)}>
-                  📄 {id}
+                  <ICON.artifacts className="run-row-icon" />
+                  <span className="run-row-title is-id">{id}</span>
                 </Link>
               </li>
             ))}

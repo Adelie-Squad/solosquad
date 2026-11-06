@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useI18n } from '../i18n';
+import { ICON } from '../icons';
 import { JobList, type Job } from './JobList';
 
 /** Live work, large — a modal over the office with the full job cards (four log lines). */
@@ -25,7 +26,7 @@ export function LiveModal({ jobs, doneToday, onClose }: { jobs: Job[]; doneToday
             <p>{t('office.liveLead')}</p>
           </div>
           <button className="icon-btn" aria-label={t('common.close')} onClick={onClose}>
-            ✕
+            <ICON.close size={18} />
           </button>
         </header>
         <div className="live-modal-body">
