@@ -12,7 +12,7 @@ import { checkGltf, formatReport, type GltfJson } from './contract';
 import { applyLook, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
 import { WALL_H, type Room, type SeatAgent } from './layout';
 import { lazyMeshopt } from './meshopt';
-import { paletteFor } from './palette';
+import { paletteFor, type OfficePalette } from './palette';
 import type { AgentStatus } from './state';
 
 // draco off (the contract uses meshopt); the meshopt decoder is set but compiles only for a
@@ -53,6 +53,8 @@ export default function OfficeCanvas(props: OfficeCanvasProps) {
       dpr={props.mobile ? 1.5 : 2}
       frameloop={props.paused ? 'never' : props.reducedMotion ? 'demand' : 'always'}
       gl={{ antialias: true, powerPreference: 'low-power' }}
+      // one soft shadow map for the day sun; drawn on demand only (the kit does not move)
+      shadows={{ enabled: true, type: THREE.PCFSoftShadowMap, autoUpdate: false }}
       camera={{ near: 0.1, far: 200, position: [20, 16, 20] }}
       onCreated={({ gl }) => {
         gl.domElement.addEventListener('webglcontextlost', (e) => {
@@ -176,7 +178,7 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect,
     <>
       <CameraRig room={room} scale={tagScale} />
       <SkyLight color={palette.sky.ambient} intensity={palette.sky.ambientIntensity} />
-      <directionalLight color={palette.sky.sun} intensity={palette.sky.sunIntensity * Math.PI} position={[cx - 6, 10, cz + 4]} />
+      <KeyLight room={room} sky={palette.sky} mobile={mobile} rebuild={office} />
       <primitive
         object={office.root}
         onClick={(e: ThreeEvent<MouseEvent>) => {
@@ -234,7 +236,7 @@ function CameraRig({ room, scale }: { room: Room; scale: RefObject<number> }) {
         }
       }
     }
-    const pad = 0.35;
+    const pad = 0.12;
     let w = maxX - minX + pad * 2;
     let h = maxY - minY + pad * 2;
     const aspect = size.width / Math.max(1, size.height);
@@ -282,4 +284,43 @@ function SkyLight({ color, intensity }: { color: string; intensity: number }) {
     };
   }, [gl, scene, color, intensity, invalidate]);
   return null;
+}
+
+/**
+ * The one key light (`clay.sky`): by day the sun, the only shadow caster — its map covers the room
+ * and is drawn once per build or theme, since only the penguins move and they bring their own
+ * contact shadow; in the evening a weak moon rim from behind, no shadow.
+ */
+function KeyLight({ room, sky, mobile, rebuild }: { room: Room; sky: OfficePalette['sky']; mobile: boolean; rebuild: unknown }) {
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+  const light = useMemo(() => new THREE.DirectionalLight(), []);
+  useLayoutEffect(() => {
+    const cx = (room.minX + room.maxX) / 2;
+    const cz = (room.minZ + room.maxZ) / 2;
+    const span = Math.hypot(room.maxX - room.minX, room.maxZ - room.minZ) / 2 + 1;
+    const dir = new THREE.Vector3(...sky.from).normalize();
+    light.color.set(sky.sun);
+    light.intensity = sky.sunIntensity * Math.PI;
+    light.position.set(cx, 0, cz).addScaledVector(dir, 20);
+    light.target.position.set(cx, 0, cz);
+    light.target.updateMatrixWorld();
+    light.castShadow = sky.shadow;
+    const size = mobile ? 1024 : 2048;
+    light.shadow.mapSize.set(size, size);
+    light.shadow.bias = -0.0005;
+    light.shadow.normalBias = 0.02;
+    light.shadow.radius = 4;
+    Object.assign(light.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 1, far: 45 });
+    light.shadow.camera.layers.enable(KIT_LAYER); // the kit lives on its own layer
+    light.shadow.camera.updateProjectionMatrix();
+    gl.shadowMap.needsUpdate = true;
+    invalidate();
+  }, [light, room, sky, mobile, gl, invalidate, rebuild]);
+  return (
+    <>
+      <primitive object={light} />
+      <primitive object={light.target} />
+    </>
+  );
 }

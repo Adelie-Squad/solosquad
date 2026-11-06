@@ -157,16 +157,23 @@ describe('the GLBs in three.js', () => {
     bank.setPalette(EVENING);
     expect(`#${wallMat!.color.getHexString()}`.toUpperCase()).toBe(EVENING.materials['clay.wall']);
     applyLook(seat, 'typing', EVENING, bank);
-    expect(seat.lamp?.visible).toBe(true);
+    expect(seat.lampLight?.visible && seat.lampLight.intensity).toBe(EVENING.agentLights!.lamp.intensity);
+    expect(seat.screenLight?.intensity).toBe(EVENING.agentLights!.screen.intensity);
+    expect(`#${seat.lampLight!.color.getHexString()}`.toUpperCase()).toBe(EVENING.agentLights!.lamp.color);
     expect(seat.pool?.visible).toBe(true);
     const screen = seat.screens[0].material as THREE.MeshStandardMaterial;
     expect(`#${screen.emissive.getHexString()}`.toUpperCase()).toBe(EVENING.screenGlow);
     applyLook(seat, 'idle', EVENING, bank);
     expect(seat.pool?.visible).toBe(false);
     expect((seat.screens[0].material as THREE.MeshStandardMaterial).emissiveIntensity).toBe(0);
+    // an idle agent's lights are off, not removed (the light count only changes with the theme)
+    expect([seat.lampLight?.visible, seat.lampLight?.intensity, seat.screenLight?.intensity]).toEqual([true, 0, 0]);
     bank.setPalette(DAY);
     applyLook(seat, 'idle', DAY, bank);
-    expect(seat.lamp?.visible).toBe(false);
+    // by day the lamps stand unlit (style frame) and the evening lights are out of the scene
+    expect(seat.lamp?.visible).toBe(true);
+    expect(seat.lampLight?.visible).toBe(false);
+    expect(seat.screenLight?.visible).toBe(false);
     office.dispose();
     bank.dispose();
   });

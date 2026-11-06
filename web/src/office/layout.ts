@@ -49,10 +49,10 @@ export const ENTRY = 'chief';
 const DESK: Footprint = { w: 0.96, d: 1.0 };
 const CHIEF_DESK: Footprint = { w: 1.3, d: 1.0 };
 /** Space between desks in a pod (aisle behind the chairs), and between pods. */
-const DESK_GAP_X = 0.25;
-const DESK_GAP_Z = 0.55;
-const POD_PAD = 0.35;
-const GAP = 1.1;
+const DESK_GAP_X = 0.2;
+const DESK_GAP_Z = 0.4;
+const POD_PAD = 0.25;
+const GAP = 0.8;
 
 export function podSize(n: number, desk: Footprint = DESK): { cols: number; rows: number; w: number; d: number } {
   // wide rather than deep — the iso view has more room across than up
@@ -186,9 +186,9 @@ export function layoutOffice(agents: SeatAgent[], opts: LayoutOptions = {}): Pod
 // ------------------------------------------------------------------ the room
 
 /** Strip along the back and left walls kept free for the shared props. */
-export const PROP_STRIP = 1.6;
+export const PROP_STRIP = 1.3;
 /** Walkway on the open sides (front, right). */
-const OPEN_EDGE = 0.8;
+const OPEN_EDGE = 0.4;
 
 export interface Room {
   /** Inner corner where the two walls meet (the floor starts here and runs to +X, +Z). */

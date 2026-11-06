@@ -9,6 +9,13 @@ import type { Theme } from '../theme';
 /** Materials the web paints per theme (contract §4); `team_*` take the team colour instead. */
 export type ClayMaterial = 'clay.wall' | 'clay.floor' | 'clay.furniture' | 'clay.wood' | 'clay.plant' | 'clay.screen' | 'clay.lamp_bulb';
 
+export interface AgentLight {
+  color: string;
+  intensity: number;
+  /** Reach in metres (light falls to zero there). */
+  distance: number;
+}
+
 export interface OfficePalette {
   /** `clay.backdrop` — the plain colour outside the open room. */
   backdrop: string;
@@ -16,10 +23,20 @@ export interface OfficePalette {
   materials: Record<ClayMaterial, string>;
   /** Evening: a working agent's laptop screen glows this colour (null = no glow, day). */
   screenGlow: string | null;
-  /** Evening desk lamp: bulb glow and its warm pool on the desk (null = lamps off and hidden). */
+  /** Evening desk lamp: bulb glow and its warm pool on the desk (null = lamps off; by day they stand unlit). */
   lamp: { bulb: string; pool: string; poolOpacity: number } | null;
-  /** `clay.sky` — the soft environment light and the one weak key light. */
-  sky: { ambient: string; ambientIntensity: number; sun: string; sunIntensity: number };
+  /**
+   * Evening per-agent lights (assets/office/README.md lighting): a warm point at the lamp and a
+   * cool light from the screen towards the agent's face — on for a working agent, off for idle.
+   * Null by day. Intensities are three.js candela, tuned on screen against the style frame.
+   */
+  agentLights: { lamp: AgentLight; screen: AgentLight } | null;
+  /**
+   * `clay.sky` — the soft environment light and one key light: by day the sun (the only shadow
+   * caster, drawn once for the still kit), in the evening a cool moon rim from behind and above.
+   * `from` = direction towards the light.
+   */
+  sky: { ambient: string; ambientIntensity: number; sun: string; sunIntensity: number; from: readonly [number, number, number]; shadow: boolean };
   /** The penguin's contact shadow on the floor. */
   contact: { color: string; opacity: number };
   /** `clay.penguin_body` — material `penguin.body` in this theme (face, cheeks and eyes keep the GLB's colour — identity). */
@@ -40,12 +57,14 @@ export const DAY: OfficePalette = {
     'clay.wood': '#D8C3A2',
     'clay.plant': '#8DB36B',
     'clay.screen': '#2C74E0',
-    // lamps are hidden by day; an unlit bulb reads as furniture if one ever shows
-    'clay.lamp_bulb': DAY_FURNITURE,
+    // an unlit bulb by day (README)
+    'clay.lamp_bulb': '#FFF4DE',
   },
   screenGlow: null,
   lamp: null,
-  sky: { ambient: '#FFFFFF', ambientIntensity: 0.72, sun: '#FFF3E0', sunIntensity: 0.4 },
+  agentLights: null,
+  // README: sky #FFFFFF x0.72, sun #FFF6E8 x1.5 with a 14 deg angle — from the front left, above
+  sky: { ambient: '#FFFFFF', ambientIntensity: 0.62, sun: '#FFF6E8', sunIntensity: 0.55, from: [-0.55, 1, 0.45], shadow: true },
   contact: { color: '#1C1900', opacity: 0.32 },
   penguinBody: '#2B2A26',
   idleDim: 0,
@@ -59,18 +78,23 @@ export const EVENING: OfficePalette = {
     'clay.furniture': '#3A3C47',
     'clay.wood': '#5A4E3E',
     'clay.plant': '#4E6A3A',
-    // a screen that is off is as dark as the room around it
-    'clay.screen': EVENING_BACKDROP,
+    // README: a screen's base under its glow; an unlit bulb as dark as the room
+    'clay.screen': '#1B2A4A',
     'clay.lamp_bulb': EVENING_BACKDROP,
   },
   screenGlow: '#8FB8FF',
-  lamp: { bulb: '#FFC56B', pool: '#FFC56B', poolOpacity: 0.3 },
-  // the evening tones are already dark — the light is weak and blue, the key light almost gone
-  sky: { ambient: '#3A4566', ambientIntensity: 5.5, sun: '#3A4566', sunIntensity: 0.6 },
+  lamp: { bulb: '#FFC56B', pool: '#FFC56B', poolOpacity: 0.12 },
+  agentLights: {
+    lamp: { color: '#FFC56B', intensity: 1.6, distance: 2.2 },
+    screen: { color: '#8FB8FF', intensity: 0.7, distance: 1.1 },
+  },
+  // README: sky #3A4566 x0.9 (weak), moon rim #9FB2E8 x2.5 from behind and above — it outlines
+  // heads and shoulders, never faces; only lamps and screens light the room
+  sky: { ambient: '#3A4566', ambientIntensity: 1.4, sun: '#9FB2E8', sunIntensity: 0.4, from: [-0.25, 0.9, -1], shadow: false },
   contact: { color: '#000000', opacity: 0.45 },
   // lighter than by day, so the silhouette holds in the navy room (DESIGN.md `clay.penguin_body`)
   penguinBody: '#474855',
-  idleDim: 0.35,
+  idleDim: 0,
 };
 
 export const paletteFor = (theme: Theme): OfficePalette => (theme === 'dark' ? EVENING : DAY);

@@ -162,6 +162,9 @@ export interface Seat {
   bodies: THREE.Mesh[];
   lamp: THREE.Object3D | null;
   pool: THREE.Mesh | null;
+  /** Evening lights for this agent: warm at the lamp, cool from the screen to the face (README). */
+  lampLight: THREE.PointLight | null;
+  screenLight: THREE.PointLight | null;
   /** The point the name tag hangs from (above the head). */
   tagAnchor: THREE.Object3D;
   mixer: THREE.AnimationMixer;
@@ -276,9 +279,18 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
       const team = d.team ?? '';
       swap(desk, 'team_sticker', (m) => bank.variant(m, team));
       const screens = swap(desk, 'clay.screen', (m) => m);
+      // the screen's light sits just in front of it, towards the sitter (-Z), at face height
+      let screenLight: THREE.PointLight | null = null;
+      if (screens.length) {
+        const c = new THREE.Box3().setFromObject(screens[0]).getCenter(new THREE.Vector3());
+        screenLight = new THREE.PointLight(0xffffff, 0, 1, 2);
+        screenLight.position.set(c.x, c.y + 0.04, c.z - 0.16);
+        root.add(screenLight);
+      }
 
       let lamp: THREE.Object3D | null = null;
       let pool: THREE.Mesh | null = null;
+      let lampLight: THREE.PointLight | null = null;
       const bulbs: THREE.Mesh[] = [];
       if (lampModule) {
         lamp = place(lampModule, kitRoot, lampAt.x, lampAt.z);
@@ -295,6 +307,9 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
         pool.position.set(at.x + 0.12, lampAt.y + 0.004, at.z);
         pool.renderOrder = 2;
         kitRoot.add(pool);
+        lampLight = new THREE.PointLight(0xffffff, 0, 2, 2);
+        lampLight.position.copy(at);
+        root.add(lampLight);
       }
 
       // the penguin — one shared body; this agent's props stay, the rest go
@@ -306,7 +321,10 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
       dressPenguin(penguin, d.agent);
       swap(penguin, 'team_accent', (m) => bank.variant(m, team));
       const bodies = swap(penguin, 'penguin.body', (m) => m);
-      for (const mesh of meshes(penguin)) mesh.frustumCulled = false; // skinned bounds lag the pose
+      for (const mesh of meshes(penguin)) {
+        mesh.frustumCulled = false; // skinned bounds lag the pose
+        mesh.receiveShadow = true; // sits in the kit's (static) sun shadow; its own is the contact shadow
+      }
 
       const head = findNode(penguin, socketBone('head')) ?? findNode(penguin, 'head') ?? penguin;
       const tagAnchor = new THREE.Object3D();
@@ -332,6 +350,8 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
         bodies,
         lamp,
         pool,
+        lampLight,
+        screenLight,
         tagAnchor,
         mixer,
         actions,
@@ -343,7 +363,11 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
     }
   }
   kitRoot.traverse((o) => o.layers.set(KIT_LAYER));
-  for (const m of meshes(kitRoot)) m.receiveShadow = false;
+  // the still kit casts and takes the day sun's soft shadow (drawn once, see OfficeCanvas)
+  for (const m of meshes(kitRoot)) {
+    m.castShadow = !(m.material as THREE.Material).transparent;
+    m.receiveShadow = true;
+  }
 
   return {
     root,
@@ -389,7 +413,12 @@ export function dressPenguin(penguin: THREE.Object3D, agent: string): string[] {
   return [...keep];
 }
 
-/** Lamps, screens and the idle dim follow the status and theme (evening only — day keeps lamps away). */
+/**
+ * Lamps, screens and lights follow the status and theme. Evening: a working agent's lamp and
+ * screen are on and light it; an idle (dozing) one sits in the dark. By day the lamps stand unlit.
+ * A light that is off keeps its place with intensity 0 — the light count, and so every shader,
+ * only changes with the theme.
+ */
 export function applyLook(seat: Seat, status: AgentStatus, palette: OfficePalette, bank: MaterialBank): void {
   const working = status !== 'idle';
   const evening = !!palette.lamp;
@@ -397,7 +426,18 @@ export function applyLook(seat: Seat, status: AgentStatus, palette: OfficePalett
   for (const m of seat.screens) swap(m, 'clay.screen', (x) => bank.variant(x, screenOn ? 'on' : 'off'));
   for (const m of seat.bulbs) swap(m, 'clay.lamp_bulb', (x) => bank.variant(x, evening && working ? 'on' : 'off'));
   for (const m of seat.bodies) swap(m, 'penguin.body', (x) => bank.variant(x, evening && !working ? 'dim' : 'lit'));
-  if (seat.lamp) seat.lamp.visible = evening;
+  const lights = palette.agentLights;
+  for (const [light, cfg] of [
+    [seat.lampLight, lights?.lamp],
+    [seat.screenLight, lights?.screen],
+  ] as const) {
+    if (!light) continue;
+    light.visible = !!cfg;
+    if (!cfg) continue;
+    light.color.set(cfg.color);
+    light.distance = cfg.distance;
+    light.intensity = working ? cfg.intensity : 0;
+  }
   if (seat.pool) {
     seat.pool.visible = evening && working;
     const mat = seat.pool.material as THREE.MeshBasicMaterial;

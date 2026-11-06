@@ -110,15 +110,19 @@ describe('scene palette and team colours follow DESIGN.md', () => {
     // day: the plain blue face; evening: the glow of a working screen
     ['clay.screen', [DAY.materials['clay.screen']], [EVENING.screenGlow!]],
     ['clay.lamp', [], [EVENING.lamp!.bulb]],
-    ['clay.sky', [DAY.sky.ambient, DAY.sky.sun], [EVENING.sky.ambient]],
+    ['clay.sky', [DAY.sky.ambient], [EVENING.sky.ambient]],
     ['clay.penguin_body', [DAY.penguinBody], [EVENING.penguinBody]],
   ] as const)('%s', (key, day, evening) => {
     expect(hexes(row(key))).toEqual([...day, ...evening].map((h) => h.toUpperCase()));
   });
 
-  it('lamps and screen glow only in the evening', () => {
+  it('lamps, screen glow and the per-agent lights only in the evening', () => {
     expect(DAY.lamp).toBeNull();
     expect(DAY.screenGlow).toBeNull();
+    expect(DAY.agentLights).toBeNull();
+    // the lights carry the table's lamp and screen colours
+    expect(EVENING.agentLights?.lamp.color).toBe(EVENING.lamp?.bulb);
+    expect(EVENING.agentLights?.screen.color).toBe(EVENING.screenGlow);
     expect(EVENING.lamp?.pool).toBe(EVENING.lamp?.bulb);
   });
 
