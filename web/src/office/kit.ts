@@ -388,12 +388,15 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
   };
 }
 
-/** Keep this agent's role props (or the team scarf) and hang them on their socket bones. */
-export function dressPenguin(penguin: THREE.Object3D, agent: string): string[] {
+/**
+ * Keep this agent's role props (or the team scarf) and hang them on their socket bones.
+ * `bare` keeps none — the plain mascot penguin of the landing.
+ */
+export function dressPenguin(penguin: THREE.Object3D, agent: string, bare = false): string[] {
   const id = canonical(agent);
   const parts = ROLE_PROPS[id];
   const wanted = parts?.map((p) => propNode(id, p)).filter((n) => findNode(penguin, n)) ?? [];
-  const keep = new Set(parts && wanted.length === parts.length ? wanted : [SCARF]);
+  const keep = new Set<string>(bare ? [] : parts && wanted.length === parts.length ? wanted : [SCARF]);
   const props: THREE.Object3D[] = [];
   penguin.traverse((o) => {
     const n = nameOf(o);
