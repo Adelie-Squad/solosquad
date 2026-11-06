@@ -125,13 +125,13 @@ export function invalidationsFor(ev: EngineEvent, keys: ScopedKeys): QueryKey[] 
   const tid = ev.thread_id ?? undefined;
   const settled = ev.event !== 'run.created' && ev.event !== 'run.started';
   if (ev.source === 'workflow') {
-    const out: QueryKey[] = [keys.workflowRuns(), keys.workflows];
+    const out: QueryKey[] = [keys.workflowRuns(), keys.workflows, keys.work];
     if (tid) out.push(keys.workflowState(tid));
-    if (settled) out.push(keys.approvals, keys.artifacts);
+    if (settled) out.push(keys.approvals, keys.artifacts, keys.schedules);
     return out;
   }
-  const out: QueryKey[] = [keys.threads, keys.runs, keys.agents];
+  const out: QueryKey[] = [keys.threads, keys.runs, keys.agents, keys.work];
   if (tid) out.push(keys.thread(tid));
-  if (settled) out.push(keys.approvals, keys.budget);
+  if (settled) out.push(keys.approvals, keys.budget, keys.schedules);
   return out;
 }

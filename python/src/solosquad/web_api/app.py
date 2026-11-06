@@ -8,7 +8,7 @@ Decision 57 · PRD v2.1.0 I40 · I22 rev7: the scope is in the address.
                                 and workflow definitions · screens · connections · org audit
     /api/o/{org}/w/{ws}/...     a workspace: threads · runs · events · ledger · budget ·
                                 approvals · workflow runs · uploads · artifacts · its own
-                                access limits · the agents at work
+                                access limits · the agents at work · schedules · agent work
 
 Every request goes through the same gate, in order:
 
@@ -32,11 +32,13 @@ import hmac
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlsplit
 
 import webauthn
+from apscheduler.triggers.cron import CronTrigger
 from pydantic import BaseModel
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
@@ -80,6 +82,7 @@ from solosquad.routing.eligibility import Entity, Verdict, judge, providers_reac
 from solosquad.routing.router import Router as LlmRouter
 from solosquad.routing.vault import SecretStore
 from solosquad.runtime import RunManager, RunStatus
+from solosquad.runtime.manager import OPS_THREAD, load_crons
 from solosquad.screens import load_screen
 from solosquad.snapshots import S3_SECRET_REF, build_target
 from solosquad.web_api import schemas as S
@@ -137,6 +140,7 @@ EVERYONE = frozenset({Role.OWNER, Role.STAFF})
 
 Level = Literal["customer", "org", "workspace"]
 Key = tuple[str, str]
+Row = dict[str, Any]
 
 # The permission table (I25). For customer routes the role is the customer-level one
 # (owner = the customer's owner); for org and workspace routes it is the role in that
@@ -193,6 +197,8 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "ws_access.get": EVERYONE,
     "ws_access.update": OWNER,
     "working": EVERYONE,
+    "schedules.list": EVERYONE,  # switching a schedule = `workflows.update` (owner)
+    "work.list": EVERYONE,
 }
 
 
@@ -1999,6 +2005,151 @@ def create_app(cfg: AppConfig) -> Starlette:
         org_audit(in_scope(request), "artifact.review", art.id)
         return respond(S.Artifact, _artifact_public(art))
 
+    # ------------------------------------------------------------------ schedules · work
+
+    def next_fire(schedule: str, tz: str) -> float | None:
+        trigger = CronTrigger.from_crontab(schedule, timezone=tz)
+        nxt = trigger.get_next_fire_time(None, datetime.now(trigger.timezone))
+        return nxt.timestamp() if nxt is not None else None
+
+    async def schedules(request: Request) -> Response:
+        """The workspace's scheduled runs — workflow schedules and the org's crons (standing
+        goals and routines) — with when each fires next and how it went last time. Read-only;
+        a workflow's schedule is switched with the workflow (`PATCH …/workflows/{name}`)."""
+        need(request, "schedules.list")
+        rt = runtime(request)
+        tz = rt.manager.timezone
+        rows: list[dict[str, Any]] = []
+        errors: list[str] = []
+
+        def when(schedule: str, enabled: bool, label: str) -> float | None:
+            try:
+                nxt = next_fire(schedule, tz)
+            except ValueError as e:
+                errors.append(f"{label}: {schedule!r}: {e}")
+                return None
+            return nxt if enabled else None
+
+        e = rt.workflows
+        if e is not None:
+            for wf in e.summaries():
+                if e.scheduled(wf["name"]) is None:
+                    continue  # no schedule, or one that would wait for an upload
+                on = bool(wf["enabled"])
+                rows.append(
+                    {
+                        "id": f"wf:{wf['name']}",
+                        "kind": "workflow",
+                        "name": wf["name"],
+                        "title": wf["title"],
+                        "schedule": wf["schedule"],
+                        "enabled": on,
+                        "next_run": when(wf["schedule"], on, wf["name"]),
+                        "last_run": wf["last_run"],
+                        "workflow": wf["name"],
+                    }
+                )
+        recent = rt.manager.store.runs(limit=500)
+        for c in load_crons(org_root(request) / "crons"):
+            last = next((r for r in recent if r["source"] == f"cron:{c.name}"), None)
+            rows.append(
+                {
+                    "id": f"cron:{c.name}",
+                    "kind": "goal" if c.thread else "routine",
+                    "name": c.name,
+                    "title": c.name,
+                    "schedule": c.schedule,
+                    "enabled": c.enabled,
+                    "next_run": when(c.schedule, c.enabled, c.name),
+                    "last_run": {k: last[k] for k in ("id", "status", "created")} if last else None,
+                    "workflow": None,
+                }
+            )
+        rows.sort(key=lambda r: (r["next_run"] is None, r["next_run"] or 0, r["title"]))
+        return respond(S.ScheduleList, {"timezone": tz, "schedules": rows, "errors": errors})
+
+    async def work(request: Request) -> Response:
+        """Agent work for Task: each conversation and workflow run once (by its newest run),
+        who worked on it and what it made. Read-only — joins the run stores, the cost ledger
+        and the artifacts, so the web does not fetch every thread's state."""
+        need(request, "work.list")
+        rt = runtime(request)
+        q = request.query_params
+        since = float(q["since"]) if q.get("since") else None
+        limit = max(1, min(int(q.get("limit", "50")), 200))
+        arts = rt.artifacts
+
+        def agents_of(tid: str) -> list[str]:
+            seen: list[str] = []
+            for entry in reversed(rt.ledger.entries(thread_id=tid, limit=200)):
+                agent = entry.get("agent")
+                if agent and agent not in seen:
+                    seen.append(str(agent))
+            return seen
+
+        def made(tid: str) -> list[dict[str, Any]]:
+            if arts is None:
+                return []
+            return [
+                {"id": a.id, "kind": a.kind, "title": a.title, "needs_review": a.needs_review}
+                for a in arts.find(thread_id=tid, limit=20)
+            ]
+
+        def newest(mgr: RunManager) -> dict[str, dict[str, Any]]:
+            out: dict[str, dict[str, Any]] = {}
+            for r in mgr.store.runs(since=since, limit=limit * 4):
+                out.setdefault(r["thread_id"], r)
+            return out
+
+        def entry(source: str, r: dict[str, Any], meta: dict[str, Any], title: Any) -> Row:
+            cron = meta.get("cron")
+            if cron is None and str(r.get("source") or "").startswith("cron:"):
+                cron = str(r["source"])[5:]
+            return {
+                "source": source,
+                "thread_id": r["thread_id"],
+                "run_id": r["id"],
+                "title": title,
+                "workflow": meta.get("workflow"),
+                "cron": cron,
+                "status": r["status"],
+                "created": r["created"],
+                "ended": r.get("ended"),
+                "agents": [],
+                "step": None,
+                "steps": None,
+                "current_step": None,
+                "artifacts": made(r["thread_id"]),
+            }
+
+        items: list[dict[str, Any]] = []
+        for tid, r in newest(rt.manager).items():
+            th = rt.manager.store.thread(tid) or {}
+            meta = th.get("metadata") or {}
+            if meta.get("workflow_thread") or tid == OPS_THREAD:
+                continue  # a workflow's agent step is part of that run; engine notices are not work
+            item = entry("chat", r, meta, th.get("title"))
+            item["agents"] = agents_of(tid)
+            items.append(item)
+        e = rt.workflows
+        if e is not None:
+            open_states = {RunStatus.PENDING, RunStatus.RUNNING, RunStatus.INTERRUPTED}
+            for tid, r in newest(e.manager).items():
+                th = e.manager.store.thread(tid) or {}
+                meta = th.get("metadata") or {}
+                item = entry("workflow", r, meta, th.get("title"))
+                item["agents"] = agents_of(f"{tid}-agent")
+                wf = e.defs.get(str(meta.get("workflow")))
+                if wf is not None and r["status"] in open_states:
+                    values = (await e.manager.thread_state(tid)).get("values") or {}
+                    step = int(values.get("step") or 0)
+                    item["step"], item["steps"] = step, len(wf.steps)
+                    if step < len(wf.steps):
+                        item["current_step"] = wf.public()["steps"][step]["title"]
+                items.append(item)
+        items.sort(key=lambda i: -float(i["created"]))
+        return respond(S.WorkList, {"items": items[:limit]})
+
     async def approvals(request: Request) -> Response:
         need(request, "approvals.list")
         rt = runtime(request)
@@ -2109,6 +2260,8 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/artifacts", artifacts, ["GET"]),
         ("/artifacts/{aid}", artifact_get, ["GET"]),
         ("/artifacts/{aid}/review", artifact_review, ["POST"]),
+        ("/schedules", schedules, ["GET"]),
+        ("/work", work, ["GET"]),
     ]
 
     def table(rows: Table) -> list[BaseRoute]:

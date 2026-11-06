@@ -109,6 +109,12 @@
     "WorkflowThreadState": {
       "$ref": "#/$defs/WorkflowThreadState"
     },
+    "ScheduleList": {
+      "$ref": "#/$defs/ScheduleList"
+    },
+    "WorkList": {
+      "$ref": "#/$defs/WorkList"
+    },
     "Upload": {
       "$ref": "#/$defs/Upload"
     },
@@ -188,6 +194,8 @@
     "Budget",
     "WorkflowList",
     "WorkflowThreadState",
+    "ScheduleList",
+    "WorkList",
     "Upload",
     "Artifact",
     "PnlData",
@@ -2179,6 +2187,105 @@
       "type": "object",
       "title": "RunCreated"
     },
+    "ScheduleEntry": {
+      "additionalProperties": false,
+      "description": "One scheduled run of the workspace (2026-11-07 — the scheduler joined the workflows).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "workflow",
+            "goal",
+            "routine"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "schedule": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "next_run": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_run": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LastRun"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workflow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "title",
+        "schedule",
+        "enabled",
+        "next_run",
+        "last_run",
+        "workflow"
+      ],
+      "type": "object",
+      "title": "ScheduleEntry"
+    },
+    "ScheduleList": {
+      "additionalProperties": false,
+      "properties": {
+        "timezone": {
+          "type": "string"
+        },
+        "schedules": {
+          "items": {
+            "$ref": "#/$defs/ScheduleEntry"
+          },
+          "type": "array"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "timezone",
+        "schedules",
+        "errors"
+      ],
+      "type": "object",
+      "title": "ScheduleList"
+    },
     "ScopeOrg": {
       "additionalProperties": false,
       "description": "An org the person may open, with the workspaces of it they may open (I40).",
@@ -2768,6 +2875,164 @@
       "type": "object",
       "title": "WidgetSpec"
     },
+    "WorkArtifact": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "needs_review": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "needs_review"
+      ],
+      "type": "object",
+      "title": "WorkArtifact"
+    },
+    "WorkEntry": {
+      "additionalProperties": false,
+      "description": "One piece of agent work for Task — a conversation or a workflow run, by its newest run.",
+      "properties": {
+        "source": {
+          "enum": [
+            "chat",
+            "workflow"
+          ],
+          "type": "string"
+        },
+        "thread_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workflow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cron": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "success",
+            "error",
+            "interrupted",
+            "cancelled"
+          ],
+          "type": "string"
+        },
+        "created": {
+          "type": "number"
+        },
+        "ended": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "step": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "current_step": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/WorkArtifact"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "source",
+        "thread_id",
+        "run_id",
+        "title",
+        "workflow",
+        "cron",
+        "status",
+        "created",
+        "ended",
+        "agents",
+        "step",
+        "steps",
+        "current_step",
+        "artifacts"
+      ],
+      "type": "object",
+      "title": "WorkEntry"
+    },
     "WorkItem": {
       "additionalProperties": false,
       "properties": {
@@ -2795,6 +3060,22 @@
       ],
       "type": "object",
       "title": "WorkItem"
+    },
+    "WorkList": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/WorkEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "type": "object",
+      "title": "WorkList"
     },
     "WorkflowInput": {
       "additionalProperties": false,

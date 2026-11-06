@@ -16,10 +16,12 @@ import type {
   PnlData,
   ProfileResponse,
   PublicUser,
+  ScheduleList,
   ScreenResponse,
   SnapshotSettings,
   WidgetSpec,
   WorkflowList,
+  WorkList,
 } from '../src/api/types.gen';
 import { approval, me } from './helpers';
 
@@ -119,11 +121,13 @@ export const screenOf = (name: string, widgets: WidgetSpec[]): ScreenResponse =>
 
 /** The engine's default screens (python `screens.py DEFAULTS`). */
 export const SCREENS: Record<string, ScreenResponse> = {
-  home: screenOf('home', [
-    { widget: 'approvals', version: 1 },
+  // the first screen (2026-11-07 — home became the dashboard; `home` is the engine's alias for it)
+  dashboard: screenOf('dashboard', [
+    { widget: 'stats', version: 1 },
+    { widget: 'todo', version: 1 },
     { widget: 'office', version: 1 },
     { widget: 'artifact-latest', version: 1, kind: 'finance.pnl' },
-    { widget: 'workflows', version: 1 },
+    { widget: 'schedule', version: 1 },
     { widget: 'budget', version: 1 },
   ]),
   artifacts: screenOf('artifacts', [
@@ -148,6 +152,52 @@ const WORKFLOWS: WorkflowList = {
       ],
       enabled: true,
       last_run: null,
+    },
+  ],
+};
+
+const SCHEDULES: ScheduleList = {
+  timezone: 'Asia/Seoul',
+  errors: [],
+  schedules: [
+    { id: 'cron:sales-goal', kind: 'goal', name: 'sales-goal', title: 'sales-goal', schedule: '30 8 * * 1-5', enabled: true, next_run: Date.UTC(2026, 10, 9, 23, 30) / 1000, last_run: null, workflow: null },
+  ],
+};
+
+/** What the agents did (`GET …/work`): the P&L run waiting at its approval step, a finished chat. */
+const WORK: WorkList = {
+  items: [
+    {
+      source: 'workflow',
+      thread_id: 'wf-th-1',
+      run_id: 'run-wf-1',
+      title: 'Monthly P&L',
+      workflow: 'monthly-pnl',
+      cron: null,
+      status: 'interrupted',
+      created: Date.UTC(2026, 10, 6) / 1000,
+      ended: null,
+      agents: [],
+      step: 1,
+      steps: 2,
+      current_step: 'Check the P&L',
+      artifacts: [{ id: 'art-pnl-1', kind: 'finance.pnl', title: '손익표', needs_review: true }],
+    },
+    {
+      source: 'chat',
+      thread_id: 'th-1',
+      run_id: 'run-1',
+      title: 'Compare suppliers',
+      workflow: null,
+      cron: null,
+      status: 'success',
+      created: Date.UTC(2026, 10, 6) / 1000,
+      ended: Date.UTC(2026, 10, 6) / 1000,
+      agents: ['chief'],
+      step: null,
+      steps: null,
+      current_step: null,
+      artifacts: [],
     },
   ],
 };
@@ -218,6 +268,8 @@ export function engineData(over: Record<string, unknown> = {}, who: 'owner' | 's
     '/artifacts': [pnlArtifact()],
     '/artifacts/art-pnl-1': pnlArtifact(),
     '/uploads': [],
+    '/schedules': SCHEDULES,
+    '/work': WORK,
     ...Object.fromEntries(Object.entries(SCREENS).map(([k, v]) => [`/screens/${k}`, v])),
     ...over,
   };

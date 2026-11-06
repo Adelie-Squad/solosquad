@@ -503,10 +503,6 @@ a.run-row:hover {
   background: color-mix(in srgb, var(--accent) 35%, var(--surface));
 }
 
-.ledger-row.is-review {
-  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
-}
-
 /* ── declarative screens ───────────────────────────────────── */
 
 .widget-grid {

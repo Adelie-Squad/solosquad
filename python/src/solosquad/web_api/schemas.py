@@ -461,6 +461,65 @@ class WorkflowList(Closed):
     errors: list[str]
 
 
+class ScheduleEntry(Closed):
+    """One scheduled run of the workspace (2026-11-07 — the scheduler joined the workflows)."""
+
+    id: str
+    """`wf:<workflow>` or `cron:<file stem>` — the scheduler's own job id."""
+    kind: Literal["workflow", "goal", "routine"]
+    """`goal` = a standing-goal cron (one fixed thread); `routine` = a cron that starts a new
+    thread each time; `workflow` = a workflow's `schedule:`."""
+    name: str
+    title: str
+    schedule: str
+    """Five-field crontab in the list's `timezone`; the web turns it into a sentence."""
+    enabled: bool
+    next_run: float | None
+    """When it fires next — None when switched off or the crontab does not parse."""
+    last_run: LastRun | None
+    workflow: str | None
+    """Switched with `PATCH /api/o/{org}/workflows/{workflow}` (owner); None = set in its file."""
+
+
+class ScheduleList(Closed):
+    timezone: str
+    schedules: list[ScheduleEntry]
+    errors: list[str]
+
+
+class WorkArtifact(Closed):
+    id: str
+    kind: str
+    title: str
+    needs_review: bool
+
+
+class WorkEntry(Closed):
+    """One piece of agent work for Task — a conversation or a workflow run, by its newest run."""
+
+    source: Literal["chat", "workflow"]
+    thread_id: str
+    run_id: str
+    title: str | None
+    workflow: str | None
+    cron: str | None
+    """The cron that started it (a scheduled run), else None."""
+    status: RunStatusName
+    created: float
+    ended: float | None
+    agents: list[str]
+    """Who worked on it, first to last (from the cost ledger)."""
+    step: int | None
+    """A workflow run that is not finished: the index of the step it is on."""
+    steps: int | None
+    current_step: str | None
+    artifacts: list[WorkArtifact]
+
+
+class WorkList(Closed):
+    items: list[WorkEntry]
+
+
 class WorkflowValues(Open):
     workflow: str | None = None
     inputs: dict[str, Any] = Field(default_factory=dict)
@@ -731,6 +790,8 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     Budget,
     WorkflowList,
     WorkflowThreadState,
+    ScheduleList,
+    WorkList,
     Upload,
     Artifact,
     PnlData,

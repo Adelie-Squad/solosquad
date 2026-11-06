@@ -18,6 +18,7 @@ import type {
   OrgChart,
   PublicUser,
   Run,
+  ScheduleList,
   ScreenResponse,
   Team,
   Thread,
@@ -30,6 +31,7 @@ import type {
   SnapshotSettings,
   WorkflowList,
   WorkflowThreadState,
+  WorkList,
 } from './types.gen';
 
 /** Customer-level keys — the same whatever org or workspace is open. */
@@ -73,6 +75,8 @@ export function scopedKeys(s: Pick<Scope, 'org' | 'ws'>) {
     artifacts: [...w, 'artifacts'] as const,
     artifact: (id: string) => [...w, 'artifacts', 'one', id] as const,
     wsAccess: [...w, 'access'] as const,
+    schedules: [...w, 'schedules'] as const,
+    work: [...w, 'work'] as const,
   };
 }
 
@@ -163,7 +167,17 @@ export const useWorkflowState = (tid: string | undefined) => {
     ...enabledFor(on && !!tid),
   });
 };
-export const useArtifacts = (query: { kind?: string; limit?: number } = {}) => {
+/** The scheduled runs — workflow schedules and the org's crons (switching = the workflow's PATCH). */
+export const useSchedules = () => {
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.schedules, queryFn: () => a.get<ScheduleList>('/schedules'), ...enabledFor(on) });
+};
+/** What the agents did and are doing — one row per conversation or workflow run (Task). */
+export const useWork = (query: { since?: number; limit?: number } = {}) => {
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: [...k.work, query], queryFn: () => a.get<WorkList>('/work', query), ...enabledFor(on) });
+};
+export const useArtifacts = (query: { kind?: string; limit?: number; needs_review?: boolean } = {}) => {
   const { k, a, on } = useWs();
   return useQuery({ queryKey: [...k.artifacts, query], queryFn: () => a.get<Artifact[]>('/artifacts', query), ...enabledFor(on) });
 };

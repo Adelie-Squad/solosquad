@@ -103,7 +103,7 @@ async def test_screens_default_org_file_and_errors(tmp_path: Path) -> None:
         await _boss_and_staff(o, boss, kim)
         r = (await kim.get("/api/screens/home")).json()
         assert r["source"] == "default" and r["screen"]["format_version"] == 1
-        assert r["screen"]["widgets"][0]["widget"] == "approvals"
+        assert r["name"] == "dashboard" and r["screen"]["widgets"][0]["widget"] == "stats"
         folder.mkdir(parents=True)
         (folder / "home.yaml").write_text(
             "format_version: 1\ntitle: 모아 첫 화면\nwidgets:\n"
