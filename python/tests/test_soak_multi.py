@@ -40,6 +40,15 @@ async def _settle(c: Customer) -> None:
     raise AssertionError(f"{len(open_runs)} runs never finished")
 
 
+async def _until_running(c: Customer) -> None:
+    for _ in range(400):
+        busy = [s for s in SCOPES if c.runtime(s).manager.store.runs(status=RunStatus.RUNNING)]
+        if len(busy) == len(SCOPES):
+            return
+        await asyncio.sleep(0.025)
+    raise AssertionError(f"slow runs never started everywhere: running in {busy}")
+
+
 async def test_one_server_soak_keeps_every_workspace_whole(tmp_path: Path) -> None:
     c = Customer(tmp_path, max_concurrency=2)
     await start_engine(c.engine)
@@ -63,8 +72,9 @@ async def test_one_server_soak_keeps_every_workspace_whole(tmp_path: Path) -> No
                     await m.submit(bt, "boom")
                 await m.fire_cron(crons[s])
             if rnd == CRASH_AFTER:
-                # the slow runs are in flight on every workspace: the whole server dies
-                await asyncio.sleep(0.05)
+                # wait until a slow run is in flight on every workspace (not a fixed sleep —
+                # slower machines start them later), then the whole server dies
+                await _until_running(c)
                 await stop_engine(c.engine)
                 c.engine = build_engine(c.solution.root, bundle=c.bundle, build=c._build,
                                         max_concurrency=2)  # fmt: skip
