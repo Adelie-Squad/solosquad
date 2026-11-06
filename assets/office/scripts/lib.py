@@ -32,6 +32,7 @@ PALETTE = {
     'penguin.feet': '#F0AE5E',
     'penguin.stitch': '#8E8676',
     'prop.gold': '#C9A227',
+    'prop.wood': '#D8C3A2',   # fixed prop wood (clipboard, brush); not re-tinted per theme
     'prop.black': '#2B2A26',
     'prop.paper': '#F4F1EA',
     'prop.metal': '#8A8371',
@@ -83,7 +84,9 @@ def material(name, hex_color=None, roughness=0.9, emission=None, strength=0.0):
     bsdf.inputs['Roughness'].default_value = roughness
     bsdf.inputs['Metallic'].default_value = 0.0
     if 'Specular IOR Level' in bsdf.inputs:
-        bsdf.inputs['Specular IOR Level'].default_value = 0.25
+        # glTF default (0.5): anything else adds KHR_materials_specular; at roughness 0.9
+        # the highlight is negligible
+        bsdf.inputs['Specular IOR Level'].default_value = 0.5
     if emission is not None:
         bsdf.inputs['Emission Color'].default_value = hex_rgba(emission)
     bsdf.inputs['Emission Strength'].default_value = strength

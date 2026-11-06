@@ -71,9 +71,9 @@ inspection.
 
 | File | Size (meshopt) | Contents |
 |---|---|---|
-| `export/office-kit.glb` | 659 KB | 12 module roots; 29 materials `<key>#<module>`; 8 AO maps `<module>_ao` (WebP; 1024 px for desks, sofa and shelf, 512 for coffee bar, plant and whiteboard, 256 for the lamp) |
-| `export/penguin.glb` | 186 KB | Skinned `penguin` + `penguin_rig` (10 joints); 19 props parented to socket bones with extras `socket`; 7 clips |
-| **Total** | **825 KB** | Budget 5 MB |
+| `export/office-kit.glb` | 651 KB | 12 module roots; 29 materials `<key>#<module>`; 8 AO maps `<module>_ao` (WebP; 1024 px for desks, sofa and shelf, 512 for coffee bar, plant and whiteboard, 256 for the lamp) |
+| `export/penguin.glb` | 185 KB | Skinned `penguin` + `penguin_rig` (10 joints); 19 props parented to socket bones with extras `socket`; 7 clips |
+| **Total** | **817 KB** | Budget 5 MB |
 
 - **Kit materials** are per module, named `<palette key>#<module>` (contract §4, PR #57): for
   example `clay.furniture#desk.set` and `team_sticker#desk.chief`. Match the palette key with
@@ -84,7 +84,10 @@ inspection.
   dequantization transform (for example under `lamp.desk`). Find modules by root name, not by mesh
   node.
 - **Penguin and prop materials** keep bare keys (`penguin.body`, `team_accent`, `prop.gold` and so
-  on). The wooden parts of the clipboard and brush use `clay.wood`.
+  on). The wooden parts of the clipboard and brush use `prop.wood` (`#D8C3A2`, fixed: the web
+  does not re-tint it per theme).
+- **No glTF extensions** beyond meshopt, quantization and WebP: specular is left at the glTF
+  default, so `KHR_materials_specular` is not emitted.
 - **Clips** (30 fps, frame 0 = the pose that stands for the state, last frame = frame 0):
 
   | Clip | Length | Motion |
@@ -107,12 +110,12 @@ than the material colours.
 | Key | Material (light) | Rendered light | Material (evening) | Rendered evening |
 |---|---|---|---|---|
 | `clay.backdrop` | `#EEE9DF` | `#EEE9DF` | `#15161B` | `#15161B` |
-| `clay.wall` (lit back wall) | `#F4F1EA` | `#F1EADD` | `#2B2D37` | `#0D0B11` |
-| `clay.wall` (left wall, shade side) | `#F4F1EA` | `#CFCBC1` | `#2B2D37` | `#1A1B29` |
-| `clay.floor` | `#ECE7DE` | `#F0E8D9` | `#23252E` | `#181D2F` (moon rim) |
-| `clay.furniture` (desk top) | `#F7F5F0` | `#FFFBF0` | `#3A3C47` | `#574F5B` (lamp-lit) |
-| `clay.wood` (coffee bar top) | `#D8C3A2` | `#A59173` (in shade) | `#5A4E3E` | `#18100B` |
-| `clay.plant` | `#8DB36B` | `#8CAF69` | `#4E6A3A` | `#24392F` |
+| `clay.wall` (lit back wall) | `#F4F1EA` | `#F1EADD` | `#2B2D37` | `#100E13` |
+| `clay.wall` (left wall, shade side) | `#F4F1EA` | `#CFCBC1` | `#2B2D37` | `#1F212F` |
+| `clay.floor` | `#ECE7DE` | `#F0E8DA` | `#23252E` | `#1E2436` (moon rim) |
+| `clay.furniture` (desk top) | `#F7F5F0` | `#FFFBF0` | `#3A3C47` | `#625863` (lamp-lit) |
+| `clay.wood` (coffee bar top) | `#D8C3A2` | `#A69275` (in shade) | `#5A4E3E` | `#1A120D` |
+| `clay.plant` | `#8DB36B` | `#8DB06C` | `#4E6A3A` | `#273B34` |
 | `clay.screen` | `#2C74E0` | — | base `#1B2A4A` + emission `#8FB8FF` ×2.2 | — |
 | `clay.lamp_bulb` | `#FFF4DE` (off) | — | `#FFC56B` emission ×12 | — |
 | `penguin.body` | `#2B2A26` | — | **`#474855`** (new: lifted so the silhouette reads at night) | — |
@@ -128,7 +131,7 @@ Fixed colours outside the DESIGN table: `penguin.face` `#F3F0EA` · `penguin.che
 `penguin.eye` `#151410` · `penguin.beak` / `penguin.feet` `#F0AE5E` · `penguin.stitch` `#8E8676`
 (the 2D icon values, `web/src/characters/colors.ts`) · `prop.gold` `#C9A227` · `prop.black`
 `#2B2A26` · `prop.paper` `#F4F1EA` · `prop.metal` `#8A8371` · `prop.lens` `#C9DDF6` ·
-`prop.helmet` `#F0C640`.
+`prop.helmet` `#F0C640` · `prop.wood` `#D8C3A2`.
 
 ## Style frames
 

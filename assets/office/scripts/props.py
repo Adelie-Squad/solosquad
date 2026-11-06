@@ -356,7 +356,7 @@ def _in_hand(ob, tilt=(0, 0, 0), offset=(0, 0, 0)):
 
 
 def clipboard(col, body):
-    parts = [box('board', (0.13, 0.012, 0.17), (0, 0, 0.06), col, M('prop.wood_board') if False else M('clay.wood'), 0.006, 2),
+    parts = [box('board', (0.13, 0.012, 0.17), (0, 0, 0.06), col, M('prop.wood'), 0.006, 2),
              box('paper', (0.11, 0.004, 0.13), (0, -0.007, 0.05), col, M('prop.paper'), 0.002, 1),
              box('clip', (0.05, 0.016, 0.022), (0, -0.004, 0.14), col, M(ACC), 0.006, 2)]
     for i in range(3):
@@ -430,7 +430,7 @@ def megaphone(col, body):
 
 
 def brush(col, body):
-    handle = cylinder('handle', 0.008, 0.16, (0, 0, 0.06), col, M('clay.wood'), 10, 0.003)
+    handle = cylinder('handle', 0.008, 0.16, (0, 0, 0.06), col, M('prop.wood'), 10, 0.003)
     ferrule = cylinder('ferrule', 0.011, 0.03, (0, 0, 0.15), col, M('prop.metal'), 12, 0.003)
     bm = bmesh.new()
     bmesh.ops.create_cone(bm, cap_ends=True, segments=14, radius1=0.013, radius2=0.002, depth=0.045)
