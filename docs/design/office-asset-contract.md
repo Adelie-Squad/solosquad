@@ -67,7 +67,8 @@ assets/office/
 | `penguin.body` · `penguin.face` · `penguin.cheek` · `penguin.eye` · `penguin.beak` · `penguin.feet` | 펭귄 |
 | `prop.<색 이름>` | 소품의 고정 색(예: `prop.gold` · `prop.black`) |
 
-- 모든 재질 = 무광(roughness 0.8 이상) · metallic 0 · 텍스처 무늬 없음.
+- 모든 재질 = 무광(roughness 0.8 이상) · metallic 0(glTF 기본값이 1 이므로 꼭 명시) · 텍스처 무늬 없음.
+- **모듈별 재질 인스턴스(AO 때문에)** — 구운 AO 는 모듈마다 다른데 재질은 여러 모듈이 같이 쓴다. 그래서 `office-kit.glb` 의 재질은 모듈마다 따로 두고 이름을 **`<팔레트 키>#<모듈>`** 로 짓는다(예: `clay.furniture#desk.set` · `team_sticker#desk.set`). AO 는 그 재질의 `occlusionTexture`(texCoord 1 = `uv_ao`)로 넣는다. 웹은 `name.split('#')[0]` 을 팔레트 키로 쓴다. 펭귄 · 역할 소품 재질은 AO 가 없으므로 `#` 없는 키 그대로(2026-11-07 결정).
 
 ## 5. 펭귄 (penguin.glb)
 
