@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { NavLink, Navigate, useParams } from 'react-router-dom';
-import { api, ApiError } from '../api/client';
+import { api } from '../api/client';
+import { errorCode, errorText } from '../api/errors';
 import { keys, useAccess, useAction, useApprovalPolicy, useKeys, useScopedApi, useSettings, useUsers } from '../api/queries';
 import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser, WebSettings } from '../api/types.gen';
 import { Loading, QueryError } from '../components/Status';
@@ -151,7 +152,7 @@ function AccountSettings() {
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
         setError(null);
-        change.mutate(undefined, { onError: (err) => setError(err instanceof ApiError ? err.message : t('common.failed')) });
+        change.mutate(undefined, { onError: (err) => setError(errorText(err, t)) });
       }}
     >
       <p>
@@ -263,8 +264,8 @@ function AccessForm({
       setLockout(null);
       setSaved(true);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) setLockout(err.message);
-      else setError(err instanceof ApiError ? err.message : t('common.failed'));
+      if (errorCode(err) === 'access_lockout') setLockout(errorText(err, t));
+      else setError(errorText(err, t));
     }
   };
 
@@ -388,7 +389,7 @@ function UserSettings() {
     [keys.users, keys.orgChart, keys.people],
   );
   const [error, setError] = useState<string | null>(null);
-  const onError = (e: unknown) => setError(e instanceof ApiError ? e.message : t('common.failed'));
+  const onError = (e: unknown) => setError(errorText(e, t));
   const act = (id: string, body: Record<string, unknown>) => {
     setError(null);
     update.mutate({ id, body }, { onError });
@@ -513,7 +514,7 @@ function NewUser() {
         setError(null);
         create.mutate(undefined, {
           onSuccess: () => setForm(blank),
-          onError: (err) => setError(err instanceof ApiError ? err.message : t('common.failed')),
+          onError: (err) => setError(errorText(err, t)),
         });
       }}
     >

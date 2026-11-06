@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { api, ApiError, setCsrf } from '../api/client';
+import { errorCode, errorKey } from '../api/errors';
 import { keys, useHealth } from '../api/queries';
 import type { Me } from '../api/types.gen';
 import { LocalePicker } from '../components/LocalePicker';
@@ -8,16 +9,27 @@ import { Mascot } from '../characters/PenguinIcon';
 import { useI18n, type MessageKey } from '../i18n';
 import { loginWithPasskey, passkeySupported, showPasskeyButton } from './passkeys';
 
-/** Server reasons (English, generic on purpose) → the person's language. */
+/** A refused login, by its code (generic on purpose server-side) → the person's language. */
 export function authReason(err: unknown): MessageKey {
-  const msg = err instanceof ApiError ? err.message : '';
-  if (msg.includes('too many')) return 'auth.throttled';
-  if (msg.includes('one-time code required')) return 'auth.needCode';
-  if (msg.includes('wrong one-time code')) return 'auth.wrongCode';
-  if (msg.includes('username or password')) return 'auth.wrong';
-  if (msg.includes('passkey not recognised')) return 'passkey.notRecognised';
-  if (err instanceof ApiError && err.status === 403) return 'auth.blocked';
-  return 'auth.failed';
+  if (!(err instanceof ApiError)) return 'auth.failed';
+  switch (errorCode(err)) {
+    case 'login_throttled':
+      return 'auth.throttled';
+    case 'otp_required':
+      return 'auth.needCode';
+    case 'otp_invalid':
+      return 'auth.wrongCode';
+    case 'login_failed':
+      return 'auth.wrong';
+    case 'passkey_not_recognised':
+      return 'passkey.notRecognised';
+    case 'network_blocked':
+      return 'auth.blocked';
+    case null:
+      return 'auth.failed';
+    default:
+      return errorKey(err);
+  }
 }
 
 /** Login — account + one-time code (decision 41). A first login without a code goes to enrolment. */
@@ -46,7 +58,7 @@ export function Login() {
       setCsrf(me.csrf);
       qc.setQueryData(keys.me, me);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) setRefused(true); // no public_url
+      if (errorCode(err) === 'passkeys_unavailable') setRefused(true); // no public_url
       else if (err instanceof ApiError) setError(authReason(err));
       else setError('passkey.cancelled'); // the person closed the browser's sheet
     } finally {

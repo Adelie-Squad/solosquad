@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ApiError } from '../api/client';
+import { errorText } from '../api/errors';
 import { useAction, useConnections, useKeys, useScopedApi } from '../api/queries';
 import type { ConnectionOut, Ok } from '../api/types.gen';
 import { Loading, QueryError } from '../components/Status';
@@ -23,7 +23,7 @@ export function ConnectionsView() {
   const [error, setError] = useState<string | null>(null);
   const toggle = useAction((c: ConnectionOut) => orgApi.patch<ConnectionOut>(`/connections/${c.id}`, { active: !c.active }), [keys.connections, keys.budget]);
   const remove = useAction((id: string) => orgApi.del<Ok>(`/connections/${id}`), [keys.connections, keys.budget]);
-  const onError = (e: unknown) => setError(e instanceof ApiError ? e.message : t('common.failed'));
+  const onError = (e: unknown) => setError(errorText(e, t));
 
   return (
     <div className="view">
@@ -158,16 +158,9 @@ function AddConnection({ onDone }: { onDone: () => void }) {
     setError(null);
     add.mutate(undefined, {
       onSuccess: onDone,
-      // 422 = the region rule refused it; the reason and its source come from the engine
-      // 400 "entity that holds" = C18, no holder for a key that reaches a provider
-      onError: (err) =>
-        setError(
-          err instanceof ApiError
-            ? err.message.includes('entity that holds')
-              ? t('connections.entityRequired')
-              : err.message
-            : t('common.failed'),
-        ),
+      // connection_ineligible_* = the region rule refused it (provider · country in params);
+      // entity_required = C18, no holder for a key that reaches a provider
+      onError: (err) => setError(errorText(err, t)),
     });
   };
 

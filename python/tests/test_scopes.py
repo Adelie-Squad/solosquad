@@ -33,7 +33,13 @@ from solosquad.engine_server import start_engine, stop_engine
 from solosquad.runtime import RunStatus
 from solosquad.web_api import totp
 from solosquad.web_api.accounts import Assignment, Role
-from solosquad.web_api.app import CSRF_HEADER, NOT_FOUND, AppConfig, create_app, route_table
+from solosquad.web_api.app import (
+    CSRF_HEADER,
+    NOT_FOUND_BODY,
+    AppConfig,
+    create_app,
+    route_table,
+)
 from solosquad.web_api.org_store import org_path
 
 PASSWORD = "correct horse battery"
@@ -129,7 +135,7 @@ async def test_c3_staff_of_one_org_sees_nothing_of_the_other(web: Web) -> None:
             foreign = await call(kim, method, fill(template, "spacex", "rocket"), hk)
             missing = await call(kim, method, fill(template, "no-such-org", "rocket"), hk)
             assert foreign.status_code == 404, (level, method, template, foreign.text)
-            assert foreign.json() == missing.json() == {"error": NOT_FOUND}, template
+            assert foreign.json() == missing.json() == NOT_FOUND_BODY, template
             assert foreign.headers["content-length"] == missing.headers["content-length"]
 
         # inside Tesla kim works; the owner reaches SpaceX
@@ -165,9 +171,9 @@ async def test_c30_a_workspace_assignment_is_that_workspace_only(web: Web) -> No
         for level, method, template in scoped_routes(web.app):
             if level == "workspace":  # the same org's other workspace
                 r = await call(lee, method, fill(template, "tesla", "cars"), hl)
-                assert r.status_code == 404 and r.json() == {"error": NOT_FOUND}, template
+                assert r.status_code == 404 and r.json() == NOT_FOUND_BODY, template
             r = await call(lee, method, fill(template, "spacex", "rocket"), hl)
-            assert r.status_code == 404 and r.json() == {"error": NOT_FOUND}, template
+            assert r.status_code == 404 and r.json() == NOT_FOUND_BODY, template
         assert (await lee.get("/api/o/tesla/w/charging/threads")).status_code == 200
         assert (await lee.get("/api/o/tesla/teams")).status_code == 200  # the org it works in
 
@@ -237,6 +243,7 @@ async def test_a_workspace_open_only_to_its_network(web: Web) -> None:
         assert r.status_code == 200
         blocked = await boss.get("/api/o/tesla/w/charging/threads")
         assert blocked.status_code == 403 and "networks" in blocked.json()["error"]  # C4
+        assert blocked.json()["code"] == "workspace_network_blocked"
         assert (await boss.get("/api/o/tesla/w/cars/threads")).status_code == 200
         assert (await boss.get("/api/me")).status_code == 200  # the session itself is fine
     async with web.client("10.1.2.3") as inside:
@@ -307,6 +314,7 @@ async def test_c31_a_workspace_that_did_not_start(tmp_path: Path) -> None:
             await web.login(kim, "kim", assignments=[Assignment("spacex", None, Role.STAFF)])
             down = await boss.get("/api/o/tesla/w/charging/threads")
             assert down.status_code == 503  # its people learn it did not start
+            assert down.json()["code"] == "workspace_not_started"
             assert (await kim.get("/api/o/tesla/w/charging/threads")).status_code == 404
             assert (await boss.get("/api/o/tesla/w/cars/threads")).status_code == 200
             me = (await boss.get("/api/me")).json()

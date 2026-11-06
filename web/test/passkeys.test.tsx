@@ -100,14 +100,14 @@ describe('passkey button on the login screen', () => {
   });
 
   it('stays hidden without public_url', async () => {
-    const fetch = serve(false, { status: 409, body: { error: 'passkeys need the office public_url' } });
+    const fetch = serve(false, { status: 409, body: { error: 'passkeys need the office public_url', code: 'passkeys_unavailable', params: {} } });
     renderWith(<Login />, 'en');
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/health', expect.anything()));
     expect(screen.queryByTestId('passkey-login')).toBeNull();
   });
 
-  it('hides itself when the engine answers 409', async () => {
-    serve(true, { status: 409, body: { error: 'passkeys need the office public_url' } });
+  it('hides itself when the engine answers passkeys_unavailable', async () => {
+    serve(true, { status: 409, body: { error: 'passkeys need the office public_url', code: 'passkeys_unavailable', params: {} } });
     renderWith(<Login />, 'en');
     const button = await waitFor(() => screen.getByTestId('passkey-login'));
     fireEvent.click(button);

@@ -158,7 +158,8 @@ async def test_profile_read_by_all_written_by_the_owner(office: Settings) -> Non
             {"entities": [{"id": "a", "name": "A", "country": "KR"}] * 2},
             {"notes": "free text"},
         ):
-            assert (await boss.put("/api/profile", json=bad, headers=hb)).status_code == 400
+            r = await boss.put("/api/profile", json=bad, headers=hb)
+            assert r.status_code == 400 and r.json()["code"] == "profile_invalid", (bad, r.text)
     assert _actions(office).count("profile.update") == 1
 
 
@@ -179,6 +180,8 @@ async def test_snapshot_settings_keep_the_keys_out_of_every_response(
         for bad in ({"type": "s3", "bucket": "bk"}, {"type": "dir"}, s3, {"type": "ftp"}):
             r = await boss.put("/api/snapshot", json=bad, headers=hb)
             assert r.status_code == 400, (bad, r.text)
+            want = "snapshot_keys_required" if bad is s3 else "snapshot_invalid"
+            assert r.json()["code"] == want, (bad, r.text)
         keys = {"access_key": "AKIAEXAMPLE", "secret_key": "very-secret-value"}
         r = await boss.put("/api/snapshot", json={**s3, **keys}, headers=hb)
         assert r.status_code == 200, r.text

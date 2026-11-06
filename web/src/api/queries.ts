@@ -2,7 +2,9 @@
 // the event stream (live/LiveProvider) only tells the cache what to refetch.
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { api } from './client';
-import { apiPath, useScope, type Scope } from '../scope';
+import { useContext } from 'react';
+import { apiPath, findWorkspace, useScope, type Scope } from '../scope';
+import { SessionContext } from '../session';
 import type {
   AccessPolicy,
   Agent,
@@ -103,9 +105,13 @@ export function useScopedApi() {
 
 const enabledFor = (on: boolean) => ({ enabled: on });
 
+/** `on` = the workspace's runtime is up (`running` in /api/me): a workspace that did not start
+ * answers every call with 503, so its screen says so instead of asking (C31). */
 function useWs() {
   const s = useScope();
-  return { k: scopedKeys(s), a: boundApi(apiPath.ws(s, '')) };
+  const session = useContext(SessionContext);
+  const on = session ? (findWorkspace(session.me.scopes, s.org, s.ws)?.running ?? true) : true;
+  return { k: scopedKeys(s), a: boundApi(apiPath.ws(s, '')), on };
 }
 
 function useOrg() {
@@ -116,58 +122,58 @@ function useOrg() {
 // -------------------------------------------------------------- workspace scope
 
 export const useThreads = () => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.threads, queryFn: () => a.get<Thread[]>('/threads') });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.threads, queryFn: () => a.get<Thread[]>('/threads'), ...enabledFor(on) });
 };
 export const useThreadState = (tid: string | undefined) => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.thread(tid ?? ''), queryFn: () => a.get<ThreadState>(`/threads/${tid}/state`), ...enabledFor(!!tid) });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.thread(tid ?? ''), queryFn: () => a.get<ThreadState>(`/threads/${tid}/state`), ...enabledFor(on && !!tid) });
 };
 export const useRuns = (query: { status?: string; thread_id?: string; limit?: number } = {}, on = true) => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: [...k.runs, query], queryFn: () => a.get<Run[]>('/runs', query), ...enabledFor(on) });
+  const { k, a, on: running } = useWs();
+  return useQuery({ queryKey: [...k.runs, query], queryFn: () => a.get<Run[]>('/runs', query), ...enabledFor(on && running) });
 };
 /** Who is working now — the workspace's runtime (`working_on`). */
 export const useAgents = () => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.agents, queryFn: () => a.get<Agent[]>('/agents') });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.agents, queryFn: () => a.get<Agent[]>('/agents'), ...enabledFor(on) });
 };
 export const useApprovals = () => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.approvals, queryFn: () => a.get<ApprovalItem[]>('/approvals') });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.approvals, queryFn: () => a.get<ApprovalItem[]>('/approvals'), ...enabledFor(on) });
 };
 export const useBudget = () => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.budget, queryFn: () => a.get<Budget>('/budget') });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.budget, queryFn: () => a.get<Budget>('/budget'), ...enabledFor(on) });
 };
 /** The workspace's view of the workflows (with its own last run). */
 export const useWorkflows = () => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.workflows, queryFn: () => a.get<WorkflowList>('/workflows') });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.workflows, queryFn: () => a.get<WorkflowList>('/workflows'), ...enabledFor(on) });
 };
 export const useWorkflowRuns = (name?: string) => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.workflowRuns(name), queryFn: () => a.get<Run[]>('/workflow-runs', { workflow: name, limit: 20 }) });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.workflowRuns(name), queryFn: () => a.get<Run[]>('/workflow-runs', { workflow: name, limit: 20 }), ...enabledFor(on) });
 };
 export const useWorkflowState = (tid: string | undefined) => {
-  const { k, a } = useWs();
+  const { k, a, on } = useWs();
   return useQuery({
     queryKey: k.workflowState(tid ?? ''),
     queryFn: () => a.get<WorkflowThreadState>(`/workflow-threads/${tid}/state`),
-    ...enabledFor(!!tid),
+    ...enabledFor(on && !!tid),
   });
 };
 export const useArtifacts = (query: { kind?: string; limit?: number } = {}) => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: [...k.artifacts, query], queryFn: () => a.get<Artifact[]>('/artifacts', query) });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: [...k.artifacts, query], queryFn: () => a.get<Artifact[]>('/artifacts', query), ...enabledFor(on) });
 };
 export const useArtifact = (id: string | undefined) => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.artifact(id ?? ''), queryFn: () => a.get<Artifact>(`/artifacts/${id}`), ...enabledFor(!!id) });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.artifact(id ?? ''), queryFn: () => a.get<Artifact>(`/artifacts/${id}`), ...enabledFor(on && !!id) });
 };
 export const useUploads = () => {
-  const { k, a } = useWs();
-  return useQuery({ queryKey: k.uploads, queryFn: () => a.get<Upload[]>('/uploads') });
+  const { k, a, on } = useWs();
+  return useQuery({ queryKey: k.uploads, queryFn: () => a.get<Upload[]>('/uploads'), ...enabledFor(on) });
 };
 
 // -------------------------------------------------------------- org scope

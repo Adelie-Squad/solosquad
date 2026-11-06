@@ -76,7 +76,7 @@ from solosquad.routing.connections import (
     load_connections,
     save_connections,
 )
-from solosquad.routing.eligibility import Entity, judge, providers_reached
+from solosquad.routing.eligibility import Entity, Verdict, judge, providers_reached
 from solosquad.routing.router import Router as LlmRouter
 from solosquad.routing.vault import SecretStore
 from solosquad.runtime import RunManager, RunStatus
@@ -94,9 +94,11 @@ from solosquad.web_api.accounts import (
     SessionStage,
     User,
 )
+from solosquad.web_api.errors import ApiError, CodedError, for_status
+from solosquad.web_api.errors import ErrorCode as E
 from solosquad.web_api.events import EventHub
 from solosquad.web_api.org_store import OrgStore
-from solosquad.workflows.engine import UPLOAD_LIMIT, WorkflowEngine
+from solosquad.workflows.engine import UPLOAD_LIMIT, UPLOAD_TYPES, WorkflowEngine
 
 if TYPE_CHECKING:
     from solosquad.engine_server import EngineServer
@@ -109,6 +111,8 @@ UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 NOT_FOUND = "Not Found"
 """The one answer for a scope that is not yours and for one that does not exist (C3 · C30) —
 Starlette's own text, so an unknown route inside your scope reads the same."""
+NOT_FOUND_BODY = {"error": NOT_FOUND, "code": E.NOT_FOUND.value, "params": {}}
+"""…and the whole body: same sentence, same code, nothing in `params` to tell them apart."""
 THEME_SCRIPT_HASH = "sha256-Tw8gxlCxr/CHgowPx8fOQaU9j9JOSiBiOuJpPMlkEuk="
 """The one inline script the web has: `web/index.html` picks light or dark before the
 first paint (DESIGN.md `## 테마`, no flash). CSP allows exactly that script by hash —
@@ -448,7 +452,9 @@ def create_app(cfg: AppConfig) -> Starlette:
     def policy_check(request: Request) -> Origin:
         w = where(request)
         if not allowed(server_cfg().access, w):
-            raise HTTPException(403, "this server does not accept connections from here")
+            raise ApiError(
+                403, E.NETWORK_BLOCKED, "this server does not accept connections from here"
+            )
         return w
 
     def accounts() -> AccountStore:
@@ -460,16 +466,16 @@ def create_app(cfg: AppConfig) -> Starlette:
         if auth.startswith("Bearer "):
             if w.local and hmac.compare_digest(auth[7:], cfg.token):
                 return Principal(Role.OWNER, None)
-            raise HTTPException(401, "unauthorized")
+            raise ApiError(401, E.UNAUTHORIZED, "unauthorized")
         session = cfg.accounts.session(request.cookies.get(SESSION_COOKIE))
         if session is None:
-            raise HTTPException(401, "unauthorized")
+            raise ApiError(401, E.UNAUTHORIZED, "unauthorized")
         if request.method in UNSAFE and not hmac.compare_digest(
             request.headers.get(CSRF_HEADER, ""), session.csrf
         ):
-            raise HTTPException(403, "missing or wrong CSRF token")
+            raise ApiError(403, E.CSRF_INVALID, "missing or wrong CSRF token")
         if session.stage is SessionStage.ENROLL and not allow_enroll:
-            raise HTTPException(403, "set up the one-time code first")
+            raise ApiError(403, E.ENROL_REQUIRED, "set up the one-time code first")
         return Principal(session.user.role, session)
 
     def role_for(who: Principal, org: str, workspace: str | None) -> Role | None:
@@ -485,7 +491,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         who = principal(request)
         role = role_for(who, org, None) if org in served_orgs() else None
         if role is None:  # not assigned, not placed here, not there at all — the same 404
-            raise HTTPException(404, NOT_FOUND)
+            raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
         request.state.in_scope = InScope(who, org, None, role)
 
     def check_workspace(request: Request) -> None:
@@ -493,13 +499,16 @@ def create_app(cfg: AppConfig) -> Starlette:
         key = (outer.org, str(request.path_params.get("ws", "")))
         role = role_for(outer.who, *key) if key in cfg.placed else None
         if role is None:
-            raise HTTPException(404, NOT_FOUND)
+            raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
         rt = cfg.runtimes.get(key)
         if rt is None:
-            raise HTTPException(503, "this workspace did not start — see the server log")
+            raise ApiError(
+                503, E.WORKSPACE_NOT_STARTED, "this workspace did not start — see the server log"
+            )
         if not allowed(rt.workspace.config().access, where(request)):
-            raise HTTPException(  # C4 — the session is fine, this workspace is not open here
+            raise ApiError(  # C4 — the session is fine, this workspace is not open here
                 403,
+                E.WORKSPACE_NETWORK_BLOCKED,
                 "this workspace accepts connections only from its own networks — connect"
                 " from there (office network or VPN), or ask the owner",
             )
@@ -518,7 +527,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         who = sc.who if sc is not None else principal(request)
         role = sc.role if sc is not None else who.role
         if role not in ROUTE_ROLES[route]:
-            raise HTTPException(403, "not allowed for your role")
+            raise ApiError(403, E.ROLE_FORBIDDEN, "not allowed for your role")
         return who
 
     def runtime(request: Request) -> RuntimeView:
@@ -530,10 +539,17 @@ def create_app(cfg: AppConfig) -> Starlette:
         raw = await request.body()
         if not raw:
             return {}
-        data = json.loads(raw)
+        try:
+            data = json.loads(raw)
+        except ValueError as e:
+            raise ApiError(400, E.INVALID_REQUEST, f"the body is not JSON: {e}") from e
         if not isinstance(data, dict):
-            raise ValueError("expected a JSON object")
+            raise ApiError(400, E.INVALID_REQUEST, "expected a JSON object")
         return data
+
+    def locale_error(nullable: bool) -> ApiError:
+        tail = " or null" if nullable else ""
+        return ApiError(400, E.LOCALE_INVALID, f"locale must be one of {list(S.LOCALES)}{tail}")
 
     # ------------------------------------------------------------------ audit · scopes
 
@@ -643,7 +659,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 ua=request.headers.get("user-agent", ""),
             )
         except AuthError as e:
-            raise HTTPException(401, str(e)) from e
+            raise ApiError(401, e.code, str(e)) from e
         accounts().audit(session.user.id, "login", w.address)
         resp = respond(S.Me, me_payload(session))
         set_session(resp, token)
@@ -676,7 +692,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 # null or "" = follow the customer default (I31)
                 loc = str(data["locale"] or "")
                 if loc and loc not in S.LOCALES:
-                    raise ValueError(f"locale must be one of {list(S.LOCALES)} or null")
+                    raise locale_error(nullable=True)
                 accounts().set_locale(uid, loc)
             if isinstance(data.get("last_scope"), dict):
                 want = (
@@ -684,7 +700,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                     str(data["last_scope"].get("workspace")),
                 )
                 if want not in cfg.placed or role_for(who, *want) is None:
-                    raise HTTPException(404, NOT_FOUND)
+                    raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
                 accounts().set_last_scope(uid, *want)
                 last_seen[uid] = want
             if "password" in data:
@@ -702,16 +718,20 @@ def create_app(cfg: AppConfig) -> Starlette:
     async def totp_begin(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
-            raise HTTPException(400, "log in with an account to set up a one-time code")
+            raise ApiError(
+                400, E.ACCOUNT_REQUIRED, "log in with an account to set up a one-time code"
+            )
         return respond(S.TotpBegin, {"uri": accounts().begin_totp(who.session.user.id)})
 
     async def totp_confirm(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
-            raise HTTPException(400, "log in with an account to set up a one-time code")
+            raise ApiError(
+                400, E.ACCOUNT_REQUIRED, "log in with an account to set up a one-time code"
+            )
         code = str((await body(request)).get("code") or "")
         if not accounts().confirm_totp(who.session.user.id, code):
-            raise HTTPException(400, "wrong one-time code")
+            raise ApiError(400, E.OTP_INVALID, "wrong one-time code")
         token = request.cookies.get(SESSION_COOKIE)
         if token:
             accounts().promote_session(token)
@@ -731,15 +751,17 @@ def create_app(cfg: AppConfig) -> Starlette:
         url = server_cfg().public_url
         parts = urlsplit(url or "")
         if parts.scheme not in ("https", "http") or not parts.hostname:
-            raise HTTPException(
-                409, "passkeys need the server's public_url (https://…) in core/server.yaml"
+            raise ApiError(
+                409,
+                E.PASSKEYS_UNAVAILABLE,
+                "passkeys need the server's public_url (https://…) in core/server.yaml",
             )
         return parts.hostname, f"{parts.scheme}://{parts.netloc}"
 
     async def passkey_register_begin(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
-            raise HTTPException(400, "log in with an account to add a passkey")
+            raise ApiError(400, E.ACCOUNT_REQUIRED, "log in with an account to add a passkey")
         rp_id, _origin = relying_party()
         user = who.session.user
         options = webauthn.generate_registration_options(
@@ -764,15 +786,19 @@ def create_app(cfg: AppConfig) -> Starlette:
     async def passkey_register_finish(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
         if who.session is None:
-            raise HTTPException(400, "log in with an account to add a passkey")
+            raise ApiError(400, E.ACCOUNT_REQUIRED, "log in with an account to add a passkey")
         rp_id, origin = relying_party()
         data = await body(request)
         taken = accounts().take_challenge(str(data.get("challenge_id") or ""), "register")
         if taken is None or taken[1] != who.session.user.id:
-            raise HTTPException(400, "the passkey request expired — start again")
+            raise ApiError(400, E.PASSKEY_EXPIRED, "the passkey request expired — start again")
         cred = data.get("credential")
         if not isinstance(cred, dict):
-            raise ValueError("send the credential from navigator.credentials.create()")
+            raise ApiError(
+                400,
+                E.PASSKEY_REJECTED,
+                "send the credential from navigator.credentials.create()",
+            )
         try:
             verified = webauthn.verify_registration_response(
                 credential=cred,
@@ -782,7 +808,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 require_user_verification=True,
             )
         except Exception as e:  # the library raises its own errors for every bad response
-            raise HTTPException(400, f"passkey was not accepted: {e}") from e
+            raise ApiError(400, E.PASSKEY_REJECTED, f"passkey was not accepted: {e}") from e
         transports = (cred.get("response") or {}).get("transports") or []
         accounts().add_passkey(
             who.session.user.id,
@@ -827,14 +853,15 @@ def create_app(cfg: AppConfig) -> Starlette:
         rp_id, origin = relying_party()
         store = accounts()
         if store.throttled(f"ip:{w.address}"):
-            raise HTTPException(401, "too many attempts — try again later")
+            raise ApiError(401, E.LOGIN_THROTTLED, "too many attempts — try again later")
         data = await body(request)
         cred = data.get("credential") or {}
         taken = store.take_challenge(str(data.get("challenge_id") or ""), "login")
         found = store.passkey(str(cred.get("id") or "")) if isinstance(cred, dict) else None
+        unknown = ApiError(401, E.PASSKEY_NOT_RECOGNISED, "passkey not recognised")
         if taken is None or found is None or (taken[1] is not None and taken[1] != found[0]):
             store.record_failure(f"ip:{w.address}")
-            raise HTTPException(401, "passkey not recognised")
+            raise unknown
         uid, public_key, sign_count = found
         try:
             verified = webauthn.verify_authentication_response(
@@ -848,9 +875,9 @@ def create_app(cfg: AppConfig) -> Starlette:
             )
         except Exception as e:
             store.record_failure(f"ip:{w.address}")
-            raise HTTPException(401, "passkey not recognised") from e
+            raise unknown from e
         if store.user(uid).disabled:
-            raise HTTPException(401, "passkey not recognised")
+            raise unknown
         store.touch_passkey(str(cred["id"]), verified.new_sign_count)
         token, session = store.open_session(
             uid, SessionStage.FULL, ip=w.address, ua=request.headers.get("user-agent", "")
@@ -871,7 +898,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         if who.session is None or not accounts().delete_passkey(
             who.session.user.id, request.path_params["pid"]
         ):
-            raise KeyError("no such passkey")
+            raise ApiError(404, E.NOT_FOUND, "no such passkey")
         accounts().audit(who.user_id, "passkey.remove", request.path_params["pid"])
         return respond(S.Ok, {"ok": True})
 
@@ -879,18 +906,21 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     def parse_assignments(raw: Any) -> list[Assignment]:
         if not isinstance(raw, list):
-            raise ValueError("assignments must be a list of {org, workspace?, role}")
+            raise ApiError(
+                400, E.ASSIGNMENT_INVALID, "assignments must be a list of {org, workspace?, role}"
+            )
         out = []
         for item in raw:
             if not isinstance(item, dict) or not item.get("org"):
-                raise ValueError("each assignment needs an org")
+                raise ApiError(400, E.ASSIGNMENT_INVALID, "each assignment needs an org")
             org, ws = str(item["org"]), item.get("workspace")
             try:
                 found = cfg.solution.org(org)
                 if ws:
                     found.workspace(str(ws))
             except LayoutError as e:
-                raise ValueError(str(e)) from e
+                where = f"{org}/{ws or '*'}"
+                raise ApiError(400, E.ASSIGNMENT_UNKNOWN_SCOPE, str(e), scope=where) from e
             out.append(
                 Assignment(org, str(ws) if ws else None, Role(str(item.get("role") or "staff")))
             )
@@ -926,8 +956,10 @@ def create_app(cfg: AppConfig) -> Starlette:
         store = accounts()
         store.user(uid)
         if "teams" in data or "title" in data:
-            raise ValueError(
-                "title and teams are per org since rev7 — PATCH /api/o/{org}/people/{uid}"
+            raise ApiError(
+                400,
+                E.USER_FIELDS_MOVED,
+                "title and teams are per org since rev7 — PATCH /api/o/{org}/people/{uid}",
             )
         if "role" in data:
             store.set_role(uid, Role(str(data["role"])))
@@ -962,7 +994,11 @@ def create_app(cfg: AppConfig) -> Starlette:
         request: Request, current: Any, data: dict[str, Any], save: Callable[[Any], object]
     ) -> Any:
         nets = [str(x) for x in data.get("allowed_networks", current.allowed_networks)]
-        parse_networks(nets)  # ValueError → 400 on a malformed entry
+        for entry in nets:
+            try:
+                parse_networks([entry])
+            except ValueError as e:
+                raise ApiError(400, E.NETWORK_INVALID, str(e), entry=entry) from e
         proposed = current.model_copy(
             update={
                 "allowed_networks": nets,
@@ -972,10 +1008,12 @@ def create_app(cfg: AppConfig) -> Starlette:
         here = where(request)
         if not allowed(proposed, here) and not data.get("confirm_lockout"):
             # K28 — refuse a list that would lock out the person saving it
-            raise HTTPException(
+            raise ApiError(
                 409,
+                E.ACCESS_LOCKOUT,
                 f"your address {here.address} is not in the new list — you would lose"
                 " access. Send confirm_lockout: true to save anyway.",
+                address=here.address,
             )
         save(proposed)
         return proposed
@@ -1030,7 +1068,7 @@ def create_app(cfg: AppConfig) -> Starlette:
             data = await body(request)
             loc = str(data.get("locale") or "")
             if loc not in S.LOCALES:
-                raise ValueError(f"locale must be one of {list(S.LOCALES)}")
+                raise locale_error(nullable=False)
             web = server_cfg().web.model_copy(update={"locale": loc})
             cfg.solution.update_server_config(web=web)
             accounts().audit(who.user_id, "settings.update", f"locale={loc}")
@@ -1049,7 +1087,11 @@ def create_app(cfg: AppConfig) -> Starlette:
             who = need(request, "profile.update")
             root = cfg.solution.root
             before = load_profile(root)
-            updated = update_profile(before, await body(request))  # ValueError → 400
+            data = await body(request)
+            try:
+                updated = update_profile(before, data)
+            except ValueError as e:  # the model's own rules, pydantic's included
+                raise ApiError(400, E.PROFILE_INVALID, str(e)) from e
             save_profile(root, updated)  # the country goes to core/server.yaml (I41)
             for rt in cfg.runtimes.values():
                 if rt.router is not None:
@@ -1075,25 +1117,34 @@ def create_app(cfg: AppConfig) -> Starlette:
             who = need(request, "snapshot.update")
             data = await body(request)
             kind = data.get("type")
-            target = build_target(
-                str(kind) if kind else None,
-                endpoint=str(data.get("endpoint") or "") or None,
-                region=str(data.get("region") or "us-east-1"),
-                bucket=str(data.get("bucket") or "") or None,
-                prefix=str(data.get("prefix") or "solosquad"),
-                path=str(data.get("path") or "") or None,
-                keep_days=int(data.get("keep_days") or 30),
-            )  # ValueError → 400, the same check as `snapshot set`
+            try:
+                target = build_target(
+                    str(kind) if kind else None,
+                    endpoint=str(data.get("endpoint") or "") or None,
+                    region=str(data.get("region") or "us-east-1"),
+                    bucket=str(data.get("bucket") or "") or None,
+                    prefix=str(data.get("prefix") or "solosquad"),
+                    path=str(data.get("path") or "") or None,
+                    keep_days=int(data.get("keep_days") or 30),
+                )  # the same check as `snapshot set`
+            except ValueError as e:
+                raise ApiError(400, E.SNAPSHOT_INVALID, str(e)) from e
             access_key, secret = data.get("access_key"), data.get("secret_key")
             if target.type == "s3":
                 if cfg.secrets is None:
-                    raise HTTPException(404, "no secret store on this server")
+                    raise ApiError(404, E.SECRET_STORE_MISSING, "no secret store on this server")
                 if access_key or secret:
                     if not (access_key and secret):
-                        raise ValueError("send both access_key and secret_key")
+                        raise ApiError(
+                            400, E.SNAPSHOT_KEYS_REQUIRED, "send both access_key and secret_key"
+                        )
                     cfg.secrets.set(S3_SECRET_REF, f"{access_key}:{secret}")
                 elif not cfg.secrets.get(S3_SECRET_REF):
-                    raise ValueError("an s3 target needs access_key and secret_key")
+                    raise ApiError(
+                        400,
+                        E.SNAPSHOT_KEYS_REQUIRED,
+                        "an s3 target needs access_key and secret_key",
+                    )
             cfg.solution.update_server_config(snapshot=target)
             keys = " · keys replaced" if access_key else ""
             accounts().audit(who.user_id, "snapshot.update", f"type={target.type}{keys}")
@@ -1104,12 +1155,12 @@ def create_app(cfg: AppConfig) -> Starlette:
     async def snapshot_run(request: Request) -> Response:
         who = need(request, "snapshot.run")
         if cfg.run_snapshot is None:
-            raise HTTPException(404, "snapshots cannot be run from this server")
+            raise ApiError(404, E.SNAPSHOT_UNAVAILABLE, "snapshots cannot be run from this server")
         try:
             result = await asyncio.to_thread(cfg.run_snapshot)
         except (ValueError, OSError) as e:
             accounts().audit(who.user_id, "snapshot.failed", f"{type(e).__name__}: {e}")
-            raise HTTPException(502, f"snapshot failed: {e}") from e
+            raise ApiError(502, E.SNAPSHOT_FAILED, f"snapshot failed: {e}") from e
         accounts().audit(who.user_id, "snapshot.run", repr(result))
         return respond(S.SnapshotRunResult, result)
 
@@ -1126,7 +1177,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         for rt in org_runtimes(in_scope(request).org):
             if rt.resolver is not None:
                 return Resolver(rt.resolver.ctx, workspace_layer=False)
-        raise HTTPException(503, "no workspace of this org is running")
+        raise ApiError(503, E.ORG_NOT_RUNNING, "no workspace of this org is running")
 
     def org_store(request: Request) -> OrgStore | None:
         return cfg.orgs.get(in_scope(request).org)
@@ -1212,14 +1263,16 @@ def create_app(cfg: AppConfig) -> Starlette:
         uid = request.path_params["uid"]
         user = cfg.accounts.user(uid)
         if cfg.accounts.role_in(user, sc.org) is None:
-            raise KeyError(f"no person {uid} in this org")
+            raise ApiError(404, E.NOT_FOUND, f"no person {uid} in this org")
         store = org_store(request)
         if store is None:
-            raise HTTPException(503, "this org's records are not open on this server")
+            raise ApiError(
+                503, E.ORG_RECORDS_UNAVAILABLE, "this org's records are not open on this server"
+            )
         data = await body(request)
         teams_in = data.get("teams")
         if teams_in is not None and not isinstance(teams_in, list):
-            raise ValueError("teams must be a list of team names")
+            raise ApiError(400, E.TEAMS_INVALID, "teams must be a list of team names")
         title, tms = store.set_member(
             uid,
             title=str(data["title"]) if "title" in data else None,
@@ -1295,11 +1348,19 @@ def create_app(cfg: AppConfig) -> Starlette:
             need(request, "approval_policy.update")
             tiers = (await body(request)).get("tiers")
             if not isinstance(tiers, dict):
-                raise ValueError("send {tiers: {category: owner|team}}")
+                raise ApiError(
+                    400, E.APPROVAL_POLICY_INVALID, "send {tiers: {category: owner|team}}"
+                )
             if UNCLASSIFIED in tiers:
-                raise ValueError("unclassified approvals always go to the owner")
+                raise ApiError(
+                    400, E.UNCLASSIFIED_OWNER_ONLY, "unclassified approvals always go to the owner"
+                )
             before = policy(request)
-            updated = {**before.overrides, **{str(k): Tier(str(v)) for k, v in tiers.items()}}
+            try:
+                chosen = {str(k): Tier(str(v)) for k, v in tiers.items()}
+            except ValueError as e:
+                raise ApiError(400, E.APPROVAL_POLICY_INVALID, str(e)) from e
+            updated = {**before.overrides, **chosen}
             # keep only what differs from the recommendation — the file stays a list of choices
             overrides = {k: v for k, v in updated.items() if RECOMMENDED.get(k) is not v}
             save_policy(path, ApprovalPolicy(overrides))
@@ -1367,6 +1428,23 @@ def create_app(cfg: AppConfig) -> Starlette:
             "source": source,
         }
 
+    def entity_required() -> ApiError:
+        return ApiError(400, E.ENTITY_REQUIRED, ENTITY_REQUIRED)
+
+    def ineligible(verdict: Verdict) -> ApiError:
+        code = (
+            E.CONNECTION_INELIGIBLE_SERVER if verdict.by == "server"
+            else E.CONNECTION_INELIGIBLE_ENTITY
+        )  # fmt: skip
+        return ApiError(
+            422,
+            code,
+            f"{verdict.reason} — see {verdict.source}",
+            provider=verdict.provider,
+            country=verdict.country,
+            source=verdict.source,
+        )
+
     async def connections(request: Request) -> Response:
         sc = in_scope(request)
         if request.method == "POST":
@@ -1375,11 +1453,11 @@ def create_app(cfg: AppConfig) -> Starlette:
             entity = Entity.model_validate(data["entity"]) if data.get("entity") else None
             cid = str(data.get("id") or "").strip()
             if not cid:
-                raise ValueError("id is required")
+                raise ApiError(400, E.CONNECTION_ID_REQUIRED, "id is required")
             path = own_file(request)
             existing = load_connections(path)
             if any(c.id == cid for c, _src in visible(request)):
-                raise ValueError(f"connection {cid!r} exists")
+                raise ApiError(400, E.CONNECTION_EXISTS, f"connection {cid!r} exists", id=cid)
             conn = Connection(
                 id=cid,
                 kind=ConnectionKind(str(data.get("kind") or "api_key")),
@@ -1392,14 +1470,16 @@ def create_app(cfg: AppConfig) -> Starlette:
                 entity=entity,
             )
             if entity is None and providers_reached(conn.provider, conn.harness, conn.models):
-                raise ValueError(ENTITY_REQUIRED)  # C18 — eligibility is judged on the holder
+                raise entity_required()  # C18 — eligibility is judged on the holder
             verdict = judge(conn.provider, conn.harness, conn.models, entity, server_country())
             if not verdict.ok:
-                raise HTTPException(422, f"{verdict.reason} — see {verdict.source}")
+                raise ineligible(verdict)
             if data.get("secret"):
                 stores = [rt.secrets for rt in org_runtimes(sc.org) if rt.secrets is not None]
                 if not stores:
-                    raise HTTPException(404, "no secret store for this org on this server")
+                    raise ApiError(
+                        404, E.SECRET_STORE_MISSING, "no secret store for this org on this server"
+                    )
                 conn = conn.model_copy(update={"secret_ref": f"conn:{cid}"})
                 for store in stores:  # every workspace of the org routes through it
                     store.set(f"conn:{cid}", str(data["secret"]))
@@ -1447,12 +1527,12 @@ def create_app(cfg: AppConfig) -> Starlette:
             and changed.entity is None
             and providers_reached(changed.provider, changed.harness, changed.models)
         ):
-            raise ValueError(ENTITY_REQUIRED)
+            raise entity_required()
         verdict = judge(
             changed.provider, changed.harness, changed.models, changed.entity, server_country()
         )
         if changed.active and not verdict.ok:
-            raise HTTPException(422, f"{verdict.reason} — see {verdict.source}")
+            raise ineligible(verdict)
         save_connections(path, [changed if c.id == cid else c for c in existing])
         refresh_routers(sc.org)
         org_audit(sc, "connection.update", f"{cid} {sorted(update)}")
@@ -1466,7 +1546,7 @@ def create_app(cfg: AppConfig) -> Starlette:
     def org_summaries(org: str) -> tuple[list[dict[str, Any]], list[str]]:
         engines = org_engines(org)
         if not engines:
-            raise HTTPException(404, "workflows are not enabled for this org")
+            raise ApiError(404, E.FEATURE_DISABLED, "workflows are not enabled for this org")
         first = engines[0]
         return [{**w, "last_run": None} for w in first.summaries()], first.errors
 
@@ -1482,10 +1562,10 @@ def create_app(cfg: AppConfig) -> Starlette:
         name = request.path_params["name"]
         data = await body(request)
         if "enabled" not in data:
-            raise ValueError("send {enabled: true|false}")
+            raise ApiError(400, E.INVALID_REQUEST, "send {enabled: true|false}")
         engines = org_engines(sc.org)
         if not engines:
-            raise HTTPException(404, "workflows are not enabled for this org")
+            raise ApiError(404, E.FEATURE_DISABLED, "workflows are not enabled for this org")
         for e in engines:  # one switch for the org: every workspace's scheduler follows it
             e.set_enabled(name, bool(data["enabled"]))
         org_audit(sc, "workflow.enable" if data["enabled"] else "workflow.disable", name)
@@ -1518,8 +1598,12 @@ def create_app(cfg: AppConfig) -> Starlette:
         card = waiting_card(mgr, tid)
         if not may_approve(request, card):
             tier = policy(request).tier((card or {}).get("category")).value
-            whom = "the owner" if tier == "owner" else f"team {(card or {}).get('team')}"
-            raise HTTPException(403, f"this approval needs {whom}")
+            if tier == "owner":
+                raise ApiError(403, E.APPROVAL_NEEDS_OWNER, "this approval needs the owner")
+            team = str((card or {}).get("team"))
+            raise ApiError(
+                403, E.APPROVAL_NEEDS_TEAM, f"this approval needs team {team}", team=team
+            )
         return card
 
     async def threads(request: Request) -> Response:
@@ -1637,7 +1721,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         need(request, "working")
         rt = runtime(request)
         if rt.resolver is None:
-            raise HTTPException(404, "the agents are not visible on this server")
+            raise ApiError(404, E.FEATURE_DISABLED, "the agents are not visible on this server")
         m = rt.manager
         busy: dict[str, list[dict[str, Any]]] = {}
         for item in m.store.runs(status=RunStatus.RUNNING, limit=200):
@@ -1696,13 +1780,13 @@ def create_app(cfg: AppConfig) -> Starlette:
     def engine(request: Request) -> WorkflowEngine:
         found = runtime(request).workflows
         if found is None:
-            raise HTTPException(404, "workflows are not enabled in this workspace")
+            raise ApiError(404, E.FEATURE_DISABLED, "workflows are not enabled in this workspace")
         return found
 
     def store(request: Request) -> ArtifactStore:
         found = runtime(request).artifacts
         if found is None:
-            raise HTTPException(404, "artifacts are not enabled in this workspace")
+            raise ApiError(404, E.FEATURE_DISABLED, "artifacts are not enabled in this workspace")
         return found
 
     async def ws_workflows(request: Request) -> Response:
@@ -1716,8 +1800,11 @@ def create_app(cfg: AppConfig) -> Starlette:
         name = request.path_params["name"]
         inputs = (await body(request)).get("inputs") or {}
         if not isinstance(inputs, dict):
-            raise ValueError("inputs must be an object")
-        tid, rid = await engine(request).run_now(name, inputs, source=f"user:{who.name}")
+            raise ApiError(400, E.WORKFLOW_INPUT_INVALID, "inputs must be an object")
+        try:
+            tid, rid = await engine(request).run_now(name, inputs, source=f"user:{who.name}")
+        except ValueError as e:  # a missing input · an upload id that is not one
+            raise ApiError(400, E.WORKFLOW_INPUT_INVALID, str(e)) from e
         org_audit(in_scope(request), "workflow.run", name)
         return respond(S.WorkflowRunCreated, {"thread_id": tid, "run_id": rid}, 201)
 
@@ -1773,9 +1860,23 @@ def create_app(cfg: AppConfig) -> Starlette:
             need(request, "uploads.create")
             filename = request.query_params.get("filename") or ""
             declared = int(request.headers.get("content-length") or "0")
+            limit_mb = UPLOAD_LIMIT // (1024 * 1024)
+            too_large = ApiError(
+                413, E.UPLOAD_TOO_LARGE, f"file is larger than {limit_mb} MB", limit_mb=limit_mb
+            )
             if declared > UPLOAD_LIMIT:
-                raise HTTPException(413, f"file is larger than {UPLOAD_LIMIT // (1024 * 1024)} MB")
-            meta = engine(request).save_upload(filename, await request.body())
+                raise too_large
+            if Path(filename).suffix.lower() not in UPLOAD_TYPES:
+                kinds = ", ".join(UPLOAD_TYPES)
+                raise ApiError(
+                    400, E.UPLOAD_TYPE, f"only {kinds} files can be uploaded", types=kinds
+                )
+            data = await request.body()
+            if len(data) > UPLOAD_LIMIT:
+                raise too_large
+            if not data:
+                raise ApiError(400, E.UPLOAD_EMPTY, "empty file")
+            meta = engine(request).save_upload(filename, data)
             org_audit(in_scope(request), "upload", f"{meta['filename']} ({meta['size']} B)")
             return respond(S.Upload, meta, 201)
         need(request, "uploads.list")
@@ -1834,15 +1935,24 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     # ------------------------------------------------------------------ errors · routes
 
+    def error(status: int, message: str, code: E, params: dict[str, Any] | None = None) -> Json:
+        body = {"error": message, "code": code.value, "params": params or {}}
+        return respond(S.ErrorBody, body, status)
+
     async def not_found(_request: Request, exc: Exception) -> Response:
-        return Json({"error": str(exc).strip("'\"")}, status_code=404)
+        return error(404, str(exc).strip("'\""), E.NOT_FOUND)
 
     async def bad_request(_request: Request, exc: Exception) -> Response:
-        return Json({"error": str(exc)}, status_code=400)
+        if isinstance(exc, CodedError):
+            return error(400, str(exc), exc.code, exc.params)
+        return error(400, str(exc), E.INVALID_REQUEST)
 
     async def http_error(_request: Request, exc: Exception) -> Response:
         assert isinstance(exc, HTTPException)
-        return Json({"error": exc.detail}, status_code=exc.status_code)
+        if isinstance(exc, ApiError):
+            return error(exc.status_code, exc.detail, exc.code, exc.params)
+        # Starlette's own (an unknown route, a method the route does not take)
+        return error(exc.status_code, exc.detail, for_status(exc.status_code))
 
     Endpoint = Callable[[Request], Awaitable[Response]]
     Table = list[tuple[str, Endpoint, list[str]]]

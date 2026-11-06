@@ -29,6 +29,7 @@ from typing import Any
 
 from solosquad.storage import Migration, columns, connect, migrate
 from solosquad.web_api import totp
+from solosquad.web_api.errors import CodedError, ErrorCode
 
 SESSION_TTL_S = 14 * 24 * 3600
 FAIL_WINDOW_S = 15 * 60
@@ -56,7 +57,20 @@ class SessionStage(StrEnum):
 
 
 class AuthError(Exception):
-    pass
+    """A sign-in refusal — the sentence stays generic on purpose; `code` is what the web shows."""
+
+    def __init__(self, code: ErrorCode, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def _check_password(password: str) -> None:
+    if len(password) < MIN_PASSWORD:
+        raise CodedError(
+            ErrorCode.PASSWORD_TOO_SHORT,
+            f"password must be at least {MIN_PASSWORD} characters",
+            min=MIN_PASSWORD,
+        )
 
 
 def hash_password(password: str) -> str:
@@ -237,9 +251,10 @@ class AccountStore:
         """`role` = the customer-level role: owner = every org; staff = only `assignments`."""
         username = username.strip().lower()
         if not username or len(username) > 64:
-            raise ValueError("username must be 1 to 64 characters")
-        if len(password) < MIN_PASSWORD:
-            raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+            raise CodedError(
+                ErrorCode.USERNAME_INVALID, "username must be 1 to 64 characters", max=64
+            )
+        _check_password(password)
         uid = f"u-{secrets.token_hex(6)}"
         try:
             self._q(
@@ -249,7 +264,9 @@ class AccountStore:
                  time.time()),
             )  # fmt: skip
         except sqlite3.IntegrityError as e:
-            raise ValueError(f"username {username!r} is taken") from e
+            raise CodedError(
+                ErrorCode.USERNAME_TAKEN, f"username {username!r} is taken", username=username
+            ) from e
         if assignments:
             self.set_assignments(uid, assignments)
         return self.user(uid)
@@ -270,10 +287,13 @@ class AccountStore:
         seen: set[tuple[str, str]] = set()
         for a in items:
             if not a.org.strip():
-                raise ValueError("an assignment needs an org")
+                raise CodedError(ErrorCode.ASSIGNMENT_INVALID, "an assignment needs an org")
             key = (a.org, a.workspace or "")
             if key in seen:
-                raise ValueError(f"assigned twice to {a.org}/{a.workspace or '*'}")
+                where = f"{a.org}/{a.workspace or '*'}"
+                raise CodedError(
+                    ErrorCode.ASSIGNMENT_DUPLICATE, f"assigned twice to {where}", scope=where
+                )
             seen.add(key)
         now = time.time()
         with self._lock:
@@ -350,19 +370,18 @@ class AccountStore:
 
     def set_role(self, uid: str, role: Role) -> None:
         if role is not Role.OWNER and self.user(uid).role is Role.OWNER and len(self.owners()) <= 1:
-            raise ValueError("the last owner cannot be demoted")
+            raise CodedError(ErrorCode.LAST_OWNER, "the last owner cannot be demoted")
         self._q("UPDATE users SET role = ? WHERE id = ?", (role.value, uid))
 
     def set_disabled(self, uid: str, disabled: bool) -> None:
         if disabled and self.user(uid).role is Role.OWNER and len(self.owners()) <= 1:
-            raise ValueError("the last owner cannot be disabled")
+            raise CodedError(ErrorCode.LAST_OWNER, "the last owner cannot be disabled")
         self._q("UPDATE users SET disabled = ? WHERE id = ?", (int(disabled), uid))
         if disabled:
             self.revoke_user_sessions(uid)
 
     def set_password(self, uid: str, password: str) -> None:
-        if len(password) < MIN_PASSWORD:
-            raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+        _check_password(password)
         self._q("UPDATE users SET pw_hash = ? WHERE id = ?", (hash_password(password), uid))
         self.revoke_user_sessions(uid)
 
@@ -439,20 +458,22 @@ class AccountStore:
         username = username.strip().lower()
         keys = (f"user:{username}", f"ip:{ip}")
         if self._throttled(*keys):
-            raise AuthError("too many attempts — try again later")
+            raise AuthError(ErrorCode.LOGIN_THROTTLED, "too many attempts — try again later")
         rows = self._q(
             "SELECT id, pw_hash, disabled, totp_secret IS NOT NULL FROM users WHERE username = ?",
             (username,),
         )
         if not rows or rows[0][2] or not check_password(password, rows[0][1]):
             self._fail(*keys)
-            raise AuthError("wrong username or password")
+            raise AuthError(ErrorCode.LOGIN_FAILED, "wrong username or password")
         uid, has_totp = rows[0][0], bool(rows[0][3])
         stage = SessionStage.FULL
         if has_totp:
             if not otp or not self._check_totp(uid, otp):
                 self._fail(*keys)
-                raise AuthError("one-time code required" if not otp else "wrong one-time code")
+                if not otp:
+                    raise AuthError(ErrorCode.OTP_REQUIRED, "one-time code required")
+                raise AuthError(ErrorCode.OTP_INVALID, "wrong one-time code")
         elif require_second_factor:
             stage = SessionStage.ENROLL
         self._q("DELETE FROM login_failures WHERE key IN (?, ?)", keys)

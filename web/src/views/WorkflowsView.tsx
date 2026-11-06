@@ -2,7 +2,7 @@ import { useLinks } from '../scope';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ApiError } from '../api/client';
+import { errorText } from '../api/errors';
 import { useAction, useApprovals, useKeys, useScopedApi, useWorkflowRuns, useWorkflows, useWorkflowState } from '../api/queries';
 import type { Run, Upload, WorkflowRunCreated, WorkflowSummary } from '../api/types.gen';
 import { ApprovalCard } from '../components/ApprovalCard';
@@ -166,7 +166,7 @@ function RunForm({ wf }: { wf: WorkflowSummary }) {
       await qc.invalidateQueries({ queryKey: keys.workflowRuns() });
       navigate(toWs(`/workflows/${wf.name}/runs/${run.thread_id}`));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('common.failed'));
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }

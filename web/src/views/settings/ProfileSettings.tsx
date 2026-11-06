@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { api, ApiError } from '../../api/client';
+import { api } from '../../api/client';
+import { errorText } from '../../api/errors';
 import { keys, useProfile } from '../../api/queries';
 import type { CustomerProfile, ProfileEntity, ProfileResponse } from '../../api/types.gen';
 import { Loading, QueryError } from '../../components/Status';
@@ -68,7 +69,7 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
       qc.setQueryData(keys.profile, next);
       setSaved(true);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('common.failed'));
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }

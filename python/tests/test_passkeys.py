@@ -96,3 +96,4 @@ async def test_passkeys_need_the_public_url(office: Office) -> None:
     async with office.client() as c:
         r = await c.post("/api/auth/passkey/login/begin", json={})
         assert r.status_code == 409 and "public_url" in r.json()["error"]
+        assert r.json()["code"] == "passkeys_unavailable"

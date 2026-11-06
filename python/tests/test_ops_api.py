@@ -212,9 +212,12 @@ async def test_connections_record_the_entity_and_refuse_ineligible(office: Offic
         nameless = {k: v for k, v in bad.items() if k != "entity"}
         r = await web.post("/api/connections", json=nameless, headers=h)
         assert r.status_code == 400 and "entity that holds" in r.json()["error"]
+        assert r.json()["code"] == "entity_required"
         assert not office.conn_file.exists() or "claude-cn" not in office.conn_file.read_text()
         r = await web.post("/api/connections", json=bad, headers=h)
         assert r.status_code == 422 and "anthropic.com" in r.json()["error"]
+        assert r.json()["code"] == "connection_ineligible_entity"
+        assert r.json()["params"]["provider"] == "anthropic" and r.json()["params"]["country"]
         good = {
             **bad,
             "id": "claude-kr",
@@ -229,6 +232,7 @@ async def test_connections_record_the_entity_and_refuse_ineligible(office: Offic
         assert [c.id for c in office.company.router.connections] == ["claude-kr"]  # routing sees it
         r = await web.patch("/api/connections/claude-kr", json={"entity": None}, headers=h)
         assert r.status_code == 400  # nor can the holder be erased afterwards
+        assert r.json()["code"] == "entity_required"
         # the server moves to Hong Kong: the same connection is now ineligible, and says why
         office.workspace.org.solution.update_server_country("HK")
         listed = {c["id"]: c for c in (await web.get("/api/connections")).json()}
