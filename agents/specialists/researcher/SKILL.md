@@ -11,7 +11,7 @@ collaborators:
   - product/product-manager
   - product/product-designer     # UX flow → UI handoff
   - product/data-analyst
-  - brand/communication          # 메시지 리서치 정합
+  - brand/marketer               # 메시지 리서치 정합
 skills_used:
   - discovery-synthesis
   - interview-script

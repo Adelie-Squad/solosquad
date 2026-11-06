@@ -1,6 +1,6 @@
 # Product Team — OKR (v2.0)
 
-> 분기 OKR 작성·갱신·평가는 **Chief 의 의사결정**(skill `okr`). `product-manager` 은 이 OKR 을 입력으로 받아
+> 분기 OKR 작성·갱신·평가는 **Chief 의 의사결정**(skill `okr`). 팀장은 없다(결정 58) — 팀의 각 에이전트가 이 OKR 을 입력으로 받아
 > 마일스톤·실행으로 분해한다. 본 파일은 workspace bundle template — `<org>/teams/product/OKR.md` 로 override.
 
 ## 2026 Q? — 초안 (squad v2.0 재구성 기준)

@@ -44,7 +44,7 @@ per_contributor:
     design_docs_produced: <N>
     open_questions_resolved: <N>
     avg_confidence: 0-100
-  engineer:
+  engineering:          # frontend/backend/data-engineer · infra · quality-assurance 합
     prs_shipped: <N>
     test_coverage_delta: <%>
   designer:
@@ -84,7 +84,7 @@ what_worked: ["..."]
 what_didn_work: ["..."]
 patterns_observed: ["..."]
 action_items:
-  - { owner: chief|pm|engineer|..., action: "...", target_date: "YYYY-MM-DD" }
+  - { owner: chief|product-manager|backend-engineer|..., action: "...", target_date: "YYYY-MM-DD" }
 followup_skills:
   - skill-refinement     # 호출 권고 시
   - workflow-refinement  # 호출 권고 시

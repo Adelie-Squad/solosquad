@@ -4,7 +4,7 @@
 
 > 영문 버전: [README.md](README.md)
 
-혼자 회사를 운영한다는 게 혼자 일한다는 뜻은 아닙니다. SoloSquad는 **Chief 1명** (조직별 supervisor, 유일한 사용자 대면 에이전트) + **4 main bot** (pm / engineer / designer / marketer) + 4개 팀(product · engineering · design · marketing)에 걸친 **20명의 specialist**를 가상의 팀으로 제공합니다. 사용자는 메신저 안에서 Chief와 대화하면 됩니다. 자동화된 일일 루틴, 조직별 메모리 격리, 6+1 단계 의사결정 루프(TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT)가 기본 탑재돼 있습니다.
+혼자 회사를 운영한다는 게 혼자 일한다는 뜻은 아닙니다. SoloSquad는 **Chief 1명** (유일한 사용자 대면 에이전트) + 4개 팀(product · engineering · business · brand)에 걸친 **14명의 에이전트**(팀장 없음 — Chief 가 직접 조율)를 가상의 팀으로 제공합니다. 사용자는 메신저 안에서 Chief와 대화하면 됩니다. 자동화된 일일 루틴, 조직별 메모리 격리, 6+1 단계 의사결정 루프(TRIAGE → DECOMPOSE → DISPATCH → AWAIT → SYNTHESIZE → DECIDE → RETROSPECT)가 기본 탑재돼 있습니다.
 
 ```
 산출물 ≠ 목표.  산출물 = 목표를 달성하기 위한 수단.
@@ -160,20 +160,24 @@ solosquad add repo /path/to/repo --keep-original  # 이동(rename) 대신 복사
 
 ## 기본 탑재 — 무엇을 받게 되는가
 
-### 4개 팀 25명의 전문 에이전트, frontmatter 기반 자동 라우팅
+### 5개 팀 15명의 에이전트, 팀장 없음, frontmatter 기반 자동 라우팅
+
+Chief 가 유일한 사용자 대면 에이전트이고, 다른 모든 에이전트에게 직접 일을 넘깁니다(결정 58 — 팀장 없음. 팀은 조직도 · 팀 승인 범위 · 사무실을 묶는 단위).
 
 | 팀 | 에이전트 | 역할 |
 |---|---|---|
-| **Strategy** (7) | PMF Planner · Feature Planner · Data Analyst · Business Strategist · Idea Refiner · Scope Estimator · Policy Architect | 시장 분석, 가설 설계, 기획 |
-| **Growth** (4) | GTM Strategist · Content Writer · Brand Marketer · Paid Marketer | 마케팅, 브랜딩, 카피, 유료 광고 |
-| **Experience** (4) | User Researcher · Desk Researcher · UX Designer · UI Designer | 리서치, 디자인 |
-| **Engineering** (10) | Creative Frontend · FDE · Architect · Backend · API · Data Collector · Data Engineer · Cloud Admin · QA · Security | 개발, 인프라, 품질, 보안 |
+| **Core** (1) | Chief | 사용자 소통, 과제 분류, 모든 에이전트 조율, 회고 |
+| **Product** (4) | Product Manager · Product Designer · Researcher · Data Analyst | 문제 정의, PMF 가설, PRD, 리서치, 메트릭 |
+| **Engineering** (5) | Frontend Engineer · Backend Engineer(시스템 설계 · ADR 포함) · Data Engineer · Infra(보안 포함) · Quality Assurance | 개발, 아키텍처, 데이터, 인프라 · 보안, 품질 |
+| **Business** (3) | Business Strategy(GTM 포함) · Sales · Finance | 전략 · GTM, 파이프라인, 장부 · 손익 · 부가세 · 增值税 |
+| **Brand** (2) | Marketer(브랜드 커뮤니케이션 포함) · Creative | 브랜드 voice, 콘텐츠, 퍼포먼스 마케팅, 비주얼 |
 
 ```
-사용자: "랜딩 페이지 카피 써줘"        → Content Writer (Growth)
-사용자: "가입 funnel 분석해줘"          → Data Analyst (Strategy)
-사용자: "로그인 UI 디자인해줘"          → UI Designer (Experience)
-사용자: "회원가입 API 설계해줘"         → API Developer (Engineering)
+사용자: "랜딩 페이지 카피 써줘"        → Marketer (Brand)
+사용자: "가입 funnel 분석해줘"          → Data Analyst (Product)
+사용자: "로그인 UI 디자인해줘"          → Product Designer (Product)
+사용자: "회원가입 API 설계해줘"         → Backend Engineer (Engineering)
+사용자: "이번 달 결산해줘"              → Finance (Business)
 ```
 
 **v0.5 4채널 라우팅** (우선순위: `slash > explicit > keyword > freq`)이 매 턴마다 어느 전문가의 `SKILL.md` 를 주입할지 결정합니다. 트리거는 각 에이전트의 frontmatter (`triggers.slash` / `.keyword` / `.freq`) 에 정의되어 있고, 봇 부팅 시 3-tier 스캔 (`<org>/.agents/` > `~/.solosquad/agents/` > 번들) 으로 수집됩니다.

@@ -12,11 +12,11 @@
 ## 2. 순환 + depth (무한 위임 차단)
 - **순환:** collaborator/위임 그래프에 사이클 없음 — workflow `depends_on` 과 **동일 Kahn O(V+E)**(공유 코어).
 - **depth cap:** 위임 깊이 상한 강제. **1차 선례 — CMA coordinator depth 1(중첩 coordinator 금지)** 이 가장
-  강함. 그 외 Claude Code subagent 5 · OpenAI 10 · LangGraph 25. SoloSquad 는 supervisor(Chief) 유지 +
+  강함. 그 외 Claude Code subagent 5 · OpenAI 10 · LangGraph 25. SoloSquad 는 Chief 가 모든 에이전트를 직접 조율(팀장 없음, 결정 58) +
   얕은 depth 지향 — coordinator-of-coordinators 금지.
 
 ## 3. 역할 사다리 정합
-- `tier`(leader/member) ↔ `team` 정합 — leader 는 팀 supervisor, member 는 worker. 엇갈리면 FAIL.
+- `tier`(leader/member) ↔ `team` 정합 — leader 는 Chief(진입점, `agents/main/`) 하나, 나머지는 member(`agents/specialists/`) — 팀장 없음(결정 58). 엇갈리면 FAIL.
 - `name` — kebab-case · **부모 디렉터리명 일치** · 예약어(`claude`/`anthropic`) 금지(primitive-core.md §3.3 동형).
 
 ## 4. budget — narrower-only invariant (사전 표면화)

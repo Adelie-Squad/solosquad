@@ -9,7 +9,7 @@
 | # | 지표 | 정의 | 데이터 소스 |
 |---|---|---|---|
 | 1 | **conversion_to_task_rate** | 사용자 메시지 N건 중 workflow/goal 으로 발전된 비율 | `<org>/memory/chief-stage-events.jsonl` |
-| 2 | **auto_pr_success_rate** | engineer/architect 가 만든 PR 중 mergeable 비율 | `<org>/memory/ledger/` + git log |
+| 2 | **auto_pr_success_rate** | 엔지니어(frontend-engineer · backend-engineer · data-engineer · infra)가 만든 PR 중 mergeable 비율 | `<org>/memory/ledger/` + git log |
 | 3 | **autonomous_goal_cycles** | 사용자 개입 없이 완료된 goal 수 (지난 7d) | `<org>/goals/<id>/` |
 | 4 | **shipping_streak_days** | 연속 release 일수 | git tag (release 패턴) |
 | 5 | **avg_confidence_score** | PM 가설 confidence 평균 (지난 7d) | `<org>/memory/open-questions/<id>.json` |

@@ -8,8 +8,8 @@ per selection — and only hands Chief the exceptions.
       monthly_usd: 200
       warn_at: 0.8
     agents:
-      chief:    {models: [sonnet, gpt-5]}
-      engineer: {models: [opus, sonnet], connections: [claude-max]}
+      chief:            {models: [sonnet, gpt-5]}
+      backend-engineer: {models: [opus, sonnet], connections: [claude-max]}
     tags:
       bulk-summary: {models: [haiku, gpt-5-mini]}
 """

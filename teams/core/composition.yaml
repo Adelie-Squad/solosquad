@@ -1,6 +1,6 @@
-# teams/core/composition.yaml — v2.0 (구 chief 팀)
-main: chief
-members: []
+# teams/core/composition.yaml — v2.1 (결정 58: 팀장 없음 · `main:` 필드 폐기)
+members:
+  - chief
 shared_skills:
   - triage
   - okr

@@ -1,48 +1,24 @@
 {
   "bundle": {
-    "agents/main/business-strategy/SKILL.md": {
-      "errors": [],
-      "warnings": [
-        "DESCRIPTION_NO_TRIGGER"
-      ]
-    },
     "agents/main/chief/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
-    "agents/main/engineer/SKILL.md": {
+    "agents/specialists/backend-engineer/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
-    "agents/main/marketer/SKILL.md": {
+    "agents/specialists/business-strategy/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
-    "agents/main/product-manager/SKILL.md": {
-      "errors": [],
-      "warnings": [
-        "DESCRIPTION_NO_TRIGGER"
-      ]
-    },
-    "agents/specialists/backend/SKILL.md": {
-      "errors": [],
-      "warnings": [
-        "DESCRIPTION_NO_TRIGGER"
-      ]
-    },
-    "agents/specialists/communication/SKILL.md": {
-      "errors": [],
-      "warnings": [
-        "DESCRIPTION_NO_TRIGGER"
-      ]
-    },
-    "agents/specialists/creative-designer/SKILL.md": {
+    "agents/specialists/creative/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
@@ -60,13 +36,13 @@
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
-    "agents/specialists/frontend/SKILL.md": {
+    "agents/specialists/finance/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
-    "agents/specialists/go-to-market/SKILL.md": {
+    "agents/specialists/frontend-engineer/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
@@ -78,13 +54,25 @@
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
+    "agents/specialists/marketer/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
     "agents/specialists/product-designer/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
-    "agents/specialists/qa/SKILL.md": {
+    "agents/specialists/product-manager/SKILL.md": {
+      "errors": [],
+      "warnings": [
+        "DESCRIPTION_NO_TRIGGER"
+      ]
+    },
+    "agents/specialists/quality-assurance/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
@@ -97,18 +85,6 @@
       ]
     },
     "agents/specialists/sales/SKILL.md": {
-      "errors": [],
-      "warnings": [
-        "DESCRIPTION_NO_TRIGGER"
-      ]
-    },
-    "agents/specialists/security/SKILL.md": {
-      "errors": [],
-      "warnings": [
-        "DESCRIPTION_NO_TRIGGER"
-      ]
-    },
-    "agents/specialists/system-architect/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"

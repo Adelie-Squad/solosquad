@@ -80,7 +80,7 @@ Chief RETROSPECT(작업 완료 회고) 시:
 per_contributor:
   founder: { commits: X, prs: Y, decisions: Z }
   pm_session: { spawns: X, design_docs: Y, open_questions_resolved: Z }
-  engineer: { prs_shipped: X, test_coverage_delta: Y }
+  engineering: { prs_shipped: X, test_coverage_delta: Y }   # frontend/backend/data-engineer · infra · quality-assurance 합
   designer: { specs: X, prototypes: Y }
   marketer: { campaigns: X, content: Y }
 

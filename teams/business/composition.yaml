@@ -1,8 +1,8 @@
-# teams/business/composition.yaml — v2.0 (신규, 구 marketing 전략부 + product business-strategist)
-main: business-strategy
+# teams/business/composition.yaml — v2.1 (결정 58: 팀장 없음 · go-to-market 병합 · finance 신규)
 members:
-  - go-to-market
+  - business-strategy
   - sales
+  - finance
 shared_skills:
   - lean-canvas
   - market-research

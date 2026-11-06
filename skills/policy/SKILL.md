@@ -28,7 +28,7 @@ pm_conventions:
 ```markdown
 - [ ] 정책 초안 = design doc(markdown), 코드 X
 - [ ] 적용 시나리오 ≥3 mental sim (edge case 포함)
-- [ ] 보안/데이터 영향 시 security 검토
+- [ ] 보안/데이터 영향 시 infra 보안 검토
 - [ ] 수익 모델 영향 시 business-strategy 정합
 - [ ] 사용자 명시적 ack 1회 ("이대로 게시하시겠어요?")
 ```

@@ -2,7 +2,9 @@
 
 Every agent in the org's team is a node; Chief is the default entry. Handoff edges come
 from each agent's `handoffs:` frontmatter, or are derived from team composition when it is
-absent (M22 default): Chief ↔ team leads, a lead ↔ its members, at most six per agent.
+absent (M22 default, decision 58 — teams have no lead): Chief ↔ every agent, and teammates
+↔ each other. Chief is the only way across teams, so its edges are not capped; everyone
+else is capped at six (Chief first, then teammates) to keep each tool list short.
 """
 
 from __future__ import annotations
@@ -40,6 +42,7 @@ from solosquad.routing.router import NoConnection, Router
 from solosquad.swarm import SwarmState, create_handoff_tool, create_swarm, handoff_target
 
 MAX_HANDOFFS = 6
+"""Per-agent cap on handoff targets — every agent except Chief (decision 58)."""
 DEFAULT_ENTRY = "chief"
 APPROVAL = re.compile(rf"{MARKER}:([0-9a-f]+):(.*)")
 CATEGORY = re.compile(r"^\[([a-z_]+)\]\s*(.*)$", re.DOTALL)
@@ -373,21 +376,19 @@ class AgentNode:
 def derive_handoffs(resolver: Resolver, agents: list[str]) -> dict[str, dict[str, str]]:
     specs = {a: resolver.agent(a).spec for a in agents}
     teams = resolver.teams()
-    leads = {c.main for c in teams.values() if c.main in specs}
     out: dict[str, dict[str, str]] = {}
     for a, spec in specs.items():
         declared = spec.extra.get("handoffs")
         if isinstance(declared, list):
             targets = [t for t in declared if isinstance(t, str) and t in specs and t != a]
         elif a == DEFAULT_ENTRY:
-            targets = sorted(leads)
-        elif a in leads:
-            team = next(c for c in teams.values() if c.main == a)
-            targets = [DEFAULT_ENTRY, *[m for m in team.members if m in specs]]
+            targets = sorted(specs)
         else:
-            lead = next((c.main for c in teams.values() if a in c.members), None)
-            targets = [t for t in (lead, DEFAULT_ENTRY) if t]
-        targets = [t for t in dict.fromkeys(targets) if t in specs and t != a][:MAX_HANDOFFS]
+            mates = [m for c in teams.values() if a in c.members for m in c.members]
+            targets = [DEFAULT_ENTRY, *mates]
+        targets = [t for t in dict.fromkeys(targets) if t in specs and t != a]
+        if a != DEFAULT_ENTRY:
+            targets = targets[:MAX_HANDOFFS]
         out[a] = {t: specs[t].description for t in targets}
     return out
 
