@@ -127,14 +127,9 @@ export const en: Record<MessageKey, string> = {
   'office.exitFullscreen': 'Exit full screen',
   'office.needsAnswer': 'need an answer',
   'office.doneToday': 'done today',
-  'office.workingOn': '{name} — now: {what}',
-  'office.idleAs': '{name} — idle',
   'office.idle': 'idle',
   'office.waitingN': '{n} waiting for an answer',
   'office.goAnswer': 'Go answer',
-  'office.members': 'Members',
-  'office.leadAgent': 'Lead agent {name}',
-  'office.others': 'Other agents',
   'office.company': 'Agent company',
   'office.team': 'Team {team}',
 
@@ -149,8 +144,6 @@ export const en: Record<MessageKey, string> = {
 
   'org.title': 'Org chart',
   'org.lead': 'Each team’s agents and people on one page. A person’s teams decide which team approvals they can give.',
-  'org.leadAgent': 'Lead agent',
-  'org.noLead': 'No lead agent.',
   'org.agents': 'Agents {n}',
   'org.people': 'People {n}',
   'org.noPeople': 'No one is in this team yet.',
@@ -426,4 +419,9 @@ export const en: Record<MessageKey, string> = {
   'assign.wholeOrg': 'whole org',
   'assign.none': 'Not assigned',
   'connections.fromCore': 'Shared by the company · read only',
+  'access.defaultTitle': 'Company default',
+  'access.defaultLead': 'Applies to every org and workspace. Only the company’s owner can change it.',
+  'access.extraTitle': 'Extra limits for this workspace — {ws}',
+  'access.extraLead': 'Added on top of the default, for this workspace only (e.g. office network only). It cannot loosen the default.',
+  'assign.everything': 'Every org and workspace (owner)',
 };

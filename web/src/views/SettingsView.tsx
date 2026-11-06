@@ -1,5 +1,4 @@
-import { useLinks } from '../scope';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { NavLink, Navigate, useParams } from 'react-router-dom';
 import { api, ApiError } from '../api/client';
@@ -8,7 +7,7 @@ import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser, WebSettings } fro
 import { Loading, QueryError } from '../components/Status';
 import { categoryLabel, LOCALE_NAMES, LOCALES, useI18n, type Locale, type MessageKey } from '../i18n';
 import { useSession } from '../session';
-import { useOrgOwner, useScope } from '../scope';
+import { useLinks, useOrgOwner, useScope } from '../scope';
 import { AssignmentChips, AssignmentsDialog, AssignmentsEditor, type Assignment } from './settings/Assignments';
 import { PasskeySettings } from './settings/PasskeySettings';
 import { ProfileSettings } from './settings/ProfileSettings';
@@ -28,7 +27,7 @@ const TABS: Tab[] = [
   { id: 'account', label: 'settings.account', ownerOnly: false },
   { id: 'profile', label: 'settings.profile', ownerOnly: false },
   { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
-  { id: 'access', label: 'settings.access', ownerOnly: 'customer' },
+  { id: 'access', label: 'settings.access', ownerOnly: 'org' },
   { id: 'approvals', label: 'settings.tiers', ownerOnly: 'org' },
   { id: 'users', label: 'settings.users', ownerOnly: 'customer' },
 ];
@@ -178,14 +177,71 @@ function AccountSettings() {
 
 // ------------------------------------------------------------------ access policy (I24 · K28)
 
+/**
+ * Access policy, two layers (decision 57 · I22): the customer's default (core/server.yaml —
+ * the customer's owner edits it) and this workspace's extra limits on top of it
+ * (workspace.yaml — this org's owner edits them). Both refuse a list that would lock out the
+ * person saving it (409) until they confirm.
+ */
 function AccessSettings() {
-  const q = useAccess(true);
-  if (q.isPending) return <Loading />;
-  if (q.error) return <QueryError error={q.error} />;
-  return <AccessForm key={JSON.stringify(q.data)} current={q.data} />;
+  const { t } = useI18n();
+  const { isOwner } = useSession();
+  const scope = useScope();
+  const keys = useKeys();
+  const { ws: wsApi } = useScopedApi();
+  const base = useAccess(true);
+  const extra = useQuery({ queryKey: keys.wsAccess, queryFn: () => wsApi.get<AccessPolicy>('/access') });
+  return (
+    <>
+      <section className="settings-section" aria-labelledby="access-default">
+        <h2 id="access-default" className="panel-title">{t('access.defaultTitle')}</h2>
+        <p className="settings-hint">{t('access.defaultLead')}</p>
+        {base.isPending ? (
+          <Loading />
+        ) : base.error ? (
+          <QueryError error={base.error} />
+        ) : (
+          <AccessForm
+            key={JSON.stringify(base.data)}
+            current={base.data}
+            readOnly={!isOwner}
+            put={(body) => api.put<AccessPolicy>('/access', body)}
+            queryKey={keys.access}
+          />
+        )}
+      </section>
+      <section className="settings-section" aria-labelledby="access-extra">
+        <h2 id="access-extra" className="panel-title">{t('access.extraTitle', { ws: scope.ws })}</h2>
+        <p className="settings-hint">{t('access.extraLead')}</p>
+        {extra.isPending ? (
+          <Loading />
+        ) : extra.error ? (
+          <QueryError error={extra.error} />
+        ) : (
+          <AccessForm
+            key={JSON.stringify(extra.data)}
+            current={extra.data}
+            readOnly={false}
+            put={(body) => wsApi.put<AccessPolicy>('/access', body)}
+            queryKey={keys.wsAccess}
+          />
+        )}
+      </section>
+    </>
+  );
 }
 
-function AccessForm({ current }: { current: AccessPolicy }) {
+function AccessForm({
+  current,
+  readOnly,
+  put,
+  queryKey,
+}: {
+  current: AccessPolicy;
+  readOnly: boolean;
+  put: (body: Record<string, unknown>) => Promise<AccessPolicy>;
+  queryKey: readonly unknown[];
+}) {
   const { t } = useI18n();
   const qc = useQueryClient();
   const [nets, setNets] = useState(current.allowed_networks.join('\n'));
@@ -198,12 +254,12 @@ function AccessForm({ current }: { current: AccessPolicy }) {
     setError(null);
     setSaved(false);
     try {
-      const next = await api.put<AccessPolicy>('/access', {
+      const next = await put({
         allowed_networks: nets.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean),
         two_factor: twoFactor,
         confirm_lockout: confirm || undefined,
       });
-      qc.setQueryData(keys.access, next);
+      qc.setQueryData(queryKey, next);
       setLockout(null);
       setSaved(true);
     } catch (err) {
@@ -220,18 +276,21 @@ function AccessForm({ current }: { current: AccessPolicy }) {
         void save(false);
       }}
     >
-      <label className="field">
-        <span>{t('access.networks')}</span>
-        <textarea rows={5} value={nets} onChange={(e) => setNets(e.target.value)} placeholder="203.0.113.0/24" />
-        <small className="dash-hint">{t('access.networksHint')}</small>
-      </label>
-      <label className="settings-row">
-        <span>{t('access.twoFactor')}</span>
-        <button type="button" className="toggle" role="switch" aria-checked={twoFactor} onClick={() => setTwoFactor((v) => !v)} />
-      </label>
+      {readOnly && <p className="settings-note">{t('settings.readOnly')}</p>}
+      <fieldset className="settings-body" disabled={readOnly}>
+        <label className="field">
+          <span>{t('access.networks')}</span>
+          <textarea rows={4} value={nets} onChange={(e) => setNets(e.target.value)} placeholder="203.0.113.0/24" />
+          <small className="dash-hint">{t('access.networksHint')}</small>
+        </label>
+        <label className="settings-row">
+          <span>{t('access.twoFactor')}</span>
+          <button type="button" className="toggle" role="switch" aria-checked={twoFactor} onClick={() => setTwoFactor((v) => !v)} />
+        </label>
+      </fieldset>
       {error && <p className="form-error">{error}</p>}
       {saved && <p className="ok-line">✓ {t('common.saved')}</p>}
-      <button className="btn is-primary">{t('common.save')}</button>
+      {!readOnly && <button className="btn is-primary">{t('common.save')}</button>}
 
       {lockout && (
         <div className="command-overlay is-modal" onMouseDown={() => setLockout(null)}>
@@ -358,22 +417,28 @@ function UserSettings() {
               <th>
                 {u.display} <span className="dash-hint">@{u.username}</span>
               </th>
-              <td>
+              <td data-label={t('users.role')}>
                 <select value={u.role} disabled={u.id === me?.id} onChange={(e) => act(u.id, { role: e.target.value })} aria-label={t('users.role')}>
                   <option value="owner">{t('role.owner')}</option>
                   <option value="staff">{t('role.staff')}</option>
                 </select>
               </td>
-              <td>
-                <AssignmentChips list={u.assignments} scopes={session.scopes} />{' '}
-                {u.role !== 'owner' && (
-                  <button className="btn is-small" onClick={() => setAssigning(u)}>
-                    {t('assign.edit')}
-                  </button>
-                )}
+              <td data-label={t('assign.column')} className="users-assign">
+                <span className="users-assign-body">
+                  {u.role === 'owner' ? (
+                    <span className="chip">{t('assign.everything')}</span>
+                  ) : (
+                    <>
+                      <AssignmentChips list={u.assignments} scopes={session.scopes} />
+                      <button className="btn is-small" onClick={() => setAssigning(u)}>
+                        {t('assign.edit')}
+                      </button>
+                    </>
+                  )}
+                </span>
               </td>
-              <td>{u.two_factor ? '✓' : t('users.notEnrolled')}</td>
-              <td>{u.disabled ? t('users.disabled') : t('users.enabled')}</td>
+              <td data-label={t('users.twoFactor')}>{u.two_factor ? '✓' : t('users.notEnrolled')}</td>
+              <td data-label={t('users.status')}>{u.disabled ? t('users.disabled') : t('users.enabled')}</td>
               <td className="row-actions">
                 {u.id !== me?.id && (
                   <>

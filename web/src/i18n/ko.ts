@@ -126,14 +126,9 @@ export const ko = {
   'office.exitFullscreen': '전체 화면 닫기',
   'office.needsAnswer': '확인 필요',
   'office.doneToday': '오늘 완료',
-  'office.workingOn': '{name} — 지금: {what}',
-  'office.idleAs': '{name} — 쉬는 중',
   'office.idle': '쉬는 중',
   'office.waitingN': '확인 필요 {n}',
   'office.goAnswer': '확인하러 가기',
-  'office.members': '구성원',
-  'office.leadAgent': '리드 에이전트 {name}',
-  'office.others': '다른 에이전트',
   'office.company': '에이전트 회사',
   'office.team': '{team} 팀',
 
@@ -148,8 +143,6 @@ export const ko = {
 
   'org.title': '조직도',
   'org.lead': '팀마다 에이전트 · 사람을 한 장에 보여줘요. 사람의 팀 소속이 팀 승인 범위를 정해요.',
-  'org.leadAgent': '리드 에이전트',
-  'org.noLead': '리드 에이전트가 없어요.',
   'org.agents': '에이전트 {n}',
   'org.people': '사람 {n}',
   'org.noPeople': '아직 소속된 사람이 없어요.',
@@ -425,6 +418,11 @@ export const ko = {
   'assign.wholeOrg': 'org 전체',
   'assign.none': '할당 없음',
   'connections.fromCore': '고객사 공용 · 읽기 전용',
+  'access.defaultTitle': '고객사 기본 정책',
+  'access.defaultLead': '모든 org · 워크스페이스에 함께 적용돼요. 고객사 대표만 바꿀 수 있어요.',
+  'access.extraTitle': '이 사업장 추가 제한 — {ws}',
+  'access.extraLead': '기본 정책 위에 이 워크스페이스에만 더해지는 제한이에요(예: 사내망 전용). 기본 정책을 풀지는 못해요.',
+  'assign.everything': '모든 org · 워크스페이스 (대표)',
 } as const;
 
 export type MessageKey = keyof typeof ko;

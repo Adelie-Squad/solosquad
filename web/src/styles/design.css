@@ -199,7 +199,16 @@ textarea:focus {
   background: var(--surface-2);
 }
 
+/* the canvas's pixel size (×2 render scale) must never widen its grid cell on a phone */
+.office-main,
+.office-stage {
+  min-width: 0;
+}
+
 .office-canvas {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -485,6 +494,92 @@ textarea:focus {
 
 .assign-new {
   flex-basis: 100%;
+}
+
+/* ── settings › people: one card per person (the assignment list is long) ── */
+
+.statement.users,
+.statement.users tbody,
+.statement.users tr,
+.statement.users th,
+.statement.users td {
+  display: block;
+}
+
+.statement.users thead {
+  display: none;
+}
+
+.statement.users tbody {
+  display: grid;
+  gap: 10px;
+}
+
+.statement.users tr {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.statement.users tr th {
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 15px;
+}
+
+.statement.users td {
+  display: contents;
+  border: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.statement.users td[data-label]::before {
+  content: attr(data-label);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.users-assign-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.statement.users td.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-column: 1 / -1;
+}
+
+.statement.users td:not(.row-actions):not([data-label]) {
+  display: none;
+}
+
+/* stacked office (≤ 1100px): scene on top at a fixed share of the screen, live work below —
+   the old SVG aspect ratio would otherwise widen the stage past a phone's width */
+@media (max-width: 1100px) {
+  .office-main .office-stage {
+    width: 100%;
+    aspect-ratio: auto;
+    height: clamp(300px, 55vh, 560px);
+    min-height: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .office-main .office-stage {
+    height: clamp(260px, 45vh, 420px);
+  }
 }
 
 /* ── phone ─────────────────────────────────────────────────────── */
