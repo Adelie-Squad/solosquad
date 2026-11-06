@@ -69,19 +69,22 @@ than the material colours.
 | Key | Material (light) | Rendered light | Material (evening) | Rendered evening |
 |---|---|---|---|---|
 | `clay.backdrop` | `#EEE9DF` | `#EEE9DF` | `#15161B` | `#15161B` |
-| `clay.wall` (lit back wall) | `#F4F1EA` | `#F1EADD` | `#2B2D37` | `#11111D` |
-| `clay.wall` (left wall, shade side) | `#F4F1EA` | `#CFCBC1` | `#2B2D37` | `#1C1E2F` |
-| `clay.floor` | `#ECE7DE` | `#F0E8D9` | `#23252E` | `#080C1A` |
-| `clay.furniture` (desk top) | `#F7F5F0` | `#FFFBF0` | `#3A3C47` | `#53484E` (lamp-lit) |
-| `clay.wood` (coffee bar top) | `#D8C3A2` | `#A59173` (in shade) | `#5A4E3E` | `#1D1616` |
-| `clay.plant` | `#8DB36B` | `#8CAF69` | `#4E6A3A` | `#172923` |
+| `clay.wall` (lit back wall) | `#F4F1EA` | `#F1EADD` | `#2B2D37` | `#0D0B11` |
+| `clay.wall` (left wall, shade side) | `#F4F1EA` | `#CFCBC1` | `#2B2D37` | `#1A1B29` |
+| `clay.floor` | `#ECE7DE` | `#F0E8D9` | `#23252E` | `#181D2F` (moon rim) |
+| `clay.furniture` (desk top) | `#F7F5F0` | `#FFFBF0` | `#3A3C47` | `#574F5B` (lamp-lit) |
+| `clay.wood` (coffee bar top) | `#D8C3A2` | `#A59173` (in shade) | `#5A4E3E` | `#18100B` |
+| `clay.plant` | `#8DB36B` | `#8CAF69` | `#4E6A3A` | `#24392F` |
 | `clay.screen` | `#2C74E0` | — | base `#1B2A4A` + emission `#8FB8FF` ×2.2 | — |
 | `clay.lamp_bulb` | `#FFF4DE` (off) | — | `#FFC56B` emission ×12 | — |
 | `penguin.body` | `#2B2A26` | — | **`#474855`** (new: lifted so the silhouette reads at night) | — |
 
 Lighting: light = sky `#FFFFFF` ×0.72 plus a sun `#FFF6E8` ×1.5 with a 14° angle; evening = sky
-`#3A4566` ×2.4, lamp points `#FFC56B` 18 W, screen area lights `#8FB8FF` 14 W facing the agent.
-Lamps and screens are switched **per agent**: off for `idle` / `idle_doze`.
+`#3A4566` ×0.9, a cool moon rim sun `#9FB2E8` ×2.5 from behind and above (it outlines heads,
+shoulders and props but not faces), lamp points `#FFC56B` 18 W, and screen area lights `#8FB8FF`
+14 W facing the agent. Lamps and screens are switched **per agent**: off for `idle` / `idle_doze`.
+Measured face centres in the evening frame: working agents `#E8BB9F` to `#FFF3C8`; the dozing
+agent `#5F5C6D`. No material emits on the face; the dozing face is lit only by ambient and spill.
 
 Fixed colours outside the DESIGN table: `penguin.face` `#F3F0EA` · `penguin.cheek` `#E01FAE` ·
 `penguin.eye` `#151410` · `penguin.beak` / `penguin.feet` `#F0AE5E` · `penguin.stitch` `#8E8676`

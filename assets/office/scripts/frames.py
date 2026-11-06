@@ -17,6 +17,8 @@ import penguin  # noqa: E402
 import props  # noqa: E402
 
 BACKDROP = {'light': '#EEE9DF', 'evening': '#15161B'}
+EVENING_SKY = 0.9    # ambient #3A4566 strength
+EVENING_RIM = 2.5    # moon rim sun strength
 
 # Room = 3 x 3 tiles. Blender axes: walls on -X (left) and +Y (back), open to -Y.
 COLS, ROWS = 2, 2
@@ -188,7 +190,7 @@ def world(theme):
         sky.inputs['Strength'].default_value = 0.72
     else:
         sky.inputs['Color'].default_value = lib.hex_rgba('#3A4566')
-        sky.inputs['Strength'].default_value = 2.4
+        sky.inputs['Strength'].default_value = EVENING_SKY
     bd.inputs['Color'].default_value = lib.hex_rgba(BACKDROP[theme])
     bd.inputs['Strength'].default_value = 1.0
     nt.links.new(lp.outputs['Is Camera Ray'], mix.inputs['Fac'])
@@ -202,11 +204,20 @@ def sun(theme):
     if s is None:
         s = bpy.data.objects.new('sun', bpy.data.lights.new('sun', 'SUN'))
         bpy.context.scene.collection.objects.link(s)
-    s.data.angle = math.radians(14)
-    s.data.color = lib.hex_rgba('#FFF6E8')[:3]
-    s.data.energy = 1.5 if theme == 'light' else 0.0
-    s.rotation_euler = (math.radians(42), 0, math.radians(-28))
-    s.hide_render = theme != 'light'
+    if theme == 'light':
+        # warm key light from the front-left, above
+        s.data.angle = math.radians(14)
+        s.data.color = lib.hex_rgba('#FFF6E8')[:3]
+        s.data.energy = 1.5
+        s.rotation_euler = (math.radians(42), 0, math.radians(-28))
+    else:
+        # cool moon rim from behind and above (back-left): outlines heads, shoulders and
+        # props without lighting the faces, so an agent whose lamp is off stays in the dark
+        s.data.angle = math.radians(8)
+        s.data.color = lib.hex_rgba('#9FB2E8')[:3]
+        s.data.energy = EVENING_RIM
+        s.rotation_euler = (math.radians(-35), 0, math.radians(40))
+    s.hide_render = False
 
 
 def lamps(seats, theme):
