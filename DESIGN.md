@@ -64,6 +64,7 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 - 옅은 배경은 `color-mix(in srgb, var(--accent) 12%, var(--surface))` 로 만든다(별도 hex 금지) — 바탕을 `--surface` 로 섞어야 다크에서도 맞는다. ok · warn · danger 도 같은 방식(10~14%).
 - 상태색은 **텍스트 + 옅은 배경** 쌍으로만 쓴다. 큰 면적 채우기 금지.
 - 그라디언트는 쓰지 않는다. 진행 바 · 스켈레톤의 흐름 표현만 예외(단색 → 투명).
+- **QR 코드는 테마와 무관하게 검정 위 흰색으로 고정**한다 — `--qr-dark: #000000` · `--qr-light: #FFFFFF`(`tokens.css` `:root` 한 곳). 다크에서 색을 뒤집으면 인증 앱 스캐너가 못 읽는 경우가 있다. QR 주변에 `--qr-light` 여백(4모듈 이상)을 둔다.
 
 ## 테마
 
