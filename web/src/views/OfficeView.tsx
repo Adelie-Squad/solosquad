@@ -12,7 +12,7 @@ import { Loading, QueryError } from '../components/Status';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { agentName } from '../lib/agentNames';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { useJobs } from '../live/jobs';
 import { useLive } from '../live/LiveProvider';
 import { ENTRY } from '../office/layout';
@@ -237,7 +237,7 @@ function AgentRoster({
     <div className="roster">
       {[...teams.entries()].map(([team, members]) => (
         <div key={team} className="roster-team">
-          <p className="settings-group">{readable(team || 'core')}</p>
+          <p className="settings-group">{teamName(team || 'core', t)}</p>
           <ul>
             {members.map((a) => {
               const st = statuses[a.name] ?? 'idle';

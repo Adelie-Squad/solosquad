@@ -9,7 +9,7 @@ import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { agentName, agentSummary } from '../lib/agentNames';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import type { AgentStatus } from '../office/state';
 import { useLinks } from '../scope';
@@ -60,7 +60,7 @@ export function AgentModal({
         <div className="entity-modal-title">
           <h2>{name}</h2>
           <div className="entity-modal-chips">
-            {agent.team && <span className="chip">{readable(agent.team)}</span>}
+            {agent.team && <span className="chip">{teamName(agent.team, t)}</span>}
             <span className={`chip ${STATUS_CHIP[status]}`}>{t(STATUS_LABEL[status])}</span>
           </div>
         </div>
@@ -150,7 +150,7 @@ export function PersonModal({
             <dt>{t('org.jobTitle')}</dt>
             <dd>{person.title || t('org.noTitle')}</dd>
             <dt>{t('org.teams')}</dt>
-            <dd>{memberOf.length ? memberOf.map(readable).join(', ') : t('org.unassigned')}</dd>
+            <dd>{memberOf.length ? memberOf.map((tm) => teamName(tm, t)).join(', ') : t('org.unassigned')}</dd>
           </dl>
           {editable && person.role !== 'owner' && (
             <div className="dialog-actions is-start">
@@ -202,7 +202,7 @@ function PersonForm({ person, teams, onDone }: { person: OrgPerson; teams: strin
         <div className="perm-chips">
           {teams.map((name) => (
             <button type="button" key={name} className={`perm-chip ${chosen.has(name) ? 'is-on' : ''}`} aria-pressed={chosen.has(name)} onClick={() => flip(name)}>
-              {readable(name)}
+              {teamName(name, t)}
             </button>
           ))}
         </div>

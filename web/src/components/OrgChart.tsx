@@ -9,7 +9,7 @@ import { teamColor } from '../characters/colors';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { agentName } from '../lib/agentNames';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import { ENTRY } from '../office/layout';
 import type { AgentStatus } from '../office/state';
@@ -49,7 +49,7 @@ export function OrgChart({ chart, agents, statuses, onAgent, onPerson, onPoint =
   const depts: Dept[] = chart.teams
     .map((tm) => ({
       key: tm.name,
-      name: readable(tm.name),
+      name: teamName(tm.name, t),
       team: tm.name,
       agents: tm.agents.filter((a) => a.name !== ENTRY),
       people: tm.people,

@@ -4,7 +4,7 @@ import { teamColor } from '../characters/colors';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { agentName, agentSummary } from '../lib/agentNames';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { TEAMS } from './catalog';
 
 /**
@@ -36,10 +36,10 @@ export function TeamStrip() {
           <div className="landing-strip-team" role="listitem" key={group.team} style={{ '--team': teamColor(group.team) } as CSSProperties}>
             <p className="landing-mono landing-strip-head">
               <span className="landing-dot" aria-hidden="true" />
-              {readable(group.team)}
+              {teamName(group.team, t)}
               <span className="landing-strip-count">{t('landing.team.count', { n: group.agents.length })}</span>
             </p>
-            <ul className="landing-strip-cards" aria-label={readable(group.team)}>
+            <ul className="landing-strip-cards" aria-label={teamName(group.team, t)}>
               {group.agents.map((a) => (
                 <li className="landing-card" key={a.id}>
                   <AgentIcon agent={a.id} team={a.team} size={40} label="" />

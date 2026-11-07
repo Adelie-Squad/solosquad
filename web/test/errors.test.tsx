@@ -43,7 +43,7 @@ describe('server error codes → words (DESIGN.md 문구)', () => {
     expect(lockout).toContain('198.51.100.7');
     expect(lockout).not.toContain('confirm_lockout');
     expect(errorText(fail('password_too_short', { min: 10 }), t)).toContain('10');
-    expect(errorText(fail('approval_needs_team', { team: 'finance' }, 403), t)).toContain('finance');
+    expect(errorText(fail('approval_needs_team', { team: 'business' }, 403), t)).toContain(t('team.business')); // the id, named in the reader's language
     const ineligible = errorText(fail('connection_ineligible_server', { provider: 'anthropic', country: 'HK' }, 422), t);
     expect(ineligible).toContain('anthropic');
     expect(ineligible).toContain('HK');

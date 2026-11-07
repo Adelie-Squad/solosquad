@@ -17,7 +17,7 @@ import { kindLabel, useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { agentName, useAgentName } from '../lib/agentNames';
 import { cronText } from '../lib/cron';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { taskCounts } from '../lib/tasks';
 import { scheduleTitle } from '../views/ScheduleView';
 import { RUN_STATUS } from '../views/WorkflowsView';
@@ -350,7 +350,7 @@ export function OrgChartWidget() {
           {q.data.teams.map((tm) => (
             <li key={tm.name}>
               <span className="run-row">
-                <strong className="run-row-title">{readable(tm.name)}</strong>
+                <strong className="run-row-title">{teamName(tm.name, t)}</strong>
                 <span className="dash-hint">{t('widget.teamCounts', { agents: tm.agents.length, people: tm.people.length })}</span>
               </span>
             </li>

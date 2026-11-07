@@ -7,7 +7,12 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import type { Agent, OrgChart as OrgChartData } from '../src/api/types.gen';
 import { AgentModal, PersonModal } from '../src/components/AgentModal';
 import { OrgChart } from '../src/components/OrgChart';
+import { ApiError } from '../src/api/client';
+import { errorText } from '../src/api/errors';
+import { translate, type Vars } from '../src/i18n';
+import type { MessageKey } from '../src/i18n/ko';
 import { agentName, agentSummary, readableId } from '../src/lib/agentNames';
+import { teamName } from '../src/lib/names';
 import { legacyTarget, ScopeLayout } from '../src/shell/ScopeLayout';
 import { visibleNav } from '../src/shell/nav';
 import { me, renderWith } from './helpers';
@@ -94,6 +99,59 @@ describe('org chart infographic', () => {
     expect(onAgent).toHaveBeenCalledWith('backend-engineer');
     fireEvent.click(nodes[2]);
     expect(onPerson).toHaveBeenCalledWith(CHART.teams[1].people[0], 'engineering');
+  });
+});
+
+describe('team and agent names follow the reader’s language', () => {
+  const pm = agent('product-manager', 'product', {
+    display_name: { ko: '프로덕트 매니저', en: 'Product Manager', 'zh-CN': '产品经理' },
+  });
+  const mover = agent('route-planner', 'logistics'); // a customer's own agent in a team of its own
+  const chart: OrgChartData = {
+    owners: [],
+    teams: [
+      { name: 'core', agents: [card(AGENTS[0])], people: [] },
+      { name: 'product', agents: [card(pm)], people: [] },
+      { name: 'engineering', agents: [card(AGENTS[1])], people: [] },
+      { name: 'business', agents: [card(AGENTS[3])], people: [] },
+      { name: 'brand', agents: [], people: [{ id: 'u-3', display: 'Kim', title: '', role: 'staff' }] },
+      { name: 'logistics', agents: [card(mover)], people: [] },
+    ],
+    unassigned: [],
+  };
+  const labels = () =>
+    within(screen.getByRole('list', { name: /Departments|부서|部门/ }))
+      .getAllByRole('list')
+      .map((l) => l.getAttribute('aria-label'));
+
+  it.each([
+    ['ko', ['프로덕트', '엔지니어링', '비즈니스', '브랜드', 'Logistics'], '프로덕트 매니저'],
+    ['en', ['Product', 'Engineering', 'Business', 'Brand', 'Logistics'], 'Product Manager'],
+    ['zh-CN', ['产品', '工程', '商务', '品牌', 'Logistics'], '产品经理'],
+  ] as const)('%s', (locale, teams, pmName) => {
+    renderWith(<OrgChart chart={chart} agents={[AGENTS[0], pm, AGENTS[1], AGENTS[3], mover]} statuses={{}} onAgent={() => {}} onPerson={() => {}} />, locale);
+    expect(labels()).toEqual(teams);
+    expect(screen.getByText(pmName)).toBeTruthy();
+    expect(screen.getByText('Chief')).toBeTruthy(); // the persona keeps its name
+    expect(screen.getByText('Route Planner')).toBeTruthy(); // no display name — the id made readable
+    expect(screen.queryByText(/product-manager|route-planner|logistics/)).toBeNull();
+  });
+
+  it('names a team the same way everywhere, with the id made readable for a team of a customer’s own', () => {
+    const t = (key: MessageKey, vars?: Vars) => translate('ko', key, vars);
+    expect(teamName('core', t)).toBe('경영');
+    expect(teamName('engineering', (key) => translate('zh-CN', key))).toBe('工程');
+    expect(teamName('core', (key) => translate('en', key))).toBe('Leadership');
+    expect(teamName('field_ops', t)).toBe('Field Ops');
+    expect(teamName('constructor', t)).toBe('Constructor'); // not looked up on the object's prototype
+    const err = new ApiError(403, 'this approval needs team business', 'approval_needs_team', { team: 'business' });
+    expect(errorText(err, t)).toBe('비즈니스 팀원이나 대표만 승인할 수 있어요.');
+  });
+
+  it('shows the team chip of the agent modal in the reader’s language', () => {
+    renderWith(<AgentModal agent={AGENTS[1]} status="idle" waiting={[]} onClose={() => {}} />, 'ko');
+    const dialog = screen.getByRole('dialog', { name: '백엔드 엔지니어' });
+    expect(within(dialog).getByText('엔지니어링')).toBeTruthy();
   });
 });
 

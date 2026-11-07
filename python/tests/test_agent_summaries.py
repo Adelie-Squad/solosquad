@@ -75,3 +75,20 @@ def test_display_names_carry_no_id_marks(repo_root: Path) -> None:
         assert isinstance(names, dict)
         for locale, shown in names.items():
             assert "-" not in shown and "_" not in shown, (name, locale, shown)
+
+
+HANGUL = re.compile(r"[가-힣]")
+HAN = re.compile(r"[一-鿿]")
+
+
+def test_display_names_are_in_the_readers_language(repo_root: Path) -> None:
+    """User decision 2026-11-07: job names are translated. Chief is the persona's name."""
+    for name, extra in specs(repo_root).items():
+        names = extra["display_name"]
+        assert isinstance(names, dict)
+        if name == "chief":
+            assert set(names.values()) == {"Chief"}, names
+            continue
+        assert HANGUL.search(names["ko"]), (name, names["ko"])
+        assert HAN.search(names["zh-CN"]), (name, names["zh-CN"])
+        assert re.fullmatch(r"[A-Za-z ]+", names["en"]), (name, names["en"])

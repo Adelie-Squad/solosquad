@@ -10,7 +10,7 @@ import { Loading, Placeholder, QueryError, SavedLine } from '../components/Statu
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { cronText } from '../lib/cron';
-import { readable } from '../lib/names';
+import { teamName } from '../lib/names';
 import { useOrgOwner } from '../scope';
 
 export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string }> = {
@@ -125,7 +125,7 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
           {wf.team && (
             <span className="chip">
               <ICON.team size={14} />
-              {readable(wf.team)}
+              {teamName(wf.team, t)}
             </span>
           )}
           {wf.schedule && (

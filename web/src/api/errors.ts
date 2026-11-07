@@ -4,6 +4,7 @@
 // python/src/solosquad/web_api/errors.py); the record below must name every one of them, so
 // a code added on the server fails `npm run typecheck` until it has its words here.
 import type { MessageKey, Translate, Vars } from '../i18n';
+import { teamName } from '../lib/names';
 import { ApiError } from './client';
 import type { ErrorCode } from './types.gen';
 
@@ -88,6 +89,7 @@ export function errorKey(err: unknown): MessageKey {
 
 /** `errorKey` with the server's `params` in the text's placeholders. */
 export function errorText(err: unknown, t: Translate): string {
-  const vars: Vars = err instanceof ApiError && errorCode(err) ? err.params : {};
+  const vars: Vars = err instanceof ApiError && errorCode(err) ? { ...err.params } : {};
+  if (typeof vars.team === 'string') vars.team = teamName(vars.team, t); // the server sends the id
   return t(errorKey(err), vars);
 }

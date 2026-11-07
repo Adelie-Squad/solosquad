@@ -371,13 +371,15 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 대표와 Chief
 [대표 · 대표]  [Chief · 쉬는 중]
 ──────────────────────────────────────────────────────────────
-● Product 4명       ● Engineering 5명      ● Business 3명      ● Brand 2명
+● 프로덕트 4명       ● 엔지니어링 5명        ● 비즈니스 3명        ● 브랜드 2명
 ─────────────       ─────────────          ─────────────       ─────────────
-[Product Manager]   [Frontend Engineer]    [Business Strategy] [Marketer]
+[프로덕트 매니저]     [프론트엔드 엔지니어]    [사업 전략가]          [마케터]
  쉬는 중              쉬는 중                쉬는 중              쉬는 중
-[Product Designer]  [Backend Engineer]     [Sales]             [Creative]
+[프로덕트 디자이너]   [백엔드 엔지니어]        [세일즈]              [크리에이티브 디렉터]
  …                   …                      …
 ```
+
+부서 이름 · 직무 이름은 읽는 사람의 언어로 쓴다(사용자 2026-11-07 — `## 문구` 이름 표기). 위 그림은 ko.
 
 - **순서** = 맨 위 대표(사람)와 Chief, 그 아래 부서 열. Chief 만 있는 core 팀은 따로 열이 되지 않는다(Chief 는 맨 위). 소속 팀이 없는 사람은 맨 끝 "소속 팀이 없는 사람" 열.
 - **부서 열** = 격자(`auto-fit`, 최소 190px)로 가로로 나란히. 칸이 모자라면 다음 줄로 넘어가고 폰에서는 한 열.
@@ -497,11 +499,39 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 - 문장은 마침표로 끝낸다(라벨 · 버튼 · 칩 · 제목은 마침표 없음). 쉼표는 절과 절 사이에만, "A · B" 나열에는 가운뎃점.
 - **이름 표기** — 조직 · 사업장은 id(소문자 slug `spacex` · `launch-ops`)를 그대로 보이지 않는다.
   1. 표시 이름이 있으면 그것(`org.yaml` · `workspace.yaml` 의 `display_name` → `/api/me` `scopes[].display` · `workspaces[].display`). 정하는 곳: `solosquad init --display "SpaceX" --workspace-display "HQ"` · `add org --display` · `add workspace --display`.
-  2. 없으면 id 를 읽는 형태로 — `-` · `_` → 공백, 단어 첫 글자 대문자(`spacex` → `Spacex`, `launch-ops` → `Launch Ops`, `blue_origin` → `Blue Origin`). 팀 이름(`engineering` → `Engineering`)도 같은 규칙.
+  2. 없으면 id 를 읽는 형태로 — `-` · `_` → 공백, 단어 첫 글자 대문자(`spacex` → `Spacex`, `launch-ops` → `Launch Ops`, `blue_origin` → `Blue Origin`).
   3. 전환 메뉴 · 사이드바 · 페이지 머리 · 조직도 · 설정(사람 · 할당 · 접속 정책) 어디서나 같은 함수(`web/src/lib/names.ts`).
+  - **부서(팀) 이름은 읽는 사람의 언어로**(사용자 2026-11-07). 기본 팀 = 번역 키 `team.<id>`, 데이터의 id 는 그대로. 고객이 만든 팀(키가 없는 id)은 위 2번 규칙(`field_ops` → `Field Ops`). 조직도 · 사무실 목록 · 모달 부서 칩 · 승인 카드 · 워크플로 칩 · 서버 오류 문구의 `{team}` 모두 `teamName`(`web/src/lib/names.ts`).
+
+    | id | ko | en | zh-CN |
+    |---|---|---|---|
+    | core | 경영 | Leadership | 管理层 |
+    | product | 프로덕트 | Product | 产品 |
+    | engineering | 엔지니어링 | Engineering | 工程 |
+    | business | 비즈니스 | Business | 商务 |
+    | brand | 브랜드 | Brand | 品牌 |
   - **에이전트도 id 를 보이지 않는다**(개발용 로그 제외). 이름 = 에이전트 정의 파일(`agents/**/SKILL.md`) 프론트매터의 `display_name`(`ko` · `en` · `zh-CN`) →
     없으면 id 의 `-` · `_` 를 없애고 단어마다 대문자(`backend-engineer` → `Backend Engineer`, `chief` → `Chief`). 대화 · 승인 카드 · 실시간 작업 · 사무실 이름표 · 조직도 · 모달 모두 같은 함수(`web/src/lib/agentNames.ts`).
     고객 org 가 에이전트를 추가해도 같은 필드를 쓴다.
+  - **직무 이름(`display_name`)은 언어마다 번역한다**(사용자 2026-11-07 — 모든 언어에 같은 영문 id 를 쓰던 2026-11-06 규칙을 대신함). 예외 = **Chief** 는 페르소나 이름이라 세 언어 모두 "Chief"("Chief 에게 말하기"). 한국어 · 중국어는 그 언어 글자로(`python/tests/test_agent_summaries.py` 가 검사).
+
+    | id | ko | en | zh-CN |
+    |---|---|---|---|
+    | chief | Chief | Chief | Chief |
+    | product-manager | 프로덕트 매니저 | Product Manager | 产品经理 |
+    | product-designer | 프로덕트 디자이너 | Product Designer | 产品设计师 |
+    | researcher | 리서처 | Researcher | 研究员 |
+    | data-analyst | 데이터 분석가 | Data Analyst | 数据分析师 |
+    | frontend-engineer | 프론트엔드 엔지니어 | Frontend Engineer | 前端工程师 |
+    | backend-engineer | 백엔드 엔지니어 | Backend Engineer | 后端工程师 |
+    | data-engineer | 데이터 엔지니어 | Data Engineer | 数据工程师 |
+    | infra | 인프라 엔지니어 | Infra Engineer | 基础设施工程师 |
+    | quality-assurance | QA 엔지니어 | Quality Assurance | 质量保证工程师 |
+    | business-strategy | 사업 전략가 | Business Strategist | 业务战略 |
+    | sales | 세일즈 | Sales | 销售 |
+    | finance | 재무 담당 | Finance | 财务 |
+    | marketer | 마케터 | Marketer | 市场营销 |
+    | creative | 크리에이티브 디렉터 | Creative | 创意 |
   - **에이전트 소개(`summary`)** — 같은 프론트매터에 언어별로. 읽는 사람 = 중소 유통사 대표 · 직원. **2~3문장, 완전한 문장**(한국어 해요체)으로 "무엇을 맡고, 어떤 결과물을 내고, 사람에게 무엇을 승인받는지" 를 말한다.
     "—" · "–" · "/" · "·" 나열 · 괄호 메모 · 결정 번호 · 개발 용어 · 영어 약어 남발 금지(`python/tests/test_agent_summaries.py` 가 검사).
     `description`(영문, 라우팅 · 에이전트용)과는 역할이 다르다 — 화면에는 `summary` 만.
@@ -524,7 +554,7 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 
 - **에이전트 카드** = 펭귄 아이콘 40 · 표시 이름 · 소개(`summary`, 읽는 사람의 언어, 6줄까지). 이름 · 소개는 번들 `agents/**/SKILL.md` 프론트매터를 빌드 때 읽은 것(로그인 전이라 API 를 못 쓴다), 표시는 앱과 같은 함수(`lib/agentNames`). 순서 = 로스터(core → product → engineering → business → brand).
 - **예시 화면**(실시간 작업 · 승인 · 월 손익)은 앱 컴포넌트와 같은 모양의 정지 구성이고 머리에 "예시 화면" 라벨. **돈 액수 · 고객사 이름 · 가짜 후기 · 가짜 사용 숫자를 넣지 않는다** — 후기 자리는 제품 한 문장(`landing.statement`).
-- **프롬프트 상자** — Chief 에게 보내는 예시 부탁 3개를 글자 단위로 쳐서 보이고(55ms/자), 다 치면 "{에이전트} 가 맡았어요" 줄(펭귄 아이콘 20)이 나온 뒤 다음 예시로. 언어를 바꾸면 처음부터. 화면 낭독기에는 예시 전체를 목록으로(`sr-only`), 상자는 `aria-hidden`.
+- **프롬프트 상자** — Chief 에게 보내는 예시 부탁 3개를 글자 단위로 쳐서 보이고(55ms/자), 다 치면 "{에이전트} 에게 맡겼어요" 줄(직무 이름이 언어마다 달라 받침에 상관없는 조사를 쓴다)(펭귄 아이콘 20)이 나온 뒤 다음 예시로. 언어를 바꾸면 처음부터. 화면 낭독기에는 예시 전체를 목록으로(`sr-only`), 상자는 `aria-hidden`.
 - **장식 규칙** — 얇은 격자 = 3열 경계의 `--line` 1px 세로선(고정). 고정폭 라벨(`--font-mono` 11.5px · 대문자 · 자간 0.06em · `--ink-2`)과 섹션 번호 `01 / 05`(번호 accent · 전체 `--ink-3`). **그라디언트 · 틴트 띠 · 그림자 금지**(버튼 그림자도 끈다) · 이모지 금지 · 기호는 Lucide.
 - **글자** — 헤드라인 `clamp(36px, 4.4vw, 56px)` 800 · 섹션 제목 `clamp(26px, 2.8vw, 36px)` 750 · 설명 16px(폰 15px) 행간 1.7 · `--measure`. 한국어 `keep-all`, 제목 `balance`(`## 타이포그래피`).
 - **진행 표시** — 오른쪽 끝 세로 목록(번호 + 눈금, 지금 섹션 = accent 굵은 눈금 + 이름). `nav` 안의 일반 링크(`#landing-<id>`, 지금 = `aria-current="step"`) — 누르면 브라우저 기본 스크롤.

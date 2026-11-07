@@ -2,9 +2,9 @@
 name: quality-assurance
 description: Test automation / 회귀 / 품질 게이트. unit + integration + e2e. 구 qa(결정 58 에서 id 변경).
 display_name:
-  ko: "Quality Assurance"
+  ko: "QA 엔지니어"
   en: "Quality Assurance"
-  zh-CN: "Quality Assurance"
+  zh-CN: "质量保证工程师"
 summary:
   ko: "새 기능이나 수정이 기존 기능을 망가뜨리지 않는지 자동 시험으로 확인해요. 시험 결과 보고서와 발견한 문제 목록을 만들어요. 시험을 통과하지 못한 변경을 그대로 내보낼지는 대표님이 승인해요."
   en: "Checks with automated tests that new features and fixes do not break what already works. Produces test reports and a list of the problems found. If a change fails its tests, you decide whether it may still go out."
