@@ -60,7 +60,7 @@ export const ko = {
   'landing.prompt.1': '지난달 손익 정리해줘',
   'landing.prompt.2': '다음 주 신상품 상세 페이지 시안 만들어줘',
   'landing.prompt.3': '재고가 적은 상품 목록 뽑아줘',
-  'landing.prompt.assigned': '{agent} 가 맡았어요',
+  'landing.prompt.assigned': '{agent} 에게 맡겼어요',
   'landing.what.title': '부탁은 한 곳에서, 일은 각자 자리에서',
   'landing.what.lead': '메신저나 웹에서 Chief 에게 평소 말투로 부탁하면 돼요. 누가 무엇을 하고 있는지는 사무실 화면에 그대로 보여요.',
   'landing.what.step1.title': '말로 맡겨요',
