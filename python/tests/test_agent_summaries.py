@@ -82,12 +82,12 @@ HAN = re.compile(r"[一-鿿]")
 
 
 def test_display_names_are_in_the_readers_language(repo_root: Path) -> None:
-    """User decision 2026-11-07: job names are translated. Chief is the persona's name."""
+    """User decision 2026-11-07: job names are translated; Chief reads 임원 / 高管 (en keeps Chief)."""
     for name, extra in specs(repo_root).items():
         names = extra["display_name"]
         assert isinstance(names, dict)
         if name == "chief":
-            assert set(names.values()) == {"Chief"}, names
+            assert names == {"ko": "임원", "en": "Chief", "zh-CN": "高管"}, names
             continue
         assert HANGUL.search(names["ko"]), (name, names["ko"])
         assert HAN.search(names["zh-CN"]), (name, names["zh-CN"])

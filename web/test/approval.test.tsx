@@ -28,7 +28,7 @@ describe('approval card buttons follow can_approve (decision 51)', () => {
     const item = approval({ can_approve: false, tier: 'team' }, { team: 'sales' });
     expect(blockedReason(item)).toEqual({ key: 'approvals.needsTeam', team: 'sales' });
     renderWith(<ApprovalCard item={item} />, 'en');
-    expect(screen.getByTestId('approval-blocked').textContent).toContain('Staff of team Sales');
+    expect(screen.getByTestId('approval-blocked').textContent).toContain('Members of team Sales');
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
   });
 

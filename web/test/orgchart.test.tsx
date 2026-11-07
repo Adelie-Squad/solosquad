@@ -92,7 +92,7 @@ describe('org chart infographic', () => {
     expect(within(depts).getAllByRole('list').map((l) => l.getAttribute('aria-label'))).toEqual(['Engineering', 'Business']);
     const engineering = screen.getByRole('list', { name: 'Engineering' });
     const nodes = within(engineering).getAllByRole('button');
-    expect(nodes.map((b) => b.textContent)).toEqual(['Backend EngineerWorking', 'Quality AssuranceIdle', 'GwynneStaff']);
+    expect(nodes.map((b) => b.textContent)).toEqual(['Backend EngineerWorking', 'Quality AssuranceIdle', 'GwynneTeam member']);
     expect(screen.queryByText(/backend-engineer|quality-assurance/)).toBeNull(); // no ids on screen
     expect(screen.queryByText(/routing text/)).toBeNull(); // the description lives in the modal only
     fireEvent.click(nodes[0]);

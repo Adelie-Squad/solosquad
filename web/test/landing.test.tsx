@@ -88,7 +88,7 @@ describe('sections', () => {
     expect(TEAMS.map((g) => g.team)).toEqual(['core', 'product', 'engineering', 'business', 'brand']);
     const strip = screen.getByRole('list', { name: '에이전트 목록' });
     expect(within(strip).getAllByRole('heading', { level: 3 })).toHaveLength(15);
-    expect(within(strip).getByRole('heading', { name: '재무 담당' })).toBeTruthy();
+    expect(within(strip).getByRole('heading', { name: '재무' })).toBeTruthy();
     // the finance SKILL.md summary, Korean
     expect(within(strip).getByText(/장부와 매출, 매입을 맞춰 보고/)).toBeTruthy();
     for (const g of TEAMS) for (const a of g.agents) expect(a.summary.ko && a.summary.en && a.summary['zh-CN'], a.id).toBeTruthy();
@@ -139,9 +139,9 @@ describe('the prompt to Chief', () => {
     );
     const list = screen.getByRole('list', { name: '부탁 예시' });
     expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      '지난달 손익 정리해줘 재무 담당 에게 맡겼어요',
-      '다음 주 신상품 상세 페이지 시안 만들어줘 크리에이티브 디렉터 에게 맡겼어요',
-      '재고가 적은 상품 목록 뽑아줘 데이터 분석가 에게 맡겼어요',
+      '지난달 손익 정리해줘 재무에게 맡겼어요',
+      '다음 주 신상품 상세 페이지 시안 만들어줘 크리에이티브에게 맡겼어요',
+      '재고가 적은 상품 목록 뽑아줘 데이터 분석가에게 맡겼어요',
     ]);
   });
 });

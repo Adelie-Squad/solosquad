@@ -2,7 +2,7 @@
 name: creative
 description: 비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브. design-system skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).
 display_name:
-  ko: "크리에이티브 디렉터"
+  ko: "크리에이티브"
   en: "Creative"
   zh-CN: "创意"
 summary:

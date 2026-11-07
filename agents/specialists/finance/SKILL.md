@@ -2,7 +2,7 @@
 name: finance
 description: 재무 — 중소 유통사(한국 · 중국) 장부 · 손익 · 현금흐름 · 매출/매입 대사, 세금계산서 · 부가세(한국) · 增值税 기본, 월 결산과 확인 필요 항목 분류. 엔진 `finance.pnl` 도구 · `monthly-pnl` 워크플로 담당. 돈은 직접 움직이지 않고 승인 카드로 올린다.
 display_name:
-  ko: "재무 담당"
+  ko: "재무"
   en: "Finance"
   zh-CN: "财务"
 summary:
