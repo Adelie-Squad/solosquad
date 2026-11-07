@@ -5,19 +5,16 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type RefObject }
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import kitUrl from 'office-asset:office-kit.glb';
-import penguinUrl from 'office-asset:penguin.glb';
 import type { Theme } from '../theme';
 import { checkGltf, formatReport, type GltfJson } from './contract';
 import { applyLook, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
 import { WALL_H, type Room, type SeatAgent } from './layout';
-import { lazyMeshopt } from './meshopt';
 import { paletteFor, type OfficePalette } from './palette';
+import { kitUrl, penguinUrl, withMeshopt } from './penguinAsset';
+import { SkyLight } from './SkyLight';
 import type { AgentStatus } from './state';
 
-// draco off (the contract uses meshopt); the meshopt decoder is set but compiles only for a
-// compressed file (see meshopt.ts). Both files start loading together.
-const withMeshopt = (loader: { setMeshoptDecoder: (d: never) => unknown }) => void loader.setMeshoptDecoder(lazyMeshopt as never);
+// Both files start loading together (the loader setup is shared with the landing's mascot — penguinAsset.ts).
 useGLTF.preload(kitUrl, false, false, withMeshopt);
 useGLTF.preload(penguinUrl, false, false, withMeshopt);
 
@@ -250,39 +247,6 @@ function CameraRig({ room, scale }: { room: Room; scale: RefObject<number> }) {
     scale.current = Math.min(1, Math.max(0.62, size.width / w / 70));
     invalidate();
   }, [camera, room, size.width, size.height, invalidate, scale]);
-  return null;
-}
-
-/**
- * The soft environment light (`clay.sky`): a one-colour sky with a brighter panel overhead, baked
- * once into a PMREM map — tops read lighter than sides, the clay look without a line. Small on
- * purpose: drei's `<Environment>` would bring its HDR / EXR / gain-map loaders (~54 kB) for this.
- */
-function SkyLight({ color, intensity }: { color: string; intensity: number }) {
-  const gl = useThree((s) => s.gl);
-  const scene = useThree((s) => s.scene);
-  const invalidate = useThree((s) => s.invalidate);
-  useLayoutEffect(() => {
-    const pmrem = new THREE.PMREMGenerator(gl);
-    const sky = new THREE.Scene();
-    sky.background = new THREE.Color(color);
-    const panel = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
-    (panel.material as THREE.MeshBasicMaterial).color.multiplyScalar(1.6);
-    panel.position.y = 5;
-    panel.rotation.x = Math.PI / 2;
-    sky.add(panel);
-    const target = pmrem.fromScene(sky, 0.04);
-    scene.environment = target.texture;
-    scene.environmentIntensity = intensity;
-    invalidate();
-    return () => {
-      scene.environment = null;
-      target.dispose();
-      pmrem.dispose();
-      panel.geometry.dispose();
-      (panel.material as THREE.Material).dispose();
-    };
-  }, [gl, scene, color, intensity, invalidate]);
   return null;
 }
 

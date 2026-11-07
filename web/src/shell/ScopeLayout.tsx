@@ -10,7 +10,7 @@ import { defaultScope, defaultWorkspace, findOrg, findWorkspace, routes, ScopeCo
 import { useSession } from '../session';
 import { ArtifactView } from '../views/ArtifactView';
 import { ChatView } from '../views/ChatView';
-import { MailView } from '../views/MailView';
+import { MessengerView } from '../views/MessengerView';
 import { OfficeView } from '../views/OfficeView';
 import { ScheduleView } from '../views/ScheduleView';
 import { SettingsView } from '../views/SettingsView';
@@ -31,6 +31,7 @@ export const MOVED: Record<string, string> = {
   'screens/artifacts': '/tasks',
   'screens/home': '/dashboard',
   'artifacts/:id': '/tasks/artifacts/:id',
+  mail: '/messenger',
 };
 
 /** Where a moved workspace address goes now (inside the workspace, `:id` filled in). */
@@ -97,7 +98,7 @@ export function ScopeLayout() {
           <Route path="chat" element={<Navigate to="new" replace />} />
           <Route path="chat/:tid" element={<ChatView />} />
           <Route path="office" element={<OfficeView />} />
-          <Route path="mail" element={<MailView />} />
+          <Route path="messenger" element={<MessengerView />} />
           <Route path="tasks" element={<TasksView />} />
           <Route path="tasks/artifacts/:id" element={<ArtifactView />} />
           <Route path="workflows" element={<WorkflowsView />} />

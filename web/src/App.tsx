@@ -1,14 +1,16 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { ApiError, setCsrf } from './api/client';
 import { useMe } from './api/queries';
 import { Enrol } from './auth/Enrol';
-import { Landing } from './auth/Landing';
 import { Login } from './auth/Login';
 import { loginFor, officeHref, safeNext, signedIn } from './auth/next';
 import { isLocale, useI18n } from './i18n';
 import { SessionContext, sessionFrom } from './session';
 import { LegacyRedirect, RootRedirect, ScopeLayout } from './shell/ScopeLayout';
+
+// the landing is its own chunk — people inside the app never download it (its 3D part is a further chunk)
+const Landing = lazy(() => import('./landing/Landing').then((m) => ({ default: m.Landing })));
 
 /**
  * Addresses (DESIGN.md `## 레이아웃`): `/` the landing (outside the shell, signed in or not) ·
@@ -29,7 +31,14 @@ export function App() {
 
   return (
     <Routes>
-      <Route index element={<Landing />} />
+      <Route
+        index
+        element={
+          <Suspense fallback={<div className="splash" />}>
+            <Landing />
+          </Suspense>
+        }
+      />
       <Route path="login" element={<LoginRoute />} />
       <Route path="*" element={<AppRoute />} />
     </Routes>
