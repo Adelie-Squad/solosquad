@@ -28,7 +28,7 @@ export const en: Record<MessageKey, string> = {
   'nav.logout': 'Log out',
 
   'role.owner': 'Owner',
-  'role.staff': 'Staff',
+  'role.staff': 'Team member',
   'role.local': 'This computer',
 
   'auth.subtitle': 'Your company’s AI office',
@@ -149,7 +149,7 @@ export const en: Record<MessageKey, string> = {
   'error.approval_policy_invalid': 'Choose owner or team for each approval tier.',
   'error.unclassified_owner_only': 'Unclassified approvals always go to the owner.',
   'error.approval_needs_owner': 'Only the owner can approve this.',
-  'error.approval_needs_team': 'Only staff of team {team}, or the owner, can approve this.',
+  'error.approval_needs_team': 'Only members of team {team}, or the owner, can approve this.',
   'error.connection_id_required': 'Enter a name for the connection.',
   'error.connection_exists': 'A connection named {id} already exists. Choose another name.',
   'error.entity_required': 'Enter the legal entity that holds this account.',
@@ -202,7 +202,7 @@ export const en: Record<MessageKey, string> = {
   'approvals.approve': 'Approve',
   'approvals.decline': 'Decline',
   'approvals.needsOwner': 'Only the owner can approve this.',
-  'approvals.needsTeam': 'Staff of team {team}, or the owner, approve this.',
+  'approvals.needsTeam': 'Members of team {team}, or the owner, approve this.',
   'approvals.risk': 'Risk {risk}',
   'risk.low': 'low',
   'risk.medium': 'medium',
@@ -440,7 +440,7 @@ export const en: Record<MessageKey, string> = {
   'access.lockoutBody': 'The address you are connecting from is not in the new list. Saving ends this session; you can come back only from an allowed network.',
   'access.lockoutConfirm': 'Save anyway',
 
-  'tiers.lead': 'Who approves each kind of action. Owner approval = only the owner; team approval = staff of that team and the owner. Choices that differ from the recommendation are marked and audited.',
+  'tiers.lead': 'Who approves each kind of action. Owner approval = only the owner; team approval = members of that team and the owner. Choices that differ from the recommendation are marked and audited.',
   'tiers.category': 'Kind of action',
   'tiers.recommended': 'Recommended',
   'tiers.tier': 'Approval tier',

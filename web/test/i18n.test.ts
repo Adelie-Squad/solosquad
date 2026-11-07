@@ -24,7 +24,7 @@ describe('dictionaries (I31 · K36)', () => {
   });
 
   it('fills placeholders and defaults to ko', () => {
-    expect(translate('en', 'approvals.needsTeam', { team: 'core' })).toBe('Staff of team core, or the owner, approve this.');
+    expect(translate('en', 'approvals.needsTeam', { team: 'core' })).toBe('Members of team core, or the owner, approve this.');
     expect(translate('ko', 'nav.dashboard')).toBe('대시보드');
   });
 });
