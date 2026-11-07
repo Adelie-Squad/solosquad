@@ -1,5 +1,5 @@
 // The menu of 2026-11-07 (DESIGN.md `## 레이아웃` · `## 컴포넌트` 대시보드 / Task / 일정):
-// dashboard · office · mail · Task · workflows; old addresses redirected; Task's groups; the
+// dashboard · office · messenger · Task · workflows; old addresses redirected; Task's groups; the
 // dashboard's cost area; the schedule list and its sentences.
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,7 +12,7 @@ import { widgetsOf } from '../src/screens/DeclarativeScreen';
 import { NAV, navActive, visibleNav } from '../src/shell/nav';
 import { MOVED, movedTarget, ScopeLayout } from '../src/shell/ScopeLayout';
 import { Sidebar } from '../src/shell/Sidebar';
-import { MailView } from '../src/views/MailView';
+import { MessengerView } from '../src/views/MessengerView';
 import { ScheduleView } from '../src/views/ScheduleView';
 import { TasksView } from '../src/views/TasksView';
 import { DeclarativeScreen } from '../src/screens/DeclarativeScreen';
@@ -114,9 +114,9 @@ const staff = me({
 // ---------------------------------------------------------------------- the menu
 
 describe('the sidebar menu', () => {
-  it('is dashboard · office · mail · Task · workflows — the same five for owner and staff', () => {
+  it('is dashboard · office · messenger · Task · workflows — the same five for owner and staff', () => {
     const ids = NAV.map((n) => n.to);
-    expect(ids).toEqual(['/dashboard', '/office', '/mail', '/tasks', '/workflows']);
+    expect(ids).toEqual(['/dashboard', '/office', '/messenger', '/tasks', '/workflows']);
     expect(visibleNav(true).map((n) => n.to)).toEqual(ids);
     expect(visibleNav(false).map((n) => n.to)).toEqual(ids);
     // five tiles in two columns: the first takes the whole row (DESIGN.md — no hole)
@@ -131,7 +131,7 @@ describe('the sidebar menu', () => {
     renderWith(<Sidebar onCommand={() => {}} />, 'en', { me: person, path: '/o/tesla/w/charging/schedule' });
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     const tiles = within(nav).getAllByRole('link');
-    expect(tiles.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual(['Dashboard', 'Office', 'Mail', 'Tasks', 'Workflows']);
+    expect(tiles.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual(['Dashboard', 'Office', 'Messenger', 'Tasks', 'Workflows']);
     expect(tiles[0].getAttribute('href')).toBe('/o/tesla/w/charging/dashboard');
     // the schedule is a view of the workflows: that tile stays selected on it
     expect(tiles[4].getAttribute('aria-current')).toBe('page');
@@ -155,6 +155,7 @@ describe('the sidebar menu', () => {
 describe('old addresses', () => {
   it('maps every moved screen', () => {
     expect(movedTarget('artifacts/:id', { id: 'a 1' })).toBe('/tasks/artifacts/a%201');
+    expect(movedTarget('mail', {})).toBe('/messenger'); // "메일" became "메신저" (2026-11-07)
     expect(MOVED).toMatchObject({ home: '/dashboard', budget: '/dashboard#cost', approvals: '/tasks', artifacts: '/tasks' });
   });
 
@@ -342,16 +343,16 @@ describe('the schedule view', () => {
   });
 });
 
-// ---------------------------------------------------------------------- mail
+// ----------------------------------------------------------------- messenger
 
-describe('mail (not connected yet)', () => {
+describe('messenger (not connected yet)', () => {
   it('points the owner to Settings › Connections and tells staff who turns it on', () => {
-    renderWith(<MailView />, 'en');
-    expect(screen.getByTestId('mail-pending').textContent).toContain('Mail is not connected yet.');
+    renderWith(<MessengerView />, 'en');
+    expect(screen.getByTestId('messenger-pending').textContent).toContain('No messenger is connected yet.');
     expect(screen.getByRole('link', { name: /Open connection settings/ }).getAttribute('href')).toBe('/o/tesla/settings/connections');
     cleanup();
-    renderWith(<MailView />, 'en', { me: staff });
-    expect(screen.getByTestId('mail-pending').textContent).toContain('once the owner connects it');
+    renderWith(<MessengerView />, 'en', { me: staff });
+    expect(screen.getByTestId('messenger-pending').textContent).toContain('once the owner connects a messenger');
     expect(screen.queryByRole('link', { name: /Open connection settings/ })).toBeNull();
   });
 });
