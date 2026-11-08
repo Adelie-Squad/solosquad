@@ -5,6 +5,7 @@ import type { AssignmentOut, ScopeOrg } from '../../api/types.gen';
 import { useI18n } from '../../i18n';
 import { ICON } from '../../icons';
 import { orgName, shownName, workspaceName } from '../../lib/names';
+import { useScrollLock } from '../../components/scrollLock';
 
 export type Assignment = AssignmentOut;
 
@@ -102,6 +103,7 @@ export function AssignmentsDialog({
 }) {
   const { t } = useI18n();
   const [list, setList] = useState<Assignment[]>(initial);
+  useScrollLock();
   return (
     <div className="command-overlay is-modal" onMouseDown={onClose}>
       <form

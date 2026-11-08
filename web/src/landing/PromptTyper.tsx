@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { agentName } from '../lib/agentNames';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n, type MessageKey } from '../i18n';
@@ -21,9 +21,10 @@ type Phase = 'typing' | 'answer';
 /**
  * A small box that types example requests to Chief and says which agent took them, then the
  * next one. Reduced motion: the first example, whole and still. The box is decoration for
- * sighted readers; screen readers get the examples as a plain list.
+ * sighted readers; screen readers get the examples as a plain list. `onType` hears every character
+ * as it is typed (the landing penguin taps a key for each one — Acts.tsx `PromptAct`).
  */
-export function PromptTyper({ still }: { still: boolean }) {
+export function PromptTyper({ still, onType }: { still: boolean; onType?: (typed: number) => void }) {
   const { t, locale } = useI18n();
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
@@ -52,6 +53,12 @@ export function PromptTyper({ still }: { still: boolean }) {
     setShown(0);
     setPhase('typing');
   }, [locale]);
+
+  const heard = useRef(onType);
+  heard.current = onType;
+  useEffect(() => {
+    if (!still && phase === 'typing' && shown > 0) heard.current?.(shown);
+  }, [still, phase, shown]);
 
   const text = still ? chars.join('') : chars.slice(0, shown).join('');
   const answered = still || phase === 'answer';

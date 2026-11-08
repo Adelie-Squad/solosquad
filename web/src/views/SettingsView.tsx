@@ -11,6 +11,7 @@ import { useSession } from '../session';
 import { useLinks, useOrgOwner, useScope } from '../scope';
 import { useLogout } from '../auth/logout';
 import { ScopeEyebrow } from '../components/ScopeEyebrow';
+import { ScrollLock } from '../components/scrollLock';
 import { ICON } from '../icons';
 import { workspaceName } from '../lib/names';
 import { AssignmentChips, AssignmentsDialog, AssignmentsEditor, type Assignment } from './settings/Assignments';
@@ -328,6 +329,7 @@ function AccessForm({
 
       {lockout && (
         <div className="command-overlay is-modal" onMouseDown={() => setLockout(null)}>
+          <ScrollLock />
           <div className="dialog" role="alertdialog" aria-label={t('access.lockoutTitle')} onMouseDown={(e) => e.stopPropagation()}>
             <h2 className="with-icon is-warn">
               <ICON.warn size={20} />

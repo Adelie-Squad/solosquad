@@ -1356,6 +1356,14 @@ h3.with-icon {
   }
 }
 
+/* ── modal scroll containment (every overlay) ──────────────────────
+   The page behind is held by components/scrollLock.ts; every scroller inside an overlay keeps its
+   wheel and touch to itself, so reaching its end never chains to the page. */
+.command-overlay,
+.command-overlay * {
+  overscroll-behavior: contain;
+}
+
 /* ── agent · person modal ──────────────────────────────────────── */
 
 .entity-modal {

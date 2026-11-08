@@ -1,13 +1,13 @@
-// The mascot layer of the landing (DESIGN.md `## 랜딩`): in the middle of the pinned stage for the
-// whole page while the slides change around it. The 2D penguin shows at once; the 3D chunk loads
+// The mascot layer of the landing (DESIGN.md `## 랜딩`): fixed in the scene column of the pinned
+// stage for the whole page while the slides change around it; each slide's scene box lies exactly
+// over it, so the slide's content sits in front of the penguin. The 2D penguin shows at once; the 3D chunk loads
 // after the first paint and takes over only once it has really drawn the penguin (MascotCanvas
 // counts draw calls) — if it never does, the page falls back to the 2D penguin. Rendering stops
 // when the tab is hidden or the layer is off-screen. Decoration only (aria-hidden).
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Mascot } from '../characters/PenguinIcon';
-import type { ClipName } from '../office/contract';
 import type { Theme } from '../theme';
-import type { LandingStats, Pointer, PresentSide } from './MascotCanvas';
+import type { LandingStats, Pointer } from './MascotCanvas';
 import type { SectionId } from './sections';
 
 const MascotCanvas = lazy(() => import('./MascotCanvas'));
@@ -42,21 +42,25 @@ function afterFirstPaint(run: () => void): () => void {
 
 export function MascotStage({
   section,
-  clip,
+  acting,
   theme,
   mobile,
   pointer,
   touch,
-  side,
+  pin,
+  onReady: ready3d,
   onFail,
 }: {
   section: SectionId;
-  clip: ClipName;
+  /** The penguin acts on the slide's content (Landing: live and drawn). */
+  acting: boolean;
   theme: Theme;
   mobile: boolean;
   pointer: RefObject<Pointer | null>;
   touch: boolean;
-  side: PresentSide;
+  /** The pinned stage — the canvas reads the slide's marks (Acts.tsx) from it. */
+  pin: RefObject<HTMLElement | null>;
+  onReady?: () => void;
   onFail: () => void;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -64,14 +68,15 @@ export function MascotStage({
   const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState(() => document.visibilityState === 'hidden');
   const [offScreen, setOffScreen] = useState(false);
-  const onReady = useCallback(() => setReady(true), []);
+  const onReady = useCallback(() => {
+    setReady(true);
+    ready3d?.();
+  }, [ready3d]);
   // `?landing-debug`: frames per second at `window.__landing.fps`
   const [stats] = useState<LandingStats | undefined>(() => (new URLSearchParams(window.location.search).has('landing-debug') ? { fps: 0, calls: 0 } : undefined));
   useEffect(() => {
     if (stats) (window as unknown as { __landing?: unknown }).__landing = stats;
   }, [stats]);
-  // greet only when the page opens at the top
-  const [greet] = useState(() => section === 'hero');
 
   useEffect(() => afterFirstPaint(() => setLoad(true)), []);
   useEffect(() => {
@@ -89,7 +94,7 @@ export function MascotStage({
 
   return (
     <div className="landing-stage" aria-hidden="true">
-      <div className={`landing-mascot ${ready ? 'is-ready' : ''}`} ref={wrap} data-clip={clip} data-testid="landing-mascot">
+      <div className={`landing-mascot ${ready ? 'is-ready' : ''}`} ref={wrap} data-testid="landing-mascot">
         <div className="landing-poster">
           <Mascot size={240} />
         </div>
@@ -97,15 +102,14 @@ export function MascotStage({
           <Boundary onFail={onFail}>
             <Suspense fallback={null}>
               <MascotCanvas
-                clip={clip}
+                act={section}
+                acting={acting}
                 theme={theme}
                 mobile={mobile}
                 paused={hidden || offScreen}
                 pointer={pointer}
                 touch={touch}
-                slide={section}
-                side={side}
-                greet={greet}
+                pin={pin}
                 onReady={onReady}
                 onFail={onFail}
                 stats={stats}
