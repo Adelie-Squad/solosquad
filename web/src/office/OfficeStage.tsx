@@ -1,12 +1,16 @@
 // The office scene on the page: lazy-loads the 3D chunk (three.js · R3F · drei · the GLBs — only
-// this screen pays for it), lays the name tags over the canvas, pauses when hidden or scrolled
+// this screen pays for it), lays the name tags and team labels over the canvas, owns the zoom
+// (five levels, buttons, keys, wheel, drag, pinch — zoom.ts), pauses when hidden or scrolled
 // away, and falls back to a list when WebGL is missing or fails. The scene is decoration
 // (aria-hidden); the list next to it is what a screen reader reads.
-import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from 'react';
 import { useI18n, type MessageKey } from '../i18n';
+import { ICON } from '../icons';
+import { teamName } from '../lib/names';
 import type { Theme } from '../theme';
 import type { SeatAgent } from './layout';
 import type { AgentStatus } from './state';
+import { LEVELS, tagPriority, tagsShowAll, wheelFactor, wheelZooms, ZoomController, type WheelMode } from './zoom';
 
 const OfficeCanvas = lazy(() => import('./OfficeCanvas'));
 
@@ -31,6 +35,12 @@ export const STATUS_CHIP: Record<AgentStatus, string> = {
 /** Idle agents keep their tag hidden until pointed at (scene hover, or the list below) — the
  * working, the waiting, the failed and the just-finished stay readable in a full office. */
 export const quiet = (st: AgentStatus) => st === 'idle';
+
+/** Does this tag show? From L3 every tag does (the penguins are far enough apart); at L1–L2 an
+ * idle agent's only when pointed at. */
+export function tagShown(st: AgentStatus, level: number, pointed: boolean): boolean {
+  return tagsShowAll(level) || pointed || !quiet(st);
+}
 
 export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -76,6 +86,17 @@ export function webglForcedOff(): boolean {
   }
 }
 
+/** What the page around the scene can ask of it. */
+export interface OfficeStageApi {
+  /** Zoom to L5 on that agent's desk ("이 에이전트로 확대"). */
+  focusAgent: (agent: string) => void;
+}
+
+/** Where a stage remembers its zoom: one per workspace, the pop-out its own. */
+export const zoomKey = (org: string, ws: string, display = false) => `solosquad.office.${display ? 'display-zoom' : 'zoom'}.${org}/${ws}`;
+
+type PodInfo = { key: string; team: string | null; chief: boolean };
+
 export function OfficeStage({
   agents,
   statuses,
@@ -84,6 +105,10 @@ export function OfficeStage({
   fallback,
   highlight = null,
   paused = false,
+  wheel = 'modifier',
+  storageKey,
+  onZoomable,
+  ref,
 }: {
   agents: SeatAgent[];
   statuses: Record<string, AgentStatus>;
@@ -94,10 +119,18 @@ export function OfficeStage({
   highlight?: string | null;
   /** Stop drawing (the scene is shown in the pop-out window instead). */
   paused?: boolean;
+  /** `modifier`: a plain wheel scrolls the page (the office screen); `always`: it zooms (the pop-out). */
+  wheel?: WheelMode;
+  /** localStorage key for the level and centre (`zoomKey`). */
+  storageKey?: string;
+  /** The scene is up and can zoom (false while loading, or with the fallback list). */
+  onZoomable?: (can: boolean) => void;
+  ref?: Ref<OfficeStageApi>;
 }) {
   const { t } = useI18n();
   const wrap = useRef<HTMLDivElement>(null);
   const tags = useRef(new Map<string, HTMLElement>());
+  const teamTags = useRef(new Map<string, HTMLElement>());
   const [failed, setFailed] = useState(() => webglForcedOff() || !hasWebGL());
   const [ready, setReady] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -105,11 +138,36 @@ export function OfficeStage({
   const [mobile] = useState(isMobile);
   const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.visibilityState === 'hidden');
   const [offScreen, setOffScreen] = useState(false);
+  const [pods, setPods] = useState<PodInfo[]>([]);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
   const select = useCallback((a: string) => selectRef.current(a), []);
   const fail = useCallback(() => setFailed(true), []);
   const onReady = useCallback(() => setReady(true), []);
+  const onPods = useCallback((p: PodInfo[]) => setPods(p), []);
+
+  // the camera's level and centre — one controller per stage (and per workspace)
+  const zoom = useMemo(() => new ZoomController(storageKey), [storageKey]);
+  useEffect(() => () => zoom.dispose(), [zoom]);
+  zoom.reduced = reduced;
+  const [level, setLevel] = useState(() => zoom.level());
+  const [announce, setAnnounce] = useState('');
+  const [dragging, setDragging] = useState(false);
+  const tRef = useRef(t);
+  tRef.current = t;
+  useEffect(() => {
+    setLevel(zoom.level());
+    return zoom.subscribe((e) => {
+      if (e === 'level') setLevel(zoom.level());
+      if (e === 'settle') setAnnounce(tRef.current('office.zoom.level', { n: zoom.level(), total: LEVELS }));
+    });
+  }, [zoom]);
+  useImperativeHandle(ref, () => ({ focusAgent: (agent: string) => void zoom.focusAgent(agent) }), [zoom]);
+  const zoomable = ready && !failed;
+  useEffect(() => {
+    onZoomable?.(zoomable);
+  }, [zoomable, onZoomable]);
+
   // `?office-debug`: `dispatchEvent(new CustomEvent('solosquad:office-debug', {detail: {chief: 'typing'}}))`
   // overrides statuses by hand — to look at every pose without a live engine; `window.__office.fps`
   const debugOn = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('office-debug');
@@ -117,11 +175,11 @@ export function OfficeStage({
   const [debug, setDebug] = useState<Record<string, AgentStatus>>({});
   useEffect(() => {
     if (!debugOn) return;
-    (window as unknown as { __office?: unknown }).__office = stats;
+    (window as unknown as { __office?: unknown }).__office = Object.assign(stats ?? {}, { zoom });
     const on = (e: Event) => setDebug((e as CustomEvent<Record<string, AgentStatus>>).detail ?? {});
     window.addEventListener('solosquad:office-debug', on);
     return () => window.removeEventListener('solosquad:office-debug', on);
-  }, [debugOn, stats]);
+  }, [debugOn, stats, zoom]);
   statuses = Object.keys(debug).length ? { ...statuses, ...debug } : statuses;
 
   // reduced motion, hidden tab and off-screen all stop the loop
@@ -144,10 +202,129 @@ export function OfficeStage({
     return () => io.disconnect();
   }, [failed]);
 
+  // wheel · pinch · drag — native listeners (a React wheel handler is passive and cannot stop the page)
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el || failed) return;
+    const local = (x: number, y: number) => {
+      const r = (el.querySelector('canvas') ?? el).getBoundingClientRect();
+      return [x - r.left, y - r.top] as const;
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (!wheelZooms(e, wheel)) return; // a plain wheel scrolls the page
+      e.preventDefault();
+      zoom.zoomAt(wheelFactor(e), ...local(e.clientX, e.clientY));
+    };
+    // Safari's trackpad pinch comes as gesture events, not ctrl+wheel
+    let gestureScale = 1;
+    const onGestureStart = (e: Event) => {
+      e.preventDefault();
+      gestureScale = 1;
+    };
+    const onGestureChange = (e: Event) => {
+      const g = e as Event & { scale: number; clientX: number; clientY: number };
+      e.preventDefault();
+      zoom.zoomAt(g.scale / gestureScale, ...local(g.clientX, g.clientY));
+      gestureScale = g.scale;
+    };
+    // one pointer drags (once zoomed in), two pinch
+    const down = new Map<number, { x: number; y: number }>();
+    let start: { x: number; y: number } | null = null;
+    let panning = false;
+    let pinch: { d: number; x: number; y: number } | null = null;
+    const pinchOf = () => {
+      const [a, b] = [...down.values()];
+      return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if ((e.target as HTMLElement).closest?.('button')) return;
+      down.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (down.size === 2) {
+        pinch = pinchOf();
+        panning = false;
+      } else if (down.size === 1) start = { x: e.clientX, y: e.clientY };
+    };
+    const onMove = (e: PointerEvent) => {
+      const prev = down.get(e.pointerId);
+      if (!prev) return;
+      const p = { x: e.clientX, y: e.clientY };
+      down.set(e.pointerId, p);
+      if (down.size >= 2 && pinch) {
+        const now = pinchOf();
+        if (pinch.d > 0) zoom.zoomAt(now.d / pinch.d, ...local(now.x, now.y));
+        zoom.panBy(now.x - pinch.x, now.y - pinch.y);
+        pinch = now;
+        return;
+      }
+      if (!panning && start && Math.hypot(p.x - start.x, p.y - start.y) > 4 && zoom.zoomed()) {
+        panning = true;
+        setDragging(true);
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch {
+          // a synthetic pointer — the drag still works without capture
+        }
+      }
+      if (panning) {
+        e.preventDefault();
+        zoom.panBy(p.x - prev.x, p.y - prev.y);
+      }
+    };
+    const onUp = (e: PointerEvent) => {
+      down.delete(e.pointerId);
+      if (down.size < 2) pinch = null;
+      if (down.size === 0) {
+        start = null;
+        if (panning) setDragging(false);
+        panning = false;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('gesturestart', onGestureStart);
+    el.addEventListener('gesturechange', onGestureChange);
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('gesturestart', onGestureStart);
+      el.removeEventListener('gesturechange', onGestureChange);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
+  }, [zoom, wheel, failed]);
+
+  /** `+` / `-` / `0` (and arrows to pan, once zoomed) while the scene has focus. */
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return; // ⌘+ / ctrl+ stay the browser's zoom
+    const k = e.key;
+    if (k === '+' || k === '=') zoom.stepIn();
+    else if (k === '-' || k === '_') zoom.stepOut();
+    else if (k === '0') zoom.fit();
+    else if (k.startsWith('Arrow') && zoom.zoomed()) {
+      const d = 60;
+      zoom.panBy(k === 'ArrowLeft' ? d : k === 'ArrowRight' ? -d : 0, k === 'ArrowUp' ? d : k === 'ArrowDown' ? -d : 0);
+    } else return;
+    e.preventDefault();
+  };
+
   if (failed) return <div className="office-fallback">{fallback}</div>;
 
+  const teams = pods.filter((p) => !p.chief && p.team);
   return (
-    <div className="office-stage" ref={wrap}>
+    <div
+      className={`office-stage ${level > 1 ? 'is-zoomed' : ''} ${dragging ? 'is-dragging' : ''} ${wheel === 'always' ? 'is-display' : ''}`}
+      ref={wrap}
+      tabIndex={zoomable ? 0 : undefined}
+      role={zoomable ? 'group' : undefined}
+      aria-label={zoomable ? t('office.zoom.scene') : undefined}
+      aria-keyshortcuts={zoomable ? '+ - 0' : undefined}
+      onKeyDown={zoomable ? onKeyDown : undefined}
+    >
       <SceneBoundary onFail={fail}>
         <Suspense fallback={null}>
           <OfficeCanvas
@@ -158,21 +335,48 @@ export function OfficeStage({
             mobile={mobile}
             paused={paused || hidden || offScreen}
             tags={tags}
+            teamTags={teamTags}
+            zoom={zoom}
             onSelect={select}
             onHover={setHovered}
+            onPods={onPods}
             onReady={onReady}
             onFail={fail}
             stats={stats}
           />
         </Suspense>
       </SceneBoundary>
+      {/* team labels — a click zooms to that team (L3 or L4, whichever frames the pod) */}
+      <div className={`office-teams ${ready && level < LEVELS ? '' : 'is-hidden'}`}>
+        {teams.map((p) => {
+          const name = teamName(p.team!, t);
+          return (
+            <button
+              key={p.key}
+              type="button"
+              className="office-team-label"
+              ref={(el) => {
+                if (el) teamTags.current.set(p.key, el);
+                else teamTags.current.delete(p.key);
+              }}
+              aria-label={t('office.zoom.toTeam', { team: name })}
+              title={t('office.zoom.toTeam', { team: name })}
+              onClick={() => zoom.focusTeam(p.key)}
+            >
+              {name}
+            </button>
+          );
+        })}
+      </div>
       <div className="office-tags" aria-hidden="true">
         {agents.map((a) => {
           const st = statuses[a.name] ?? 'idle';
+          const pointed = a.name === hovered || a.name === highlight;
           return (
             <div
               key={a.name}
-              className={`office-tag is-${st} ${quiet(st) && a.name !== hovered && a.name !== highlight ? 'is-quiet' : ''} ${ready ? '' : 'is-pending'}`}
+              className={`office-tag is-${st} ${tagShown(st, level, pointed) ? '' : 'is-quiet'} ${ready ? '' : 'is-pending'}`}
+              data-prio={tagPriority(st, pointed)}
               ref={(el) => {
                 if (el) tags.current.set(a.name, el);
                 else tags.current.delete(a.name);
@@ -198,7 +402,47 @@ export function OfficeStage({
           );
         })}
       </div>
+      {zoomable && <ZoomControls zoom={zoom} level={level} />}
+      <p className="office-zoom-live" aria-live="polite">
+        {announce}
+      </p>
       {!ready && <div className="office-loading">{t('common.loading')}</div>}
+    </div>
+  );
+}
+
+/** − · five level dots · + · 전체 보기 — on the scene's corner. */
+function ZoomControls({ zoom, level }: { zoom: ZoomController; level: number }) {
+  const { t } = useI18n();
+  return (
+    <div className="office-zoom" role="toolbar" aria-label={t('office.zoom.controls')}>
+      <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.out')} title={`${t('office.zoom.out')} (-)`} disabled={level <= 1} onClick={() => zoom.stepOut()}>
+        <ICON.zoomOut />
+      </button>
+      <span className="office-zoom-dots">
+        {Array.from({ length: LEVELS }, (_, i) => {
+          const label = t('office.zoom.level', { n: i + 1, total: LEVELS });
+          return (
+            <button
+              key={i}
+              type="button"
+              className={`office-zoom-dot ${i + 1 === level ? 'is-on' : ''}`}
+              aria-label={label}
+              aria-pressed={i + 1 === level}
+              title={label}
+              onClick={() => zoom.setLevel(i + 1)}
+            >
+              <span />
+            </button>
+          );
+        })}
+      </span>
+      <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.in')} title={`${t('office.zoom.in')} (+)`} disabled={level >= LEVELS} onClick={() => zoom.stepIn()}>
+        <ICON.zoomIn />
+      </button>
+      <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.fit')} title={`${t('office.zoom.fit')} (0)`} disabled={level <= 1 && !zoom.zoomed()} onClick={() => zoom.fit()}>
+        <ICON.zoomFit />
+      </button>
     </div>
   );
 }

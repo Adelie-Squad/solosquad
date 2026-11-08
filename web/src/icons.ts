@@ -38,6 +38,7 @@ import {
   Play,
   Plug,
   Plus,
+  Scan,
   Send,
   Settings,
   Sun,
@@ -46,6 +47,8 @@ import {
   Users,
   Workflow,
   X,
+  ZoomIn,
+  ZoomOut,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -96,6 +99,9 @@ export const ICON = {
   report: ChartColumn,
   explore: Compass,
   draft: PenLine,
+  zoomIn: ZoomIn,
+  zoomOut: ZoomOut,
+  zoomFit: Scan,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON;
