@@ -1159,6 +1159,19 @@ html:has(.landing[data-mode="live"]) {
   gap: var(--card-gap);
 }
 
+/* no rod without the 3D penguin: the paper is a plain card */
+.landing-stack .landing-scroll-sheet,
+.landing-pin:not(.is-acting) .landing-scroll-sheet {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.landing-stack .landing-scroll-roll,
+.landing-pin:not(.is-acting) .landing-scroll-roll {
+  display: none;
+}
+
 /* no acting here: the 2D penguin stands beside the prompt box */
 .landing-stack .landing-slide.is-hero .landing-scene {
   flex-direction: row;
