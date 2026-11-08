@@ -1,11 +1,20 @@
 // The landing's 3D mascot — the lazily loaded part (three.js · R3F · drei · penguin.glb). One
 // plain penguin from the office loader (office/penguinAsset.ts), coloured by the office palette
-// (light = day, dark = evening overtime), playing the office's state clips. On top of the clip it
-// acts on the section's content (DESIGN.md `## 랜딩` — 연기): each frame it reads the HTML act's
-// marks (Acts.tsx — `data-hand` · `data-stamp-target` · `data-rod` · `data-front`), turns its
-// wings to touch them (rig.ts), holds its props (props.ts) and cuts the body out behind the content
-// so the content reads in front of it while a wing or a prop stays on top. The head follows the
-// cursor. MascotStage owns the page side.
+// (light = day, dark = evening overtime). The canvas covers the scene column; each section's content
+// is centred there and the penguin walks to a spot picked from that content's box (staging.ts) and
+// acts on it (DESIGN.md `## 랜딩` — 자리 · 연기): it patters above the prompt box, hands the request
+// to the step cards, peeks over the scroll and holds its rod, stamps the approval from the card's
+// corner, waves from behind the last card. The head follows the cursor, toned down while acting.
+//
+// The camera is orthographic and one world unit is `zoom` CSS pixels, so a point of the page and
+// a point of the scene map onto each other exactly at any size, and the penguin keeps its own units
+// (the wing reach, the stamp, the lights).
+//
+// What shows in front of the content (DESIGN.md `## 랜딩` — 가림): three passes. (1) the whole
+// penguin; (2) an eraser over each content box wipes every pixel there — depth plays no part, so no
+// turn, lean or nod can push a body part through; (3) only the wings that are meant to touch the
+// content (`FRONT` — the typing wings on the box edge, the wing on the rod, the stamp wing) and the
+// props are drawn again on top. Anything else of the body under the content stays wiped.
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -16,12 +25,13 @@ import { CROSSFADE } from '../office/motion';
 import { paletteFor } from '../office/palette';
 import { preloadPenguin, useSoloPenguin } from '../office/penguinAsset';
 import { SkyLight } from '../office/SkyLight';
-import { ACT_CLIP, cues, FLIP_STEP_MS, flipLift, now, squashAt, STAMP_TOTAL_MS, stampAside, stampLift, stampTilt, tapPulse } from './acting';
-import { drawState, follow, lookAt, wander, type Look, type Pointer } from './gaze';
+import { ACT_CLIP, cues, now, relayHand, squashAt, STAMP_TOTAL_MS, stampAside, stampLift, stampTilt, tugAt, WAVE_SWING, waveAt, WING_GLIDE, WING_WEIGHT_RATE } from './acting';
+import { drawState, follow, GAZE_ACTING, lookAt, wander, type Look, type Pointer } from './gaze';
 import { useHolder } from './holder';
 import { makeRod, makeStamp, STAMP_LENGTH } from './props';
-import { aim, atDepth, fitEraser, makeEraser, rayAt, reach } from './rig';
+import { aim, atDepth, fitEraser, FRONT, makeEraser, rayAt, reach, useFrontPass, type Side } from './rig';
 import type { SectionId } from './sections';
+import { headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
 
 preloadPenguin();
 
@@ -31,8 +41,15 @@ export interface LandingStats {
   fps: number;
   /** Last frame's draw calls — 0 means nothing is on screen. */
   calls: number;
-  /** Where the shoulders and the resting wing tips fall in the canvas (0 = top … 1 = bottom) — tuning `--front-top`. */
-  frame?: { shoulder: number; tip: number; feet: number; head: number };
+  /** The penguin this frame (client px) — where it stands, its height, and whether it has arrived. */
+  spot?: Spot & { settled: boolean };
+  /** The body bone and the wing tips this frame (client px) — the frame sequences read them. */
+  body?: { x: number; y: number };
+  tips?: Record<Side, { x: number; y: number }>;
+  /** Which wings are drawn over the content this frame. */
+  front?: Record<Side, boolean>;
+  /** How much the wings are typing (0 … 1, eased). */
+  typing?: number;
 }
 
 export interface MascotCanvasProps {
@@ -43,6 +60,7 @@ export interface MascotCanvasProps {
   theme: Theme;
   mobile: boolean;
   paused: boolean;
+  /** The cursor, client px (null = none). */
   pointer: RefObject<Pointer | null>;
   /** No cursor (touch): a slow look around instead of following. */
   touch: boolean;
@@ -53,21 +71,14 @@ export interface MascotCanvasProps {
   stats?: LandingStats;
 }
 
-/** How much of the canvas height the penguin takes, and the height (× its own) at the canvas middle. */
-const FRAME_HEIGHT = 1.6;
-const FRAME_CENTRE = 0.6;
-/** Body turn while acting (rad) — the wings stay on the content whatever the body does. */
-const ACT_BODY = 0.35;
 /** The head looks down at the content a little while acting (rad). */
-const ACT_PITCH = 0.12;
-/** Offsets on the page, as fractions of the canvas height. */
-const HOVER = 0.012;
-const TAP_DOWN = 0.022;
-const FLIP_UP = 0.05;
-/** The wings glide between marks at this rate (1/s) — taps and the stamp ride on top, undamped. */
-const GLIDE = 11;
-/** How far aside of the button the stamp is held at rest (fraction of the canvas height). */
-const STAMP_ASIDE = 0.075;
+const ACT_PITCH = 0.1;
+/** Where the wings rest on a top edge, either side of the penguin's middle (fraction of its height). */
+const REACH = 0.19;
+/** A fading card hides the body this many times faster than it shows itself (fully hidden at 40 %). */
+const ERASE_GAIN = 2.5;
+/** How far aside of the button the stamp is held at rest (fraction of the penguin's height). */
+const STAMP_ASIDE = 0.42;
 
 export default function MascotCanvas(props: MascotCanvasProps) {
   const { onFail } = props;
@@ -78,10 +89,11 @@ export default function MascotCanvas(props: MascotCanvasProps) {
       style={{ pointerEvents: 'none' }}
       aria-hidden="true"
       flat
+      orthographic
       dpr={props.mobile ? 1.5 : Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)}
       frameloop={props.paused ? 'never' : 'always'}
       gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
-      camera={{ fov: 26, near: 0.05, far: 20, position: [0, 0.35, 3] }}
+      camera={{ position: [0, 0, 10], zoom: 300, near: 0.01, far: 40 }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.domElement.addEventListener('webglcontextlost', (e) => {
@@ -105,7 +117,7 @@ function useOwnBodyMaterial(penguin: THREE.Object3D, color: string) {
   useLayoutEffect(() => {
     penguin.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
+      if (!mesh.isMesh || mesh.userData.landingFront) return;
       mesh.frustumCulled = false;
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
       const next = mats.map((m) => {
@@ -121,23 +133,6 @@ function useOwnBodyMaterial(penguin: THREE.Object3D, color: string) {
   }, [penguin, color]);
 }
 
-/** A bone turned on top of whatever the clip wrote this frame, undone before the next mix. */
-class Offset {
-  private q = new THREE.Quaternion();
-  private inv = new THREE.Quaternion();
-  constructor(readonly bone: THREE.Object3D | null) {}
-  undo() {
-    if (this.bone) this.bone.quaternion.multiply(this.inv);
-  }
-  apply(q: THREE.Quaternion) {
-    if (!this.bone) return;
-    this.q.copy(q);
-    this.inv.copy(q).invert();
-    this.bone.quaternion.multiply(this.q);
-  }
-}
-
-type Side = 'L' | 'R';
 interface Wing {
   bone: THREE.Object3D | null;
   /** The mark on the page this wing glides after (client px), null = rest. */
@@ -149,19 +144,25 @@ const centre = (el: Element) => {
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 };
+const boxOf = (el: Element | null | undefined): Box | null => {
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 ? { left: r.left, top: r.top, width: r.width, height: r.height } : null;
+};
 
-function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
+function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
   const { penguin, clips } = useSoloPenguin();
   const palette = paletteFor(theme);
-  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
-  const size = useThree((s) => s.size);
+  const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const gl = useThree((s) => s.gl);
   const scene = useThree((s) => s.scene);
   const holder = useHolder(penguin);
   useOwnBodyMaterial(penguin, palette.penguinBody);
+  const front = useFrontPass(penguin, palette.penguinBody);
+  const lights = useRef<THREE.Group>(null);
 
-  // frame the penguin by its height: its rest bounds, the camera a little above eye level
-  const front = useRef(0.2);
+  // the penguin stands on the holder's origin; its height sets the camera's zoom
+  const dims = useRef({ height: 0.78 });
   useLayoutEffect(() => {
     penguin.position.set(0, 0, 0);
     penguin.updateMatrixWorld(true);
@@ -169,16 +170,9 @@ function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stat
     const c = box.getCenter(new THREE.Vector3());
     const s = box.getSize(new THREE.Vector3());
     penguin.position.set(-c.x, -box.min.y, -c.z);
-    // the content's depth: just in front of the belly (and the beak)
-    front.current = s.z / 2 + 0.006;
-    const h = s.y * FRAME_HEIGHT;
-    const fov = THREE.MathUtils.degToRad(camera.fov);
-    const dist = h / 2 / Math.tan(fov / 2);
-    const at = new THREE.Vector3(0, s.y * FRAME_CENTRE, 0);
-    camera.position.set(0, at.y + dist * 0.1, dist);
-    camera.lookAt(at);
-    camera.updateProjectionMatrix();
-  }, [penguin, camera, size.width, size.height]);
+    dims.current = { height: s.y };
+    holder.rotation.order = 'ZYX';
+  }, [penguin, holder]);
 
   const mixer = useMemo(() => new THREE.AnimationMixer(penguin), [penguin]);
   const actions = useMemo(() => new Map(clips.map((c) => [c.name as ClipName, mixer.clipAction(c)])), [clips, mixer]);
@@ -203,34 +197,36 @@ function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stat
 
   const rig = useMemo(
     () => ({
-      head: new Offset(findNode(penguin, 'head')),
+      head: findNode(penguin, 'head'),
       body: findNode(penguin, 'body'),
-      hand: findNode(penguin, 'socket.hand.R'),
       wings: { L: { bone: findNode(penguin, 'wing.L'), at: null, weight: 0 }, R: { bone: findNode(penguin, 'wing.R'), at: null, weight: 0 } } as Record<Side, Wing>,
     }),
     [penguin],
   );
+  const handLength = useMemo(() => findNode(penguin, 'socket.hand.R')?.position.length() ?? 0.265, [penguin]);
 
-  // the props and the erasers live in the scene; the stamp hangs from the right wing's tip
+  // the props live in the scene; the stamp hangs from the left wing's tip (the wing nearest the card)
   const stamp = useMemo(() => makeStamp(palette), []); // eslint-disable-line react-hooks/exhaustive-deps
   const rod = useMemo(() => makeRod(palette), []); // eslint-disable-line react-hooks/exhaustive-deps
   const erasers = useMemo(() => [makeEraser(), makeEraser()], []);
+  const grip = useMemo(() => new THREE.Object3D(), []);
   useEffect(() => {
     stamp.recolor(palette);
     rod.recolor(palette);
   }, [palette, stamp, rod]);
   useLayoutEffect(() => {
-    const socket = rig.hand;
+    grip.position.set(0, handLength, 0);
+    rig.wings.L.bone?.add(grip);
+    grip.add(stamp.group);
     stamp.group.scale.setScalar(0.0001);
     rod.group.scale.setScalar(0.0001);
-    socket?.add(stamp.group);
     scene.add(rod.group, ...erasers);
     return () => {
-      stamp.group.removeFromParent();
+      grip.removeFromParent();
       rod.group.removeFromParent();
       for (const e of erasers) e.removeFromParent();
     };
-  }, [rig, scene, stamp, rod, erasers]);
+  }, [rig, scene, stamp, rod, erasers, grip, handLength]);
   useEffect(
     () => () => {
       stamp.dispose();
@@ -255,17 +251,20 @@ function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stat
       hang: new THREE.Vector3(),
       v: new THREE.Vector3(),
       w: new THREE.Vector3(),
-      tipLocal: new THREE.Vector3(),
+      tipLocal: new THREE.Vector3(0, 1, 0),
     }),
     [],
   );
-  const handLength = useMemo(() => rig.hand?.position.length() ?? 0.265, [rig]);
+  // what the clip wrote this frame — put back before the next mix (the mixer only writes a bone
+  // when its value changes, so last frame's turns would otherwise pile up)
   const clipPose = useRef({
+    head: (rig.head?.quaternion ?? new THREE.Quaternion()).clone(),
     L: (rig.wings.L.bone?.quaternion ?? new THREE.Quaternion()).clone(),
     R: (rig.wings.R.bone?.quaternion ?? new THREE.Quaternion()).clone(),
     scale: (rig.body?.scale ?? new THREE.Vector3(1, 1, 1)).clone(),
   });
-  const props = useRef({ stamp: 0, rod: 0, acting: 0 });
+  const p = useRef({ stamp: 0, rod: 0, acting: 0, typing: 0 });
+  const move = useRef<{ act: SectionId | null; from: Spot | null; at: number; cur: Spot | null }>({ act: null, from: null, at: 0, cur: null });
   const fps = useRef({ n: 0, at: 0 });
   const drawn = useRef<'waiting' | 'drawn' | 'empty'>('waiting');
   const running = useRef(0);
@@ -273,6 +272,7 @@ function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stat
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
     const t = now();
+    const k = (rate: number) => 1 - Math.exp(-rate * dt);
 
     // the 2D poster gives way only once the penguin is really on screen
     if (drawn.current === 'waiting') {
@@ -282,133 +282,169 @@ function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stat
       else if (drawn.current === 'empty') onFail();
     }
 
-    // the mixer only writes a bone when the clip's value changes (a still track is written once),
-    // so put back what the clip wrote before turning the wings and squashing the body last frame
-    rig.head.undo();
-    for (const side of ['L', 'R'] as const) rig.wings[side].bone?.quaternion.copy(clipPose.current[side]);
-    rig.body?.scale.copy(clipPose.current.scale);
+    const cp = clipPose.current;
+    rig.head?.quaternion.copy(cp.head);
+    for (const side of ['L', 'R'] as const) rig.wings[side].bone?.quaternion.copy(cp[side]);
+    rig.body?.scale.copy(cp.scale);
     mixer.update(dt);
+    if (rig.head) cp.head.copy(rig.head.quaternion);
     for (const side of ['L', 'R'] as const) {
       const bone = rig.wings[side].bone;
-      if (bone) clipPose.current[side].copy(bone.quaternion);
+      if (bone) cp[side].copy(bone.quaternion);
     }
-    if (rig.body) clipPose.current.scale.copy(rig.body.scale);
+    if (rig.body) cp.scale.copy(rig.body.scale);
 
-    const k = (rate: number) => 1 - Math.exp(-rate * dt);
-    const p = props.current;
-    p.acting += ((acting ? 1 : 0) - p.acting) * k(6);
+    const pp = p.current;
+    pp.acting += ((acting ? 1 : 0) - pp.acting) * k(4);
+    pp.typing += ((acting && act === 'hero' && cues.typing ? 1 : 0) - pp.typing) * k(5);
 
-    // the stamp's hit squashes the body for a moment
+    // ── where the penguin stands: the spot for this section's content, walked to over MOVE_MS ──
+    const rect = gl.domElement.getBoundingClientRect();
+    const stage = pin.current;
+    const slide = stage?.querySelector<HTMLElement>(`[data-slide="${act}"]`) ?? null;
+    const content = boxOf(slide?.querySelector('[data-content]'));
+    const sceneBox = boxOf(slide?.querySelector('.landing-scene'));
+    const m = move.current;
+    let target = m.cur;
+    if (content && sceneBox) target = spotFor(act, content, penguinHeight(sceneBox, mobile), mobile);
+    if (!target) return;
+    if (m.act !== act) {
+      m.from = m.cur ?? target;
+      m.at = m.cur ? t : -Infinity;
+      m.act = act;
+    }
+    const cur = moveAt(m.from ?? target, target, t - m.at);
+    m.cur = cur;
+    const settled = t - m.at >= MOVE_MS;
+    const live = acting && settled;
+
+    const H = cur.h;
+    const zoom = H / dims.current.height;
+    if (Math.abs(camera.zoom - zoom) > 1e-4) {
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+    }
+    const toWorld = (x: number, y: number, z: number, out: THREE.Vector3) => atDepth(rayAt(x, y, rect, camera, tmp.ray), z, out);
+    toWorld(cur.x, cur.y, 0, holder.position);
+    lights.current?.position.copy(holder.position);
+
+    // the stamp's hit squashes the body a little
     const stampMs = t - cues.stampAt;
     if (rig.body && act === 'control') {
       const sy = squashAt(stampMs);
       if (sy !== 1) rig.body.scale.multiply(tmp.v.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy)));
     }
 
-    // gaze: the cursor (or a slow look around on touch); while acting, the head also looks down at the content
-    const ptr = touch ? wander(t / 1000) : (pointer.current ?? { x: 0, y: 0 });
+    // gaze: measured from the head; a lit card wins while acting; toned down while acting
+    const head = headOf(cur);
+    const gazeEl = live ? slide?.querySelector('[data-gaze]') : null;
+    const px = gazeEl ? centre(gazeEl) : pointer.current;
+    const ptr = touch && !gazeEl ? wander(t / 1000) : px ? { x: (px.x - head.x) / (rect.width * 0.5 || 1), y: (px.y - head.y) / (rect.height * 0.5 || 1) } : { x: 0, y: 0 };
     const want = lookAt(ptr);
-    want.body *= 1 - p.acting * (1 - ACT_BODY);
-    want.pitch += ACT_PITCH * p.acting;
+    const calm = 1 - pp.acting * (1 - GAZE_ACTING);
+    want.body *= calm;
+    want.yaw *= calm;
+    want.pitch = want.pitch * calm + ACT_PITCH * pp.acting;
     look.current = follow(look.current, want, dt);
     const l = look.current;
-    holder.rotation.y = l.body;
-    rig.head.apply(tmp.q.setFromEuler(tmp.e.set(l.pitch, l.yaw, 0, 'YXZ')));
+    holder.rotation.set(0, cur.turn + l.body, cur.lean);
+    rig.head?.quaternion.multiply(tmp.q.setFromEuler(tmp.e.set(l.pitch, l.yaw, 0, 'YXZ')));
     holder.updateMatrixWorld(true);
 
-    const rect = gl.domElement.getBoundingClientRect();
-    const H = rect.height || 1;
-    const stage = pin.current;
-    const slide = acting && stage ? stage.querySelector<HTMLElement>('.landing-slide.is-on') : null;
+    // ── the wings: a page point each (or a world point for the rod), and which may show in front ──
     const mark = (sel: string) => slide?.querySelector(sel) ?? null;
-
-    // where each wing goes this frame (page px, before the undamped offsets)
     const marks: Record<Side, { x: number; y: number } | null> = { L: null, R: null };
-    for (const side of ['L', 'R'] as const) {
-      const el = mark(`[data-hand="${side}"]`);
-      if (el) marks[side] = centre(el);
-    }
-    const stampTarget = act === 'control' ? mark('[data-stamp-target]') : null;
-    if (stampTarget) marks.R = centre(stampTarget);
-    const rodMark = act === 'team' ? mark('[data-rod]') : null;
-
-    // team: the rod at the paper's top edge, at a depth both wings reach; the wings hold it
-    let rodAt: THREE.Vector3 | null = null;
-    if (rodMark && rig.wings.L.bone && rig.wings.R.bone) {
-      const c = centre(rodMark);
-      const sheet = mark('.landing-scroll');
-      const w = sheet ? sheet.getBoundingClientRect().width : rect.width * 0.8;
-      rayAt(c.x, c.y, rect, camera, tmp.ray);
-      const grip = 0.115;
-      rig.wings.L.bone.getWorldPosition(tmp.shoulder);
-      let z = front.current + 0.03;
-      for (let i = 0; i < 2; i++) {
-        atDepth(tmp.ray, z, tmp.goal);
-        const dx = Math.max(0, Math.abs(tmp.shoulder.x) - grip);
-        const dy = tmp.goal.y - tmp.shoulder.y;
-        const room = handLength * handLength - dx * dx - dy * dy;
-        z = Math.max(front.current + 0.025, tmp.shoulder.z + Math.sqrt(Math.max(0, room)));
+    const strength: Record<Side, number> = { L: 1, R: 1 };
+    const allowed = FRONT[act];
+    let rodKnob: THREE.Vector3 | null = null;
+    if (live && content) {
+      const edge = content.top + 0.015 * H;
+      if (act === 'hero') {
+        marks.L = { x: cur.x + REACH * H, y: edge };
+        marks.R = { x: cur.x - REACH * H, y: edge };
+      } else if (act === 'what') {
+        const hand = mark('[data-hand="R"]');
+        if (hand) marks.R = centre(hand);
+        strength.R = relayHand(t - cues.relayAt);
+      } else if (act === 'control') {
+        const target = mark('[data-stamp-target]');
+        if (target) marks.L = centre(target);
+      } else if (act === 'start') {
+        marks.L = { x: cur.x + REACH * H, y: edge };
+        marks.R = { x: cur.x - REACH * H, y: edge };
       }
-      rodAt = atDepth(tmp.ray, z, new THREE.Vector3());
-      // the unroll: the rod dips as the paper lets go, then settles
-      const um = t - cues.unrollAt;
-      if (um > 0 && um < 520) rodAt.y -= Math.sin((um / 520) * Math.PI) * 0.018;
-      // the paper's width at the rod's depth
-      atDepth(rayAt(c.x - w / 2, c.y, rect, camera, tmp.ray), z, tmp.v);
-      atDepth(rayAt(c.x + w / 2, c.y, rect, camera, tmp.ray), z, tmp.w);
-      rod.setLength(tmp.v.distanceTo(tmp.w));
-      rod.group.position.copy(rodAt);
     }
 
+    // team: the rod along the paper's top edge, at the depth the right wing reaches its left knob
+    const rodMark = live && act === 'team' ? mark('[data-rod]') : null;
+    const sheet = mark('.landing-scroll');
+    const wingR = rig.wings.R.bone;
+    if (rodMark && sheet && wingR) {
+      const c = centre(rodMark);
+      const width = sheet.getBoundingClientRect().width / zoom;
+      const knobX = c.x - (width / 2 + 0.022) * zoom;
+      wingR.getWorldPosition(tmp.shoulder);
+      const r = handLength * (wingR.getWorldScale(tmp.w).y || 1);
+      reach(rayAt(knobX, c.y, rect, camera, tmp.ray), tmp.shoulder, r, tmp.goal);
+      toWorld(c.x, c.y, tmp.goal.z, rod.group.position);
+      rod.group.position.y += tugAt(t - cues.unrollAt) * dims.current.height;
+      rod.setLength(width);
+      rodKnob = tmp.v.copy(rod.group.position).add(tmp.w.set(-width / 2 - 0.022, 0, 0)).clone();
+    }
+
+    const frontNow: Record<Side, boolean> = { L: false, R: false };
     for (const side of ['L', 'R'] as const) {
       const wing = rig.wings[side];
       const bone = wing.bone;
       if (!bone) continue;
-      const target = rodAt ? { x: 0, y: 0 } : marks[side];
-      wing.weight += ((target ? p.acting : 0) - wing.weight) * k(7);
-      if (target && !rodAt) wing.at = wing.at ? { x: wing.at.x + (target.x - wing.at.x) * k(GLIDE), y: wing.at.y + (target.y - wing.at.y) * k(GLIDE) } : { ...target };
+      const goalMark = side === 'R' && rodKnob ? null : marks[side];
+      const wanted = (goalMark || (side === 'R' && rodKnob) ? 1 : 0) * pp.acting;
+      if (act === 'what' && side === 'R') wing.weight = wanted * strength.R;
+      else wing.weight += (wanted - wing.weight) * k(WING_WEIGHT_RATE);
+      if (goalMark) wing.at = wing.at ? { x: wing.at.x + (goalMark.x - wing.at.x) * k(WING_GLIDE), y: wing.at.y + (goalMark.y - wing.at.y) * k(WING_GLIDE) } : { ...goalMark };
       if (wing.weight < 0.002) continue;
+      frontNow[side] = allowed.includes(side) && wing.weight > 0.05;
 
       bone.getWorldPosition(tmp.shoulder);
-      tmp.tipLocal.set(0, handLength, 0);
-      bone.localToWorld(tmp.tip.copy(tmp.tipLocal));
+      bone.localToWorld(tmp.tip.copy(tmp.tipLocal).multiplyScalar(handLength));
       const r = tmp.tip.distanceTo(tmp.shoulder);
 
-      if (rodAt) {
-        tmp.goal.copy(rodAt).add(tmp.v.set(side === 'L' ? 0.115 : -0.115, 0, 0));
+      if (side === 'R' && rodKnob) {
+        tmp.goal.copy(rodKnob);
       } else if (wing.at) {
         let { x, y } = wing.at;
         if (act === 'hero') {
-          const pulse = tapPulse(t - cues.tapAt);
-          y -= HOVER * H;
-          y += (cues.tapSide === side ? HOVER + TAP_DOWN : -HOVER * 0.6) * H * pulse;
-        } else if (act === 'what') {
-          let lift = 0;
-          for (let i = 0; i < 3; i++) if ((i % 2 ? 'L' : 'R') === side) lift += flipLift(t - cues.flipAt - i * FLIP_STEP_MS);
-          y -= FLIP_UP * H * lift;
+          // pretend typing: small alternating strokes above the keys, eased in and out with the box
+          y += pp.typing * (-STROKE_LIFT * H + (STROKE_LIFT + STROKE_DEPTH) * H * strokeAt(t / 1000, side));
+        } else if (act === 'start' && side === 'L') {
+          const w = waveAt(t - cues.waveAt);
+          x += w.raise * 0.17 * H + w.swing * WAVE_SWING * H;
+          y -= w.raise * 0.42 * H;
+        } else if (act === 'control' && side === 'L') {
+          x -= STAMP_ASIDE * H * stampAside(stampMs);
         }
-        if (side === 'R' && stampTarget) x -= STAMP_ASIDE * H * stampAside(stampMs);
         rayAt(x, y, rect, camera, tmp.ray);
-        if (side === 'R' && stampTarget) {
+        if (act === 'control' && side === 'L') {
           tmp.hang.set(0, STAMP_LENGTH + stampLift(stampMs), 0);
           reach(tmp.ray, tmp.shoulder, r, tmp.goal, tmp.hang);
         } else reach(tmp.ray, tmp.shoulder, r, tmp.goal);
       } else continue;
       aim(bone, tmp.shoulder, tmp.tip, tmp.goal, wing.weight);
     }
+    front.set(frontNow);
 
     // props: grow in for their act, shrink away after
-    p.stamp += ((act === 'control' && acting ? 1 : 0) - p.stamp) * k(8);
-    p.rod += ((rodAt ? 1 : 0) - p.rod) * k(8);
-    stamp.group.scale.setScalar(Math.max(0.0001, p.stamp));
-    rod.group.scale.setScalar(Math.max(0.0001, p.rod));
-    if (rig.hand && p.stamp > 0.001) {
+    pp.stamp += ((act === 'control' && live ? 1 : 0) - pp.stamp) * k(6);
+    pp.rod += ((rodKnob ? 1 : 0) - pp.rod) * k(6);
+    stamp.group.scale.setScalar(Math.max(0.0001, pp.stamp));
+    rod.group.scale.setScalar(Math.max(0.0001, pp.rod));
+    if (pp.stamp > 0.001) {
       // upright in the world whatever the wing does, leaning back as it rises
-      rig.hand.getWorldQuaternion(tmp.q).invert();
+      grip.getWorldQuaternion(tmp.q).invert();
       stamp.group.quaternion.copy(tmp.q).multiply(new THREE.Quaternion().setFromEuler(tmp.e.set(stampMs > 0 && stampMs < STAMP_TOTAL_MS ? stampTilt(stampMs) : 0, 0, 0)));
     }
 
-    // cut the body out behind the content of each slide that is showing (two while they cross-fade)
+    // wipe the body out behind the content of each slide that is showing (two while they cross-fade)
     let used = 0;
     if (stage && acting) {
       for (const el of stage.querySelectorAll<HTMLElement>('.landing-slide')) {
@@ -416,55 +452,66 @@ function Mascot({ act, acting, theme, pointer, touch, pin, onReady, onFail, stat
         const opacity = parseFloat(getComputedStyle(el).opacity || '0');
         if (opacity < 0.01) continue;
         let box: { left: number; top: number; right: number; bottom: number } | null = null;
-        for (const f of el.querySelectorAll('[data-front]')) {
+        let ground = false;
+        for (const f of el.querySelectorAll<HTMLElement>('[data-front]')) {
           const r = f.getBoundingClientRect();
           if (r.width <= 0 || r.height <= 0) continue;
+          if (f.dataset.front === 'ground') ground = true;
           box = box ? { left: Math.min(box.left, r.left), top: Math.min(box.top, r.top), right: Math.max(box.right, r.right), bottom: Math.max(box.bottom, r.bottom) } : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
         }
         if (!box) continue;
+        // `ground`: the penguin stands behind this card — nothing of it shows under the card either
+        if (ground) box.bottom = Math.max(box.bottom, rect.bottom);
         const eraser = erasers[used++];
-        fitEraser(eraser, box, front.current, rect, camera, tmp.ray);
-        eraser.material.opacity = opacity * p.acting;
+        fitEraser(eraser, box, 1, rect, camera, tmp.ray);
+        // a card that is still fading in already hides the body (no penguin seen through it)
+        eraser.material.opacity = Math.min(1, opacity * ERASE_GAIN);
         eraser.visible = true;
       }
     }
     for (let i = used; i < erasers.length; i++) erasers[i].visible = false;
 
     if (stats) {
+      const toPage = (v: THREE.Vector3) => {
+        const n = v.project(camera);
+        return { x: Math.round((rect.left + ((n.x + 1) / 2) * rect.width) * 10) / 10, y: Math.round((rect.top + ((1 - n.y) / 2) * rect.height) * 10) / 10 };
+      };
       stats.calls = state.gl.info.render.calls;
+      stats.spot = { ...cur, settled };
+      if (rig.body) stats.body = toPage(rig.body.getWorldPosition(new THREE.Vector3()));
+      const tips = {} as Record<Side, { x: number; y: number }>;
+      for (const side of ['L', 'R'] as const) {
+        const bone = rig.wings[side].bone;
+        if (bone) tips[side] = toPage(bone.localToWorld(new THREE.Vector3(0, handLength, 0)));
+      }
+      stats.tips = tips;
+      stats.front = frontNow;
+      stats.typing = Math.round(pp.typing * 100) / 100;
       const now2 = state.clock.elapsedTime;
       fps.current.n++;
       if (now2 - fps.current.at >= 1) {
         stats.fps = Math.round(fps.current.n / (now2 - fps.current.at));
         fps.current = { n: 0, at: now2 };
-        const project = (v: THREE.Vector3) => (1 - v.project(camera).y) / 2;
-        const sh = rig.wings.R.bone?.getWorldPosition(new THREE.Vector3());
-        const box = new THREE.Box3().setFromObject(penguin);
-        stats.frame = {
-          shoulder: sh ? +project(sh).toFixed(3) : 0,
-          tip: rig.hand ? +project(rig.hand.getWorldPosition(new THREE.Vector3())).toFixed(3) : 0,
-          feet: +project(new THREE.Vector3(0, box.min.y, 0)).toFixed(3),
-          head: +project(new THREE.Vector3(0, box.max.y, 0)).toFixed(3),
-        };
       }
     }
   });
 
   const sky = palette.sky;
-  const lights = palette.agentLights;
+  const agentLights = palette.agentLights;
   return (
     <>
       <SkyLight color={sky.ambient} intensity={sky.ambientIntensity} />
-      {lights ? (
-        <>
-          {/* evening overtime: a warm desk lamp from the left, the laptop's cool light on the face, the moon rim behind */}
-          <pointLight position={[-0.7, 0.9, 0.5]} color={lights.lamp.color} intensity={lights.lamp.intensity * 0.9} distance={3} decay={2} />
-          <pointLight position={[0.15, 0.4, 0.9]} color={lights.screen.color} intensity={lights.screen.intensity * 1.2} distance={2.2} decay={2} />
-          <directionalLight position={[sky.from[0] * 4, sky.from[1] * 4, sky.from[2] * 4]} color={sky.sun} intensity={sky.sunIntensity * Math.PI} />
-        </>
-      ) : (
-        <directionalLight position={[sky.from[0] * 4, sky.from[1] * 4, sky.from[2] * 4 + 2]} color={sky.sun} intensity={sky.sunIntensity * Math.PI} />
-      )}
+      {/* the lights walk with the penguin (positions in its own units) */}
+      <group ref={lights}>
+        {agentLights ? (
+          <>
+            {/* evening overtime: a warm desk lamp from the left, the laptop's cool light on the face, the moon rim behind */}
+            <pointLight position={[-0.7, 0.9, 0.5]} color={agentLights.lamp.color} intensity={agentLights.lamp.intensity * 0.9} distance={3} decay={2} />
+            <pointLight position={[0.15, 0.4, 0.9]} color={agentLights.screen.color} intensity={agentLights.screen.intensity * 1.2} distance={2.2} decay={2} />
+          </>
+        ) : null}
+      </group>
+      <directionalLight position={[sky.from[0] * 4, sky.from[1] * 4, sky.from[2] * 4 + (agentLights ? 0 : 2)]} color={sky.sun} intensity={sky.sunIntensity * Math.PI} />
       <primitive object={holder} name={`${nameOf(penguin)}@landing`} />
     </>
   );

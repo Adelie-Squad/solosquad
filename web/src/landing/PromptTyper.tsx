@@ -12,19 +12,20 @@ export const PROMPTS: { text: MessageKey; agent: string }[] = [
   { text: 'landing.prompt.3', agent: 'data-analyst' },
 ];
 
-export const TYPE_MS = 55;
+export const TYPE_MS = 90;
 export const HOLD_TYPED_MS = 700;
-export const HOLD_ANSWER_MS = 2600;
+export const HOLD_ANSWER_MS = 2000;
 
 type Phase = 'typing' | 'answer';
 
 /**
  * A small box that types example requests to Chief and says which agent took them, then the
  * next one. Reduced motion: the first example, whole and still. The box is decoration for
- * sighted readers; screen readers get the examples as a plain list. `onType` hears every character
- * as it is typed (the landing penguin taps a key for each one — Acts.tsx `PromptAct`).
+ * sighted readers; screen readers get the examples as a plain list. `onTyping` hears whether the box
+ * is typing right now (the landing penguin patters above the keys while it is — not one stroke per
+ * character; Acts.tsx `PromptAct`).
  */
-export function PromptTyper({ still, onType }: { still: boolean; onType?: (typed: number) => void }) {
+export function PromptTyper({ still, onTyping }: { still: boolean; onTyping?: (typing: boolean) => void }) {
   const { t, locale } = useI18n();
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
@@ -54,11 +55,13 @@ export function PromptTyper({ still, onType }: { still: boolean; onType?: (typed
     setPhase('typing');
   }, [locale]);
 
-  const heard = useRef(onType);
-  heard.current = onType;
+  const heard = useRef(onTyping);
+  heard.current = onTyping;
+  const typing = !still && phase === 'typing';
   useEffect(() => {
-    if (!still && phase === 'typing' && shown > 0) heard.current?.(shown);
-  }, [still, phase, shown]);
+    heard.current?.(typing);
+  }, [typing]);
+  useEffect(() => () => heard.current?.(false), []);
 
   const text = still ? chars.join('') : chars.slice(0, shown).join('');
   const answered = still || phase === 'answer';
@@ -78,6 +81,12 @@ export function PromptTyper({ still, onType }: { still: boolean; onType?: (typed
         <p className={`landing-prompt-answer ${answered ? 'is-on' : ''}`} data-testid="landing-answer">
           <AgentIcon agent={prompt.agent} size={20} label="" />
           {t('landing.prompt.assigned', { agent: who })}
+        </p>
+        <p className="landing-prompt-bar">
+          <span className="landing-mono">{t('landing.prompt.hint')}</span>
+          <span className="landing-prompt-send">
+            <ICON.ask />
+          </span>
         </p>
       </div>
       <ul className="sr-only" aria-label={t('landing.prompt.examples')}>
