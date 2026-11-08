@@ -12,19 +12,6 @@
   padding-bottom: 24px;
 }
 
-.office.is-fullscreen {
-  display: flex;
-  flex-direction: column;
-  max-width: none;
-  overflow: auto;
-  background: var(--surface-2);
-  padding: 32px 48px;
-}
-
-.office.is-fullscreen .office-stage {
-  border: 0;
-}
-
 .office-actions {
   display: flex;
   align-items: center;
@@ -173,6 +160,184 @@
 
   .office-live {
     max-height: 70vh;
+  }
+}
+
+/* 새 창으로 띄운 동안 — 장면 · 실시간 작업만 흐리게(페이지 나머지는 그대로), 가운데 안내 한 장 */
+.office-body {
+  position: relative;
+}
+
+.office-body.is-popped > .office-main,
+.office-body.is-popped > .office-live {
+  opacity: 0.3;
+  pointer-events: none;
+  user-select: none;
+}
+
+.office-popout-cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+
+.office-popout-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 420px;
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+}
+
+.office-popout-note p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.office-popout-note p .icon {
+  color: var(--ink-2);
+}
+
+.office-popout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.office-popout-actions .btn {
+  white-space: nowrap;
+}
+
+/* 팝업 차단 — 보통 줄 + warn 아이콘(틴트 띠 없음) */
+.office-popout-blocked {
+  margin: 0 0 var(--space-4);
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.office-popout-blocked .icon {
+  color: var(--warn);
+}
+
+/* ── 새 창(…/office/display) — 장면 + 실시간 작업만. 넓으면 옆, 좁으면 아래 ── */
+.office-display {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: var(--card-gap);
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--space-4);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.office-display-scene {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.office-display-scene .office-stage,
+.office-display-scene .office-fallback {
+  height: 100%;
+  min-height: 0;
+}
+
+/* 장면 안 맨 위 줄 — 왼쪽 제목 + 숫자 줄, 오른쪽 전체 화면 버튼 */
+.office-display-top {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+
+/* 제목 판 — 옅은 --surface 판 하나(그림자 · 틴트 · 테두리 없음). 라이트 --bg 위에 warn 숫자를 두지 않으려고 */
+.office-display-overlay {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+}
+
+.office-display-overlay h1 {
+  margin: 0 0 var(--space-1);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.office-display-overlay .office-stats {
+  margin: 0;
+}
+
+.office-display-fs {
+  flex-shrink: 0;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+/* WebGL 이 없으면 목록이 장면 자리에 — 제목 판은 목록 위에 얹지 않고 맨 위 줄로 */
+.office-display-scene:has(.office-fallback) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.office-display-scene:has(.office-fallback) .office-display-top {
+  position: static;
+  order: -1;
+}
+
+.office-display-scene:has(.office-fallback) .office-display-overlay {
+  padding: 0 0 0 var(--space-1);
+  background: none;
+}
+
+.office-display-scene:has(.office-fallback) .office-fallback {
+  flex: 1;
+}
+
+.office-display > .office-live {
+  min-height: 0;
+}
+
+@media (max-width: 860px), (max-aspect-ratio: 1/1) {
+  .office-display {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: start;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .office-display-scene {
+    height: clamp(300px, 60vh, 640px);
+  }
+
+  .office-display-overlay h1 {
+    font-size: 20px;
+  }
+
+  .office-display > .office-live {
+    max-height: none;
+    overflow: visible;
   }
 }
 

@@ -5,6 +5,7 @@ import { useMe } from './api/queries';
 import { Enrol } from './auth/Enrol';
 import { Login } from './auth/Login';
 import { loginFor, officeHref, safeNext, signedIn } from './auth/next';
+import { useSessionSync } from './auth/sessionSync';
 import { isLocale, useI18n } from './i18n';
 import { SessionContext, sessionFrom } from './session';
 import { LegacyRedirect, RootRedirect, ScopeLayout } from './shell/ScopeLayout';
@@ -21,6 +22,7 @@ const Landing = lazy(() => import('./landing/Landing').then((m) => ({ default: m
 export function App() {
   const me = useMe();
   const { setLocale } = useI18n();
+  useSessionSync();
 
   useEffect(() => {
     if (me.data) {

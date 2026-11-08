@@ -83,6 +83,7 @@ export function OfficeStage({
   onSelect,
   fallback,
   highlight = null,
+  paused = false,
 }: {
   agents: SeatAgent[];
   statuses: Record<string, AgentStatus>;
@@ -91,6 +92,8 @@ export function OfficeStage({
   fallback: ReactNode;
   /** An agent pointed at elsewhere (the list below) — its quiet tag shows. */
   highlight?: string | null;
+  /** Stop drawing (the scene is shown in the pop-out window instead). */
+  paused?: boolean;
 }) {
   const { t } = useI18n();
   const wrap = useRef<HTMLDivElement>(null);
@@ -153,7 +156,7 @@ export function OfficeStage({
             theme={theme}
             reducedMotion={reduced}
             mobile={mobile}
-            paused={hidden || offScreen}
+            paused={paused || hidden || offScreen}
             tags={tags}
             onSelect={select}
             onHover={setHovered}
