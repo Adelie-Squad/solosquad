@@ -80,7 +80,8 @@ describe('next= (same-origin app paths only)', () => {
   it('builds the login address and the office address', () => {
     expect(loginFor('/o/tesla/w/charging')).toBe('/login?next=%2Fo%2Ftesla%2Fw%2Fcharging');
     expect(loginFor('//evil.example')).toBe('/login');
-    expect(officeHref(me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }))).toBe('/o/tesla/w/vehicles');
+    // decision 60 — people land on the account dashboard; the sidebar points at the last scope
+    expect(officeHref(me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }))).toBe('/dashboard');
     expect(officeHref(me({ scopes: [] }))).toBe('/o');
   });
 });
@@ -93,16 +94,16 @@ describe('landing · login · app addresses', () => {
     expect(await screen.findByRole('button', { name: 'Log in' })).toBeTruthy();
   });
 
-  it('signed in: /login goes to next, else the last scope', async () => {
+  it('signed in: /login goes to next, else the account dashboard (decision 60)', async () => {
     stubApi(() => me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }));
     app('/login');
-    await waitFor(() => expect(where()).toBe('/o/tesla/w/vehicles'));
+    await waitFor(() => expect(where()).toBe('/dashboard'));
     cleanup();
     app('/login?next=%2Fo%2Ftesla%2Fsettings%2Fusers');
     await waitFor(() => expect(where()).toBe('/o/tesla/settings/users'));
     cleanup();
     app('/login?next=%2F%2Fevil.example');
-    await waitFor(() => expect(where()).toBe('/o/tesla/w/vehicles'));
+    await waitFor(() => expect(where()).toBe('/dashboard'));
   });
 
   it('the landing offers Log in when signed out, Go to my office when signed in — and stays on /', async () => {
@@ -115,7 +116,7 @@ describe('landing · login · app addresses', () => {
     stubApi(() => me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }));
     app('/');
     const offices = await screen.findAllByRole('link', { name: /Go to my office/ });
-    for (const office of offices) expect(office.getAttribute('href')).toBe('/o/tesla/w/vehicles');
+    for (const office of offices) expect(office.getAttribute('href')).toBe('/dashboard');
     expect(screen.queryByRole('link', { name: /Log in/ })).toBeNull();
     expect(where()).toBe('/');
   });

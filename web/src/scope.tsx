@@ -12,9 +12,23 @@ export interface Scope {
   ws: string;
   /** True on `/o/<org>/w/<ws>/…`, false on an org-level screen. */
   inWorkspace: boolean;
+  /** True on an account screen (`/dashboard` · `/calendar` · `/messenger`, decision 60): the
+   * scope is only where the workspace tiles of the sidebar point. */
+  account?: boolean;
 }
 
 export const ScopeContext = createContext<Scope | null>(null);
+
+/** The workspace the sidebar's lower group points to while an account screen is open — the
+ * last workspace visited in this tab, else the person's last scope. Picking one in the switcher
+ * on an account screen changes only this (the screen stays). */
+export interface PickedScope {
+  picked: { org: string; ws: string } | null;
+  pick: (s: { org: string; ws: string }) => void;
+}
+
+export const PickedScopeContext = createContext<PickedScope>({ picked: null, pick: () => {} });
+export const usePickedScope = () => useContext(PickedScopeContext);
 
 export function useScope(): Scope {
   const s = useContext(ScopeContext);

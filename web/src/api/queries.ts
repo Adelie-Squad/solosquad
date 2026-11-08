@@ -32,6 +32,14 @@ import type {
   WorkflowList,
   WorkflowThreadState,
   WorkList,
+  CalendarAgentAccess,
+  CalendarAgentView,
+  CalendarDetail,
+  CalendarItem,
+  CalendarLabel,
+  CalendarLabels,
+  CalendarList,
+  CalendarTodoOut,
 } from './types.gen';
 
 /** Customer-level keys — the same whatever org or workspace is open. */
@@ -252,6 +260,58 @@ export function decide(scope: Pick<Scope, 'org' | 'ws'>, item: Pick<ApprovalItem
   const base = item.source === 'workflow' ? '/workflow-threads' : '/threads';
   return api.post<{ run_id: string }>(apiPath.ws(scope, `${base}/${item.thread_id}/resume`), { value });
 }
+
+// -------------------------------------------------------------- the account's calendar (decision 60)
+
+export interface CalendarRangeQuery {
+  from: string;
+  to: string;
+  kind?: 'work' | 'personal';
+  org?: string;
+  workspace?: string;
+  category?: string;
+  tag?: string;
+  done?: boolean;
+  undated?: boolean;
+}
+
+export const calendarKeys = {
+  all: ['calendar'] as const,
+  range: (q: CalendarRangeQuery) => ['calendar', 'items', q] as const,
+  item: (id: string) => ['calendar', 'item', id] as const,
+  labels: ['calendar', 'labels'] as const,
+  agentAccess: ['calendar', 'agent-access'] as const,
+  agentView: (q: { from: string; to: string }) => ['calendar', 'agent-view', q] as const,
+};
+
+export const useCalendar = (q: CalendarRangeQuery, on = true) =>
+  useQuery({ queryKey: calendarKeys.range(q), queryFn: () => api.get<CalendarList>('/calendar/items', { ...q }), ...enabledFor(on) });
+export const useCalendarItem = (id: string | null) =>
+  useQuery({ queryKey: calendarKeys.item(id ?? ''), queryFn: () => api.get<CalendarDetail>(`/calendar/items/${id}`), ...enabledFor(!!id) });
+export const useCalendarLabels = () =>
+  useQuery({ queryKey: calendarKeys.labels, queryFn: () => api.get<CalendarLabels>('/calendar/labels') });
+export const useAgentAccess = (on = true) =>
+  useQuery({ queryKey: calendarKeys.agentAccess, queryFn: () => api.get<CalendarAgentAccess>('/calendar/agent-access'), ...enabledFor(on) });
+export const useAgentView = (q: { from: string; to: string }, on: boolean) =>
+  useQuery({ queryKey: calendarKeys.agentView(q), queryFn: () => api.get<CalendarAgentView>('/calendar/agent-view', q), ...enabledFor(on) });
+
+/** Every calendar write refreshes the whole calendar cache — lists, details, labels. */
+export function useCalendarAction<In, Out>(fn: (input: In) => Promise<Out>) {
+  return useAction(fn, [calendarKeys.all]);
+}
+
+export const calendarApi = {
+  createItem: (body: Record<string, unknown>) => api.post<CalendarItem>('/calendar/items', body),
+  updateItem: (id: string, body: Record<string, unknown>) => api.patch<CalendarItem>(`/calendar/items/${id}`, body),
+  deleteItem: (id: string) => api.del<{ ok: boolean }>(`/calendar/items/${id}`),
+  createTodo: (itemId: string, body: Record<string, unknown>) => api.post<CalendarTodoOut>(`/calendar/items/${itemId}/todos`, body),
+  updateTodo: (id: string, body: Record<string, unknown>) => api.patch<CalendarTodoOut>(`/calendar/todos/${id}`, body),
+  deleteTodo: (id: string) => api.del<{ ok: boolean }>(`/calendar/todos/${id}`),
+  createLabel: (body: Record<string, unknown>) => api.post<CalendarLabel>('/calendar/labels', body),
+  updateLabel: (id: string, body: Record<string, unknown>) => api.patch<CalendarLabel>(`/calendar/labels/${id}`, body),
+  reorder: (type: 'items' | 'todos' | 'labels', ids: string[]) => api.post<{ ok: boolean }>('/calendar/reorder', { type, ids }),
+  setAgentAccess: (level: CalendarAgentAccess['level']) => api.put<CalendarAgentAccess>('/calendar/agent-access', { level }),
+};
 
 export function useMe() {
   return useQuery({

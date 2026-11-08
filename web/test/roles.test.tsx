@@ -120,8 +120,10 @@ describe('C15 — what staff is not shown', () => {
     expect(NAV.filter((n) => n.ownerOnly)).toEqual([]);
     const menu = async (who: Me) => {
       await open('/o/tesla/w/charging', who);
-      const nav = screen.getByRole('navigation', { name: t('nav.main') });
-      const items = within(nav).getAllByRole('link').map((a) => a.getAttribute('href'));
+      // decision 60 — two groups: the whole account, then the workspace in the switcher
+      const items = [t('nav.accountGroup'), t('nav.workspaceGroup')].flatMap((name) =>
+        within(screen.getByRole('navigation', { name })).getAllByRole('link').map((a) => a.getAttribute('href')),
+      );
       const chip = document.querySelector('.account-button-role')?.textContent;
       cleanup();
       vi.unstubAllGlobals();
@@ -135,9 +137,9 @@ describe('C15 — what staff is not shown', () => {
   });
 
   it('staff still gives work and reads reports: new request, run a workflow, open the P&L', async () => {
-    await open('/o/tesla/w/charging', staffMe);
+    await open('/o/tesla/w/charging/screens/dashboard', staffMe);
     expect(screen.getByRole('button', { name: t('chat.new') })).toBeTruthy();
-    expect(screen.getAllByText('손익표').length).toBeGreaterThan(0); // the latest report on the dashboard
+    expect(screen.getAllByText('손익표').length).toBeGreaterThan(0); // the latest report on the workspace screen
     cleanup();
     vi.unstubAllGlobals();
     await open('/o/tesla/w/charging/workflows/monthly-pnl', staffMe);

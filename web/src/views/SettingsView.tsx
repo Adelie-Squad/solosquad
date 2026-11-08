@@ -10,6 +10,7 @@ import { categoryLabel, LOCALE_NAMES, LOCALES, useI18n, type Locale, type Messag
 import { useSession } from '../session';
 import { useLinks, useOrgOwner, useScope } from '../scope';
 import { useLogout } from '../auth/logout';
+import { AgentAccessPanel } from './calendar/common';
 import { ScopeEyebrow } from '../components/ScopeEyebrow';
 import { ScrollLock } from '../components/scrollLock';
 import { ICON } from '../icons';
@@ -156,6 +157,8 @@ function AccountSettings() {
     <section className="panel">
       <PasskeySettings />
     </section>
+    {/* decision 60 rev — how much agents may read of my personal events (people never see them) */}
+    <AgentAccessPanel />
     <form
       className="panel settings-body"
       onSubmit={(e: FormEvent) => {

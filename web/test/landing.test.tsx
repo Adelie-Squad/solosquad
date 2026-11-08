@@ -911,13 +911,13 @@ describe('the buttons', () => {
     expect(screen.getByText('Log in and you are straight in the office.')).toBeTruthy();
   });
 
-  it('signed in: both go to the last workspace', async () => {
+  it('signed in: both go to the account dashboard (decision 60)', async () => {
     stubMe(me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }));
     landing();
     const links = await screen.findAllByRole('link', { name: 'Go to my office' });
     expect(links).toHaveLength(2);
     for (const a of links) {
-      expect(a.getAttribute('href')).toBe('/o/tesla/w/vehicles');
+      expect(a.getAttribute('href')).toBe('/dashboard');
       expect(a.querySelector('svg')).toBeNull();
     }
     expect(screen.queryByRole('link', { name: /Log in/ })).toBeNull();

@@ -9,6 +9,11 @@ import type {
   ApprovalPolicyRow,
   Artifact,
   Budget,
+  CalendarDetail,
+  CalendarItem,
+  CalendarLabel,
+  CalendarList,
+  CalendarTodo,
   ConnectionOut,
   Me,
   OrgChart,
@@ -273,6 +278,69 @@ export function engineData(over: Record<string, unknown> = {}, who: 'owner' | 's
     ...Object.fromEntries(Object.entries(SCREENS).map(([k, v]) => [`/screens/${k}`, v])),
     ...over,
   };
+}
+
+// ---------------------------------------------------------------------- the calendar (decision 60)
+
+/** The user's own example: 사업 SoloSquad (here tesla) → 2차 모두의 창업 → 지원 · 오리엔테이션 ·
+ * 1라운드 제출 · 멘토링 → 할 일 사업계획서 작성/제출 · 창업활동보고서 작성/제출; 구분 지원 · 개발 · 영업 ·
+ * 인사 · 네트워킹; tags 서류 · 인터뷰 — and the person's two personal entries. Dates around `today`. */
+export function calendarDemo(today: string, owner = 'u-1') {
+  const day = (n: number) => {
+    const [y, m, d] = today.split('-').map(Number);
+    const x = new Date(y, m - 1, d + n);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+  };
+  const label = (id: string, type: 'category' | 'tag', name: string, color: CalendarLabel['color'], scope = 'tesla', position = 0): CalendarLabel => ({
+    id, type, scope_kind: scope === owner ? 'user' : 'org', scope, name, color, archived: false, position,
+  });
+  const labels: CalendarLabel[] = [
+    label('cl-support', 'category', '지원', 'blue', 'tesla', 0),
+    label('cl-dev', 'category', '개발', 'teal', 'tesla', 1),
+    label('cl-sales', 'category', '영업', 'orange', 'tesla', 2),
+    label('cl-hr', 'category', '인사', 'green', 'tesla', 3),
+    label('cl-net', 'category', '네트워킹', 'gold', 'tesla', 4),
+    label('cl-doc', 'tag', '서류', 'gray', 'tesla', 0),
+    label('cl-interview', 'tag', '인터뷰', 'rose', 'tesla', 1),
+    label('cl-me', 'category', '개인', 'blue', owner, 0),
+  ];
+  const item = (over: Partial<CalendarItem> & Pick<CalendarItem, 'id' | 'title'>): CalendarItem => ({
+    kind: 'work', org: 'tesla', workspace: null, owner_id: null, parent_id: null, notes: '', start: null, end: null, all_day: true,
+    category_id: 'cl-support', tag_ids: [], status: 'planned', position: 0, created_by: owner, created: 1, updated: 1, ...over,
+  });
+  const top = item({ id: 'ci-top', title: '2차 모두의 창업', start: day(-6), end: day(40), status: 'active' });
+  const subs = [
+    item({ id: 'ci-apply', title: '지원', parent_id: 'ci-top', start: day(-6), end: day(-2), status: 'done', tag_ids: ['cl-doc'], position: 0 }),
+    item({ id: 'ci-ot', title: '오리엔테이션', parent_id: 'ci-top', start: `${day(1)}T14:00`, end: `${day(1)}T16:00`, all_day: false, position: 1 }),
+    item({ id: 'ci-r1', title: '1라운드 제출', parent_id: 'ci-top', start: day(5), end: day(12), status: 'active', tag_ids: ['cl-doc'], position: 2 }),
+    item({ id: 'ci-mentor', title: '멘토링', parent_id: 'ci-top', start: `${day(19)}T10:00`, end: `${day(19)}T11:30`, all_day: false, tag_ids: ['cl-interview'], position: 3 }),
+  ];
+  const personal = [
+    item({ id: 'ci-dentist', title: '치과 예약', kind: 'personal', org: null, owner_id: owner, category_id: null, start: `${day(2)}T18:30`, end: `${day(2)}T19:30`, all_day: false }),
+    item({ id: 'ci-trip', title: '가족 여행', kind: 'personal', org: null, owner_id: owner, category_id: 'cl-me', start: day(14), end: day(16) }),
+  ];
+  const todo = (id: string, item_id: string, title: string, due: string | null, done = false, position = 0): CalendarTodo => ({
+    id, item_id, title, done, due, assignee_id: null, position, created: 1, updated: 1,
+  });
+  const todos = [
+    todo('ct-plan', 'ci-r1', '사업계획서 작성/제출', day(0), false, 0),
+    todo('ct-report', 'ci-r1', '창업활동보고서 작성/제출', day(12), false, 1),
+    todo('ct-form', 'ci-apply', '지원서 제출', day(-3), true, 0),
+  ];
+  const items = [top, ...subs, ...personal];
+  const list = (from: string, to: string): CalendarList => ({ start: from, end: to, items, todos, context: [] });
+  const detail = (id: string): CalendarDetail => {
+    const it = items.find((i) => i.id === id)!;
+    const children = items.filter((i) => i.parent_id === id);
+    return {
+      item: it,
+      parent: it.parent_id ? items.find((i) => i.id === it.parent_id)! : null,
+      children,
+      todos: todos.filter((t) => t.item_id === id),
+      child_todos: todos.filter((t) => children.some((c) => c.id === t.item_id)),
+    };
+  };
+  return { labels, items, todos, list, detail, day };
 }
 
 /** `/api/o/tesla/w/charging/agents?x=1` → `/agents`. */

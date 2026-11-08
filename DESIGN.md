@@ -258,7 +258,12 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
   - 한 줄 = 사람 아이콘(대표 `owner` · 팀원 `person`) · 이름(굵게, 길면 말줄임) · 역할(`--ink-2`) · 끝에 `settings` 아이콘. 누르면 설정(`/o/<org>/settings`).
   - **누르는 자리 하나 · Tab 한 번**(링크 하나, 안에 다른 버튼 없음), 최소 높이 44px. 접근 이름 = "설정 · {이름} {역할}"(`nav.account` — en "Settings · {name} {role}" · zh-CN "设置 · {name} {role}"), 같은 문장을 `title` 툴팁으로.
   - 상태 = 사이드바 항목과 같다(hover `--surface-2` 반투명 · 설정 화면에 있으면 선택 = `--surface` + `--shadow-1` + 설정 아이콘 accent).
-  - 사이드바에 접힌 모드는 없다. 폰(≤ 860px)에서는 드로어 맨 아래 같은 버튼(드로어 폭 280px 안에서 이름만 줄어든다).
+  - 폰(≤ 860px)에서는 드로어 맨 아래 같은 버튼(드로어 폭 280px 안에서 이름만 줄어든다).
+- **접힌 사이드바(레일, 사용자 2026-11-09 — "lnb 우측 상단에 lnb 접고 펼칠 수 있는 버튼 아이콘으로 추가")** — 사이드바 맨 위 줄 **오른쪽 끝**에 아이콘 버튼 하나(펼친 상태 `collapseSidebar` · 접힌 상태 `expandSidebar`, 28×28). 접근 이름 "사이드바 접기" / "사이드바 펼치기"(`nav.collapse` · `nav.expand` — en Collapse / Expand sidebar · zh-CN 收起 / 展开侧边栏), 툴팁 = 같은 말 + 단축키. **단축키 ⌘\ (Windows · Linux Ctrl+\)** — ⌘K(빠른 이동)와 겹치지 않는다.
+  - 접힌 폭 **60px**. 위에서부터 접기 버튼(가운데) · 계정 묶음 아이콘(대시보드 · 일정 · 메신저) · 구분선 · 전환 메뉴는 **사업 첫 글자 상자 하나**(누르면 같은 전환 메뉴가 레일 옆에 열린다, 하나뿐이면 이름 툴팁만) · 워크스페이스 묶음 아이콘(사무실 · 과제 · 워크플로우) · 새 대화 `new` 아이콘(대화 목록은 숨김) · 맨 아래 계정 버튼은 사람 아이콘만. 뒤로 · 앞으로 · 빠른 이동 버튼은 접힌 동안 숨긴다(⌘K 는 그대로).
+  - 아이콘 하나 = 한 줄 40px, 가운데 정렬, **모든 아이콘에 `aria-label` + `title`**(라벨 그대로). 과제 배지는 아이콘 오른쪽 위 작은 숫자 알약(16px, 12px 글자) — 접근 이름에 "· 내가 할 일 n건"을 붙인다. 선택 = 펼친 타일과 같은 `--surface` + `--shadow-1` + 아이콘 accent. 띠 · 새 그림자 없음.
+  - 폭 전환은 `width 0.2s ease`, `prefers-reduced-motion` 에서 바로. 본문 카드는 남은 폭을 채운다(겹치지 않음).
+  - 고른 상태는 이 브라우저에 저장(`localStorage["solosquad.sidebar"]` = `rail | open`, 처음은 펼침). 폰(≤ 860px)은 드로어라 접기 버튼을 그리지 않고 레일도 적용하지 않는다.
 - 사이드바 항목: 선택 = `--surface` 바탕 + `--shadow-1` + 아이콘 accent, hover = `--surface-2` 반투명. 글자 `--ink` / 보조 `--ink-2`.
 - 콘텐츠 최대 폭 **980px**, 대화형 화면 820px. 페이지 여백 48px (좁은 화면 24px).
 - 페이지 머리: 제목 + 한 줄 설명 + (오른쪽) 주요 버튼 1개. org 전체 화면(설정)은 제목 위에 org 표시 이름 한 줄(`--ink-2` 13px). 머리 ↔ 첫 카드 32px.
@@ -316,7 +321,9 @@ prototype/<project>/DESIGN.md    ← 프로토타입 전용 (선택)
 | 일정(캘린더 메뉴 · 날짜) | `calendar` | `CalendarDays` |
 | 태그 | `tag` | `Tag` |
 | 이전(캘린더 이전 기간) | `prev` | `ChevronLeft` |
-| 지우기 | `remove` | `Trash2` |
+| 지우기 | `remove` | `Trash` |
+| 사이드바 접기 | `collapseSidebar` | `PanelLeftClose` |
+| 사이드바 펼치기 | `expandSidebar` | `PanelLeftOpen` |
 | 실행 중 작업 링크 | `run` | `Play` |
 | 뒤로 | `back` | `ArrowLeft` |
 | 앞으로 · 들어가기 | `forward` | `ArrowRight` |
