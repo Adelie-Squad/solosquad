@@ -33,6 +33,9 @@ export const MOVED: Record<string, string> = {
   'screens/home': '/dashboard',
   'artifacts/:id': '/tasks/artifacts/:id',
   mail: '/messenger',
+  // 2026-11-09 — the scheduled runs moved off `schedule`, which the coming calendar menu will take;
+  // this redirect is temporary (DESIGN.md `## 컴포넌트` 예약된 작업)
+  schedule: '/scheduled-jobs',
 };
 
 /** Where a moved workspace address goes now (inside the workspace, `:id` filled in). */
@@ -109,7 +112,7 @@ export function ScopeLayout() {
           <Route path="workflows" element={<WorkflowsView />} />
           <Route path="workflows/:name" element={<WorkflowsView />} />
           <Route path="workflows/:name/runs/:tid" element={<WorkflowRunView />} />
-          <Route path="schedule" element={<ScheduleView />} />
+          <Route path="scheduled-jobs" element={<ScheduleView />} />
           {/* the menu of 2026-11-07 — old addresses keep working */}
           {Object.keys(MOVED).map((from) => (
             <Route key={from} path={from} element={<Moved from={from} />} />

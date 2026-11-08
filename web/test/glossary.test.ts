@@ -19,7 +19,7 @@ const BANNED: Record<Locale, RegExp[]> = {
     /사업장/, // 워크스페이스
     /고객사/, // 회사
     /조직(?!도)/, // 사업 (조직도 = the org chart)
-    /스케줄/, /예약/, // 일정
+    /스케줄/, /크론/, /예약(?!된 작업)/, // 예약된 작업 (일정 = the calendar; checked by key below)
     /직원/, /스태프/, // 팀원
     /사장/, /오너/, // 대표
     /사용액/, // 비용
@@ -48,7 +48,7 @@ const BANNED: Record<Locale, RegExp[]> = {
     /对接/, /集成/, // 连接
     /组织(?!架构)/, // 业务 (组织架构 = the org chart)
     /工作空间/, // 工作区
-    /预定/, /(?<!固)定时/, // 日程 (固定时间 = "set times" is fine)
+    /预定/, /定时任务/, /计划任务/, // 定时运行 (任务 is the menu word only)
     /用量/, // 费用
     /预算/, // 上限
     /部门/, // 团队
@@ -92,6 +92,36 @@ describe('the glossary ban-list (DESIGN.md `## 문구` 용어집)', () => {
     expect(BANNED['zh-CN'].some((re) => re.test('组织架构'))).toBe(false);
     expect(BANNED.en.some((re) => re.test('Handle in Tasks'))).toBe(false);
     expect(BANNED.en.some((re) => re.test('Give Chief a task'))).toBe(true);
+  });
+});
+
+// 2026-11-09: 일정 · 日程 are kept for the coming calendar (a person's schedule). The scheduled runs
+// are 예약된 작업 · Scheduled runs · 定时运行 — so the word must not come back in their copy.
+describe('예약된 작업 is not called 일정', () => {
+  const SCHEDULED_KEY = /^(schedule\.|widget\.schedule$|tasks\.scheduled$)/;
+  const CALENDAR_WORD: Record<Locale, RegExp> = { ko: /일정/, en: /\bschedules?\b/i, 'zh-CN': /日程/ };
+  const NAME: Record<Locale, string> = { ko: '예약된 작업', en: 'Scheduled runs', 'zh-CN': '定时运行' };
+
+  it.each(Object.keys(NAME) as Locale[])('%s: the scheduled-runs copy uses no calendar word', (locale) => {
+    const keys = Object.keys(dictionaries[locale]).filter((k) => SCHEDULED_KEY.test(k));
+    expect(keys.length).toBeGreaterThan(8);
+    const hits = keys.filter((k) => CALENDAR_WORD[locale].test(words(dictionaries[locale][k as keyof (typeof dictionaries)[Locale]])));
+    expect(hits).toEqual([]);
+  });
+
+  it.each(Object.keys(NAME) as Locale[])('%s: the tab, the empty state and the dashboard widget name it', (locale) => {
+    const d = dictionaries[locale];
+    expect(d['schedule.tab']).toBe(NAME[locale]);
+    expect(d['widget.schedule']).toContain(locale === 'en' ? 'scheduled runs' : NAME[locale]);
+    expect(d['schedule.none']).toContain(locale === 'en' ? 'scheduled runs' : NAME[locale]);
+  });
+
+  it('the ban list still catches the old words', () => {
+    expect(BANNED.ko.some((re) => re.test('스케줄 보기'))).toBe(true);
+    expect(BANNED.ko.some((re) => re.test('크론 작업'))).toBe(true);
+    expect(BANNED.ko.some((re) => re.test('예약된 작업'))).toBe(false);
+    expect(BANNED['zh-CN'].some((re) => re.test('定时任务'))).toBe(true);
+    expect(BANNED.en.some((re) => re.test('Scheduled jobs'))).toBe(true);
   });
 });
 
@@ -140,7 +170,8 @@ describe('DESIGN.md carries the glossary', () => {
     ['임원', 'Chief', '高管'],
     ['산출물', 'work product', '工作成果'],
     ['대화', 'conversation', '对话'],
-    ['일정', 'schedule', '日程'],
+    ['예약된 작업', 'scheduled run', '定时运行'],
+    ['일정', 'calendar', '日程'],
     ['비용', 'cost', '费用'],
     ['한도', 'cap', '上限'],
   ])('names %s · %s · %s in one row', (ko, en, zh) => {

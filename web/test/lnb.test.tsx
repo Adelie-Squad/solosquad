@@ -1,4 +1,4 @@
-// The menu of 2026-11-07 (DESIGN.md `## 레이아웃` · `## 컴포넌트` 대시보드 / Task / 일정):
+// The menu of 2026-11-07 (DESIGN.md `## 레이아웃` · `## 컴포넌트` 대시보드 / Task / 예약된 작업):
 // dashboard · office · messenger · Task · workflows; old addresses redirected; Task's groups; the
 // dashboard's cost area; the schedule list and its sentences.
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -14,6 +14,8 @@ import { MOVED, movedTarget, ScopeLayout } from '../src/shell/ScopeLayout';
 import { Sidebar } from '../src/shell/Sidebar';
 import { MessengerView } from '../src/views/MessengerView';
 import { ScheduleView } from '../src/views/ScheduleView';
+import { WorkflowsView } from '../src/views/WorkflowsView';
+import { ScheduleWidget } from '../src/screens/widgets';
 import { TasksView } from '../src/views/TasksView';
 import { DeclarativeScreen } from '../src/screens/DeclarativeScreen';
 import { approval, me, renderWith } from './helpers';
@@ -128,12 +130,12 @@ describe('the sidebar menu', () => {
     ['staff', staff],
   ])('draws five tiles for %s, with a Task badge for what waits for them', async (_who, person) => {
     stubApi({ '/approvals': [approval(), approval({ run_id: 'r-2', can_approve: false })], '/artifacts': [artifact()], '/threads': [] });
-    renderWith(<Sidebar onCommand={() => {}} />, 'en', { me: person, path: '/o/tesla/w/charging/schedule' });
+    renderWith(<Sidebar onCommand={() => {}} />, 'en', { me: person, path: '/o/tesla/w/charging/scheduled-jobs' });
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     const tiles = within(nav).getAllByRole('link');
     expect(tiles.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual(['Dashboard', 'Office', 'Messenger', 'Tasks', 'Workflows']);
     expect(tiles[0].getAttribute('href')).toBe('/o/tesla/w/charging/dashboard');
-    // the schedule is a view of the workflows: that tile stays selected on it
+    // the scheduled runs are a view of the workflows: that tile stays selected on them
     expect(tiles[4].getAttribute('aria-current')).toBe('page');
     // 1 card I may answer + 1 work product to check (the other team's card is not mine)
     await waitFor(() => expect(within(tiles[3]).getByText('2')).toBeTruthy());
@@ -180,7 +182,7 @@ describe('the sidebar menu', () => {
     const links = { w: (p = '') => `/o/t/w/c${p}`, o: (p = '') => `/o/t${p}` };
     const wf = NAV[4];
     expect(navActive(wf, '/o/t/w/c/workflows/monthly-pnl/runs/x', links)).toBe(true);
-    expect(navActive(wf, '/o/t/w/c/schedule', links)).toBe(true);
+    expect(navActive(wf, '/o/t/w/c/scheduled-jobs', links)).toBe(true);
     expect(navActive(NAV[3], '/o/t/w/c/tasks/artifacts/a', links)).toBe(true);
     expect(navActive(NAV[3], '/o/t/w/c/tasksx', links)).toBe(false);
   });
@@ -203,6 +205,9 @@ describe('old addresses', () => {
     ['/o/tesla/w/charging/artifacts', '/o/tesla/w/charging/tasks'],
     ['/o/tesla/w/charging/screens/artifacts', '/o/tesla/w/charging/tasks'],
     ['/o/tesla/w/charging/artifacts/art-7', '/o/tesla/w/charging/tasks/artifacts/art-7'],
+    // 2026-11-09 — the scheduled runs left `schedule` (kept for the coming calendar); temporary redirect
+    ['/o/tesla/w/charging/schedule', '/o/tesla/w/charging/scheduled-jobs'],
+    ['/o/tesla/w/charging/schedule?x=1', '/o/tesla/w/charging/scheduled-jobs?x=1'],
   ])('%s → %s', async (from, to) => {
     stubApi({ '/budget': budget, '/schedules': schedules, '/work': { items: [] } });
     renderWith(
@@ -367,7 +372,7 @@ describe('the schedule view', () => {
     expect(rows[1].textContent).toContain('Not run yet');
     expect(within(rows[1]).queryByRole('switch')).toBeNull();
     expect(screen.getByText(/Times are in Asia\/Seoul/)).toBeTruthy();
-    expect(screen.getByRole('link', { name: /Schedule/ }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Scheduled runs' }).getAttribute('aria-current')).toBe('page');
   });
 
   it('staff reads only', async () => {
@@ -376,6 +381,67 @@ describe('the schedule view', () => {
     await screen.findAllByTestId('schedule-row');
     expect(screen.queryByRole('switch')).toBeNull();
     expect(screen.getByText(/Only the owner can switch these on and off/)).toBeTruthy();
+  });
+});
+
+// 2026-11-09 — 일정 → 예약된 작업, and the tabs moved from the header to right above the list
+describe('예약된 작업 (scheduled runs)', () => {
+  const TAB = { ko: ['워크플로우', '예약된 작업'], en: ['Workflows', 'Scheduled runs'], 'zh-CN': ['工作流', '定时运行'] } as const;
+
+  it.each(Object.keys(TAB) as Locale[])('%s: the tabs read workflows | scheduled runs and point at scheduled-jobs', async (locale) => {
+    stubApi({ '/schedules': schedules });
+    renderWith(<ScheduleView />, locale);
+    await screen.findAllByTestId('schedule-row');
+    const tabs = within(screen.getByRole('navigation', { name: translate(locale, 'workflows.views') })).getAllByRole('link');
+    expect(tabs.map((a) => a.textContent)).toEqual([...TAB[locale]]);
+    expect(tabs.map((a) => a.getAttribute('href'))).toEqual(['/o/tesla/w/charging/workflows', '/o/tesla/w/charging/scheduled-jobs']);
+    expect(tabs[1].getAttribute('aria-current')).toBe('page');
+  });
+
+  it('the tabs sit outside the header, right above the scheduled-runs list', async () => {
+    stubApi({ '/schedules': schedules });
+    renderWith(<ScheduleView />, 'ko');
+    const list = await screen.findByTestId('schedule-list');
+    const tabs = screen.getByRole('navigation', { name: '워크플로우 보기 전환' });
+    const header = document.querySelector('.view-header') as HTMLElement;
+    expect(header.contains(tabs)).toBe(false);
+    expect(header.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tabs.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tabs.nextElementSibling).toBe(list);
+  });
+
+  it('on the workflows view too — under the title and lead, above the cards', async () => {
+    const wf = { name: 'monthly-pnl', title: 'Monthly P&L', description: '', enabled: true, team: null, schedule: '0 9 1 * *', steps: [], inputs: [], last_run: null };
+    stubApi({ '/workflows': { workflows: [wf], errors: [] }, '/workflows/monthly-pnl/runs': [] });
+    renderWith(
+      <Routes>
+        <Route path="o/:org/w/:ws/workflows/:name" element={<WorkflowsView />} />
+      </Routes>,
+      'ko',
+      { path: '/o/tesla/w/charging/workflows/monthly-pnl' },
+    );
+    const cards = await screen.findByRole('navigation', { name: '워크플로우' });
+    const tabs = screen.getByRole('navigation', { name: '워크플로우 보기 전환' });
+    const header = document.querySelector('.view-header') as HTMLElement;
+    expect(header.contains(tabs)).toBe(false);
+    expect(within(header).getByRole('heading', { level: 1 }).textContent).toBe('워크플로우');
+    expect(tabs.nextElementSibling).toBe(cards);
+    expect(within(tabs).getAllByRole('link').map((a) => a.textContent)).toEqual(['워크플로우', '예약된 작업']);
+    // the cadence chip in the detail goes to the scheduled runs and says so
+    const chip = screen.getByRole('link', { name: /^예약된 작업: / });
+    expect(chip.getAttribute('href')).toBe('/o/tesla/w/charging/scheduled-jobs');
+  });
+
+  it.each([
+    ['ko', '다음 예약된 작업'],
+    ['en', 'Next scheduled runs'],
+    ['zh-CN', '接下来的定时运行'],
+  ] as const)('%s: the dashboard widget is titled %s and opens scheduled-jobs', async (locale, title) => {
+    stubApi({ '/schedules': schedules });
+    renderWith(<ScheduleWidget />, locale);
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(title);
+    expect(screen.getByRole('link', { name: translate(locale, 'widget.all') }).getAttribute('href')).toBe('/o/tesla/w/charging/scheduled-jobs');
+    await screen.findByText('Weekly brief');
   });
 });
 
