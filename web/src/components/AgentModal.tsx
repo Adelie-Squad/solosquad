@@ -1,7 +1,7 @@
 // One modal for an agent or a person (DESIGN.md `## 컴포넌트` — 에이전트 · 사람 모달), opened
 // from the org chart and from the office scene. The org chart nodes show only a name and a
 // status; what the agent does, what it works on and what waits for an answer live here.
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAction, useKeys, useScopedApi } from '../api/queries';
 import type { Agent, ApprovalItem, OrgPerson, Person } from '../api/types.gen';
@@ -13,25 +13,7 @@ import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import type { AgentStatus } from '../office/state';
 import { useLinks } from '../scope';
-
-function Modal({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
-  const { t } = useI18n();
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return (
-    <div className="command-overlay is-modal" onMouseDown={onClose}>
-      <div className="dialog is-wide entity-modal" role="dialog" aria-modal="true" aria-label={label} onMouseDown={(e) => e.stopPropagation()}>
-        <button type="button" className="icon-btn entity-modal-close" aria-label={t('common.close')} title={t('common.close')} onClick={onClose} autoFocus>
-          <ICON.close size={18} />
-        </button>
-        {children}
-      </div>
-    </div>
-  );
-}
+import { Modal } from './Modal';
 
 export function AgentModal({
   agent,

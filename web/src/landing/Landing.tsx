@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useMe } from '../api/queries';
 import { LOGIN, officeHref, signedIn } from '../auth/next';
@@ -6,47 +6,47 @@ import { Mascot } from '../characters/PenguinIcon';
 import { LocalePicker } from '../components/LocalePicker';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
-import { readable } from '../lib/names';
 import { hasWebGL, isMobile, prefersReducedMotion, webglForcedOff } from '../office/OfficeStage';
 import { useTheme } from '../theme';
 import { AGENT_COUNT, TEAMS } from './catalog';
+import { LandingOrgChart } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
 import { ApprovalPreview, LivePreview, PnlPreview } from './Previews';
 import { PromptTyper } from './PromptTyper';
-import { clipForSection, sectionAnchor, sectionIndex, SECTIONS, type SectionId } from './sections';
-import { TeamStrip } from './TeamStrip';
+import { clipForSection, sectionAnchor, sectionIndex, SECTIONS, stepAt, THINK_SECONDS, type SectionId } from './sections';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
 
-/** 3D when WebGL works and motion is welcome; otherwise the 2D penguin and still sections. */
+/** Shorter than this, a slide does not fit one screen — the page stacks its sections instead. */
+export const MIN_STAGE_HEIGHT = 600;
+
+/**
+ * Pinned slides with the 3D penguin when WebGL works, motion is welcome and the screen is tall
+ * enough; otherwise the sections stacked with the 2D penguin.
+ */
 export function landingMode(): LandingMode {
-  return webglForcedOff() || prefersReducedMotion() || !hasWebGL() ? 'static' : 'live';
+  const short = typeof window !== 'undefined' && window.innerHeight > 0 && window.innerHeight < MIN_STAGE_HEIGHT;
+  return webglForcedOff() || prefersReducedMotion() || short || !hasWebGL() ? 'static' : 'live';
 }
 
-/** Where the page is: the section under the middle of the viewport and how far through it. */
-function useScrollPosition(enabled: boolean) {
-  const [where, setWhere] = useState<{ id: SectionId; progress: number }>({ id: 'hero', progress: 0 });
-  const scroll = useRef(0);
+/**
+ * Which slide is up: the snap stop nearest the scroll position (`stepAt`). Native scroll only —
+ * the stops are `scroll-snap-align` targets, so the wheel, a swipe, PageDown · Space · the arrow
+ * keys and the progress links all land on one; this only reads where the page is.
+ */
+function useStep(enabled: boolean) {
+  const [step, setStep] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const vh = window.innerHeight;
-      const doc = document.documentElement;
-      scroll.current = Math.min(1, Math.max(0, window.scrollY / Math.max(1, doc.scrollHeight - vh)));
-      const mid = vh / 2;
-      for (const s of SECTIONS) {
-        const el = document.getElementById(sectionAnchor(s.id));
-        if (!el) continue;
-        const r = el.getBoundingClientRect();
-        if (r.height > 0 && r.top <= mid && r.bottom > mid) {
-          const progress = Math.round(((mid - r.top) / r.height) * 20) / 20;
-          setWhere((w) => (w.id === s.id && w.progress === progress ? w : { id: s.id, progress }));
-          return;
-        }
-      }
+      setScrolled(window.scrollY > 4);
+      if (!enabled) return;
+      const stops = SECTIONS.map((s) => document.getElementById(sectionAnchor(s.id))).map((el) => (el ? el.getBoundingClientRect().top + window.scrollY : 0));
+      setStep(stepAt(window.scrollY, stops));
     };
     const on = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -60,23 +60,19 @@ function useScrollPosition(enabled: boolean) {
       if (frame) cancelAnimationFrame(frame);
     };
   }, [enabled]);
-  return { ...where, scroll };
+  return { step, scrolled };
 }
 
-function SectionHead({ id, title, lead, as = 'h2', titleId }: { id: SectionId; title: string; lead?: string; as?: 'h1' | 'h2'; titleId: string }) {
-  const H = as;
-  return (
-    <>
-      <p className="landing-mono landing-index">
-        <span>{sectionIndex(id)}</span>
-        <span className="landing-index-total">/ {String(SECTIONS.length).padStart(2, '0')}</span>
-      </p>
-      <H id={titleId} className={as === 'h1' ? 'landing-display' : 'landing-title'}>
-        {title}
-      </H>
-      {lead && <p className="landing-lead">{lead}</p>}
-    </>
-  );
+/** Seconds since the slide came in, ticking only where the clip changes over time. */
+function useSlideClock(id: SectionId) {
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    setLate(false);
+    if (id !== 'what') return;
+    const timer = window.setTimeout(() => setLate(true), THINK_SECONDS * 1000);
+    return () => window.clearTimeout(timer);
+  }, [id]);
+  return late ? THINK_SECONDS : 0;
 }
 
 const STEPS: { title: MessageKey; body: MessageKey }[] = [
@@ -91,11 +87,16 @@ const POINTS: { icon: keyof typeof ICON; title: MessageKey; body: MessageKey }[]
   { icon: 'back', title: 'landing.control.point3.title', body: 'landing.control.point3.body' },
 ];
 
+/** The n-th thing the penguin presents — staggered in step with its wing (landing.css `--i`). */
+const at = (i: number) => ({ '--i': i }) as CSSProperties;
+
 /**
- * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`): five sections scroll past one
- * penguin that stays in the middle of the viewport and changes what it does per section. The
- * button goes to `/login`, or to the person's office when already signed in; it never
- * redirects on its own. Native scroll only.
+ * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`): a pinned stage, one screen high, with
+ * the 3D penguin fixed in its middle, following the cursor with its head. Each step of scroll brings
+ * the next slide: the message on the left, and on the right what the penguin presents — it turns
+ * and lifts a wing as the content comes in beside it. Reduced motion, no WebGL and short screens
+ * get the same sections stacked, with the 2D penguin. The only buttons out are the login (top bar)
+ * and the last slide's; they go to `/login`, or to the office when signed in, never on their own.
  */
 export function Landing() {
   const { t } = useI18n();
@@ -104,10 +105,12 @@ export function Landing() {
   const { theme } = useTheme();
   const [mode, setMode] = useState<LandingMode>(landingMode);
   const [reduced, setReduced] = useState(prefersReducedMotion);
-  const [mobile] = useState(isMobile);
+  const [mobile, setMobile] = useState(isMobile);
+  const [touch] = useState(() => !!window.matchMedia?.('(hover: none)').matches);
   const live = mode === 'live';
-  const where = useScrollPosition(live);
-  const clip = clipForSection(where.id, where.progress);
+  const { step, scrolled } = useStep(live);
+  const active: SectionId = live ? SECTIONS[step].id : 'hero';
+  const clip = clipForSection(active, useSlideClock(active));
   const fail = useCallback(() => setMode('static'), []);
 
   useEffect(() => {
@@ -119,8 +122,13 @@ export function Landing() {
     mq?.addEventListener?.('change', on);
     return () => mq?.removeEventListener?.('change', on);
   }, []);
+  useEffect(() => {
+    const on = () => setMobile(isMobile());
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
 
-  const pointer = useRef<Pointer>({ x: 0, y: 0 });
+  const pointer = useRef<Pointer | null>({ x: 0, y: 0 });
   useEffect(() => {
     if (!live) return;
     const on = (e: PointerEvent) => {
@@ -139,43 +147,168 @@ export function Landing() {
     };
   }, [live]);
 
-  const cta = (cls: string) =>
-    inside ? (
-      <Link className={cls} to={officeHref(inside)}>
-        {t('landing.goOffice')}
-        <ICON.forward />
-      </Link>
-    ) : (
-      <Link className={cls} to={LOGIN}>
-        {t('auth.login')}
-        <ICON.forward />
-      </Link>
+  // Tab into a slide that is not up (its content stays in the page for keyboards and screen
+  // readers) brings that slide up — the browser scrolls to its stop
+  const stage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stage.current;
+    if (!live || !el) return;
+    const onFocus = (e: FocusEvent) => {
+      const slide = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
+      const id = slide?.dataset.slide as SectionId | undefined;
+      if (!id || id === SECTIONS[step].id) return;
+      document.getElementById(sectionAnchor(id))?.scrollIntoView({ block: 'start' });
+    };
+    el.addEventListener('focusin', onFocus);
+    return () => el.removeEventListener('focusin', onFocus);
+  }, [live, step]);
+
+  const cta = (cls: string) => (
+    <Link className={cls} to={inside ? officeHref(inside) : LOGIN}>
+      {t(inside ? 'landing.goOffice' : 'auth.login')}
+    </Link>
+  );
+
+  const slide = (id: SectionId, copy: ReactNode, present: ReactNode) => {
+    const on = !live || active === id;
+    const passed = live && SECTIONS.findIndex((s) => s.id === id) < step;
+    return (
+      <section
+        key={id}
+        id={live ? undefined : sectionAnchor(id)}
+        data-slide={id}
+        className={`landing-slide is-${id} ${on ? 'is-on' : ''} ${passed ? 'is-passed' : ''}`}
+        aria-labelledby={`landing-${id}-title`}
+      >
+        <div className="landing-copy">{copy}</div>
+        <div className="landing-present">{present}</div>
+      </section>
     );
+  };
+
+  const slides = [
+    slide(
+      'hero',
+      <>
+        <p className="landing-mono landing-eyebrow">{t('landing.eyebrow')}</p>
+        <h1 id="landing-hero-title" className="landing-display">
+          {t('landing.title')}
+        </h1>
+        <p className="landing-lead">{t('landing.lead')}</p>
+      </>,
+      <>
+        {!live && (
+          <div className="landing-static-mascot" aria-hidden="true" data-testid="landing-static-mascot">
+            <Mascot size={160} />
+          </div>
+        )}
+        <div className="landing-item" style={at(0)}>
+          <PromptTyper still={reduced} />
+        </div>
+      </>,
+    ),
+    slide(
+      'what',
+      <>
+        <h2 id="landing-what-title" className="landing-title">
+          {t('landing.what.title')}
+        </h2>
+        <p className="landing-lead">{t('landing.what.lead')}</p>
+      </>,
+      <>
+        <ol className="landing-steps">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="landing-item" style={at(i)}>
+              <span className="landing-mono landing-step-n">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{t(s.title)}</h3>
+              <p>{t(s.body)}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="landing-item is-wide-only" style={at(3)}>
+          <LivePreview />
+        </div>
+      </>,
+    ),
+    slide(
+      'team',
+      <>
+        <h2 id="landing-team-title" className="landing-title">
+          {t('landing.team.title', { n: AGENT_COUNT, teams: TEAMS.length })}
+        </h2>
+        <p className="landing-lead">{t('landing.team.lead')}</p>
+      </>,
+      <LandingOrgChart style={(i) => at(i)} />,
+    ),
+    slide(
+      'control',
+      <>
+        <h2 id="landing-control-title" className="landing-title">
+          {t('landing.control.title')}
+        </h2>
+        <p className="landing-lead">{t('landing.control.lead')}</p>
+      </>,
+      <>
+        <ul className="landing-points">
+          {POINTS.map((p, i) => {
+            const Icon = ICON[p.icon];
+            return (
+              <li key={p.title} className="landing-item" style={at(i)}>
+                <Icon />
+                <span>
+                  <b>{t(p.title)}</b>
+                  {t(p.body)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="landing-previews">
+          <div className="landing-item" style={at(3)}>
+            <ApprovalPreview />
+          </div>
+          <div className="landing-item is-wide-only" style={at(4)}>
+            <PnlPreview />
+          </div>
+        </div>
+      </>,
+    ),
+    slide(
+      'start',
+      <>
+        <h2 id="landing-start-title" className="landing-title">
+          {t('landing.start.title')}
+        </h2>
+        <p className="landing-lead">{t(inside ? 'landing.start.in' : 'landing.start.out')}</p>
+      </>,
+      <>
+        <p className="landing-statement landing-item" style={at(0)}>
+          {t('landing.statement')}
+        </p>
+        <div className="landing-item" style={at(1)}>
+          {cta('btn is-primary is-large landing-final-cta')}
+        </div>
+      </>,
+    ),
+  ];
 
   return (
-    <main className="landing" data-mode={mode} data-section={where.id}>
-      <div className="landing-grid" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-        <span />
-      </div>
-
-      <header className="landing-top">
-        <p className="landing-brand">SoloSquad</p>
-        <div className="landing-top-actions">
-          <LocalePicker />
-          {cta('btn with-icon landing-top-cta')}
+    <main className="landing" data-mode={mode} data-section={active}>
+      <header className={`landing-top ${scrolled ? 'is-scrolled' : ''}`}>
+        <div className="landing-top-inner">
+          <p className="landing-brand">SoloSquad</p>
+          <div className="landing-top-actions">
+            <LocalePicker />
+            {cta('btn landing-top-cta')}
+          </div>
         </div>
       </header>
-
-      {live && <MascotStage section={where.id} clip={clip} theme={theme} mobile={mobile} pointer={pointer} scroll={where.scroll} onFail={fail} />}
 
       <nav className="landing-progress" aria-label={t('landing.nav')}>
         <ol>
           {SECTIONS.map((s) => (
             <li key={s.id}>
-              <a href={`#${sectionAnchor(s.id)}`} aria-current={where.id === s.id ? 'step' : undefined} className={where.id === s.id ? 'is-on' : ''}>
+              <a href={`#${sectionAnchor(s.id)}`} aria-current={active === s.id && live ? 'step' : undefined} className={active === s.id && live ? 'is-on' : ''}>
                 <span className="landing-progress-label">{t(s.label)}</span>
                 <span className="landing-progress-index">{sectionIndex(s.id)}</span>
                 <span className="landing-progress-tick" aria-hidden="true" />
@@ -185,96 +318,26 @@ export function Landing() {
         </ol>
       </nav>
 
-      <section id={sectionAnchor('hero')} className="landing-section is-hero" aria-labelledby="landing-hero-title">
-        <div className="landing-side is-left">
-          <p className="landing-mono landing-eyebrow">{t('landing.eyebrow')}</p>
-          <SectionHead id="hero" as="h1" titleId="landing-hero-title" title={t('landing.title')} lead={t('landing.lead')} />
-          {cta('btn is-primary is-large with-icon')}
-        </div>
-        {!live && (
-          <div className="landing-static-mascot" aria-hidden="true" data-testid="landing-static-mascot">
-            <Mascot size={200} />
-          </div>
-        )}
-        <div className="landing-side is-right">
-          <PromptTyper still={reduced} />
-          <div className="landing-crew">
-            <p className="landing-mono landing-crew-title">{t('landing.crew')}</p>
-            <ul>
-              {TEAMS.filter((g) => g.team !== 'core').map((g) => (
-                <li key={g.team} className="landing-mono">
-                  <span>{readable(g.team)}</span>
-                  <span>{t('landing.team.count', { n: g.agents.length })}</span>
-                </li>
-              ))}
-            </ul>
+      {live ? (
+        <div className="landing-track" style={{ '--steps': SECTIONS.length } as CSSProperties}>
+          {SECTIONS.map((s, i) => (
+            <span key={s.id} id={sectionAnchor(s.id)} className="landing-stop" style={{ '--n': i } as CSSProperties} data-testid={`landing-stop-${s.id}`} />
+          ))}
+          <div className="landing-pin" ref={stage}>
+            <div className="landing-grid" aria-hidden="true">
+              <span />
+              <span />
+            </div>
+            <MascotStage section={active} clip={clip} theme={theme} mobile={mobile} pointer={pointer} touch={touch} side={mobile ? 'down' : 'right'} onFail={fail} />
+            {slides}
           </div>
         </div>
-        <p className="landing-mono landing-scroll" aria-hidden="true">
-          {t('landing.scroll')}
-          <ICON.expand />
-        </p>
-      </section>
-
-      <section id={sectionAnchor('what')} className="landing-section is-what" aria-labelledby="landing-what-title">
-        <div className="landing-side is-left">
-          <SectionHead id="what" titleId="landing-what-title" title={t('landing.what.title')} lead={t('landing.what.lead')} />
+      ) : (
+        <div className="landing-stack">
+          {slides}
+          <footer className="landing-foot landing-mono">SoloSquad</footer>
         </div>
-        <div className="landing-side is-right">
-          <ol className="landing-steps">
-            {STEPS.map((s, i) => (
-              <li key={s.title}>
-                <span className="landing-mono landing-step-n">{String(i + 1).padStart(2, '0')}</span>
-                <h3>{t(s.title)}</h3>
-                <p>{t(s.body)}</p>
-              </li>
-            ))}
-          </ol>
-          <LivePreview />
-        </div>
-      </section>
-
-      <section id={sectionAnchor('team')} className="landing-section is-team" aria-labelledby="landing-team-title">
-        <div className="landing-side is-left">
-          <SectionHead id="team" titleId="landing-team-title" title={t('landing.team.title', { n: AGENT_COUNT, teams: TEAMS.length })} lead={t('landing.team.lead')} />
-        </div>
-        <div className="landing-wide">
-          <TeamStrip />
-        </div>
-      </section>
-
-      <section id={sectionAnchor('control')} className="landing-section is-control" aria-labelledby="landing-control-title">
-        <div className="landing-side is-left">
-          <SectionHead id="control" titleId="landing-control-title" title={t('landing.control.title')} lead={t('landing.control.lead')} />
-          <ul className="landing-points">
-            {POINTS.map((p) => {
-              const Icon = ICON[p.icon];
-              return (
-                <li key={p.title}>
-                  <Icon />
-                  <span>
-                    <b>{t(p.title)}</b>
-                    {t(p.body)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        <div className="landing-side is-right">
-          <ApprovalPreview />
-          <PnlPreview />
-        </div>
-        <p className="landing-statement landing-wide">{t('landing.statement')}</p>
-      </section>
-
-      <section id={sectionAnchor('start')} className="landing-section is-start" aria-labelledby="landing-start-title">
-        <div className="landing-side is-left">
-          <SectionHead id="start" titleId="landing-start-title" title={t('landing.start.title')} lead={t(inside ? 'landing.start.in' : 'landing.start.out')} />
-          {cta('btn is-primary is-large with-icon')}
-        </div>
-        <footer className="landing-foot landing-wide landing-mono">SoloSquad</footer>
-      </section>
+      )}
     </main>
   );
 }
