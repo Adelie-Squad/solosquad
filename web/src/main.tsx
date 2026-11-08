@@ -17,6 +17,7 @@ import './styles/OfficeView.css';
 import './styles/app.css';
 import './styles/design.css';
 import './styles/screens.css';
+import './styles/calendar.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

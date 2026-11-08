@@ -9,8 +9,8 @@ import { translate, type Locale } from '../src/i18n';
 import { cronText } from '../src/lib/cron';
 import { filterDone, groupTasks, taskCounts } from '../src/lib/tasks';
 import { widgetsOf } from '../src/screens/DeclarativeScreen';
-import { NAV, navActive, visibleNav } from '../src/shell/nav';
-import { MOVED, movedTarget, ScopeLayout } from '../src/shell/ScopeLayout';
+import { ACCOUNT_NAV, NAV, navActive, visibleNav, WORKSPACE_NAV } from '../src/shell/nav';
+import { accountTarget, MOVED, movedTarget, ScopeLayout, TO_ACCOUNT } from '../src/shell/ScopeLayout';
 import { Sidebar } from '../src/shell/Sidebar';
 import { MessengerView } from '../src/views/MessengerView';
 import { ScheduleView } from '../src/views/ScheduleView';
@@ -115,42 +115,50 @@ const staff = me({
 
 // ---------------------------------------------------------------------- the menu
 
-describe('the sidebar menu', () => {
-  it('is dashboard · office · messenger · Tasks · workflows — the same five for owner and staff', () => {
+describe('the sidebar menu (decision 60 — two groups)', () => {
+  it('is dashboard · calendar · messenger for the account, then office · Tasks · workflows — the same for owner and staff', () => {
+    expect(ACCOUNT_NAV.map((n) => n.to)).toEqual(['/dashboard', '/calendar', '/messenger']);
+    expect(WORKSPACE_NAV.map((n) => n.to)).toEqual(['/office', '/tasks', '/workflows']);
     const ids = NAV.map((n) => n.to);
-    expect(ids).toEqual(['/dashboard', '/office', '/messenger', '/tasks', '/workflows']);
     expect(visibleNav(true).map((n) => n.to)).toEqual(ids);
     expect(visibleNav(false).map((n) => n.to)).toEqual(ids);
-    // five tiles in two columns: the first takes the whole row (DESIGN.md — no hole)
-    expect(NAV.length % 2).toBe(1);
+    // three tiles per group in two columns: the first takes the whole row (DESIGN.md — no hole)
+    expect(ACCOUNT_NAV.length % 2).toBe(1);
+    expect(WORKSPACE_NAV.length % 2).toBe(1);
   });
 
   it.each([
     ['owner', me()],
     ['staff', staff],
-  ])('draws five tiles for %s, with a Task badge for what waits for them', async (_who, person) => {
+  ])('draws both groups for %s, with a Task badge for what waits for them', async (_who, person) => {
     stubApi({ '/approvals': [approval(), approval({ run_id: 'r-2', can_approve: false })], '/artifacts': [artifact()], '/threads': [] });
     renderWith(<Sidebar onCommand={() => {}} />, 'en', { me: person, path: '/o/tesla/w/charging/scheduled-jobs' });
-    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    const account = within(screen.getByRole('navigation', { name: 'Whole company' })).getAllByRole('link');
+    expect(account.map((a) => a.textContent)).toEqual(['Dashboard', 'Calendar', 'Messenger']);
+    expect(account.map((a) => a.getAttribute('href'))).toEqual(['/dashboard', '/calendar', '/messenger']);
+    const nav = screen.getByRole('navigation', { name: 'Workspace' });
     const tiles = within(nav).getAllByRole('link');
-    expect(tiles.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual(['Dashboard', 'Office', 'Messenger', 'Tasks', 'Workflows']);
-    expect(tiles[0].getAttribute('href')).toBe('/o/tesla/w/charging/dashboard');
+    expect(tiles.map((a) => a.textContent?.replace(/\d+$/, ''))).toEqual(['Office', 'Tasks', 'Workflows']);
+    expect(tiles[0].getAttribute('href')).toBe('/o/tesla/w/charging/office');
     // the scheduled runs are a view of the workflows: that tile stays selected on them
-    expect(tiles[4].getAttribute('aria-current')).toBe('page');
+    expect(tiles[2].getAttribute('aria-current')).toBe('page');
     // 1 card I may answer + 1 work product to check (the other team's card is not mine)
-    await waitFor(() => expect(within(tiles[3]).getByText('2')).toBeTruthy());
+    await waitFor(() => expect(within(tiles[1]).getByText('2')).toBeTruthy());
     expect(within(nav).queryByText('Approvals')).toBeNull();
+    // the two groups are split by a plain line — no label, no band
+    expect(document.querySelector('.sidebar-divider')).toBeTruthy();
   });
 
   it.each([
-    ['ko', ['대시보드', '사무실', '메신저', '과제', '워크플로우']],
-    ['en', ['Dashboard', 'Office', 'Messenger', 'Tasks', 'Workflows']],
-    ['zh-CN', ['仪表盘', '办公室', '消息渠道', '任务', '工作流']],
-  ] as const)('%s menu labels', (locale, labels) => {
+    ['ko', ['대시보드', '일정', '메신저'], ['사무실', '과제', '워크플로우']],
+    ['en', ['Dashboard', 'Calendar', 'Messenger'], ['Office', 'Tasks', 'Workflows']],
+    ['zh-CN', ['仪表盘', '日程', '消息渠道'], ['办公室', '任务', '工作流']],
+  ] as const)('%s menu labels', (locale, top, ws) => {
     stubApi({ '/approvals': [], '/artifacts': [], '/threads': [] });
     renderWith(<Sidebar onCommand={() => {}} />, locale);
-    const nav = screen.getByRole('navigation', { name: translate(locale, 'nav.main') });
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual([...labels]);
+    const labels = (name: string) => within(screen.getByRole('navigation', { name: translate(locale, name as 'nav.accountGroup') })).getAllByRole('link').map((a) => a.textContent);
+    expect(labels('nav.accountGroup')).toEqual([...top]);
+    expect(labels('nav.workspaceGroup')).toEqual([...ws]);
   });
 
   it.each([
@@ -180,11 +188,15 @@ describe('the sidebar menu', () => {
 
   it('marks a tile selected on its own address and below it', () => {
     const links = { w: (p = '') => `/o/t/w/c${p}`, o: (p = '') => `/o/t${p}` };
-    const wf = NAV[4];
+    const [office, tasks, wf] = WORKSPACE_NAV;
     expect(navActive(wf, '/o/t/w/c/workflows/monthly-pnl/runs/x', links)).toBe(true);
     expect(navActive(wf, '/o/t/w/c/scheduled-jobs', links)).toBe(true);
-    expect(navActive(NAV[3], '/o/t/w/c/tasks/artifacts/a', links)).toBe(true);
-    expect(navActive(NAV[3], '/o/t/w/c/tasksx', links)).toBe(false);
+    expect(navActive(tasks, '/o/t/w/c/tasks/artifacts/a', links)).toBe(true);
+    expect(navActive(tasks, '/o/t/w/c/tasksx', links)).toBe(false);
+    expect(navActive(office, '/o/t/w/c/office/display', links)).toBe(true);
+    // an account tile is its own address, whatever the scope
+    expect(navActive(ACCOUNT_NAV[1], '/calendar', links)).toBe(true);
+    expect(navActive(ACCOUNT_NAV[0], '/o/t/w/c/dashboard', links)).toBe(false);
   });
 });
 
@@ -193,26 +205,29 @@ describe('the sidebar menu', () => {
 describe('old addresses', () => {
   it('maps every moved screen', () => {
     expect(movedTarget('artifacts/:id', { id: 'a 1' })).toBe('/tasks/artifacts/a%201');
-    expect(movedTarget('mail', {})).toBe('/messenger'); // "메일" became "메신저" (2026-11-07)
-    expect(MOVED).toMatchObject({ home: '/dashboard', budget: '/dashboard#cost', approvals: '/tasks', artifacts: '/tasks' });
+    expect(MOVED).toMatchObject({ approvals: '/tasks', artifacts: '/tasks' });
+    // decision 60: the dashboard and the messenger became account screens — the scope is the filter
+    expect(TO_ACCOUNT).toMatchObject({ dashboard: '/dashboard', home: '/dashboard', budget: '/dashboard#cost', messenger: '/messenger', mail: '/messenger' });
+    expect(accountTarget('dashboard', 'tesla', 'charging', '?x=1')).toEqual({ pathname: '/dashboard', search: '?x=1&org=tesla&ws=charging', hash: '' });
   });
 
   it.each([
-    ['/o/tesla/w/charging', '/o/tesla/w/charging/dashboard'],
-    ['/o/tesla/w/charging/home', '/o/tesla/w/charging/dashboard'],
-    ['/o/tesla/w/charging/budget', '/o/tesla/w/charging/dashboard#cost'],
+    ['/o/tesla/w/charging', '/o/tesla/w/charging/office'],
+    ['/o/tesla/w/charging/dashboard', '/dashboard?org=tesla&ws=charging'],
+    ['/o/tesla/w/charging/home', '/dashboard?org=tesla&ws=charging'],
+    ['/o/tesla/w/charging/budget', '/dashboard?org=tesla&ws=charging#cost'],
+    ['/o/tesla/w/charging/messenger', '/messenger?org=tesla&ws=charging'],
+    ['/o/tesla/w/charging/mail', '/messenger?org=tesla&ws=charging'],
     ['/o/tesla/w/charging/approvals?x=1', '/o/tesla/w/charging/tasks?x=1'],
     ['/o/tesla/w/charging/artifacts', '/o/tesla/w/charging/tasks'],
     ['/o/tesla/w/charging/screens/artifacts', '/o/tesla/w/charging/tasks'],
     ['/o/tesla/w/charging/artifacts/art-7', '/o/tesla/w/charging/tasks/artifacts/art-7'],
-    // 2026-11-09 — the scheduled runs left `schedule` (kept for the coming calendar); temporary redirect
-    ['/o/tesla/w/charging/schedule', '/o/tesla/w/charging/scheduled-jobs'],
-    ['/o/tesla/w/charging/schedule?x=1', '/o/tesla/w/charging/scheduled-jobs?x=1'],
   ])('%s → %s', async (from, to) => {
     stubApi({ '/budget': budget, '/schedules': schedules, '/work': { items: [] } });
     renderWith(
       <Routes>
         <Route path="o/:org/*" element={<><ScopeLayout /><Where /></>} />
+        <Route path="*" element={<Where />} />
       </Routes>,
       'en',
       { path: from },

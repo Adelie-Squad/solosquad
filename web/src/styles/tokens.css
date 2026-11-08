@@ -25,6 +25,14 @@
   --danger: #C2362B;
   --cheek: #E01FAE;
   --focus: #2867D0;
+  /* calendar category palette (DESIGN.md `## 색` 일정 구분 색) — dots and left borders only */
+  --cal-blue: #3A6FD8;
+  --cal-teal: #1F8079;
+  --cal-green: #5A7D1A;
+  --cal-gold: #A88414;
+  --cal-orange: #C0661A;
+  --cal-rose: #C2456E;
+  --cal-gray: var(--ink-3);
 
   --shadow-1: 0 1px 3px rgba(30,28,23,.08);
   --shadow-2: 0 4px 18px rgba(30,28,23,.08);
@@ -84,6 +92,12 @@
     --danger: #F2857A;
     --cheek: #F25CC8;
     --focus: #7FA6F5;
+    --cal-blue: #86A9F2;
+    --cal-teal: #5EC4B9;
+    --cal-green: #A9CB66;
+    --cal-gold: #E0C062;
+    --cal-orange: #F2A766;
+    --cal-rose: #F08FB0;
 
     --shadow-1: none;
     --shadow-2: 0 0 0 1px var(--line);
@@ -109,6 +123,12 @@
   --danger: #F2857A;
   --cheek: #F25CC8;
   --focus: #7FA6F5;
+  --cal-blue: #86A9F2;
+  --cal-teal: #5EC4B9;
+  --cal-green: #A9CB66;
+  --cal-gold: #E0C062;
+  --cal-orange: #F2A766;
+  --cal-rose: #F08FB0;
 
   --shadow-1: none;
   --shadow-2: 0 0 0 1px var(--line);

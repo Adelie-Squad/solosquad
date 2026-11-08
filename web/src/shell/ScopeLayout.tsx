@@ -1,16 +1,16 @@
 // The scoped part of the app (decision 57 · I40). `/o/<org>/…` is checked against the
 // person's assignments from /api/me before anything is fetched: a scope they are not
 // assigned to is "no such page" — the same answer as one that does not exist (C3 · C30).
+import { useEffect } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Mascot } from '../characters/PenguinIcon';
 import { useI18n } from '../i18n';
 import { LiveProvider } from '../live/LiveProvider';
 import { DeclarativeScreen } from '../screens/DeclarativeScreen';
-import { defaultScope, defaultWorkspace, findOrg, findWorkspace, routes, ScopeContext, useScope } from '../scope';
+import { defaultScope, defaultWorkspace, findOrg, findWorkspace, routes, ScopeContext, usePickedScope, useScope } from '../scope';
 import { useSession } from '../session';
 import { ArtifactView } from '../views/ArtifactView';
 import { ChatView } from '../views/ChatView';
-import { MessengerView } from '../views/MessengerView';
 import { OfficeDisplay } from '../views/OfficeDisplay';
 import { OfficeView } from '../views/OfficeView';
 import { ScheduleView } from '../views/ScheduleView';
@@ -25,22 +25,42 @@ export const LEGACY_WS = ['office', 'approvals', 'workflows', 'chat', 'artifacts
 /** Workspace screens the menu of 2026-11-07 folded into others: home → dashboard, the cost
  * screen → the dashboard's cost area, approvals and work products → Task. `:id` is carried over. */
 export const MOVED: Record<string, string> = {
-  home: '/dashboard',
-  budget: '/dashboard#cost',
   approvals: '/tasks',
   artifacts: '/tasks',
   'screens/artifacts': '/tasks',
-  'screens/home': '/dashboard',
   'artifacts/:id': '/tasks/artifacts/:id',
-  mail: '/messenger',
-  // 2026-11-09 — the scheduled runs moved off `schedule`, which the coming calendar menu will take;
-  // this redirect is temporary (DESIGN.md `## 컴포넌트` 예약된 작업)
-  schedule: '/scheduled-jobs',
 };
+
+/** Workspace screens that became account screens (decision 60): they open the account screen
+ * filtered to the workspace they came from. */
+export const TO_ACCOUNT: Record<string, string> = {
+  dashboard: '/dashboard',
+  home: '/dashboard',
+  'screens/home': '/dashboard',
+  budget: '/dashboard#cost',
+  messenger: '/messenger',
+  mail: '/messenger',
+};
+// (the temporary `schedule` → `scheduled-jobs` redirect of 2026-11-09 was removed with the calendar)
+
+/** `/o/<org>/w/<ws>/dashboard?x=1` → `/dashboard?x=1&org=<org>&ws=<ws>` (the scope becomes the filter). */
+export function accountTarget(pattern: string, org: string, ws: string, search = ''): { pathname: string; search: string; hash: string } {
+  const [pathname, hash] = TO_ACCOUNT[pattern].split('#');
+  const q = new URLSearchParams(search);
+  q.set('org', org);
+  q.set('ws', ws);
+  return { pathname, search: `?${q.toString()}`, hash: hash ? `#${hash}` : '' };
+}
 
 /** Where a moved workspace address goes now (inside the workspace, `:id` filled in). */
 export function movedTarget(pattern: string, params: Record<string, string | undefined>): string {
   return MOVED[pattern].replace(/:(\w+)/g, (_m, name: string) => encodeURIComponent(params[name] ?? ''));
+}
+
+function ToAccount({ from }: { from: string }) {
+  const { org = '', ws = '' } = useParams();
+  const location = useLocation();
+  return <Navigate to={accountTarget(from, org, ws, location.search)} replace />;
 }
 
 function Moved({ from }: { from: string }) {
@@ -100,13 +120,12 @@ export function ScopeLayout() {
       <Route element={<Shell />}>
         <Route index element={<Navigate to={routes.ws(org, shown)} replace />} />
         <Route path="w/:ws" element={<WorkspaceGate />}>
-          <Route index element={<Navigate to={routes.ws(org, shown, '/dashboard')} replace />} />
-          <Route path="dashboard" element={<DeclarativeScreen name="dashboard" />} />
+          <Route index element={<Navigate to={routes.ws(org, shown, '/office')} replace />} />
+          {/* the workspace's own declarative screen (I30) — the account dashboard links here */}
           <Route path="screens/:name" element={<DeclarativeScreen />} />
           <Route path="chat" element={<Navigate to="new" replace />} />
           <Route path="chat/:tid" element={<ChatView />} />
           <Route path="office" element={<OfficeView />} />
-          <Route path="messenger" element={<MessengerView />} />
           <Route path="tasks" element={<TasksView />} />
           <Route path="tasks/artifacts/:id" element={<ArtifactView />} />
           <Route path="workflows" element={<WorkflowsView />} />
@@ -116,6 +135,10 @@ export function ScopeLayout() {
           {/* the menu of 2026-11-07 — old addresses keep working */}
           {Object.keys(MOVED).map((from) => (
             <Route key={from} path={from} element={<Moved from={from} />} />
+          ))}
+          {/* decision 60 — the dashboard and the messenger belong to the whole account now */}
+          {Object.keys(TO_ACCOUNT).map((from) => (
+            <Route key={from} path={from} element={<ToAccount from={from} />} />
           ))}
           <Route path="*" element={<NotFoundInShell />} />
         </Route>
@@ -132,9 +155,19 @@ export function ScopeLayout() {
 
   return (
     <ScopeContext.Provider value={scope}>
+      <RememberScope org={org} ws={ws} />
       {running ? <LiveProvider key={`${org}/${shown}`}>{routesInScope}</LiveProvider> : routesInScope}
     </ScopeContext.Provider>
   );
+}
+
+/** The workspace in the address is the one the account screens' sidebar points to next. */
+function RememberScope({ org, ws }: { org: string; ws: string | null }) {
+  const { pick } = usePickedScope();
+  useEffect(() => {
+    if (ws !== null) pick({ org, ws });
+  }, [org, ws, pick]);
+  return null;
 }
 
 /** A workspace that is assigned but whose runtime did not start: say so instead of erroring. */
@@ -187,7 +220,7 @@ export function NotFoundPage() {
   );
 }
 
-function NoAssignment() {
+export function NoAssignment() {
   const { t } = useI18n();
   return (
     <div className="auth-page">

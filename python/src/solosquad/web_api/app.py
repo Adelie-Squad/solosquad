@@ -30,6 +30,7 @@ import asyncio
 import contextlib
 import hmac
 import json
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -67,6 +68,15 @@ from solosquad.approvals import (
     save_policy,
 )
 from solosquad.artifacts import ArtifactStore
+from solosquad.calendars import (
+    CalendarStore,
+    NotVisible,
+    Preset,
+    PresetError,
+    Viewer,
+    default_preset,
+    load_preset,
+)
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
 from solosquad.layout import LayoutError, ServerConfig, Solution, Workspace
@@ -199,6 +209,24 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "working": EVERYONE,
     "schedules.list": EVERYONE,  # switching a schedule = `workflows.update` (owner)
     "work.list": EVERYONE,
+    # calendar (decision 60) — customer level; each entry is then checked against the
+    # person's scopes (work = its org/workspace, personal = its owner only)
+    "calendar.list": EVERYONE,
+    "calendar.create": EVERYONE,
+    "calendar.get": EVERYONE,
+    "calendar.update": EVERYONE,
+    "calendar.delete": EVERYONE,
+    "calendar.todos.create": EVERYONE,
+    "calendar.todos.update": EVERYONE,
+    "calendar.todos.delete": EVERYONE,
+    "calendar.labels.list": EVERYONE,
+    "calendar.labels.create": EVERYONE,
+    "calendar.labels.update": EVERYONE,
+    "calendar.reorder": EVERYONE,
+    "calendar.agent_access.get": EVERYONE,  # each person's own setting
+    "calendar.agent_access.update": EVERYONE,
+    "calendar.agent_view": EVERYONE,  # own preview; the engine token for agents (v2.2)
+    "calendar.events": EVERYONE,
 }
 
 
@@ -312,6 +340,8 @@ class AppConfig:
     secure_cookies: bool = True
     closing: asyncio.Event | None = None
     """Set on shutdown so open event streams end instead of holding the server."""
+    calendar: CalendarStore | None = None
+    """The account's calendar (decision 60) — opened on `core.db` when not given."""
 
     @property
     def placed(self) -> set[Key]:
@@ -450,9 +480,36 @@ def _artifact_public(art: Any) -> dict[str, Any]:
     return out
 
 
+class CalendarHub:
+    """Live "calendar changed" notes for the account's open windows (decision 60). Each
+    client is held with who it is; a note goes only to people who may see the entry."""
+
+    def __init__(self) -> None:
+        self._clients: dict[asyncio.Queue[dict[str, Any]], Viewer] = {}
+
+    def publish(self, event: dict[str, Any], visible: Callable[[Viewer], bool]) -> None:
+        for q, who in list(self._clients.items()):
+            if visible(who):
+                q.put_nowait(event)
+
+    def add(self, who: Viewer) -> asyncio.Queue[dict[str, Any]]:
+        q: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self._clients[q] = who
+        return q
+
+    def drop(self, q: asyncio.Queue[dict[str, Any]]) -> None:
+        self._clients.pop(q, None)
+
+    @property
+    def size(self) -> int:
+        return len(self._clients)
+
+
 def create_app(cfg: AppConfig) -> Starlette:
     hubs: dict[Key, EventHub] = {}
     last_seen: dict[str, Key] = {}
+    cal = cfg.calendar or CalendarStore(cfg.accounts.path)
+    cal_hub = CalendarHub()
 
     # ------------------------------------------------------------------ the gate
 
@@ -2177,6 +2234,302 @@ def create_app(cfg: AppConfig) -> Starlette:
                 )
         return respond(list[S.ApprovalItem], sorted(out, key=lambda a: -float(a["created"])))
 
+    # ------------------------------------------------------------------ calendar (decision 60)
+
+    def viewer(who: Principal) -> Viewer:
+        """What this person may see of the calendar: work entries of the orgs (and
+        workspaces) they may enter — the same `role_in` as the scope gate — and their own
+        personal entries. The local CLI token has no personal calendar."""
+
+        def may_see(org: str, ws: str | None) -> bool:
+            if org not in served_orgs():
+                return False
+            if ws is not None and (org, ws) not in cfg.placed:
+                return False
+            return role_for(who, org, ws) is not None
+
+        return Viewer(who.user_id, may_see)
+
+    def hidden() -> ApiError:
+        return ApiError(404, E.NOT_FOUND, NOT_FOUND)  # foreign and missing read the same
+
+    def assignable_in(org: str | None, ws: str | None) -> Callable[[str], bool]:
+        def ok(uid: str) -> bool:
+            if org is None:
+                return False
+            try:
+                person = cfg.accounts.user(uid)
+            except KeyError:
+                return False
+            return cfg.accounts.role_in(person, org, ws) is not None
+
+        return ok
+
+    def preset_for(errors: dict[str, str]) -> Callable[[str], Preset]:
+        def find(org: str) -> Preset:
+            try:
+                found = load_preset(cfg.solution.org(org).root)
+            except PresetError as e:
+                errors[org] = str(e)
+                found = None
+            except LayoutError:
+                found = None
+            return found or default_preset(customer_locale())
+
+        return find
+
+    def cal_note(
+        event: str,
+        item: dict[str, Any] | None = None,
+        *,
+        org: str | None = None,
+        owner: str | None = None,
+    ) -> None:
+        note: dict[str, Any] = {"ts": time.time(), "event": event}
+        ws: str | None = None
+        if item is not None:
+            note.update(kind=item["kind"], org=item["org"], workspace=item["workspace"],
+                        item_id=item["id"])  # fmt: skip
+            org, owner, ws = item["org"], item["owner_id"], item["workspace"]
+        else:
+            note.update(kind="personal" if owner else "work", org=org)
+
+        def visible(v: Viewer) -> bool:
+            if owner is not None:
+                return v.user_id == owner
+            return org is not None and v.may_see(org, ws)
+
+        cal_hub.publish(S.conform(S.CalendarEvent, note), visible)
+
+    def cal_audit(who: Principal, item: dict[str, Any], action: str, what: str = "") -> None:
+        """Work entries are the business's records — their changes go to the org audit.
+        Personal entries are nobody else's business and are not logged."""
+        if item["kind"] != "work" or not item["org"]:
+            return
+        store = cfg.orgs.get(item["org"])
+        if store is not None:
+            detail = f"{item['id']} {item['title']}" + (f" / {what}" if what else "")
+            store.audit(who.user_id, action, detail, workspace=item["workspace"])
+
+    def label_audit(who: Principal, label: dict[str, Any], action: str) -> None:
+        if label["scope_kind"] != "org":
+            return
+        store = cfg.orgs.get(label["scope"])
+        if store is not None:
+            store.audit(who.user_id, action, f"{label['type']} {label['name']}")
+
+    def flag(raw: str | None) -> bool | None:
+        return None if raw is None else raw.lower() in ("1", "true", "yes")
+
+    async def calendar_items(request: Request) -> Response:
+        if request.method == "POST":
+            who = need(request, "calendar.create")
+            try:
+                item = cal.create_item(viewer(who), await body(request))
+            except NotVisible as e:
+                raise hidden() from e
+            cal_audit(who, item, "calendar.create")
+            cal_note("calendar.changed", item)
+            return respond(S.CalendarItem, item, 201)
+        who = need(request, "calendar.list")
+        q = request.query_params
+        kind = q.get("kind")
+        if kind is not None and kind not in ("work", "personal"):
+            raise ApiError(400, E.CALENDAR_KIND_INVALID, "kind must be work or personal")
+        found = cal.list_range(
+            viewer(who),
+            start=q.get("from") or "",
+            end=q.get("to") or "",
+            kind=kind,
+            org=q.get("org"),
+            workspace=q.get("workspace"),
+            category=q.get("category"),
+            tag=q.get("tag"),
+            done=flag(q.get("done")),
+            undated=bool(flag(q.get("undated"))),
+        )
+        return respond(S.CalendarList, found)
+
+    async def calendar_item(request: Request) -> Response:
+        iid = request.path_params["iid"]
+        try:
+            if request.method == "PATCH":
+                who = need(request, "calendar.update")
+                item = cal.update_item(iid, viewer(who), await body(request))
+                cal_audit(who, item, "calendar.update")
+                cal_note("calendar.changed", item)
+                return respond(S.CalendarItem, item)
+            if request.method == "DELETE":
+                who = need(request, "calendar.delete")
+                item = cal.delete_item(iid, viewer(who))
+                cal_audit(who, item, "calendar.delete")
+                cal_note("calendar.changed", item)
+                return respond(S.Ok, {"ok": True})
+            who = need(request, "calendar.get")
+            return respond(S.CalendarDetail, cal.detail(iid, viewer(who)))
+        except NotVisible as e:
+            raise hidden() from e
+
+    async def calendar_todos(request: Request) -> Response:
+        who = need(request, "calendar.todos.create")
+        iid = request.path_params["iid"]
+        v = viewer(who)
+        try:
+            owner = cal.item(iid, v)
+            todo, item = cal.create_todo(
+                iid, v, await body(request),
+                assignable=assignable_in(owner["org"], owner["workspace"]),
+            )  # fmt: skip
+        except NotVisible as e:
+            raise hidden() from e
+        cal_audit(who, item, "calendar.todo.create", todo["title"])
+        cal_note("calendar.changed", item)
+        return respond(S.CalendarTodoOut, {"todo": todo, "item": item}, 201)
+
+    async def calendar_todo(request: Request) -> Response:
+        tid = request.path_params["tid"]
+        try:
+            if request.method == "DELETE":
+                who = need(request, "calendar.todos.delete")
+                todo, item = cal.delete_todo(tid, viewer(who))
+                cal_audit(who, item, "calendar.todo.delete", todo["title"])
+                cal_note("calendar.changed", item)
+                return respond(S.Ok, {"ok": True})
+            who = need(request, "calendar.todos.update")
+            v = viewer(who)
+            data = await body(request)
+            _old, owner = cal.todo(tid, v)
+            todo, item = cal.update_todo(
+                tid, v, data, assignable=assignable_in(owner["org"], owner["workspace"])
+            )
+        except NotVisible as e:
+            raise hidden() from e
+        cal_audit(who, item, "calendar.todo.update", todo["title"])
+        cal_note("calendar.changed", item)
+        return respond(S.CalendarTodoOut, {"todo": todo, "item": item})
+
+    async def calendar_labels(request: Request) -> Response:
+        if request.method == "POST":
+            who = need(request, "calendar.labels.create")
+            try:
+                label = cal.create_label(viewer(who), await body(request))
+            except NotVisible as e:
+                raise hidden() from e
+            label_audit(who, label, "calendar.label.create")
+            org, owner = label_scope(label)
+            cal_note("calendar.labels", org=org, owner=owner)
+            return respond(S.CalendarLabel, label, 201)
+        who = need(request, "calendar.labels.list")
+        wanted = request.query_params.get("org")
+        orgs = [wanted] if wanted else sorted(served_orgs())
+        errors: dict[str, str] = {}
+        own_locale = (who.session.user.locale if who.session else "") or customer_locale()
+        found = cal.labels(
+            viewer(who),
+            orgs,
+            preset_for=preset_for(errors),
+            personal_preset=default_preset(own_locale, personal=True),
+        )
+        return respond(S.CalendarLabels, {**found, "preset_errors": errors})
+
+    def label_scope(label: dict[str, Any]) -> tuple[str | None, str | None]:
+        if label["scope_kind"] == "user":
+            return None, label["scope"]
+        return label["scope"], None
+
+    async def calendar_label(request: Request) -> Response:
+        who = need(request, "calendar.labels.update")
+        try:
+            label = cal.update_label(request.path_params["lid"], viewer(who), await body(request))
+        except NotVisible as e:
+            raise hidden() from e
+        label_audit(who, label, "calendar.label.update")
+        org, owner = label_scope(label)
+        cal_note("calendar.labels", org=org, owner=owner)
+        return respond(S.CalendarLabel, label)
+
+    async def calendar_reorder(request: Request) -> Response:
+        who = need(request, "calendar.reorder")
+        data = await body(request)
+        ids = data.get("ids")
+        if not isinstance(ids, list):
+            raise ApiError(400, E.CALENDAR_REORDER_INVALID, "ids must be a list")
+        what = str(data.get("type") or "")
+        v = viewer(who)
+        try:
+            org = cal.reorder(v, what, [str(i) for i in ids])
+            if what == "labels":
+                cal_note("calendar.labels", org=org, owner=None if org else who.user_id)
+            elif what == "items":
+                cal_note("calendar.changed", cal.item(str(ids[0]), v))
+            else:
+                cal_note("calendar.changed", cal.todo(str(ids[0]), v)[1])
+        except NotVisible as e:
+            raise hidden() from e
+        return respond(S.Ok, {"ok": True})
+
+    async def calendar_agent_access(request: Request) -> Response:
+        """The person's own choice of how much agents may read of their personal entries
+        (decision 60 rev — off · busy/free · full). People never see them either way."""
+        if request.method == "PUT":
+            who = need(request, "calendar.agent_access.update")
+            if who.session is None:
+                raise ApiError(400, E.CALENDAR_KIND_INVALID, "personal settings need a person")
+            level = str((await body(request)).get("level") or "")
+            before = cal.agent_access(who.session.user.id)
+            after = cal.set_agent_access(who.session.user.id, level)
+            if before != after:
+                cfg.accounts.audit(who.user_id, "calendar.agent_access", f"{before} -> {after}")
+            return respond(S.CalendarAgentAccess, {"level": after})
+        who = need(request, "calendar.agent_access.get")
+        uid = who.session.user.id if who.session else None
+        return respond(S.CalendarAgentAccess, {"level": cal.agent_access(uid) if uid else "off"})
+
+    async def calendar_agent_view(request: Request) -> Response:
+        """What an agent working for `user` may read of their personal entries, at the
+        level that person chose — the read path an agent tool uses (v2.2). The engine's own
+        token may ask for anyone; a signed-in person only for themselves (a preview of what
+        agents see). Anyone else's → the same 404 as a missing one."""
+        who = need(request, "calendar.agent_view")
+        q = request.query_params
+        uid = q.get("user") or (who.user_id or "")
+        if who.session is not None and uid != who.session.user.id:
+            raise hidden()
+        try:
+            cfg.accounts.user(uid)
+        except KeyError as e:
+            raise hidden() from e
+        view = cal.agent_view(uid, start=q.get("from") or "", end=q.get("to") or "")
+        return respond(S.CalendarAgentView, view)
+
+    async def calendar_events(request: Request) -> Response:
+        who = need(request, "calendar.events")
+        q = cal_hub.add(viewer(who))
+
+        async def stream() -> AsyncIterator[bytes]:
+            closing = cfg.closing or asyncio.Event()
+            stop = asyncio.ensure_future(closing.wait())
+            nxt = asyncio.ensure_future(q.get())
+            await asyncio.sleep(0)
+            yield b"retry: 3000\n: connected\n\n"
+            try:
+                while True:
+                    done, _ = await asyncio.wait({nxt, stop}, return_when=asyncio.FIRST_COMPLETED)
+                    if stop in done:
+                        return
+                    yield b"data: " + dumps(nxt.result()) + b"\n\n"
+                    nxt = asyncio.ensure_future(q.get())
+            finally:
+                stop.cancel()
+                nxt.cancel()
+                cal_hub.drop(q)
+
+        return StreamingResponse(
+            stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
     # ------------------------------------------------------------------ errors · routes
 
     def error(status: int, message: str, code: E, params: dict[str, Any] | None = None) -> Json:
@@ -2222,6 +2575,16 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/profile", profile, ["GET", "PUT"]),
         ("/snapshot", snapshot, ["GET", "PUT"]),
         ("/snapshot/run", snapshot_run, ["POST"]),
+        ("/calendar/items", calendar_items, ["GET", "POST"]),
+        ("/calendar/items/{iid}", calendar_item, ["GET", "PATCH", "DELETE"]),
+        ("/calendar/items/{iid}/todos", calendar_todos, ["POST"]),
+        ("/calendar/todos/{tid}", calendar_todo, ["PATCH", "DELETE"]),
+        ("/calendar/labels", calendar_labels, ["GET", "POST"]),
+        ("/calendar/labels/{lid}", calendar_label, ["PATCH"]),
+        ("/calendar/reorder", calendar_reorder, ["POST"]),
+        ("/calendar/agent-access", calendar_agent_access, ["GET", "PUT"]),
+        ("/calendar/agent-view", calendar_agent_view, ["GET"]),
+        ("/calendar/events", calendar_events, ["GET"]),
     ]
     org: Table = [
         ("/org-chart", org_chart, ["GET"]),

@@ -156,6 +156,36 @@
     },
     "SnapshotRunResult": {
       "$ref": "#/$defs/SnapshotRunResult"
+    },
+    "CalendarItem": {
+      "$ref": "#/$defs/CalendarItem"
+    },
+    "CalendarTodo": {
+      "$ref": "#/$defs/CalendarTodo"
+    },
+    "CalendarList": {
+      "$ref": "#/$defs/CalendarList"
+    },
+    "CalendarDetail": {
+      "$ref": "#/$defs/CalendarDetail"
+    },
+    "CalendarTodoOut": {
+      "$ref": "#/$defs/CalendarTodoOut"
+    },
+    "CalendarLabel": {
+      "$ref": "#/$defs/CalendarLabel"
+    },
+    "CalendarLabels": {
+      "$ref": "#/$defs/CalendarLabels"
+    },
+    "CalendarEvent": {
+      "$ref": "#/$defs/CalendarEvent"
+    },
+    "CalendarAgentAccess": {
+      "$ref": "#/$defs/CalendarAgentAccess"
+    },
+    "CalendarAgentView": {
+      "$ref": "#/$defs/CalendarAgentView"
     }
   },
   "required": [
@@ -209,7 +239,17 @@
     "CustomerProfile",
     "ProfileResponse",
     "SnapshotSettings",
-    "SnapshotRunResult"
+    "SnapshotRunResult",
+    "CalendarItem",
+    "CalendarTodo",
+    "CalendarList",
+    "CalendarDetail",
+    "CalendarTodoOut",
+    "CalendarLabel",
+    "CalendarLabels",
+    "CalendarEvent",
+    "CalendarAgentAccess",
+    "CalendarAgentView"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -301,6 +341,92 @@
       ],
       "type": "object",
       "title": "Agent"
+    },
+    "AgentBlock": {
+      "additionalProperties": false,
+      "description": "One personal entry as an agent may read it. At `busy` only the times are set.",
+      "properties": {
+        "start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "all_day": {
+          "type": "boolean"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "planned",
+                "active",
+                "done",
+                "canceled"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "all_day",
+        "id",
+        "title",
+        "notes",
+        "status"
+      ],
+      "type": "object",
+      "title": "AgentBlock"
     },
     "AgentCard": {
       "additionalProperties": false,
@@ -782,6 +908,538 @@
       ],
       "type": "object",
       "title": "BudgetLine"
+    },
+    "CalendarAgentAccess": {
+      "additionalProperties": false,
+      "description": "How much agents may read of this person's personal entries (decision 60 rev):\n`off` (default) nothing · `busy` time blocks only · `full` titles, times and notes.",
+      "properties": {
+        "level": {
+          "enum": [
+            "off",
+            "busy",
+            "full"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "level"
+      ],
+      "type": "object",
+      "title": "CalendarAgentAccess"
+    },
+    "CalendarAgentView": {
+      "additionalProperties": false,
+      "description": "`GET /api/calendar/agent-view` — the read path for an agent tool (v2.2).",
+      "properties": {
+        "user_id": {
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "off",
+            "busy",
+            "full"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/AgentBlock"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "user_id",
+        "level",
+        "start",
+        "end",
+        "entries"
+      ],
+      "type": "object",
+      "title": "CalendarAgentView"
+    },
+    "CalendarDetail": {
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/CalendarItem"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CalendarItem"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "children": {
+          "items": {
+            "$ref": "#/$defs/CalendarItem"
+          },
+          "type": "array"
+        },
+        "todos": {
+          "items": {
+            "$ref": "#/$defs/CalendarTodo"
+          },
+          "type": "array"
+        },
+        "child_todos": {
+          "items": {
+            "$ref": "#/$defs/CalendarTodo"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "item",
+        "parent",
+        "children",
+        "todos",
+        "child_todos"
+      ],
+      "type": "object",
+      "title": "CalendarDetail"
+    },
+    "CalendarEvent": {
+      "additionalProperties": false,
+      "description": "One `GET /api/calendar/events` message — \"something changed, refetch\". Carries ids\nonly, and reaches only people who may see the entry (a personal one: its owner).",
+      "properties": {
+        "ts": {
+          "type": "number"
+        },
+        "event": {
+          "enum": [
+            "calendar.changed",
+            "calendar.labels"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "work",
+                "personal"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "org": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "workspace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "ts",
+        "event",
+        "kind",
+        "org",
+        "workspace",
+        "item_id"
+      ],
+      "type": "object",
+      "title": "CalendarEvent"
+    },
+    "CalendarItem": {
+      "additionalProperties": false,
+      "description": "A 항목 (`parent_id` null) or a 세부 항목 (one level below). `start`/`end` are a date\n(`2026-11-20`, all day) or a local date-time (`2026-11-20T14:00`) — never a timestamp,\nso a day stays the day it was written on.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "work",
+            "personal"
+          ],
+          "type": "string"
+        },
+        "org": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workspace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "owner_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "all_day": {
+          "type": "boolean"
+        },
+        "category_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tag_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "planned",
+            "active",
+            "done",
+            "canceled"
+          ],
+          "type": "string"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "created_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created": {
+          "type": "number"
+        },
+        "updated": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "org",
+        "workspace",
+        "owner_id",
+        "parent_id",
+        "title",
+        "notes",
+        "start",
+        "end",
+        "all_day",
+        "category_id",
+        "tag_ids",
+        "status",
+        "position",
+        "created_by",
+        "created",
+        "updated"
+      ],
+      "type": "object",
+      "title": "CalendarItem"
+    },
+    "CalendarLabel": {
+      "additionalProperties": false,
+      "description": "구분 (`category`) or 태그 (`tag`) — per org (`scope_kind` org) for work entries, per\nperson (`user`) for personal ones.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "category",
+            "tag"
+          ],
+          "type": "string"
+        },
+        "scope_kind": {
+          "enum": [
+            "org",
+            "user"
+          ],
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "color": {
+          "enum": [
+            "blue",
+            "teal",
+            "green",
+            "gold",
+            "orange",
+            "rose",
+            "gray"
+          ],
+          "type": "string"
+        },
+        "archived": {
+          "type": "boolean"
+        },
+        "position": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "scope_kind",
+        "scope",
+        "name",
+        "color",
+        "archived",
+        "position"
+      ],
+      "type": "object",
+      "title": "CalendarLabel"
+    },
+    "CalendarLabels": {
+      "additionalProperties": false,
+      "properties": {
+        "labels": {
+          "items": {
+            "$ref": "#/$defs/CalendarLabel"
+          },
+          "type": "array"
+        },
+        "seeded": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
+        "preset_errors": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "labels",
+        "seeded",
+        "preset_errors"
+      ],
+      "type": "object",
+      "title": "CalendarLabels"
+    },
+    "CalendarList": {
+      "additionalProperties": false,
+      "description": "`GET /api/calendar/items?from=&to=` — what overlaps those days (inclusive).",
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/CalendarItem"
+          },
+          "type": "array"
+        },
+        "todos": {
+          "items": {
+            "$ref": "#/$defs/CalendarTodo"
+          },
+          "type": "array"
+        },
+        "context": {
+          "items": {
+            "$ref": "#/$defs/CalendarItem"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "items",
+        "todos",
+        "context"
+      ],
+      "type": "object",
+      "title": "CalendarList"
+    },
+    "CalendarTodo": {
+      "additionalProperties": false,
+      "description": "A 할 일 under a 항목 or 세부 항목. One with `due` shows on the calendar that day.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "item_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "done": {
+          "type": "boolean"
+        },
+        "due": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assignee_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer"
+        },
+        "created": {
+          "type": "number"
+        },
+        "updated": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "item_id",
+        "title",
+        "done",
+        "due",
+        "assignee_id",
+        "position",
+        "created",
+        "updated"
+      ],
+      "type": "object",
+      "title": "CalendarTodo"
+    },
+    "CalendarTodoOut": {
+      "additionalProperties": false,
+      "properties": {
+        "todo": {
+          "$ref": "#/$defs/CalendarTodo"
+        },
+        "item": {
+          "$ref": "#/$defs/CalendarItem"
+        }
+      },
+      "required": [
+        "todo",
+        "item"
+      ],
+      "type": "object",
+      "title": "CalendarTodoOut"
     },
     "ChatMessage": {
       "additionalProperties": false,
@@ -1296,7 +1954,19 @@
         "workflow_input_invalid",
         "upload_type",
         "upload_empty",
-        "upload_too_large"
+        "upload_too_large",
+        "calendar_title_required",
+        "calendar_date_invalid",
+        "calendar_kind_invalid",
+        "calendar_org_required",
+        "calendar_parent_invalid",
+        "calendar_status_invalid",
+        "calendar_label_invalid",
+        "calendar_label_exists",
+        "calendar_color_invalid",
+        "calendar_assignee_invalid",
+        "calendar_reorder_invalid",
+        "calendar_agent_access_invalid"
       ],
       "type": "string",
       "title": "ErrorCode"
