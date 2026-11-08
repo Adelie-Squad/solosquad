@@ -8,7 +8,14 @@ import { loginFor, officeHref, safeNext, signedIn } from './auth/next';
 import { useSessionSync } from './auth/sessionSync';
 import { isLocale, useI18n } from './i18n';
 import { SessionContext, sessionFrom } from './session';
+import { CalendarLive } from './live/CalendarLive';
+import { AccountLayout, PickedScopeProvider } from './shell/AccountLayout';
 import { LegacyRedirect, RootRedirect, ScopeLayout } from './shell/ScopeLayout';
+import { AccountDashboard } from './views/AccountDashboard';
+import { MessengerView } from './views/MessengerView';
+
+// the calendar is its own chunk — month · week · list, the drawer and the settings
+const CalendarView = lazy(() => import('./views/calendar/CalendarView').then((m) => ({ default: m.CalendarView })));
 
 // the landing is its own chunk — people inside the app never download it (its 3D part is a further chunk)
 const Landing = lazy(() => import('./landing/Landing').then((m) => ({ default: m.Landing })));
@@ -79,13 +86,29 @@ function AppRoute() {
   );
 }
 
-/** Signed-in addresses: `/o` → the last scope · `/o/<org>/…` scoped screens · old unscoped addresses → the current scope. */
+/** Signed-in addresses: the account screens (`/dashboard` · `/calendar` · `/messenger`, decision 60) ·
+ * `/o` → the last scope · `/o/<org>/…` scoped screens · old unscoped addresses → the current scope. */
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route path="o" element={<RootRedirect />} />
-      <Route path="o/:org/*" element={<ScopeLayout />} />
-      <Route path="*" element={<LegacyRedirect />} />
-    </Routes>
+    <PickedScopeProvider>
+      <CalendarLive />
+      <Routes>
+        <Route element={<AccountLayout />}>
+          <Route path="dashboard" element={<AccountDashboard />} />
+          <Route
+            path="calendar"
+            element={
+              <Suspense fallback={<div className="view" />}>
+                <CalendarView />
+              </Suspense>
+            }
+          />
+          <Route path="messenger" element={<MessengerView />} />
+        </Route>
+        <Route path="o" element={<RootRedirect />} />
+        <Route path="o/:org/*" element={<ScopeLayout />} />
+        <Route path="*" element={<LegacyRedirect />} />
+      </Routes>
+    </PickedScopeProvider>
   );
 }

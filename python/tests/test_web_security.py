@@ -69,6 +69,22 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "snapshot.get": ("GET", f"{CUST}/snapshot", None),
     "snapshot.update": ("PUT", f"{CUST}/snapshot", {"type": None}),
     "snapshot.run": ("POST", f"{CUST}/snapshot/run", None),
+    "calendar.list": ("GET", f"{CUST}/calendar/items", None),
+    "calendar.create": ("POST", f"{CUST}/calendar/items", {"kind": "work", "org": "tesla"}),
+    "calendar.get": ("GET", f"{CUST}/calendar/items/{{iid}}", None),
+    "calendar.update": ("PATCH", f"{CUST}/calendar/items/{{iid}}", {"title": "t"}),
+    "calendar.delete": ("DELETE", f"{CUST}/calendar/items/{{iid}}", None),
+    "calendar.todos.create": ("POST", f"{CUST}/calendar/items/{{iid}}/todos", {"title": "t"}),
+    "calendar.todos.update": ("PATCH", f"{CUST}/calendar/todos/{{tid}}", {"done": True}),
+    "calendar.todos.delete": ("DELETE", f"{CUST}/calendar/todos/{{tid}}", None),
+    "calendar.labels.list": ("GET", f"{CUST}/calendar/labels", None),
+    "calendar.labels.create": ("POST", f"{CUST}/calendar/labels", {"type": "tag"}),
+    "calendar.labels.update": ("PATCH", f"{CUST}/calendar/labels/{{lid}}", {"name": "n"}),
+    "calendar.reorder": ("POST", f"{CUST}/calendar/reorder", {"type": "items", "ids": []}),
+    "calendar.agent_access.get": ("GET", f"{CUST}/calendar/agent-access", None),
+    "calendar.agent_access.update": ("PUT", f"{CUST}/calendar/agent-access", {"level": "off"}),
+    "calendar.agent_view": ("GET", f"{CUST}/calendar/agent-view", None),
+    "calendar.events": ("GET", f"{CUST}/calendar/events", None),
     # org
     "org_chart": ("GET", f"{ORG}/org-chart", None),
     "people.list": ("GET", f"{ORG}/people", None),
@@ -337,7 +353,7 @@ async def test_c15_staff_is_refused_every_owner_only_key(office: Office) -> None
         # what staff may do passes the role check (it may still fail for its own reasons)
         for key in sorted(k for k, roles in ROUTE_ROLES.items() if Role.STAFF in roles):
             method, template, body = KEYS[key]
-            if key == "events":
+            if key in ("events", "calendar.events"):
                 continue  # a stream — it opens; the sweep would wait on it forever
             r = await kim.request(method, _fill(template, **ids), json=body, headers=hk)
             code = r.json().get("code") if r.status_code >= 400 else None

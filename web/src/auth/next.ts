@@ -28,9 +28,17 @@ export function loginFor(address: string): string {
   return next ? `${LOGIN}?next=${encodeURIComponent(next)}` : LOGIN;
 }
 
-/** The person's office: the last scope they used, else their first assignment, else `/o`
- * (which says that nothing is assigned yet). */
+/** Where a person lands: the account dashboard (decision 60) — its sidebar points at the last
+ * scope they used, else their first assignment — or `/o` (which says that nothing is assigned yet). */
 export function officeHref(me: Pick<Me, 'scopes' | 'last_scope'>): string {
+  return defaultScope(me) ? ACCOUNT_HOME : '/o';
+}
+
+/** The first account screen. */
+export const ACCOUNT_HOME = '/dashboard';
+
+/** The last scope's own workspace address (the office), for links that want a workspace. */
+export function workspaceHref(me: Pick<Me, 'scopes' | 'last_scope'>): string {
   const s = defaultScope(me);
   return s ? routes.ws(s.org, s.ws) : '/o';
 }

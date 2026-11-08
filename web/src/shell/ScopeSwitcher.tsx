@@ -8,7 +8,7 @@ import type { ScopeOrg } from '../api/types.gen';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { orgName as orgNameOf, shownName, workspaceName } from '../lib/names';
-import { routes, useScope } from '../scope';
+import { routes, usePickedScope, useScope } from '../scope';
 import { useSession } from '../session';
 
 export interface ScopeChoice {
@@ -32,11 +32,12 @@ export function scopeChoices(scopes: ScopeOrg[]): ScopeChoice[] {
   );
 }
 
-export function ScopeSwitcher() {
+export function ScopeSwitcher({ compact = false }: { compact?: boolean }) {
   const { t } = useI18n();
   const { me } = useSession();
   const scope = useScope();
   const navigate = useNavigate();
+  const { pick } = usePickedScope();
   const choices = scopeChoices(me.scopes);
   const here = choices.findIndex((c) => c.org === scope.org && c.ws === scope.ws);
   const [open, setOpen] = useState(false);
@@ -53,7 +54,7 @@ export function ScopeSwitcher() {
     }
   }, [open, here]);
 
-  if (choices.length <= 1) {
+  if (choices.length <= 1 && !compact) {
     return (
       <div className="scope-switch is-single" aria-label={t('scope.current')}>
         <strong title={orgName}>{orgName}</strong>
@@ -64,7 +65,9 @@ export function ScopeSwitcher() {
 
   const go = (c: ScopeChoice) => {
     setOpen(false);
-    navigate(routes.ws(c.org, c.ws));
+    // an account screen stays where it is — only the workspace tiles below follow the choice
+    if (scope.account) pick({ org: c.org, ws: c.ws });
+    else navigate(routes.ws(c.org, c.ws));
   };
 
   const onKey = (e: KeyboardEvent) => {
@@ -84,30 +87,12 @@ export function ScopeSwitcher() {
     }
   };
 
-  return (
-    <div className="scope-switch">
-      <button
-        className="scope-switch-button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown' && !open) {
-            e.preventDefault();
-            setOpen(true);
-          }
-        }}
-      >
-        <strong title={orgName}>{orgName}</strong>
-        <span title={wsName}>{current?.wsDisplay ?? wsName}</span>
-        <ICON.switch className="scope-switch-caret" />
-      </button>
-      {open && (
+  const menu = (extra = '') => (
         <>
           <div className="scope-switch-scrim" onClick={() => setOpen(false)} aria-hidden />
           <ul
             ref={listRef}
-            className="scope-switch-menu"
+            className={`scope-switch-menu ${extra}`.trim()}
             role="listbox"
             tabIndex={-1}
             aria-label={t('scope.switch')}
@@ -137,7 +122,47 @@ export function ScopeSwitcher() {
             })}
           </ul>
         </>
-      )}
+  );
+
+  if (compact) {
+    // the rail: the business's first letter opens the same menu (or just names it, when only one)
+    const label = `${t('scope.current')} · ${orgName} · ${wsName}`;
+    return (
+      <div className="scope-switch is-rail">
+        <button
+          className="rail-scope"
+          aria-label={label}
+          title={label}
+          aria-haspopup={choices.length > 1 ? 'listbox' : undefined}
+          aria-expanded={choices.length > 1 ? open : undefined}
+          onClick={() => choices.length > 1 && setOpen((o) => !o)}
+        >
+          {Array.from(orgName)[0] ?? '?'}
+        </button>
+        {open && choices.length > 1 && menu('rail-scope-menu')}
+      </div>
+    );
+  }
+
+  return (
+    <div className="scope-switch">
+      <button
+        className="scope-switch-button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' && !open) {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+      >
+        <strong title={orgName}>{orgName}</strong>
+        <span title={wsName}>{current?.wsDisplay ?? wsName}</span>
+        <ICON.switch className="scope-switch-caret" />
+      </button>
+      {open && menu()}
     </div>
   );
 }

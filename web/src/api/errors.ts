@@ -68,6 +68,18 @@ export const ERROR_KEYS: Record<ErrorCode, MessageKey> = {
   upload_type: 'error.upload_type',
   upload_empty: 'error.upload_empty',
   upload_too_large: 'error.upload_too_large',
+  calendar_title_required: 'error.calendar_title_required',
+  calendar_date_invalid: 'error.calendar_date_invalid',
+  calendar_kind_invalid: 'error.calendar_kind_invalid',
+  calendar_org_required: 'error.calendar_org_required',
+  calendar_parent_invalid: 'error.calendar_parent_invalid',
+  calendar_status_invalid: 'error.calendar_status_invalid',
+  calendar_label_invalid: 'error.calendar_label_invalid',
+  calendar_label_exists: 'error.calendar_label_exists',
+  calendar_color_invalid: 'error.calendar_color_invalid',
+  calendar_assignee_invalid: 'error.calendar_assignee_invalid',
+  calendar_reorder_invalid: 'error.calendar_reorder_invalid',
+  calendar_agent_access_invalid: 'error.calendar_agent_access_invalid',
 };
 
 export function isErrorCode(code: unknown): code is ErrorCode {

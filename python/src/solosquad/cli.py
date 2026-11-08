@@ -1130,6 +1130,35 @@ def accounts_create_owner(
     console.print("[green]one-time code enrolled[/green]")
 
 
+calendar_app = typer.Typer(no_args_is_help=True, help="The account's calendar (일정).")
+app.add_typer(calendar_app, name="calendar")
+
+
+@calendar_app.command("demo")
+def calendar_demo(
+    org: Annotated[str, typer.Option("--org", help="The business the demo entries belong to.")],
+    owner: Annotated[
+        str | None, typer.Option("--owner", help="Username whose personal entries to add.")
+    ] = None,
+    solution: SolutionOpt = Path("."),
+) -> None:
+    """Add the decision-60 example (2차 모두의 창업 · 세부 항목 · 할 일 · 구분 · 태그) around
+    today — for demos and screenshots, never on a customer's real calendar."""
+    import datetime as dt
+
+    from solosquad.calendars import CalendarStore, seed_demo
+
+    store = _accounts(solution)
+    uid = None
+    if owner:
+        found = [u for u in store.users() if u.username == owner.strip().lower()]
+        if not found:
+            raise _fail(f"no account {owner!r}")
+        uid = found[0].id
+    ids = seed_demo(CalendarStore(store.path), org, uid, today=dt.date.today().isoformat())
+    console.print(f"added {len(ids)} calendar entries to {org!r}")
+
+
 @accounts_app.command("list")
 def accounts_list(solution: SolutionOpt = Path(".")) -> None:
     """Accounts of the customer and what each is assigned to."""
