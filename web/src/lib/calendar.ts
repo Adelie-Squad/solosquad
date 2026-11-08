@@ -121,6 +121,8 @@ export interface DayEntry {
   todo?: CalendarTodo;
   /** First day of a multi-day item (its title is written there; the others continue it). */
   starts: boolean;
+  /** The day is a Monday — a span that runs on names itself again at the start of the week. */
+  weekStart?: boolean;
 }
 
 /** What one day shows: items covering it (timed ones by time), then to-dos due that day. */
@@ -128,7 +130,7 @@ export function entriesOn(day: string, items: CalendarItem[], todos: CalendarTod
   const its = items
     .filter((i) => covers(i, day))
     .sort((a, b) => (timeOf(a.start) ?? '').localeCompare(timeOf(b.start) ?? '') || a.position - b.position)
-    .map<DayEntry>((i) => ({ kind: 'item', id: i.id, item: i, starts: span(i)?.[0] === day }));
+    .map<DayEntry>((i) => ({ kind: 'item', id: i.id, item: i, starts: span(i)?.[0] === day, weekStart: weekStart(day) === day }));
   const tds = todos
     .filter((t) => t.due && t.due.slice(0, 10) === day && itemById.has(t.item_id))
     .map<DayEntry>((t) => ({ kind: 'todo', id: t.id, item: itemById.get(t.item_id)!, todo: t, starts: true }));

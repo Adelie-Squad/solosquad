@@ -100,8 +100,12 @@ export function CalendarView() {
     return parent ? `${where} › ${parent.title}` : where;
   };
   const open = (id: string) => set({ item: id });
-  const filterCats = maps.all.filter((l) => l.type === 'category' && !l.archived && (q.kind === 'personal' ? l.scope_kind === 'user' : q.kind === 'work' ? l.scope_kind === 'org' : true) && (!q.org || l.scope_kind === 'user' || l.scope === q.org));
-  const filterTags = maps.all.filter((l) => l.type === 'tag' && !l.archived && (q.kind === 'personal' ? l.scope_kind === 'user' : q.kind === 'work' ? l.scope_kind === 'org' : true) && (!q.org || l.scope_kind === 'user' || l.scope === q.org));
+  // 구분 and tags belong to one scope (a business, or my personal events): their chips show once
+  // the filter has narrowed to one — two businesses' "서류" are different labels
+  const onlyOrg = q.org ?? (me.scopes.length === 1 && q.kind === 'work' ? me.scopes[0].org : null);
+  const labelScope = (l: { scope_kind: string; scope: string }) => (q.kind === 'personal' ? l.scope_kind === 'user' : !!onlyOrg && l.scope_kind === 'org' && l.scope === onlyOrg);
+  const filterCats = maps.all.filter((l) => l.type === 'category' && !l.archived && labelScope(l));
+  const filterTags = maps.all.filter((l) => l.type === 'tag' && !l.archived && labelScope(l));
 
   return (
     <div className="view calendar-view">
@@ -220,9 +224,11 @@ function Entry({ e, colour, onOpen, showTime = true }: { e: DayEntry; colour: Vi
     );
   }
   const time = showTime ? timeOf(i.start) : null;
+  // a long span names itself where it starts and at the start of each week; between, a slim bar
+  const slim = !e.starts && !e.weekStart;
   return (
     <button
-      className={`cal-entry ${personal ? 'is-personal' : ''} ${e.starts ? '' : 'is-continued'} ${i.status === 'done' || i.status === 'canceled' ? 'is-done' : ''}`}
+      className={`cal-entry ${personal ? 'is-personal' : ''} ${e.starts ? '' : 'is-continued'} ${slim ? 'is-slim' : ''} ${i.status === 'done' || i.status === 'canceled' ? 'is-done' : ''}`}
       data-color={colour(i)}
       onClick={() => onOpen(i.id)}
       aria-label={t('calendar.open', { title: i.title })}

@@ -183,6 +183,11 @@
   color: var(--warn);
 }
 
+/* the coming 일정: a day and a time need more room than "in 2 hours" */
+.account-dashboard [data-testid='account-upcoming'] .next-run {
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
 .cost-sub {
   margin: var(--space-4) 0 var(--space-2);
   font-size: 13px;
@@ -354,6 +359,25 @@
 
 .cal-entry.is-continued .cal-entry-title {
   color: var(--ink-2);
+}
+
+.cal-entry.is-slim {
+  min-height: 6px;
+  height: 6px;
+  padding: 0;
+  border-left-width: 0;
+  background: var(--dot, var(--cal-gray));
+  opacity: 0.45;
+}
+
+.cal-entry.is-slim > * {
+  display: none;
+}
+
+.cal-entry.is-personal.is-slim {
+  background: transparent;
+  border-top: 2px dashed var(--dot, var(--cal-gray));
+  opacity: 1;
 }
 
 .cal-entry.is-todo {
@@ -541,6 +565,8 @@
 .cal-sheet-overlay {
   display: flex;
   justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
 }
 
 .cal-sheet {
@@ -793,6 +819,10 @@
   gap: var(--space-2);
 }
 
+.dialog.cal-settings {
+  width: min(880px, calc(100% - 32px));
+}
+
 .cal-label-row {
   display: flex;
   flex-wrap: wrap;
@@ -829,12 +859,13 @@
 
 .cal-swatches {
   display: flex;
-  gap: 4px;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
 .cal-swatch {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   border: 2px solid transparent;
   border-radius: 50%;
