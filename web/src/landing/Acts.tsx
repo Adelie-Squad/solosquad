@@ -121,7 +121,6 @@ export function StampAct({ on, acting }: ActProps) {
   return (
     <div className="landing-act is-stamp">
       <figure className={`landing-preview landing-approval is-${state}`} data-front data-testid="landing-approval" data-state={state} aria-label={t('landing.preview.approvals')}>
-        <span className="landing-hand is-l" data-hand="L" aria-hidden="true" />
         <div className="landing-approval-head">
           <AgentIcon agent="finance" size={28} label="" />
           <span className="landing-live-text">
@@ -132,8 +131,11 @@ export function StampAct({ on, acting }: ActProps) {
         </div>
         {/* the buttons come right under the head — within reach of the stamp */}
         <div className="landing-approval-actions" aria-hidden="true">
-          <span className="btn is-primary landing-approve" data-stamp-target>
-            {t('approvals.approve')}
+          {/* the mark sits outside the button (a button clips what overflows it) */}
+          <span className="landing-approve-wrap">
+            <span className="btn is-primary landing-approve" data-stamp-target>
+              {t('approvals.approve')}
+            </span>
             <span className="landing-stamp-mark" data-testid="landing-stamp-mark" />
           </span>
           <span className="btn landing-decline">{t('approvals.decline')}</span>

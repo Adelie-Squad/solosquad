@@ -474,6 +474,8 @@ describe('the scene: the content in front of the penguin', () => {
     // the content starts at wing height, the scroll a little higher
     expect(rule('.landing-pin .landing-act')).toMatch(/top: var\(--front-top\);/);
     expect(css).toMatch(/--front-top: calc\(var\(--mascot\) \* 0\.5\d\);/);
+    // the scroll rod sits under the beak on every screen size — the face always shows
+    for (const m of css.matchAll(/--rod-top: calc\(var\(--mascot\) \* (0\.\d+)\);/g)) expect(Number(m[1])).toBeGreaterThanOrEqual(0.55);
     expect(rule('.landing-pin .landing-act.is-scroll')).toMatch(/top: var\(--rod-top\);/);
     // layers: the 2D poster under the content, the 3D canvas over it (cut out behind the content), never catching clicks
     expect(rule('.landing-poster')).toMatch(/z-index: 1;/);
@@ -495,7 +497,7 @@ describe('the scene: the content in front of the penguin', () => {
     expect(team.querySelectorAll('[data-front]')).toHaveLength(2); // the paper shown so far + the roll
     const control = screen.getByTestId('landing-scene-control');
     expect(control.querySelector('[data-stamp-target]')!.textContent).toContain('Approve');
-    expect(control.querySelector('[data-hand="L"]')).toBeTruthy();
+    expect(control.querySelector('[data-hand]')).toBeNull(); // only the stamp wing works here — nothing over the chip
   });
 
   it('phone: the penguin at the top centre, the scene first with the content over its lower half, the message under it', () => {
@@ -580,7 +582,7 @@ describe('the acting', () => {
     expect(card.className).toContain('is-approved');
     expect(within(card).getByText('Approved')).toBeTruthy();
     expect(approve.textContent).toBe('Approve');
-    expect(approve.querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
+    expect(approve.parentElement!.querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
     // CSS: pressed = the button goes down; approved = ok border and text; the mark and the shake appear from the hit
     expect(css).toMatch(/\.landing-approval\.is-pressed \.landing-approve \{[^}]*translate: 0 2px;/);
     expect(css).toMatch(/\.landing-approval\.is-approved \.landing-approve \{[^}]*border-color: var\(--ok\);[^}]*color: var\(--ok\);/);

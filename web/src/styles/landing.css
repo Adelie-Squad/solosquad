@@ -15,8 +15,8 @@
   /* viewport units only: a % here would resolve against whichever box uses the variable */
   --mascot: min(calc((100svh - var(--landing-gnb)) * 0.78), calc((100vw - 2 * var(--space-12)) * 0.54), 640px);
   --scene-top: max(var(--space-4), calc((100svh - var(--landing-gnb) - var(--mascot)) * 0.15));
-  /* the scroll is held a little higher, at the shoulders, so the whole org chart fits under it */
-  --rod-top: calc(var(--mascot) * 0.47);
+  /* the scroll rod at the chest, just under the beak — the face always shows */
+  --rod-top: calc(var(--mascot) * 0.56);
   /* where the content's top edge meets the penguin: wing height */
   --front-top: calc(var(--mascot) * 0.53);
   /* where the wings rest on the content, either side of the penguin's middle */
@@ -615,7 +615,7 @@ html:has(.landing[data-mode="live"]) {
 
 .landing-scroll-sheet {
   /* the wings hang over the top of the paper — the chart starts below them */
-  padding: var(--space-12) var(--card-pad-compact) var(--space-5);
+  padding: var(--space-10) var(--card-pad-compact) var(--space-5);
   border: 1px solid var(--line);
   border-top: 0;
   background: var(--surface);
@@ -742,7 +742,7 @@ html:has(.landing[data-mode="live"]) {
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  min-height: 26px;
+  min-height: 23px;
   font-size: 13.5px;
   font-weight: 600;
 }
@@ -978,8 +978,9 @@ html:has(.landing[data-mode="live"]) {
 }
 
 .landing-approval-actions {
+  /* room for the stamp mark around the approve button */
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-5);
 }
 
 .landing-approval-actions .btn {
@@ -1034,18 +1035,18 @@ html:has(.landing[data-mode="live"]) {
   }
 }
 
-/* the ink the stamp leaves: an ok ring around the word, like a seal, a little crooked */
+.landing-approve-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* the ink the stamp leaves: a tidy ok ring around the whole button, centred on it */
 .landing-stamp-mark {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 66px;
-  height: 50px;
-  margin: -25px 0 0 -33px;
+  inset: -7px -8px;
   border: 2px solid var(--ok);
-  border-radius: 50%;
+  border-radius: 999px;
   opacity: 0;
-  rotate: -10deg;
   pointer-events: none;
 }
 
@@ -1190,11 +1191,11 @@ html:has(.landing[data-mode="live"]) {
 /* a low screen: the org chart's rows close up so the paper still fits */
 @media (max-height: 820px) {
   .landing {
-    --rod-top: calc(var(--mascot) * 0.44);
+    --rod-top: calc(var(--mascot) * 0.55);
   }
 
   .landing-pin .landing-scroll-sheet {
-    padding-top: var(--space-10);
+    padding-top: var(--space-8);
     padding-bottom: var(--space-3);
   }
 
@@ -1209,7 +1210,7 @@ html:has(.landing[data-mode="live"]) {
   }
 
   .landing-pin .landing-org-node {
-    min-height: 21px;
+    min-height: 20px;
     font-size: 13px;
   }
 
@@ -1227,7 +1228,7 @@ html:has(.landing[data-mode="live"]) {
     --mascot: min(34svh, 72vw, 300px);
     --scene-top: var(--space-2);
     --front-top: calc(var(--mascot) * 0.54);
-    --rod-top: calc(var(--mascot) * 0.48);
+    --rod-top: calc(var(--mascot) * 0.58);
   }
 
   .landing-top .locale-picker > span {
