@@ -11,6 +11,7 @@ import { useSession } from '../session';
 import { ArtifactView } from '../views/ArtifactView';
 import { ChatView } from '../views/ChatView';
 import { MessengerView } from '../views/MessengerView';
+import { OfficeDisplay } from '../views/OfficeDisplay';
 import { OfficeView } from '../views/OfficeView';
 import { ScheduleView } from '../views/ScheduleView';
 import { SettingsView } from '../views/SettingsView';
@@ -89,6 +90,10 @@ export function ScopeLayout() {
 
   const routesInScope = (
     <Routes>
+      {/* the office in its own window — the scene and the live work only, outside the shell */}
+      <Route path="w/:ws/office/display" element={<WorkspaceGate />}>
+        <Route index element={<OfficeDisplay />} />
+      </Route>
       <Route element={<Shell />}>
         <Route index element={<Navigate to={routes.ws(org, shown)} replace />} />
         <Route path="w/:ws" element={<WorkspaceGate />}>

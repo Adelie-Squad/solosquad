@@ -2,6 +2,8 @@
 // Every state-changing request carries `X-CSRF-Token`, taken from /api/me or the login reply.
 // No LLM is ever called from the browser: chat goes to the engine like everything else.
 
+import { broadcast, DATA_CHANNEL } from '../lib/channels';
+
 export const CSRF_HEADER = 'X-CSRF-Token';
 const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -84,6 +86,8 @@ export async function request<T>(method: string, path: string, opts: RequestOpti
     const { code, params } = errorParts(data);
     throw new ApiError(res.status, msg, code, params);
   }
+  // something changed — another window showing this workspace (the office pop-out) asks again
+  if (UNSAFE.has(method)) broadcast(DATA_CHANNEL, { type: 'refetch' });
   return data as T;
 }
 
