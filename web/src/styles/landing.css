@@ -675,13 +675,13 @@ html:has(.landing[data-mode="live"]) {
   clip-path: inset(0 -1px calc((1 - var(--unroll)) * 100%) -1px);
 }
 
-/* the paper shown so far — what the canvas cuts the penguin out behind */
+/* the whole paper, rolled or not — the penguin stays behind it while it unrolls (no foot under the roll) */
 .landing-scroll-extent {
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
-  height: calc(var(--unroll) * 100%);
+  height: 100%;
   pointer-events: none;
 }
 
