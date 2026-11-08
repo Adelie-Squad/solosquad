@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from solosquad.storage import Migration, connect, migrate
+from solosquad.storage import Migration, columns, connect, migrate
 
 
 def _id(prefix: str) -> str:
@@ -50,9 +50,27 @@ class RunStore:
                     CREATE INDEX IF NOT EXISTS {prefix}runs_by_thread
                       ON {self.R} (thread_id, created)
                     """,
-                )
+                ),
+                Migration(2, self._add_superseded),
             ],
             path=path,
+        )
+
+    def _add_superseded(self, db: sqlite3.Connection) -> None:
+        """v2: `superseded_by`, and repair runs left `interrupted` after the thread moved on.
+
+        Before v2 an answered approval left its run `interrupted` forever (the resume is a
+        new run), so every list that counts waiting runs showed a finished one as waiting.
+        """
+        if "superseded_by" not in columns(db, self.R):
+            db.execute(f"ALTER TABLE {self.R} ADD COLUMN superseded_by TEXT")
+        r = self.R
+        db.execute(
+            f"UPDATE {r} SET status = 'superseded', ended = COALESCE(ended, created),"
+            f" superseded_by = (SELECT n.id FROM {r} n WHERE n.thread_id = {r}.thread_id"
+            f"   AND n.created > {r}.created ORDER BY n.created LIMIT 1)"
+            f" WHERE status = 'interrupted' AND EXISTS (SELECT 1 FROM {r} n"
+            f"   WHERE n.thread_id = {r}.thread_id AND n.created > {r}.created)"
         )
 
     def purge(self, before: float) -> list[str]:
@@ -121,6 +139,13 @@ class RunStore:
                 time.time() if created is None else created,
                 source,
             ),
+        )
+        # Only a thread's newest run can wait: the run that answers (or overtakes) an
+        # approval closes the one that asked, so no list keeps counting it as waiting.
+        self._exec(
+            f"UPDATE {self.R} SET status = 'superseded', superseded_by = ?"
+            " WHERE thread_id = ? AND status = 'interrupted' AND id != ?",
+            (rid, tid, rid),
         )
         return rid
 

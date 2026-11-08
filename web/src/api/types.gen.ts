@@ -380,7 +380,7 @@ export interface Interrupt {
 export interface Run {
   id: string;
   thread_id: string;
-  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled';
+  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled' | 'superseded';
   kind: string;
   input: unknown;
   error: string | null;
@@ -389,6 +389,7 @@ export interface Run {
   started: number | null;
   ended: number | null;
   source: string | null;
+  superseded_by: string | null;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -659,7 +660,7 @@ export interface WorkflowStepSummary {
  */
 export interface LastRun {
   id: string;
-  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled';
+  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled' | 'superseded';
   created: number;
 }
 /**
@@ -735,7 +736,7 @@ export interface WorkEntry {
   title: string | null;
   workflow: string | null;
   cron: string | null;
-  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled';
+  status: 'pending' | 'running' | 'success' | 'error' | 'interrupted' | 'cancelled' | 'superseded';
   created: number;
   ended: number | null;
   agents: string[];

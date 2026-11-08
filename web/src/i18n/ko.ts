@@ -322,6 +322,7 @@ export const ko = {
   'run.success': '완료',
   'run.error': '오류',
   'run.cancelled': '취소됨',
+  'run.superseded': '이어서 진행',
 
   'artifact.markReviewed': '확인 완료로 표시',
   'artifact.reviewed': '확인 완료',

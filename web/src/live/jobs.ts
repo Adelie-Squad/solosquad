@@ -16,7 +16,19 @@ function startOfToday(): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
 }
 
-function status(run: Run): Job['status'] {
+/** The runs the live panel shows: open ones, and of a thread only its newest — the engine
+ * closes an answered approval run (`superseded`), and an older engine's leftover
+ * `interrupted` run behind a newer one on its thread is history too, never "waiting". */
+export function openRuns(runs: Run[]): Run[] {
+  const newest = new Map<string, Run>();
+  for (const r of runs) {
+    const seen = newest.get(r.thread_id);
+    if (!seen || r.created > seen.created) newest.set(r.thread_id, r);
+  }
+  return runs.filter((r) => ACTIVE.has(r.status) && newest.get(r.thread_id) === r);
+}
+
+export function status(run: Run): Job['status'] {
   if (run.status === 'running') return 'running';
   if (run.status === 'interrupted') return 'waiting';
   if (run.status === 'pending') return 'queued';
@@ -37,7 +49,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
   const workflows = useWorkflows();
   const today = startOfToday();
 
-  const activeWf = (wfRuns.data ?? []).filter((r) => ACTIVE.has(r.status));
+  const activeWf = openRuns(wfRuns.data ?? []);
   // one state read per running workflow (few at a time) — it knows the workflow and its step
   const states = useQueries({
     queries: activeWf.map((r) => ({
@@ -47,20 +59,18 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
   });
 
   const titles = new Map((threads.data ?? []).map((th) => [th.id, th.title ?? '']));
-  const company: Job[] = (runs.data ?? [])
-    .filter((r) => ACTIVE.has(r.status))
-    .map((r) => ({
-      id: r.id,
-      agent: live.runAgent[r.id] ?? 'chief',
-      title: titles.get(r.thread_id) || t('chat.untitled'),
-      who: live.current[r.id] ? nameOf(live.current[r.id]) : t('office.title'),
-      status: status(r),
-      startedAt: r.started ?? r.created,
-      steps: [],
-      stepIndex: 0,
-      log: live.logs[r.id] ?? [],
-      link: toWs(`/chat/${r.thread_id}`),
-    }));
+  const company: Job[] = openRuns(runs.data ?? []).map((r) => ({
+    id: r.id,
+    agent: live.runAgent[r.id] ?? 'chief',
+    title: titles.get(r.thread_id) || t('chat.untitled'),
+    who: live.current[r.id] ? nameOf(live.current[r.id]) : t('office.title'),
+    status: status(r),
+    startedAt: r.started ?? r.created,
+    steps: [],
+    stepIndex: 0,
+    log: live.logs[r.id] ?? [],
+    link: toWs(`/chat/${r.thread_id}`),
+  }));
 
   const defs = new Map((workflows.data?.workflows ?? []).map((w) => [w.name, w]));
   const flows: Job[] = activeWf.map((r, i) => {

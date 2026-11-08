@@ -324,6 +324,7 @@ export const zhCN: Record<MessageKey, string> = {
   'run.success': '完成',
   'run.error': '错误',
   'run.cancelled': '已取消',
+  'run.superseded': '已继续',
 
   'artifact.markReviewed': '标记为已确认',
   'artifact.reviewed': '已确认',

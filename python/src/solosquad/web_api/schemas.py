@@ -239,7 +239,9 @@ class Interrupt(Closed):
     value: Any
 
 
-RunStatusName = Literal["pending", "running", "success", "error", "interrupted", "cancelled"]
+RunStatusName = Literal[
+    "pending", "running", "success", "error", "interrupted", "cancelled", "superseded"
+]
 
 
 class Run(Closed):
@@ -254,6 +256,8 @@ class Run(Closed):
     started: float | None
     ended: float | None
     source: str | None
+    superseded_by: str | None = None
+    """The newer run on the thread that answered this interrupted one (status `superseded`)."""
 
 
 class ThreadValues(Open):
