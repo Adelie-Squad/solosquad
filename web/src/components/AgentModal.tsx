@@ -70,12 +70,12 @@ export function AgentModal({
         <p className="entity-modal-summary">{summary ?? t('agent.noSummary')}</p>
       </section>
       {waiting.length > 0 && (
-        <div className="approval-bar">
-          <span className="with-icon">
-            <ICON.person />
+        <div className="approval-bar" data-testid="approval-bar">
+          <span className="with-icon approval-bar-label">
+            <ICON.warn />
             {t('office.waitingN', { n: waiting.length })}
           </span>
-          <Link className="btn is-primary" to={toWs('/tasks')}>
+          <Link className="btn" to={toWs('/tasks')}>
             {t('office.goAnswer')}
           </Link>
         </div>

@@ -159,3 +159,31 @@ describe('no colour values outside the token files', () => {
     expect(hits).toEqual([]);
   });
 });
+
+// DESIGN.md `## 색` (2026-11-08): a status colour mixed into a light background belongs to a chip,
+// a step chip, a bar or a hover — never to a band, a callout, a table row or a selected card.
+describe('no tinted bands', () => {
+  const dir = join(process.cwd(), 'src', 'styles');
+  const TINT = /background(?:-color)?\s*:\s*color-mix\(in srgb, var\(--(?:warn|danger|accent|ok)\) \d+%/;
+  const CHIP_LIKE = /chip|step|vbar|pnl-bar|pnl-key|\.btn|wf-card-icon|work-artifact:hover|suggestion:hover/;
+  const rules = readdirSync(dir).flatMap((f) =>
+    [...readFileSync(join(dir, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+      file: f,
+      selector: m[1].trim().replace(/\s+/g, ' '),
+      body: m[2],
+    })),
+  );
+
+  it('reads the style sheets', () => expect(rules.length).toBeGreaterThan(300));
+
+  it('tints only chips, step chips, bars and hovers', () => {
+    const bands = rules.filter((r) => TINT.test(r.body) && !CHIP_LIKE.test(r.selector)).map((r) => `${r.file}: ${r.selector}`);
+    expect(bands).toEqual([]);
+  });
+
+  it.each(['.approval-bar', '.viewer-banner', '.placeholder', '.home-bubble', '.statement tr.is-off th', '.wf-card.is-selected', '.command-bar li button.is-active'])('%s has no tinted background', (sel) => {
+    const own = rules.filter((r) => r.selector.split(',').some((s) => s.trim() === sel));
+    expect(own.length, sel).toBeGreaterThan(0);
+    for (const r of own) expect(r.body, `${r.file}: ${r.selector}`).not.toMatch(TINT);
+  });
+});

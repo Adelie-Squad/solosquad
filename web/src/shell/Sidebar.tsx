@@ -24,6 +24,8 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
   const todo = (approvals.data ?? []).filter((a) => a.can_approve).length + (reviews.data ?? []).length;
   // workflow agent steps run on their own company threads; they are not conversations
   const chats = (threads.data ?? []).filter((th) => !th.metadata?.workflow_thread);
+  const name = user?.display || user?.username || t('role.local');
+  const role = isOwner ? t('role.owner') : t('role.staff');
 
   return (
     <aside className="sidebar">
@@ -87,13 +89,14 @@ export function Sidebar({ onCommand }: { onCommand: () => void }) {
       </section>
 
       <div className="sidebar-bottom">
-        <NavLink to={toOrg('/settings')} className="viewer-chip" title={t('nav.settings')}>
-          {isOwner ? <ICON.owner className="viewer-chip-icon" /> : <ICON.person className="viewer-chip-icon" />}
-          <span className="viewer-chip-name">{user?.display || user?.username || t('role.local')}</span>
-          <span className="viewer-chip-role">{isOwner ? t('role.owner') : t('role.staff')}</span>
-        </NavLink>
-        <NavLink className="icon-btn" aria-label={t('nav.settings')} title={t('nav.settings')} to={toOrg('/settings')}>
-          <ICON.settings />
+        {/* one control for "who is here" and settings — one hit target, one focus stop (2026-11-08) */}
+        <NavLink to={toOrg('/settings')} className="account-button" aria-label={t('nav.account', { name, role })} title={t('nav.account', { name, role })}>
+          {isOwner ? <ICON.owner className="account-button-icon" /> : <ICON.person className="account-button-icon" />}
+          <span className="account-button-text">
+            <span className="account-button-name">{name}</span>
+            <span className="account-button-role">{role}</span>
+          </span>
+          <ICON.settings className="account-button-settings" />
         </NavLink>
       </div>
     </aside>

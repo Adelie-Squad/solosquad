@@ -122,7 +122,7 @@ describe('C15 — what staff is not shown', () => {
       await open('/o/tesla/w/charging', who);
       const nav = screen.getByRole('navigation', { name: t('nav.main') });
       const items = within(nav).getAllByRole('link').map((a) => a.getAttribute('href'));
-      const chip = document.querySelector('.viewer-chip-role')?.textContent;
+      const chip = document.querySelector('.account-button-role')?.textContent;
       cleanup();
       vi.unstubAllGlobals();
       return { items, chip };

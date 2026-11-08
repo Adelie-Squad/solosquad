@@ -240,35 +240,6 @@ kbd {
   padding: 6px 2px 4px;
 }
 
-/* 지금 보고 있는 사람 — 누르면 설정(팀원 · 권한) */
-.viewer-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: transparent;
-  font-size: 13px;
-  color: var(--ink);
-}
-
-.viewer-chip:hover {
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
-}
-
-.viewer-chip-name {
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.viewer-chip-role {
-  overflow: hidden;
-  opacity: 0.6;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 /* 팀원 화면으로 보는 중 — 카드 맨 위에 붙는 띠 */
 .viewer-banner {
   position: sticky;
@@ -279,8 +250,9 @@ kbd {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--warn) 30%, var(--surface));
-  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
   font-size: 13.5px;
 }
 
@@ -391,7 +363,7 @@ kbd {
 }
 
 .command-bar li button.is-active {
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  background: var(--surface-2);
 }
 
 .command-icon {

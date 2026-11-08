@@ -114,7 +114,7 @@ const staff = me({
 // ---------------------------------------------------------------------- the menu
 
 describe('the sidebar menu', () => {
-  it('is dashboard · office · messenger · Task · workflows — the same five for owner and staff', () => {
+  it('is dashboard · office · messenger · Tasks · workflows — the same five for owner and staff', () => {
     const ids = NAV.map((n) => n.to);
     expect(ids).toEqual(['/dashboard', '/office', '/messenger', '/tasks', '/workflows']);
     expect(visibleNav(true).map((n) => n.to)).toEqual(ids);
@@ -138,6 +138,42 @@ describe('the sidebar menu', () => {
     // 1 card I may answer + 1 work product to check (the other team's card is not mine)
     await waitFor(() => expect(within(tiles[3]).getByText('2')).toBeTruthy());
     expect(within(nav).queryByText('Approvals')).toBeNull();
+  });
+
+  it.each([
+    ['ko', ['대시보드', '사무실', '메신저', '과제', '워크플로우']],
+    ['en', ['Dashboard', 'Office', 'Messenger', 'Tasks', 'Workflows']],
+    ['zh-CN', ['仪表盘', '办公室', '消息渠道', '任务', '工作流']],
+  ] as const)('%s menu labels', (locale, labels) => {
+    stubApi({ '/approvals': [], '/artifacts': [], '/threads': [] });
+    renderWith(<Sidebar onCommand={() => {}} />, locale);
+    const nav = screen.getByRole('navigation', { name: translate(locale, 'nav.main') });
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual([...labels]);
+  });
+
+  it.each([
+    ['owner', 'ko', me(), '설정 · Boss 대표'],
+    ['staff', 'en', staff, 'Settings · Kim Team member'],
+    ['owner', 'zh-CN', me(), '设置 · Boss 代表'],
+  ] as const)('%s (%s): the bottom is one control — who is here and settings, one focus stop', async (_who, locale, person, name) => {
+    stubApi({ '/approvals': [], '/artifacts': [], '/threads': [] });
+    renderWith(
+      <Routes>
+        <Route path="*" element={<><Sidebar onCommand={() => {}} /><Where /></>} />
+      </Routes>,
+      locale,
+      { me: person, path: '/o/tesla/w/charging/dashboard' },
+    );
+    const bottom = document.querySelector('.sidebar-bottom') as HTMLElement;
+    const focusable = bottom.querySelectorAll('a, button, [tabindex]');
+    expect(focusable).toHaveLength(1); // one hit target, one focus stop
+    const account = within(bottom).getByRole('link', { name });
+    expect(account.getAttribute('href')).toBe('/o/tesla/settings');
+    expect(account.querySelectorAll('svg')).toHaveLength(2); // the person icon and the trailing settings icon
+    // no second settings button anywhere in the sidebar
+    expect(screen.getAllByRole('link', { name: new RegExp(translate(locale, 'nav.settings')) })).toEqual([account]);
+    await act(async () => fireEvent.click(account));
+    expect(screen.getByTestId('where').textContent).toBe('/o/tesla/settings');
   });
 
   it('marks a tile selected on its own address and below it', () => {
@@ -264,7 +300,7 @@ describe('the dashboard', () => {
     stubApi({ '/screens/dashboard': screenRes, '/budget': budget, '/approvals': [approval()], '/work': { items: [work({ status: 'running', ended: null })] }, '/artifacts': [] });
     renderWith(<DeclarativeScreen name="dashboard" />, 'en');
     const cost = await screen.findByTestId('cost');
-    await waitFor(() => expect(within(cost).getByText('Whole company')).toBeTruthy());
+    await waitFor(() => expect(within(cost).getByText('Whole business')).toBeTruthy());
     expect(within(cost).getByText('max')).toBeTruthy();
     expect(within(cost).getByText('router')).toBeTruthy();
     expect(within(cost).getByText('Warning')).toBeTruthy();

@@ -15,7 +15,7 @@ import { agentName, agentSummary, readableId } from '../src/lib/agentNames';
 import { teamName } from '../src/lib/names';
 import { legacyTarget, ScopeLayout } from '../src/shell/ScopeLayout';
 import { visibleNav } from '../src/shell/nav';
-import { me, renderWith } from './helpers';
+import { approval, me, renderWith } from './helpers';
 
 const agent = (name: string, team: string | null, words: Partial<Agent> = {}): Agent => ({
   name,
@@ -87,7 +87,7 @@ describe('org chart infographic', () => {
     renderWith(<OrgChart chart={CHART} agents={AGENTS} statuses={{ 'backend-engineer': 'typing' }} onAgent={onAgent} onPerson={onPerson} />, 'en');
     const top = screen.getByRole('list', { name: 'Owner and Chief' });
     expect(within(top).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Elon · Owner', 'Chief · Idle']);
-    const depts = screen.getByRole('list', { name: 'Departments' });
+    const depts = screen.getByRole('list', { name: 'Teams' });
     // core holds only Chief, who is on top — it is not a department of its own
     expect(within(depts).getAllByRole('list').map((l) => l.getAttribute('aria-label'))).toEqual(['Engineering', 'Business']);
     const engineering = screen.getByRole('list', { name: 'Engineering' });
@@ -120,7 +120,7 @@ describe('team and agent names follow the reader’s language', () => {
     unassigned: [],
   };
   const labels = () =>
-    within(screen.getByRole('list', { name: /Departments|부서|部门/ }))
+    within(screen.getByRole('list', { name: /^(Teams|팀|团队)$/ }))
       .getAllByRole('list')
       .map((l) => l.getAttribute('aria-label'));
 
@@ -166,6 +166,20 @@ describe('agent and person modal', () => {
     expect(within(dialog).getByRole('link', { name: /Fix the API/ }).getAttribute('href')).toBe('/o/tesla/w/charging/chat/t1');
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['ko', '승인 대기 2건', '과제에서 처리'],
+    ['en', '2 waiting for approval', 'Handle in Tasks'],
+    ['zh-CN', '待审批 2 项', '在任务中处理'],
+  ] as const)('%s: approvals waiting for the agent read as a plain row with a warn icon, linking to Tasks', (locale, label, link) => {
+    renderWith(<AgentModal agent={AGENTS[1]} status="waiting" waiting={[approval(), approval({ run_id: 'r-2' })]} onClose={() => {}} />, locale);
+    const bar = screen.getByTestId('approval-bar');
+    expect(bar.textContent).toContain(label);
+    expect(bar.querySelector('svg.lucide-triangle-alert')).toBeTruthy(); // the warn icon, not a band of colour
+    const go = within(bar).getByRole('link', { name: link });
+    expect(go.getAttribute('href')).toBe('/o/tesla/w/charging/tasks');
+    expect(go.className).not.toContain('is-primary'); // the modal's one primary action stays "talk to"
   });
 
   it('lets the owner edit a person’s title and teams; others only read', () => {
