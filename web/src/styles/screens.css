@@ -397,11 +397,14 @@
   font-size: 13px;
 }
 
-/* ── workflows ↔ schedule tabs (links styled as the segmented control) ───────────────── */
+/* ── workflows ↔ scheduled-runs tabs (links styled as the segmented control) ──────────
+   2026-11-09 — out of the header, right above the card list, left edge on the cards' left edge */
 
 .wf-tabs {
-  flex-shrink: 0;
-  align-self: center;
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: var(--space-4);
 }
 
 .segmented a {
@@ -566,10 +569,6 @@
 
   .schedule-row {
     align-items: flex-start;
-  }
-
-  .view-header .wf-tabs {
-    align-self: flex-start;
   }
 }
 

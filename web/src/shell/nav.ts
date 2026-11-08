@@ -15,13 +15,13 @@ export interface NavItem {
 /** The fixed menu (2026-11-07): dashboard · office · messenger · Task · workflows. Five tiles in two
  * columns — the first takes a whole row, so the grid has no hole. Items a role cannot use are not
  * shown (the server still enforces, I25). Connections and logging out live in Settings; the org
- * chart is part of the office; the schedule is a view of the workflows. */
+ * chart is part of the office; the scheduled runs are a view of the workflows. */
 export const NAV: NavItem[] = [
   { to: '/dashboard', icon: ICON.dashboard, label: 'nav.dashboard' },
   { to: '/office', icon: ICON.office, label: 'nav.office' },
   { to: '/messenger', icon: ICON.messenger, label: 'nav.messenger' },
   { to: '/tasks', icon: ICON.tasks, label: 'nav.tasks' },
-  { to: '/workflows', icon: ICON.workflows, label: 'nav.workflows', also: ['/schedule'] },
+  { to: '/workflows', icon: ICON.workflows, label: 'nav.workflows', also: ['/scheduled-jobs'] },
 ];
 
 export const visibleNav = (isOwner: boolean) => NAV.filter((n) => isOwner || !n.ownerOnly);

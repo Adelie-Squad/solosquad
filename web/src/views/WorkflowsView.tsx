@@ -24,13 +24,18 @@ export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string
   superseded: { label: 'run.superseded', chip: '' },
 };
 
-/** The two views of the workflows screen — the workflows, and their schedule (2026-11-07). */
-export function WorkflowTabs({ current }: { current: 'workflows' | 'schedule' }) {
+/** Where the scheduled runs live (2026-11-09). A top-level segment, not `workflows/scheduled`, so a
+ * workflow can be named anything; `schedule` is kept for the coming calendar and only redirects here. */
+export const SCHEDULED_PATH = '/scheduled-jobs';
+
+/** The two views of the workflows screen — the workflows, and their scheduled runs (2026-11-07).
+ * Sits right above the card list, under the title and lead (2026-11-09). */
+export function WorkflowTabs({ current }: { current: 'workflows' | 'scheduled' }) {
   const { w: toWs } = useLinks();
   const { t } = useI18n();
   const tabs = [
     { id: 'workflows', to: toWs('/workflows'), label: t('workflows.tabFlows'), icon: ICON.workflows },
-    { id: 'schedule', to: toWs('/schedule'), label: t('schedule.tab'), icon: ICON.schedule },
+    { id: 'scheduled', to: toWs(SCHEDULED_PATH), label: t('schedule.tab'), icon: ICON.schedule },
   ] as const;
   return (
     <nav className="segmented wf-tabs" aria-label={t('workflows.views')}>
@@ -64,8 +69,8 @@ export function WorkflowsView() {
           <h1>{t('workflows.title')}</h1>
           <p>{t('workflows.lead')}</p>
         </div>
-        <WorkflowTabs current="workflows" />
       </header>
+      <WorkflowTabs current="workflows" />
       {q.data.errors.length > 0 && <Placeholder title={t('workflows.brokenFiles')} detail={q.data.errors.join(' · ')} />}
       {list.length === 0 ? (
         <div className="panel empty">{t('workflows.none')}</div>
@@ -131,7 +136,7 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
             </span>
           )}
           {wf.schedule && (
-            <Link className="chip" to={toWs('/schedule')} title={wf.schedule}>
+            <Link className="chip" to={toWs(SCHEDULED_PATH)} title={wf.schedule} aria-label={`${t('schedule.tab')}: ${cronText(wf.schedule, locale, t)}`}>
               <ICON.schedule size={14} />
               {cronText(wf.schedule, locale, t)}
             </Link>
