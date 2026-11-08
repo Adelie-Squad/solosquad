@@ -86,7 +86,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 12px;
 }
 
@@ -381,7 +381,7 @@ a.run-row:hover {
   display: block;
   margin-bottom: 2px;
   color: var(--ink-3);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
