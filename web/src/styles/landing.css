@@ -1,10 +1,15 @@
-/* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. Five sections scroll past one sticky
-   penguin in the middle of the viewport. Tokens only; no gradients, tinted bands or shadows.
-   data-mode="live" = 3D mascot layer · "static" = 2D penguin in the hero, still sections. */
+/* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. A pinned stage one screen high: the 3D
+   penguin fixed in its middle, the slides changing around it as the page scrolls past snap stops.
+   Tokens only; no gradients, tinted bands or shadows; nothing under 12px.
+   data-mode="live" = pinned slides + 3D · "static" = the same sections stacked, 2D penguin. */
 
 .landing {
-  --landing-w: min(1200px, calc(100% - 2 * var(--space-12)));
-  --landing-mono: 11.5px;
+  --landing-w: min(1240px, calc(100% - 2 * var(--space-12)));
+  --landing-gnb: 64px;
+  --landing-mono: 12px;
+  /* matches PRESENT_DELAY_MS (sections.ts): the content follows the wing */
+  --present-delay: 220ms;
+  --present-step: 110ms;
   position: relative;
   min-height: 100%;
   background: var(--bg);
@@ -12,8 +17,13 @@
   overflow-x: clip;
 }
 
+/* the slides: native scroll that comes to rest on a stop, one per section */
+html:has(.landing[data-mode="live"]) {
+  scroll-snap-type: y mandatory;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  html:has(.landing[data-mode="live"]) {
+  html:has(.landing) {
     scroll-behavior: smooth;
   }
 }
@@ -40,43 +50,34 @@
   color: var(--ink-2);
 }
 
-/* ── thin grid: the three columns' edges, hairlines in --line ─────────── */
-.landing-grid {
-  position: fixed;
-  inset: 0 auto 0 50%;
-  width: var(--landing-w);
-  transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  pointer-events: none;
-  z-index: 0;
+/* no drop shadows on the landing (DESIGN.md `## 랜딩`) */
+.landing .btn {
+  box-shadow: none;
 }
 
-.landing-grid span {
-  border-left: 1px solid var(--line);
-}
-
-.landing-grid span:last-child {
-  position: absolute;
-  inset: 0 0 0 auto;
-  border-left: 0;
-  border-right: 1px solid var(--line);
-}
-
-/* ── top bar (not fixed: it scrolls away with the hero) ───────────────── */
+/* ── top bar: fixed, page colour, a hairline once the page has moved ─── */
 .landing-top {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 3;
-  width: var(--landing-w);
-  transform: translateX(-50%);
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  height: var(--landing-gnb);
+  border-bottom: 1px solid transparent;
+  background: var(--bg);
+  transition: border-color 0.15s ease;
+}
+
+.landing-top.is-scrolled {
+  border-bottom-color: var(--line);
+}
+
+.landing-top-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5) 0;
-  border-bottom: 1px solid var(--line);
+  width: var(--landing-w);
+  height: 100%;
+  margin: 0 auto;
 }
 
 .landing-brand {
@@ -93,24 +94,72 @@
   min-width: 0;
 }
 
+.landing-top .locale-picker select {
+  height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+}
+
 .landing-top-cta {
   white-space: nowrap;
 }
 
-/* no drop shadows on the landing (DESIGN.md `## 랜딩`) */
-.landing .btn {
-  box-shadow: none;
+/* ── the track: one screen of scroll per section, the stage pinned in it ─ */
+.landing-track {
+  position: relative;
+  height: calc(var(--steps) * 100vh);
+  height: calc(var(--steps) * 100svh);
 }
 
-/* ── the mascot layer: sticky, full viewport, behind the sections ────── */
-.landing-stage {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+.landing-stop {
+  position: absolute;
+  top: calc(var(--n) * 100vh);
+  top: calc(var(--n) * 100svh);
+  left: 0;
+  width: 1px;
   height: 100vh;
   height: 100svh;
-  margin-bottom: -100vh;
-  margin-bottom: -100svh;
+  pointer-events: none;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.landing-pin {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* thin grid: the message column's edges, hairlines in --line (none between the penguin and what it presents) */
+.landing-grid {
+  position: absolute;
+  inset: var(--landing-gnb) 0 0;
+  width: var(--landing-w);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  pointer-events: none;
+}
+
+.landing-grid span {
+  border-left: 1px solid var(--line);
+}
+
+.landing-grid span:last-child {
+  border-right: 1px solid var(--line);
+}
+
+/* ── the mascot: the middle of the stage, for every slide ─────────────── */
+.landing-stage {
+  position: absolute;
+  inset: var(--landing-gnb) 0 0;
+  z-index: 1;
   display: grid;
   place-items: center;
   pointer-events: none;
@@ -118,20 +167,8 @@
 
 .landing-mascot {
   position: relative;
-  width: min(74vh, 36vw, 640px);
+  width: min(76svh, 36vw, 660px);
   aspect-ratio: 1;
-  transform-origin: 50% 60%;
-  transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-/* per-section placement — set by the active section, eased (state, not scroll-hijack) */
-.landing-mascot.is-what,
-.landing-mascot.is-control {
-  transform: translateY(2vh) scale(0.92);
-}
-
-.landing-mascot.is-team {
-  transform: translateY(-17vh) scale(0.6);
 }
 
 .landing-poster {
@@ -143,7 +180,7 @@
 }
 
 .landing-poster .penguin {
-  width: 52%;
+  width: 46%;
   height: auto;
 }
 
@@ -162,12 +199,12 @@
   opacity: 0;
 }
 
-/* ── right-edge section progress ──────────────────────────────────────── */
+/* ── right-edge progress ──────────────────────────────────────────────── */
 .landing-progress {
   position: fixed;
   top: 50%;
   right: var(--space-4);
-  z-index: 3;
+  z-index: 9;
   transform: translateY(-50%);
 }
 
@@ -228,60 +265,78 @@
   background: var(--accent);
 }
 
-/* ── sections: copy left | mascot in the middle | content right ──────── */
-.landing-section {
-  position: relative;
-  z-index: 2;
-  width: var(--landing-w);
-  min-height: 100vh;
-  min-height: 100svh;
-  margin: 0 auto;
+/* ── a slide: the message | the penguin presenting its content ───────── */
+.landing-slide {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  align-content: center;
-  row-gap: var(--space-8);
-  padding: var(--space-16) 0;
-  pointer-events: none;
+  min-width: 0;
 }
 
-.landing-section > * {
+.landing-pin .landing-slide {
+  position: absolute;
+  inset: var(--landing-gnb) 0 0;
+  z-index: 2;
+  width: var(--landing-w);
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  /* the outgoing slide clears first, the incoming one follows — a short overlap, never two titles on top of each other */
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+.landing-pin .landing-slide.is-passed {
+  transform: translateY(-8px);
+}
+
+.landing-pin .landing-slide.is-on {
+  opacity: 1;
+  transform: none;
+  transition-duration: 0.45s;
+  transition-delay: 0.18s;
+}
+
+.landing-pin .landing-slide.is-on .landing-copy,
+.landing-pin .landing-slide.is-on .landing-present {
   pointer-events: auto;
 }
 
-.landing-side {
+.landing-copy {
+  grid-column: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-5);
   min-width: 0;
+  padding: 0 var(--space-8);
 }
 
-.landing-side.is-left {
-  grid-column: 1;
+.landing-present {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  min-width: 0;
   padding-right: var(--space-8);
 }
 
-.landing-side.is-right {
-  grid-column: 3;
-  padding-left: var(--space-8);
-  align-items: stretch;
+/* what the penguin presents comes in beside it, one piece after another, in step with the wing */
+.landing-pin .landing-item {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
 }
 
-.landing-wide {
-  grid-column: 1 / -1;
-  min-width: 0;
-}
-
-.landing-index {
-  display: flex;
-  gap: var(--space-2);
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.landing-index-total {
-  color: var(--ink-3);
+.landing-pin .landing-slide.is-on .landing-item {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--present-delay) + var(--i, 0) * var(--present-step));
 }
 
 .landing-display {
@@ -301,6 +356,7 @@
 }
 
 .landing .landing-lead {
+  max-width: var(--measure);
   margin: 0;
   color: var(--ink-2);
   font-size: 16px;
@@ -311,48 +367,12 @@
   margin-bottom: calc(-1 * var(--space-2));
 }
 
-/* hero */
-.landing-section.is-hero {
-  padding-top: calc(var(--space-16) + var(--space-12));
-}
-
 .landing-static-mascot {
-  grid-column: 2;
-  grid-row: 1;
   display: grid;
   place-items: center;
 }
 
-.landing-scroll {
-  position: absolute;
-  bottom: var(--space-8);
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.landing-crew ul {
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.landing-crew li {
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--line);
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.landing-crew-title {
-  color: var(--ink-3);
-}
-
-/* the boxed prompt */
+/* the prompt box (hero) */
 .landing-prompt-box {
   display: flex;
   flex-direction: column;
@@ -373,7 +393,7 @@
 .landing-prompt-text {
   margin: 0;
   min-height: calc(2 * 1.5em);
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.5;
 }
@@ -425,6 +445,7 @@
 .landing-steps li {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
+  align-items: baseline;
   column-gap: var(--space-2);
   padding: var(--space-3) 0;
   border-top: 1px solid var(--line);
@@ -436,7 +457,6 @@
 
 .landing-step-n {
   grid-row: span 2;
-  padding-top: 3px;
   color: var(--accent);
 }
 
@@ -447,6 +467,7 @@
 }
 
 .landing-steps p {
+  grid-column: 2;
   margin: var(--space-1) 0 0;
   color: var(--ink-2);
   font-size: 13.5px;
@@ -555,7 +576,7 @@
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
-  height: 96px;
+  height: 88px;
   padding-bottom: var(--space-1);
   border-bottom: 1px solid var(--line);
 }
@@ -564,13 +585,13 @@
   display: flex;
   flex: 1;
   align-items: flex-end;
-  gap: 3px;
+  gap: var(--space-1);
   height: 100%;
 }
 
 .landing-pnl-bar {
   flex: 1;
-  border-radius: 3px 3px 0 0;
+  border-radius: 4px 4px 0 0;
 }
 
 .landing-pnl-bar.is-revenue,
@@ -603,19 +624,164 @@
   border-radius: 2px;
 }
 
-/* the team strip */
-.landing-section.is-team {
-  align-content: space-between;
+/* ── section 3: the org chart (DESIGN.md `### 조직도`, landing variant) ── */
+.landing-org {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
-.landing-section.is-team .landing-side.is-left {
-  align-self: start;
+.landing-org button {
+  font: inherit;
+}
+
+.landing-org-top,
+.landing-org-team {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-btn);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.landing-org-top:hover,
+.landing-org-team:hover {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.landing-org-top:active,
+.landing-org-team:active {
+  transform: translateY(1px);
+}
+
+.landing-org-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.landing-org-count {
+  color: var(--ink-2);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.landing-org-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+}
+
+.landing-org-teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.landing-org-team .landing-org-label {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.landing-org-members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.landing-org-node {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 28px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.landing-org-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.landing-org-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+}
+
+.landing-org-avatar .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.landing-org-all {
+  align-self: flex-start;
+}
+
+.landing-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--team);
+}
+
+/* the team modal: agent cards side by side, scrolling sideways */
+.dialog.is-wide.landing-team-modal {
+  width: min(1120px, calc(100% - 32px));
+}
+
+.landing-team-modal-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-right: var(--space-12);
+}
+
+.landing-team-modal-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.landing-team-modal-head p {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
 }
 
 .landing-strip-wrap {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .landing-strip-controls {
@@ -632,11 +798,13 @@
 }
 
 .landing-strip {
+  position: relative;
   display: flex;
   gap: var(--space-8);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: 0;
   padding-bottom: var(--space-3);
   scrollbar-width: thin;
 }
@@ -650,28 +818,24 @@
   flex: none;
   flex-direction: column;
   gap: var(--space-3);
-  scroll-snap-align: start;
 }
 
 .landing-strip-head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin: 0;
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--line);
-  color: var(--ink);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .landing-strip-count {
-  color: var(--ink-3);
+  color: var(--ink-2);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-}
-
-.landing-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--team);
 }
 
 .landing-strip-cards {
@@ -691,6 +855,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  scroll-snap-align: start;
 }
 
 .landing-card h3 {
@@ -713,7 +878,7 @@
   -webkit-line-clamp: 6;
 }
 
-/* approvals and control */
+/* section 4: approvals */
 .landing-points {
   display: flex;
   flex-direction: column;
@@ -725,6 +890,7 @@
 
 .landing-points li {
   display: flex;
+  align-items: flex-start;
   gap: var(--space-3);
   color: var(--ink-2);
   font-size: 13.5px;
@@ -732,7 +898,7 @@
 }
 
 .landing-points li > .icon {
-  margin-top: 3px;
+  margin-top: var(--space-1);
   color: var(--accent);
 }
 
@@ -742,177 +908,175 @@
   font-size: 14.5px;
 }
 
-.landing-section.is-control .landing-side.is-right {
+.landing-previews {
+  display: flex;
+  flex-direction: column;
   gap: var(--card-gap);
 }
 
+/* section 5 */
 .landing-statement {
   margin: 0;
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--line);
-  font-size: clamp(19px, 2vw, 26px);
+  font-size: clamp(19px, 1.9vw, 24px);
   font-weight: 650;
   line-height: 1.45;
   letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
-/* final CTA */
+.landing-final-cta {
+  white-space: nowrap;
+}
+
 .landing-foot {
-  align-self: end;
-  padding-top: var(--space-6);
+  width: var(--landing-w);
+  margin: 0 auto;
+  padding: var(--space-6) 0 var(--space-8);
   border-top: 1px solid var(--line);
   color: var(--ink-3);
 }
 
-.landing-section.is-start {
-  align-content: space-between;
+/* ── static (reduced motion · no WebGL · a short screen): stacked, two columns ── */
+.landing-stack {
+  padding-top: var(--landing-gnb);
 }
 
-.landing-section.is-start .landing-side.is-left {
-  margin-top: 28vh;
-}
-
-/* ── static (no WebGL · reduced motion): two columns, no mascot layer ─── */
-.landing[data-mode="static"] .landing-section:not(.is-hero) {
+.landing-stack .landing-slide {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: var(--space-12);
-  min-height: 0;
+  width: var(--landing-w);
+  margin: 0 auto;
+  padding: var(--space-16) 0;
 }
 
-.landing[data-mode="static"] .landing-section:not(.is-hero) .landing-side.is-right {
+.landing-stack .landing-slide + .landing-slide {
+  border-top: 1px solid var(--line);
+}
+
+.landing-stack .landing-copy {
+  padding: 0;
+}
+
+.landing-stack .landing-present {
   grid-column: 2;
-  padding-left: 0;
-}
-
-.landing[data-mode="static"] .landing-section.is-start .landing-side.is-left {
-  margin-top: 0;
-}
-
-.landing[data-mode="static"] .landing-grid {
-  display: none;
+  padding: 0;
 }
 
 /* ── phone and narrow ─────────────────────────────────────────────────── */
+/* a low screen keeps one example per slide so the slide still fits */
+@media (max-height: 820px) {
+  .landing-pin .is-wide-only {
+    display: none;
+  }
+}
+
 @media (max-width: 860px) {
   .landing {
     --landing-w: calc(100% - 2 * var(--space-4));
-  }
-
-  .landing-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .landing-grid span:nth-child(2),
-  .landing-grid span:nth-child(3) {
-    display: none;
-  }
-
-  .landing-top {
-    padding: var(--space-3) 0;
+    --landing-gnb: 56px;
+    --landing-mascot: min(26svh, 56vw, 230px);
   }
 
   .landing-top .locale-picker > span {
     display: none;
   }
 
-  .landing-stage {
-    place-items: start center;
-    padding-top: 9vh;
-  }
-
-  .landing-mascot {
-    width: min(74vw, 46vh, 340px);
-  }
-
-  .landing-mascot.is-what,
-  .landing-mascot.is-control,
-  .landing-mascot.is-team {
-    transform: none;
-  }
-
-  .landing-section,
-  .landing[data-mode="static"] .landing-section:not(.is-hero) {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 0;
-    row-gap: var(--space-4);
-    padding: var(--space-12) 0;
-  }
-
-  .landing-side.is-left,
-  .landing-side.is-right,
-  .landing[data-mode="static"] .landing-section:not(.is-hero) .landing-side.is-right,
-  .landing-static-mascot {
-    grid-column: 1;
-    grid-row: auto;
-    padding: 0;
-  }
-
-  .landing-static-mascot {
-    justify-items: start;
-    order: -1;
-  }
-
-  .landing-static-mascot .penguin {
-    width: 128px;
-    height: 128px;
-  }
-
-  .landing-section.is-hero {
-    padding-top: calc(var(--space-16) + var(--space-6));
-  }
-
-  .landing-scroll {
+  .landing-grid {
     display: none;
   }
 
-  /* live: the penguin shows through the gap above each section; the copy sits on cards */
-  .landing[data-mode="live"] .landing-section {
-    padding-top: 58vh;
-    padding-top: 58svh;
+  /* the penguin sits at the top centre; the slide reads below it */
+  .landing-stage {
+    place-items: start center;
   }
 
-  .landing[data-mode="live"] .landing-section.is-hero {
-    padding-top: 56vh;
-    padding-top: 56svh;
+  .landing-mascot {
+    width: var(--landing-mascot);
   }
 
-  .landing[data-mode="live"] .landing-side,
-  .landing[data-mode="live"] .landing-statement {
-    padding: var(--card-pad);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--surface);
+  .landing-slide,
+  .landing-stack .landing-slide {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    align-content: start;
+    row-gap: var(--space-5);
   }
 
-  /* the right column already holds cards — no card around cards, just the page colour behind them */
-  .landing[data-mode="live"] .landing-side.is-right,
-  .landing[data-mode="live"] .landing-section.is-team .landing-wide {
-    padding: var(--space-2) 0;
-    border: 0;
-    border-radius: 0;
-    background: var(--bg);
+  .landing-pin .landing-slide {
+    padding: calc(var(--landing-mascot) - var(--space-4)) 0 var(--space-4);
   }
 
-  .landing-section.is-start .landing-side.is-left {
-    margin-top: 0;
+  .landing-copy,
+  .landing-present,
+  .landing-stack .landing-present {
+    grid-column: 1;
+    padding: 0;
+  }
+
+  .landing-copy {
+    gap: var(--space-3);
+  }
+
+  /* what the penguin presents comes up from under it on a phone */
+  .landing-pin .landing-item {
+    transform: translateY(8px);
+  }
+
+  .landing-stack .landing-slide {
+    padding: var(--space-12) 0;
   }
 
   .landing-display {
-    font-size: clamp(30px, 8.4vw, 40px);
+    font-size: clamp(28px, 8vw, 36px);
   }
 
   .landing-title {
-    font-size: clamp(23px, 6.4vw, 28px);
+    font-size: clamp(22px, 6.2vw, 26px);
   }
 
   .landing .landing-lead {
     font-size: 15px;
+    line-height: 1.6;
   }
 
-  .landing-side .btn.is-large {
-    align-self: stretch;
-    justify-content: center;
+  .landing-eyebrow {
+    margin-bottom: 0;
+  }
+
+  .is-wide-only {
+    display: none;
+  }
+
+  .landing-steps li {
+    padding: var(--space-2) 0;
+  }
+
+  .landing-points {
+    gap: var(--space-2);
+  }
+
+  .landing-org {
+    gap: var(--space-3);
+  }
+
+  .landing-org-teams {
+    row-gap: 0;
+    padding-top: var(--space-2);
+  }
+
+  .landing-org-top,
+  .landing-org-team {
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .landing-org-members {
+    gap: 0;
+  }
+
+  .landing-org-node {
+    min-height: 24px;
+    font-size: 13px;
   }
 
   .landing-card {
@@ -938,12 +1102,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-mascot,
   .landing-poster,
   .landing-canvas,
+  .landing-pin .landing-slide,
+  .landing-pin .landing-item,
   .landing-prompt-answer,
   .landing-progress-label,
-  .landing-progress-tick {
+  .landing-progress-tick,
+  .landing-top {
     transition: none;
   }
 

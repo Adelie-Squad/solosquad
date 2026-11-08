@@ -67,7 +67,7 @@ kbd {
   border-radius: 5px;
   background: var(--surface-2);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
 }
 
@@ -113,7 +113,7 @@ kbd {
   border-radius: 10px;
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 20px;
   text-align: center;

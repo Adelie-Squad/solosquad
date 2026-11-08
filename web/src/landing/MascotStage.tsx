@@ -1,12 +1,13 @@
-// The mascot layer of the landing (DESIGN.md `## 랜딩`): sticky in the middle of the viewport
-// while the sections scroll past. The 2D penguin shows at once; the 3D chunk loads after the
-// first paint and takes over when it has drawn. Rendering stops when the tab is hidden or the
-// layer is off-screen. Decoration only (aria-hidden).
+// The mascot layer of the landing (DESIGN.md `## 랜딩`): in the middle of the pinned stage for the
+// whole page while the slides change around it. The 2D penguin shows at once; the 3D chunk loads
+// after the first paint and takes over only once it has really drawn the penguin (MascotCanvas
+// counts draw calls) — if it never does, the page falls back to the 2D penguin. Rendering stops
+// when the tab is hidden or the layer is off-screen. Decoration only (aria-hidden).
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { Mascot } from '../characters/PenguinIcon';
 import type { ClipName } from '../office/contract';
 import type { Theme } from '../theme';
-import type { Pointer } from './MascotCanvas';
+import type { LandingStats, Pointer, PresentSide } from './MascotCanvas';
 import type { SectionId } from './sections';
 
 const MascotCanvas = lazy(() => import('./MascotCanvas'));
@@ -45,15 +46,17 @@ export function MascotStage({
   theme,
   mobile,
   pointer,
-  scroll,
+  touch,
+  side,
   onFail,
 }: {
   section: SectionId;
   clip: ClipName;
   theme: Theme;
   mobile: boolean;
-  pointer: RefObject<Pointer>;
-  scroll: RefObject<number>;
+  pointer: RefObject<Pointer | null>;
+  touch: boolean;
+  side: PresentSide;
   onFail: () => void;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -63,7 +66,7 @@ export function MascotStage({
   const [offScreen, setOffScreen] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
   // `?landing-debug`: frames per second at `window.__landing.fps`
-  const [stats] = useState(() => (new URLSearchParams(window.location.search).has('landing-debug') ? { fps: 0 } : undefined));
+  const [stats] = useState<LandingStats | undefined>(() => (new URLSearchParams(window.location.search).has('landing-debug') ? { fps: 0, calls: 0 } : undefined));
   useEffect(() => {
     if (stats) (window as unknown as { __landing?: unknown }).__landing = stats;
   }, [stats]);
@@ -86,7 +89,7 @@ export function MascotStage({
 
   return (
     <div className="landing-stage" aria-hidden="true">
-      <div className={`landing-mascot is-${section} ${ready ? 'is-ready' : ''}`} ref={wrap} data-clip={clip}>
+      <div className={`landing-mascot ${ready ? 'is-ready' : ''}`} ref={wrap} data-clip={clip} data-testid="landing-mascot">
         <div className="landing-poster">
           <Mascot size={240} />
         </div>
@@ -99,7 +102,9 @@ export function MascotStage({
                 mobile={mobile}
                 paused={hidden || offScreen}
                 pointer={pointer}
-                scroll={scroll}
+                touch={touch}
+                slide={section}
+                side={side}
                 greet={greet}
                 onReady={onReady}
                 onFail={onFail}

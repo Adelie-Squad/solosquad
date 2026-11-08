@@ -1,0 +1,60 @@
+// Where the landing penguin looks (DESIGN.md `## 랜딩` — 시선). Plain numbers, no three.js, so the
+// limits and the damping are testable: the head carries the gaze (the eyes are part of the head
+// mesh — the rig has no eye bones), the body follows a little, all of it damped.
+
+export interface Pointer {
+  /** -1 (left) … 1 (right) of the viewport, measured from the penguin (the viewport centre). */
+  x: number;
+  /** -1 (top) … 1 (bottom). */
+  y: number;
+}
+
+export interface Look {
+  /** Body turn (rad, + = towards screen right). */
+  body: number;
+  /** Head turn left/right on top of the body (rad). */
+  yaw: number;
+  /** Head nod (rad, + = looking down). */
+  pitch: number;
+}
+
+/** Natural limits (rad): the head turns further than the body, and nods less than it turns. */
+export const LIMITS = { body: 0.2, yaw: 0.55, pitch: 0.28 } as const;
+/** Damping rate (1/s): about 0.3 s to settle — follows, never snaps. */
+export const DAMP = 7;
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/** The look a pointer asks for: the head takes most of the turn, the body the rest. */
+export function lookAt(p: Pointer): Look {
+  const x = clamp(p.x, -1, 1);
+  const y = clamp(p.y, -1, 1);
+  return { body: x * LIMITS.body, yaw: x * (LIMITS.yaw - LIMITS.body), pitch: y * LIMITS.pitch };
+}
+
+/** One damped step from `from` towards `to` over `dt` seconds. */
+export function follow(from: Look, to: Look, dt: number, rate = DAMP): Look {
+  const k = 1 - Math.exp(-rate * Math.max(0, dt));
+  return {
+    body: from.body + (to.body - from.body) * k,
+    yaw: from.yaw + (to.yaw - from.yaw) * k,
+    pitch: from.pitch + (to.pitch - from.pitch) * k,
+  };
+}
+
+/** Touch devices have no cursor: a slow, small look around instead (two unrelated sines). */
+export function wander(seconds: number): Pointer {
+  return { x: Math.sin(seconds * 0.45) * 0.55 + Math.sin(seconds * 0.17) * 0.2, y: Math.sin(seconds * 0.31 + 1.2) * 0.35 };
+}
+
+/**
+ * Has the 3D penguin actually drawn? The 2D poster stays until the renderer has issued draw calls
+ * (`calls` — last frame's `gl.info.render.calls`); if nothing is drawn within `GIVE_UP_SECONDS`
+ * of frames the landing falls back to the 2D penguin instead of showing an empty layer.
+ */
+export const GIVE_UP_SECONDS = 4;
+
+export function drawState(calls: number, secondsRunning: number): 'drawn' | 'waiting' | 'empty' {
+  if (calls > 0) return 'drawn';
+  return secondsRunning >= GIVE_UP_SECONDS ? 'empty' : 'waiting';
+}
