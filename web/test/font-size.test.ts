@@ -112,6 +112,23 @@ describe('최소 12px (DESIGN.md `## 타이포그래피`)', () => {
     expect(bad).toEqual([]);
   });
 
+  it('office scene text never scales with the zoom (fixed px at every level)', () => {
+    // name tags, chips and team labels are placed by translate() only — a scale() on them would
+    // shrink 12px text below the floor when the whole office is in view
+    const canvas = readFileSync(join(web, 'src/office/OfficeCanvas.tsx'), 'utf8');
+    const transforms = [...canvas.matchAll(/style\.transform\s*=\s*`([^`]*)`/g)].map((m) => m[1]);
+    expect(transforms.length).toBeGreaterThanOrEqual(2);
+    for (const tr of transforms) expect(tr).not.toMatch(/scale/);
+    const css = sheets.map((s) => s.css).join('\n');
+    for (const sel of ['.office-tag-pill', '.office-tag-pill .chip', '.office-team-label']) {
+      const block = new RegExp(`${sel.replace(/[.*]/g, (c) => `\\${c}`)}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+      const size = /font-size\s*:\s*([^;]+);/.exec(block)?.[1];
+      expect(size, sel).toBeDefined();
+      expect(smallestPx(size!), sel).toBeGreaterThanOrEqual(MIN);
+    }
+    expect(/\.office-tag[^{]*\{[^}]*transform\s*:[^}]*scale/.test(css)).toBe(false);
+  });
+
   it('DESIGN.md states the floor', () => {
     const design = readFileSync(join(web, '..', 'DESIGN.md'), 'utf8');
     expect(design.includes('최소 12px')).toBe(true);

@@ -20,6 +20,7 @@ export function AgentModal({
   status,
   waiting,
   onTalk,
+  onZoom,
   onClose,
 }: {
   agent: Agent;
@@ -27,6 +28,8 @@ export function AgentModal({
   waiting: ApprovalItem[];
   /** Chief only — start a conversation from here. */
   onTalk?: () => void;
+  /** The office scene is up — zoom it to this agent's desk (L5). */
+  onZoom?: () => void;
   onClose: () => void;
 }) {
   const { w: toWs } = useLinks();
@@ -79,12 +82,20 @@ export function AgentModal({
           <p className="dash-hint">{t('job.none')}</p>
         )}
       </section>
-      {onTalk && (
+      {(onTalk || onZoom) && (
         <div className="dialog-actions is-start">
-          <button type="button" className="btn is-primary with-icon" onClick={onTalk}>
-            <ICON.chat />
-            {t('chat.talkTo', { name })}
-          </button>
+          {onTalk && (
+            <button type="button" className="btn is-primary with-icon" onClick={onTalk}>
+              <ICON.chat />
+              {t('chat.talkTo', { name })}
+            </button>
+          )}
+          {onZoom && (
+            <button type="button" className="btn with-icon" onClick={onZoom}>
+              <ICON.zoomIn />
+              {t('office.zoom.toAgent')}
+            </button>
+          )}
         </div>
       )}
     </Modal>

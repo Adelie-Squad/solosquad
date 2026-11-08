@@ -1,18 +1,21 @@
 // The clay office in React Three Fiber (DESIGN.md `## 사무실 장면` v3) — the lazily loaded part
 // of the office screen: three.js, R3F, drei and the two GLBs load only here. OfficeStage owns
-// the page side (tags, fallback, pausing); this draws and reports back.
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, type RefObject } from 'react';
+// the page side (tags, controls, fallback, pausing); this draws, applies the zoom controller's
+// view, and reports back.
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { ContactShadows, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { Theme } from '../theme';
+import { seatClicks } from './clicks';
 import { checkGltf, formatReport, type GltfJson } from './contract';
 import { applyLook, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
-import { WALL_H, type Room, type SeatAgent } from './layout';
+import type { Room, SeatAgent } from './layout';
 import { paletteFor, type OfficePalette } from './palette';
 import { kitUrl, penguinUrl, withMeshopt } from './penguinAsset';
 import { SkyLight } from './SkyLight';
 import type { AgentStatus } from './state';
+import { collidingTags, floorPoint, officeFrame, tagsShowAll, VIEW_DIR, type TagBox, type ZoomController } from './zoom';
 
 // Both files start loading together (the loader setup is shared with the landing's mascot — penguinAsset.ts).
 useGLTF.preload(kitUrl, false, false, withMeshopt);
@@ -27,8 +30,14 @@ export interface OfficeCanvasProps {
   /** Hidden tab or scrolled off-screen — stop drawing. */
   paused: boolean;
   tags: RefObject<Map<string, HTMLElement>>;
+  /** Team labels under each pod (pod key → element), placed like the tags. */
+  teamTags: RefObject<Map<string, HTMLElement>>;
+  /** Where the camera looks (levels, pan) — the page drives it, the scene applies it. */
+  zoom: ZoomController;
   onSelect: (agent: string) => void;
   onHover: (agent: string | null) => void;
+  /** The pods as laid out (team labels follow them). */
+  onPods: (pods: { key: string; team: string | null; chief: boolean }[]) => void;
   onReady: () => void;
   onFail: () => void;
   /** `?office-debug` — frames per second land here. */
@@ -36,7 +45,9 @@ export interface OfficeCanvasProps {
 }
 
 /** Elevation 30°, azimuth 45° (contract §2) — the direction from the room towards the camera. */
-const VIEW = new THREE.Vector3(Math.sin(Math.PI / 4) * Math.cos(Math.PI / 6), Math.sin(Math.PI / 6), Math.cos(Math.PI / 4) * Math.cos(Math.PI / 6));
+const VIEW = new THREE.Vector3(...VIEW_DIR);
+/** Pixels between the anchor above the head and the tag's bottom — the same at every zoom. */
+const TAG_GAP = 8;
 
 export default function OfficeCanvas(props: OfficeCanvasProps) {
   const palette = paletteFor(props.theme);
@@ -79,10 +90,16 @@ function agentOf(e: ThreeEvent<PointerEvent | MouseEvent>): string | null {
   return null;
 }
 
-function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect, onHover, onReady, stats }: OfficeCanvasProps) {
+/** Stage pixels of a projected point. */
+function toScreen(v: THREE.Vector3, size: { width: number; height: number }): [number, number] {
+  return [((v.x + 1) / 2) * size.width, ((1 - v.y) / 2) * size.height];
+}
+
+function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags, zoom, onSelect, onHover, onPods, onReady, stats }: OfficeCanvasProps) {
   const kit = useGLTF(kitUrl, false, false, withMeshopt);
   const penguin = useGLTF(penguinUrl, false, false, withMeshopt);
   const { size, raycaster, invalidate, gl } = useThree();
+  const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const palette = paletteFor(theme);
   const evening = !!palette.lamp;
 
@@ -111,6 +128,9 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect,
     [kit, penguin, bank, seatKey, aspectBucket], // eslint-disable-line react-hooks/exhaustive-deps
   );
   useEffect(() => () => office.dispose(), [office]);
+  useEffect(() => {
+    onPods(office.pods.map((p) => ({ key: p.key, team: p.team, chief: p.desks.some((d) => d.chief) })));
+  }, [office, onPods]);
 
   useLayoutEffect(() => {
     bank.setPalette(palette);
@@ -136,19 +156,51 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect,
     onReady();
   }, [onReady]);
 
-  const tagScale = useRef(1);
   const v = useMemo(() => new THREE.Vector3(), []);
   const fps = useRef({ n: 0, at: 0 });
+  /** Measured tag sizes (px) — re-read now and then, not every frame (a layout read costs). */
+  const sizes = useRef(new WeakMap<HTMLElement, { w: number; h: number; at: number }>());
+  const frameNo = useRef(0);
   useFrame((state, dt) => {
+    if (zoom.tick()) applyView(camera, zoom);
     if (!reducedMotion) for (const seat of office.seats.values()) seat.mixer.update(Math.min(dt, 0.05));
+    const n = ++frameNo.current;
+    // tags keep one pixel size at every zoom (DESIGN — 12px floor); below L3 a tag that would
+    // cover a more important one is hidden instead of drawn smaller
+    const collide = !tagsShowAll(zoom.level());
+    const boxes: (TagBox & { el: HTMLElement })[] = [];
     for (const seat of office.seats.values()) {
       const el = seat.tag ?? tags.current?.get(seat.name) ?? null;
       seat.tag = el;
       if (!el) continue;
       seat.tagAnchor.getWorldPosition(v).project(state.camera);
-      const x = ((v.x + 1) / 2) * state.size.width;
-      const y = ((1 - v.y) / 2) * state.size.height;
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%) scale(${tagScale.current.toFixed(2)})`;
+      const [x, y] = toScreen(v, state.size);
+      el.style.transform = `translate(${x.toFixed(1)}px, ${(y - TAG_GAP).toFixed(1)}px) translate(-50%, -100%)`;
+      if (!collide || el.classList.contains('is-quiet')) {
+        if (el.dataset.covered) delete el.dataset.covered;
+        continue;
+      }
+      let box = sizes.current.get(el);
+      if (!box || n - box.at > 30) {
+        box = { w: el.offsetWidth, h: el.offsetHeight, at: n };
+        sizes.current.set(el, box);
+      }
+      boxes.push({ el, name: seat.name, x, y: y - TAG_GAP, w: box.w, h: box.h, prio: Number(el.dataset.prio ?? 5) });
+    }
+    if (boxes.length) {
+      const hidden = collidingTags(boxes);
+      for (const b of boxes) {
+        if (hidden.has(b.name)) b.el.dataset.covered = '1';
+        else if (b.el.dataset.covered) delete b.el.dataset.covered;
+      }
+    }
+    // team labels sit on the floor just in front of their pod
+    for (const pod of office.pods) {
+      const el = teamTags.current?.get(pod.key);
+      if (!el) continue;
+      v.set(pod.x, 0, pod.z + pod.d / 2 + 0.12).project(state.camera);
+      const [x, y] = toScreen(v, state.size);
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, 0)`;
     }
     if (stats) {
       const now = state.clock.elapsedTime;
@@ -164,26 +216,36 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect,
   const hover = (name: string | null) => {
     if (name === hovered.current) return;
     hovered.current = name;
-    gl.domElement.style.cursor = name ? 'pointer' : 'default';
+    gl.domElement.style.cursor = name ? 'pointer' : '';
     onHover(name);
   };
+
+  // one click opens the agent (after a beat, in case a second click follows); a double-click
+  // zooms to that agent's desk (L5) instead
+  const clicks = useMemo(() => seatClicks({ onSelect: (a) => onSelect(a), onFocus: (a) => void zoom.focusAgent(a) }), [onSelect, zoom]);
+  useEffect(() => clicks.cancel, [clicks]);
 
   const room = office.room;
   const cx = (room.minX + room.maxX) / 2;
   const cz = (room.minZ + room.maxZ) / 2;
   return (
     <>
-      <CameraRig room={room} scale={tagScale} />
+      <CameraRig room={room} office={office} zoom={zoom} />
       <SkyLight color={palette.sky.ambient} intensity={palette.sky.ambientIntensity} />
-      <KeyLight room={room} sky={palette.sky} mobile={mobile} rebuild={office} />
+      <KeyLight room={room} sky={palette.sky} mobile={mobile} rebuild={office} zoom={zoom} />
       <primitive
         object={office.root}
         onClick={(e: ThreeEvent<MouseEvent>) => {
           const name = agentOf(e);
-          if (name) {
-            e.stopPropagation();
-            onSelect(name);
-          }
+          if (!name) return;
+          e.stopPropagation();
+          clicks.click(name, e.nativeEvent.detail, e.delta);
+        }}
+        onDoubleClick={(e: ThreeEvent<MouseEvent>) => {
+          const name = agentOf(e);
+          if (!name) return;
+          e.stopPropagation();
+          clicks.dblclick(name);
         }}
         onPointerMove={(e: ThreeEvent<PointerEvent>) => hover(agentOf(e))}
         onPointerOut={() => hover(null)}
@@ -201,68 +263,73 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, onSelect,
   );
 }
 
-/** Orthographic camera at the contract's view, the frustum fitted to the room (floor + walls). */
-function CameraRig({ room, scale }: { room: Room; scale: RefObject<number> }) {
+/** Apply the controller's view: the frustum is cut around (u, v) in view coordinates, then zoomed. */
+function applyView(camera: THREE.OrthographicCamera, zoom: ZoomController) {
+  const f = zoom.frame;
+  if (!f) return;
+  const { u, v } = zoom.view;
+  Object.assign(camera, { left: u - f.fit.w / 2, right: u + f.fit.w / 2, top: v + f.fit.h / 2, bottom: v - f.fit.h / 2, zoom: zoom.view.zoom });
+  camera.updateProjectionMatrix();
+}
+
+/**
+ * Orthographic camera at the contract's view, on the VIEW line through the origin — so the view
+ * coordinates of zoom.ts are the frustum's own. The levels are measured from this layout at this
+ * stage size; the controller keeps its level and centre across a resize.
+ */
+function CameraRig({ room, office, zoom }: { room: Room; office: Office; zoom: ZoomController }) {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
   useLayoutEffect(() => {
-    const center = new THREE.Vector3((room.minX + room.maxX) / 2, WALL_H / 3, (room.minZ + room.maxZ) / 2);
+    const reach = Math.hypot(room.maxX - room.minX, room.maxZ - room.minZ) + Math.hypot(room.minX + room.maxX, room.minZ + room.maxZ) / 2;
+    const dist = 40 + reach;
     (camera as THREE.OrthographicCamera & { manual?: boolean }).manual = true;
     camera.layers.enable(KIT_LAYER);
-    camera.position.copy(center).addScaledVector(VIEW, 40);
-    camera.lookAt(center);
+    camera.position.copy(VIEW).multiplyScalar(dist);
+    camera.lookAt(0, 0, 0);
     camera.near = 0.1;
-    camera.far = 120;
-    camera.zoom = 1;
+    camera.far = dist * 2 + 10;
     camera.updateMatrixWorld();
-    const view = camera.matrixWorldInverse;
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    const p = new THREE.Vector3();
-    for (const x of [room.minX, room.maxX]) {
-      for (const z of [room.minZ, room.maxZ]) {
-        for (const y of [0, WALL_H]) {
-          p.set(x, y, z).applyMatrix4(view);
-          minX = Math.min(minX, p.x);
-          maxX = Math.max(maxX, p.x);
-          minY = Math.min(minY, p.y);
-          maxY = Math.max(maxY, p.y);
-        }
-      }
-    }
-    const pad = 0.12;
-    let w = maxX - minX + pad * 2;
-    let h = maxY - minY + pad * 2;
-    const aspect = size.width / Math.max(1, size.height);
-    if (w / h > aspect) h = w / aspect;
-    else w = h * aspect;
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    Object.assign(camera, { left: cx - w / 2, right: cx + w / 2, top: cy + h / 2, bottom: cy - h / 2 });
-    camera.updateProjectionMatrix();
-    // name tags shrink with the room so a full office stays readable
-    scale.current = Math.min(1, Math.max(0.62, size.width / w / 70));
+    zoom.setFrame(officeFrame(office.pods, room, size.width, size.height, office.desk));
+    applyView(camera, zoom);
     invalidate();
-  }, [camera, room, size.width, size.height, invalidate, scale]);
+  }, [camera, room, office, zoom, size.width, size.height, invalidate]);
+  // a demand-driven loop (reduced motion) still redraws when the view moves
+  useEffect(() => zoom.subscribe((e) => e === 'change' && invalidate()), [zoom, invalidate]);
   return null;
 }
 
 /**
- * The one key light (`clay.sky`): by day the sun, the only shadow caster — its map covers the room
- * and is drawn once per build or theme, since only the penguins move and they bring their own
- * contact shadow; in the evening a weak moon rim from behind, no shadow.
+ * The one key light (`clay.sky`): by day the sun, the only shadow caster — its map covers what
+ * is in view (the whole room at L1) and is drawn again only when the zoom or the pan settles,
+ * never per frame of a drag, since only the penguins move and they bring their own contact
+ * shadow; in the evening a weak moon rim from behind, no shadow.
  */
-function KeyLight({ room, sky, mobile, rebuild }: { room: Room; sky: OfficePalette['sky']; mobile: boolean; rebuild: unknown }) {
+function KeyLight({ room, sky, mobile, rebuild, zoom }: { room: Room; sky: OfficePalette['sky']; mobile: boolean; rebuild: unknown; zoom: ZoomController }) {
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
   const light = useMemo(() => new THREE.DirectionalLight(), []);
+  const [focus, setFocus] = useState<{ x: number; z: number; r: number } | null>(null);
+  useEffect(
+    () =>
+      zoom.subscribe((e) => {
+        if ((e !== 'settle' && e !== 'frame') || !zoom.frame) return;
+        const f = zoom.frame;
+        const { u, v, zoom: z } = zoom.view;
+        const p = floorPoint(u, v);
+        // the visible floor: w across, about 2·h deep (seen at 30°), with a margin for the next pan
+        const r = Math.max(f.fit.w / z / 2, f.fit.h / z) * 1.25 + 1.5;
+        setFocus((old) => (old && Math.abs(old.x - p.x) < 0.05 && Math.abs(old.z - p.z) < 0.05 && Math.abs(old.r - r) < 0.05 ? old : { x: p.x, z: p.z, r }));
+      }),
+    [zoom],
+  );
   useLayoutEffect(() => {
-    const cx = (room.minX + room.maxX) / 2;
-    const cz = (room.minZ + room.maxZ) / 2;
-    const span = Math.hypot(room.maxX - room.minX, room.maxZ - room.minZ) / 2 + 1;
+    const whole = Math.hypot(room.maxX - room.minX, room.maxZ - room.minZ) / 2 + 1;
+    const near = !!focus && focus.r < whole;
+    const cx = near ? focus.x : (room.minX + room.maxX) / 2;
+    const cz = near ? focus.z : (room.minZ + room.maxZ) / 2;
+    const span = near ? focus.r : whole;
     const dir = new THREE.Vector3(...sky.from).normalize();
     light.color.set(sky.sun);
     light.intensity = sky.sunIntensity * Math.PI;
@@ -270,8 +337,8 @@ function KeyLight({ room, sky, mobile, rebuild }: { room: Room; sky: OfficePalet
     light.target.position.set(cx, 0, cz);
     light.target.updateMatrixWorld();
     light.castShadow = sky.shadow;
-    const size = mobile ? 1024 : 2048;
-    light.shadow.mapSize.set(size, size);
+    const mapSize = mobile ? 1024 : 2048;
+    light.shadow.mapSize.set(mapSize, mapSize);
     light.shadow.bias = -0.0005;
     light.shadow.normalBias = 0.02;
     light.shadow.radius = 4;
@@ -280,7 +347,7 @@ function KeyLight({ room, sky, mobile, rebuild }: { room: Room; sky: OfficePalet
     light.shadow.camera.updateProjectionMatrix();
     gl.shadowMap.needsUpdate = true;
     invalidate();
-  }, [light, room, sky, mobile, gl, invalidate, rebuild]);
+  }, [light, room, sky, mobile, gl, invalidate, rebuild, focus]);
   return (
     <>
       <primitive object={light} />

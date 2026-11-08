@@ -7,7 +7,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { teamColor } from '../characters/colors';
 import { canonical } from '../characters/roster';
 import { ANCHORS, CLIPS, LAMP_LIGHT, lampOffset, paletteKey, PENGUIN_MESH, ROLE_PROPS, SCARF, SEAT_OFFSET, SOCKETS, propNode, socketBone, type ClipName, type ModuleName, type Socket } from './contract';
-import { layoutOffice, PROP_SPOTS, propPlace, roomFor, roomTiles, type Footprint, type Room, type SeatAgent } from './layout';
+import { layoutOffice, PROP_SPOTS, propPlace, roomFor, roomTiles, type Footprint, type Pod, type Room, type SeatAgent } from './layout';
 import { CROSSFADE, clipFor, phaseOf, STILL_TIME } from './motion';
 import type { ClayMaterial, OfficePalette } from './palette';
 import type { AgentStatus } from './state';
@@ -178,6 +178,10 @@ export interface Seat {
 export interface Office {
   root: THREE.Group;
   room: Room;
+  /** The desk pods as laid out (zoom levels and team labels read them). */
+  pods: Pod[];
+  /** The desk module's measured footprint (L5 frames one). */
+  desk: Footprint;
   seats: Map<string, Seat>;
   dispose(): void;
 }
@@ -328,7 +332,9 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
 
       const head = findNode(penguin, socketBone('head')) ?? findNode(penguin, 'head') ?? penguin;
       const tagAnchor = new THREE.Object3D();
-      tagAnchor.position.set(0, 0.3, 0);
+      // just above the head; the gap to the tag is a fixed pixel offset (OfficeCanvas) so the tag
+      // stays close to the head at every zoom level instead of floating off at L5
+      tagAnchor.position.set(0, 0.12, 0);
       head.add(tagAnchor);
 
       const mixer = new THREE.AnimationMixer(penguin);
@@ -372,6 +378,8 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
   return {
     root,
     room,
+    pods,
+    desk: deskFp,
     seats,
     // GPU memory only, and safe to call before a reuse: React's StrictMode runs an effect's cleanup
     // and then the effect again on the same memoised office (three re-uploads a disposed resource on

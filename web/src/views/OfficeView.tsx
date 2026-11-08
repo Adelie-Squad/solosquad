@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAgents, useApprovals, useOrgChart, usePeople } from '../api/queries';
 import type { Agent, Person } from '../api/types.gen';
 import { AgentIcon } from '../characters/PenguinIcon';
@@ -16,7 +16,7 @@ import { teamName } from '../lib/names';
 import { useJobs } from '../live/jobs';
 import { useLive } from '../live/LiveProvider';
 import { ENTRY } from '../office/layout';
-import { OfficeStage, STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
+import { OfficeStage, STATUS_CHIP, STATUS_LABEL, zoomKey, type OfficeStageApi } from '../office/OfficeStage';
 import { usePopout } from '../office/popout';
 import { agentStatuses, nextChange, type AgentStatus } from '../office/state';
 import { useOrgOwner, useScope } from '../scope';
@@ -104,6 +104,8 @@ export function OfficeView() {
   const [liveModal, setLiveModal] = useState(false);
   const [quickChat, setQuickChat] = useState(false);
   const popout = usePopout(org, ws);
+  const stage = useRef<OfficeStageApi>(null);
+  const [zoomable, setZoomable] = useState(false);
 
   if (agents.isPending) return <div className="view"><Loading /></div>;
   if (agents.error) return <div className="view"><QueryError error={agents.error} /></div>;
@@ -158,6 +160,9 @@ export function OfficeView() {
             fallback={roster}
             highlight={pointed}
             paused={popout.open}
+            storageKey={zoomKey(org, ws)}
+            onZoomable={setZoomable}
+            ref={stage}
           />
         </div>
         {liveOpen && (
@@ -235,6 +240,14 @@ export function OfficeView() {
               ? () => {
                   setSelected(null);
                   setQuickChat(true);
+                }
+              : undefined
+          }
+          onZoom={
+            zoomable && !popout.open
+              ? () => {
+                  setSelected(null);
+                  stage.current?.focusAgent(chosen.name);
                 }
               : undefined
           }
