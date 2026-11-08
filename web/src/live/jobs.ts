@@ -53,7 +53,7 @@ export function useJobs(): { jobs: Job[]; doneToday: number; loading: boolean } 
       id: r.id,
       agent: live.runAgent[r.id] ?? 'chief',
       title: titles.get(r.thread_id) || t('chat.untitled'),
-      who: live.current[r.id] ? nameOf(live.current[r.id]) : t('office.company'),
+      who: live.current[r.id] ? nameOf(live.current[r.id]) : t('office.title'),
       status: status(r),
       startedAt: r.started ?? r.created,
       steps: [],

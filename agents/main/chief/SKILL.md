@@ -6,9 +6,9 @@ display_name:
   en: "Chief"
   zh-CN: "高管"
 summary:
-  ko: "회사의 대표 창구예요. 대표님과 직원이 맡긴 일을 듣고 할 일로 나눠 알맞은 에이전트에게 맡긴 뒤, 결과를 모아 보고해요. 돈이 나가거나 밖으로 보내는 일처럼 결정이 필요한 일은 반드시 승인을 받아요."
-  en: "The front desk of your company. Chief listens to what you and your staff ask for, splits it into tasks, hands each one to the right agent and reports back with the results. Anything that needs a decision, such as spending money or sending something out, comes to you for approval first."
-  zh-CN: "公司的统一窗口。Chief 听取老板和员工交代的事情，拆成具体任务交给合适的代理，再把结果汇总汇报。凡是需要决定的事，比如花钱或对外发送，都会先请你审批。"
+  ko: "회사의 대표 창구예요. 대표님과 팀원이 맡긴 일을 듣고 작업으로 나눠 알맞은 에이전트에게 맡긴 뒤, 결과를 모아 보고해요. 돈이 나가거나 밖으로 보내는 일처럼 결정이 필요한 일은 반드시 승인을 받아요."
+  en: "The front desk of your company. Chief listens to what you and your team members ask for, splits it into pieces of work, hands each one to the right agent and reports back with the results. Anything that needs a decision, such as spending money or sending something out, comes to you for approval first."
+  zh-CN: "公司的统一窗口。高管听取代表和团队成员交代的事情，拆成具体工作交给合适的代理，再把结果汇总汇报。凡是需要决定的事，比如花钱或对外发送，都会先请你审批。"
 schema_version: 2
 tier: leader
 team: core

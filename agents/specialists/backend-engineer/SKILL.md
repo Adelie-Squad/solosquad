@@ -8,7 +8,7 @@ display_name:
 summary:
   ko: "서비스 뒤에서 돌아가는 서버와 데이터 저장 구조를 설계하고 만들어요. 설계 문서와 서버 기능, 다른 시스템과 연결하는 통로를 만들어요. 실제 운영 데이터나 서버 설정을 바꾸기 전에는 승인을 받아요."
   en: "Designs and builds the servers and data storage behind your service. Delivers design documents, server features and the links to other systems. Asks for approval before changing live data or server settings."
-  zh-CN: "设计并搭建服务背后的服务器和数据存储。交付设计文档、服务器功能以及与其他系统的对接。修改正式数据或服务器设置前会请你审批。"
+  zh-CN: "设计并搭建服务背后的服务器和数据存储。交付设计文档、服务器功能以及与其他系统的连接。修改正式数据或服务器设置前会请你审批。"
 schema_version: 2
 tier: member
 team: engineering

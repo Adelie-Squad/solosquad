@@ -482,11 +482,11 @@ a.run-row:hover {
   font-weight: 700;
 }
 
-.statement tr.is-deviating th,
-.statement tr.is-deviating td,
+/* a row that differs from the recommendation says so with its warn chip; a suspended person reads
+   quieter — neither gets a tinted band (2026-11-08) */
 .statement tr.is-off th,
 .statement tr.is-off td {
-  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+  color: var(--ink-2);
 }
 
 .statement .row-actions {
@@ -524,11 +524,20 @@ a.run-row:hover {
   font-weight: 600;
 }
 
+/* a widget this web cannot draw: a plain panel with a dashed line and a warn icon — no tinted band */
 .placeholder {
-  border: 1px dashed var(--warn);
-  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+  border: 1px dashed var(--line);
+  background: var(--surface);
   color: var(--ink-2);
   font-size: 14px;
+}
+
+.placeholder > strong {
+  color: var(--ink);
+}
+
+.placeholder > strong svg {
+  color: var(--warn);
 }
 
 .placeholder p {

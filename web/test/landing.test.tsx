@@ -137,7 +137,7 @@ describe('the prompt to Chief', () => {
         <PromptTyper still />
       </I18nProvider>,
     );
-    const list = screen.getByRole('list', { name: '부탁 예시' });
+    const list = screen.getByRole('list', { name: '요청 예시' });
     expect(within(list).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       '지난달 손익 정리해줘 재무에게 맡겼어요',
       '다음 주 신상품 상세 페이지 시안 만들어줘 크리에이티브에게 맡겼어요',

@@ -51,7 +51,7 @@
   position: relative;
   padding: 18px 22px;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  background: var(--surface-2);
   font-size: 15.5px;
   line-height: 1.6;
   animation: bubble-in 0.5s ease 0.2s both;
@@ -64,7 +64,7 @@
   top: 28px;
   border-width: 8px 10px 8px 0;
   border-style: solid;
-  border-color: transparent color-mix(in srgb, var(--accent) 7%, var(--surface)) transparent transparent;
+  border-color: transparent var(--surface-2) transparent transparent;
 }
 
 .home-bubble p {
