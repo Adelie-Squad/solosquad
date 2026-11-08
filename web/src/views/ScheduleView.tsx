@@ -18,7 +18,8 @@ export const SCHEDULE_KIND: Record<ScheduleEntry['kind'], MessageKey> = {
 export const scheduleTitle = (s: Pick<ScheduleEntry, 'kind' | 'title' | 'name'>) => (s.kind === 'workflow' ? s.title : readable(s.name));
 
 /**
- * The schedule view of the workflows (2026-11-07 — the scheduler joined the workflows): every
+ * The scheduled-runs view of the workflows (2026-11-07 — the scheduler joined the workflows;
+ * 2026-11-09 — named 예약된 작업 · Scheduled runs · 定时运行, at `scheduled-jobs`): every
  * run this workspace makes on its own — workflow schedules, standing goals, routines — when it
  * fires next and how it went last time. The owner switches a workflow's schedule here; staff read.
  */
@@ -37,8 +38,8 @@ export function ScheduleView() {
             {!isOwner && q.data ? ` ${t('schedule.staffNote')}` : ''}
           </p>
         </div>
-        <WorkflowTabs current="schedule" />
       </header>
+      <WorkflowTabs current="scheduled" />
       {q.isPending ? (
         <Loading />
       ) : q.error ? (

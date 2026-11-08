@@ -20,7 +20,7 @@ import { cronText } from '../lib/cron';
 import { teamName } from '../lib/names';
 import { taskCounts } from '../lib/tasks';
 import { scheduleTitle } from '../views/ScheduleView';
-import { RUN_STATUS } from '../views/WorkflowsView';
+import { RUN_STATUS, SCHEDULED_PATH } from '../views/WorkflowsView';
 
 function Frame({ title, to, more, count, children }: { title: string; to?: string; more?: string; count?: number; children: ReactNode }) {
   return (
@@ -285,7 +285,7 @@ export function ScheduleWidget() {
   const q = useSchedules();
   const next = (q.data?.schedules ?? []).filter((s) => s.next_run != null).slice(0, 4);
   return (
-    <Frame title={t('widget.schedule')} to={toWs('/schedule')} more={t('widget.all')}>
+    <Frame title={t('widget.schedule')} to={toWs(SCHEDULED_PATH)} more={t('widget.all')}>
       {q.isPending ? <Loading /> : q.error ? <QueryError error={q.error} /> : next.length === 0 ? (
         <p className="dash-hint">{t('schedule.none')}</p>
       ) : (
