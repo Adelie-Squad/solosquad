@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -140,6 +141,36 @@ async def test_interrupt_then_resume_through_the_manager(tmp_path: Path) -> None
     assert done["status"] == RunStatus.SUCCESS
     kinds = [e["event"] for e in events]
     assert "run.interrupted" in kinds and "run.completed" in kinds and "run.message" in kinds
+    # the conversation's approval run is closed by the resume that answered it
+    asked = m.store.run(run["id"])
+    assert asked is not None
+    assert (asked["status"], asked["superseded_by"]) == (RunStatus.SUPERSEDED, done["id"])
+    assert m.store.runs(status=RunStatus.INTERRUPTED) == []
+
+
+def test_runs_stuck_interrupted_are_repaired_on_open(tmp_path: Path) -> None:
+    """A data folder from before the fix: an answered approval left its run `interrupted`."""
+    path = tmp_path / "runs.sqlite"
+    store = RunStore(path)
+    tid = store.create_thread("approve me")
+    asked = store.create_run(tid, "input", {}, "user")
+    store.set_status(asked, RunStatus.INTERRUPTED, interrupts=[{"id": "i", "value": {}}])
+    answer = store.create_run(tid, "resume", "approved", "user")
+    store.set_status(answer, RunStatus.SUCCESS)
+    other = store.create_thread("still waiting")
+    waiting = store.create_run(other, "input", {}, "user")
+    store.set_status(waiting, RunStatus.INTERRUPTED)
+    db = sqlite3.connect(path)  # roll the file back to v1, ghost included
+    db.execute("UPDATE runs SET status = 'interrupted' WHERE id = ?", (asked,))
+    db.execute("ALTER TABLE runs DROP COLUMN superseded_by")
+    db.execute("UPDATE schema_versions SET version = 1 WHERE component = 'runs'")
+    db.commit()
+    db.close()
+    reopened = RunStore(path)
+    fixed = reopened.run(asked)
+    assert fixed is not None
+    assert (fixed["status"], fixed["superseded_by"]) == (RunStatus.SUPERSEDED, answer)
+    assert [r["id"] for r in reopened.runs(status=RunStatus.INTERRUPTED)] == [waiting]
 
 
 async def test_escalation_goes_to_chief_ops_thread(tmp_path: Path) -> None:

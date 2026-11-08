@@ -320,6 +320,7 @@ export const en: Record<MessageKey, string> = {
   'run.success': 'Done',
   'run.error': 'Error',
   'run.cancelled': 'Cancelled',
+  'run.superseded': 'Continued',
 
   'artifact.markReviewed': 'Mark as reviewed',
   'artifact.reviewed': 'Reviewed',

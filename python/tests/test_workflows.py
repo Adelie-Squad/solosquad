@@ -160,6 +160,14 @@ async def test_monthly_pnl_runs_end_to_end(engines: Engines) -> None:
     assert state["status"] == "done" and state["artifacts"] == [pnl.id, brief.id]
     company_threads = [t["id"] for t in engines.company.store.threads(50)]
     assert f"{tid}-agent" in company_threads  # visible as an ordinary company thread
+    # the run that asked for the approval is closed by the one that answered it — no list
+    # of waiting or open runs keeps the finished workflow (the office's ghost card)
+    asked = wf.manager.store.run(rid)
+    assert asked is not None
+    assert (asked["status"], asked["superseded_by"]) == (RunStatus.SUPERSEDED, rid2)
+    assert wf.manager.store.runs(status=RunStatus.INTERRUPTED) == []
+    statuses = {r["status"] for r in wf.manager.store.runs(thread_id=tid)}
+    assert statuses == {RunStatus.SUCCESS, RunStatus.SUPERSEDED}
 
 
 async def test_declining_stops_before_the_agent_step(engines: Engines) -> None:
@@ -278,6 +286,20 @@ async def test_workflow_api_roles_and_review(tmp_path: Path) -> None:
             )
             await _status(wf, ok.json()["run_id"], RunStatus.SUCCESS)
             assert (await boss.get("/api/approvals")).json() == []  # answered → off the list
+            # the run list the office's live panel reads: nothing waits, nothing is open
+            listed_runs = (await kim.get("/api/workflow-runs", headers=hk)).json()
+            by_id = {r["id"]: r for r in listed_runs}
+            assert by_id[rid]["status"] == "superseded"
+            assert by_id[rid]["superseded_by"] == ok.json()["run_id"]
+            open_ = [r for r in listed_runs if r["status"] in ("pending", "running", "interrupted")]
+            assert open_ == []
+            waiting = await kim.get(
+                "/api/workflow-runs", params={"status": "interrupted"}, headers=hk
+            )
+            assert waiting.json() == []
+            work = (await kim.get("/api/work", headers=hk)).json()["items"]
+            [item] = [i for i in work if i["source"] == "workflow"]
+            assert item["status"] == "success" and item["run_id"] == ok.json()["run_id"]
             arts = (await kim.get("/api/artifacts", params={"needs_review": "true"})).json()
             assert [a["kind"] for a in arts] == ["finance.pnl"]
             reviewed = await kim.post(f"/api/artifacts/{arts[0]['id']}/review", headers=hk)
