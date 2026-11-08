@@ -164,16 +164,16 @@ def load_preset(org_root: Path) -> Preset | None:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except yaml.YAMLError as e:
-        raise PresetError(f"{PRESET_FILE}: not YAML: {e}") from e
+        raise PresetError(f"{PRESET_FILE.as_posix()}: not YAML: {e}") from e
     if not isinstance(data, dict):
-        raise PresetError(f"{PRESET_FILE}: expected a mapping")
+        raise PresetError(f"{PRESET_FILE.as_posix()}: expected a mapping")
     version = data.get("format_version", 1)
     if version != 1:
-        raise PresetError(f"{PRESET_FILE}: format_version {version!r} is not supported")
+        raise PresetError(f"{PRESET_FILE.as_posix()}: format_version {version!r} is not supported")
     return Preset(
         _preset_labels(data.get("categories"), "categories"),
         _preset_labels(data.get("tags"), "tags"),
-        str(PRESET_FILE),
+        PRESET_FILE.as_posix(),
     )
 
 

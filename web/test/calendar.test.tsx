@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { addDays, iso, monthGrid, rangeOf, readQuery, weekDays, writeQuery } from '../src/lib/calendar';
+import { addDays, monthGrid, rangeOf, readQuery, weekDays, writeQuery } from '../src/lib/calendar';
 import { RAIL_KEY, isRailShortcut } from '../src/shell/rail';
 import { Shell } from '../src/shell/Shell';
 import { CalendarView } from '../src/views/calendar/CalendarView';
@@ -15,7 +15,9 @@ import { me, renderWith } from './helpers';
 
 (globalThis as { EventSource?: unknown }).EventSource ??= QuietEventSource;
 
-const TODAY = iso(new Date());
+// a fixed Wednesday — the demo entries sit around "today", and which of them fall in the
+// week view depends on the weekday, so a real clock made this test pass or fail by date
+const TODAY = '2026-11-11';
 const demo = calendarDemo(TODAY);
 
 function calendarData(over: Record<string, unknown> = {}) {
@@ -97,7 +99,7 @@ describe('the calendar screen', () => {
     open(`/calendar?view=week&date=${TODAY}`);
     const week = await screen.findByTestId('week');
     expect(within(week).getAllByRole('gridcell')).toHaveLength(7);
-    expect(within(week).getAllByText('오리엔테이션').length + within(week).queryAllByText('치과 예약').length).toBeGreaterThan(0);
+    expect(within(week).queryAllByText('오리엔테이션').length + within(week).queryAllByText('치과 예약').length).toBeGreaterThan(0);
     cleanup();
     open(`/calendar?view=list&date=${TODAY}`);
     const list = await screen.findByTestId('list');
