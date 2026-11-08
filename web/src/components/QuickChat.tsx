@@ -7,6 +7,7 @@ import type { PromptHandoff } from './CommandBar';
 import { SuggestionStrip } from './SuggestionStrip';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { useAgentName } from '../lib/agentNames';
+import { useScrollLock } from './scrollLock';
 
 /** Quick chat — opens over the office when Chief is clicked; sending starts a new conversation. */
 export function QuickChat({ agent, onClose }: { agent: string; onClose: () => void }) {
@@ -15,6 +16,7 @@ export function QuickChat({ agent, onClose }: { agent: string; onClose: () => vo
   const name = useAgentName()(agent);
   const navigate = useNavigate();
   const [draft, setDraft] = useState('');
+  useScrollLock();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();

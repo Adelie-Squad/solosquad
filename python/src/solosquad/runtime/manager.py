@@ -1,7 +1,9 @@
 """Run manager (M24, decision 34): the part of LangGraph Server a 24/7 company needs.
 
     threads   one task each; its checkpoint thread_id is the thread id
-    runs      one execution of a thread — pending → running → success · error · interrupted
+    runs      one execution of a thread — pending → running → success · error · interrupted;
+              an interrupted run becomes `superseded` once a newer run is made on its thread
+              (the resume that answers it), so only a thread's newest run is ever waiting
     crons     a schedule that starts a run (on a fixed thread for a standing goal)
 
 Runs execute concurrently up to `max_concurrency`; connection slots in the router are the
@@ -42,6 +44,9 @@ class RunStatus(StrEnum):
     ERROR = "error"
     INTERRUPTED = "interrupted"
     CANCELLED = "cancelled"
+    SUPERSEDED = "superseded"
+    """An interrupted run a newer run on its thread answered (`superseded_by`) — history,
+    never waiting."""
 
 
 @dataclass(frozen=True)
@@ -203,6 +208,7 @@ class RunManager:
             RunStatus.ERROR,
             RunStatus.INTERRUPTED,
             RunStatus.CANCELLED,
+            RunStatus.SUPERSEDED,
         ):
             return run
         await asyncio.wait_for(ev.wait(), timeout)

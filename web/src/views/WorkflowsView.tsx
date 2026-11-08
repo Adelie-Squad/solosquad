@@ -20,6 +20,8 @@ export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string
   success: { label: 'run.success', chip: 'is-ok' },
   error: { label: 'run.error', chip: 'is-danger' },
   cancelled: { label: 'run.cancelled', chip: '' },
+  // an approval run the resume answered: history, the newer run carries the outcome
+  superseded: { label: 'run.superseded', chip: '' },
 };
 
 /** Where the scheduled runs live (2026-11-09). A top-level segment, not `workflows/scheduled`, so a

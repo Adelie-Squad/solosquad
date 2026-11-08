@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { JobList, type Job } from './JobList';
+import { useScrollLock } from './scrollLock';
 
 /** Live work, large — a modal over the office with the full job cards (four log lines). */
 export function LiveModal({ jobs, doneToday, onClose }: { jobs: Job[]; doneToday: number; onClose: () => void }) {
   const { t } = useI18n();
+  useScrollLock();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);

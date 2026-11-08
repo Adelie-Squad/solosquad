@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import { ICON, type LucideIcon } from '../icons';
 import { useOrgOwner } from '../scope';
 import { navHref, visibleNav } from '../shell/nav';
+import { useScrollLock } from './scrollLock';
 
 interface Props {
   onClose: () => void;
@@ -31,6 +32,7 @@ export function CommandBar({ onClose }: Props) {
   const isOwner = useOrgOwner();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  useScrollLock();
   const [cursor, setCursor] = useState(0);
 
   const ask = (prompt: string) => {

@@ -13,7 +13,7 @@ from typing import Any, Protocol
 from solosquad.instance import Instance, start_instance
 from solosquad.messages import Message
 
-TERMINAL = {"success", "error", "interrupted", "cancelled"}
+TERMINAL = {"success", "error", "interrupted", "cancelled", "superseded"}
 
 
 class Client(Protocol):

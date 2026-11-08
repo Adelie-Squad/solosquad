@@ -1347,7 +1347,8 @@
             "success",
             "error",
             "interrupted",
-            "cancelled"
+            "cancelled",
+            "superseded"
           ],
           "type": "string"
         },
@@ -2093,7 +2094,8 @@
             "success",
             "error",
             "interrupted",
-            "cancelled"
+            "cancelled",
+            "superseded"
           ],
           "type": "string"
         },
@@ -2156,6 +2158,17 @@
               "type": "null"
             }
           ]
+        },
+        "superseded_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2169,7 +2182,8 @@
         "created",
         "started",
         "ended",
-        "source"
+        "source",
+        "superseded_by"
       ],
       "type": "object",
       "title": "Run"
@@ -2954,7 +2968,8 @@
             "success",
             "error",
             "interrupted",
-            "cancelled"
+            "cancelled",
+            "superseded"
           ],
           "type": "string"
         },

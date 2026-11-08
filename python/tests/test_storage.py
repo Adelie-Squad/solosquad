@@ -120,7 +120,7 @@ def test_an_office_writes_one_database(tmp_path: Path) -> None:
     assert {"threads", "runs", "checkpoints", "writes", "store", "ledger", "artifacts",
             "wf_threads", "wf_runs", "wf_checkpoints", "wf_writes", "schema_versions"} <= tables  # fmt: skip
     versions = dict(sqlite3.connect(db).execute("SELECT component, version FROM schema_versions"))
-    assert versions == {"runs": 1, "wf_runs": 1, "checkpoints": 1, "wf_checkpoints": 1,
+    assert versions == {"runs": 2, "wf_runs": 2, "checkpoints": 1, "wf_checkpoints": 1,
                         "store": 1, "ledger": 1, "artifacts": 1}  # fmt: skip
 
 
