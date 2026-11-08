@@ -726,6 +726,148 @@ class ScreenResponse(Closed):
     """Set when the file could not be read — the web shows a placeholder, never crashes."""
 
 
+# ---------------------------------------------------------------------- calendar (decision 60)
+
+CalendarKind = Literal["work", "personal"]
+CalendarStatus = Literal["planned", "active", "done", "canceled"]
+CalendarColor = Literal["blue", "teal", "green", "gold", "orange", "rose", "gray"]
+
+
+class CalendarItem(Closed):
+    """A 항목 (`parent_id` null) or a 세부 항목 (one level below). `start`/`end` are a date
+    (`2026-11-20`, all day) or a local date-time (`2026-11-20T14:00`) — never a timestamp,
+    so a day stays the day it was written on."""
+
+    id: str
+    kind: CalendarKind
+    org: str | None
+    """Work: the business (org) it belongs to. Personal: null."""
+    workspace: str | None
+    owner_id: str | None
+    """Personal: the one person who sees it. Work: null."""
+    parent_id: str | None
+    title: str
+    notes: str
+    start: str | None
+    end: str | None
+    all_day: bool
+    category_id: str | None
+    """구분 — one `CalendarLabel` of type `category` from the same scope."""
+    tag_ids: list[str]
+    status: CalendarStatus
+    position: int
+    created_by: str | None
+    created: float
+    updated: float
+
+
+class CalendarTodo(Closed):
+    """A 할 일 under a 항목 or 세부 항목. One with `due` shows on the calendar that day."""
+
+    id: str
+    item_id: str
+    title: str
+    done: bool
+    due: str | None
+    assignee_id: str | None
+    position: int
+    created: float
+    updated: float
+
+
+class CalendarList(Closed):
+    """`GET /api/calendar/items?from=&to=` — what overlaps those days (inclusive)."""
+
+    start: str
+    end: str
+    items: list[CalendarItem]
+    todos: list[CalendarTodo]
+    """To-dos due in the range (their item may be outside it — see `context`)."""
+    context: list[CalendarItem]
+    """Parents of listed sub-items and items of listed to-dos that are not in `items` —
+    for breadcrumbs and colours, not to be drawn as entries."""
+
+
+class CalendarDetail(Closed):
+    item: CalendarItem
+    parent: CalendarItem | None
+    children: list[CalendarItem]
+    todos: list[CalendarTodo]
+    child_todos: list[CalendarTodo]
+    """The to-dos of the sub-items, for their counts in the drawer."""
+
+
+class CalendarTodoOut(Closed):
+    todo: CalendarTodo
+    item: CalendarItem
+
+
+class CalendarLabel(Closed):
+    """구분 (`category`) or 태그 (`tag`) — per org (`scope_kind` org) for work entries, per
+    person (`user`) for personal ones."""
+
+    id: str
+    type: Literal["category", "tag"]
+    scope_kind: Literal["org", "user"]
+    scope: str
+    name: str
+    color: CalendarColor
+    archived: bool
+    position: int
+
+
+class CalendarLabels(Closed):
+    labels: list[CalendarLabel]
+    seeded: dict[str, str] = Field(default_factory=dict)
+    """Scopes seeded by this call → from where (`default` · `calendar/presets.yaml`)."""
+    preset_errors: dict[str, str] = Field(default_factory=dict)
+    """org → why its preset file could not be used (the default was seeded instead)."""
+
+
+AgentAccessLevel = Literal["off", "busy", "full"]
+
+
+class CalendarAgentAccess(Closed):
+    """How much agents may read of this person's personal entries (decision 60 rev):
+    `off` (default) nothing · `busy` time blocks only · `full` titles, times and notes."""
+
+    level: AgentAccessLevel
+
+
+class AgentBlock(Closed):
+    """One personal entry as an agent may read it. At `busy` only the times are set."""
+
+    start: str | None
+    end: str | None
+    all_day: bool
+    id: str | None
+    title: str | None
+    notes: str | None
+    status: CalendarStatus | None
+
+
+class CalendarAgentView(Closed):
+    """`GET /api/calendar/agent-view` — the read path for an agent tool (v2.2)."""
+
+    user_id: str
+    level: AgentAccessLevel
+    start: str
+    end: str
+    entries: list[AgentBlock]
+
+
+class CalendarEvent(Closed):
+    """One `GET /api/calendar/events` message — "something changed, refetch". Carries ids
+    only, and reaches only people who may see the entry (a personal one: its owner)."""
+
+    ts: float
+    event: Literal["calendar.changed", "calendar.labels"]
+    kind: CalendarKind | None = None
+    org: str | None = None
+    workspace: str | None = None
+    item_id: str | None = None
+
+
 # ---------------------------------------------------------------------- events (I9)
 
 
@@ -810,6 +952,16 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     ProfileResponse,
     SnapshotSettings,
     SnapshotRunResult,
+    CalendarItem,
+    CalendarTodo,
+    CalendarList,
+    CalendarDetail,
+    CalendarTodoOut,
+    CalendarLabel,
+    CalendarLabels,
+    CalendarEvent,
+    CalendarAgentAccess,
+    CalendarAgentView,
 )
 
 

@@ -90,6 +90,19 @@ class ErrorCode(StrEnum):
     UPLOAD_TYPE = "upload_type"
     UPLOAD_EMPTY = "upload_empty"
     UPLOAD_TOO_LARGE = "upload_too_large"
+    # -- calendar (decision 60)
+    CALENDAR_TITLE_REQUIRED = "calendar_title_required"
+    CALENDAR_DATE_INVALID = "calendar_date_invalid"
+    CALENDAR_KIND_INVALID = "calendar_kind_invalid"
+    CALENDAR_ORG_REQUIRED = "calendar_org_required"
+    CALENDAR_PARENT_INVALID = "calendar_parent_invalid"
+    CALENDAR_STATUS_INVALID = "calendar_status_invalid"
+    CALENDAR_LABEL_INVALID = "calendar_label_invalid"
+    CALENDAR_LABEL_EXISTS = "calendar_label_exists"
+    CALENDAR_COLOR_INVALID = "calendar_color_invalid"
+    CALENDAR_ASSIGNEE_INVALID = "calendar_assignee_invalid"
+    CALENDAR_REORDER_INVALID = "calendar_reorder_invalid"
+    CALENDAR_AGENT_ACCESS_INVALID = "calendar_agent_access_invalid"
 
 
 BY_STATUS: dict[int, ErrorCode] = {
