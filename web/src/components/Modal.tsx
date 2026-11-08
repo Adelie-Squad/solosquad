@@ -6,9 +6,11 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
+import { useScrollLock } from './scrollLock';
 
 export function Modal({ label, onClose, className = '', children }: { label: string; onClose: () => void; className?: string; children: ReactNode }) {
   const { t } = useI18n();
+  useScrollLock();
   const opener = useRef<Element | null>(typeof document === 'undefined' ? null : document.activeElement);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();

@@ -1,15 +1,26 @@
-/* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. A pinned stage one screen high: the 3D
-   penguin fixed in its middle, the slides changing around it as the page scrolls past snap stops.
+/* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. A pinned stage one screen high: the
+   message on one side, the 3D penguin fixed in the scene column on the other, and each section's
+   content in front of the penguin (the scene box lies exactly over it) — the penguin acts on it.
    Tokens only; no gradients, tinted bands or shadows; nothing under 12px.
-   data-mode="live" = pinned slides + 3D · "static" = the same sections stacked, 2D penguin. */
+   data-mode="live" = pinned slides + 3D + the step controller (landing/dwell.ts) ·
+   "static" = the same sections stacked, 2D penguin, native scroll. */
 
 .landing {
   --landing-w: min(1240px, calc(100% - 2 * var(--space-12)));
   --landing-gnb: 64px;
   --landing-mono: 12px;
-  /* matches PRESENT_DELAY_MS (sections.ts): the content follows the wing */
-  --present-delay: 220ms;
-  --present-step: 110ms;
+  /* the message | the scene (the penguin and its content) */
+  --landing-cols: minmax(0, 5fr) minmax(0, 7fr);
+  /* the penguin's box — the canvas, and every slide's scene box over it */
+  /* viewport units only: a % here would resolve against whichever box uses the variable */
+  --mascot: min(calc((100svh - var(--landing-gnb)) * 0.78), calc((100vw - 2 * var(--space-12)) * 0.54), 640px);
+  --scene-top: max(var(--space-4), calc((100svh - var(--landing-gnb) - var(--mascot)) * 0.15));
+  /* the scroll rod at the chest, just under the beak — the face always shows */
+  --rod-top: calc(var(--mascot) * 0.56);
+  /* where the content's top edge meets the penguin: wing height */
+  --front-top: calc(var(--mascot) * 0.53);
+  /* where the wings rest on the content, either side of the penguin's middle */
+  --reach: calc(var(--mascot) * 0.115);
   position: relative;
   min-height: 100%;
   background: var(--bg);
@@ -17,13 +28,13 @@
   overflow-x: clip;
 }
 
-/* the slides: native scroll that comes to rest on a stop, one per section */
+/* live: the step controller moves the page (no CSS snap — a hard flick would glide past the stops) */
 html:has(.landing[data-mode="live"]) {
-  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  html:has(.landing) {
+  html:has(.landing[data-mode="static"]) {
     scroll-behavior: smooth;
   }
 }
@@ -115,6 +126,7 @@ html:has(.landing[data-mode="live"]) {
   height: calc(var(--steps) * 100svh);
 }
 
+/* one stop per section — where the controller glides to, what the progress links point at */
 .landing-stop {
   position: absolute;
   top: calc(var(--n) * 100vh);
@@ -124,26 +136,26 @@ html:has(.landing[data-mode="live"]) {
   height: 100vh;
   height: 100svh;
   pointer-events: none;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
 }
 
+/* the stage's layers: the 2D poster (1) < the slides (2) < the 3D canvas (3) */
 .landing-pin {
   position: sticky;
   top: 0;
+  z-index: 0;
   height: 100vh;
   height: 100svh;
   overflow: hidden;
 }
 
-/* thin grid: the message column's edges, hairlines in --line (none between the penguin and what it presents) */
+/* thin grid: the message column's edges, hairlines in --line (none inside the scene) */
 .landing-grid {
   position: absolute;
   inset: var(--landing-gnb) 0 0;
   width: var(--landing-w);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: var(--landing-cols);
   pointer-events: none;
 }
 
@@ -155,39 +167,50 @@ html:has(.landing[data-mode="live"]) {
   border-right: 1px solid var(--line);
 }
 
-/* ── the mascot: the middle of the stage, for every slide ─────────────── */
+/* ── the penguin: fixed in the scene column for every slide ───────────── */
+/* no z-index here — the poster and the canvas take their own layers in the pin */
 .landing-stage {
   position: absolute;
   inset: var(--landing-gnb) 0 0;
-  z-index: 1;
+  width: var(--landing-w);
+  margin: 0 auto;
   display: grid;
-  place-items: center;
+  grid-template-columns: var(--landing-cols);
   pointer-events: none;
 }
 
 .landing-mascot {
   position: relative;
-  width: min(76svh, 36vw, 660px);
-  aspect-ratio: 1;
+  grid-column: 2;
+  justify-self: center;
+  align-self: start;
+  width: var(--mascot);
+  height: var(--mascot);
+  margin-top: var(--scene-top);
 }
 
 .landing-poster {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: grid;
-  place-items: center;
+  place-items: start center;
+  padding-top: calc(var(--mascot) * 0.2);
   transition: opacity 0.4s ease;
 }
 
 .landing-poster .penguin {
-  width: 46%;
+  width: calc(var(--mascot) * 0.42);
   height: auto;
 }
 
+/* above the slides but never in the way of a click; the content in front is cut out of it */
 .landing-canvas {
   position: absolute !important;
   inset: 0;
+  z-index: 3;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.5s ease;
 }
 
@@ -265,11 +288,10 @@ html:has(.landing[data-mode="live"]) {
   background: var(--accent);
 }
 
-/* ── a slide: the message | the penguin presenting its content ───────── */
+/* ── a slide: the message | the scene (the penguin and its content, one picture) ── */
 .landing-slide {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: center;
+  grid-template-columns: var(--landing-cols);
   min-width: 0;
 }
 
@@ -279,7 +301,6 @@ html:has(.landing[data-mode="live"]) {
   z-index: 2;
   width: var(--landing-w);
   margin: 0 auto;
-  padding: var(--space-8) 0;
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
@@ -301,12 +322,13 @@ html:has(.landing[data-mode="live"]) {
 }
 
 .landing-pin .landing-slide.is-on .landing-copy,
-.landing-pin .landing-slide.is-on .landing-present {
+.landing-pin .landing-slide.is-on .landing-act {
   pointer-events: auto;
 }
 
 .landing-copy {
   grid-column: 1;
+  align-self: center;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -315,28 +337,60 @@ html:has(.landing[data-mode="live"]) {
   padding: 0 var(--space-8);
 }
 
-.landing-present {
-  grid-column: 3;
-  display: flex;
-  flex-direction: column;
-  gap: var(--card-gap);
+/* the scene box: exactly over the penguin's box, so the content can sit in front of the penguin */
+.landing-scene {
+  grid-column: 2;
   min-width: 0;
-  padding-right: var(--space-8);
 }
 
-/* what the penguin presents comes in beside it, one piece after another, in step with the wing */
-.landing-pin .landing-item {
-  opacity: 0;
-  transform: translateX(-8px);
-  transition:
-    opacity 0.4s ease,
-    transform 0.4s ease;
+.landing-pin .landing-scene {
+  position: relative;
+  justify-self: center;
+  align-self: start;
+  width: var(--mascot);
+  height: var(--mascot);
+  margin-top: var(--scene-top);
 }
 
-.landing-pin .landing-slide.is-on .landing-item {
-  opacity: 1;
-  transform: none;
-  transition-delay: calc(var(--present-delay) + var(--i, 0) * var(--present-step));
+/* the content: centred on the penguin, its top edge at wing height, over the penguin's lower half */
+.landing-act {
+  position: relative;
+  min-width: 0;
+}
+
+.landing-pin .landing-act {
+  position: absolute;
+  top: var(--front-top);
+  left: 50%;
+  width: calc(var(--mascot) * 0.84);
+  transform: translateX(-50%);
+}
+
+.landing-pin .landing-act.is-scroll {
+  top: var(--rod-top);
+  width: calc(var(--mascot) * 0.92);
+}
+
+.landing-pin .landing-act.is-stamp,
+.landing-pin .landing-act.is-sign {
+  width: calc(var(--mascot) * 0.8);
+}
+
+/* where the wings rest: the content's top edge, either side of the penguin's middle */
+.landing-hand {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.landing-hand.is-r {
+  left: calc(50% - var(--reach));
+}
+
+.landing-hand.is-l {
+  left: calc(50% + var(--reach));
 }
 
 .landing-display {
@@ -372,7 +426,7 @@ html:has(.landing[data-mode="live"]) {
   place-items: center;
 }
 
-/* the prompt box (hero) */
+/* ── hero: the prompt box, tapped like a keyboard ───────────────────── */
 .landing-prompt-box {
   display: flex;
   flex-direction: column;
@@ -435,7 +489,30 @@ html:has(.landing[data-mode="live"]) {
   transform: none;
 }
 
-/* what it does */
+/* each key tap nudges the box (TAP_MS in acting.ts; the two names restart the animation) */
+.landing-pin.is-acting .landing-act.is-prompt[data-tap="a"] {
+  animation: landing-tap-a 150ms ease-out;
+}
+
+.landing-pin.is-acting .landing-act.is-prompt[data-tap="b"] {
+  animation: landing-tap-b 150ms ease-out;
+}
+
+@keyframes landing-tap-a {
+  35% {
+    translate: -1px 2px;
+    rotate: -0.3deg;
+  }
+}
+
+@keyframes landing-tap-b {
+  35% {
+    translate: 1px 2px;
+    rotate: 0.3deg;
+  }
+}
+
+/* ── what it does: the step board, its cards turned over one by one ──── */
 .landing-steps {
   margin: 0;
   padding: 0;
@@ -451,8 +528,8 @@ html:has(.landing[data-mode="live"]) {
   border-top: 1px solid var(--line);
 }
 
-.landing-steps li:last-child {
-  border-bottom: 1px solid var(--line);
+.landing-steps li:first-child {
+  border-top: 0;
 }
 
 .landing-step-n {
@@ -474,161 +551,106 @@ html:has(.landing[data-mode="live"]) {
   line-height: 1.6;
 }
 
-/* previews — still compositions of the app's screens */
-.landing-preview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--title-gap);
-  margin: 0;
-  padding: var(--card-pad-compact);
+.landing-act.is-board {
+  padding: var(--space-2) var(--card-pad-compact);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
 }
 
-.landing-preview-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 28px;
+/* FLIP_MS · FLIP_STEP_MS · ACT_DELAY_MS (acting.ts); --flip-at is set per card */
+.landing-pin.is-acting .landing-slide.is-on .landing-act.is-board li {
+  transform-origin: 50% 0;
+  animation: landing-flip 460ms cubic-bezier(0.3, 1.35, 0.5, 1) var(--flip-at) both;
 }
 
-.landing-preview-title {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
+@keyframes landing-flip {
+  from {
+    opacity: 0;
+    transform: perspective(700px) rotateX(-95deg);
+  }
+
+  45% {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.landing-preview-tag {
-  color: var(--ink-3);
-  white-space: nowrap;
+/* ── team: the scroll, the org chart on its paper ───────────────────── */
+@property --unroll {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
 }
 
-.landing-live {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.landing-live li,
-.landing-approval-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 40px;
-  padding: var(--space-2) 0;
-}
-
-.landing-live li + li {
-  border-top: 1px solid var(--line);
-}
-
-.landing-live-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  line-height: 1.35;
-}
-
-.landing-live-text b {
-  font-size: 13.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.landing-live-text span {
-  color: var(--ink-2);
-  font-size: 12.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.landing-live .chip,
-.landing-approval-head .chip {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.landing-approval-reason {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
-.landing-approval-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.landing-approval-actions .btn {
+/* where the 3D rod sits: the paper's top edge, in the middle */
+.landing-rod {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 1px;
   pointer-events: none;
 }
 
-.landing-pnl {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-3);
-  height: 88px;
-  padding-bottom: var(--space-1);
-  border-bottom: 1px solid var(--line);
+.landing-scroll {
+  --unroll: 1;
+  position: relative;
 }
 
-.landing-pnl-month {
-  display: flex;
-  flex: 1;
-  align-items: flex-end;
-  gap: var(--space-1);
-  height: 100%;
+/* acting: rolled up while away (once the slide has faded), unrolled on entry — UNROLL_MS · ACT_DELAY_MS (acting.ts) */
+.landing-pin.is-acting .landing-scroll {
+  --unroll: 0;
+  transition: --unroll 0s linear 0.3s;
 }
 
-.landing-pnl-bar {
-  flex: 1;
-  border-radius: 4px 4px 0 0;
+.landing-pin.is-acting .landing-slide.is-on .landing-scroll {
+  --unroll: 1;
+  transition: --unroll 1250ms cubic-bezier(0.3, 1.12, 0.45, 1) 520ms;
 }
 
-.landing-pnl-bar.is-revenue,
-.landing-pnl-key.is-revenue {
-  background: var(--accent);
+.landing-scroll-sheet {
+  /* the wings hang over the top of the paper — the chart starts below them */
+  padding: var(--space-10) var(--card-pad-compact) var(--space-5);
+  border: 1px solid var(--line);
+  border-top: 0;
+  background: var(--surface);
+  clip-path: inset(0 -1px calc((1 - var(--unroll)) * 100%) -1px);
 }
 
-.landing-pnl-bar.is-expense,
-.landing-pnl-key.is-expense {
-  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+/* the paper shown so far — what the canvas cuts the penguin out behind */
+.landing-scroll-extent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--unroll) * 100%);
+  pointer-events: none;
 }
 
-.landing-pnl-legend {
-  display: flex;
-  gap: var(--space-4);
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 12.5px;
-}
-
-.landing-pnl-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.landing-pnl-key {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+/* the rest of the roll, travelling down with the paper's edge */
+.landing-scroll-roll {
+  position: absolute;
+  top: calc(var(--unroll) * 100%);
+  right: calc(-1 * var(--space-2));
+  left: calc(-1 * var(--space-2));
+  height: 14px;
+  margin-top: -7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  pointer-events: none;
 }
 
 /* ── section 3: the org chart (DESIGN.md `### 조직도`, landing variant) ── */
 .landing-org {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .landing-org button {
@@ -654,10 +676,18 @@ html:has(.landing[data-mode="live"]) {
     border-color 0.15s ease;
 }
 
+/* the top row in one line: "owner and Chief" · the two of them */
+.landing-org-top {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-5);
+}
+
 .landing-org-top:hover,
 .landing-org-team:hover {
   border-color: var(--line);
-  background: var(--surface);
+  background: var(--surface-2);
 }
 
 .landing-org-top:active,
@@ -691,7 +721,7 @@ html:has(.landing[data-mode="live"]) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2) var(--space-3);
   margin: 0;
-  padding: var(--space-4) 0 0;
+  padding: var(--space-3) 0 0;
   border-top: 1px solid var(--line);
   list-style: none;
 }
@@ -704,7 +734,7 @@ html:has(.landing[data-mode="live"]) {
 .landing-org-members {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .landing-org-node {
@@ -712,7 +742,7 @@ html:has(.landing[data-mode="live"]) {
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  min-height: 28px;
+  min-height: 23px;
   font-size: 13.5px;
   font-weight: 600;
 }
@@ -738,10 +768,6 @@ html:has(.landing[data-mode="live"]) {
 .landing-org-avatar .icon {
   width: 14px;
   height: 14px;
-}
-
-.landing-org-all {
-  align-self: flex-start;
 }
 
 .landing-dot {
@@ -802,7 +828,7 @@ html:has(.landing[data-mode="live"]) {
   display: flex;
   gap: var(--space-8);
   overflow-x: auto;
-  overscroll-behavior-x: contain;
+  overscroll-behavior: contain;
   scroll-snap-type: x proximity;
   scroll-padding-inline: 0;
   padding-bottom: var(--space-3);
@@ -878,7 +904,170 @@ html:has(.landing[data-mode="live"]) {
   -webkit-line-clamp: 6;
 }
 
-/* section 4: approvals */
+/* ── approval: the card the penguin stamps ──────────────────────────── */
+.landing-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--title-gap);
+  margin: 0;
+  padding: var(--card-pad-compact);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.landing-preview-tag {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.landing-approval {
+  position: relative;
+}
+
+.landing-approval-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+}
+
+/* the reason and the "example" label, under the buttons */
+.landing-approval-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.landing-live-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.landing-live-text b {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.landing-live-text span {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.landing-approval-head .chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.landing-approval-reason {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.landing-approval-actions {
+  /* room for the stamp mark around the approve button */
+  display: flex;
+  gap: var(--space-5);
+}
+
+.landing-approval-actions .btn {
+  pointer-events: none;
+  transition:
+    translate 0.08s ease,
+    scale 0.08s ease,
+    opacity 0.3s ease,
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.landing-approve {
+  position: relative;
+  min-width: 96px;
+  justify-content: center;
+}
+
+/* pressed by the stamp, then approved: ok text and border, no fill */
+.landing-approval.is-pressed .landing-approve {
+  translate: 0 2px;
+  scale: 0.96;
+}
+
+.landing-approval.is-approved .landing-approve {
+  border-color: var(--ok);
+  background: var(--surface);
+  color: var(--ok);
+}
+
+.landing-approval.is-approved .landing-decline {
+  opacity: 0.45;
+}
+
+/* the hit: one short shake of the card (SHAKE_MS in acting.ts) */
+.landing-approval.is-pressed {
+  animation: landing-shake 260ms ease-out;
+}
+
+@keyframes landing-shake {
+  20% {
+    translate: -3px 1px;
+  }
+
+  45% {
+    translate: 2px 0;
+  }
+
+  70% {
+    translate: -1px 0;
+  }
+}
+
+.landing-approve-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* the ink the stamp leaves: a tidy ok ring around the whole button, centred on it */
+.landing-stamp-mark {
+  position: absolute;
+  inset: -7px -8px;
+  border: 2px solid var(--ok);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.landing-approval:not(.is-waiting) .landing-stamp-mark {
+  opacity: 0.9;
+  animation: landing-ink 300ms cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+@keyframes landing-ink {
+  from {
+    opacity: 0;
+    scale: 1.35;
+  }
+
+  to {
+    opacity: 0.9;
+    scale: 1;
+  }
+}
+
+/* the three promises, under the message */
 .landing-points {
   display: flex;
   flex-direction: column;
@@ -898,6 +1087,7 @@ html:has(.landing[data-mode="live"]) {
 }
 
 .landing-points li > .icon {
+  flex-shrink: 0;
   margin-top: var(--space-1);
   color: var(--accent);
 }
@@ -908,13 +1098,20 @@ html:has(.landing[data-mode="live"]) {
   font-size: 14.5px;
 }
 
-.landing-previews {
+/* ── start: the sign the penguin holds up ───────────────────────────── */
+.landing-act.is-sign {
   display: flex;
   flex-direction: column;
-  gap: var(--card-gap);
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding: var(--card-pad);
+  /* the wings hold the top edge — the words start below them */
+  padding-top: var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-/* section 5 */
 .landing-statement {
   margin: 0;
   font-size: clamp(19px, 1.9vw, 24px);
@@ -942,8 +1139,8 @@ html:has(.landing[data-mode="live"]) {
 }
 
 .landing-stack .landing-slide {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: var(--space-12);
+  align-items: center;
   width: var(--landing-w);
   margin: 0 auto;
   padding: var(--space-16) 0;
@@ -957,16 +1154,69 @@ html:has(.landing[data-mode="live"]) {
   padding: 0;
 }
 
-.landing-stack .landing-present {
-  grid-column: 2;
-  padding: 0;
+.landing-stack .landing-scene {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+/* no rod without the 3D penguin: the paper is a plain card */
+.landing-stack .landing-scroll-sheet,
+.landing-pin:not(.is-acting) .landing-scroll-sheet {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.landing-stack .landing-scroll-roll,
+.landing-pin:not(.is-acting) .landing-scroll-roll {
+  display: none;
+}
+
+/* no acting here: the 2D penguin stands beside the prompt box */
+.landing-stack .landing-slide.is-hero .landing-scene {
+  flex-direction: row;
+  align-items: center;
+}
+
+.landing-stack .landing-static-mascot {
+  flex-shrink: 0;
+}
+
+.landing-stack .landing-slide.is-hero .landing-act {
+  flex: 1;
 }
 
 /* ── phone and narrow ─────────────────────────────────────────────────── */
-/* a low screen keeps one example per slide so the slide still fits */
+/* a low screen: the org chart's rows close up so the paper still fits */
 @media (max-height: 820px) {
-  .landing-pin .is-wide-only {
-    display: none;
+  .landing {
+    --rod-top: calc(var(--mascot) * 0.55);
+  }
+
+  .landing-pin .landing-scroll-sheet {
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-3);
+  }
+
+  .landing-pin .landing-org {
+    gap: var(--space-2);
+  }
+
+  .landing-pin .landing-org-top,
+  .landing-pin .landing-org-team {
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .landing-pin .landing-org-node {
+    min-height: 20px;
+    font-size: 13px;
+  }
+
+  .landing-pin .landing-org-teams {
+    row-gap: 0;
+    padding-top: var(--space-2);
   }
 }
 
@@ -974,7 +1224,11 @@ html:has(.landing[data-mode="live"]) {
   .landing {
     --landing-w: calc(100% - 2 * var(--space-4));
     --landing-gnb: 56px;
-    --landing-mascot: min(26svh, 56vw, 230px);
+    --landing-cols: minmax(0, 1fr);
+    --mascot: min(34svh, 72vw, 300px);
+    --scene-top: var(--space-2);
+    --front-top: calc(var(--mascot) * 0.54);
+    --rod-top: calc(var(--mascot) * 0.58);
   }
 
   .landing-top .locale-picker > span {
@@ -985,45 +1239,63 @@ html:has(.landing[data-mode="live"]) {
     display: none;
   }
 
-  /* the penguin sits at the top centre; the slide reads below it */
-  .landing-stage {
-    place-items: start center;
-  }
-
+  /* the penguin at the top centre; the canvas as wide as the page so the props are never cut */
   .landing-mascot {
-    width: var(--landing-mascot);
+    grid-column: 1;
+    width: 100%;
   }
 
-  .landing-slide,
-  .landing-stack .landing-slide {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    align-content: start;
-    row-gap: var(--space-5);
-  }
-
+  /* the scene first (penguin + content over its lower half), the message under it */
   .landing-pin .landing-slide {
-    padding: calc(var(--landing-mascot) - var(--space-4)) 0 var(--space-4);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .landing-pin .landing-scene {
+    order: -1;
+    width: 100%;
+    height: auto;
+    padding-top: var(--front-top);
+  }
+
+  .landing-pin .landing-slide.is-team .landing-scene {
+    padding-top: var(--rod-top);
+  }
+
+  .landing-pin .landing-act,
+  .landing-pin .landing-act.is-scroll,
+  .landing-pin .landing-act.is-stamp,
+  .landing-pin .landing-act.is-sign {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    transform: none;
+  }
+
+  .landing-pin .landing-copy {
+    align-self: stretch;
+    margin-top: var(--space-6);
+  }
+
+  .landing-stack .landing-slide {
+    row-gap: var(--space-5);
+    padding: var(--space-12) 0;
+  }
+
+  .landing-stack .landing-slide.is-hero .landing-scene {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .landing-copy,
-  .landing-present,
-  .landing-stack .landing-present {
+  .landing-stack .landing-scene {
     grid-column: 1;
     padding: 0;
   }
 
   .landing-copy {
     gap: var(--space-3);
-  }
-
-  /* what the penguin presents comes up from under it on a phone */
-  .landing-pin .landing-item {
-    transform: translateY(8px);
-  }
-
-  .landing-stack .landing-slide {
-    padding: var(--space-12) 0;
   }
 
   .landing-display {
@@ -1043,8 +1315,8 @@ html:has(.landing[data-mode="live"]) {
     margin-bottom: 0;
   }
 
-  .is-wide-only {
-    display: none;
+  .landing-act.is-sign {
+    padding: var(--space-10) var(--card-pad-compact) var(--card-pad-compact);
   }
 
   .landing-steps li {
@@ -1055,8 +1327,13 @@ html:has(.landing[data-mode="live"]) {
     gap: var(--space-2);
   }
 
+  /* a phone screen has no room for it; the org chart's rows open the same modal */
+  .landing-pin .landing-org-all {
+    display: none;
+  }
+
   .landing-org {
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
   .landing-org-teams {
@@ -1070,13 +1347,13 @@ html:has(.landing[data-mode="live"]) {
     padding: var(--space-1) var(--space-2);
   }
 
-  .landing-org-members {
-    gap: 0;
+  .landing-org-node {
+    min-height: 22px;
+    font-size: 13px;
   }
 
-  .landing-org-node {
-    min-height: 24px;
-    font-size: 13px;
+  .landing-scroll-sheet {
+    padding: var(--space-8) var(--space-2) var(--space-3);
   }
 
   .landing-card {
@@ -1105,7 +1382,6 @@ html:has(.landing[data-mode="live"]) {
   .landing-poster,
   .landing-canvas,
   .landing-pin .landing-slide,
-  .landing-pin .landing-item,
   .landing-prompt-answer,
   .landing-progress-label,
   .landing-progress-tick,
