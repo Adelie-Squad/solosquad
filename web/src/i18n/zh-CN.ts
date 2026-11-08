@@ -62,6 +62,8 @@ export const zhCN: Record<MessageKey, string> = {
   'landing.prompt.2': '给下周的新品做一版详情页设计稿',
   'landing.prompt.3': '列出库存不足的商品',
   'landing.prompt.assigned': '已交给 {agent}',
+  'landing.prompt.hint': '一句话就够了',
+  'landing.what.artifact': '上月损益报告',
   'landing.what.title': '在一个地方交代，在各自岗位上完成',
   'landing.what.lead': '在消息渠道或网页上，像平时说话一样跟高管交代就行。谁在做什么，办公室画面上一目了然。',
   'landing.what.step1.title': '直接说出来',

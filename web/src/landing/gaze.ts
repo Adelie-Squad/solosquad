@@ -2,10 +2,15 @@
 // limits and the damping are testable: the head carries the gaze (the eyes are part of the head
 // mesh — the rig has no eye bones), the body follows a little, all of it damped.
 
+/** The cursor on the page, client px (the canvas measures it from the penguin's head). */
 export interface Pointer {
-  /** -1 (left) … 1 (right) of the viewport, measured from the penguin (the viewport centre). */
   x: number;
-  /** -1 (top) … 1 (bottom). */
+  y: number;
+}
+
+/** A look request: -1 … 1 each way, measured from the head (left/up negative). */
+export interface Aim {
+  x: number;
   y: number;
 }
 
@@ -20,13 +25,15 @@ export interface Look {
 
 /** Natural limits (rad): the head turns further than the body, and nods less than it turns. */
 export const LIMITS = { body: 0.2, yaw: 0.55, pitch: 0.28 } as const;
-/** Damping rate (1/s): about 0.3 s to settle — follows, never snaps. */
-export const DAMP = 7;
+/** Damping rate (1/s): about 0.45 s to settle — follows calmly, never snaps. */
+export const DAMP = 5;
+/** While the penguin acts, the cursor gets this share of the turn — the gaze never fights the acting. */
+export const GAZE_ACTING = 0.55;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 /** The look a pointer asks for: the head takes most of the turn, the body the rest. */
-export function lookAt(p: Pointer): Look {
+export function lookAt(p: Aim): Look {
   const x = clamp(p.x, -1, 1);
   const y = clamp(p.y, -1, 1);
   return { body: x * LIMITS.body, yaw: x * (LIMITS.yaw - LIMITS.body), pitch: y * LIMITS.pitch };
@@ -43,7 +50,7 @@ export function follow(from: Look, to: Look, dt: number, rate = DAMP): Look {
 }
 
 /** Touch devices have no cursor: a slow, small look around instead (two unrelated sines). */
-export function wander(seconds: number): Pointer {
+export function wander(seconds: number): Aim {
   return { x: Math.sin(seconds * 0.45) * 0.55 + Math.sin(seconds * 0.17) * 0.2, y: Math.sin(seconds * 0.31 + 1.2) * 0.35 };
 }
 

@@ -1,10 +1,11 @@
 // The landing (DESIGN.md `## 랜딩`): five pinned slides moved by the step controller (one gesture =
-// one section, then a hold), the progress nav and Tab going through it, the stacked 2D fallback
-// (reduced motion · `?webgl=off` · no WebGL · a 3D layer that never draws) with native scroll, each
-// section's content in the scene box over the penguin and what the penguin does with it (taps on the
-// prompt, turns the step cards, unrolls the org chart, stamps the approval, holds up the sign), the
-// org chart and its team modal, the cycling prompt, the buttons, and the regression for the penguin
-// that appeared and then disappeared.
+// one section, then a hold), the section names at the left edge and Tab going through it, the
+// stacked 2D fallback (reduced motion · `?webgl=off` · no WebGL · a 3D layer that never draws) with
+// native scroll, each section's content centred in its scene, where the penguin stands for each
+// (staging) and how it walks there, what it does (a pretend typing patter within the stroke limits,
+// the relay, the scroll, the stamp, the wave), that the content never shakes, what may show in front
+// of the content (occlusion), the org chart and its team modal, the cycling prompt, the buttons, and
+// the regression for the penguin that appeared and then disappeared.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
@@ -20,10 +21,11 @@ import {
   ACT_CLIP,
   ACT_DELAY_MS,
   cues,
-  FLIP_MS,
-  FLIP_STEP_MS,
+  RELAY,
+  relayAt,
+  relayHand,
   resetCues,
-  SHAKE_MS,
+  SQUASH,
   squashAt,
   STAMP,
   STAMP_APPROVED_MS,
@@ -33,11 +35,16 @@ import {
   STAMP_TOTAL_MS,
   stampLift,
   stampState,
-  TAP_MS,
-  tapPulse,
+  tugAt,
   UNROLL_MS,
+  WAVE_HZ,
+  waveAt,
 } from '../src/landing/acting';
-import { PromptAct, StampAct } from '../src/landing/Acts';
+import { PromptAct, relayStep, StampAct, StepsAct } from '../src/landing/Acts';
+import { FRONT, fitEraser, makeEraser, ORDER } from '../src/landing/rig';
+import { makeStamp } from '../src/landing/props';
+import { paletteFor } from '../src/office/palette';
+import { BODY, centreOffset, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
 import { AGENT_COUNT, TEAMS } from '../src/landing/catalog';
 import { DWELL_MS, GESTURE_GAP_MS, GLIDE_MS, keyStep, Stepper, WheelGesture, type StepperEnv } from '../src/landing/dwell';
 import { drawState, follow, GIVE_UP_SECONDS, LIMITS, lookAt, wander } from '../src/landing/gaze';
@@ -219,7 +226,25 @@ describe('stepping the slides', () => {
     expect(links[0].getAttribute('aria-current')).toBe('step');
     scrollTo(SCREEN);
     expect(links[1].getAttribute('aria-current')).toBe('step');
+    expect(links[1].className).toBe('is-on');
     expect(links[0].getAttribute('aria-current')).toBeNull();
+    // section names only — no numbers (user, 2026-11-09)
+    expect(links.map((a) => a.textContent)).toEqual(['Intro', 'Work', 'Team', 'Control', 'Start']);
+    expect(nav.textContent).not.toMatch(/\d/);
+    expect(nav.querySelector('.landing-progress-index')).toBeNull();
+  });
+
+  it('the section names sit at the left edge, vertically centred, in the margin left of the message; a phone hides them', () => {
+    expect(rule('.landing-progress')).toMatch(/position: fixed;[\s\S]*top: 50%;[\s\S]*left: var\(--space-6\);/);
+    expect(rule('.landing-progress')).not.toMatch(/right:/);
+    expect(rule('.landing-progress')).toMatch(/max-width: calc\(var\(--landing-gutter\) - var\(--space-10\)\);/);
+    expect(rule('.landing-progress')).toMatch(/transform: translateY\(-50%\);/);
+    // the page leaves that margin on both sides of the content
+    expect(css).toMatch(/--landing-w: min\(1200px, calc\(100% - 2 \* var\(--landing-gutter\)\)\);/);
+    expect(rule('.landing-progress a.is-on .landing-progress-mark')).toMatch(/background: var\(--accent\);/);
+    expect(rule('.landing-progress a')).toMatch(/font-size: 13px;/);
+    const phone = css.slice(css.indexOf('@media (max-width: 860px)'));
+    expect(phone).toMatch(/\.landing-progress \{\s*display: none;/);
   });
 
   it('every heading is plain HTML, the section number above it is gone', () => {
@@ -438,8 +463,8 @@ describe('one gesture, one section (dwell)', () => {
   });
 });
 
-describe('the scene: the content in front of the penguin', () => {
-  it('each section is the message on one side and, on the other, the scene box holding its content', () => {
+describe('the scene: the content centred, the penguin around it', () => {
+  it('each section is the message on one side and, on the other, the scene holding its content', () => {
     live();
     const { container } = landing();
     for (const s of SECTIONS) {
@@ -447,77 +472,189 @@ describe('the scene: the content in front of the penguin', () => {
       const parts = [...slide.children].map((c) => c.className);
       expect(parts).toEqual(['landing-copy', 'landing-scene']);
       const scene = screen.getByTestId(`landing-scene-${s.id}`);
-      expect(scene.querySelector('.landing-act')).toBeTruthy();
+      // one centred block per scene — the penguin's spot is read from it
+      expect(scene.querySelectorAll('[data-content]'), s.id).toHaveLength(1);
     }
     expect(within(screen.getByTestId('landing-scene-hero')).getByTestId('landing-prompt')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-what')).getAllByRole('heading', { level: 3 })).toHaveLength(3);
     expect(within(screen.getByTestId('landing-scene-team')).getByTestId('landing-org')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-control')).getByTestId('landing-approval')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-start')).getByRole('link', { name: 'Log in' })).toBeTruthy();
-    // never three columns: nothing sits between the message and the scene
     expect(container.querySelector('.landing-present')).toBeNull();
   });
 
-  it('the scene box lies exactly over the penguin, and the content overlaps its lower half', () => {
-    // the same grid and the same box for the penguin layer and every slide's scene
+  it('the content block sits in the middle of its scene (CSS), and nothing slides under the penguin', () => {
+    expect(rule('.landing-pin .landing-scene')).toMatch(/display: grid;[\s\S]*place-items: center;[\s\S]*height: 100%;/);
+    // the slide only fades: a slide that moved would move the spot the penguin walks to
+    expect(rule('.landing-pin .landing-slide')).not.toMatch(/transform|translate/);
+    expect(rule('.landing-pin .landing-slide.is-on')).not.toMatch(/transform|translate/);
+    // the canvas covers the scene column (a little past it), the same grid as the slides
     expect(rule('.landing-stage')).toMatch(/grid-template-columns: var\(--landing-cols\);/);
-    expect(rule('.landing-pin .landing-slide')).toMatch(/inset: var\(--landing-gnb\) 0 0;/);
-    expect(rule('.landing-slide')).toMatch(/grid-template-columns: var\(--landing-cols\);/);
-    expect(rule('.landing-mascot')).toMatch(/grid-column: 2;/);
+    expect(rule('.landing-mascot')).toMatch(/grid-column: 2;[\s\S]*height: 100%;/);
     expect(rule('.landing-scene')).toMatch(/grid-column: 2;/);
-    for (const box of [rule('.landing-mascot'), rule('.landing-pin .landing-scene')]) {
-      expect(box).toMatch(/justify-self: center;[\s\S]*align-self: start;/);
-      expect(box).toMatch(/width: var\(--mascot\);/);
-      expect(box).toMatch(/height: var\(--mascot\);/);
-      expect(box).toMatch(/margin-top: var\(--scene-top\);/);
-    }
-    // the content starts at wing height, the scroll a little higher
-    expect(rule('.landing-pin .landing-act')).toMatch(/top: var\(--front-top\);/);
-    expect(css).toMatch(/--front-top: calc\(var\(--mascot\) \* 0\.5\d\);/);
-    // the scroll rod sits under the beak on every screen size — the face always shows
-    for (const m of css.matchAll(/--rod-top: calc\(var\(--mascot\) \* (0\.\d+)\);/g)) expect(Number(m[1])).toBeGreaterThanOrEqual(0.55);
-    expect(rule('.landing-pin .landing-act.is-scroll')).toMatch(/top: var\(--rod-top\);/);
-    // layers: the 2D poster under the content, the 3D canvas over it (cut out behind the content), never catching clicks
+    // layers: the 2D poster under the content, the 3D canvas over it, never catching clicks
     expect(rule('.landing-poster')).toMatch(/z-index: 1;/);
     expect(rule('.landing-pin .landing-slide')).toMatch(/z-index: 2;/);
     expect(rule('.landing-canvas')).toMatch(/z-index: 3;[\s\S]*pointer-events: none;/);
+    // the prompt box never grows as it types (the spot would creep)
+    expect(rule('.landing-prompt-text')).toMatch(/height: calc\(2 \* 1\.5em\);[\s\S]*overflow: hidden;/);
   });
 
-  it('the wings have marks to go to on every act, and the stamp, the rod and the cut-out theirs', () => {
+  it('a centred block is centred within a pixel; an off-centre one is not', () => {
+    const area = { left: 600, top: 64, width: 720, height: 836 };
+    const block = { width: 480, height: 230 };
+    const centred = { left: area.left + (area.width - block.width) / 2, top: area.top + (area.height - block.height) / 2, ...block };
+    expect(centreOffset(centred, area)).toEqual({ x: 0, y: 0 });
+    expect(Math.abs(centreOffset({ ...centred, left: centred.left + 0.6 }, area).x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(centreOffset({ ...centred, left: centred.left + 40 }, area).x)).toBeGreaterThan(1);
+  });
+
+  it('the marks the canvas reads: the content, what hides the body, the wings’ targets', () => {
     live();
     landing();
-    for (const id of ['hero', 'what', 'start']) {
-      const scene = screen.getByTestId(`landing-scene-${id}`);
-      expect(scene.querySelector('[data-hand="L"]'), id).toBeTruthy();
-      expect(scene.querySelector('[data-hand="R"]'), id).toBeTruthy();
-      expect(scene.querySelector('[data-front]'), id).toBeTruthy();
-    }
+    for (const s of SECTIONS) expect(screen.getByTestId(`landing-scene-${s.id}`).querySelector('[data-front]'), s.id).toBeTruthy();
+    // the penguin stands behind the prompt box and the last card: nothing of it shows under them either
+    expect(screen.getByTestId('landing-scene-hero').querySelector('[data-front="ground"]')).toBeTruthy();
+    expect(screen.getByTestId('landing-scene-start').querySelector('[data-front="ground"]')).toBeTruthy();
+    // the relay: the right wing hands the request to card 1
+    const what = screen.getByTestId('landing-scene-what');
+    expect(what.querySelector('li')!.querySelector('[data-hand="R"]')).toBeTruthy();
     const team = screen.getByTestId('landing-scene-team');
     expect(team.querySelector('[data-rod]')).toBeTruthy();
     expect(team.querySelectorAll('[data-front]')).toHaveLength(2); // the paper shown so far + the roll
     const control = screen.getByTestId('landing-scene-control');
     expect(control.querySelector('[data-stamp-target]')!.textContent).toContain('Approve');
-    expect(control.querySelector('[data-hand]')).toBeNull(); // only the stamp wing works here — nothing over the chip
+    expect(control.querySelector('[data-hand]')).toBeNull();
   });
 
-  it('phone: the penguin at the top centre, the scene first with the content over its lower half, the message under it', () => {
+  it('phone: the scene first with the content centred in what is left, the message under it; the canvas covers the stage', () => {
     const phone = css.slice(css.indexOf('@media (max-width: 860px)'));
-    expect(phone).toMatch(/--mascot: min\(\d+svh, \d+vw, \d+px\);/);
-    expect(phone).toMatch(/\.landing-pin \.landing-scene \{[^}]*order: -1;[^}]*padding-top: var\(--front-top\);/);
-    expect(phone).toMatch(/\.landing-pin \.landing-act,[^{]*\{[^}]*position: relative;/);
+    expect(phone).toMatch(/\.landing-pin \.landing-scene \{[^}]*order: -1;[^}]*flex: 1 1 auto;/);
+    expect(phone).toMatch(/\.landing-mascot \{[^}]*position: absolute;[^}]*inset: 0;/);
+    expect(phone).toMatch(/--penguin: min\(\d+svh, \d+vw, \d+px\);/);
+  });
+});
+
+describe('where the penguin stands (staging)', () => {
+  const desk = { width: 690, height: 836 };
+  const h = penguinHeight(desk, false);
+  const box = { left: 800, top: 300, width: 480, height: 230 };
+  const right = box.left + box.width;
+  const bottom = box.top + box.height;
+
+  it('one height per screen, smaller on a phone', () => {
+    expect(h).toBeCloseTo(Math.min(836 * 0.36, 690 * 0.4, 320));
+    expect(penguinHeight({ width: 390, height: 560 }, true)).toBeLessThanOrEqual(190);
+    expect(penguinHeight({ width: 390, height: 560 }, true)).toBeLessThan(h);
+  });
+
+  it('hero: centred over the prompt box, shoulders just above its top edge, the feet hidden behind it', () => {
+    const s = spotFor('hero', box, h, false);
+    expect(s.x).toBe(box.left + box.width / 2);
+    const shoulder = s.y - (1 - BODY.shoulder) * h;
+    expect(shoulder).toBeLessThan(box.top);
+    expect(box.top - shoulder).toBeLessThan(0.15 * h);
+    expect(s.y).toBeLessThan(bottom); // feet behind the box
+    expect(headOf(s).y).toBeLessThan(box.top); // the face shows above it
+    expect(s.lean).toBe(0);
+  });
+
+  it('what: beside the step cards on their right, turned to them; on a phone over their upper right', () => {
+    const s = spotFor('what', box, h, false);
+    expect(s.x).toBeGreaterThan(right);
+    expect(s.turn).toBeLessThan(0);
+    const p = spotFor('what', box, 170, true);
+    expect(p.x).toBeLessThan(right);
+    expect(p.x + BODY.halfWidth * 170).toBeLessThanOrEqual(right + 2);
+    expect(headOf(p).y).toBeLessThan(box.top);
+  });
+
+  it('team: behind the paper’s upper-left corner, leaning out to the left; the eyes above the rod', () => {
+    const s = spotFor('team', box, h, false);
+    expect(s.x).toBeGreaterThan(box.left); // the body is behind the paper
+    expect(s.lean).toBeGreaterThan(0.2); // leaning out to the reader's left
+    expect(headOf(s).x).toBeLessThan(s.x);
+    const eyes = s.y - Math.cos(s.lean) * (1 - BODY.eyes) * h;
+    expect(eyes).toBeLessThan(box.top); // the face peeks over the top edge
+    expect(s.y).toBeLessThan(bottom); // the feet are hidden behind the paper
+  });
+
+  it('control: just outside the card’s lower-left corner, turned to it', () => {
+    const s = spotFor('control', box, h, false);
+    expect(s.x).toBeLessThan(box.left);
+    expect(s.y).toBeGreaterThan(bottom);
+    expect(s.turn).toBeGreaterThan(0.2);
+    const p = spotFor('control', box, 170, true);
+    expect(p.h).toBeLessThan(170); // a smaller penguin on a phone
+    expect(p.x).toBeLessThan(box.left);
+  });
+
+  it('start: behind the last card’s upper right, head and shoulders above it', () => {
+    const s = spotFor('start', box, h, false);
+    expect(s.x).toBeGreaterThan(box.left + box.width / 2);
+    expect(s.x).toBeLessThan(right);
+    expect(headOf(s).y).toBeLessThan(box.top);
+    expect(s.y).toBeLessThan(bottom);
+  });
+
+  it('every section has its own spot', () => {
+    const spots = SECTIONS.map((sec) => spotFor(sec.id, box, h, false));
+    const keys = new Set(spots.map((s) => `${Math.round(s.x)}:${Math.round(s.y)}`));
+    expect(keys.size).toBe(SECTIONS.length);
+  });
+
+  it('walks between spots in ~0.7 s, eased at both ends, with a small hop — no jump', () => {
+    expect(MOVE_MS).toBeGreaterThanOrEqual(600);
+    expect(MOVE_MS).toBeLessThanOrEqual(800);
+    const a = spotFor('hero', box, h, false);
+    const b = spotFor('control', box, h, false);
+    expect(moveAt(a, b, 0).x).toBeCloseTo(a.x);
+    expect(moveAt(a, b, MOVE_MS)).toEqual(b);
+    // eased: slow at the start and the end, fastest in the middle
+    const step = (ms: number) => Math.abs(moveAt(a, b, ms + 16).x - moveAt(a, b, ms).x);
+    expect(step(0)).toBeLessThan(step(MOVE_MS / 2 - 8) / 4);
+    expect(step(MOVE_MS - 16)).toBeLessThan(step(MOVE_MS / 2 - 8) / 4);
+    // never a jump between frames
+    let last = moveAt(a, b, 0);
+    for (let ms = 16; ms <= MOVE_MS; ms += 16) {
+      const now = moveAt(a, b, ms);
+      expect(Math.hypot(now.x - last.x, now.y - last.y)).toBeLessThan(h * 0.12);
+      last = now;
+    }
+    expect(easeInOutCubic(0)).toBe(0);
+    expect(easeInOutCubic(1)).toBe(1);
   });
 });
 
 describe('the acting', () => {
-  it('each act plays an office clip under the wings — typing at the prompt, idle while holding things', () => {
-    expect(ACT_CLIP).toEqual({ hero: 'typing', what: 'idle', team: 'idle', control: 'idle', start: 'idle' });
+  it('every act breathes on the idle clip — the office typing clip (the body bob behind the trembling) is not used', () => {
+    expect(ACT_CLIP).toEqual({ hero: 'idle', what: 'idle', team: 'idle', control: 'idle', start: 'idle' });
+    expect(ACT_DELAY_MS).toBeGreaterThan(MOVE_MS); // the act starts once the penguin has arrived
   });
 
-  it('a key tap: down fast, up slower, one per typed character, wings alternating', () => {
-    expect(tapPulse(-1)).toBe(0);
-    expect(tapPulse(TAP_MS * 0.35)).toBeCloseTo(1);
-    expect(tapPulse(TAP_MS * 0.2)).toBeGreaterThan(0.5);
-    expect(tapPulse(TAP_MS)).toBe(0);
+  it('typing is a pretend patter: 3–4 strokes a second, alternating, smooth, not one per character', () => {
+    expect(STROKE_RATE).toBeGreaterThanOrEqual(STROKE_LIMITS.min);
+    expect(STROKE_RATE).toBeLessThanOrEqual(STROKE_LIMITS.max);
+    // count the strokes (each wing's local peaks) over ten seconds
+    const peaks = (side: 'L' | 'R') => {
+      let n = 0;
+      const dt = 0.002;
+      for (let t = dt; t < 10; t += dt) {
+        const [a, b, c] = [strokeAt(t - dt, side), strokeAt(t, side), strokeAt(t + dt, side)];
+        if (b > a && b >= c && b > 0.5) n++;
+      }
+      return n;
+    };
+    const perSecond = (peaks('L') + peaks('R')) / 10;
+    expect(perSecond).toBeGreaterThanOrEqual(STROKE_LIMITS.min);
+    expect(perSecond).toBeLessThanOrEqual(STROKE_LIMITS.max);
+    // the wings take turns: when one is down the other is up
+    for (let t = 0; t < 2; t += 0.01) expect(Math.min(strokeAt(t, 'L'), strokeAt(t, 'R'))).toBe(0);
+    // smooth: no step bigger than a frame's worth of a gentle curve
+    for (let t = 0; t < 2; t += 1 / 60) expect(Math.abs(strokeAt(t + 1 / 60, 'L') - strokeAt(t, 'L'))).toBeLessThan(0.4);
+    // small strokes
+    expect(STROKE_DEPTH + STROKE_LIFT).toBeLessThan(0.06);
+    // the box tells the canvas only whether it is typing — no per-character tap
     vi.useFakeTimers();
     render(
       <I18nProvider locale="en">
@@ -526,41 +663,48 @@ describe('the acting', () => {
         </div>
       </I18nProvider>,
     );
-    const sides: string[] = [];
-    const nudges: (string | null)[] = [];
-    for (let i = 0; i < 4; i++) {
-      act(() => void vi.advanceTimersByTime(TYPE_MS));
-      sides.push(cues.tapSide);
-      nudges.push(document.querySelector('.landing-act.is-prompt')!.getAttribute('data-tap'));
-    }
-    expect(sides).toEqual(['R', 'L', 'R', 'L']);
-    expect(nudges).toEqual(['a', 'b', 'a', 'b']); // the box nudges with each tap
-    expect(cues.tapAt).toBeGreaterThan(-Infinity);
-    expect(css).toMatch(/\.landing-pin\.is-acting \.landing-act\.is-prompt\[data-tap="a"\] \{\s*animation: landing-tap-a 150ms/);
+    act(() => void vi.advanceTimersByTime(TYPE_MS * 3));
+    expect(cues.typing).toBe(true);
+    expect(document.querySelector('.landing-act.is-prompt')!.getAttribute('data-tap')).toBeNull();
+    for (let i = 0; i < 40; i++) act(() => void vi.advanceTimersByTime(TYPE_MS));
+    act(() => void vi.advanceTimersByTime(HOLD_TYPED_MS));
+    expect(screen.getByTestId('landing-answer').classList.contains('is-on')).toBe(true);
+    expect(cues.typing).toBe(false); // it holds still while the answer shows
   });
 
-  it('the stamp: raised past its strike height, a fast strike to the card, a small rebound, back to rest', () => {
+  it('the content never shakes: no animation or transform on the prompt box or the approval card', () => {
+    for (const sel of ['.landing-act.is-prompt', '.landing-prompt-box', '.landing-approval', '.landing-preview', '.landing-act.is-stamp']) {
+      for (const m of css.matchAll(new RegExp(`(^|\\n)([^\\n{}]*${sel.replace(/[.[\]]/g, '\\$&')}[^\\n{},]*)\\{([^}]*)\\}`, 'g'))) {
+        if (/\.landing-approve\b|\.landing-stamp-mark|\.landing-decline|\.btn/.test(m[2])) continue; // the button and its ink, not the card
+        expect(m[3], m[2]).not.toMatch(/animation|transform|translate|rotate/);
+      }
+    }
+    expect(css).not.toMatch(/@keyframes landing-(shake|tap)/);
+    expect(css).not.toMatch(/data-tap/);
+  });
+
+  it('the stamp: raised past its strike height, a decisive strike, a small rebound, a subtle squash', () => {
     expect(stampLift(-10)).toBe(STAMP_REST);
-    expect(Math.max(...[100, 200, 300, 400].map(stampLift))).toBeGreaterThan(STAMP_TOP); // anticipation overshoot
-    expect(stampLift(STAMP.raise + STAMP.cock / 2)).toBeGreaterThan(STAMP_TOP - 0.01);
-    // the strike accelerates: most of the drop happens in its second half
+    expect(Math.max(...[150, 300, 450, 600].map(stampLift))).toBeGreaterThan(STAMP_TOP);
     const s0 = STAMP.raise + STAMP.cock;
     expect(stampLift(s0 + STAMP.strike / 2)).toBeGreaterThan(STAMP_TOP * 0.7);
     expect(stampLift(STAMP_IMPACT_MS)).toBe(0);
     expect(stampLift(STAMP_IMPACT_MS + STAMP.hold / 2)).toBe(0);
-    expect(Math.max(...[60, 120, 200, 300, 400].map((d) => stampLift(STAMP_IMPACT_MS + STAMP.hold + d)))).toBeGreaterThan(STAMP_REST); // overshoot on the way up
     expect(stampLift(STAMP_TOTAL_MS + 1)).toBe(STAMP_REST);
-    // the body squashes at the hit, rebounds, and is itself again
+    // calm: nothing in the stamp moves faster than 120 ms, the whole beat takes ~2 s
+    for (const v of Object.values(STAMP)) expect(v).toBeGreaterThanOrEqual(120);
+    expect(STAMP_TOTAL_MS).toBeGreaterThan(1600);
+    // the squash: at most 4 %, back to itself
     expect(squashAt(STAMP_IMPACT_MS - 1)).toBe(1);
-    expect(squashAt(STAMP_IMPACT_MS + 70)).toBeLessThan(0.95);
-    expect(squashAt(STAMP_IMPACT_MS + 170)).toBeGreaterThan(1);
+    expect(Math.min(...[0, 30, 60, 90, 120, 200].map((d) => squashAt(STAMP_IMPACT_MS + d)))).toBeGreaterThanOrEqual(1 - SQUASH - 1e-9);
+    expect(SQUASH).toBeLessThanOrEqual(0.04);
     expect(squashAt(STAMP_IMPACT_MS + 400)).toBe(1);
     expect(stampState(STAMP_IMPACT_MS - 1)).toBe('waiting');
     expect(stampState(STAMP_IMPACT_MS)).toBe('pressed');
     expect(stampState(STAMP_APPROVED_MS)).toBe('approved');
   });
 
-  it('the stamp sequence on the card: waiting → pressed at the hit (mark, shake) → approved', () => {
+  it('the stamp sequence on the card: waiting → pressed at the hit (mark) → approved; the card stays still', () => {
     vi.useFakeTimers();
     render(
       <I18nProvider locale="en">
@@ -576,19 +720,16 @@ describe('the acting', () => {
     expect(card.getAttribute('data-state')).toBe('waiting');
     act(() => void vi.advanceTimersByTime(20));
     expect(card.getAttribute('data-state')).toBe('pressed');
-    expect(card.className).toContain('is-pressed');
     act(() => void vi.advanceTimersByTime(STAMP_APPROVED_MS - STAMP_IMPACT_MS));
     expect(card.getAttribute('data-state')).toBe('approved');
-    expect(card.className).toContain('is-approved');
     expect(within(card).getByText('Approved')).toBeTruthy();
     expect(approve.textContent).toBe('Approve');
     expect(approve.parentElement!.querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
-    // CSS: pressed = the button goes down; approved = ok border and text; the mark and the shake appear from the hit
-    expect(css).toMatch(/\.landing-approval\.is-pressed \.landing-approve \{[^}]*translate: 0 2px;/);
+    // the buttons come last in the card — the bottom-left corner the penguin reaches from
+    expect(card.lastElementChild!.className).toBe('landing-approval-actions');
+    expect(css).toMatch(/\.landing-approval\.is-pressed \.landing-approve \{[^}]*translate: 0 1px;/);
     expect(css).toMatch(/\.landing-approval\.is-approved \.landing-approve \{[^}]*border-color: var\(--ok\);[^}]*color: var\(--ok\);/);
     expect(css).toMatch(/\.landing-approval:not\(\.is-waiting\) \.landing-stamp-mark \{[^}]*opacity: 0\.9;/);
-    expect(css).toContain(`.landing-approval.is-pressed {\n  animation: landing-shake ${SHAKE_MS}ms`);
-    // nothing plays without acting (no 3D yet, or the stacked page)
     cleanup();
     resetCues();
     render(
@@ -601,29 +742,101 @@ describe('the acting', () => {
     expect(cues.stampAt).toBe(-Infinity);
   });
 
-  it('the scroll unrolls and the step cards turn over on the same clock as the wings', () => {
-    expect(css).toContain(`transition: --unroll ${UNROLL_MS}ms cubic-bezier(0.3, 1.12, 0.45, 1) ${ACT_DELAY_MS}ms;`);
+  it('the relay: the wing hands the request to card 1, then the cards light up in turn — accent working, ok done', () => {
+    expect(relayAt(0)).toBe(-1);
+    expect(relayAt(RELAY.reach)).toBe(0);
+    expect(relayAt(RELAY.reach + RELAY.step)).toBe(1);
+    expect(relayAt(RELAY.reach + 3 * RELAY.step + 1)).toBe(3);
+    expect(relayHand(-1)).toBe(0);
+    expect(relayHand(RELAY.reach)).toBeCloseTo(1);
+    expect(relayHand(RELAY.reach + 2000)).toBe(0);
+    expect(relayStep(0, 1)).toBe('done');
+    expect(relayStep(1, 1)).toBe('on');
+    expect(relayStep(2, 1)).toBe('waiting');
+    vi.useFakeTimers();
+    render(
+      <I18nProvider locale="en">
+        <StepsAct on acting />
+      </I18nProvider>,
+    );
+    const states = () => [...document.querySelectorAll('.landing-step')].map((li) => li.getAttribute('data-state'));
+    expect(states()).toEqual(['waiting', 'waiting', 'waiting']);
+    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + RELAY.reach + 10));
+    expect(states()).toEqual(['on', 'waiting', 'waiting']);
+    expect(document.querySelector('[data-gaze]')).toBe(document.querySelectorAll('.landing-step')[0]);
+    act(() => void vi.advanceTimersByTime(RELAY.step));
+    expect(states()).toEqual(['done', 'on', 'waiting']);
+    act(() => void vi.advanceTimersByTime(2 * RELAY.step));
+    expect(states()).toEqual(['done', 'done', 'done']);
+    expect(css).toMatch(/\.landing-step\.is-on \{[^}]*outline-color: var\(--accent\);/);
+    expect(css).toMatch(/\.landing-step\.is-done \.landing-step-badge \{[^}]*color: var\(--ok\);/);
+    // without acting it is the finished picture
+    cleanup();
+    render(
+      <I18nProvider locale="en">
+        <StepsAct on acting={false} />
+      </I18nProvider>,
+    );
+    expect(states()).toEqual(['done', 'done', 'done']);
+  });
+
+  it('the scroll unrolls once the penguin has arrived, on the same clock as the wing; the wave is slow', () => {
+    expect(css).toContain(`transition: --unroll ${UNROLL_MS}ms cubic-bezier(0.33, 1, 0.5, 1) ${ACT_DELAY_MS}ms;`);
     expect(css).toMatch(/@property --unroll \{[^}]*initial-value: 1;/);
     expect(css).toMatch(/\.landing-scroll-sheet \{[^}]*clip-path: inset\(0 -1px calc\(\(1 - var\(--unroll\)\) \* 100%\) -1px\);/);
-    expect(css).toMatch(/\.landing-scroll-roll \{[^}]*top: calc\(var\(--unroll\) \* 100%\);/);
-    expect(css).toContain(`animation: landing-flip ${FLIP_MS}ms cubic-bezier(0.3, 1.35, 0.5, 1) var(--flip-at) both;`);
-    live();
-    landing();
-    const cards = [...screen.getByTestId('landing-scene-what').querySelectorAll('li')];
-    expect(cards.map((li) => li.style.getPropertyValue('--flip-at'))).toEqual([0, 1, 2].map((i) => `${ACT_DELAY_MS + i * FLIP_STEP_MS}ms`));
+    expect(tugAt(-1)).toBe(0);
+    expect(Math.max(...[100, 350, 600].map(tugAt))).toBeLessThanOrEqual(0.02);
+    expect(WAVE_HZ).toBeLessThan(STROKE_LIMITS.min / 2);
+    expect(waveAt(-1)).toEqual({ swing: 0, raise: 0 });
+    expect(waveAt(5000).raise).toBe(0);
   });
 
   it('every act animation waits for acting — the poster and the stacked page show the finished picture', () => {
-    const gated = [...css.matchAll(/\n([^\n{}]+)\{[^}]*(animation: landing-(?:flip|tap-a|tap-b)|--unroll: 0)/g)].map((m) => m[1].trim());
-    expect(gated.length).toBeGreaterThanOrEqual(4);
-    for (const sel of gated) expect(sel).toMatch(/^\.landing-pin\.is-acting /);
+    const gated = [...css.matchAll(/\n([^\n{}]+)\{[^}]*(animation: landing-|--unroll: 0)/g)].map((m) => m[1].trim());
+    for (const sel of gated) expect(sel).toMatch(/^\.landing-pin\.is-acting |^\.landing-approval:not|caret/);
     expect(css).not.toMatch(/(^|\n)\.landing-act \{[^}]*opacity: 0/);
     expect(css).not.toMatch(/(^|\n)\.landing-slide \{[^}]*opacity: 0/);
   });
 });
 
+describe('what shows in front of the content (occlusion)', () => {
+  it('only the wings that touch the content may show in front — never the head, body or feet', () => {
+    expect(FRONT).toEqual({ hero: ['L', 'R'], what: ['R'], team: ['R'], control: ['L'], start: ['L', 'R'] });
+    expect(ORDER.eraser).toBeLessThan(ORDER.front);
+  });
+
+  it('the eraser wipes every pixel under the content whatever its depth, and covers the content rect exactly', () => {
+    const eraser = makeEraser();
+    expect(eraser.material.depthTest).toBe(false);
+    expect(eraser.renderOrder).toBe(ORDER.eraser);
+    expect(eraser.material.transparent).toBe(true);
+    // an orthographic camera, one unit = 100 px, over a 800 × 600 canvas at (100, 50)
+    const camera = new THREE.OrthographicCamera(-400, 400, 300, -300, 0.01, 40);
+    camera.zoom = 100;
+    camera.position.set(0, 0, 10);
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
+    const rect = { left: 100, top: 50, width: 800, height: 600, right: 900, bottom: 650 } as DOMRect;
+    const box = { left: 300, top: 200, right: 700, bottom: 450 };
+    fitEraser(eraser, box, 1, rect, camera, new THREE.Ray());
+    const pos = eraser.geometry.getAttribute('position');
+    const page = [0, 1, 2, 3].map((i) => {
+      const v = new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)).project(camera);
+      return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
+    });
+    expect(page.map((p) => [Math.round(p.x), Math.round(p.y)])).toEqual([
+      [300, 200],
+      [700, 200],
+      [700, 450],
+      [300, 450],
+    ]);
+    // the props draw after it
+    expect(makeStamp(paletteFor('light')).group.children.every((c) => c.renderOrder === ORDER.front)).toBe(true);
+  });
+});
+
 describe('the penguin', () => {
-  it('stays in its place for every slide (one layer, never moved per section)', () => {
+  it('one penguin layer for the whole page; it walks per section instead of the layer moving', () => {
     live();
     const { container } = landing();
     const mascot = () => screen.getByTestId('landing-mascot');
@@ -631,7 +844,6 @@ describe('the penguin', () => {
     for (let i = 0; i < SECTIONS.length; i++) {
       scrollTo(SCREEN * i);
       expect(mascot()).toBe(before);
-      expect(mascot().className).not.toMatch(/is-(hero|what|team|control|start)/);
     }
     expect(container.querySelectorAll('.landing-mascot')).toHaveLength(1);
   });

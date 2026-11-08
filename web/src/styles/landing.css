@@ -1,26 +1,20 @@
 /* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. A pinned stage one screen high: the
-   message on one side, the 3D penguin fixed in the scene column on the other, and each section's
-   content in front of the penguin (the scene box lies exactly over it) — the penguin acts on it.
+   section names at the left edge, the message, and the scene where each section's content sits
+   in the middle; the 3D penguin walks to a spot by the content and acts on it (landing/staging.ts).
    Tokens only; no gradients, tinted bands or shadows; nothing under 12px.
    data-mode="live" = pinned slides + 3D + the step controller (landing/dwell.ts) ·
    "static" = the same sections stacked, 2D penguin, native scroll. */
 
 .landing {
-  --landing-w: min(1240px, calc(100% - 2 * var(--space-12)));
+  /* the left margin holds the section names (.landing-progress) */
+  --landing-gutter: 128px;
+  --landing-w: min(1200px, calc(100% - 2 * var(--landing-gutter)));
   --landing-gnb: 64px;
   --landing-mono: 12px;
-  /* the message | the scene (the penguin and its content) */
-  --landing-cols: minmax(0, 5fr) minmax(0, 7fr);
-  /* the penguin's box — the canvas, and every slide's scene box over it */
-  /* viewport units only: a % here would resolve against whichever box uses the variable */
-  --mascot: min(calc((100svh - var(--landing-gnb)) * 0.78), calc((100vw - 2 * var(--space-12)) * 0.54), 640px);
-  --scene-top: max(var(--space-4), calc((100svh - var(--landing-gnb) - var(--mascot)) * 0.15));
-  /* the scroll rod at the chest, just under the beak — the face always shows */
-  --rod-top: calc(var(--mascot) * 0.56);
-  /* where the content's top edge meets the penguin: wing height */
-  --front-top: calc(var(--mascot) * 0.53);
-  /* where the wings rest on the content, either side of the penguin's middle */
-  --reach: calc(var(--mascot) * 0.115);
+  /* the message | the scene (the content, the penguin around it) */
+  --landing-cols: minmax(0, 4.6fr) minmax(0, 7.4fr);
+  /* the penguin's height — the 3D one is sized by staging.ts penguinHeight; this is for the 2D poster */
+  --penguin: min(calc((100svh - var(--landing-gnb)) * 0.4), 340px);
   position: relative;
   min-height: 100%;
   background: var(--bg);
@@ -167,7 +161,7 @@ html:has(.landing[data-mode="live"]) {
   border-right: 1px solid var(--line);
 }
 
-/* ── the penguin: fixed in the scene column for every slide ───────────── */
+/* ── the penguin: one canvas over the scene column; it walks to each section's spot ── */
 /* no z-index here — the poster and the canvas take their own layers in the pin */
 .landing-stage {
   position: absolute;
@@ -179,32 +173,32 @@ html:has(.landing[data-mode="live"]) {
   pointer-events: none;
 }
 
+/* the canvas reaches a little past the column, so a prop or a peeking head is never cut */
 .landing-mascot {
   position: relative;
   grid-column: 2;
-  justify-self: center;
-  align-self: start;
-  width: var(--mascot);
-  height: var(--mascot);
-  margin-top: var(--scene-top);
+  min-width: 0;
+  height: 100%;
+  margin-inline: calc(-1 * var(--space-12));
 }
 
+/* the 2D penguin until the 3D one has drawn: where the hero puts it — above the prompt box, its feet behind it */
 .landing-poster {
   position: absolute;
-  inset: 0;
+  bottom: 50%;
+  left: 50%;
   z-index: 1;
-  display: grid;
-  place-items: start center;
-  padding-top: calc(var(--mascot) * 0.2);
+  width: calc(var(--penguin) * 0.7);
+  translate: -50% 18%;
   transition: opacity 0.4s ease;
 }
 
 .landing-poster .penguin {
-  width: calc(var(--mascot) * 0.42);
+  width: 100%;
   height: auto;
 }
 
-/* above the slides but never in the way of a click; the content in front is cut out of it */
+/* above the slides but never in the way of a click; the content wipes the body out of it */
 .landing-canvas {
   position: absolute !important;
   inset: 0;
@@ -222,19 +216,20 @@ html:has(.landing[data-mode="live"]) {
   opacity: 0;
 }
 
-/* ── right-edge progress ──────────────────────────────────────────────── */
+/* ── progress: section names at the left edge, no numbers ────────────── */
 .landing-progress {
   position: fixed;
   top: 50%;
-  right: var(--space-4);
+  left: var(--space-6);
   z-index: 9;
+  max-width: calc(var(--landing-gutter) - var(--space-10));
   transform: translateY(-50%);
 }
 
 .landing-progress ol {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -243,58 +238,57 @@ html:has(.landing[data-mode="live"]) {
 .landing-progress a {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
-  min-height: 24px;
-  font-family: var(--font-mono);
-  font-size: var(--landing-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  gap: var(--space-3);
+  min-height: 30px;
   color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.landing-progress a:hover {
+  color: var(--ink);
 }
 
 .landing-progress-label {
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.landing-progress a.is-on .landing-progress-label,
-.landing-progress a:hover .landing-progress-label,
-.landing-progress a:focus-visible .landing-progress-label {
-  opacity: 1;
-}
-
-.landing-progress-index {
-  font-variant-numeric: tabular-nums;
-}
-
-.landing-progress-tick {
-  width: 12px;
-  height: 1px;
-  background: var(--ink-3);
+/* the mark: a short line; the section that is up gets a longer accent line */
+.landing-progress-mark {
+  flex-shrink: 0;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--line);
   transition:
-    width 0.2s ease,
+    height 0.2s ease,
     background-color 0.2s ease;
 }
 
 .landing-progress a.is-on {
   color: var(--ink);
+  font-weight: 700;
 }
 
-.landing-progress a.is-on .landing-progress-tick {
-  width: 28px;
-  height: 2px;
+.landing-progress a.is-on .landing-progress-mark {
+  height: 20px;
   background: var(--accent);
 }
 
-/* ── a slide: the message | the scene (the penguin and its content, one picture) ── */
+/* ── a slide: the message | the scene, the content centred in the scene ── */
 .landing-slide {
   display: grid;
   grid-template-columns: var(--landing-cols);
   min-width: 0;
 }
 
+/* slides only fade — nothing slides under the penguin while it walks */
 .landing-pin .landing-slide {
   position: absolute;
   inset: var(--landing-gnb) 0 0;
@@ -302,21 +296,13 @@ html:has(.landing[data-mode="live"]) {
   width: var(--landing-w);
   margin: 0 auto;
   opacity: 0;
-  transform: translateY(8px);
   pointer-events: none;
   /* the outgoing slide clears first, the incoming one follows — a short overlap, never two titles on top of each other */
-  transition:
-    opacity 0.28s ease,
-    transform 0.28s ease;
-}
-
-.landing-pin .landing-slide.is-passed {
-  transform: translateY(-8px);
+  transition: opacity 0.28s ease;
 }
 
 .landing-pin .landing-slide.is-on {
   opacity: 1;
-  transform: none;
   transition-duration: 0.45s;
   transition-delay: 0.18s;
 }
@@ -337,60 +323,52 @@ html:has(.landing[data-mode="live"]) {
   padding: 0 var(--space-8);
 }
 
-/* the scene box: exactly over the penguin's box, so the content can sit in front of the penguin */
 .landing-scene {
   grid-column: 2;
   min-width: 0;
 }
 
+/* the content block sits in the middle of the scene; the penguin finds its own spot around it */
 .landing-pin .landing-scene {
   position: relative;
-  justify-self: center;
-  align-self: start;
-  width: var(--mascot);
-  height: var(--mascot);
-  margin-top: var(--scene-top);
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: var(--space-6) var(--space-8);
 }
 
-/* the content: centred on the penguin, its top edge at wing height, over the penguin's lower half */
 .landing-act {
   position: relative;
   min-width: 0;
+  width: 100%;
 }
 
-.landing-pin .landing-act {
-  position: absolute;
-  top: var(--front-top);
-  left: 50%;
-  width: calc(var(--mascot) * 0.84);
-  transform: translateX(-50%);
+.landing-pin .landing-act.is-prompt {
+  width: min(100%, 480px);
+}
+
+.landing-pin .landing-act.is-relay {
+  width: min(60%, 360px);
 }
 
 .landing-pin .landing-act.is-scroll {
-  top: var(--rod-top);
-  width: calc(var(--mascot) * 0.92);
+  width: min(84%, 520px);
 }
 
-.landing-pin .landing-act.is-stamp,
+.landing-pin .landing-act.is-stamp {
+  width: min(56%, 380px);
+}
+
 .landing-pin .landing-act.is-sign {
-  width: calc(var(--mascot) * 0.8);
+  width: min(100%, 460px);
 }
 
-/* where the wings rest: the content's top edge, either side of the penguin's middle */
+/* where a wing goes (empty, aria-hidden) */
 .landing-hand {
   position: absolute;
-  top: 0;
   width: 1px;
   height: 1px;
   pointer-events: none;
-}
-
-.landing-hand.is-r {
-  left: calc(50% - var(--reach));
-}
-
-.landing-hand.is-l {
-  left: calc(50% + var(--reach));
 }
 
 .landing-display {
@@ -426,12 +404,12 @@ html:has(.landing[data-mode="live"]) {
   place-items: center;
 }
 
-/* ── hero: the prompt box, tapped like a keyboard ───────────────────── */
+/* ── hero: the prompt box — it never moves; the penguin patters above its top edge ── */
 .landing-prompt-box {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--card-pad-compact);
+  padding: var(--card-pad);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -444,11 +422,13 @@ html:has(.landing[data-mode="live"]) {
   color: var(--accent);
 }
 
+/* a fixed height: the box never grows as it types (the penguin's spot is read from it) */
 .landing-prompt-text {
+  height: calc(2 * 1.5em);
   margin: 0;
-  min-height: calc(2 * 1.5em);
-  font-size: 15px;
-  font-weight: 600;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 650;
   line-height: 1.5;
 }
 
@@ -472,112 +452,185 @@ html:has(.landing[data-mode="live"]) {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-height: 24px;
   margin: 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
   color: var(--ink-2);
   font-size: 13px;
   opacity: 0;
-  transform: translateY(4px);
-  transition:
-    opacity 0.25s ease,
-    transform 0.25s ease;
+  transition: opacity 0.3s ease;
 }
 
 .landing-prompt-answer.is-on {
   opacity: 1;
-  transform: none;
 }
 
-/* each key tap nudges the box (TAP_MS in acting.ts; the two names restart the animation) */
-.landing-pin.is-acting .landing-act.is-prompt[data-tap="a"] {
-  animation: landing-tap-a 150ms ease-out;
+.landing-prompt-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
 }
 
-.landing-pin.is-acting .landing-act.is-prompt[data-tap="b"] {
-  animation: landing-tap-b 150ms ease-out;
+.landing-prompt-send {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
-@keyframes landing-tap-a {
-  35% {
-    translate: -1px 2px;
-    rotate: -0.3deg;
-  }
-}
-
-@keyframes landing-tap-b {
-  35% {
-    translate: 1px 2px;
-    rotate: 0.3deg;
-  }
-}
-
-/* ── what it does: the step board, its cards turned over one by one ──── */
+/* ── what it does: the relay — the request lights the cards up one after another ── */
 .landing-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.landing-steps li {
+/* the lit card: an accent ring drawn inside the border (no layout change, no shadow) */
+.landing-step {
+  position: relative;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
-  align-items: baseline;
-  column-gap: var(--space-2);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--line);
-}
-
-.landing-steps li:first-child {
-  border-top: 0;
-}
-
-.landing-step-n {
-  grid-row: span 2;
-  color: var(--accent);
-}
-
-.landing-steps h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.landing-steps p {
-  grid-column: 2;
-  margin: var(--space-1) 0 0;
-  color: var(--ink-2);
-  font-size: 13.5px;
-  line-height: 1.6;
-}
-
-.landing-act.is-board {
-  padding: var(--space-2) var(--card-pad-compact);
+  column-gap: var(--space-3);
+  row-gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  transition: outline-color 0.3s ease;
 }
 
-/* FLIP_MS · FLIP_STEP_MS · ACT_DELAY_MS (acting.ts); --flip-at is set per card */
-.landing-pin.is-acting .landing-slide.is-on .landing-act.is-board li {
-  transform-origin: 50% 0;
-  animation: landing-flip 460ms cubic-bezier(0.3, 1.35, 0.5, 1) var(--flip-at) both;
+.landing-step.is-on {
+  outline-color: var(--accent);
 }
 
-@keyframes landing-flip {
-  from {
-    opacity: 0;
-    transform: perspective(700px) rotateX(-95deg);
-  }
+.landing-step-badge {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
 
-  45% {
-    opacity: 1;
-  }
+.landing-step.is-on .landing-step-badge {
+  background: var(--accent);
+  color: var(--on-accent);
+}
 
-  to {
-    opacity: 1;
-    transform: none;
-  }
+.landing-step.is-done .landing-step-badge {
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  color: var(--ok);
+}
+
+.landing-step-words h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.landing-step-words p {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* what the step holds — space kept, shown once the request has reached it */
+.landing-step-proof {
+  display: flex;
+  grid-column: 2;
+  align-items: center;
+  min-width: 0;
+  min-height: 28px;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.landing-step.is-on .landing-step-proof,
+.landing-step.is-done .landing-step-proof {
+  opacity: 1;
+}
+
+.landing-ask {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.landing-ask .icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.landing-handoff {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-2);
+}
+
+.landing-handoff > .icon {
+  margin: 0 var(--space-1);
+}
+
+.landing-artifact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.landing-artifact > .icon {
+  flex-shrink: 0;
+  color: var(--ok);
+}
+
+.landing-artifact-by {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+/* the right wing hands the request to card 1 at its right edge */
+.landing-hand.is-card {
+  top: 50%;
+  right: var(--space-4);
 }
 
 /* ── team: the scroll, the org chart on its paper ───────────────────── */
@@ -610,12 +663,12 @@ html:has(.landing[data-mode="live"]) {
 
 .landing-pin.is-acting .landing-slide.is-on .landing-scroll {
   --unroll: 1;
-  transition: --unroll 1250ms cubic-bezier(0.3, 1.12, 0.45, 1) 520ms;
+  transition: --unroll 1600ms cubic-bezier(0.33, 1, 0.5, 1) 840ms;
 }
 
 .landing-scroll-sheet {
   /* the wings hang over the top of the paper — the chart starts below them */
-  padding: var(--space-10) var(--card-pad-compact) var(--space-5);
+  padding: var(--space-8) var(--card-pad-compact) var(--space-5);
   border: 1px solid var(--line);
   border-top: 0;
   background: var(--surface);
@@ -933,14 +986,12 @@ html:has(.landing[data-mode="live"]) {
   min-height: 40px;
 }
 
-/* the reason and the "example" label, under the buttons */
+/* the reason and the "example" label, under the head */
 .landing-approval-foot {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
 }
 
 .landing-live-text {
@@ -977,10 +1028,13 @@ html:has(.landing[data-mode="live"]) {
   font-size: 13px;
 }
 
+/* the buttons along the bottom, approve first (bottom left — the stamp comes from the corner) */
 .landing-approval-actions {
   /* room for the stamp mark around the approve button */
   display: flex;
   gap: var(--space-5);
+  padding: var(--space-3) var(--space-2) var(--space-1);
+  border-top: 1px solid var(--line);
 }
 
 .landing-approval-actions .btn {
@@ -1001,9 +1055,10 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* pressed by the stamp, then approved: ok text and border, no fill */
+/* the card itself never moves (no shake) — only the button gives under the stamp */
 .landing-approval.is-pressed .landing-approve {
-  translate: 0 2px;
-  scale: 0.96;
+  translate: 0 1px;
+  scale: 0.97;
 }
 
 .landing-approval.is-approved .landing-approve {
@@ -1014,25 +1069,6 @@ html:has(.landing[data-mode="live"]) {
 
 .landing-approval.is-approved .landing-decline {
   opacity: 0.45;
-}
-
-/* the hit: one short shake of the card (SHAKE_MS in acting.ts) */
-.landing-approval.is-pressed {
-  animation: landing-shake 260ms ease-out;
-}
-
-@keyframes landing-shake {
-  20% {
-    translate: -3px 1px;
-  }
-
-  45% {
-    translate: 2px 0;
-  }
-
-  70% {
-    translate: -1px 0;
-  }
 }
 
 .landing-approve-wrap {
@@ -1098,15 +1134,14 @@ html:has(.landing[data-mode="live"]) {
   font-size: 14.5px;
 }
 
-/* ── start: the sign the penguin holds up ───────────────────────────── */
+/* ── start: the last card — the line, the whole team, one big button; the penguin pops up behind it ── */
 .landing-act.is-sign {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-5);
   padding: var(--card-pad);
-  /* the wings hold the top edge — the words start below them */
-  padding-top: var(--space-12);
+  padding-top: var(--space-10);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -1114,14 +1149,41 @@ html:has(.landing[data-mode="live"]) {
 
 .landing-statement {
   margin: 0;
-  font-size: clamp(19px, 1.9vw, 24px);
-  font-weight: 650;
-  line-height: 1.45;
-  letter-spacing: -0.015em;
+  color: var(--ink);
+  font-size: clamp(22px, 2.1vw, 28px);
+  font-weight: 800;
+  line-height: 1.38;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
+.landing-faces {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* the fifteen agents in their team colours, a little overlapped */
+.landing-faces-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.landing-faces-row > * + * {
+  margin-left: -6px;
+}
+
+.landing-faces-label {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .landing-final-cta {
+  min-height: 52px;
+  padding: 0 var(--space-8);
+  font-size: 17px;
+  font-weight: 750;
   white-space: nowrap;
 }
 
@@ -1187,15 +1249,16 @@ html:has(.landing[data-mode="live"]) {
   flex: 1;
 }
 
+/* the stacked page has no left nav — the sections are all there to scroll through */
+.landing[data-mode="static"] .landing-progress {
+  display: none;
+}
+
 /* ── phone and narrow ─────────────────────────────────────────────────── */
 /* a low screen: the org chart's rows close up so the paper still fits */
 @media (max-height: 820px) {
-  .landing {
-    --rod-top: calc(var(--mascot) * 0.55);
-  }
-
   .landing-pin .landing-scroll-sheet {
-    padding-top: var(--space-8);
+    padding-top: var(--space-6);
     padding-bottom: var(--space-3);
   }
 
@@ -1218,17 +1281,19 @@ html:has(.landing[data-mode="live"]) {
     row-gap: 0;
     padding-top: var(--space-2);
   }
+
+  .landing-pin .landing-step {
+    padding-block: var(--space-2);
+  }
 }
 
 @media (max-width: 860px) {
   .landing {
+    --landing-gutter: var(--space-4);
     --landing-w: calc(100% - 2 * var(--space-4));
     --landing-gnb: 56px;
     --landing-cols: minmax(0, 1fr);
-    --mascot: min(34svh, 72vw, 300px);
-    --scene-top: var(--space-2);
-    --front-top: calc(var(--mascot) * 0.54);
-    --rod-top: calc(var(--mascot) * 0.58);
+    --penguin: min(30svh, 42vw, 170px);
   }
 
   .landing-top .locale-picker > span {
@@ -1239,13 +1304,31 @@ html:has(.landing[data-mode="live"]) {
     display: none;
   }
 
-  /* the penguin at the top centre; the canvas as wide as the page so the props are never cut */
-  .landing-mascot {
-    grid-column: 1;
+  /* no room at the side on a phone: the section names go; the page still steps one section a gesture */
+  .landing-progress {
+    display: none;
+  }
+
+  /* the canvas covers the whole stage — the scene's height depends on the message under it */
+  .landing-stage {
+    display: block;
     width: 100%;
   }
 
-  /* the scene first (penguin + content over its lower half), the message under it */
+  .landing-mascot {
+    position: absolute;
+    inset: 0;
+    height: auto;
+    margin: 0;
+  }
+
+  .landing-poster {
+    bottom: auto;
+    top: 14%;
+    translate: -50% 0;
+  }
+
+  /* the scene first (the content centred in what is left), the message under it */
   .landing-pin .landing-slide {
     display: flex;
     flex-direction: column;
@@ -1253,29 +1336,41 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-pin .landing-scene {
     order: -1;
-    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
     height: auto;
-    padding-top: var(--front-top);
+    padding: var(--space-4) 0;
   }
 
-  .landing-pin .landing-slide.is-team .landing-scene {
-    padding-top: var(--rod-top);
-  }
-
-  .landing-pin .landing-act,
-  .landing-pin .landing-act.is-scroll,
-  .landing-pin .landing-act.is-stamp,
-  .landing-pin .landing-act.is-sign {
-    position: relative;
-    top: auto;
-    left: auto;
+  .landing-pin .landing-act.is-prompt,
+  .landing-pin .landing-act.is-relay {
     width: 100%;
-    transform: none;
+  }
+
+  /* the penguin is over card 1's upper right: its wing hands the request down onto the top edge */
+  .landing-hand.is-card {
+    top: 0;
+    right: 40%;
+  }
+
+  .landing-pin .landing-act.is-scroll {
+    width: calc(100% - 40px);
+  }
+
+  /* the card right of the middle: the penguin needs the room at its lower-left corner */
+  .landing-pin .landing-act.is-stamp {
+    justify-self: end;
+    width: calc(100% - 88px);
+  }
+
+  .landing-pin .landing-act.is-sign {
+    width: calc(100% - 24px);
   }
 
   .landing-pin .landing-copy {
+    flex: none;
     align-self: stretch;
-    margin-top: var(--space-6);
+    padding: 0 0 var(--space-6);
   }
 
   .landing-stack .landing-slide {
@@ -1315,12 +1410,33 @@ html:has(.landing[data-mode="live"]) {
     margin-bottom: 0;
   }
 
-  .landing-act.is-sign {
-    padding: var(--space-10) var(--card-pad-compact) var(--card-pad-compact);
+  .landing-prompt-box {
+    padding: var(--card-pad-compact);
   }
 
-  .landing-steps li {
-    padding: var(--space-2) 0;
+  .landing-prompt-text {
+    font-size: 15px;
+  }
+
+  .landing-act.is-sign {
+    gap: var(--space-4);
+    padding: var(--space-8) var(--card-pad-compact) var(--card-pad-compact);
+  }
+
+  .landing-statement {
+    font-size: 19px;
+  }
+
+  .landing-faces-row > * + * {
+    margin-left: -10px;
+  }
+
+  .landing-step {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .landing-step-words p {
+    font-size: 12.5px;
   }
 
   .landing-points {
@@ -1353,28 +1469,11 @@ html:has(.landing[data-mode="live"]) {
   }
 
   .landing-scroll-sheet {
-    padding: var(--space-8) var(--space-2) var(--space-3);
+    padding: var(--space-6) var(--space-2) var(--space-3);
   }
 
   .landing-card {
     width: 220px;
-  }
-
-  .landing-progress {
-    right: 2px;
-  }
-
-  .landing-progress-label,
-  .landing-progress-index {
-    display: none;
-  }
-
-  .landing-progress-tick {
-    width: 6px;
-  }
-
-  .landing-progress a.is-on .landing-progress-tick {
-    width: 10px;
   }
 }
 
@@ -1383,8 +1482,11 @@ html:has(.landing[data-mode="live"]) {
   .landing-canvas,
   .landing-pin .landing-slide,
   .landing-prompt-answer,
-  .landing-progress-label,
-  .landing-progress-tick,
+  .landing-progress a,
+  .landing-progress-mark,
+  .landing-step,
+  .landing-step-badge,
+  .landing-step-proof,
   .landing-top {
     transition: none;
   }

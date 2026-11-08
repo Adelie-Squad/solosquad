@@ -19,9 +19,6 @@ export const SECTIONS: Section[] = [
 
 export const sectionAnchor = (id: SectionId) => `landing-${id}`;
 
-/** `01` … `05` — the progress nav's numbers. */
-export const sectionIndex = (id: SectionId) => String(SECTIONS.findIndex((s) => s.id === id) + 1).padStart(2, '0');
-
 /**
  * The slide for a scroll position: the stop marker (one per section, `stops` = their offsets from
  * the top of the page, ascending) nearest to `scrollY`. Halfway between two markers is the later

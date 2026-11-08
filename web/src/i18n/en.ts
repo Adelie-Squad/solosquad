@@ -61,6 +61,8 @@ export const en: Record<MessageKey, string> = {
   'landing.prompt.2': 'Draft the product page for next week’s new item',
   'landing.prompt.3': 'List the items running low on stock',
   'landing.prompt.assigned': '{agent} is on it',
+  'landing.prompt.hint': 'One line is enough',
+  'landing.what.artifact': 'Last month’s P&L report',
   'landing.what.title': 'Ask in one place. The work happens at every desk.',
   'landing.what.lead': 'Ask Chief the way you would ask a colleague, in your messenger or on the web. The office shows who is working on what.',
   'landing.what.step1.title': 'Ask in plain words',

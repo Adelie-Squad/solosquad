@@ -15,7 +15,7 @@ import { keyStep, ownsKeys, SETTLE_MS, Stepper, wheelPixels } from './dwell';
 import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
-import { sectionAnchor, sectionIndex, SECTIONS, stepAt, type SectionId } from './sections';
+import { sectionAnchor, SECTIONS, stepAt, type SectionId } from './sections';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
@@ -148,11 +148,12 @@ const POINTS: { icon: keyof typeof ICON; title: MessageKey; body: MessageKey }[]
 ];
 
 /**
- * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`): a pinned stage, one screen high. Each
- * section is the message on one side and, on the other, the 3D penguin with the section's content
- * in front of it — the penguin acts on the content (types on the prompt, turns the step cards, unrolls
- * the org chart, stamps the approval, holds up the last button). One wheel or swipe moves one
- * section and the page holds there a moment. Reduced motion, no WebGL and short screens get the same
+ * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`): a pinned stage, one screen high, the
+ * section names at the left edge. Each section is the message on one side and, on the other, the
+ * section's content centred in its scene; the 3D penguin walks to a spot by the content and acts on
+ * it (pretends to type over the prompt, hands the request along the step cards, peeks over the
+ * scroll, stamps the approval from its corner, waves from behind the last card). One wheel or swipe
+ * moves one section and the page holds there a moment. Reduced motion, no WebGL and short screens get the same
  * sections stacked with the 2D penguin and native scroll. The only buttons out are the login (top
  * bar) and the last section's; they go to `/login`, or to the office when signed in.
  */
@@ -190,17 +191,15 @@ export function Landing() {
     return () => window.removeEventListener('resize', on);
   }, []);
 
-  const pointer = useRef<Pointer | null>({ x: 0, y: 0 });
+  const pointer = useRef<Pointer | null>(null);
   useEffect(() => {
     if (!live) return;
     const on = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse') return;
-      pointer.current = {
-        x: Math.max(-1, Math.min(1, (e.clientX / window.innerWidth) * 2 - 1)),
-        y: Math.max(-1, Math.min(1, (e.clientY / window.innerHeight) * 2 - 1)),
-      };
+      // client px — the canvas measures it from wherever the penguin's head is
+      pointer.current = { x: e.clientX, y: e.clientY };
     };
-    const reset = () => (pointer.current = { x: 0, y: 0 });
+    const reset = () => (pointer.current = null);
     window.addEventListener('pointermove', on, { passive: true });
     document.addEventListener('pointerleave', reset);
     return () => {
@@ -335,7 +334,7 @@ export function Landing() {
         </h2>
         <p className="landing-lead">{t(inside ? 'landing.start.in' : 'landing.start.out')}</p>
       </>,
-      <SignAct cta={cta('btn is-primary is-large landing-final-cta')} />,
+      <SignAct on={isOn('start')} acting={acting} cta={cta('btn is-primary is-large landing-final-cta')} />,
     ),
   ];
 
@@ -361,9 +360,8 @@ export function Landing() {
                 aria-current={active === s.id && live ? 'step' : undefined}
                 className={active === s.id && live ? 'is-on' : ''}
               >
+                <span className="landing-progress-mark" aria-hidden="true" />
                 <span className="landing-progress-label">{t(s.label)}</span>
-                <span className="landing-progress-index">{sectionIndex(s.id)}</span>
-                <span className="landing-progress-tick" aria-hidden="true" />
               </a>
             </li>
           ))}

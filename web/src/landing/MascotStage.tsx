@@ -1,6 +1,6 @@
-// The mascot layer of the landing (DESIGN.md `## 랜딩`): fixed in the scene column of the pinned
-// stage for the whole page while the slides change around it; each slide's scene box lies exactly
-// over it, so the slide's content sits in front of the penguin. The 2D penguin shows at once; the 3D chunk loads
+// The mascot layer of the landing (DESIGN.md `## 랜딩`): one canvas over the scene column of the
+// pinned stage for the whole page; the penguin in it walks to each section's spot (staging.ts) while
+// the slides change. The 2D penguin shows at once (where the hero puts it); the 3D chunk loads
 // after the first paint and takes over only once it has really drawn the penguin (MascotCanvas
 // counts draw calls) — if it never does, the page falls back to the 2D penguin. Rendering stops
 // when the tab is hidden or the layer is off-screen. Decoration only (aria-hidden).
