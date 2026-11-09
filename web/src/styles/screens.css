@@ -531,6 +531,274 @@
   color: var(--ink-2);
 }
 
+/* ── the work tabs: the number strip is the tab row, the list opens under it (2026-11-10) ─ */
+
+.dash-work {
+  padding: 0;
+  overflow: hidden;
+}
+
+.dash-work .dash-stats {
+  border-bottom: 1px solid var(--line);
+}
+
+button.dash-stat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dash-stat.is-selected {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.dash-stat.is-selected .dash-stat-label {
+  color: var(--ink);
+}
+
+.dash-stat:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.dash-tab-panel {
+  padding: var(--card-pad);
+}
+
+.dash-tab-panel > :first-child {
+  margin-top: 0;
+}
+
+.dash-tab-panel .work-list {
+  padding: 0;
+}
+
+.dash-tab-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dash-tab-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+}
+
+.dash-tab-foot .widget-more {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.dash-others {
+  margin-top: var(--space-5);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.dash-others > summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--ink-2);
+}
+
+.dash-others > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash-others-caret {
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.dash-others[open] .dash-others-caret {
+  transform: none;
+}
+
+.dash-others > .dash-hint {
+  margin: 0 0 var(--space-3);
+}
+
+a.next-run-link {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.next-run-link:hover strong {
+  text-decoration: underline;
+}
+
+/* ── 자리를 비운 동안: one sentence, a few short groups, then 확인했어요 ─────────────────────── */
+
+.digest {
+  margin-bottom: var(--card-gap);
+}
+
+.digest-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.digest-head .dash-hint {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.digest-headline {
+  max-width: var(--measure);
+  margin: var(--space-2) 0 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.digest.is-welcome .digest-headline {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.digest-group {
+  margin-top: var(--space-5);
+}
+
+.digest-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.digest-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.digest-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.digest-row + .digest-row {
+  border-top: 1px solid var(--line);
+}
+
+.digest-row-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--ink-3);
+}
+
+.digest-row-icon.is-ok {
+  color: var(--ok);
+}
+
+.digest-row-icon.is-danger {
+  color: var(--danger);
+}
+
+.digest-row-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.digest-row-title {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.digest-row-title:hover {
+  text-decoration: underline;
+}
+
+.digest-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.digest-row-meta > span + span::before {
+  content: '·';
+  margin-right: var(--space-2);
+  color: var(--ink-3);
+}
+
+.digest-row-error {
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.digest-row .work-made {
+  margin-top: var(--space-1);
+}
+
+.digest-others {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.digest-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.digest-quiet {
+  margin-bottom: var(--card-gap);
+}
+
 /* ── phone ───────────────────────────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {

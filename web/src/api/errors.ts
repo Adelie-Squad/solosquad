@@ -80,6 +80,8 @@ export const ERROR_KEYS: Record<ErrorCode, MessageKey> = {
   calendar_assignee_invalid: 'error.calendar_assignee_invalid',
   calendar_reorder_invalid: 'error.calendar_reorder_invalid',
   calendar_agent_access_invalid: 'error.calendar_agent_access_invalid',
+  digest_since_invalid: 'error.digest_since_invalid',
+  digest_until_invalid: 'error.digest_until_invalid',
 };
 
 export function isErrorCode(code: unknown): code is ErrorCode {

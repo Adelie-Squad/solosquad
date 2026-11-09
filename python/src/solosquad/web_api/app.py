@@ -37,6 +37,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 import webauthn
 from apscheduler.triggers.cron import CronTrigger
@@ -227,7 +228,22 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "calendar.agent_access.update": EVERYONE,
     "calendar.agent_view": EVERYONE,  # own preview; the engine token for agents (v2.2)
     "calendar.events": EVERYONE,
+    # the dashboard digest (자리를 비운 동안) — each person's own; every row inside is then
+    # one of the scopes they may enter, checked the way the scope gate checks
+    "digest.get": EVERYONE,
+    "digest.ack": EVERYONE,
 }
+
+PRESENCE_HEADER = "x-presence"
+"""The web sends `X-Presence: 1` only while the person is really there (they touched the
+page in the last two minutes, or just opened it) — a background refresh after a live event
+does not, so a tab left open overnight does not count as being here."""
+TOUCH_EVERY_S = 60.0
+"""`last_active` is written at most this often per person."""
+DIGEST_CAP = 20
+"""The most rows one digest list carries; `counts` has the full numbers."""
+DIGEST_LOOKBACK_S = 30 * 86400
+"""The digest looks back at most this far, however long someone was away."""
 
 
 def _json_default(obj: Any) -> Any:
@@ -508,6 +524,7 @@ class CalendarHub:
 def create_app(cfg: AppConfig) -> Starlette:
     hubs: dict[Key, EventHub] = {}
     last_seen: dict[str, Key] = {}
+    touched: dict[str, float] = {}
     cal = cfg.calendar or CalendarStore(cfg.accounts.path)
     cal_hub = CalendarHub()
 
@@ -548,7 +565,18 @@ def create_app(cfg: AppConfig) -> Starlette:
             raise ApiError(403, E.CSRF_INVALID, "missing or wrong CSRF token")
         if session.stage is SessionStage.ENROLL and not allow_enroll:
             raise ApiError(403, E.ENROL_REQUIRED, "set up the one-time code first")
+        if request.method in UNSAFE or request.headers.get(PRESENCE_HEADER) == "1":
+            present(session.user.id)
         return Principal(session.user.role, session)
+
+    def present(uid: str, *, new_visit: bool = False) -> None:
+        """The person is here (`AccountStore.touch`) — at most once a minute, except a
+        sign-in, which always starts a new visit."""
+        now = time.time()
+        if not new_visit and now - touched.get(uid, 0.0) < TOUCH_EVERY_S:
+            return
+        touched[uid] = now
+        cfg.accounts.touch(uid, now, new_visit=new_visit)
 
     def role_for(who: Principal, org: str, workspace: str | None) -> Role | None:
         if who.session is None:
@@ -744,6 +772,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         except AuthError as e:
             raise ApiError(401, e.code, str(e)) from e
         accounts().audit(session.user.id, "login", w.address)
+        present(session.user.id, new_visit=True)
         resp = respond(S.Me, me_payload(session))
         set_session(resp, token)
         return resp
@@ -986,6 +1015,7 @@ def create_app(cfg: AppConfig) -> Starlette:
             uid, SessionStage.FULL, ip=w.address, ua=request.headers.get("user-agent", "")
         )
         store.audit(uid, "login.passkey", w.address)
+        present(uid, new_visit=True)
         resp = respond(S.Me, me_payload(session))
         set_session(resp, token)
         return resp
@@ -1709,12 +1739,12 @@ def create_app(cfg: AppConfig) -> Starlette:
         return None
 
     def may_approve(request: Request, card: dict[str, Any] | None) -> bool:
-        sc = in_scope(request)
+        return may_answer(in_scope(request), policy(request), card)
+
+    def may_answer(sc: InScope, pol: ApprovalPolicy, card: dict[str, Any] | None) -> bool:
         if sc.role is Role.OWNER:  # the role in this org (decision 57 · I25 rev7)
             return True
-        return card is not None and can_approve(
-            policy(request), card, is_owner=False, teams=teams_of(sc)
-        )
+        return card is not None and can_approve(pol, card, is_owner=False, teams=teams_of(sc))
 
     def check_approver(request: Request, mgr: RunManager, tid: str) -> dict[str, Any] | None:
         card = waiting_card(mgr, tid)
@@ -2209,13 +2239,19 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def approvals(request: Request) -> Response:
         need(request, "approvals.list")
-        rt = runtime(request)
-        sources = [("company", rt.manager)]
+        out = waiting_in(in_scope(request), runtime(request), policy(request))
+        return respond(list[S.ApprovalItem], sorted(out, key=lambda a: -float(a["created"])))
+
+    def managers(rt: RuntimeView) -> list[tuple[Literal["company", "workflow"], RunManager]]:
+        found: list[tuple[Literal["company", "workflow"], RunManager]] = [("company", rt.manager)]
         if rt.workflows is not None:
-            sources.append(("workflow", rt.workflows.manager))
-        tiers = policy(request)
+            found.append(("workflow", rt.workflows.manager))
+        return found
+
+    def waiting_in(sc: InScope, rt: RuntimeView, tiers: ApprovalPolicy) -> list[dict[str, Any]]:
+        """The approval cards waiting in one workspace, with whether this person may answer."""
         out = []
-        for source, mgr in sources:
+        for source, mgr in managers(rt):
             for item in mgr.store.runs(status=RunStatus.INTERRUPTED, limit=200):
                 card = waiting_card(mgr, item["thread_id"])
                 newest = mgr.store.runs(thread_id=item["thread_id"], limit=1)
@@ -2229,10 +2265,10 @@ def create_app(cfg: AppConfig) -> Starlette:
                         "created": item["created"],
                         "card": card,
                         "tier": tiers.tier(card.get("category")).value,
-                        "can_approve": may_approve(request, card),
+                        "can_approve": may_answer(sc, tiers, card),
                     }
                 )
-        return respond(list[S.ApprovalItem], sorted(out, key=lambda a: -float(a["created"])))
+        return out
 
     # ------------------------------------------------------------------ calendar (decision 60)
 
@@ -2530,6 +2566,291 @@ def create_app(cfg: AppConfig) -> Starlette:
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
+    # ------------------------------------------------------------- the digest (자리를 비운 동안)
+
+    def digest_scopes(request: Request, who: Principal) -> list[InScope]:
+        """Every workspace this person may enter from here, checked as the scope gate checks
+        (assignment → placed → running → the workspace's own networks)."""
+        out = []
+        for org, ws in sorted(cfg.placed):
+            role = role_for(who, org, ws)
+            rt = cfg.runtimes.get((org, ws))
+            if role is None or rt is None:
+                continue
+            if not allowed(rt.workspace.config().access, where(request)):
+                continue
+            out.append(InScope(who, org, ws, role, rt))
+        return out
+
+    def agents_on(rt: RuntimeView, tid: str) -> list[str]:
+        seen: list[str] = []
+        for entry in reversed(rt.ledger.entries(thread_id=tid, limit=200)):
+            agent = entry.get("agent")
+            if agent and agent not in seen:
+                seen.append(str(agent))
+        return seen
+
+    def made_since(rt: RuntimeView, tid: str, since: float) -> list[dict[str, Any]]:
+        if rt.artifacts is None:
+            return []
+        return [
+            {"id": a.id, "kind": a.kind, "title": a.title, "needs_review": a.needs_review}
+            for a in rt.artifacts.find(thread_id=tid, limit=10)
+            if a.created > since
+        ]
+
+    def local_moment(when: str, tz: str) -> float:
+        """A calendar date (`2026-11-20` = that day's start) or local date-time, as a time."""
+        fmt = "%Y-%m-%dT%H:%M" if "T" in when else "%Y-%m-%d"
+        return datetime.strptime(when, fmt).replace(tzinfo=ZoneInfo(tz)).timestamp()
+
+    def digest_runs(
+        sc: InScope, frm: float, until: float, out: dict[str, list[dict[str, Any]]]
+    ) -> None:
+        """Runs that ended (finished · failed) and runs a schedule started, in one workspace."""
+        rt = sc.runtime
+        assert rt is not None and sc.workspace is not None
+        where_ = {"org": sc.org, "workspace": sc.workspace}
+        wf = rt.workflows
+        for source, mgr in managers(rt):
+            seen: set[str] = set()
+            for r in mgr.store.ended_between(frm, until, limit=500):
+                tid = r["thread_id"]
+                if tid in seen:
+                    continue
+                seen.add(tid)
+                th = mgr.store.thread(tid) or {}
+                meta = th.get("metadata") or {}
+                if source == "company" and (meta.get("workflow_thread") or tid == OPS_THREAD):
+                    continue  # a workflow's agent step is part of that run; engine notices
+                if r["status"] not in (RunStatus.SUCCESS, RunStatus.ERROR):
+                    continue  # waiting (an approval) · stopped · superseded
+                src = str(r.get("source") or "")
+                row = {
+                    **where_,
+                    "source": "chat" if source == "company" else "workflow",
+                    "thread_id": tid,
+                    "run_id": r["id"],
+                    "title": th.get("title"),
+                    "workflow": meta.get("workflow"),
+                    "cron": src[5:] if src.startswith("cron:") else meta.get("cron"),
+                    "status": r["status"],
+                    "ended": r["ended"],
+                    "agents": agents_on(rt, tid if source == "company" else f"{tid}-agent"),
+                    "artifacts": made_since(rt, tid, frm),
+                    "error": str(r.get("error") or "")[:200] or None,
+                }
+                if r["status"] == RunStatus.ERROR:
+                    out["failed"].append(row)
+                elif not src.startswith("cron:"):
+                    out["finished"].append(row)  # a scheduled one is under scheduled
+            for r in mgr.store.runs(since=frm, limit=500):
+                src = str(r.get("source") or "")
+                if not src.startswith("cron:") or not (frm < r["created"] <= until):
+                    continue
+                if r["status"] == RunStatus.ERROR:
+                    continue  # listed under failed
+                name = src[5:]
+                is_wf = name.startswith("wf:")
+                short = name[3:] if is_wf else name
+                title = short
+                if is_wf and wf is not None and short in wf.defs:
+                    title = wf.defs[short].title or short
+                out["scheduled"].append(
+                    {
+                        **where_,
+                        "run_id": r["id"],
+                        "thread_id": r["thread_id"],
+                        "kind": "workflow" if is_wf else "cron",
+                        "name": short,
+                        "title": title,
+                        "status": r["status"],
+                        "created": r["created"],
+                        "artifacts": made_since(rt, r["thread_id"], frm),
+                    }
+                )
+
+    def digest_decisions(
+        sc: InScope, uid: str | None, frm: float, until: float
+    ) -> list[dict[str, Any]]:
+        """Approvals someone else answered in this workspace (the org audit, C6 · C23)."""
+        rt = sc.runtime
+        store = cfg.orgs.get(sc.org)
+        if store is None or rt is None:
+            return []
+        out = []
+        for a in store.audit_between("approval", frm, until):
+            if a["workspace"] != sc.workspace or (uid is not None and a["user_id"] == uid):
+                continue
+            try:
+                d = json.loads(a["detail"] or "{}")
+            except ValueError:
+                continue
+            src = "workflow" if d.get("source") == "workflow" else "company"
+            tid = str(d.get("thread") or "")
+            mgr = rt.workflows.manager if src == "workflow" and rt.workflows else rt.manager
+            try:
+                approver = cfg.accounts.user(str(a["user_id"])).display
+            except KeyError:
+                approver = str(d.get("approver") or "")
+            value = d.get("value")
+            out.append(
+                {
+                    "org": sc.org,
+                    "workspace": sc.workspace,
+                    "ts": a["ts"],
+                    "approver": approver,
+                    "decision": value if value in ("approved", "declined") else "other",
+                    "source": src,
+                    "thread_id": tid,
+                    "title": (mgr.store.thread(tid) or {}).get("title"),
+                    "category": d.get("category"),
+                }
+            )
+        return out
+
+    def digest_calendar(who: Principal, frm: float, until: float, tz: str) -> list[dict[str, Any]]:
+        """일정 items that began and 할 일 that came due in the window — not done, and only
+        the person's own (or nobody's) to-dos."""
+        uid = who.user_id
+        zone = ZoneInfo(tz)
+        first = datetime.fromtimestamp(frm, zone).strftime("%Y-%m-%d")
+        last = datetime.fromtimestamp(until, zone).strftime("%Y-%m-%d")
+        found = cal.list_range(viewer(who), start=first, end=last, done=False)
+        items = {i["id"]: i for i in [*found["items"], *found["context"]]}
+
+        def came_due(when: str | None) -> bool:
+            return bool(when) and frm < local_moment(str(when), tz) <= until
+
+        out: list[dict[str, Any]] = []
+        for i in found["items"]:
+            if came_due(i["start"]):
+                out.append(
+                    {"type": "item", "id": i["id"], "item_id": i["id"], "title": i["title"],
+                     "item_title": None, "when": i["start"], "kind": i["kind"], "org": i["org"]}
+                )  # fmt: skip
+        for t in found["todos"]:
+            owner = items.get(t["item_id"])
+            if owner is None or not came_due(t["due"]):
+                continue
+            if t["assignee_id"] and t["assignee_id"] != uid:
+                continue
+            out.append(
+                {"type": "todo", "id": t["id"], "item_id": t["item_id"], "title": t["title"],
+                 "item_title": owner["title"], "when": t["due"], "kind": owner["kind"],
+                 "org": owner["org"]}
+            )  # fmt: skip
+        out.sort(key=lambda c: str(c["when"]))
+        return out
+
+    DIGEST_LISTS = ("finished", "failed", "approvals_mine", "approvals_others", "decided",
+                    "scheduled", "calendar")  # fmt: skip
+
+    def build_digest(
+        request: Request, who: Principal, since: float, until: float
+    ) -> dict[str, Any]:
+        frm = max(since, until - DIGEST_LOOKBACK_S)
+        lists: dict[str, list[dict[str, Any]]] = {k: [] for k in DIGEST_LISTS}
+        by_org: dict[str, float] = {}
+        scopes = digest_scopes(request, who)
+        policies: dict[str, ApprovalPolicy] = {}
+        for sc in scopes:
+            rt = sc.runtime
+            assert rt is not None
+            pol = policies.get(sc.org)
+            if pol is None:
+                pol = policies[sc.org] = load_policy(
+                    cfg.solution.org(sc.org).root / "approvals.yaml"
+                )
+            digest_runs(sc, frm, until, lists)
+            for item in waiting_in(sc, rt, pol):
+                if frm < float(item["created"]) <= until:
+                    key = "approvals_mine" if item["can_approve"] else "approvals_others"
+                    lists[key].append({"org": sc.org, "workspace": sc.workspace, **item})
+            lists["decided"] += digest_decisions(sc, who.user_id, frm, until)
+            spent = sum(v["cost_usd"] for v in rt.ledger.totals("org", since=frm).values())
+            by_org[sc.org] = by_org.get(sc.org, 0.0) + spent
+        first_rt = scopes[0].runtime if scopes else None
+        tz = first_rt.manager.timezone if first_rt is not None else "Asia/Seoul"
+        lists["calendar"] = digest_calendar(who, frm, until, tz)
+        newest = {"finished": "ended", "failed": "ended", "decided": "ts",
+                  "approvals_mine": "created", "approvals_others": "created",
+                  "scheduled": "created"}  # fmt: skip
+        shown: dict[str, list[dict[str, Any]]] = {}
+        for k, v in lists.items():
+            field_ = newest.get(k)
+            rows = sorted(v, key=lambda r: -float(r[field_])) if field_ else v
+            shown[k] = rows[:DIGEST_CAP]
+        return {
+            **shown,
+            "cost": {
+                "spent_usd": round(sum(by_org.values()), 4),
+                "orgs": [
+                    {"org": o, "display": org_display(o), "spent_usd": round(v, 4)}
+                    for o, v in sorted(by_org.items())
+                ],
+            },
+            "counts": {k: len(v) for k, v in lists.items()},
+            "cap": DIGEST_CAP,
+        }
+
+    def empty_digest() -> dict[str, Any]:
+        return {
+            **{k: [] for k in DIGEST_LISTS},
+            "cost": {"spent_usd": 0.0, "orgs": []},
+            "counts": dict.fromkeys(DIGEST_LISTS, 0),
+            "cap": DIGEST_CAP,
+        }
+
+    def person(who: Principal) -> str:
+        """The digest is a person's — the local CLI token is nobody, so it has none."""
+        if who.user_id is None:
+            raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
+        return who.user_id
+
+    async def digest(request: Request) -> Response:
+        """What happened in the person's scopes since they were last here (`AccountStore.touch`
+        sets the start; 확인했어요 moves it). `since` = a time to look from instead, for a
+        check — never stored. No model call: the lists are read from the stores."""
+        who = need(request, "digest.get")
+        uid = person(who)
+        until = time.time()
+        raw = request.query_params.get("since", "auto")
+        pres = cfg.accounts.presence(uid) or cfg.accounts.touch(uid, until)
+        basis = pres.basis
+        since = pres.seen_until
+        if raw != "auto":
+            try:
+                since = float(raw)
+            except ValueError as e:
+                raise ApiError(
+                    400, E.DIGEST_SINCE_INVALID, "since must be a time (seconds) or auto"
+                ) from e
+            if not 0 <= since < until:
+                raise ApiError(400, E.DIGEST_SINCE_INVALID, "since must be in the past")
+            basis = "away"
+        if since is None:  # never here before — a welcome, not a window
+            return respond(
+                S.Digest, {"basis": "first", "since": None, "until": until, **empty_digest()}
+            )
+        found = build_digest(request, who, since, until)
+        return respond(S.Digest, {"basis": basis, "since": since, "until": until, **found})
+
+    async def digest_ack(request: Request) -> Response:
+        who = need(request, "digest.ack")
+        uid = person(who)
+        raw = (await body(request)).get("until")
+        now = time.time()
+        if raw is None:
+            until = now
+        elif isinstance(raw, int | float) and not isinstance(raw, bool) and raw > 0:
+            until = float(raw)
+        else:
+            raise ApiError(400, E.DIGEST_UNTIL_INVALID, "until must be the digest's until")
+        pres = cfg.accounts.acknowledge(uid, until, now)
+        assert pres.seen_until is not None
+        return respond(S.DigestAck, {"seen_until": pres.seen_until, "basis": pres.basis})
+
     # ------------------------------------------------------------------ errors · routes
 
     def error(status: int, message: str, code: E, params: dict[str, Any] | None = None) -> Json:
@@ -2567,6 +2888,8 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/me/passkeys", my_passkeys, ["GET"]),
         ("/me/passkeys/{pid}", my_passkey_delete, ["DELETE"]),
         ("/me", me, ["GET", "PATCH"]),
+        ("/me/digest", digest, ["GET"]),
+        ("/me/digest/ack", digest_ack, ["POST"]),
         ("/users", users, ["GET", "POST"]),
         ("/users/{uid}", user_update, ["PATCH"]),
         ("/access", access, ["GET", "PUT"]),

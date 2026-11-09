@@ -194,6 +194,15 @@ class RunStore:
         args.append(limit)
         return [self._decode(r) for r in self._exec(sql, tuple(args))]
 
+    def ended_between(self, since: float, until: float, limit: int = 200) -> list[dict[str, Any]]:
+        """Runs that ended after `since` and at or before `until`, newest end first — what
+        finished while someone was away (the dashboard digest)."""
+        rows = self._exec(
+            f"SELECT * FROM {self.R} WHERE ended > ? AND ended <= ? ORDER BY ended DESC LIMIT ?",
+            (since, until, limit),
+        )
+        return [self._decode(r) for r in rows]
+
     @staticmethod
     def _decode(row: dict[str, Any]) -> dict[str, Any]:
         row["input"] = json.loads(row["input"]) if row.get("input") else None

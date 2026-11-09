@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api, ApiError, CSRF_HEADER, setCsrf } from '../src/api/client';
+import { PRESENCE_HEADER, PRESENT_FOR_MS, touched } from '../src/lib/presence';
 
 function mockFetch(status = 200, body: unknown = { ok: true }) {
   const fn = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(body), { status }));
@@ -40,5 +41,20 @@ describe('api client (I21)', () => {
     mockFetch(409, { error: 'you would lose access' });
     await expect(api.put('/access', {})).rejects.toMatchObject({ status: 409, message: 'you would lose access' });
     await expect(api.put('/access', {})).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe('presence (자리를 비운 동안)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('says X-Presence only while the person touched the page lately', async () => {
+    const fetch = mockFetch();
+    touched();
+    await api.get('/me');
+    expect(headersOf(fetch, 0)[PRESENCE_HEADER]).toBe('1');
+    touched(Date.now() - PRESENT_FOR_MS - 1000); // a refetch in a tab nobody touched
+    await api.get('/me');
+    expect(headersOf(fetch, 1)[PRESENCE_HEADER]).toBeUndefined();
+    touched();
   });
 });

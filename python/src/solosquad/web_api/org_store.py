@@ -126,6 +126,20 @@ class OrgStore:
             for r in rows
         ]
 
+    def audit_between(
+        self, action: str, since: float, until: float, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        """One action's records after `since` and at or before `until`, newest first."""
+        rows = self._q(
+            "SELECT ts, user_id, workspace, action, detail FROM org_audit"
+            " WHERE action = ? AND ts > ? AND ts <= ? ORDER BY ts DESC LIMIT ?",
+            (action, since, until, limit),
+        )
+        return [
+            {"ts": r[0], "user_id": r[1], "workspace": r[2], "action": r[3], "detail": r[4]}
+            for r in rows
+        ]
+
     def purge(self, *, audit_days: int, now: float | None = None) -> int:
         t = time.time() if now is None else now
         with self._lock:
