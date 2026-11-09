@@ -178,20 +178,21 @@ describe('the GLBs in three.js', () => {
     bank.dispose();
   });
 
-  it('lights the evening room: a warm fill, a light over every pod, the whiteboard and two floor lamps — off by day', async () => {
+  it('lights the evening room: a warm fill, one ceiling light with a pool under every pod, the whiteboard and two floor lamps — off by day', async () => {
     const kit = await load(kitBytes);
     const penguin = await load(penguinBytes);
     const bank = new MaterialBank([kit.scene, penguin.scene], EVENING);
     const agents = [{ name: 'chief', team: 'core' }, { name: 'sales', team: 'business' }, { name: 'marketer', team: 'brand' }, { name: 'creative', team: 'brand' }];
     const office = buildOffice({ kit, penguin }, agents, bank, 1.6);
     const n = office.night;
-    // few lights on purpose (each costs every pixel): one per pod + the board + two lamps
-    expect(n.pods).toHaveLength(office.pods.length);
+    // few lights on purpose (each costs every pixel): one ceiling light + the board + two lamps,
+    // however many pods; a pool under every pod and lamp
+    expect(n.pools).toHaveLength(office.pods.length + 2);
     expect(n.board).not.toBeNull();
     expect(n.floorLamps).toHaveLength(2);
     const points: THREE.PointLight[] = [];
     n.lights.traverse((o) => (o as THREE.PointLight).isPointLight && points.push(o as THREE.PointLight));
-    expect(points).toHaveLength(office.pods.length + 3);
+    expect(points).toHaveLength(4);
     expect(points.every((l) => !l.castShadow)).toBe(true);
 
     applyNight(n, EVENING);
@@ -199,15 +200,13 @@ describe('the GLBs in three.js', () => {
     expect(n.lights.visible && n.fixtures.visible).toBe(true);
     expect(n.fill.intensity).toBe(cfg.fill.intensity);
     expect(`#${n.fill.color.getHexString()}`.toUpperCase()).toBe(EVENING.lamp!.bulb);
-    for (const l of n.pods) {
-      expect(l.intensity).toBe(cfg.pod.intensity);
-      expect(l.position.y).toBe(cfg.pod.height);
-      expect(`#${l.color.getHexString()}`.toUpperCase()).toBe(EVENING.lamp!.bulb);
-    }
+    expect(n.ceiling.intensity).toBe(cfg.ceiling.intensity);
+    expect(n.ceiling.position.y).toBe(cfg.ceiling.height);
+    expect(`#${n.ceiling.color.getHexString()}`.toUpperCase()).toBe(EVENING.lamp!.bulb);
     expect(n.board!.intensity).toBe(cfg.board.intensity);
     for (const l of n.floorLamps) expect(l.intensity).toBe(cfg.floorLamp.intensity);
     // brighter than the desk lamps alone, still evening: every room light under a working lamp's pool
-    const total = cfg.pod.intensity * n.pods.length + cfg.board.intensity + cfg.floorLamp.intensity * 2;
+    const total = cfg.ceiling.intensity + cfg.board.intensity + cfg.floorLamp.intensity * 2;
     expect(total).toBeGreaterThan(EVENING.agentLights!.lamp.intensity * 4);
     expect(n.pools.every((m) => (m.material as THREE.MeshBasicMaterial).opacity <= EVENING.lamp!.poolOpacity)).toBe(true);
 

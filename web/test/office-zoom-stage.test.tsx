@@ -24,8 +24,10 @@ const seats: SeatAgent[] = [
 ];
 
 let lastZoom: ZoomController | null = null;
+let canvasRenders = 0;
 vi.mock('../src/office/OfficeCanvas', () => ({
   default: function StubCanvas(props: OfficeCanvasProps) {
+    canvasRenders++;
     useEffect(() => {
       const pods = layoutOffice(props.agents, { aspect: 1200 / 760 });
       props.zoom.reduced = true;
@@ -240,6 +242,24 @@ describe('drag', () => {
     ]);
     expect(zoom.view.zoom).toBe(before.zoom);
     expect(zoom.view.u).not.toBe(before.u);
+  });
+
+  it('a drag re-renders nothing: the pan lives in the controller, the camera reads it per frame', async () => {
+    const { zoom } = await mount();
+    goLevel(3);
+    const canvas = screen.getByTestId('canvas');
+    const before = canvasRenders;
+    const views = new Set<unknown>();
+    act(() => {
+      ptr(canvas, 'pointerdown', 600, 380);
+      for (let i = 1; i <= 30; i++) {
+        ptr(canvas, 'pointermove', 600 + i * 3, 380 + i);
+        views.add(zoom.view);
+      }
+      ptr(canvas, 'pointerup', 690, 410);
+    });
+    expect(canvasRenders).toBe(before); // no React render of the stage (or its tags) for a drag
+    expect(views.size).toBeGreaterThan(25); // a new view per move — what the frame loop applies
   });
 
   it('shows the grab cursor class while dragging', async () => {

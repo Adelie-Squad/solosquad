@@ -411,10 +411,10 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
 export interface NightLights {
   /** The drawn fixtures (floor lamps, the whiteboard's picture light) and the floor pools — kit layer. */
   fixtures: THREE.Group;
-  /** The lights themselves: one fill, one per pod, the whiteboard, the floor lamps. */
+  /** The lights themselves: one fill, one ceiling light, the whiteboard, the floor lamps. */
   lights: THREE.Group;
   fill: THREE.HemisphereLight;
-  pods: THREE.PointLight[];
+  ceiling: THREE.PointLight;
   board: THREE.PointLight | null;
   floorLamps: THREE.PointLight[];
   /** Pool meshes (floor), shades and bulbs (glow), the dark parts (pole, base, bar housing). */
@@ -425,8 +425,8 @@ export interface NightLights {
 }
 
 /**
- * The evening's room lights (palette `night`): a warm fill over the whole room, a light high over
- * every pod with a soft pool under it, a picture light over the whiteboard, and a standing lamp by
+ * The evening's room lights (palette `night`): a warm fill over the whole room, one ceiling light
+ * high over the middle with a soft pool under every pod, a picture light over the whiteboard, and a standing lamp by
  * the sofa and by the coffee bar. Few lights on purpose — every point light costs each pixel —
  * and no shadows: the day sun stays the only shadow caster. Hidden by day (`applyNight`).
  */
@@ -467,13 +467,12 @@ function buildNight(room: Room, pods: Pod[], props: Map<ModuleName, THREE.Box3>)
   const fill = new THREE.HemisphereLight(0xffffff, 0x000000, 0);
   lights.add(fill);
 
-  const podLights: THREE.PointLight[] = [];
-  for (const p of pods) {
-    const l = point();
-    l.position.set(p.x, 0, p.z); // the height comes from the palette
-    podLights.push(l);
-    pool(p.x, p.z, Math.max(p.w, p.d) * 0.62 + 0.4);
-  }
+  // one ceiling light high over the middle of the room (the height comes from the palette) and a
+  // soft warm pool under every pod. One light, not one per pod: each point light is paid by every
+  // pixel, and five of them pushed a quarter of the frames at L3 past 16.7 ms (2026-11-10).
+  const ceiling = point();
+  ceiling.position.set((room.minX + room.maxX) / 2, 0, (room.minZ + room.maxZ) / 2);
+  for (const p of pods) pool(p.x, p.z, Math.max(p.w, p.d) * 0.62 + 0.4);
 
   // the whiteboard: a slim lit bar on the wall just above it, its light a little in front
   let board: THREE.PointLight | null = null;
@@ -511,7 +510,7 @@ function buildNight(room: Room, pods: Pod[], props: Map<ModuleName, THREE.Box3>)
     fixtures,
     lights,
     fill,
-    pods: podLights,
+    ceiling,
     board,
     floorLamps,
     pools,
@@ -540,10 +539,8 @@ export function applyNight(night: NightLights, palette: OfficePalette): void {
     l.intensity = cfg.intensity;
     l.distance = cfg.distance;
   };
-  for (const l of night.pods) {
-    set(l, n.pod);
-    l.position.y = n.pod.height;
-  }
+  set(night.ceiling, n.ceiling);
+  night.ceiling.position.y = n.ceiling.height;
   if (night.board) set(night.board, n.board);
   for (const l of night.floorLamps) set(l, n.floorLamp);
   night.body.color.set(palette.materials['clay.furniture']);
@@ -552,7 +549,7 @@ export function applyNight(night: NightLights, palette: OfficePalette): void {
   night.glow.emissiveIntensity = 1;
   for (const m of night.pools) {
     const mat = m.material as THREE.MeshBasicMaterial;
-    mat.color.set(n.pod.color);
+    mat.color.set(n.ceiling.color);
     mat.opacity = n.poolOpacity;
   }
 }

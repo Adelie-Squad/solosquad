@@ -568,6 +568,11 @@ export class ZoomController {
     this.changed();
   }
 
+  /** A pointer drag is under way. */
+  dragging(): boolean {
+    return this.free !== null;
+  }
+
   /** The drag let go: back inside the bounds (eased), then settle. */
   endDrag(): void {
     if (!this.free) return;
