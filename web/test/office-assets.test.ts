@@ -13,7 +13,7 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { describe, expect, it } from 'vitest';
 import { teamColor } from '../src/characters/colors';
 import { ALL_PROPS, CLIPS, MODULES, PENGUIN_HEIGHT, SEAT_OFFSET, checkGltf, lampOffset, paletteKey, checkOfficeAssets, formatReport, readGlbJson, type GltfJson } from '../src/office/contract';
-import { applyLook, buildOffice, dressPenguin, findNode, MaterialBank, nameOf, playStatus } from '../src/office/kit';
+import { applyLook, applyNight, buildOffice, dressPenguin, findNode, MaterialBank, nameOf, playStatus } from '../src/office/kit';
 import { lazyMeshopt } from '../src/office/meshopt';
 import { DAY, EVENING } from '../src/office/palette';
 
@@ -174,6 +174,46 @@ describe('the GLBs in three.js', () => {
     expect(seat.lamp?.visible).toBe(true);
     expect(seat.lampLight?.visible).toBe(false);
     expect(seat.screenLight?.visible).toBe(false);
+    office.dispose();
+    bank.dispose();
+  });
+
+  it('lights the evening room: a warm fill, a light over every pod, the whiteboard and two floor lamps — off by day', async () => {
+    const kit = await load(kitBytes);
+    const penguin = await load(penguinBytes);
+    const bank = new MaterialBank([kit.scene, penguin.scene], EVENING);
+    const agents = [{ name: 'chief', team: 'core' }, { name: 'sales', team: 'business' }, { name: 'marketer', team: 'brand' }, { name: 'creative', team: 'brand' }];
+    const office = buildOffice({ kit, penguin }, agents, bank, 1.6);
+    const n = office.night;
+    // few lights on purpose (each costs every pixel): one per pod + the board + two lamps
+    expect(n.pods).toHaveLength(office.pods.length);
+    expect(n.board).not.toBeNull();
+    expect(n.floorLamps).toHaveLength(2);
+    const points: THREE.PointLight[] = [];
+    n.lights.traverse((o) => (o as THREE.PointLight).isPointLight && points.push(o as THREE.PointLight));
+    expect(points).toHaveLength(office.pods.length + 3);
+    expect(points.every((l) => !l.castShadow)).toBe(true);
+
+    applyNight(n, EVENING);
+    const cfg = EVENING.night!;
+    expect(n.lights.visible && n.fixtures.visible).toBe(true);
+    expect(n.fill.intensity).toBe(cfg.fill.intensity);
+    expect(`#${n.fill.color.getHexString()}`.toUpperCase()).toBe(EVENING.lamp!.bulb);
+    for (const l of n.pods) {
+      expect(l.intensity).toBe(cfg.pod.intensity);
+      expect(l.position.y).toBe(cfg.pod.height);
+      expect(`#${l.color.getHexString()}`.toUpperCase()).toBe(EVENING.lamp!.bulb);
+    }
+    expect(n.board!.intensity).toBe(cfg.board.intensity);
+    for (const l of n.floorLamps) expect(l.intensity).toBe(cfg.floorLamp.intensity);
+    // brighter than the desk lamps alone, still evening: every room light under a working lamp's pool
+    const total = cfg.pod.intensity * n.pods.length + cfg.board.intensity + cfg.floorLamp.intensity * 2;
+    expect(total).toBeGreaterThan(EVENING.agentLights!.lamp.intensity * 4);
+    expect(n.pools.every((m) => (m.material as THREE.MeshBasicMaterial).opacity <= EVENING.lamp!.poolOpacity)).toBe(true);
+
+    applyNight(n, DAY);
+    expect(n.lights.visible || n.fixtures.visible).toBe(false);
+    expect(DAY.night).toBeNull();
     office.dispose();
     bank.dispose();
   });

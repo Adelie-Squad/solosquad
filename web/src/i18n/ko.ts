@@ -248,7 +248,6 @@ export const ko = {
   'office.zoom.controls': '확대 · 축소',
   'office.zoom.in': '확대',
   'office.zoom.out': '축소',
-  'office.zoom.fit': '전체 보기',
   'office.zoom.level': '확대 수준 {n}/{total}',
   'office.zoom.toTeam': '{team} 팀으로 확대',
   'office.zoom.toAgent': '이 에이전트로 확대',

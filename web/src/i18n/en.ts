@@ -249,7 +249,6 @@ export const en: Record<MessageKey, string> = {
   'office.zoom.controls': 'Zoom',
   'office.zoom.in': 'Zoom in',
   'office.zoom.out': 'Zoom out',
-  'office.zoom.fit': 'See all',
   'office.zoom.level': 'Zoom level {n}/{total}',
   'office.zoom.toTeam': 'Zoom to team {team}',
   'office.zoom.toAgent': 'Zoom to this agent',

@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { Theme } from '../theme';
 import { seatClicks } from './clicks';
 import { checkGltf, formatReport, type GltfJson } from './contract';
-import { applyLook, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
+import { applyLook, applyNight, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
 import type { Room, SeatAgent } from './layout';
 import { paletteFor, type OfficePalette } from './palette';
 import { kitUrl, penguinUrl, withMeshopt } from './penguinAsset';
@@ -146,6 +146,14 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags,
     }
     invalidate();
   }, [office, statuses, evening, reducedMotion, palette, bank, invalidate]);
+
+  // the evening's room lights (palette `night`) — on all evening, out of the scene by day
+  useLayoutEffect(() => {
+    applyNight(office.night, palette);
+    invalidate();
+    // `?office-debug`: `window.__office.night(false)` takes them out — to measure what they cost
+    if (stats) Object.assign(stats, { night: (on: boolean) => (applyNight(office.night, on ? palette : { ...palette, night: null }), invalidate()) });
+  }, [office, palette, invalidate, stats]);
 
   // tag elements come and go with React; the seat keeps a pointer
   useEffect(() => {

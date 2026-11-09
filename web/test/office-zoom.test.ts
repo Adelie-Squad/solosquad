@@ -1,6 +1,7 @@
-// DESIGN.md `## 사무실 장면` — 확대 · 축소 (2026-11-09): five levels measured from the layout
-// (whole office · half · large team · small team · one agent), the controller that steps,
-// clamps, pans and focuses, the wheel rule (page vs pop-out), the name-tag rule per level and
+// DESIGN.md `## 사무실 장면` — 확대 · 축소 (2026-11-09, evened out 2026-11-10): five levels at
+// one constant ratio from the whole office to one desk, the controller that steps, clamps, pans
+// (a rubber band at the edges and at L1) and focuses, the wheel rule (every wheel over the scene
+// zooms — a notch is a level, a trackpad gesture adds up to one), the name-tag rule per level and
 // the collision that hides a tag rather than shrinking it, and the saved level + centre.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ROSTER } from '../src/characters/roster';
@@ -14,11 +15,15 @@ import {
   nearestLevel,
   officeFrame,
   project,
+  RUBBER,
+  SMOOTH_STEP_PX,
   tagPriority,
   tagsShowAll,
+  teamLevel,
   viewRect,
   wheelFactor,
-  wheelZooms,
+  wheelKind,
+  WheelStepper,
   ZoomController,
   ZOOM_MS,
 } from '../src/office/zoom';
@@ -55,19 +60,25 @@ describe('view coordinates', () => {
   });
 });
 
-describe('five levels from the layout bounds', () => {
+describe('five evenly spaced levels', () => {
   it.each([
-    ['the bundled office', bundled],
-    ['a 2-person and an 8-person team', small],
-    ['Chief alone', [{ name: 'chief', team: 'core' }]],
-  ])('%s: five increasing zooms, L1 = the whole room', (_, agents) => {
-    const { frame } = frameFor(agents as SeatAgent[]);
+    ['the bundled office', bundled, 1200, 760],
+    ['a 2-person and an 8-person team', small, 1200, 760],
+    ['Chief alone', [{ name: 'chief', team: 'core' }], 1200, 760],
+    ['the bundled office on a tall stage', bundled, 600, 900],
+    ['the bundled office in a full-screen pop-out', bundled, 1900, 1040],
+  ])('%s: L1 = the whole room, one constant ratio between neighbours', (_, agents, w, h) => {
+    const { frame } = frameFor(agents as SeatAgent[], w as number, h as number);
     expect(frame.levels).toHaveLength(LEVELS);
     expect(frame.levels[0]).toBe(1);
-    for (let i = 1; i < LEVELS; i++) expect(frame.levels[i]).toBeGreaterThanOrEqual(frame.levels[i - 1] * 1.2 - 1e-9);
+    const ratios = frame.levels.slice(1).map((l, i) => l / frame.levels[i]);
+    for (const r of ratios) {
+      expect(r).toBeGreaterThanOrEqual(1.2 - 1e-9);
+      expect(r / ratios[0]).toBeCloseTo(1, 6); // even, within 1e-6
+    }
   });
 
-  it('L5 frames one desk; L3 the largest pod, L4 the smallest (zooming in: large team → small team)', () => {
+  it('L5 frames one desk; a team label frames its whole pod at the deepest level that can', () => {
     const { frame, pods } = frameFor(small);
     const deskRect = viewRect(-0.48, 0.48, 0, 1.6, -0.5, 0.5);
     const visW = frame.fit.w / frame.levels[4];
@@ -80,14 +91,19 @@ describe('five levels from the layout bounds', () => {
     const pair = pods.find((p) => p.key === 'brand')!;
     const fits = (p: typeof big, zoom: number) => {
       const r = viewRect(p.x - p.w / 2, p.x + p.w / 2, 0, 1.8, p.z - p.d / 2, p.z + p.d / 2);
-      return r.u1 - r.u0 <= frame.fit.w / zoom + 1e-6 && r.v1 - r.v0 <= frame.fit.h / zoom + 1e-6;
+      // with the 0.3 m margin a team framing keeps around its pod
+      return r.u1 - r.u0 + 0.6 <= (frame.fit.w / zoom) * 1.02 + 1e-6 && r.v1 - r.v0 + 0.6 <= (frame.fit.h / zoom) * 1.02 + 1e-6;
     };
-    expect(fits(big, frame.levels[2])).toBe(true);
-    expect(fits(pair, frame.levels[3])).toBe(true);
-    expect(fits(big, frame.levels[3])).toBe(false);
-    expect(frame.teams.engineering.level).toBe(3);
-    expect(frame.teams.brand.level).toBe(4);
+    for (const p of [big, pair]) {
+      const lv = frame.teams[p.key].level;
+      expect(fits(p, frame.levels[lv - 1])).toBe(true);
+      if (lv < LEVELS) expect(fits(p, frame.levels[lv])).toBe(false);
+    }
+    // the bigger team needs to stand further back
+    expect(frame.teams.engineering.level).toBeLessThan(frame.teams.brand.level);
     expect(frame.teams.chief).toBeUndefined();
+    // never the whole room for a team
+    expect(teamLevel(frame.levels, 0.5)).toBe(2);
   });
 
   it('knows every desk, and the nearest level of any zoom', () => {
@@ -131,7 +147,7 @@ describe('the controller', () => {
     expect(z.level()).toBe(4);
   });
 
-  it('전체 보기 resets to L1, centred', () => {
+  it('the hidden `0` key (fit) resets to L1, centred', () => {
     const z = make();
     z.focusAgent('researcher');
     expect(z.level()).toBe(5);
@@ -151,10 +167,65 @@ describe('the controller', () => {
     expect(z.focusAgent('nobody')).toBe(false);
     const key = Object.keys(z.frame!.teams)[0];
     z.focusTeam(key);
-    expect([3, 4]).toContain(z.level());
+    expect(z.level()).toBe(z.frame!.teams[key].level);
   });
 
-  it('pans only inside the room (plus a margin) and not at all at L1', () => {
+  it('a drag pans at every zoomed level, 1:1 with the pointer inside the bounds', () => {
+    const z = make();
+    const f = z.frame!;
+    for (const lv of [2, 3, 4, 5]) {
+      z.setLevel(lv, f.fit);
+      const a = { ...z.view };
+      z.dragBy(-20, 10);
+      z.endDrag();
+      // 20 px of the stage = 20 / width of the view
+      expect(z.view.u - a.u).toBeCloseTo((20 / f.width) * (f.fit.w / a.zoom), 6);
+      expect(z.view.v - a.v).toBeCloseTo((10 / f.height) * (f.fit.h / a.zoom), 6);
+    }
+  });
+
+  it('at L1 (and past the edges) a drag pulls with resistance and springs back on release', () => {
+    const z = make();
+    const f = z.frame!;
+    z.dragBy(300, 0);
+    const pulled = f.fit.u - z.view.u;
+    expect(pulled).toBeGreaterThan(0); // it answers
+    expect(pulled).toBeLessThan((300 / f.width) * f.fit.w * 0.5); // with resistance
+    for (let i = 0; i < 40; i++) z.dragBy(300, 0);
+    expect(f.fit.u - z.view.u).toBeLessThanOrEqual(f.fit.w * RUBBER + 1e-9); // never more than the band
+    z.endDrag();
+    expect(z.view.u).toBeCloseTo(f.fit.u, 6);
+    expect(z.view.v).toBeCloseTo(f.fit.v, 6);
+  });
+
+  it('a wheel notch steps one level towards the pointer, counting from a running tween', () => {
+    const z = make();
+    const f = z.frame!;
+    const px = f.width * 0.25;
+    const py = f.height * 0.6;
+    const under = (v: typeof z.view) => ({ u: v.u + ((px / f.width - 0.5) * f.fit.w) / v.zoom, v: v.v + ((0.5 - py / f.height) * f.fit.h) / v.zoom });
+    z.setLevel(2);
+    const a = under(z.view);
+    z.stepAt(1, px, py);
+    expect(z.level()).toBe(3);
+    const b = under(z.view);
+    expect(b.u).toBeCloseTo(a.u, 6);
+    expect(b.v).toBeCloseTo(a.v, 6);
+    z.stepAt(-1, px, py);
+    z.stepAt(-1, px, py);
+    expect(z.level()).toBe(1);
+    // eased: three quick notches go three levels
+    const e = new ZoomController(undefined, clock);
+    e.setFrame(frameFor(bundled).frame);
+    e.stepAt(1, px, py);
+    e.stepAt(1, px, py);
+    e.stepAt(1, px, py);
+    now = ZOOM_MS + 1;
+    e.tick();
+    expect(e.level()).toBe(4);
+  });
+
+  it('pans inside the room (plus a margin); the arrow keys do nothing at L1', () => {
     const z = make();
     const before = { ...z.view };
     z.panBy(500, 300);
@@ -218,17 +289,62 @@ describe('the controller', () => {
   });
 });
 
-describe('wheel rule', () => {
-  it('a plain wheel scrolls the office page; ctrl (pinch) or ⌘ zooms; on the pop-out every wheel zooms', () => {
-    expect(wheelZooms({ ctrlKey: false, metaKey: false }, 'modifier')).toBe(false);
-    expect(wheelZooms({ ctrlKey: true, metaKey: false }, 'modifier')).toBe(true);
-    expect(wheelZooms({ ctrlKey: false, metaKey: true }, 'modifier')).toBe(true);
-    expect(wheelZooms({ ctrlKey: false, metaKey: false }, 'always')).toBe(true);
+describe('wheel rule — every wheel over the scene zooms', () => {
+  const ev = (deltaY: number, more: Partial<{ deltaMode: number; ctrlKey: boolean; wheelDeltaY: number }> = {}) => ({ deltaY, deltaMode: 0, ctrlKey: false, ...more });
+
+  it('tells a mouse notch from a trackpad scroll and a pinch', () => {
+    // macOS Chrome / Safari: a notch is a multiple of 4.000244 px — often just one
+    expect(wheelKind(ev(-4.000244140625), 16)).toBe('notch');
+    expect(wheelKind(ev(12.000732421875), 16)).toBe('notch');
+    // Firefox: lines; Windows: a lone 100 px with wheelDelta 120
+    expect(wheelKind(ev(3, { deltaMode: 1 }), 16)).toBe('notch');
+    expect(wheelKind(ev(100, { wheelDeltaY: -120 }))).toBe('notch');
+    // a trackpad: small, frequent deltas; with ctrl it is a pinch
+    expect(wheelKind(ev(-7.5), 16)).toBe('smooth');
+    expect(wheelKind(ev(-60), 16)).toBe('smooth');
+    expect(wheelKind(ev(-2.3, { ctrlKey: true }), 16)).toBe('pinch');
+    // ctrl + a mouse notch is still a notch
+    expect(wheelKind(ev(-4.000244140625, { ctrlKey: true }), 200)).toBe('notch');
   });
 
-  it('wheel up zooms in, down zooms out', () => {
-    expect(wheelFactor({ deltaY: -100, deltaMode: 0, ctrlKey: false })).toBeGreaterThan(1);
-    expect(wheelFactor({ deltaY: 5, deltaMode: 0, ctrlKey: true })).toBeLessThan(1);
+  it('one notch = one level, in either direction', () => {
+    const s = new WheelStepper();
+    expect(s.push(ev(-4.000244140625), 'notch', 0)).toBe(1);
+    expect(s.push(ev(-4.000244140625), 'notch', 40)).toBe(1);
+    expect(s.push(ev(100), 'notch', 400)).toBe(-1);
+  });
+
+  it('a trackpad scroll adds up to one level, and one flick (with its glide) stays one level', () => {
+    const s = new WheelStepper();
+    let t = 0;
+    const steps: number[] = [];
+    // a flick: rising for 5 events, then gliding for ~1 s — ~900 px in all
+    for (let i = 0; i < 60; i++) {
+      const d = i < 5 ? 60 * ((i + 1) / 5) : 60 * 0.93 ** (i - 5);
+      const r = s.push(ev(-Math.max(0.5, d)), 'smooth', (t += 16));
+      if (r) steps.push(r);
+    }
+    expect(steps).toEqual([1]);
+    // a slow push under the threshold does nothing yet
+    const slow = new WheelStepper();
+    let n = 0;
+    for (let px = 0; px < SMOOTH_STEP_PX - 10; px += 5) n += Math.abs(slow.push(ev(-5), 'smooth', (t += 16)));
+    expect(n).toBe(0);
+    // a pause, then another flick: a second level
+    t += 400;
+    for (let i = 0; i < 20; i++) {
+      const r = s.push(ev(-40), 'smooth', (t += 16));
+      if (r) steps.push(r);
+    }
+    expect(steps).toEqual([1, 1]);
+    // the other way at once
+    expect([...Array(10)].map(() => s.push(ev(30), 'smooth', (t += 16))).filter(Boolean)).toEqual([-1]);
+  });
+
+  it('a pinch follows the fingers (wheel up zooms in, down out)', () => {
+    expect(wheelFactor({ deltaY: -10, deltaMode: 0 })).toBeGreaterThan(1);
+    expect(wheelFactor({ deltaY: 5, deltaMode: 0 })).toBeLessThan(1);
+    expect(new WheelStepper().push(ev(-3, { ctrlKey: true }), 'pinch', 0)).toBe(0);
   });
 });
 

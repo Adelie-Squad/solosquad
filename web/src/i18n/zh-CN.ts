@@ -250,7 +250,6 @@ export const zhCN: Record<MessageKey, string> = {
   'office.zoom.controls': '放大 · 缩小',
   'office.zoom.in': '放大',
   'office.zoom.out': '缩小',
-  'office.zoom.fit': '查看全部',
   'office.zoom.level': '缩放级别 {n}/{total}',
   'office.zoom.toTeam': '放大到 {team} 团队',
   'office.zoom.toAgent': '放大到这位代理',

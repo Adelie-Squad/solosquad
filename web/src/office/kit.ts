@@ -183,6 +183,8 @@ export interface Office {
   /** The desk module's measured footprint (L5 frames one). */
   desk: Footprint;
   seats: Map<string, Seat>;
+  /** The evening's room lights (hidden by day). */
+  night: NightLights;
   dispose(): void;
 }
 
@@ -258,11 +260,14 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
   if (wallLeft) for (const t of tiles.wallLeft) place(wallLeft, kitRoot, t.x, t.z);
   if (wallBack) for (const t of tiles.wallBack) place(wallBack, kitRoot, t.x, t.z);
   if (corner) place(corner, kitRoot, tiles.corner.x, tiles.corner.z);
+  const props = new Map<ModuleName, THREE.Box3>();
   for (const spot of PROP_SPOTS) {
     const m = mod(spot.module);
     if (!m) continue;
     const at = propPlace(spot, room, footprint(m, { w: 1, d: 0.6 }));
-    place(m, kitRoot, at.x, at.z, at.rotY);
+    const holder = place(m, kitRoot, at.x, at.z, at.rotY);
+    holder.updateMatrixWorld(true);
+    props.set(spot.module, new THREE.Box3().setFromObject(holder));
   }
 
   const lampModule = mod('lamp.desk');
@@ -368,6 +373,9 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
       });
     }
   }
+  const night = buildNight(room, pods, props);
+  kitRoot.add(night.fixtures);
+  root.add(night.lights);
   kitRoot.traverse((o) => o.layers.set(KIT_LAYER));
   // the still kit casts and takes the day sun's soft shadow (drawn once, see OfficeCanvas)
   for (const m of meshes(kitRoot)) {
@@ -381,6 +389,7 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
     pods,
     desk: deskFp,
     seats,
+    night,
     // GPU memory only, and safe to call before a reuse: React's StrictMode runs an effect's cleanup
     // and then the effect again on the same memoised office (three re-uploads a disposed resource on
     // the next draw). Uncaching the mixer here broke that second run — actions lost their bindings.
@@ -392,8 +401,160 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
         s.pool?.geometry.dispose();
         (s.pool?.material as THREE.Material | undefined)?.dispose();
       }
+      night.dispose();
     },
   };
+}
+
+// ------------------------------------------------------------------ evening room lights
+
+export interface NightLights {
+  /** The drawn fixtures (floor lamps, the whiteboard's picture light) and the floor pools — kit layer. */
+  fixtures: THREE.Group;
+  /** The lights themselves: one fill, one per pod, the whiteboard, the floor lamps. */
+  lights: THREE.Group;
+  fill: THREE.HemisphereLight;
+  pods: THREE.PointLight[];
+  board: THREE.PointLight | null;
+  floorLamps: THREE.PointLight[];
+  /** Pool meshes (floor), shades and bulbs (glow), the dark parts (pole, base, bar housing). */
+  pools: THREE.Mesh[];
+  glow: THREE.MeshStandardMaterial;
+  body: THREE.MeshStandardMaterial;
+  dispose(): void;
+}
+
+/**
+ * The evening's room lights (palette `night`): a warm fill over the whole room, a light high over
+ * every pod with a soft pool under it, a picture light over the whiteboard, and a standing lamp by
+ * the sofa and by the coffee bar. Few lights on purpose — every point light costs each pixel —
+ * and no shadows: the day sun stays the only shadow caster. Hidden by day (`applyNight`).
+ */
+function buildNight(room: Room, pods: Pod[], props: Map<ModuleName, THREE.Box3>): NightLights {
+  const fixtures = new THREE.Group();
+  fixtures.name = 'night.fixtures';
+  const lights = new THREE.Group();
+  lights.name = 'night.lights';
+  const glow = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0, side: THREE.DoubleSide });
+  glow.name = 'night.glow';
+  const body = new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0 });
+  body.name = 'night.body';
+  const geos: THREE.BufferGeometry[] = [];
+  const pools: THREE.Mesh[] = [];
+  const pool = (x: number, z: number, r: number) => {
+    const g = new THREE.CircleGeometry(r, 40);
+    geos.push(g);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, alphaMap: poolTexture(), toneMapped: false }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, 0.006, z);
+    m.renderOrder = 1;
+    fixtures.add(m);
+    pools.push(m);
+  };
+  const mesh = (g: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => {
+    geos.push(g);
+    const m = new THREE.Mesh(g, mat);
+    m.position.set(x, y, z);
+    fixtures.add(m);
+    return m;
+  };
+  const point = () => {
+    const l = new THREE.PointLight(0xffffff, 0, 1, 2);
+    lights.add(l);
+    return l;
+  };
+
+  const fill = new THREE.HemisphereLight(0xffffff, 0x000000, 0);
+  lights.add(fill);
+
+  const podLights: THREE.PointLight[] = [];
+  for (const p of pods) {
+    const l = point();
+    l.position.set(p.x, 0, p.z); // the height comes from the palette
+    podLights.push(l);
+    pool(p.x, p.z, Math.max(p.w, p.d) * 0.62 + 0.4);
+  }
+
+  // the whiteboard: a slim lit bar on the wall just above it, its light a little in front
+  let board: THREE.PointLight | null = null;
+  const wb = props.get('prop.whiteboard');
+  if (wb && !wb.isEmpty()) {
+    const w = wb.max.x - wb.min.x;
+    const cx = (wb.min.x + wb.max.x) / 2;
+    const bar = Math.max(0.5, w * 0.55);
+    mesh(new THREE.BoxGeometry(bar, 0.045, 0.07), body, cx, wb.max.y + 0.07, room.minZ + 0.06);
+    mesh(new THREE.BoxGeometry(bar - 0.04, 0.012, 0.05), glow, cx, wb.max.y + 0.045, room.minZ + 0.07);
+    board = point();
+    board.position.set(cx, wb.max.y - 0.05, wb.max.z + 0.45);
+  }
+
+  // standing lamps: beside the sofa (towards the open side) and beside the coffee bar (towards the back)
+  const floorLamps: THREE.PointLight[] = [];
+  const lampAt = (x: number, z: number) => {
+    const h = 1.45;
+    mesh(new THREE.CylinderGeometry(0.13, 0.15, 0.03, 24), body, x, 0.015, z);
+    mesh(new THREE.CylinderGeometry(0.016, 0.016, h - 0.2, 10), body, x, (h - 0.2) / 2 + 0.03, z);
+    // the shade glows (open at the bottom, warm inside), the bulb under it
+    mesh(new THREE.CylinderGeometry(0.11, 0.18, 0.24, 28, 1, true), glow, x, h - 0.08, z);
+    mesh(new THREE.SphereGeometry(0.05, 14, 10), glow, x, h - 0.15, z);
+    const l = point();
+    l.position.set(x, h - 0.2, z);
+    floorLamps.push(l);
+    pool(x, z, 0.9);
+  };
+  const sofa = props.get('prop.sofa');
+  if (sofa && !sofa.isEmpty()) lampAt(room.minX + 0.32, Math.min(room.maxZ - 0.4, sofa.max.z + 0.24));
+  const bar = props.get('prop.coffee_bar');
+  if (bar && !bar.isEmpty()) lampAt(room.minX + 0.32, Math.max(room.minZ + 0.6, bar.min.z - 0.24));
+
+  return {
+    fixtures,
+    lights,
+    fill,
+    pods: podLights,
+    board,
+    floorLamps,
+    pools,
+    glow,
+    body,
+    dispose() {
+      for (const g of geos) g.dispose();
+      for (const m of pools) (m.material as THREE.Material).dispose();
+      glow.dispose();
+      body.dispose();
+    },
+  };
+}
+
+/** Evening: the room lights on (palette `night`); by day the whole set is out of the scene. */
+export function applyNight(night: NightLights, palette: OfficePalette): void {
+  const n = palette.night;
+  night.fixtures.visible = !!n;
+  night.lights.visible = !!n;
+  if (!n) return;
+  night.fill.color.set(n.fill.sky);
+  night.fill.groundColor.set(n.fill.ground);
+  night.fill.intensity = n.fill.intensity;
+  const set = (l: THREE.PointLight, cfg: { color: string; intensity: number; distance: number }) => {
+    l.color.set(cfg.color);
+    l.intensity = cfg.intensity;
+    l.distance = cfg.distance;
+  };
+  for (const l of night.pods) {
+    set(l, n.pod);
+    l.position.y = n.pod.height;
+  }
+  if (night.board) set(night.board, n.board);
+  for (const l of night.floorLamps) set(l, n.floorLamp);
+  night.body.color.set(palette.materials['clay.furniture']);
+  night.glow.color.set(n.floorLamp.color);
+  night.glow.emissive.set(n.floorLamp.color);
+  night.glow.emissiveIntensity = 1;
+  for (const m of night.pools) {
+    const mat = m.material as THREE.MeshBasicMaterial;
+    mat.color.set(n.pod.color);
+    mat.opacity = n.poolOpacity;
+  }
 }
 
 /**

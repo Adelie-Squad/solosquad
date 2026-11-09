@@ -32,6 +32,23 @@ export interface OfficePalette {
    */
   agentLights: { lamp: AgentLight; screen: AgentLight } | null;
   /**
+   * Evening room lights (`clay.night`, user 2026-11-10 — "야근할 때 너무 어두우니까 야간 조명"):
+   * always on in the evening, so the room reads, while the desk lamps still say who is at work.
+   * All in the lamp's warm colour, none casts a shadow. Null by day.
+   */
+  night: {
+    /** A soft warm fill over the whole room — a hemisphere light: warm from above, the sky's navy from below. */
+    fill: { sky: string; ground: string; intensity: number };
+    /** One light over each pod, high under the cut-away ceiling (no fixture — it would cover the back row). */
+    pod: AgentLight & { height: number };
+    /** A picture light on the wall above the whiteboard (a lit bar + its light). */
+    board: AgentLight;
+    /** Standing lamps by the sofa and the coffee bar (pole, glowing shade, their light). */
+    floorLamp: AgentLight;
+    /** The soft warm pool on the floor under each pod light and floor lamp. */
+    poolOpacity: number;
+  } | null;
+  /**
    * `clay.sky` — the soft environment light and one key light: by day the sun (the only shadow
    * caster, drawn once for the still kit), in the evening a cool moon rim from behind and above.
    * `from` = direction towards the light.
@@ -47,6 +64,8 @@ export interface OfficePalette {
 
 const DAY_FURNITURE = '#F7F5F0';
 const EVENING_BACKDROP = '#15161B';
+const EVENING_LAMP = '#FFC56B';
+const EVENING_SKY = '#3A4566';
 
 export const DAY: OfficePalette = {
   backdrop: '#EEE9DF',
@@ -63,6 +82,7 @@ export const DAY: OfficePalette = {
   screenGlow: null,
   lamp: null,
   agentLights: null,
+  night: null,
   // README: sky #FFFFFF x0.72, sun #FFF6E8 x1.5 with a 14 deg angle — from the front left, above
   sky: { ambient: '#FFFFFF', ambientIntensity: 0.62, sun: '#FFF6E8', sunIntensity: 0.55, from: [-0.55, 1, 0.45], shadow: true },
   contact: { color: '#1C1900', opacity: 0.32 },
@@ -88,8 +108,15 @@ export const EVENING: OfficePalette = {
     lamp: { color: '#FFC56B', intensity: 1.6, distance: 2.2 },
     screen: { color: '#8FB8FF', intensity: 0.7, distance: 1.1 },
   },
+  night: {
+    fill: { sky: EVENING_LAMP, ground: EVENING_SKY, intensity: 0.55 },
+    pod: { color: EVENING_LAMP, intensity: 6.5, distance: 7, height: 2.7 },
+    board: { color: EVENING_LAMP, intensity: 2.4, distance: 2.6 },
+    floorLamp: { color: EVENING_LAMP, intensity: 2.2, distance: 3 },
+    poolOpacity: 0.08,
+  },
   // README: sky #3A4566 x0.9 (weak), moon rim #9FB2E8 x2.5 from behind and above — it outlines
-  // heads and shoulders, never faces; only lamps and screens light the room
+  // heads and shoulders, never faces; the room itself is lit by `night` below, the agents by their lamps and screens
   sky: { ambient: '#3A4566', ambientIntensity: 1.4, sun: '#9FB2E8', sunIntensity: 0.4, from: [-0.25, 0.9, -1], shadow: false },
   contact: { color: '#000000', opacity: 0.45 },
   // lighter than by day, so the silhouette holds in the navy room (DESIGN.md `clay.penguin_body`)

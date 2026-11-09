@@ -212,12 +212,16 @@ textarea:focus {
   height: 100%;
 }
 
-.office-stage.is-zoomed .office-canvas {
+/* a drag pans at every level (at L1 the room springs back) — grab everywhere on the floor */
+.office-canvas {
   cursor: grab;
 }
 
-.office-stage.is-dragging .office-canvas {
-  cursor: grabbing;
+/* during a drag — also over a penguin, whose hover sets the canvas's inline 'pointer' */
+.office-stage.is-dragging,
+.office-stage.is-dragging .office-canvas,
+.office-stage.is-dragging .office-teams > button {
+  cursor: grabbing !important;
 }
 
 /* ── 확대 · 축소 — 장면 오른쪽 아래. 그림자 · 틴트 없이 --surface + --line ── */
@@ -260,46 +264,9 @@ textarea:focus {
   cursor: default;
 }
 
-.office-zoom-btn:focus-visible,
-.office-zoom-dot:focus-visible {
+.office-zoom-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-}
-
-.office-zoom-dots {
-  display: flex;
-  align-items: center;
-}
-
-.office-zoom-dot {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 32px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.office-zoom-dot span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ink-3);
-  opacity: 0.55;
-  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
-}
-
-.office-zoom-dot:hover span {
-  opacity: 1;
-}
-
-.office-zoom-dot.is-on span {
-  background: var(--accent);
-  opacity: 1;
-  transform: scale(1.3);
 }
 
 /* the level, read out politely (visually hidden) */
