@@ -20,9 +20,12 @@ export const PENGUIN_2D = {
   face: '#F3F0EA',
   faceShade: '#C9BD98',
   eye: '#151410',
-  beak: '#F0AE5E',
+  /** White felt beak — its edge is drawn by the black stitch. */
+  beak: '#FBF9F4',
+  feet: '#151410',
   line: '#111008',
-  stitch: '#8E8676',
+  /** Black thread: the front's edge and the beak's edge. */
+  stitch: '#151410',
   // props
   gold: '#C9A227',
   paper: '#F4F1EA',

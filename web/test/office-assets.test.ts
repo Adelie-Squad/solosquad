@@ -212,7 +212,7 @@ describe('the GLBs in three.js', () => {
     bank.dispose();
   });
 
-  it('seats the penguin and the lamp at the contract offsets; the penguin is 0.60 m', async () => {
+  it('seats the penguin and the lamp at the contract offsets; the penguin is 0.70 m', async () => {
     const [kit, penguin] = await Promise.all([load(kitBytes), load(penguinBytes)]);
     const bank = new MaterialBank([kit.scene, penguin.scene], DAY);
     const office = buildOffice({ kit, penguin }, [{ name: 'chief', team: 'core' }, { name: 'sales', team: 'business' }], bank, 1.6);
