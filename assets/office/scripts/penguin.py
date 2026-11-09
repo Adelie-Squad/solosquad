@@ -1,11 +1,14 @@
 """The SoloSquad penguin in clay (contract §5, DESIGN.md `## 에이전트 캐릭터`).
 
-Same character as the 2D icon (web/src/characters/PenguinIcon.tsx): a flat, plump
-plush-keychain silhouette, a heart-shaped white face (felt patch), magenta cheeks and a
-stitch running just inside the face edge — a shallow groove, no ink outline.
+Same character as the 2D icon (web/src/characters/PenguinIcon.tsx, geometry in
+web/src/characters/penguinShape.ts): a flat plush-keychain body, taller than wide; one white
+felt front that runs from the forehead down the belly and wraps under the bottom; round eyes,
+round magenta cheeks (smaller than the eyes); a white diamond beak; black stitches along the
+front's edge and the beak's edge; black feet. No ink outline.
 
 Built seated: origin = where the penguin's bottom rests (the chair seat), facing -Y.
 """
+import bisect
 import math
 
 import bmesh
@@ -13,31 +16,42 @@ import bpy
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from lib import ellipsoid, join, material, mesh_object
+from lib import ellipsoid, join, mesh_object
 
-# Body proportions (m). Seated height ~0.55 (contract §2).
-H = 0.60     # height
-W = 0.50     # widest width
-D = 0.29     # depth (flat plush)
+# Body proportions (m). Seated height 0.70 (contract §2).
+H = 0.70     # height
+W = 0.44     # widest width (without wings)
+D = 0.30     # depth (flat plush)
 
-# 2D icon face heart path (viewBox 40), as absolute cubic segments.
-_HEART = [
-    ((20, 35.5), (13.4, 35.5), (9, 31.9), (9, 26.3)),
-    ((9, 26.3), (9, 22.9), (10.6, 20.3), (12.9, 18.7)),
-    ((12.9, 18.7), (12.3, 17.8), (12.0, 16.8), (12.0, 15.7)),
-    ((12.0, 15.7), (12.0, 12.8), (14.2, 10.7), (17.0, 10.7)),
-    ((17.0, 10.7), (18.2, 10.7), (19.2, 11.1), (20.0, 11.7)),
-    ((20.0, 11.7), (20.8, 11.1), (21.8, 10.7), (23.0, 10.7)),
-    ((23.0, 10.7), (25.8, 10.7), (28.0, 12.8), (28.0, 15.7)),
-    ((28.0, 15.7), (28.0, 16.8), (27.7, 17.8), (27.1, 18.7)),
-    ((27.1, 18.7), (29.4, 20.3), (31.0, 22.9), (31.0, 26.3)),
-    ((31.0, 26.3), (31.0, 31.9), (26.6, 35.5), (20.0, 35.5)),
+# ---------------------------------------------------------------------------
+# Front view in icon units (viewBox 40, y down) — the same numbers as
+# web/src/characters/penguinShape.ts. Keep the two in step.
+# ---------------------------------------------------------------------------
+# White front, right half, top -> bottom (cubic segments). The left half mirrors it.
+# Forehead: one round arch (the white comes up into the forehead). Beside the eyes: a smooth
+# convex curve, no notch. Belly: a gentle concave waist. Below the last point the 3D front
+# wraps under the bottom; the 2D drawing closes along the body's bottom edge.
+FRONT = [
+    ((20.0, 11.0), (24.8, 11.0), (28.2, 14.6), (28.9, 19.4)),
+    ((28.9, 19.4), (29.5, 23.4), (28.9, 26.8), (28.0, 29.6)),
+    ((28.0, 29.6), (27.2, 32.2), (27.6, 36.5), (29.4, 41.5)),
 ]
+EYES = ((16.2, 18.4), (23.8, 18.4))
+EYE_R = 1.9
+CHEEKS = ((14.2, 22.4), (25.8, 22.4))
+CHEEK_R = 1.5
+BEAK = (20.0, 21.9)          # centre = the line between the upper and lower beak
+BEAK_HALF_W = 2.6
+BEAK_UP = 2.6                # upper beak: triangle pointing up
+BEAK_DOWN = 3.0              # lower beak: triangle pointing down
 
-# Icon feature anchors (viewBox units)
-_EYE = ((16.4, 18.6), (23.6, 18.6))
-_CHEEK = ((13.6, 22.6), (26.4, 22.6))
-_BEAK = (20.0, 22.1)
+# icon -> body-front XZ (m)
+_S = 0.017                   # metres per icon unit
+EYE_Z = 0.49                 # z of the eye centres
+
+
+def icon_to_xz(x, y):
+    return ((x - 20.0) * _S, EYE_Z - (y - EYES[0][1]) * _S)
 
 
 def _bez(p0, p1, p2, p3, t):
@@ -46,37 +60,33 @@ def _bez(p0, p1, p2, p3, t):
                  for a, b, c, d in zip(p0, p1, p2, p3))
 
 
-def heart_outline(n_per_seg=12):
+def front_half(n_per_seg=10):
+    """Right half of the white front's edge, top -> bottom, in icon units."""
     pts = []
-    for seg in _HEART:
-        for i in range(n_per_seg):
+    for k, seg in enumerate(FRONT):
+        last = k == len(FRONT) - 1
+        for i in range(n_per_seg + (1 if last else 0)):
             pts.append(_bez(*seg, i / n_per_seg))
     return pts
 
 
-# Map icon coords (x 9..31 face width, y down) into body-front XZ (m).
-FACE_W = 0.35                 # heart width on the body
-FACE_TOP = H * 0.93           # z of the heart's top lobes
-_S = FACE_W / 22.0            # metres per icon unit
-
-
-def icon_to_xz(x, y):
-    return ((x - 20.0) * _S, FACE_TOP - (y - 10.7) * _S)
-
+# ---------------------------------------------------------------------------
+# Body
+# ---------------------------------------------------------------------------
 
 def _profile(t):
-    """Body half-width factor at normalised height t (0 bottom .. 1 top): a plump pear."""
-    # widest a little below the middle, rounded top, slightly tucked bottom
-    import math as m
-    base = m.sin(m.pi * min(max(t, 0.0), 1.0)) ** 0.42
-    belly = 1.0 + 0.10 * m.exp(-((t - 0.32) / 0.22) ** 2)
-    return base * belly
+    """Body half-width factor at normalised height t (0 bottom .. 1 top): a tall pear —
+    widest a little below the middle, narrowing into a round head."""
+    base = math.sin(math.pi * min(max(t, 0.0), 1.0)) ** 0.40
+    belly = 1.0 + 0.08 * math.exp(-((t - 0.30) / 0.24) ** 2)
+    head = 1.0 - 0.10 * _smooth(0.45, 0.85, t)
+    return base * belly * head
 
 
 def body_mesh():
     """UV-sphere remapped to the plush pear: flat front/back, round edges."""
     bm = bmesh.new()
-    bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=22, radius=1.0)
+    bmesh.ops.create_uvsphere(bm, u_segments=40, v_segments=26, radius=1.0)
     for v in bm.verts:
         x, y, z = v.co
         t = (z + 1) / 2                      # 0..1 bottom..top
@@ -88,10 +98,10 @@ def body_mesh():
         p = 2.6
         sq = (abs(c) ** p + abs(s) ** p) ** (-1 / p)
         rr = r * k * (1 + 0.18 * (sq - 1))
-        nz = t
-        # flatten the bottom so it sits
-        if t < 0.08:
-            nz = 0.08 - (0.08 - t) * 0.35
+        # flatten the bottom so it sits: a soft max with the seat plane (no crease, so the
+        # white front can wrap under it without the body poking through)
+        f, soft = 0.04, 0.035
+        nz = 0.5 * (t + f + math.sqrt((t - f) ** 2 + soft * soft))
         v.co = Vector((c * rr * W / 2, s * rr * D / 2, nz * H))
     return bm
 
@@ -108,26 +118,65 @@ def _project_front(bvh, x, z, offset=0.0):
     return hit[0] + hit[1] * offset, hit[1]
 
 
-def face_patch(col, body, mat, thickness=0.010):
-    """Heart felt patch: outline -> concentric rings -> projected onto the body front."""
+# The white front wraps from the face round the bottom, so it is laid out in a polar
+# domain (x, phi): a ray from (x, 0, ZC) inside the body, phi = 0 straight up, 90° straight
+# ahead (-Y), 180° straight down.
+ZC = 0.26
+PHI_UNDER = math.radians(194)    # how far under the bottom the white reaches (to the seat)
+PHI_STITCH = math.radians(150)   # the stitch stops where the front turns under the bottom
+
+
+def _polar(bvh, x, phi):
+    d = Vector((0, -math.sin(phi), math.cos(phi)))
+    hit = bvh.ray_cast(Vector((x, 0, ZC)), d)
+    return hit[0], hit[1]
+
+
+def _phi_of(p):
+    return math.atan2(-p.y, p.z - ZC)
+
+
+def front_outline(body_bvh, n_under=10):
+    """Closed outline of the white front in (x, phi): right side down, under the bottom,
+    left side up. Returns a list of (x, phi)."""
+    right = []
+    for (ix, iy) in front_half():
+        x, z = icon_to_xz(ix, iy)
+        hit, _ = _project_front(body_bvh, x, z)
+        right.append((x, _phi_of(hit)))
+    # continue the sides under the bottom, narrowing a little, then close across the seat
+    x0, p0 = right[-1]
+    for i in range(1, n_under + 1):
+        t = i / n_under
+        right.append((x0 * (1 - 0.30 * t * t), p0 + (PHI_UNDER - p0) * t))
+    xe = right[-1][0]
+    bottom = []
+    for i in range(1, 7):
+        a = (math.pi / 2) * i / 7
+        bottom.append((xe * math.cos(a), PHI_UNDER + math.radians(6) * math.sin(a)))
+    half = right + bottom
+    left = [(-x, p) for (x, p) in reversed(half)]
+    # the centre-line points (x == 0) appear once
+    return half + left[1:-1]
+
+
+def front_patch(col, body, mat, thickness=0.010, rings=9):
+    """White felt front: outline -> concentric rings -> projected onto the body."""
     bvh = _bvh(body)
-    outline = [icon_to_xz(*p) for p in heart_outline(9)]
-    cx, cz = icon_to_xz(20.0, 24.0)
+    outline = front_outline(bvh)
+    cx = 0.0
+    cphi = math.radians(110)
     bm = bmesh.new()
-    rings = 6
     ring_verts = []
     for r in range(rings):
         f = 1 - r / rings
-        f = f ** 0.9
         row = []
-        for (x, z) in outline:
-            px, pz = cx + (x - cx) * f, cz + (z - cz) * f
-            hit, nrm = _project_front(bvh, px, pz)
-            # lift slightly more toward the centre (felt puff)
+        for (x, p) in outline:
+            hit, nrm = _polar(bvh, cx + (x - cx) * f, cphi + (p - cphi) * f)
             puff = thickness * (0.55 + 0.45 * (1 - f) ** 0.5)
             row.append(bm.verts.new(hit + nrm * puff))
         ring_verts.append(row)
-    centre_hit, cn = _project_front(bvh, cx, cz)
+    centre_hit, cn = _polar(bvh, cx, cphi)
     centre = bm.verts.new(centre_hit + cn * thickness)
     n = len(outline)
     for r in range(rings - 1):
@@ -148,58 +197,58 @@ def face_patch(col, body, mat, thickness=0.010):
         bm.faces.new((skirt[i], skirt[j], ring_verts[0][j], ring_verts[0][i]))
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     ob = mesh_object('face', bm, col, mat)
-    # make normals face outward (-Y)
+    _face_out(ob, Vector((0, 0, ZC)))
+    return ob, outline
+
+
+def _face_out(ob, centre):
+    """Flip the mesh if its normals point into the body."""
     me = ob.data
-    if sum(p.normal.y for p in me.polygons) > 0:
-        bm2 = bmesh.new(); bm2.from_mesh(me)
+    if sum(p.normal.dot(p.center - centre) for p in me.polygons) < 0:
+        bm2 = bmesh.new()
+        bm2.from_mesh(me)
         bmesh.ops.reverse_faces(bm2, faces=bm2.faces)
-        bm2.to_mesh(me); bm2.free()
-    return ob
+        bm2.to_mesh(me)
+        bm2.free()
 
 
-def stitch(col, face, mat, inset=0.86, dash=0.012, gap=0.009, r=0.0035):
-    """Dashed stitch just inside the face edge, sunk into the felt (reads as a groove)."""
-    bvh = _bvh(face)
-    cx, cz = icon_to_xz(20.0, 24.0)
-    outline = [icon_to_xz(*p) for p in heart_outline(40)]
-    pts = []
-    for x, z in outline:
-        px, pz = cx + (x - cx) * inset, cz + (z - cz) * inset
-        hit, nrm = _project_front(bvh, px, pz)
-        if hit is not None:
-            pts.append((hit, nrm))
-    # walk the polyline placing dashes
-    parts = []
-    acc, on, seg_start = 0.0, True, 0
-    pos = []
-    total = 0.0
-    for i in range(len(pts)):
-        a, b = pts[i][0], pts[(i + 1) % len(pts)][0]
-        pos.append((total, i))
-        total += (b - a).length
-    period = dash + gap
-    k = 0
-    import bisect
-    lengths = [p[0] for p in pos]
+def _dashes(col, pts, mat, closed, dash=0.012, gap=0.008, r=0.0034, name='stitch'):
+    """Dashed stitch along a polyline of (point, normal) on a surface: small flat capsules,
+    half sunk into the felt (reads as thread pulled into a seam)."""
+    if len(pts) < 2:
+        return []
+    segs = len(pts) if closed else len(pts) - 1
+    lengths, total = [], 0.0
+    for i in range(segs):
+        lengths.append(total)
+        total += (pts[(i + 1) % len(pts)][0] - pts[i][0]).length
 
     def at(s):
-        i = max(bisect.bisect_right(lengths, s) - 1, 0)
+        i = min(max(bisect.bisect_right(lengths, s) - 1, 0), segs - 1)
         a, na = pts[i]
         b, nb = pts[(i + 1) % len(pts)]
         seg = (b - a).length or 1e-6
-        t = (s - lengths[i]) / seg
+        t = min(max((s - lengths[i]) / seg, 0.0), 1.0)
         return a.lerp(b, t), na.lerp(nb, t).normalized()
 
-    s = 0.0
-    while s + dash < total:
+    period = dash + gap
+    count = max(int((total + (0 if closed else gap)) // period), 1)
+    # spread the slack so a closed stitch has no odd dash where it meets itself
+    period = (total + (0 if closed else gap)) / count
+    dash = period * dash / (dash + gap)
+    parts = []
+    for k in range(count):
+        s = k * period
         p0, n0 = at(s)
-        p1, n1 = at(s + dash)
+        p1, n1 = at(min(s + dash, total))
         mid = (p0 + p1) / 2
         nrm = (n0 + n1).normalized()
-        d = (p1 - p0)
+        d = p1 - p0
         ln = d.length
+        if ln < 1e-5:
+            continue
         bm = bmesh.new()
-        bmesh.ops.create_uvsphere(bm, u_segments=6, v_segments=3, radius=1.0)
+        bmesh.ops.create_uvsphere(bm, u_segments=5, v_segments=3, radius=1.0)
         bmesh.ops.scale(bm, vec=(ln / 2 + r * 0.3, r, r * 0.6), verts=bm.verts)
         x_ax = d.normalized()
         z_ax = nrm
@@ -207,33 +256,145 @@ def stitch(col, face, mat, inset=0.86, dash=0.012, gap=0.009, r=0.0035):
         x_ax = y_ax.cross(z_ax).normalized()
         rot = Matrix((x_ax, y_ax, z_ax)).transposed().to_4x4()
         bmesh.ops.transform(bm, matrix=Matrix.Translation(mid - nrm * (r * 0.15)) @ rot, verts=bm.verts)
-        parts.append(mesh_object('stitch', bm, col, mat))
-        s += period
-    return join(parts, 'stitch') if parts else None
+        parts.append(mesh_object(name, bm, col, mat))
+    return parts
 
 
-def _feature(col, name, radii, x, z, mat, bvh, lift, tilt_to_normal=True):
-    hit, nrm = _project_front(bvh, x, z)
-    ob = ellipsoid(name, radii, (0, 0, 0), col, mat, 14, 7)
-    # orient local Y along -normal so the flat side hugs the surface
-    y_ax = -nrm
-    z_ax = Vector((0, 0, 1))
-    x_ax = y_ax.cross(z_ax).normalized()
-    z_ax = x_ax.cross(y_ax).normalized()
-    rot = Matrix((x_ax, y_ax, z_ax)).transposed().to_4x4()
+def front_stitch(col, body, face, outline, mat, inset=0.015):
+    """Stitch just inside the front's edge, on the visible part (stops where it turns under)."""
+    bbvh, fbvh = _bvh(body), _bvh(face)
+    n = len(outline)
+    keep = [i for i, (_, p) in enumerate(outline) if p <= PHI_STITCH]
+    # start just after the hidden run under the bottom: left side up, over the forehead, right side down
+    hidden = [i for i in range(n) if i not in set(keep)]
+    start = (max(hidden) + 1) % n if hidden else 0
+    order = [(start + k) % n for k in range(n)]
+    order = [i for i in order if outline[i][1] <= PHI_STITCH]
+    pts3 = [_polar(bbvh, *outline[i]) for i in order]
+    centre = Vector((0, 0, ZC))
+    out = []
+    for k, (p, nrm) in enumerate(pts3):
+        a = pts3[max(k - 1, 0)][0]
+        b = pts3[min(k + 1, len(pts3) - 1)][0]
+        tan = (b - a).normalized()
+        inward = nrm.cross(tan).normalized()
+        # inward = toward the middle of the front
+        probe, _ = _polar(bbvh, 0.0, math.radians(110))
+        if inward.dot(probe - p) < 0:
+            inward = -inward
+        q = p + inward * inset
+        hit, hn = fbvh.find_nearest(q)[:2]
+        if hn.dot(hit - centre) < 0:
+            hn = -hn
+        out.append((hit, hn))
+    return _dashes(col, out, mat, closed=False)
+
+
+def _frame_at(fbvh, x, z):
+    """Surface point + an orthonormal frame (right, up, normal) on the face at icon-mapped x, z."""
+    hit, nrm = _project_front(fbvh, x, z)
+    right = Vector((1, 0, 0))
+    right = (right - nrm * right.dot(nrm)).normalized()
+    up = nrm.cross(right).normalized()
+    if up.z < 0:
+        up = -up
+    return hit, right, up, nrm
+
+
+def disc(col, name, r, depth, x, z, mat, fbvh, lift):
+    """A round felt disc (eye, cheek): circular in the face's tangent plane."""
+    hit, right, up, nrm = _frame_at(fbvh, x, z)
+    ob = ellipsoid(name, (r, depth, r), (0, 0, 0), col, mat, 16, 6)
+    # local X = right, local Y = into the face (-normal), local Z = up
+    rot = Matrix((right, -nrm, up)).transposed().to_4x4()
     ob.matrix_world = Matrix.Translation(hit + nrm * lift) @ rot
     return ob
 
 
-# Rig layout (contract §5). Blender coords; the penguin's right is -X.
-SHOULDER = Vector((W / 2 - 0.035, 0.0, H * 0.62))
-WING_TIP = Vector((W / 2 - 0.02, -0.01, H * 0.18))
-NECK_Z = H * 0.42          # body / head blend centre
+def _rhombus(u_half, v_up, v_down, n=48, p=1.18):
+    """Diamond outline in a tangent plane (u right, v up), soft corners (superellipse p ~ 1)."""
+    pts = []
+    for i in range(n):
+        a = math.tau * i / n
+        c, s = math.cos(a), math.sin(a)
+        u = u_half * math.copysign(abs(c) ** (2 / p), c)
+        v = (v_up if s >= 0 else v_down) * math.copysign(abs(s) ** (2 / p), s)
+        pts.append((u, v))
+    return pts
+
+
+def beak(col, face, mat, stitch_mat):
+    """White diamond beak: upper triangle up, lower triangle down, a crease between them, and a
+    black stitch round the outer edge. Returns [beak, *stitch dashes]."""
+    fbvh = _bvh(face)
+    bx, bz = icon_to_xz(*BEAK)
+    hit, right, up, nrm = _frame_at(fbvh, bx, bz)
+    a, vu, vd = BEAK_HALF_W * _S, BEAK_UP * _S, BEAK_DOWN * _S
+    outline = _rhombus(a, vu, vd)
+    rings = 5
+    puff = 0.016
+
+    def base(u, v):
+        o = hit + right * u + up * v + nrm * 0.05
+        h = fbvh.ray_cast(o, -nrm)
+        return (h[0], h[1]) if h[0] is not None else (hit + right * u + up * v, nrm)
+
+    def height(u, v, f):
+        lobe = 1.0 if v >= 0 else 0.82                     # the upper beak stands a little prouder
+        crease = 1 - 0.45 * math.exp(-(v / (0.10 * vu)) ** 2) * (1 - f ** 4)
+        return 0.0015 + puff * lobe * crease * (1 - f * f) ** 0.6
+
+    bm = bmesh.new()
+    ring_verts = []
+    for r in range(rings):
+        f = 1 - r / rings
+        row = []
+        for (u, v) in outline:
+            p, pn = base(u * f, v * f)
+            row.append(bm.verts.new(p + pn * height(u * f, v * f, f)))
+        ring_verts.append(row)
+    p, pn = base(0, 0)
+    centre = bm.verts.new(p + pn * height(0, 0, 0))
+    n = len(outline)
+    for r in range(rings - 1):
+        a_, b_ = ring_verts[r], ring_verts[r + 1]
+        for i in range(n):
+            j = (i + 1) % n
+            bm.faces.new((a_[i], a_[j], b_[j], b_[i]))
+    for i in range(n):
+        bm.faces.new((ring_verts[-1][i], ring_verts[-1][(i + 1) % n], centre))
+    skirt = []
+    for (u, v) in outline:
+        p, pn = base(u, v)
+        skirt.append(bm.verts.new(p - pn * 0.003))
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((skirt[i], skirt[j], ring_verts[0][j], ring_verts[0][i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    ob = mesh_object('beak', bm, col, mat)
+    _face_out(ob, hit - nrm * 0.05)
+    # stitch: just inside the beak's outer edge, on the beak's surface
+    bbvh = _bvh(ob)
+    pts = []
+    for (u, v) in _rhombus(a * 0.80, vu * 0.80, vd * 0.80, n=64):
+        o = hit + right * u + up * v + nrm * 0.05
+        h = bbvh.ray_cast(o, -nrm)
+        if h[0] is not None:
+            hn = h[1] if h[1].dot(nrm) > 0 else -h[1]
+            pts.append((h[0], hn))
+    dashes = _dashes(col, pts, stitch_mat, closed=True, dash=0.0062, gap=0.0042, r=0.0022, name='beak_stitch')
+    return [ob] + dashes
 
 
 def _smooth(a, b, x):
     t = min(max((x - a) / (b - a), 0.0), 1.0)
     return t * t * (3 - 2 * t)
+
+
+# Rig layout (contract §5). Blender coords; the penguin's right is -X.
+SHOULDER = Vector((W / 2 - 0.030, 0.0, H * 0.60))
+WING_TIP = Vector((W / 2 - 0.015, -0.01, H * 0.19))
+NECK_Z = H * 0.44          # body / head blend centre
 
 
 def _skin(p):
@@ -283,9 +444,9 @@ def rig(col, mesh, name='penguin_rig'):
         sh = Vector((sx * SHOULDER.x, SHOULDER.y, SHOULDER.z))
         tip = Vector((sx * WING_TIP.x, WING_TIP.y, WING_TIP.z))
         bone(f'wing.{side}', sh, tip, 'body')
-        bone(f'foot.{side}', (sx * 0.085, -D / 2 + 0.01, 0.022), (sx * 0.085, -D / 2 - 0.06, 0.022), 'root')
+        bone(f'foot.{side}', (sx * FOOT_X, -D / 2 + 0.01, 0.022), (sx * FOOT_X, -D / 2 - 0.06, 0.022), 'root')
     bone('socket.head', (0, 0, H), (0, 0, H + 0.08), 'head', deform=False)
-    bone('socket.chest', (0, -D / 2, 0.2), (0, -D / 2 - 0.08, 0.2), 'body', deform=False)
+    bone('socket.chest', (0, -D / 2, CHEST_Z), (0, -D / 2 - 0.08, CHEST_Z), 'body', deform=False)
     tip_r = Vector((-WING_TIP.x, WING_TIP.y, WING_TIP.z))
     bone('socket.hand.R', tip_r, tip_r + Vector((0, -0.08, 0)), 'wing.R', deform=False)
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -296,49 +457,39 @@ def rig(col, mesh, name='penguin_rig'):
     return ob
 
 
+FOOT_X = 0.080
+CHEST_Z = H * 0.33
+
+
 def build(col, name='penguin'):
+    from lib import apply_modifiers, material
     mats = {k: material(k) for k in ('penguin.body', 'penguin.face', 'penguin.cheek',
                                      'penguin.eye', 'penguin.beak', 'penguin.feet',
                                      'penguin.stitch')}
     body = mesh_object('body', body_mesh(), col, mats['penguin.body'])
-    face = face_patch(col, body, mats['penguin.face'])
+    face, outline = front_patch(col, body, mats['penguin.face'])
     parts = [body, face]
-    st = stitch(col, face, mats['penguin.stitch'])
-    if st:
-        parts.append(st)
+    parts += front_stitch(col, body, face, outline, mats['penguin.stitch'])
     fbvh = _bvh(face)
-    for (x, y) in _EYE:
+    for (x, y) in EYES:
         px, pz = icon_to_xz(x, y)
-        parts.append(_feature(col, 'eye', (0.020, 0.008, 0.027), px, pz, mats['penguin.eye'], fbvh, 0.001))
-    for (x, y) in _CHEEK:
+        parts.append(disc(col, 'eye', EYE_R * _S, 0.008, px, pz, mats['penguin.eye'], fbvh, 0.001))
+    for (x, y) in CHEEKS:
         px, pz = icon_to_xz(x, y)
-        parts.append(_feature(col, 'cheek', (0.027, 0.004, 0.017), px, pz, mats['penguin.cheek'], fbvh, 0.0))
-    # beak: a soft rounded triangle pointing down
-    px, pz = icon_to_xz(*_BEAK)
-    hit, nrm = _project_front(fbvh, px, pz)
-    bm = bmesh.new()
-    bmesh.ops.create_cone(bm, cap_ends=True, segments=3, radius1=0.028, radius2=0.0, depth=0.03)
-    bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=2, use_grid_fill=True)
-    beak = mesh_object('beak', bm, col, mats['penguin.beak'])
-    sub = beak.modifiers.new('sub', 'SUBSURF'); sub.levels = 2; sub.render_levels = 2
-    beak.matrix_world = (Matrix.Translation(hit + nrm * 0.006) @
-                         Matrix.Rotation(math.radians(90), 4, 'X') @
-                         Matrix.Rotation(math.radians(180), 4, 'Z') @
-                         Matrix.Diagonal((1.0, 0.75, 0.55, 1)))
-    beak.rotation_euler.z += 0  # keep
-    parts.append(beak)
+        parts.append(disc(col, 'cheek', CHEEK_R * _S, 0.004, px, pz, mats['penguin.cheek'], fbvh, 0.0))
+    parts += beak(col, face, mats['penguin.beak'], mats['penguin.stitch'])
     # wings: flat paddles hugging the sides
     for sx in (-1, 1):
-        w = ellipsoid('wing', (0.035, 0.085, 0.14), (0, 0, 0), col, mats['penguin.body'], 16, 10)
-        w.matrix_world = (Matrix.Translation((sx * (W / 2 - 0.03), 0.0, H * 0.40)) @
-                          Matrix.Rotation(math.radians(-sx * 9), 4, 'Y'))
+        w = ellipsoid('wing', (0.034, 0.085, 0.155), (0, 0, 0), col, mats['penguin.body'], 16, 10)
+        w.matrix_world = (Matrix.Translation((sx * (W / 2 - 0.022), 0.0, H * 0.39)) @
+                          Matrix.Rotation(math.radians(-sx * 8), 4, 'Y'))
         parts.append(w)
-    # feet: little orange paddles poking out front
+    # feet: little black paddles poking out from under the white belly
     for sx in (-1, 1):
-        f = ellipsoid('foot', (0.05, 0.065, 0.022), (sx * 0.085, -D / 2 + 0.035, 0.022), col,
+        f = ellipsoid('foot', (0.052, 0.068, 0.022), (sx * FOOT_X, -D / 2 + 0.030, 0.022), col,
                       mats['penguin.feet'], 14, 7)
         parts.append(f)
-    from lib import apply_modifiers
+    bpy.context.view_layer.update()          # matrix_world of parts placed by .location
     for p in parts:
         if p.modifiers:
             apply_modifiers(p)
@@ -370,7 +521,6 @@ POSES = {
 
 
 def apply_pose(rig_ob, state):
-    import math as m
     for pb in rig_ob.pose.bones:
         pb.rotation_mode = 'XYZ'
         pb.rotation_euler = (0, 0, 0)
@@ -380,5 +530,4 @@ def apply_pose(rig_ob, state):
         if key.endswith('@loc'):
             rig_ob.pose.bones[key[:-4]].location = val
         else:
-            rig_ob.pose.bones[key].rotation_euler = tuple(m.radians(a) for a in val)
-
+            rig_ob.pose.bones[key].rotation_euler = tuple(math.radians(a) for a in val)

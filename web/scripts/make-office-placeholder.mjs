@@ -217,7 +217,7 @@ async function kit() {
 
 async function penguin() {
   const d = doc();
-  // drawn at 0.516 m, scaled to the contract's seated height (§2: 0.60 m)
+  // drawn at 0.516 m, scaled to the contract's seated height (§2: 0.70 m)
   const S = PENGUIN_HEIGHT / 0.516;
   const scaleS = new THREE.Matrix4().makeScale(S, S, S);
   const part = (...args) => basePart(...args).applyMatrix4(scaleS);
@@ -227,7 +227,8 @@ async function penguin() {
     'penguin.cheek': '#E01FAE', // --cheek
     'penguin.eye': PENGUIN_2D.eye,
     'penguin.beak': PENGUIN_2D.beak,
-    'penguin.feet': PENGUIN_2D.beak,
+    'penguin.feet': PENGUIN_2D.feet,
+    'penguin.stitch': PENGUIN_2D.stitch,
     team_accent: TEAM_FALLBACK,
     'prop.gold': PENGUIN_2D.gold,
     'prop.black': PENGUIN_2D.eye,
@@ -297,6 +298,7 @@ async function penguin() {
       'penguin.eye': [j('head', part(sph(0.025), [0.065, 0.38, 0.185], [0, 0, 0], [0.9, 1.2, 0.5])), j('head', part(sph(0.025), [-0.065, 0.38, 0.185], [0, 0, 0], [0.9, 1.2, 0.5]))],
       'penguin.cheek': [j('head', part(sph(0.03), [0.11, 0.33, 0.17], [0, 0, 0], [1.2, 0.8, 0.4])), j('head', part(sph(0.03), [-0.11, 0.33, 0.17], [0, 0, 0], [1.2, 0.8, 0.4]))],
       'penguin.beak': [j('head', part(cone(0.03, 0.06, 12), [0, 0.34, 0.215], [Math.PI / 2, 0, 0]))],
+      'penguin.stitch': [j('head', part(rbox(0.2, 0.008, 0.006, 0.002), [0, 0.44, 0.17])), j('body', part(rbox(0.2, 0.008, 0.006, 0.002), [0, 0.06, 0.2]))],
       'penguin.feet': [j('foot.L', part(sph(0.05), [0.08, 0.02, 0.12], [0, 0, 0], [1, 0.4, 1.5])), j('foot.R', part(sph(0.05), [-0.08, 0.02, 0.12], [0, 0, 0], [1, 0.4, 1.5]))],
     },
     mats,
