@@ -1,11 +1,11 @@
 // The mascot layer of the landing (DESIGN.md `## 랜딩`): one canvas over the scene column of the
 // pinned stage for the whole page; the penguin in it walks to each section's spot (staging.ts) while
-// the slides change. The 2D penguin shows at once (where the hero puts it); the 3D chunk loads
-// after the first paint and takes over only once it has really drawn the penguin (MascotCanvas
-// counts draw calls) — if it never does, the page falls back to the 2D penguin. Rendering stops
+// the slides change. Nothing shows where the penguin goes until the 3D one draws (no 2D poster —
+// user, 2026-11-10: "2d 펭귄 나오는거 없애주고"): the 3D chunk loads after the first paint and the penguin
+// enters as a clay ball that becomes the penguin (intro.ts). If it never draws (MascotCanvas counts
+// draw calls) or fails, the page falls back to the stacked page with the 2D penguin. Rendering stops
 // when the tab is hidden or the layer is off-screen. Decoration only (aria-hidden).
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { Mascot } from '../characters/PenguinIcon';
 import type { Theme } from '../theme';
 import type { LandingStats, Pointer } from './MascotCanvas';
 import type { SectionId } from './sections';
@@ -95,9 +95,6 @@ export function MascotStage({
   return (
     <div className="landing-stage" aria-hidden="true">
       <div className={`landing-mascot ${ready ? 'is-ready' : ''}`} ref={wrap} data-testid="landing-mascot">
-        <div className="landing-poster">
-          <Mascot size={240} />
-        </div>
         {load && (
           <Boundary onFail={onFail}>
             <Suspense fallback={null}>

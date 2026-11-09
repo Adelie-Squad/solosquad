@@ -55,9 +55,10 @@ export function wander(seconds: number): Aim {
 }
 
 /**
- * Has the 3D penguin actually drawn? The 2D poster stays until the renderer has issued draw calls
- * (`calls` — last frame's `gl.info.render.calls`); if nothing is drawn within `GIVE_UP_SECONDS`
- * of frames the landing falls back to the 2D penguin instead of showing an empty layer.
+ * Has the 3D penguin actually drawn? Until the renderer has issued draw calls (`calls` — last
+ * frame's `gl.info.render.calls`) the stage is empty where the penguin goes (no 2D poster); if
+ * nothing is drawn within `GIVE_UP_SECONDS` of frames the landing falls back to the stacked page
+ * with the 2D penguin instead of keeping an empty layer.
  */
 export const GIVE_UP_SECONDS = 4;
 
