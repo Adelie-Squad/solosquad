@@ -195,13 +195,52 @@ CREATE TABLE IF NOT EXISTS migrated_orgs (
     org TEXT PRIMARY KEY, users INTEGER NOT NULL, ts REAL NOT NULL)
 """
 
+
+def _add_presence(db: sqlite3.Connection) -> None:
+    """v5: when each person was last here (the dashboard's 자리를 비운 동안). People who were
+    already here start from their newest audited action (a login at the least), so their
+    first digest covers the time since then instead of greeting them as new."""
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS presence (user_id TEXT PRIMARY KEY,"
+        " last_active REAL NOT NULL, seen_until REAL, basis TEXT NOT NULL,"
+        " visit_start REAL NOT NULL)"
+    )
+    db.execute(
+        "INSERT OR IGNORE INTO presence (user_id, last_active, seen_until, basis, visit_start)"
+        " SELECT a.user_id, MAX(a.ts), MAX(a.ts), 'away', MAX(a.ts) FROM audit a"
+        " JOIN users u ON u.id = a.user_id GROUP BY a.user_id"
+    )
+
+
 MIGRATIONS = (
     *LEGACY_MIGRATIONS,
     Migration(4, SCOPES_SCHEMA),  # decision 57 — assignments · last scope (I39)
+    Migration(5, _add_presence),  # 2026-11-10 — last seen, for the dashboard digest
 )
 COMPONENT = "core"
 """The component name of these tables in `core.db`."""
 CHALLENGE_TTL_S = 5 * 60
+
+AWAY_GAP_S = 30 * 60
+"""A person who has not been here for this long is away: their next presence starts a new
+visit, and the digest then covers the time since they were last here."""
+
+PresenceBasis = str  # "first" · "away" · "acknowledged"
+
+
+@dataclass(frozen=True)
+class Presence:
+    """When a person was last here (PRD v2.1.0 · DESIGN.md `### 대시보드` 자리를 비운 동안).
+
+    `last_active` — their newest request that a person made (not a background refresh).
+    `seen_until` — where the digest starts: the end of their previous visit, or the moment
+    they said 확인했어요. None = they have never been here before (`basis` "first").
+    `visit_start` — when this visit began."""
+
+    last_active: float
+    seen_until: float | None
+    basis: PresenceBasis
+    visit_start: float
 
 
 @dataclass(frozen=True)
@@ -352,6 +391,58 @@ class AccountStore:
             " workspace = excluded.workspace, ts = excluded.ts",
             (uid, org, workspace, time.time()),
         )
+
+    # ------------------------------------------------------------------ presence
+
+    def presence(self, uid: str) -> Presence | None:
+        rows = self._q(
+            "SELECT last_active, seen_until, basis, visit_start FROM presence WHERE user_id = ?",
+            (uid,),
+        )
+        return Presence(rows[0][0], rows[0][1], rows[0][2], rows[0][3]) if rows else None
+
+    def touch(self, uid: str, now: float | None = None, *, new_visit: bool = False) -> Presence:
+        """The person is here. A sign-in (`new_visit`) or the first presence after
+        `AWAY_GAP_S` starts a new visit: the digest moves to start where the previous visit
+        ended. Inside a visit nothing but `last_active` changes — a reload keeps the digest."""
+        t = time.time() if now is None else now
+        with self._lock:
+            row = self._db.execute(
+                "SELECT last_active, seen_until, basis, visit_start FROM presence"
+                " WHERE user_id = ?",
+                (uid,),
+            ).fetchone()
+            if row is None:
+                found = Presence(t, None, "first", t)
+            elif new_visit or t - row[0] > AWAY_GAP_S:
+                found = Presence(t, max(row[1] or 0.0, row[0]), "away", t)
+            else:
+                found = Presence(max(row[0], t), row[1], row[2], row[3])
+            self._db.execute(
+                "INSERT INTO presence (user_id, last_active, seen_until, basis, visit_start)"
+                " VALUES (?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET"
+                " last_active = excluded.last_active, seen_until = excluded.seen_until,"
+                " basis = excluded.basis, visit_start = excluded.visit_start",
+                (uid, found.last_active, found.seen_until, found.basis, found.visit_start),
+            )
+        return found
+
+    def acknowledge(self, uid: str, until: float, now: float | None = None) -> Presence:
+        """확인했어요 — the digest now starts at `until` (never later than now, never earlier
+        than it already did)."""
+        t = time.time() if now is None else now
+        self.touch(uid, t)
+        with self._lock:
+            row = self._db.execute(
+                "SELECT last_active, seen_until, visit_start FROM presence WHERE user_id = ?",
+                (uid,),
+            ).fetchone()
+            seen = max(row[1] or 0.0, min(until, t))
+            self._db.execute(
+                "UPDATE presence SET seen_until = ?, basis = 'acknowledged' WHERE user_id = ?",
+                (seen, uid),
+            )
+        return Presence(row[0], seen, "acknowledged", row[2])
 
     def migrated_orgs(self) -> dict[str, int]:
         return {r[0]: int(r[1]) for r in self._q("SELECT org, users FROM migrated_orgs")}

@@ -103,6 +103,9 @@ class ErrorCode(StrEnum):
     CALENDAR_ASSIGNEE_INVALID = "calendar_assignee_invalid"
     CALENDAR_REORDER_INVALID = "calendar_reorder_invalid"
     CALENDAR_AGENT_ACCESS_INVALID = "calendar_agent_access_invalid"
+    # -- the dashboard digest (자리를 비운 동안)
+    DIGEST_SINCE_INVALID = "digest_since_invalid"
+    DIGEST_UNTIL_INVALID = "digest_until_invalid"
 
 
 BY_STATUS: dict[int, ErrorCode] = {

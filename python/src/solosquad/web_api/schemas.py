@@ -898,6 +898,140 @@ class EngineEvent(Open):
     interrupts: list[Interrupt] | None = None
 
 
+# ------------------------------------------------------------------ the digest (자리를 비운 동안)
+
+DigestBasis = Literal["first", "away", "acknowledged"]
+
+
+class DigestWork(Closed):
+    """A conversation or workflow run that ended in the window (by its newest run)."""
+
+    org: str
+    workspace: str
+    source: Literal["chat", "workflow"]
+    thread_id: str
+    run_id: str
+    title: str | None
+    workflow: str | None
+    cron: str | None
+    status: RunStatusName
+    ended: float
+    agents: list[str]
+    artifacts: list[WorkArtifact]
+    """What it made in the window."""
+    error: str | None
+
+
+class DigestApproval(Closed):
+    """An approval that arrived in the window and still waits — `ApprovalItem` plus where."""
+
+    org: str
+    workspace: str
+    source: Literal["company", "workflow"]
+    thread_id: str
+    run_id: str
+    created: float
+    card: ApprovalCard
+    tier: TierName
+    can_approve: bool
+
+
+class DigestDecision(Closed):
+    """An approval someone else answered in the window."""
+
+    org: str
+    workspace: str
+    ts: float
+    approver: str
+    """Their display name."""
+    decision: Literal["approved", "declined", "other"]
+    source: Literal["company", "workflow"]
+    thread_id: str
+    title: str | None
+    category: str | None
+
+
+class DigestScheduled(Closed):
+    """A run a schedule started in the window (a failed one is under `failed` instead)."""
+
+    org: str
+    workspace: str
+    run_id: str
+    thread_id: str
+    kind: Literal["workflow", "cron"]
+    name: str
+    title: str
+    status: RunStatusName
+    created: float
+    artifacts: list[WorkArtifact]
+
+
+class DigestCalendar(Closed):
+    """A 일정 item that began, or a 할 일 that came due, in the window (not done)."""
+
+    type: Literal["item", "todo"]
+    id: str
+    item_id: str
+    title: str
+    item_title: str | None
+    """For a to-do: the item it belongs to."""
+    when: str
+    kind: CalendarKind
+    org: str | None
+
+
+class DigestOrgCost(Closed):
+    org: str
+    display: str
+    spent_usd: float
+
+
+class DigestCost(Closed):
+    spent_usd: float
+    orgs: list[DigestOrgCost]
+
+
+class DigestCounts(Closed):
+    """How many of each there were — the lists are capped, these are not."""
+
+    finished: int
+    failed: int
+    approvals_mine: int
+    approvals_others: int
+    decided: int
+    scheduled: int
+    calendar: int
+
+
+class Digest(Closed):
+    """`GET /api/me/digest` — what happened in the person's scopes between `since` (when they
+    were last here) and `until` (now). Deterministic aggregation, no model call."""
+
+    basis: DigestBasis
+    """first = never here before (no window) · away = since the end of the previous visit ·
+    acknowledged = since they last said 확인했어요."""
+    since: float | None
+    until: float
+    finished: list[DigestWork]
+    failed: list[DigestWork]
+    approvals_mine: list[DigestApproval]
+    approvals_others: list[DigestApproval]
+    decided: list[DigestDecision]
+    scheduled: list[DigestScheduled]
+    calendar: list[DigestCalendar]
+    cost: DigestCost
+    counts: DigestCounts
+    cap: int
+    """The most rows any one list carries."""
+
+
+class DigestAck(Closed):
+    """`POST /api/me/digest/ack` — the digest now starts here."""
+
+    seen_until: float
+    basis: DigestBasis
+
+
 # ---------------------------------------------------------------------- export · respond
 
 EXPORTED: tuple[type[BaseModel], ...] = (
@@ -962,6 +1096,8 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     CalendarEvent,
     CalendarAgentAccess,
     CalendarAgentView,
+    Digest,
+    DigestAck,
 )
 
 

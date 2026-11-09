@@ -7,6 +7,7 @@ import { App } from './App';
 import { ApiError } from './api/client';
 import { I18nProvider } from './i18n';
 import { ICON_DEFAULTS } from './icons';
+import { watchPresence } from './lib/presence';
 import { enableThemeTransitions } from './theme';
 import './styles/tokens.css';
 import './styles/global.css';
@@ -31,6 +32,7 @@ const queryClient = new QueryClient({
 });
 
 enableThemeTransitions();
+watchPresence();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

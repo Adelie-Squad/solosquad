@@ -1,5 +1,5 @@
 import { useLinks } from '../scope';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { errorText } from '../api/errors';
@@ -26,13 +26,13 @@ const RISK_LABEL: Record<string, MessageKey> = { high: 'risk.high', medium: 'ris
  * Approve / decline appear only when the server says this person may answer
  * (`can_approve`); otherwise the reason is shown instead.
  */
-export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; compact?: boolean }) {
+export function ApprovalCard({ item, compact = false, from }: { item: ApprovalItem; compact?: boolean; from?: ReactNode }) {
   const keys = useKeys();
   const { w: toWs } = useLinks();
   const { scope } = useScopedApi();
   const { t, locale, fmt } = useI18n();
   const [error, setError] = useState<string | null>(null);
-  const answer = useAction((value: Decision) => decide(scope, item, value), [keys.approvals, keys.runs, keys.workflowRuns(), keys.work]);
+  const answer = useAction((value: Decision) => decide(scope, item, value), [keys.approvals, keys.runs, keys.workflowRuns(), keys.work, keys.digest]);
   const nameOf = useAgentName();
   const blocked = blockedReason(item);
   const card = item.card;
@@ -62,6 +62,12 @@ export function ApprovalCard({ item, compact = false }: { item: ApprovalItem; co
       {card.summary && <p className="approval-summary">{card.summary}</p>}
       <p className="approval-meta">
         {item.source === 'workflow' ? t('approvals.fromWorkflow', { name: card.workflow ?? '' }) : t('approvals.fromAgent', { name: nameOf(card.agent) })}
+        {from && (
+          <>
+            {' · '}
+            {from}
+          </>
+        )}
         {' · '}
         {fmt.relative(item.created)}
         {workflowLink && (
