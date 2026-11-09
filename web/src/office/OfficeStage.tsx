@@ -153,7 +153,6 @@ export function OfficeStage({
   zoom.reduced = reduced;
   const [level, setLevel] = useState(() => zoom.level());
   const [announce, setAnnounce] = useState('');
-  const [dragging, setDragging] = useState(false);
   const tRef = useRef(t);
   tRef.current = t;
   useEffect(() => {
@@ -280,7 +279,7 @@ export function OfficeStage({
       if (!panning && start && Math.hypot(p.x - start.x, p.y - start.y) > DRAG_PX) {
         panning = true;
         swallowClick = true;
-        setDragging(true);
+        el.classList.add('is-dragging'); // not React state: a drag must not re-render the stage and its tags
         try {
           el.setPointerCapture(e.pointerId);
         } catch {
@@ -300,7 +299,7 @@ export function OfficeStage({
       if (down.size === 0) {
         start = null;
         if (panning) {
-          setDragging(false);
+          el.classList.remove('is-dragging');
           zoom.endDrag();
         }
         panning = false;
@@ -357,7 +356,7 @@ export function OfficeStage({
   const teams = pods.filter((p) => !p.chief && p.team);
   return (
     <div
-      className={`office-stage ${level > 1 ? 'is-zoomed' : ''} ${dragging ? 'is-dragging' : ''} ${display ? 'is-display' : ''}`}
+      className={`office-stage ${level > 1 ? 'is-zoomed' : ''} ${display ? 'is-display' : ''}`}
       ref={wrap}
       tabIndex={zoomable ? 0 : undefined}
       role={zoomable ? 'group' : undefined}

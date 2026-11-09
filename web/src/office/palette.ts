@@ -39,8 +39,8 @@ export interface OfficePalette {
   night: {
     /** A soft warm fill over the whole room — a hemisphere light: warm from above, the sky's navy from below. */
     fill: { sky: string; ground: string; intensity: number };
-    /** One light over each pod, high under the cut-away ceiling (no fixture — it would cover the back row). */
-    pod: AgentLight & { height: number };
+    /** One light high over the middle of the room, under the cut-away ceiling (no fixture — it would cover the back row). */
+    ceiling: AgentLight & { height: number };
     /** A picture light on the wall above the whiteboard (a lit bar + its light). */
     board: AgentLight;
     /** Standing lamps by the sofa and the coffee bar (pole, glowing shade, their light). */
@@ -109,8 +109,8 @@ export const EVENING: OfficePalette = {
     screen: { color: '#8FB8FF', intensity: 0.7, distance: 1.1 },
   },
   night: {
-    fill: { sky: EVENING_LAMP, ground: EVENING_SKY, intensity: 0.55 },
-    pod: { color: EVENING_LAMP, intensity: 6.5, distance: 7, height: 2.7 },
+    fill: { sky: EVENING_LAMP, ground: EVENING_SKY, intensity: 0.75 },
+    ceiling: { color: EVENING_LAMP, intensity: 14, distance: 14, height: 3.4 },
     board: { color: EVENING_LAMP, intensity: 2.4, distance: 2.6 },
     floorLamp: { color: EVENING_LAMP, intensity: 2.2, distance: 3 },
     poolOpacity: 0.08,
