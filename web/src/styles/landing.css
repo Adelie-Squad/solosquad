@@ -13,8 +13,6 @@
   --landing-mono: 12px;
   /* the message | the scene (the content, the penguin around it) */
   --landing-cols: minmax(0, 4.6fr) minmax(0, 7.4fr);
-  /* the penguin's height — the 3D one is sized by staging.ts penguinHeight; this is for the 2D poster */
-  --penguin: min(calc((100svh - var(--landing-gnb)) * 0.4), 340px);
   position: relative;
   min-height: 100%;
   background: var(--bg);
@@ -132,7 +130,7 @@ html:has(.landing[data-mode="live"]) {
   pointer-events: none;
 }
 
-/* the stage's layers: the 2D poster (1) < the slides (2) < the 3D canvas (3) */
+/* the stage's layers: the slides (2) < the 3D canvas (3) — no 2D poster on the live page */
 .landing-pin {
   position: sticky;
   top: 0;
@@ -162,7 +160,7 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* ── the penguin: one canvas over the scene column; it walks to each section's spot ── */
-/* no z-index here — the poster and the canvas take their own layers in the pin */
+/* no z-index here — the canvas takes its own layer in the pin */
 .landing-stage {
   position: absolute;
   inset: var(--landing-gnb) 0 0;
@@ -179,23 +177,7 @@ html:has(.landing[data-mode="live"]) {
   grid-column: 2;
   min-width: 0;
   height: 100%;
-  margin-inline: calc(-1 * var(--space-12));
-}
-
-/* the 2D penguin until the 3D one has drawn: where the hero puts it — above the prompt box, its feet behind it */
-.landing-poster {
-  position: absolute;
-  bottom: 50%;
-  left: 50%;
-  z-index: 1;
-  width: calc(var(--penguin) * 0.7);
-  translate: -50% 18%;
-  transition: opacity 0.4s ease;
-}
-
-.landing-poster .penguin {
-  width: 100%;
-  height: auto;
+  margin-inline: calc(-1 * var(--space-16));
 }
 
 /* above the slides but never in the way of a click; the content wipes the body out of it */
@@ -203,17 +185,7 @@ html:has(.landing[data-mode="live"]) {
   position: absolute !important;
   inset: 0;
   z-index: 3;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s ease;
-}
-
-.landing-mascot.is-ready .landing-canvas {
-  opacity: 1;
-}
-
-.landing-mascot.is-ready .landing-poster {
-  opacity: 0;
 }
 
 /* ── progress: section names at the left edge, no numbers ────────────── */
@@ -347,16 +319,22 @@ html:has(.landing[data-mode="live"]) {
   width: min(100%, 480px);
 }
 
+/* the cards sit left of the middle so the penguin beside their right edge — far enough out for its
+   face to stay clear of them while it turns to act — and the cards are centred together */
 .landing-pin .landing-act.is-relay {
   width: min(60%, 360px);
+  margin-right: min(32%, 240px);
 }
 
 .landing-pin .landing-act.is-scroll {
   width: min(84%, 520px);
 }
 
+/* the card sits right of the middle so the penguin at its lower-left corner — far enough out for its
+   near shoulder to clear the card's edge (staging.ts besideEdge) — and the card are centred together */
 .landing-pin .landing-act.is-stamp {
   width: min(56%, 380px);
+  margin-left: min(32%, 240px);
 }
 
 .landing-pin .landing-act.is-sign {
@@ -628,9 +606,10 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* the right wing hands the request to card 1 at its right edge */
+/* card 1's lower right: the far wing comes down to it in front of the belly, below the face */
 .landing-hand.is-card {
-  top: 50%;
-  right: var(--space-4);
+  top: 82%;
+  right: var(--space-2);
 }
 
 /* ── team: the scroll, the org chart on its paper ───────────────────── */
@@ -1293,7 +1272,6 @@ html:has(.landing[data-mode="live"]) {
     --landing-w: calc(100% - 2 * var(--space-4));
     --landing-gnb: 56px;
     --landing-cols: minmax(0, 1fr);
-    --penguin: min(30svh, 42vw, 170px);
   }
 
   .landing-top .locale-picker > span {
@@ -1322,12 +1300,6 @@ html:has(.landing[data-mode="live"]) {
     margin: 0;
   }
 
-  .landing-poster {
-    bottom: auto;
-    top: 14%;
-    translate: -50% 0;
-  }
-
   /* the scene first (the content centred in what is left), the message under it */
   .landing-pin .landing-slide {
     display: flex;
@@ -1345,12 +1317,14 @@ html:has(.landing[data-mode="live"]) {
   .landing-pin .landing-act.is-prompt,
   .landing-pin .landing-act.is-relay {
     width: 100%;
+    margin-right: 0;
   }
 
   /* the penguin is over card 1's upper right: its wing hands the request down onto the top edge */
+  /* near the cards' right end: the far wing reaches it from over card 1's upper right */
   .landing-hand.is-card {
     top: 0;
-    right: 40%;
+    right: 14%;
   }
 
   .landing-pin .landing-act.is-scroll {
@@ -1360,7 +1334,8 @@ html:has(.landing[data-mode="live"]) {
   /* the card right of the middle: the penguin needs the room at its lower-left corner */
   .landing-pin .landing-act.is-stamp {
     justify-self: end;
-    width: calc(100% - 88px);
+    width: calc(100% - 100px);
+    margin-left: 0;
   }
 
   .landing-pin .landing-act.is-sign {
@@ -1478,7 +1453,6 @@ html:has(.landing[data-mode="live"]) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-poster,
   .landing-canvas,
   .landing-pin .landing-slide,
   .landing-prompt-answer,

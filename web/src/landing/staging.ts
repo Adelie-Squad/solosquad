@@ -29,9 +29,19 @@ export interface Spot {
 /**
  * Where things are on the penguin, as fractions of its height from the top of its head (measured
  * on penguin.glb in the landing frame): the eyes, the shoulders (wing roots), the beak, and half
- * its width with the wings.
+ * its width with the wings. `shoulderX` = how far a shoulder is from the middle, sideways (facing
+ * the reader); `face` = half the face's width and how far the face sits in front of the body's
+ * axis (a turn moves it sideways by `face.depth · sin(turn)`).
  */
-export const BODY = { eyes: 0.33, shoulder: 0.38, beak: 0.41, halfWidth: 0.41 } as const;
+export const BODY = { eyes: 0.3, shoulder: 0.4, beak: 0.385, halfWidth: 0.34, shoulderX: 0.27, face: { half: 0.15, depth: 0.25 } } as const;
+
+/** Where the middle of the face is on screen for a body turned by `turn` (+ = towards the reader's right). */
+export const faceX = (x: number, h: number, turn: number) => x + BODY.face.depth * Math.sin(turn) * h;
+
+/** How far past the content's side edge a near shoulder stands (fraction of the height) — for the near-wing stamp. */
+export const SHOULDER_CLEAR = 0.08;
+/** From the content's side edge to the feet so that the near shoulder is `SHOULDER_CLEAR` outside it. */
+export const besideEdge = (turn: number) => BODY.shoulderX * Math.cos(turn) + SHOULDER_CLEAR;
 
 /** The penguin's height for a scene box — the same in every section of one screen. */
 export function penguinHeight(scene: { width: number; height: number }, mobile: boolean): number {
@@ -46,20 +56,23 @@ const cx = (b: Box) => b.left + b.width / 2;
  * The spot for a section, from its centred content box `c` and the penguin's height `h`.
  * - hero: centred over the prompt box, shoulders just above its top edge (the wings rest on it),
  *   the feet hidden behind it.
- * - what: desktop = standing beside the step cards' right edge, turned to them (the right wing —
- *   the reader's left — hands the request to card 1); phone = over the cards' upper right.
+ * - what: desktop = standing beside the step cards' right edge, shoulders level with their top,
+ *   turned to them; the body turns further to act (arms.ts `actYaw`) and the far (left — the
+ *   reader's right) wing comes down round in front of the belly — below the face — to card 1's
+ *   lower right; phone = over the cards' upper right.
  * - team: behind the paper's upper-left corner, leaning out to the left so the face peeks over the
  *   rod; the body stays behind the paper.
- * - control: just outside the card's lower-left corner, turned to the card, the left wing (the
- *   reader's right) reaching up to the approve button with the stamp (a phone: a smaller penguin).
+ * - control: just outside the card's lower-left corner, turned to the card, the near (left — the
+ *   reader's right) shoulder outside the card's left edge so that wing comes round it with the stamp
+ *   to the approve button (arms.ts `ARM_CHOICE`; a phone: a smaller penguin).
  * - start: behind the card's upper right, head and shoulders above its top edge.
  */
 export function spotFor(id: SectionId, c: Box, h: number, mobile: boolean): Spot {
   switch (id) {
     case 'hero':
-      return { x: cx(c), y: c.top + (1 - 0.48) * h, h, lean: 0, turn: 0 };
+      return { x: cx(c), y: c.top + (1 - BODY.shoulder - 0.1) * h, h, lean: 0, turn: 0 };
     case 'what':
-      return mobile ? { x: right(c) - 0.42 * h, y: c.top + 0.52 * h, h, lean: 0, turn: -0.15 } : { x: right(c) + 0.2 * h, y: c.top + 0.8 * h, h, lean: 0, turn: -0.18 };
+      return mobile ? { x: right(c) - 0.42 * h, y: c.top + 0.52 * h, h, lean: 0, turn: -0.15 } : { x: right(c) + 0.24 * h, y: c.top + 0.6 * h, h, lean: 0, turn: -0.18 };
     case 'team':
       return { x: c.left + (mobile ? 0.38 : 0.3) * h, y: c.top + 0.54 * h, h, lean: 0.32, turn: -0.1 };
     case 'control':
@@ -67,9 +80,9 @@ export function spotFor(id: SectionId, c: Box, h: number, mobile: boolean): Spot
         // a phone has no room at the card's side for a full-size penguin: a smaller one, and the card
         // sits to the right of the middle (landing.css) so the two of them are centred together
         const s = 0.8 * h;
-        return { x: c.left - 0.3 * s, y: bottom(c) + 0.3 * s, h: s, lean: 0, turn: 0.38 };
+        return { x: c.left - besideEdge(0.5) * s, y: bottom(c) + 0.3 * s, h: s, lean: 0, turn: 0.5 };
       }
-      return { x: c.left - 0.22 * h, y: bottom(c) + 0.34 * h, h, lean: 0, turn: 0.38 };
+      return { x: c.left - besideEdge(0.5) * h, y: bottom(c) + 0.34 * h, h, lean: 0, turn: 0.5 };
     case 'start':
       return { x: right(c) - (mobile ? 0.42 : 0.24) * h, y: c.top + 0.5 * h, h, lean: mobile ? 0 : -0.05, turn: -0.12 };
   }
