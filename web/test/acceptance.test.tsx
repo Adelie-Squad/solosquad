@@ -303,19 +303,20 @@ describe('C26 — the org chart widget follows the people and the teams', () => 
 
 // ---------------------------------------------------------------------- C18
 
-describe('C18 — a connection that reaches a provider asks for its holder', () => {
-  it('the add form explains the entity, and the refusal is shown in the reader’s language', async () => {
-    const refused = () => new Response(JSON.stringify({ error: 'an API key needs its entity', code: 'entity_required', params: {} }), { status: 400 });
+describe('C18 — a connection that reaches a provider waits for the company', () => {
+  it('the add form says the company holds it, and the refusal is shown in the reader’s language', async () => {
+    const refused = () => new Response(JSON.stringify({ error: 'enter the company country', code: 'company_required', params: {} }), { status: 400 });
     for (const locale of ['ko', 'en'] as const) {
       const api = await openApp('/o/tesla/settings/connections', engineData({ 'POST /connections': refused }, 'owner'), ownerMe, locale);
       fireEvent.click(screen.getByRole('button', { name: t('connections.add', undefined, locale) }));
       const form = screen.getByRole('heading', { name: t('connections.add', undefined, locale) }).closest('form') as HTMLElement;
-      expect(within(form).getByText(t('connections.entityHint', undefined, locale))).toBeTruthy();
+      expect(within(form).getByText(t('connections.holderHint', undefined, locale))).toBeTruthy();
+      expect(within(form).queryByPlaceholderText(/KR/)).toBeNull(); // no per-connection holder any more
       fireEvent.change(within(form).getAllByRole('textbox')[0], { target: { value: 'claude-api' } });
       fireEvent.submit(form);
-      await waitFor(() => expect(within(form).getByText(t('error.entity_required', undefined, locale))).toBeTruthy());
+      await waitFor(() => expect(within(form).getByText(t('error.company_required', undefined, locale))).toBeTruthy());
       expect(api.calls.find((c) => c.method === 'POST')?.body).toMatchObject({ id: 'claude-api', provider: 'anthropic' });
-      expect(within(form).queryByText('an API key needs its entity')).toBeNull(); // never the server's English
+      expect(within(form).queryByText('enter the company country')).toBeNull(); // never the server's English
       cleanup();
       vi.unstubAllGlobals();
     }

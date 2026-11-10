@@ -14,7 +14,6 @@ import yaml
 from pydantic import BaseModel, Field
 
 from solosquad.assets.text import load_yaml
-from solosquad.routing.eligibility import Entity
 
 
 class ConnectionKind(StrEnum):
@@ -43,8 +42,8 @@ class Connection(BaseModel):
     monthly_budget_usd: float | None = None
     network: str = "external"
     """external · internal · local — matched against the workspace execution policy."""
-    entity: Entity | None = None
-    """The legal entity that holds this account (decision 45) — checked against the rules."""
+    # The account holder is the customer company (회사, 2026-11-11) — one for every
+    # connection. An old file's per-connection `entity` is ignored on read, dropped on save.
 
 
 class ConnectionsFile(BaseModel):

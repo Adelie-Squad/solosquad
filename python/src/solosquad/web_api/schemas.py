@@ -374,12 +374,6 @@ class ApprovalPolicyRow(Closed):
 # ---------------------------------------------------------------------- connections · budget
 
 
-class Entity(Closed):
-    name: str
-    country: str
-    controlled_by: str | None = None
-
-
 class ConnectionOut(Closed):
     id: str
     kind: Literal["subscription", "api_key", "local_llm"]
@@ -390,7 +384,6 @@ class ConnectionOut(Closed):
     slots: int
     monthly_budget_usd: float | None
     network: str
-    entity: Entity | None
     secret_last4: str | None
     eligible: bool
     eligibility_reason: str | None
@@ -622,54 +615,42 @@ class PasskeyAdded(Closed):
     passkeys: list[Passkey]
 
 
-# ---------------------------------------------------------------------- profile · snapshot
+# ---------------------------------------------------------------------- 서버 · 회사 · snapshot
 
 
-class ProfileServer(Open):
-    country: str | None = None
-    cloud: str | None = None
-    region: str | None = None
-    access: str | None = None
+class ServerFacts(Closed):
+    """What this engine server is (the 서버 tab, read-only) — detected, with the builder's
+    `core/server.yaml` values as overrides (`solosquad.server_facts`)."""
+
+    where: Literal["local", "intranet", "cloud"]
+    """`local` = this computer (the web says 로컬)."""
+    cloud: str | None
+    region: str | None
+    country: str | None
+    """ISO country — the server half of decision 45's region rule; null = unknown."""
+    os: str
+    version: str
+    """The engine's version."""
+    sources: dict[str, Literal["override", "detected", "default"]]
 
 
-class ProfileEntity(Closed):
-    id: str
+class Company(Closed):
+    """The customer company (회사, 2026-11-11) — `core.db` table `company`. The account
+    holder for decision 45: its 소재지 country (and a 법인's 지배 회사 나라)."""
+
+    kind: Literal["corporation", "sole_proprietor"] | None
+    """법인 · 개인 사업자."""
     name: str
-    country: str
-    controlled_by: str | None = None
-
-
-class ProfileLanguages(Closed):
-    enabled: list[Locale]
-    """The languages the customer uses. There is no default here any more (2026-11-11):
-    each person picks their own screen language, ko until they do."""
-
-
-class ProfilePrivacy(Closed):
-    regimes: list[str]
-    reviewer: str | None = None
-
-
-class CustomerProfile(Open):
-    """`core/profile.yaml` (decision 50) — facts about the customer, no secrets."""
-
-    schema_version: int
-    server: ProfileServer
-    entities: list[ProfileEntity]
-    languages: ProfileLanguages
-    privacy: ProfilePrivacy
-
-
-class ChecklistItem(Closed):
-    item: str
-    """Stable id — the web names it in the reader's language."""
-    label: str
-    done: bool
-
-
-class ProfileResponse(Closed):
-    profile: CustomerProfile
-    checklist: list[ChecklistItem]
+    """법인명 or 상호."""
+    representative: str
+    """대표자."""
+    country: str | None
+    """소재지 country, ISO 3166-1 alpha-2."""
+    address: str
+    """소재지 address lines."""
+    controlled_by: str | None
+    """지배 회사 나라 (법인 only) — the controlling company's HQ country, if different."""
+    complete: bool
 
 
 class SnapshotSettings(Closed):
@@ -1059,7 +1040,6 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     OrgPerson,
     ApprovalItem,
     ApprovalPolicyRow,
-    Entity,
     ConnectionOut,
     Budget,
     WorkflowList,
@@ -1076,8 +1056,8 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     PasskeyOptions,
     Passkey,
     PasskeyAdded,
-    CustomerProfile,
-    ProfileResponse,
+    ServerFacts,
+    Company,
     SnapshotSettings,
     SnapshotRunResult,
     CalendarItem,

@@ -43,7 +43,7 @@ describe('no unused keys', () => {
     };
     walk(src);
     const all = code.join('\n');
-    const built = ['category.', 'connections.kind.', 'artifact.kind.', 'messenger.channel.', 'calendar.view.', 'calendar.kind.', 'calendar.color.']; // `category.${c}` · `connections.kind.${k}` · `artifact.kind.${k}` · `messenger.channel.${c}`
+    const built = ['category.', 'connections.kind.', 'artifact.kind.', 'messenger.channel.', 'calendar.view.', 'calendar.kind.', 'calendar.color.', 'company.name.']; // `category.${c}` · `connections.kind.${k}` · `artifact.kind.${k}` · `messenger.channel.${c}`
     const unused = Object.keys(ko).filter((k) => !all.includes(`'${k}'`) && !built.some((p) => k.startsWith(p)));
     expect(unused).toEqual([]);
   });

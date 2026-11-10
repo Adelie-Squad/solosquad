@@ -14,12 +14,13 @@ the server and every other runtime keep going (K49); its web scope answers 503.
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from solosquad.instance import Instance, build_instance, start_instance, stop_instance
 from solosquad.layout import EngineStore, Placement, ServerConfig, Solution, solosquad_home
+from solosquad.routing.eligibility import Entity
 from solosquad.routing.vault import SecretStore
 from solosquad.snapshots import S3_SECRET_REF
 from solosquad.web_api.accounts import AccountStore
@@ -104,8 +105,16 @@ def build_engine(
             )
         except Exception as e:  # one broken workspace never keeps the others down (K49)
             engine.failed[key] = f"{type(e).__name__}: {e}"
+    set_holder(engine.runtimes.values(), accounts.company().holder())
     _adopt_snapshot_key(engine)
     return engine
+
+
+def set_holder(runtimes: Iterable[Instance], holder: Entity | None) -> None:
+    """Every router judges its connections against the customer company (회사, decision 45)."""
+    for inst in runtimes:
+        if inst.router is not None:
+            inst.router.holder = holder
 
 
 def _adopt_snapshot_key(engine: EngineServer) -> None:

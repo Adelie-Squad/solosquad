@@ -32,7 +32,7 @@ def test_fresh_solution_has_no_errors(tmp_path: Path, repo_root: Path) -> None:
     reports = validate_solution(sol, repo_root)
     assert set(reports) == {"moa-living/hq", ""}
     assert all(r.ok for r in reports.values())
-    assert [i.code for i in reports[""].issues] == ["PROFILE_INCOMPLETE"]  # a warning
+    assert [i.code for i in reports[""].issues] == ["COMPANY_INCOMPLETE"]  # a warning
     res = run(app, ["validate", "-s", str(sol)])
     assert res.exit_code == 0, res.output
 
@@ -123,8 +123,8 @@ def test_doctor(tmp_path: Path, repo_root: Path) -> None:
     sol = _init(tmp_path)
     checks = {c.name: c for c in doctor_checks(sol, repo_root)}
     assert checks["python"].status == "ok"
-    assert checks["definitions"].status == "warn"  # the empty customer profile
-    assert checks["profile"].status == "warn"
+    assert checks["definitions"].status == "warn"  # the company is not entered yet
+    assert checks["company"].status == "warn"
     assert checks["connections"].status == "warn"
     assert checks["data:moa-living/hq"].status == "ok"
     assert doctor_checks(sol, None)[-1].status == "fail"
@@ -156,52 +156,50 @@ def test_cron_list_and_run(tmp_path: Path, openai_server: str) -> None:  # noqa:
     assert run(app, ["cron", "run", "nope", "-s", str(sol)]).exit_code == 1
 
 
-def test_customer_profile_at_setup(tmp_path: Path, repo_root: Path) -> None:
-    """Decision 50: region, entities, languages, privacy are per customer, set at init."""
+def test_company_and_server_at_setup(tmp_path: Path, repo_root: Path) -> None:
+    """2026-11-11: the server is detected (init only overrides), the company (회사) is set
+    once, and decision 45 judges every connection against the company and the server."""
     sol = tmp_path / "moa"
     res = run(
         app,
-        [
-            "init", str(sol), "--org", "moa", "--server-country", "kr", "--cloud", "aws",
-            "--region", "ap-northeast-2", "--cloud-access", "FDE IAM role",
-            "--entity", "moa-kr=Moa Korea Co.:KR", "--entity", "moa-qd=Moa Qingdao 3PL:CN",
-            "--privacy-regime", "PIPA", "--privacy-regime", "PIPL",
-            "--privacy-reviewer", "고객 법무팀",
-        ],
+        ["init", str(sol), "--org", "moa", "--server-country", "kr", "--cloud", "aws",
+         "--region", "ap-northeast-2", "--cloud-access", "FDE IAM role"],
     )  # fmt: skip
     assert res.exit_code == 0, res.output
     from solosquad.layout import Solution
-    from solosquad.profile import load_profile
 
-    profile = load_profile(sol)
-    assert all(i["done"] for i in profile.checklist())
-    assert Solution(sol).server_config().server_country == "KR"
+    server = Solution(sol).server_config()
+    assert (server.server_country, server.cloud, server.agency_access) == (
+        "KR", "aws", "FDE IAM role",
+    )  # fmt: skip
     codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
-    assert "PROFILE_INCOMPLETE" not in codes
-    # an account held by the Korean entity may reach Anthropic; one held from China may not
+    assert "COMPANY_INCOMPLETE" in codes
     base = ["connections", "add", "--kind", "api_key", "--harness", "lite", "--provider",
             "anthropic", "--models", "claude-sonnet", "-s", str(sol)]  # fmt: skip
-    ok = run(app, [*base[:2], "claude-kr", *base[2:], "--entity", "moa-kr"])
+    nameless = run(app, [*base[:2], "y", *base[2:]])  # C18 — no company country, no key
+    assert nameless.exit_code == 1 and "company" in nameless.output
+    assert run(app, ["company", "set", "--kind", "corporation", "--name", "Moa Korea Co.",
+                     "--representative", "김대표", "--country", "kr", "-s", str(sol)]).exit_code == 0  # fmt: skip
+    codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
+    assert "COMPANY_INCOMPLETE" not in codes
+    ok = run(app, [*base[:2], "claude-kr", *base[2:]])
     assert ok.exit_code == 0, ok.output
-    bad = run(app, [*base[:2], "claude-qd", *base[2:], "--entity", "moa-qd"])
-    assert bad.exit_code == 1 and "anthropic" in bad.output
-    assert run(app, [*base[:2], "x", *base[2:], "--entity", "nope"]).exit_code == 1
-    nameless = run(app, [*base[:2], "y", *base[2:]])  # C18 — no holder, no key
-    assert nameless.exit_code == 1 and "--entity" in nameless.output
-    # Chinese models for the Chinese entity are fine
-    qwen = run(app, ["connections", "add", "qwen", "--kind", "api_key", "--harness", "lite",
-                     "--provider", "dashscope", "--models", "qwen3", "--entity", "moa-qd", "-s", str(sol)])  # fmt: skip
-    assert qwen.exit_code == 0, qwen.output
-    # moving the server to Hong Kong is applied to every office and blocks the Claude key
-    assert run(app, ["profile", "set", "--server-country", "HK", "-s", str(sol)]).exit_code == 0
-    assert Solution(sol).server_config().server_country == "HK"
+    # the same company controlled from China may not reach Anthropic
+    bad_kind = run(app, ["company", "set", "--kind", "sole_proprietor", "--controlled-by", "CN",
+                         "-s", str(sol)])  # fmt: skip
+    assert bad_kind.exit_code == 1  # only a 법인 has a controlling company
+    assert run(app, ["company", "set", "--controlled-by", "CN", "-s", str(sol)]).exit_code == 0
+    assert run(app, [*base[:2], "claude-2", *base[2:]]).exit_code == 1
+    codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
+    assert "CONNECTION_INELIGIBLE" in codes
+    assert run(app, ["company", "set", "--controlled-by", "", "-s", str(sol)]).exit_code == 0
+    # moving the server to Hong Kong blocks the Claude key for every office
+    assert run(app, ["server", "set", "--country", "HK", "-s", str(sol)]).exit_code == 0
+    assert Solution(sol).server_config().facts().country == "HK"
     codes = {i.code for r in validate_solution(sol, repo_root).values() for i in r.issues}
     assert "CONNECTION_INELIGIBLE" in codes
     assert run(app, ["add", "workspace", "branch", "--org", "moa", "-s", str(sol)]).exit_code == 0
     assert "server_country" not in (sol / "orgs/moa/workspaces/branch/workspace.yaml").read_text(
         encoding="utf-8"
     )
-    assert (
-        run(app, ["init", str(tmp_path / "bad"), "--org", "x", "--entity", "nonsense"]).exit_code
-        == 1
-    )
+    assert run(app, ["init", str(tmp_path / "bad"), "--org", "x", "--entity", "x"]).exit_code == 2

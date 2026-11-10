@@ -3,7 +3,7 @@
 Decision 57 · PRD v2.1.0 I40 · I22 rev7: the scope is in the address.
 
     /api/...                    the customer: health · auth · me · users · login audit ·
-                                profile · snapshot · server settings (access default)
+                                서버 facts · 회사 · snapshot · server settings (access default)
     /api/o/{org}/...            an org: org chart · people · approval policy · teams · agent
                                 and workflow definitions · screens · connections · org audit
     /api/o/{org}/w/{ws}/...     a workspace: threads · runs · events · ledger · budget ·
@@ -78,11 +78,11 @@ from solosquad.calendars import (
     default_preset,
     load_preset,
 )
+from solosquad.company_info import validate_company
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
 from solosquad.layout import LayoutError, ServerConfig, Solution, Workspace
 from solosquad.messages import Message as ChatMessage
-from solosquad.profile import load_profile, save_profile, update_profile
 from solosquad.routing.connections import (
     Connection,
     ConnectionKind,
@@ -121,7 +121,9 @@ if TYPE_CHECKING:
 
 SESSION_COOKIE = "ss_session"
 CSRF_HEADER = "x-csrf-token"
-ENTITY_REQUIRED = "enter the entity that holds this account (entity: {name, country})"
+COMPANY_REQUIRED = (
+    "enter the company's country (회사, 소재지) first — the provider rules judge the company"
+)
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 NOT_FOUND = "Not Found"
 """The one answer for a scope that is not yours and for one that does not exist (C3 · C30) —
@@ -165,8 +167,9 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "access.get": EVERYONE,
     "access.update": OWNER,
     "audit": OWNER,
-    "profile.get": EVERYONE,
-    "profile.update": OWNER,
+    "server.get": EVERYONE,
+    "company.get": EVERYONE,
+    "company.update": OWNER,
     "snapshot.get": EVERYONE,
     "snapshot.update": OWNER,
     "snapshot.run": OWNER,
@@ -1194,34 +1197,34 @@ def create_app(cfg: AppConfig) -> Starlette:
         rows = accounts().audit_log(int(request.query_params.get("limit", "200")))
         return respond(list[S.AuditEntry], rows)
 
-    # ------------------------------------------------------------------ profile · snapshot
+    # ------------------------------------------------------------------ 서버 · 회사 · snapshot
 
-    def profile_payload() -> dict[str, Any]:
-        profile = load_profile(cfg.solution.root)
-        return {"profile": profile.model_dump(mode="json"), "checklist": profile.checklist()}
+    async def server_facts(request: Request) -> Response:
+        """The 서버 tab (read-only): detected, with core/server.yaml as the override."""
+        need(request, "server.get")
+        return respond(S.ServerFacts, server_cfg().facts().public())
 
-    async def profile(request: Request) -> Response:
+    def holder() -> Entity | None:
+        """The account holder every connection is judged on — the customer company."""
+        return accounts().company().holder()
+
+    async def company(request: Request) -> Response:
         if request.method == "PUT":
-            who = need(request, "profile.update")
-            root = cfg.solution.root
-            before = load_profile(root)
+            who = need(request, "company.update")
             data = await body(request)
-            try:
-                updated = update_profile(before, data)
-            except ValueError as e:  # the model's own rules, pydantic's included
-                raise ApiError(400, E.PROFILE_INVALID, str(e)) from e
-            save_profile(root, updated)  # the country goes to core/server.yaml (I41)
-            for rt in cfg.runtimes.values():
-                if rt.router is not None:
-                    rt.router.server_country = updated.server.country
+            before = accounts().company()
+            updated = accounts().set_company(validate_company(data), who.user_id)
             changed = sorted(
-                k for k in ("server", "entities", "languages", "privacy")
+                k for k in ("kind", "name", "representative", "country", "address", "controlled_by")
                 if getattr(updated, k) != getattr(before, k)
             )  # fmt: skip
-            accounts().audit(who.user_id, "profile.update", f"sections={changed}")
-            return respond(S.ProfileResponse, profile_payload())
-        need(request, "profile.get")
-        return respond(S.ProfileResponse, profile_payload())
+            accounts().audit(who.user_id, "company.update", f"fields={changed}")
+            for rt in cfg.runtimes.values():
+                if rt.router is not None:
+                    rt.router.holder = updated.holder()
+            return respond(S.Company, updated.public())
+        need(request, "company.get")
+        return respond(S.Company, accounts().company().public())
 
     def snapshot_payload() -> dict[str, Any]:
         target = server_cfg().snapshot
@@ -1520,7 +1523,7 @@ def create_app(cfg: AppConfig) -> Starlette:
     # ------------------------------------------------------------------ connections
 
     def server_country() -> str | None:
-        return server_cfg().server_country
+        return server_cfg().facts().country
 
     def own_file(request: Request) -> Path:
         """Connections added in the web go to the org's own file (core stays the owner's)."""
@@ -1546,7 +1549,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     def conn_public(c: Connection, source: str, org: str) -> dict[str, Any]:
         secret = org_secret(org, c.secret_ref) if c.secret_ref else None
-        verdict = judge(c.provider, c.harness, c.models, c.entity, server_country())
+        verdict = judge(c.provider, c.harness, c.models, holder(), server_country())
         return {
             "id": c.id,
             "kind": c.kind.value,
@@ -1557,7 +1560,6 @@ def create_app(cfg: AppConfig) -> Starlette:
             "slots": c.slots,
             "monthly_budget_usd": c.monthly_budget_usd,
             "network": c.network,
-            "entity": c.entity.model_dump() if c.entity else None,
             "secret_last4": secret[-4:] if secret and len(secret) >= 8 else None,
             "eligible": verdict.ok,
             "eligibility_reason": verdict.reason or None,
@@ -1565,13 +1567,13 @@ def create_app(cfg: AppConfig) -> Starlette:
             "source": source,
         }
 
-    def entity_required() -> ApiError:
-        return ApiError(400, E.ENTITY_REQUIRED, ENTITY_REQUIRED)
+    def company_required() -> ApiError:
+        return ApiError(400, E.COMPANY_REQUIRED, COMPANY_REQUIRED)
 
     def ineligible(verdict: Verdict) -> ApiError:
         code = (
             E.CONNECTION_INELIGIBLE_SERVER if verdict.by == "server"
-            else E.CONNECTION_INELIGIBLE_ENTITY
+            else E.CONNECTION_INELIGIBLE_COMPANY
         )  # fmt: skip
         return ApiError(
             422,
@@ -1587,7 +1589,6 @@ def create_app(cfg: AppConfig) -> Starlette:
         if request.method == "POST":
             need(request, "connections.create")
             data = await body(request)
-            entity = Entity.model_validate(data["entity"]) if data.get("entity") else None
             cid = str(data.get("id") or "").strip()
             if not cid:
                 raise ApiError(400, E.CONNECTION_ID_REQUIRED, "id is required")
@@ -1604,11 +1605,11 @@ def create_app(cfg: AppConfig) -> Starlette:
                 base_url=data.get("base_url"),
                 secret_env=data.get("secret_env"),
                 monthly_budget_usd=data.get("monthly_budget_usd"),
-                entity=entity,
             )
-            if entity is None and providers_reached(conn.provider, conn.harness, conn.models):
-                raise entity_required()  # C18 — eligibility is judged on the holder
-            verdict = judge(conn.provider, conn.harness, conn.models, entity, server_country())
+            company = holder()
+            if company is None and providers_reached(conn.provider, conn.harness, conn.models):
+                raise company_required()  # C18 — eligibility is judged on the company
+            verdict = judge(conn.provider, conn.harness, conn.models, company, server_country())
             if not verdict.ok:
                 raise ineligible(verdict)
             if data.get("secret"):
@@ -1656,17 +1657,9 @@ def create_app(cfg: AppConfig) -> Starlette:
             update["active"] = bool(data["active"])
         if "monthly_budget_usd" in data:
             update["monthly_budget_usd"] = data["monthly_budget_usd"]
-        if "entity" in data:
-            update["entity"] = Entity.model_validate(data["entity"]) if data["entity"] else None
         changed = found.model_copy(update=update)
-        if (
-            "entity" in data
-            and changed.entity is None
-            and providers_reached(changed.provider, changed.harness, changed.models)
-        ):
-            raise entity_required()
         verdict = judge(
-            changed.provider, changed.harness, changed.models, changed.entity, server_country()
+            changed.provider, changed.harness, changed.models, holder(), server_country()
         )
         if changed.active and not verdict.ok:
             raise ineligible(verdict)
@@ -2883,7 +2876,8 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/users/{uid}", user_update, ["PATCH"]),
         ("/access", access, ["GET", "PUT"]),
         ("/audit", audit, ["GET"]),
-        ("/profile", profile, ["GET", "PUT"]),
+        ("/server", server_facts, ["GET"]),
+        ("/company", company, ["GET", "PUT"]),
         ("/snapshot", snapshot, ["GET", "PUT"]),
         ("/snapshot/run", snapshot_run, ["POST"]),
         ("/calendar/items", calendar_items, ["GET", "POST"]),

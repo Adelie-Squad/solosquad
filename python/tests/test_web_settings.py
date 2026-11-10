@@ -1,6 +1,6 @@
-"""v2.1.0 slice 4b — passkeys, the customer profile and snapshots through the web API.
+"""v2.1.0 slice 4b — passkeys and snapshots through the web API.
 
-PRD v2.1.0: decision 46 W3 (passkeys) · decision 50 (customer profile) · decision 54 /
+PRD v2.1.0: decision 46 W3 (passkeys) · decision 54 /
 I36 (snapshots). Reads are open to everyone; every change is the owner's and audited.
 """
 
@@ -17,7 +17,6 @@ from soft_authenticator import SoftAuthenticator
 from test_passkeys import ORIGIN
 from test_web_api import PASSWORD, Office, _next_code, _secret
 
-from solosquad.profile import load_profile
 from solosquad.routing.vault import SecretStore
 from solosquad.web_api import schemas as S
 from solosquad.web_api import totp
@@ -124,43 +123,17 @@ async def test_owner_resets_someone_elses_passkeys(office: Settings) -> None:
     assert "user.passkeys.reset" in _actions(office)
 
 
-# ---------------------------------------------------------------------- customer profile
+# ---------------------------------------------------------------------- the retired profile
 
 
-async def test_profile_read_by_all_written_by_the_owner(office: Settings) -> None:
-    root = office.workspace.org.solution.root
-    async with office.client() as boss, office.client("203.0.113.9") as kim:
+async def test_the_profile_endpoint_is_gone(office: Settings) -> None:
+    """2026-11-11: 회사 프로필 → 서버 (detected, read-only) + 회사 (core.db)."""
+    async with office.client() as boss:
         hb = await office.login(boss, "boss", Role.OWNER)
-        hk = await office.login(kim, "kim", Role.STAFF)
-        first = (await kim.get("/api/profile")).json()
-        S.ProfileResponse.model_validate(first)
-        assert {i["item"] for i in first["checklist"]} >= {"server_country", "entities"}
-        assert not any(i["done"] for i in first["checklist"] if i["item"] == "entities")
-        change = {
-            "server": {"country": "kr", "cloud": "aws", "region": "ap-northeast-2"},
-            "entities": [{"id": "moa-qd", "name": "Moa Qingdao 3PL", "country": "cn"}],
-            "privacy": {"regimes": ["PIPA", "PIPL"], "reviewer": "legal team"},
-        }
-        assert (await kim.put("/api/profile", json=change, headers=hk)).status_code == 403
-        r = await boss.put("/api/profile", json=change, headers=hb)
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["profile"]["server"]["country"] == "KR"
-        assert body["profile"]["entities"][0]["country"] == "CN"
-        done = {i["item"]: i["done"] for i in body["checklist"]}
-        assert done["server_country"] and done["entities"] and done["privacy"]
-        assert load_profile(root).server.region == "ap-northeast-2"
-        assert (
-            office.workspace.org.solution.server_config().server_country == "KR"
-        )  # one place (I41)
-        for bad in (
-            {"languages": {"enabled": ["fr"]}},
-            {"entities": [{"id": "a", "name": "A", "country": "KR"}] * 2},
-            {"notes": "free text"},
-        ):
-            r = await boss.put("/api/profile", json=bad, headers=hb)
-            assert r.status_code == 400 and r.json()["code"] == "profile_invalid", (bad, r.text)
-    assert _actions(office).count("profile.update") == 1
+        assert (await boss.get("/api/profile")).status_code == 404
+        assert (await boss.put("/api/profile", json={}, headers=hb)).status_code in (404, 405)
+        assert (await boss.get("/api/server")).status_code == 200
+        assert (await boss.get("/api/company")).status_code == 200
 
 
 # ---------------------------------------------------------------------- snapshots

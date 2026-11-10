@@ -1214,12 +1214,64 @@ h3.with-icon {
   padding: var(--card-pad);
 }
 
-.checklist-mark {
-  color: var(--ink-3);
+/* ── 서버 · 회사 (DESIGN.md `## 컴포넌트` 설정 탭, 2026-11-11) ───────────────────────────── */
+.server-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
 }
 
-.checklist .is-done .checklist-mark {
-  color: var(--ok);
+.server-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.server-fact dt {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.server-fact dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 15px;
+}
+
+.company-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.company-grid > legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+
+.company-grid .field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.company-grid input[aria-invalid='true'],
+.company-grid select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+@media (max-width: 860px) {
+  .company-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* connections */

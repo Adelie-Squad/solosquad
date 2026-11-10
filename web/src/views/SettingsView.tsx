@@ -19,7 +19,8 @@ import { workspaceName } from '../lib/names';
 import { AssignmentChips, AssignmentsDialog, AssignmentsEditor, type Assignment } from './settings/Assignments';
 import { ConnectionsSettings } from './settings/ConnectionsSettings';
 import { PasskeySettings } from './settings/PasskeySettings';
-import { ProfileSettings } from './settings/ProfileSettings';
+import { CompanySettings } from './settings/CompanySettings';
+import { ServerSettings } from './settings/ServerSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
 import { ThemeSettings } from './settings/ThemeSettings';
 
@@ -34,7 +35,8 @@ const TABS: Tab[] = [
   { id: 'language', label: 'settings.language', ownerOnly: false },
   { id: 'display', label: 'settings.display', ownerOnly: false },
   { id: 'account', label: 'settings.account', ownerOnly: false },
-  { id: 'profile', label: 'settings.profile', ownerOnly: false },
+  { id: 'company', label: 'settings.company', ownerOnly: false },
+  { id: 'server', label: 'settings.server', ownerOnly: false },
   { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
   { id: 'connections', label: 'connections.title', ownerOnly: false },
   { id: 'access', label: 'settings.access', ownerOnly: 'org' },
@@ -70,7 +72,8 @@ export function SettingsView() {
       {tab === 'language' && <LanguageSettings />}
       {tab === 'display' && <ThemeSettings />}
       {tab === 'account' && <AccountSettings />}
-      {tab === 'profile' && <ProfileSettings />}
+      {tab === 'company' && <CompanySettings />}
+      {tab === 'server' && <ServerSettings />}
       {tab === 'snapshot' && <SnapshotSettings />}
       {tab === 'connections' && <ConnectionsSettings />}
       {tab === 'access' && <AccessSettings />}

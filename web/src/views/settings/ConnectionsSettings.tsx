@@ -10,7 +10,7 @@ import { useOrgOwner } from '../../scope';
 const KINDS: ConnectionOut['kind'][] = ['api_key', 'subscription', 'local_llm'];
 
 /**
- * LLM connections — which accounts the agents run on, whose legal entity holds them, and
+ * LLM connections — which accounts the agents run on (all held by the 회사, 2026-11-11) and
  * whether the region rule allows them (decision 45 · I23 · I32). Everyone sees the list;
  * adding, switching and removing are the owner's. Lives in Settings › Connections
  * (`/o/<org>/settings/connections`) since it is set up once and rarely visited.
@@ -84,10 +84,6 @@ export function ConnectionsSettings() {
               <dl className="conn-facts">
                 <dt>{t('connections.models')}</dt>
                 <dd>{c.models.length ? c.models.join(', ') : '—'}</dd>
-                <dt>{t('connections.entity')}</dt>
-                <dd>
-                  {c.entity ? `${c.entity.name} (${c.entity.country}${c.entity.controlled_by ? ` · ${t('connections.controlledBy', { country: c.entity.controlled_by })}` : ''})` : t('connections.noEntity')}
-                </dd>
                 <dt>{t('connections.budget')}</dt>
                 <dd>{c.monthly_budget_usd != null ? fmt.usd(c.monthly_budget_usd) : t('connections.noBudget')}</dd>
                 <dt>{t('connections.secret')}</dt>
@@ -132,9 +128,6 @@ function AddConnection({ onDone }: { onDone: () => void }) {
     secret: '',
     secret_env: '',
     monthly_budget_usd: '',
-    entity_name: '',
-    entity_country: '',
-    entity_controlled_by: '',
   });
   const [error, setError] = useState<string | null>(null);
   const add = useAction(
@@ -148,13 +141,6 @@ function AddConnection({ onDone }: { onDone: () => void }) {
         secret: form.secret || undefined,
         secret_env: form.secret_env || undefined,
         monthly_budget_usd: form.monthly_budget_usd ? Number(form.monthly_budget_usd) : undefined,
-        entity: form.entity_name
-          ? {
-              name: form.entity_name.trim(),
-              country: form.entity_country.trim().toUpperCase(),
-              controlled_by: form.entity_controlled_by.trim().toUpperCase() || null,
-            }
-          : undefined,
       }),
     [keys.connections, keys.budget],
   );
@@ -166,7 +152,7 @@ function AddConnection({ onDone }: { onDone: () => void }) {
     add.mutate(undefined, {
       onSuccess: onDone,
       // connection_ineligible_* = the region rule refused it (provider · country in params);
-      // entity_required = C18, no holder for a key that reaches a provider
+      // company_required = C18, the 회사 has no country yet for a key that reaches a provider
       onError: (err) => setError(errorText(err, t)),
     });
   };
@@ -213,13 +199,7 @@ function AddConnection({ onDone }: { onDone: () => void }) {
         <span>{t('connections.budget')} (USD)</span>
         <input type="number" min="0" step="1" value={form.monthly_budget_usd} onChange={set('monthly_budget_usd')} />
       </label>
-      <fieldset className="field">
-        <legend>{t('connections.entity')}</legend>
-        <p className="dash-hint">{t('connections.entityHint')}</p>
-        <input placeholder={t('connections.entityName')} value={form.entity_name} onChange={set('entity_name')} />
-        <input placeholder={t('connections.entityCountry')} value={form.entity_country} onChange={set('entity_country')} maxLength={2} />
-        <input placeholder={t('connections.entityControl')} value={form.entity_controlled_by} onChange={set('entity_controlled_by')} maxLength={2} />
-      </fieldset>
+      <p className="dash-hint is-wide">{t('connections.holderHint')}</p>
       {error && <p className="form-error">{error}</p>}
       <div className="dialog-actions">
         <button type="button" className="btn" onClick={onDone}>

@@ -48,6 +48,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from solosquad.assets.text import load_yaml
+from solosquad.server_facts import ServerFacts, detect
 from solosquad.snapshots import SnapshotTarget
 
 SCHEMA_VERSION = 1
@@ -148,13 +149,26 @@ class ServerConfig(_Doc):
     to this domain, so they stay off until it is set (decision 47 S4)."""
     server_country: str | None = None
     """ISO country where the server runs (decision 45 region rule), e.g. KR."""
-    type: ServerType = ServerType.LOCAL
+    type: ServerType | None = None
+    """The builder's override of where the server runs (local · intranet · cloud). Unset =
+    detected (`server_facts`); an old file's `type: local` counts as the builder's choice."""
+    cloud: str | None = None
+    """Override of the detected cloud provider (aws · gcp · azure · ncp …)."""
+    region: str | None = None
+    """Override of the detected region (e.g. ap-northeast-2) — the country follows it."""
+    agency_access: str | None = None
+    """Builder's note: how the agency reaches the customer's cloud (role, account, VPN) — no
+    credentials. Not shown in the web (moved from the retired customer profile, 2026-11-11)."""
     snapshot: SnapshotTarget = Field(default_factory=SnapshotTarget)
     """Where the daily snapshot goes — the customer's own bucket (decision 54)."""
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     """The customer's default access policy; a workspace can only narrow it."""
     placement: Placement = Field(default_factory=Placement)
     web: WebPrefs = Field(default_factory=WebPrefs)
+
+    def facts(self) -> ServerFacts:
+        """What this server is, detected — with this file's values as overrides."""
+        return detect(self.model_dump(mode="json", exclude_none=True))
 
 
 SERVER_FIELDS = ("public_url", "server_country", "type", "snapshot", "web")
@@ -510,7 +524,7 @@ def scaffold_solution(
     root: Path,
     engine_version: str,
     owner_templates: Path | None = None,
-    server_type: ServerType = ServerType.LOCAL,
+    server_type: ServerType | None = None,
 ) -> Solution:
     """Create `core/` for a new customer. Refuses to touch a non-empty directory.
 

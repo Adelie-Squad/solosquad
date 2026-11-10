@@ -25,7 +25,8 @@ from solosquad.layout import (
     scaffold_solution,
     scaffold_workspace,
 )
-from solosquad.profile import load_profile
+from solosquad.profile import lift_customer_profile
+from solosquad.web_api.accounts import AccountStore
 
 SERVER = {
     "public_url": "https://ai.moa.example",
@@ -146,14 +147,22 @@ def test_a_server_value_left_in_workspace_yaml_must_match_the_server_file(
     assert _codes(sol, bundle)["SERVER_CONFIG_CONFLICT"] == "error"
 
 
-def test_the_profile_country_is_the_server_country(tmp_path: Path) -> None:
+def test_the_retired_profile_moves_into_the_server_settings(tmp_path: Path) -> None:
+    """2026-11-11: core/profile.yaml is read once — server.cloud · region · access go to
+    core/server.yaml (overrides of the detected facts; access as the builder's note) and
+    the file is removed."""
     sol = rev6(tmp_path)
     sol.lift_server_config()
     (sol.profile_path).write_text(
-        "schema_version: 1\nserver: {country: KR, cloud: aws}\n", encoding="utf-8"
+        "schema_version: 1\nserver: {country: KR, cloud: aws, region: ap-northeast-2,"
+        " access: FDE IAM role}\nlanguages: {default: ko}\nprivacy: {regimes: [PIPA]}\n",
+        encoding="utf-8",
     )
-    assert load_profile(sol.root).server.country == "KR"
-    sol.update_server_country("JP")  # profile set / the web profile write here
-    assert load_profile(sol.root).server.country == "JP"
-    assert "country" not in sol.profile_path.read_text(encoding="utf-8")
-    assert load_profile(sol.root).server.cloud == "aws"
+    core = AccountStore(tmp_path / "core.db")
+    moved = lift_customer_profile(sol, core)
+    assert moved["profile"] == "removed" and not sol.profile_path.exists()
+    server = sol.server_config()
+    assert (server.cloud, server.region, server.agency_access) == (
+        "aws", "ap-northeast-2", "FDE IAM role",
+    )  # fmt: skip
+    assert server.facts().where == "cloud" and server.facts().country == "KR"

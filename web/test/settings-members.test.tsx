@@ -84,11 +84,6 @@ describe('언어 — my screen language only', () => {
     expect(localStorage.getItem('solosquad.locale')).toBe('zh-CN');
   });
 
-  it("the profile no longer asks for a company default language", async () => {
-    await openApp('/o/tesla/settings/profile', engineData({}, 'owner'));
-    expect(screen.queryByText('기본 언어')).toBeNull();
-    expect(screen.getByText(t('profile.enabledLanguages'))).toBeTruthy();
-  });
 });
 
 describe('구성원 — the list and one 구성원 추가 button', () => {

@@ -115,7 +115,7 @@ def test_eligibility_rules() -> None:
 
 def test_router_skips_an_ineligible_connection(tmp_path: Path) -> None:
     c = Company(tmp_path)
-    c.connections[0].entity = Entity.model_validate(CN_CONTROLLED)
+    c.router.holder = Entity.model_validate(CN_CONTROLLED)  # the 회사, set by the engine
     c.connections[0].provider = "anthropic"
     names = [conn.id for conn, _ in c.router.candidates("chief")]
     assert "max" not in names and "router" in names
@@ -202,53 +202,59 @@ async def test_approval_card_and_approver(office: Office) -> None:
 # ---------------------------------------------------------------------- connections · budget
 
 
-async def test_connections_record_the_entity_and_refuse_ineligible(office: Office) -> None:
+async def test_connections_are_judged_on_the_company_and_the_server(office: Office) -> None:
+    """2026-11-11: one holder for every connection — the 회사 (소재지 country, a 법인's 지배
+    회사 나라) — and the server's country from the 서버 facts (decision 45)."""
     async with office.client() as web:
         h = await office.login(web, "boss", Role.OWNER)
-        bad = {
-            "id": "claude-cn",
-            "provider": "anthropic",
-            "harness": "lite",
-            "models": ["claude-sonnet"],
-            "entity": CN_CONTROLLED,
-        }
-        # C18 — an API key that reaches a provider is not saved without its holder
-        nameless = {k: v for k, v in bad.items() if k != "entity"}
-        r = await web.post("/api/connections", json=nameless, headers=h)
-        assert r.status_code == 400 and "entity that holds" in r.json()["error"]
-        assert r.json()["code"] == "entity_required"
-        assert not office.conn_file.exists() or "claude-cn" not in office.conn_file.read_text()
-        r = await web.post("/api/connections", json=bad, headers=h)
+        conn = {"id": "claude-1", "provider": "anthropic", "harness": "lite",
+                "models": ["claude-sonnet"]}  # fmt: skip
+        # C18 — an API key that reaches a ruled provider waits for the company's country
+        r = await web.post("/api/connections", json=conn, headers=h)
+        assert (r.status_code, r.json()["code"]) == (400, "company_required")
+        assert not office.conn_file.exists() or "claude-1" not in office.conn_file.read_text()
+        # a Korean 법인 controlled from China may not reach Anthropic
+        cn = {"kind": "corporation", "name": "Moa Seoul", "representative": "김대표",
+              "country": "KR", "controlled_by": "CN"}  # fmt: skip
+        assert (await web.put("/api/company", json=cn, headers=h)).status_code == 200
+        r = await web.post("/api/connections", json=conn, headers=h)
         assert r.status_code == 422 and "anthropic.com" in r.json()["error"]
-        assert r.json()["code"] == "connection_ineligible_entity"
-        assert r.json()["params"]["provider"] == "anthropic" and r.json()["params"]["country"]
-        good = {
-            **bad,
-            "id": "claude-kr",
-            "entity": KR,
-            "secret": "sk-ant-1234567890abcd",
-            "secret_env": "ANTHROPIC_API_KEY",
-        }
+        assert r.json()["code"] == "connection_ineligible_company"
+        assert r.json()["params"] == {
+            "provider": "anthropic", "country": "CN", "source": r.json()["params"]["source"],
+        }  # fmt: skip
+        # a per-connection entity is no longer read: sending one changes nothing
+        r = await web.post("/api/connections", json={**conn, "entity": KR}, headers=h)
+        assert r.json()["code"] == "connection_ineligible_company"
+        kr = {**cn, "controlled_by": None}
+        assert (await web.put("/api/company", json=kr, headers=h)).status_code == 200
+        assert office.company.router.holder is not None  # the routers follow the company
+        assert office.company.router.holder.control_country == "KR"
+        good = {**conn, "secret": "sk-ant-1234567890abcd", "secret_env": "ANTHROPIC_API_KEY"}
         r = await web.post("/api/connections", json=good, headers=h)
         assert r.status_code == 201, r.text
         assert r.json()["secret_last4"] == "abcd" and r.json()["eligible"] is True
+        assert "entity" not in r.json() and "entity" not in office.conn_file.read_text()
         assert "sk-ant" not in office.conn_file.read_text()
-        assert [c.id for c in office.company.router.connections] == ["claude-kr"]  # routing sees it
-        r = await web.patch("/api/connections/claude-kr", json={"entity": None}, headers=h)
-        assert r.status_code == 400  # nor can the holder be erased afterwards
-        assert r.json()["code"] == "entity_required"
+        assert [c.id for c in office.company.router.connections] == ["claude-1"]  # routing sees it
         # the server moves to Hong Kong: the same connection is now ineligible, and says why
         office.workspace.org.solution.update_server_country("HK")
         listed = {c["id"]: c for c in (await web.get("/api/connections")).json()}
         assert (
-            listed["claude-kr"]["eligible"] is False
-            and "HK" in listed["claude-kr"]["eligibility_reason"]
+            listed["claude-1"]["eligible"] is False
+            and "HK" in listed["claude-1"]["eligibility_reason"]
         )
         office.workspace.org.solution.update_server_country(None)
-        r = await web.patch("/api/connections/claude-kr", json={"active": False}, headers=h)
+        # a 개인 사업자 in China: the owner's own country decides
+        solo = {"kind": "sole_proprietor", "name": "Moa", "representative": "Li", "country": "CN"}
+        assert (await web.put("/api/company", json=solo, headers=h)).status_code == 200
+        listed = {c["id"]: c for c in (await web.get("/api/connections")).json()}
+        assert listed["claude-1"]["eligible"] is False
+        assert (await web.put("/api/company", json=kr, headers=h)).status_code == 200
+        r = await web.patch("/api/connections/claude-1", json={"active": False}, headers=h)
         assert r.status_code == 200 and r.json()["active"] is False
-        assert (await web.delete("/api/connections/claude-kr", headers=h)).status_code == 200
-        assert office.company.secrets.get("conn:claude-kr") is None
+        assert (await web.delete("/api/connections/claude-1", headers=h)).status_code == 200
+        assert office.company.secrets.get("conn:claude-1") is None
     async with office.client("203.0.113.9") as staff:
         hs = await office.login(staff, "kim", Role.STAFF)
         assert (await staff.get("/api/connections")).status_code == 200

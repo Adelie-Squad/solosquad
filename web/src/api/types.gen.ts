@@ -49,7 +49,11 @@ export type ErrorCode =
   | 'locale_invalid'
   | 'access_lockout'
   | 'network_invalid'
-  | 'profile_invalid'
+  | 'company_kind_invalid'
+  | 'company_field_invalid'
+  | 'company_field_too_long'
+  | 'company_country_invalid'
+  | 'company_control_corporation_only'
   | 'snapshot_invalid'
   | 'snapshot_keys_required'
   | 'snapshot_unavailable'
@@ -61,8 +65,8 @@ export type ErrorCode =
   | 'approval_needs_team'
   | 'connection_id_required'
   | 'connection_exists'
-  | 'entity_required'
-  | 'connection_ineligible_entity'
+  | 'company_required'
+  | 'connection_ineligible_company'
   | 'connection_ineligible_server'
   | 'workflow_input_invalid'
   | 'upload_type'
@@ -116,7 +120,6 @@ export interface SoloSquadWebApi {
   OrgPerson: OrgPerson;
   ApprovalItem: ApprovalItem;
   ApprovalPolicyRow: ApprovalPolicyRow;
-  Entity: Entity;
   ConnectionOut: ConnectionOut;
   Budget: Budget;
   WorkflowList: WorkflowList;
@@ -133,8 +136,8 @@ export interface SoloSquadWebApi {
   PasskeyOptions: PasskeyOptions;
   Passkey: Passkey;
   PasskeyAdded: PasskeyAdded;
-  CustomerProfile: CustomerProfile;
-  ProfileResponse: ProfileResponse;
+  ServerFacts: ServerFacts;
+  Company: Company;
   SnapshotSettings: SnapshotSettings;
   SnapshotRunResult: SnapshotRunResult;
   CalendarItem: CalendarItem;
@@ -565,15 +568,6 @@ export interface ApprovalPolicyRow {
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "Entity".
- */
-export interface Entity {
-  name: string;
-  country: string;
-  controlled_by: string | null;
-}
-/**
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
  * via the `definition` "ConnectionOut".
  */
 export interface ConnectionOut {
@@ -586,7 +580,6 @@ export interface ConnectionOut {
   slots: number;
   monthly_budget_usd: number | null;
   network: string;
-  entity: Entity | null;
   secret_last4: string | null;
   eligible: boolean;
   eligibility_reason: string | null;
@@ -948,71 +941,38 @@ export interface PasskeyAdded {
   passkeys: Passkey[];
 }
 /**
- * `core/profile.yaml` (decision 50) — facts about the customer, no secrets.
+ * What this engine server is (the 서버 tab, read-only) — detected, with the builder's
+ * `core/server.yaml` values as overrides (`solosquad.server_facts`).
  *
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "CustomerProfile".
+ * via the `definition` "ServerFacts".
  */
-export interface CustomerProfile {
-  schema_version: number;
-  server: ProfileServer;
-  entities: ProfileEntity[];
-  languages: ProfileLanguages;
-  privacy: ProfilePrivacy;
-  [k: string]: unknown;
-}
-/**
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "ProfileServer".
- */
-export interface ProfileServer {
-  country: string | null;
+export interface ServerFacts {
+  where: 'local' | 'intranet' | 'cloud';
   cloud: string | null;
   region: string | null;
-  access: string | null;
-  [k: string]: unknown;
+  country: string | null;
+  os: string;
+  version: string;
+  sources: {
+    [k: string]: 'override' | 'detected' | 'default';
+  };
 }
 /**
+ * The customer company (회사, 2026-11-11) — `core.db` table `company`. The account
+ * holder for decision 45: its 소재지 country (and a 법인's 지배 회사 나라).
+ *
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "ProfileEntity".
+ * via the `definition` "Company".
  */
-export interface ProfileEntity {
-  id: string;
+export interface Company {
+  kind: ('corporation' | 'sole_proprietor') | null;
   name: string;
-  country: string;
+  representative: string;
+  country: string | null;
+  address: string;
   controlled_by: string | null;
-}
-/**
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "ProfileLanguages".
- */
-export interface ProfileLanguages {
-  enabled: ('ko' | 'en' | 'zh-CN')[];
-}
-/**
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "ProfilePrivacy".
- */
-export interface ProfilePrivacy {
-  regimes: string[];
-  reviewer: string | null;
-}
-/**
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "ProfileResponse".
- */
-export interface ProfileResponse {
-  profile: CustomerProfile;
-  checklist: ChecklistItem[];
-}
-/**
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "ChecklistItem".
- */
-export interface ChecklistItem {
-  item: string;
-  label: string;
-  done: boolean;
+  complete: boolean;
 }
 /**
  * `workspace.yaml snapshot` — the keys themselves are never sent, only whether

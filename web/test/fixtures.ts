@@ -19,7 +19,8 @@ import type {
   OrgChart,
   OrgPerson,
   PnlData,
-  ProfileResponse,
+  Company,
+  ServerFacts,
   PublicUser,
   ScheduleList,
   ScreenResponse,
@@ -63,7 +64,6 @@ export const connection = (over: Partial<ConnectionOut> = {}): ConnectionOut => 
   slots: 1,
   monthly_budget_usd: 100,
   network: 'external',
-  entity: { name: 'Moa Korea Co.', country: 'KR', controlled_by: null },
   secret_last4: null,
   eligible: true,
   eligibility_reason: null,
@@ -230,15 +230,25 @@ const POLICY: ApprovalPolicyRow[] = [
 
 const ACCESS: AccessPolicy = { require_login: true, two_factor: true, allowed_networks: [] };
 
-const PROFILE: ProfileResponse = {
-  profile: {
-    schema_version: 1,
-    server: { country: 'KR', cloud: 'aws', region: 'ap-northeast-2', access: 'internet' },
-    entities: [{ id: 'kr', name: 'Moa Korea Co.', country: 'KR', controlled_by: null }],
-    languages: { enabled: ['ko', 'en'] },
-    privacy: { regimes: ['PIPA'], reviewer: 'Kim' },
-  },
-  checklist: [],
+/** A laptop: nothing detected, so 로컬 · country unknown. */
+export const SERVER_LOCAL: ServerFacts = {
+  where: 'local',
+  cloud: null,
+  region: null,
+  country: null,
+  os: 'Darwin 25.5.0',
+  version: '2.1.0',
+  sources: { where: 'default', cloud: 'default', region: 'default', country: 'default' },
+};
+
+export const COMPANY: Company = {
+  kind: 'corporation',
+  name: 'Moa Korea Co.',
+  representative: '김대표',
+  country: 'KR',
+  address: '서울특별시 강남구 테헤란로 1',
+  controlled_by: null,
+  complete: true,
 };
 
 const SNAPSHOT: SnapshotSettings = { type: 'dir', endpoint: null, region: 'auto', bucket: null, prefix: 'solosquad', path: '/backups', keep_days: 30, has_secret: false };
@@ -251,7 +261,8 @@ export function engineData(over: Record<string, unknown> = {}, who: 'owner' | 's
     '/health': { ok: true, passkeys: false },
     '/me/passkeys': [],
     '/access': ACCESS,
-    '/profile': PROFILE,
+    '/server': SERVER_LOCAL,
+    '/company': COMPANY,
     '/snapshot': SNAPSHOT,
     '/users': USERS,
     '/teams': [],

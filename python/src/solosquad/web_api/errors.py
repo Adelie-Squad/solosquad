@@ -67,8 +67,12 @@ class ErrorCode(StrEnum):
     # -- access policy
     ACCESS_LOCKOUT = "access_lockout"
     NETWORK_INVALID = "network_invalid"
-    # -- profile · snapshot
-    PROFILE_INVALID = "profile_invalid"
+    # -- company (회사, 2026-11-11) · snapshot
+    COMPANY_KIND_INVALID = "company_kind_invalid"
+    COMPANY_FIELD_INVALID = "company_field_invalid"
+    COMPANY_FIELD_TOO_LONG = "company_field_too_long"
+    COMPANY_COUNTRY_INVALID = "company_country_invalid"
+    COMPANY_CONTROL_CORPORATION_ONLY = "company_control_corporation_only"
     SNAPSHOT_INVALID = "snapshot_invalid"
     SNAPSHOT_KEYS_REQUIRED = "snapshot_keys_required"
     SNAPSHOT_UNAVAILABLE = "snapshot_unavailable"
@@ -82,8 +86,9 @@ class ErrorCode(StrEnum):
     # -- connections
     CONNECTION_ID_REQUIRED = "connection_id_required"
     CONNECTION_EXISTS = "connection_exists"
-    ENTITY_REQUIRED = "entity_required"
-    CONNECTION_INELIGIBLE_ENTITY = "connection_ineligible_entity"
+    COMPANY_REQUIRED = "company_required"
+    """A connection reaches a provider with region rules, and 회사 has no 소재지 country."""
+    CONNECTION_INELIGIBLE_COMPANY = "connection_ineligible_company"
     CONNECTION_INELIGIBLE_SERVER = "connection_ineligible_server"
     # -- workflows · uploads
     WORKFLOW_INPUT_INVALID = "workflow_input_invalid"

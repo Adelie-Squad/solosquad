@@ -332,6 +332,11 @@ def open_accounts(sol: Solution, home: Path | None = None) -> AccountStore:
         migrate_org_accounts(core, org.name, org_path(sol, org.name, home))
     core.settle_locales(fill)
     sol.drop_legacy_web_locale()
+    from solosquad.profile import lift_customer_profile  # profile → 서버 · 회사 (2026-11-11)
+
+    moved = lift_customer_profile(sol, core)
+    if moved:
+        core.audit(None, "profile.retire", ", ".join(f"{k}={v}" for k, v in sorted(moved.items())))
     return core
 
 

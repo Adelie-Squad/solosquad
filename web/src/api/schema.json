@@ -91,9 +91,6 @@
     "ApprovalPolicyRow": {
       "$ref": "#/$defs/ApprovalPolicyRow"
     },
-    "Entity": {
-      "$ref": "#/$defs/Entity"
-    },
     "ConnectionOut": {
       "$ref": "#/$defs/ConnectionOut"
     },
@@ -142,11 +139,11 @@
     "PasskeyAdded": {
       "$ref": "#/$defs/PasskeyAdded"
     },
-    "CustomerProfile": {
-      "$ref": "#/$defs/CustomerProfile"
+    "ServerFacts": {
+      "$ref": "#/$defs/ServerFacts"
     },
-    "ProfileResponse": {
-      "$ref": "#/$defs/ProfileResponse"
+    "Company": {
+      "$ref": "#/$defs/Company"
     },
     "SnapshotSettings": {
       "$ref": "#/$defs/SnapshotSettings"
@@ -221,7 +218,6 @@
     "OrgPerson",
     "ApprovalItem",
     "ApprovalPolicyRow",
-    "Entity",
     "ConnectionOut",
     "Budget",
     "WorkflowList",
@@ -238,8 +234,8 @@
     "PasskeyOptions",
     "Passkey",
     "PasskeyAdded",
-    "CustomerProfile",
-    "ProfileResponse",
+    "ServerFacts",
+    "Company",
     "SnapshotSettings",
     "SnapshotRunResult",
     "CalendarItem",
@@ -1490,26 +1486,68 @@
       "type": "object",
       "title": "ChatMessage"
     },
-    "ChecklistItem": {
+    "Company": {
       "additionalProperties": false,
+      "description": "The customer company (회사, 2026-11-11) — `core.db` table `company`. The account\nholder for decision 45: its 소재지 country (and a 법인's 지배 회사 나라).",
       "properties": {
-        "item": {
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "corporation",
+                "sole_proprietor"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
           "type": "string"
         },
-        "label": {
+        "representative": {
           "type": "string"
         },
-        "done": {
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "address": {
+          "type": "string"
+        },
+        "controlled_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "complete": {
           "type": "boolean"
         }
       },
       "required": [
-        "item",
-        "label",
-        "done"
+        "kind",
+        "name",
+        "representative",
+        "country",
+        "address",
+        "controlled_by",
+        "complete"
       ],
       "type": "object",
-      "title": "ChecklistItem"
+      "title": "Company"
     },
     "ConnectionBudget": {
       "additionalProperties": false,
@@ -1603,16 +1641,6 @@
         "network": {
           "type": "string"
         },
-        "entity": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Entity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "secret_last4": {
           "anyOf": [
             {
@@ -1665,7 +1693,6 @@
         "slots",
         "monthly_budget_usd",
         "network",
-        "entity",
         "secret_last4",
         "eligible",
         "eligibility_reason",
@@ -1674,39 +1701,6 @@
       ],
       "type": "object",
       "title": "ConnectionOut"
-    },
-    "CustomerProfile": {
-      "additionalProperties": true,
-      "description": "`core/profile.yaml` (decision 50) — facts about the customer, no secrets.",
-      "properties": {
-        "schema_version": {
-          "type": "integer"
-        },
-        "server": {
-          "$ref": "#/$defs/ProfileServer"
-        },
-        "entities": {
-          "items": {
-            "$ref": "#/$defs/ProfileEntity"
-          },
-          "type": "array"
-        },
-        "languages": {
-          "$ref": "#/$defs/ProfileLanguages"
-        },
-        "privacy": {
-          "$ref": "#/$defs/ProfilePrivacy"
-        }
-      },
-      "required": [
-        "schema_version",
-        "server",
-        "entities",
-        "languages",
-        "privacy"
-      ],
-      "type": "object",
-      "title": "CustomerProfile"
     },
     "Digest": {
       "additionalProperties": false,
@@ -2393,35 +2387,6 @@
       "type": "object",
       "title": "EngineEvent"
     },
-    "Entity": {
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "country": {
-          "type": "string"
-        },
-        "controlled_by": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "name",
-        "country",
-        "controlled_by"
-      ],
-      "type": "object",
-      "title": "Entity"
-    },
     "ErrorBody": {
       "additionalProperties": false,
       "description": "Every error answer (`web_api/errors.py`). The web shows `code` in the person's language\n(`error.<code>`, `params` in its placeholders) — never `error`, which is for logs.",
@@ -2499,7 +2464,11 @@
         "locale_invalid",
         "access_lockout",
         "network_invalid",
-        "profile_invalid",
+        "company_kind_invalid",
+        "company_field_invalid",
+        "company_field_too_long",
+        "company_country_invalid",
+        "company_control_corporation_only",
         "snapshot_invalid",
         "snapshot_keys_required",
         "snapshot_unavailable",
@@ -2511,8 +2480,8 @@
         "approval_needs_team",
         "connection_id_required",
         "connection_exists",
-        "entity_required",
-        "connection_ineligible_entity",
+        "company_required",
+        "connection_ineligible_company",
         "connection_ineligible_server",
         "workflow_input_invalid",
         "upload_type",
@@ -3075,165 +3044,6 @@
       "type": "object",
       "title": "PnlReviewRow"
     },
-    "ProfileEntity": {
-      "additionalProperties": false,
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "country": {
-          "type": "string"
-        },
-        "controlled_by": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "country",
-        "controlled_by"
-      ],
-      "type": "object",
-      "title": "ProfileEntity"
-    },
-    "ProfileLanguages": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "items": {
-            "enum": [
-              "ko",
-              "en",
-              "zh-CN"
-            ],
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "enabled"
-      ],
-      "type": "object",
-      "title": "ProfileLanguages"
-    },
-    "ProfilePrivacy": {
-      "additionalProperties": false,
-      "properties": {
-        "regimes": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "reviewer": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "regimes",
-        "reviewer"
-      ],
-      "type": "object",
-      "title": "ProfilePrivacy"
-    },
-    "ProfileResponse": {
-      "additionalProperties": false,
-      "properties": {
-        "profile": {
-          "$ref": "#/$defs/CustomerProfile"
-        },
-        "checklist": {
-          "items": {
-            "$ref": "#/$defs/ChecklistItem"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "profile",
-        "checklist"
-      ],
-      "type": "object",
-      "title": "ProfileResponse"
-    },
-    "ProfileServer": {
-      "additionalProperties": true,
-      "properties": {
-        "country": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "cloud": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "region": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "access": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "country",
-        "cloud",
-        "region",
-        "access"
-      ],
-      "type": "object",
-      "title": "ProfileServer"
-    },
     "PublicUser": {
       "additionalProperties": false,
       "properties": {
@@ -3683,6 +3493,78 @@
       ],
       "type": "object",
       "title": "ScreenResponse"
+    },
+    "ServerFacts": {
+      "additionalProperties": false,
+      "description": "What this engine server is (the 서버 tab, read-only) — detected, with the builder's\n`core/server.yaml` values as overrides (`solosquad.server_facts`).",
+      "properties": {
+        "where": {
+          "enum": [
+            "local",
+            "intranet",
+            "cloud"
+          ],
+          "type": "string"
+        },
+        "cloud": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "os": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "sources": {
+          "additionalProperties": {
+            "enum": [
+              "override",
+              "detected",
+              "default"
+            ],
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "where",
+        "cloud",
+        "region",
+        "country",
+        "os",
+        "version",
+        "sources"
+      ],
+      "type": "object",
+      "title": "ServerFacts"
     },
     "SnapshotRunResult": {
       "additionalProperties": true,

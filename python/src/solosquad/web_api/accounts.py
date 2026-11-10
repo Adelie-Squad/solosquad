@@ -28,6 +28,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from solosquad.company_info import SCHEMA as COMPANY_SCHEMA
+from solosquad.company_info import Company, read_company, write_company
 from solosquad.storage import Migration, columns, connect, migrate
 from solosquad.web_api import totp
 from solosquad.web_api.errors import CodedError, ErrorCode
@@ -255,6 +257,7 @@ def migrations(fill_locale: str = DEFAULT_LOCALE) -> tuple[Migration, ...]:
         Migration(4, SCOPES_SCHEMA),  # decision 57 — assignments · last scope (I39)
         Migration(5, _add_presence),  # 2026-11-10 — last seen, for the dashboard digest
         Migration(6, _settle_locales(fill_locale)),  # 2026-11-11 — a language per person
+        Migration(7, COMPANY_SCHEMA),  # 2026-11-11 — the customer company (회사)
     )
 
 
@@ -522,6 +525,22 @@ class AccountStore:
         if locale not in LOCALES:
             raise CodedError(ErrorCode.LOCALE_INVALID, f"locale must be one of {list(LOCALES)}")
         self._q("UPDATE users SET locale = ? WHERE id = ?", (locale, uid))
+
+    # ------------------------------------------------------------------ company (회사)
+
+    def company(self) -> Company:
+        """The customer company — empty until the owner fills it in."""
+        with self._lock:
+            return read_company(self._db) or Company()
+
+    def set_company(self, company: Company, by: str | None = None) -> Company:
+        with self._lock:
+            write_company(self._db, company, by, time.time())
+        return self.company()
+
+    def has_company(self) -> bool:
+        with self._lock:
+            return read_company(self._db) is not None
 
     def settle_locales(self, fill: str) -> int:
         """`settle_locales` for accounts moved in after the migration (rev6 org.db)."""
