@@ -45,3 +45,7 @@ venv/
 # Claude Code (local only — shared config is committed)
 .claude/settings.local.json
 .claude/worktrees/
+
+# Brand identity (identity/): raw Blender renders and page screenshots are rebuilt, not committed
+identity/_build/
+identity/_preview/

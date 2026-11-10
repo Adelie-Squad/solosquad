@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoloSquad 아이덴티티</title>
+<style>
+  /* DESIGN.md `## 색` 토큰 — 라이트 · 다크는 시스템 설정을 따른다 */
+  :root {
+    --bg: #EEE9DF; --surface: #FBF9F4; --surface-2: #F3EFE6; --line: #DED6C6;
+    --ink: #1E1C17; --ink-2: #575143; --ink-3: #8A8371; --accent: #2867D0;
+    --warn: #A85A12; --cheek: #E01FAE;
+    --shadow-2: 0 4px 18px rgba(30,28,23,.08);
+    --radius: 12px; --measure: 46em;
+    --scene-light: #EEE9DF; --scene-evening: #15161B;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15161B; --surface: #1E1F26; --surface-2: #272832; --line: #353745;
+      --ink: #ECE8DF; --ink-2: #B7B2A6; --ink-3: #858174; --accent: #7FA6F5;
+      --warn: #F0AE5E; --cheek: #F25CC8;
+      --shadow-2: 0 0 0 1px var(--line);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    word-break: keep-all; overflow-wrap: break-word;
+  }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 48px 40px 64px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
+  header p { color: var(--ink-2); max-width: var(--measure); margin: 0 0 12px; text-wrap: pretty; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+  nav a { color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+  nav a:hover { border-color: var(--accent); }
+  section { margin-top: 32px; }
+  h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h3 { font-size: 15px; font-weight: 700; margin: 24px 0 8px; }
+  .lead { color: var(--ink-2); margin: 0 0 12px; max-width: var(--measure); text-wrap: pretty; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-2); padding: 20px; }
+  .grid { display: grid; gap: 16px; }
+  .g6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .g6 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(2, 1fr); } .g3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .page { padding: 24px 16px 48px; } .g6, .g3, .g2 { grid-template-columns: repeat(2, 1fr); } }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 8px; }
+  .light-bg img, img.light-bg { background: var(--scene-light); }
+  .evening-bg img, img.evening-bg { background: var(--scene-evening); }
+  figcaption { font-size: 12px; line-height: 1.4; color: var(--ink-2); margin-top: 6px; }
+  figcaption b { color: var(--ink); font-weight: 600; font-size: 13px; display: block; }
+  figcaption .src { color: var(--ink-3); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
+  .wide img { border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink-2); font-weight: 600; font-size: 13px; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  .sw { display: inline-block; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); vertical-align: middle; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .swatch { display: flex; gap: 12px; align-items: center; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-2); padding: 12px; }
+  .swatch .chips { display: flex; gap: 4px; flex: none; }
+  .swatch .chips span { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); }
+  .swatch.span-all { grid-column: 1 / -1; }
+  .swatch .t { font-size: 13px; line-height: 1.4; min-width: 0; }
+  .swatch .t b { display: block; font-size: 13px; }
+  .swatch .t span { color: var(--ink-2); font-size: 12px; }
+  .icons { display: grid; grid-template-columns: 56px repeat(17, minmax(0, 1fr)); align-items: center; gap: 6px 4px; }
+  .icons .lbl { font-size: 12px; color: var(--ink-2); }
+  .icons img { display: block; margin: 0 auto; }
+  .icons .head { font-size: 12px; color: var(--ink-3); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile { border-radius: var(--radius); padding: 16px; }
+  .tile.on-light { background: #FBF9F4; color: #575143; --ink-2: #575143; --ink-3: #8A8371; }
+  .tile.on-dark { background: #1E1F26; color: #B7B2A6; --ink-2: #B7B2A6; --ink-3: #858174; }
+  .tile + .tile { margin-top: 12px; }
+  .scroll .icons { min-width: 860px; }
+  .clip { display: grid; grid-template-columns: 180px 180px 1fr; gap: 16px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .clip:last-child { border-bottom: 0; }
+  .clip .meta h3 { margin: 0 0 4px; }
+  .clip .meta p { margin: 0; font-size: 14px; color: var(--ink-2); }
+  .clip .meta .use { margin-top: 8px; font-size: 13px; }
+  .clip .keys { grid-column: 1 / -1; }
+  @media (max-width: 700px) { .clip { grid-template-columns: 1fr 1fr; } .clip .meta { grid-column: 1 / -1; } }
+  ol.issues { margin: 0; padding-left: 22px; }
+  ol.issues li { margin: 0 0 10px; text-wrap: pretty; }
+  ol.issues b { color: var(--ink); }
+  .note { font-size: 13px; color: var(--ink-2); }
+  .tag { display: inline-block; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; color: var(--ink-2); background: var(--surface-2); white-space: nowrap; }
+  .warn { color: var(--warn); }
+  footer { margin-top: 48px; font-size: 13px; color: var(--ink-3); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>SoloSquad 아이덴티티 — 펭귄 캐릭터 현황</h1>
+  <p>2026-11-10 에 다시 그린 펭귄(브랜치 <code>feat/v2.1-penguin-redesign</code>, 커밋 <code>60f182f</code>)을 있는 그대로 기록한 페이지다. 다시 디자인하기 전에 무엇이 이상한지 보려고 만들었다. 값은 <a href="character/spec.md">character/spec.md</a>, 색은 <a href="character/palette.json">palette.json</a>.</p>
+  <p class="note">이 폴더는 어떤 배포물(npm · Python 휠 · curl/irm 압축본 · 웹 빌드)에도 들어가지 않는다 — <a href="README.md">README.md</a>.</p>
+  <nav>
+    <a href="#character">캐릭터 현황</a><a href="#palette">팔레트</a><a href="#ratios">비율 표</a><a href="#motion">모션</a><a href="#landing">랜딩 모션</a><a href="#issues">알려진 문제</a>
+  </nav>
+</header>
+
+<section id="character">
+  <h2>캐릭터 현황</h2>
+  <p class="lead">3D 는 Blender Python 이 빈 장면에서 만든다(<code>assets/office/scripts/penguin.py</code>). 렌더는 Cycles 64 샘플 · 투명 바탕 + 바닥 그림자. 라이트 그림은 사무실 낮 바탕색, 저녁 그림은 저녁 바탕색 위에 놓았다.</p>
+
+  <h3>턴어라운드 — 라이트</h3>
+  <div class="grid g6 light-bg">
+    <figure><img src="character/turnaround/front-light.webp" alt="정면, 라이트" loading="lazy"><figcaption><b>정면</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/three-quarter-left-light.webp" alt="3/4 펭귄 왼쪽, 라이트" loading="lazy"><figcaption><b>3/4 (펭귄 왼쪽)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/side-left-light.webp" alt="옆, 라이트" loading="lazy"><figcaption><b>옆 (왼쪽)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/back-light.webp" alt="뒤, 라이트" loading="lazy"><figcaption><b>뒤</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/three-quarter-right-light.webp" alt="3/4 펭귄 오른쪽, 라이트" loading="lazy"><figcaption><b>3/4 (펭귄 오른쪽)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/top-light.webp" alt="위, 라이트" loading="lazy"><figcaption><b>위 (아래쪽 = 정면)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+  </div>
+
+  <h3>턴어라운드 — 저녁</h3>
+  <p class="note">저녁 조명 = 사무실 저녁(어두운 하늘 · 뒤 위 달빛 테두리) + 앞에서 노트북 화면 같은 파란 채움광. 몸색은 저녁 값 <code>#474855</code>.</p>
+  <div class="grid g6 evening-bg">
+    <figure><img src="character/turnaround/front-evening.webp" alt="정면, 저녁" loading="lazy"><figcaption><b>정면</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/three-quarter-left-evening.webp" alt="3/4 펭귄 왼쪽, 저녁" loading="lazy"><figcaption><b>3/4 (펭귄 왼쪽)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/side-left-evening.webp" alt="옆, 저녁" loading="lazy"><figcaption><b>옆 (왼쪽)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/back-evening.webp" alt="뒤, 저녁" loading="lazy"><figcaption><b>뒤</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/three-quarter-right-evening.webp" alt="3/4 펭귄 오른쪽, 저녁" loading="lazy"><figcaption><b>3/4 (펭귄 오른쪽)</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/turnaround/top-evening.webp" alt="위, 저녁" loading="lazy"><figcaption><b>위</b><span class="src">identity_renders.py turnaround · 2026-11-10</span></figcaption></figure>
+  </div>
+
+  <h3>얼굴 확대</h3>
+  <div class="grid g3">
+    <figure class="light-bg"><img src="character/renders/face-front-light.webp" alt="얼굴 정면, 라이트" loading="lazy"><figcaption><b>정면 · 라이트</b>눈 · 볼 정원(16각형으로 보임) · 흰 마름모 부리 + 검정 박음질<span class="src">identity_renders.py face · 2026-11-10</span></figcaption></figure>
+    <figure class="evening-bg"><img src="character/renders/face-front-evening.webp" alt="얼굴 정면, 저녁" loading="lazy"><figcaption><b>정면 · 저녁</b><span class="src">identity_renders.py face · 2026-11-10</span></figcaption></figure>
+    <figure class="light-bg"><img src="character/renders/face-three-quarter-light.webp" alt="얼굴 3/4, 라이트" loading="lazy"><figcaption><b>3/4 · 라이트</b>부리의 도톰함 · 가운데 주름<span class="src">identity_renders.py face · 2026-11-10</span></figcaption></figure>
+  </div>
+
+  <h3>소품 없는 펭귄</h3>
+  <div class="grid g2">
+    <figure class="light-bg"><img src="character/renders/bare-light.webp" alt="소품 없는 펭귄, 라이트" loading="lazy"><figcaption><b>라이트 · 3/4 위 20°</b>앉은 키 0.70 m · 폭 0.44 m · 깊이 0.30 m<span class="src">identity_renders.py bare · 2026-11-10</span></figcaption></figure>
+    <figure class="evening-bg"><img src="character/renders/bare-evening.webp" alt="소품 없는 펭귄, 저녁" loading="lazy"><figcaption><b>저녁</b><span class="src">identity_renders.py bare · 2026-11-10</span></figcaption></figure>
+  </div>
+
+  <h3>역할 소품 15 + 표에 없는 역할</h3>
+  <p class="note">몸은 하나, 역할은 소품으로만 구분한다. 팀 색 부분(<code>team_accent</code>)은 그 팀 대표색으로 칠했다.</p>
+  <div class="grid g4 light-bg">
+    <figure><img src="character/renders/props/chief.webp" alt="chief" loading="lazy"><figcaption><b>chief · core</b>왕관 + 나비넥타이<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/product-manager.webp" alt="product-manager" loading="lazy"><figcaption><b>product-manager · product</b>클립보드<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/product-designer.webp" alt="product-designer" loading="lazy"><figcaption><b>product-designer · product</b>베레모<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/researcher.webp" alt="researcher" loading="lazy"><figcaption><b>researcher · product</b>동그란 안경<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/data-analyst.webp" alt="data-analyst" loading="lazy"><figcaption><b>data-analyst · product</b>막대 차트 패널<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/frontend-engineer.webp" alt="frontend-engineer" loading="lazy"><figcaption><b>frontend-engineer · engineering</b>비니<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/backend-engineer.webp" alt="backend-engineer" loading="lazy"><figcaption><b>backend-engineer · engineering</b>헤드셋<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/data-engineer.webp" alt="data-engineer" loading="lazy"><figcaption><b>data-engineer · engineering</b>데이터 큐브<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/infra.webp" alt="infra" loading="lazy"><figcaption><b>infra · engineering</b>안전모 + 방패 배지<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/quality-assurance.webp" alt="quality-assurance" loading="lazy"><figcaption><b>quality-assurance · engineering</b>돋보기<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/business-strategy.webp" alt="business-strategy" loading="lazy"><figcaption><b>business-strategy · business</b>넥타이<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/sales.webp" alt="sales" loading="lazy"><figcaption><b>sales · business</b>명함<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/finance.webp" alt="finance" loading="lazy"><figcaption><b>finance · business</b>금테 안경 + 계산기<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/marketer.webp" alt="marketer" loading="lazy"><figcaption><b>marketer · brand</b>메가폰<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/creative.webp" alt="creative" loading="lazy"><figcaption><b>creative · brand</b>붓<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+    <figure><img src="character/renders/props/custom-role.webp" alt="표에 없는 역할" loading="lazy"><figcaption><b>표에 없는 역할</b>팀 색 스카프(여기서는 product)<span class="src">identity_renders.py props · 2026-11-10</span></figcaption></figure>
+  </div>
+
+  <h3>2D 아이콘 — 크기별</h3>
+  <p class="note">웹 컴포넌트(<code>web/src/characters/PenguinIcon.tsx</code>)를 그대로 SVG 로 뽑았다. 40px 이상은 박음질이 점선, 그보다 작으면 실선. 실제 크기(1배)로 보인다. 볼은 SVG 파일 안에서 라이트 값(<code>#E01FAE</code>)으로 고정 — 앱 다크에서는 <code>#F25CC8</code>.</p>
+  <div class="tile on-light scroll" id="icons-light"></div>
+  <div class="tile on-dark scroll" id="icons-dark"></div>
+  <p class="note">출처: <span class="mono">node web/scripts/identity-icons.mjs</span> → <span class="mono">character/2d/&lt;크기&gt;/&lt;역할&gt;.svg</span> · 2026-11-10</p>
+
+  <h3>마스코트 — 전신</h3>
+  <div class="grid g4">
+    <figure><img class="light-bg" src="character/2d/mascot-240.svg" alt="마스코트, 라이트 바탕" style="padding:16px"><figcaption><b>2D 마스코트 240px · 라이트 바탕</b>소품 · 테두리 없음, 검은 발까지<span class="src">identity-icons.mjs · Mascot · 2026-11-10</span></figcaption></figure>
+    <figure><img class="evening-bg" src="character/2d/mascot-240.svg" alt="마스코트, 다크 바탕" style="padding:16px"><figcaption><b>2D 마스코트 240px · 다크 바탕</b>다크에서도 몸색 · 얼굴색은 그대로<span class="src">identity-icons.mjs · Mascot · 2026-11-10</span></figcaption></figure>
+    <figure><img class="light-bg" src="character/2d/mascot-96.svg" alt="마스코트 96px" style="padding:16px;width:auto;margin:0 auto"><figcaption><b>2D 마스코트 96px</b>로그인 · 빈 상태 크기<span class="src">identity-icons.mjs · Mascot · 2026-11-10</span></figcaption></figure>
+    <figure class="light-bg"><img src="character/renders/bare-light.webp" alt="3D 펭귄 전신" loading="lazy"><figcaption><b>3D 전신(같은 펭귄)</b>랜딩 · 사무실의 몸<span class="src">identity_renders.py bare · 2026-11-10</span></figcaption></figure>
+  </div>
+</section>
+
+<section id="palette">
+  <h2>팔레트</h2>
+  <p class="lead">키 = 3D 재질 이름(<code>lib.py</code>). 웹이 테마별로 바꾸는 것은 몸 하나뿐. 2D 값은 <code>colors.ts PENGUIN_2D</code>. 칸 두 개면 왼쪽 = 라이트, 오른쪽 = 저녁 · 다크.</p>
+  <div class="swatches">
+    <div class="swatch"><div class="chips"><span style="background:#2B2A26"></span><span style="background:#474855"></span></div><div class="t"><b>penguin.body</b><span class="mono">#2B2A26 · 저녁 #474855</span><br><span>몸 · 날개</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#F3F0EA"></span></div><div class="t"><b>penguin.face</b><span class="mono">#F3F0EA</span><br><span>흰 앞판(얼굴 + 배)</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#151410"></span></div><div class="t"><b>penguin.eye</b><span class="mono">#151410</span><br><span>눈</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#E01FAE"></span><span style="background:#F25CC8"></span></div><div class="t"><b>penguin.cheek · --cheek</b><span class="mono">#E01FAE · 다크 UI #F25CC8</span><br><span>볼(3D 는 고정, 2D 는 변수)</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#FBF9F4"></span></div><div class="t"><b>penguin.beak</b><span class="mono">#FBF9F4</span><br><span>부리(흰색)</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#151410"></span></div><div class="t"><b>penguin.stitch</b><span class="mono">#151410</span><br><span>박음질(앞판 · 부리 테두리)</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#151410"></span></div><div class="t"><b>penguin.feet</b><span class="mono">#151410</span><br><span>발</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#3D3B35"></span></div><div class="t"><b>2D bodyTop</b><span class="mono">#3D3B35</span><br><span>2D 날개</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#111008"></span></div><div class="t"><b>2D line</b><span class="mono">#111008</span><br><span>2D 잉크 윤곽선(3D 없음)</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#C9BD98"></span></div><div class="t"><b>2D faceShade</b><span class="mono">#C9BD98</span><br><span>2D 부리 이음선</span></div></div>
+  </div>
+  <h3>소품 · 팀</h3>
+  <div class="swatches">
+    <div class="swatch"><div class="chips"><span style="background:#C9A227"></span></div><div class="t"><b>prop.gold</b><span class="mono">#C9A227</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#2B2A26"></span></div><div class="t"><b>prop.black</b><span class="mono">#2B2A26</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#F4F1EA"></span></div><div class="t"><b>prop.paper</b><span class="mono">#F4F1EA</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#8A8371"></span></div><div class="t"><b>prop.metal</b><span class="mono">#8A8371</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#C9DDF6"></span></div><div class="t"><b>prop.lens</b><span class="mono">#C9DDF6</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#F0C640"></span></div><div class="t"><b>prop.helmet</b><span class="mono">#F0C640</span></div></div>
+    <div class="swatch"><div class="chips"><span style="background:#D8C3A2"></span></div><div class="t"><b>prop.wood</b><span class="mono">#D8C3A2</span></div></div>
+    <div class="swatch span-all"><div class="chips"><span style="background:#C9A227"></span><span style="background:#2C74E0"></span><span style="background:#9AC22D"></span><span style="background:#9B6A3C"></span><span style="background:#E01FAE"></span></div><div class="t"><b>팀 대표색</b><span class="mono">#C9A227 · #2C74E0 · #9AC22D · #9B6A3C · #E01FAE</span><br><span>core · product · engineering · business · brand (모르는 팀 #8A8371)</span></div></div>
+  </div>
+  <p class="note">재질 규칙: 무광 roughness 0.9 · metallic 0 · 텍스처 없음.</p>
+</section>
+
+<section id="ratios">
+  <h2>비율 표</h2>
+  <p class="lead">3D 는 1 단위 = 1 m, 얼굴은 2D 아이콘 단위(viewBox 40)를 0.017 m/단위로 옮긴다. 기준 = 눈 높이 흰 앞판 폭 17.5 단위(0.2975 m).</p>
+  <div class="grid g2">
+    <div class="card scroll">
+      <table>
+        <tr><th>몸</th><th>값</th></tr>
+        <tr><td>앉은 키</td><td class="num">0.70 m</td></tr>
+        <tr><td>몸 폭 / 날개 포함</td><td class="num">0.44 / 0.48 m</td></tr>
+        <tr><td>깊이 / 앞판 포함 / 발끝</td><td class="num">0.30 / 0.32 / 0.35 m</td></tr>
+        <tr><td>키 : 폭 (3D)</td><td class="num">1.59 : 1</td></tr>
+        <tr><td>키 : 폭 (2D 몸 경로)</td><td class="num">1.71 : 1</td></tr>
+        <tr><td>깊이 : 폭</td><td class="num">0.68</td></tr>
+        <tr><td>눈 중심 높이</td><td class="num">0.49 m (키의 70 %)</td></tr>
+        <tr><td>부리 중심 · 볼 중심</td><td class="num">0.43 · 0.42 m</td></tr>
+        <tr><td>흰 앞판 꼭대기</td><td class="num">0.616 m</td></tr>
+        <tr><td>어깨 · 목 · 가슴 소켓</td><td class="num">0.42 · 0.31 · 0.23 m</td></tr>
+        <tr><td>삼각형</td><td class="num">7,368 / 8k</td></tr>
+      </table>
+    </div>
+    <div class="card scroll">
+      <table>
+        <tr><th>얼굴</th><th>아이콘 단위</th><th>3D</th><th>앞판 폭 대비</th></tr>
+        <tr><td>눈 지름</td><td class="num">3.8</td><td class="num">0.065 m</td><td class="num">0.22</td></tr>
+        <tr><td>볼 지름</td><td class="num">3.0</td><td class="num">0.051 m</td><td class="num">0.17</td></tr>
+        <tr><td>부리 폭</td><td class="num">5.2</td><td class="num">0.088 m</td><td class="num">0.30</td></tr>
+        <tr><td>부리 높이(위 + 아래)</td><td class="num">2.6 + 3.0</td><td class="num">0.095 m</td><td class="num">0.32</td></tr>
+        <tr><td>눈 사이(중심)</td><td class="num">7.6</td><td class="num">0.129 m</td><td class="num">0.43</td></tr>
+        <tr><td>앞판 꼭대기 ↔ 눈</td><td class="num">7.4</td><td class="num">0.126 m</td><td class="num">0.42</td></tr>
+        <tr><td>앞판 폭 ÷ 몸 폭</td><td class="num">—</td><td class="num">0.30 / 0.44</td><td class="num">0.68</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="note">부분 · 재질 · 뼈 · 소켓 전체 표: <a href="character/spec.md">character/spec.md</a></p>
+</section>
+
+<section id="motion">
+  <h2>모션 — 동작 클립 7개</h2>
+  <p class="lead"><code>penguin.glb</code> 의 클립. 30 fps 이음매 없는 반복, 첫 프레임이 그 상태의 대표 자세다. 미리보기는 15 fps · 360px 움직이는 WebP(정면 · 3/4), 아래 줄은 반복 한 번을 6등분한 키 포즈. 원본 <code>anim.py</code> · 렌더 <code>identity_renders.py motion</code> · 2026-11-10.</p>
+  <div class="card">
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/idle/idle-front.webp" alt="idle 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/idle/idle-three-quarter.webp" alt="idle 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>idle <span class="tag">2 s · 반복</span></h3><p>느린 숨(몸 2.5 % 길어짐) · 머리 2° 끄덕임.</p><p class="use">쓰는 곳: 사무실 낮 <code>idle</code> · 랜딩 모든 장면(날개는 코드가 따로)</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/idle/idle-keys.webp" alt="idle 키 포즈" loading="lazy"><figcaption><span class="src">idle-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/idle_doze/idle_doze-front.webp" alt="idle_doze 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/idle_doze/idle_doze-three-quarter.webp" alt="idle_doze 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>idle_doze <span class="tag">2 s · 반복</span></h3><p>고개 −20° 숙이고 졸며 끄덕임 · 느린 숨.</p><p class="use">쓰는 곳: 사무실 저녁(다크)의 <code>idle</code> — 스탠드 · 화면 꺼짐</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/idle_doze/idle_doze-keys.webp" alt="idle_doze 키 포즈" loading="lazy"><figcaption><span class="src">idle_doze-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/thinking/thinking-front.webp" alt="thinking 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/thinking/thinking-three-quarter.webp" alt="thinking 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>thinking <span class="tag">2 s · 반복</span></h3><p>고개 들고 오른 날개로 턱 괴기 · 몸 좌우 ±5° · 둘러보기 · 날개 톡톡 2번.</p><p class="use">쓰는 곳: 사무실 — 일하는 중, 4초 넘게 출력 없음</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/thinking/thinking-keys.webp" alt="thinking 키 포즈" loading="lazy"><figcaption><span class="src">thinking-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/typing/typing-front.webp" alt="typing 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/typing/typing-three-quarter.webp" alt="typing 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>typing <span class="tag">1 s · 반복</span></h3><p>몸 숙이고 두 날개를 앞으로 — 번갈아 초당 3번 · 몸 들썩 6번.</p><p class="use">쓰는 곳: 사무실 — 4초 안에 글 · 도구 단계. 랜딩은 안 씀(떨려 보여서)</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/typing/typing-keys.webp" alt="typing 키 포즈" loading="lazy"><figcaption><span class="src">typing-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/waiting/waiting-front.webp" alt="waiting 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/waiting/waiting-three-quarter.webp" alt="waiting 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>waiting <span class="tag">1 s · 반복</span></h3><p>오른 날개 들어 흔들기 2번 · 작은 뜀 2번(최대 3.6 cm).</p><p class="use">쓰는 곳: 사무실 — 사람 승인을 기다릴 때(가장 우선)</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/waiting/waiting-keys.webp" alt="waiting 키 포즈" loading="lazy"><figcaption><span class="src">waiting-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/done/done-front.webp" alt="done 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/done/done-three-quarter.webp" alt="done 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>done <span class="tag">1 s · 반복</span></h3><p>두 날개 번쩍 · 한 번 뛰어올라 착지 때 8 % 납작.</p><p class="use">쓰는 곳: 사무실 — 끝나고 10초, 그 뒤 idle</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/done/done-keys.webp" alt="done 키 포즈" loading="lazy"><figcaption><span class="src">done-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+    <div class="clip">
+      <figure class="light-bg"><img src="motion/clips/error/error-front.webp" alt="error 정면" loading="lazy"><figcaption>정면</figcaption></figure>
+      <figure class="light-bg"><img src="motion/clips/error/error-three-quarter.webp" alt="error 3/4" loading="lazy"><figcaption>3/4</figcaption></figure>
+      <div class="meta"><h3>error <span class="tag">2 s · 반복</span></h3><p>고개 −26° 푹 숙이고 날개 늘어뜨림 · 거의 멈춘 채 무거운 숨.</p><p class="use">쓰는 곳: 사무실 — 실패 뒤 60초 또는 다시 일할 때까지</p></div>
+      <figure class="keys light-bg"><img src="motion/clips/error/error-keys.webp" alt="error 키 포즈" loading="lazy"><figcaption><span class="src">error-keys · identity_renders.py motion · 2026-11-10</span></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="landing">
+  <h2>랜딩 전용 모션 (코드, 클립 아님)</h2>
+  <p class="lead">랜딩은 <code>idle</code> 클립 위에서 날개 · 몸 위치를 웹 코드가 프레임마다 직접 움직인다(<code>web/src/landing/</code>). 그림은 랜딩 작업 때 찍은 프레임 시트(1440 × 900 · 라이트 · 2026-11-10)를 옮겨 왔다. 시간표 전체: <a href="motion/README.md">motion/README.md</a>.</p>
+  <div class="grid g2">
+    <figure class="wide"><img src="motion/landing/intro-bounce.webp" alt="첫 등장 바운스" loading="lazy"><figcaption><b>첫 등장 — 공 → 펭귄 (1150 ms)</b>떨어짐 340 · 납작 120 · 늘어남 240 · 되튐 180 · 자리잡기 270 ms. <span class="warn">브랜치 feat/v2.1-landing-intro(11d26c3), 아직 main 아님</span><span class="src">web/src/landing/intro.ts · morph.ts — solosquad-shots/v2.1-landing-intro/final/intro-1440-light · 2026-11-10</span></figcaption></figure>
+    <figure class="wide"><img src="motion/landing/hero-typing.webp" alt="타자 치는 날개" loading="lazy"><figcaption><b>타자 치는 날개 (hero)</b>번갈아 초당 3.5번 · 깊이 키의 3 %<span class="src">staging.ts strokeAt · MascotCanvas.tsx — s0-1440-light · 2026-11-10</span></figcaption></figure>
+    <figure class="wide"><img src="motion/landing/what-reach.webp" alt="날개 뻗기" loading="lazy"><figcaption><b>날개 뻗기 — 요청 건네기 (what)</b>650 ms 뻗고 · 350 ms 머물고 · 600 ms 돌아옴, 카드 1100 ms 간격<span class="src">acting.ts RELAY · rig.ts reach — s1-1440-light · 2026-11-10</span></figcaption></figure>
+    <figure class="wide"><img src="motion/landing/team-unroll.webp" alt="두루마리" loading="lazy"><figcaption><b>두루마리 펼치기 (team)</b>종이 1600 ms · 손잡이 당김 700 ms. 시트는 펼쳐진 뒤의 장면<span class="src">acting.ts UNROLL_MS · tugAt — s2-1440-light · 2026-11-10</span></figcaption></figure>
+    <figure class="wide"><img src="motion/landing/control-stamp.webp" alt="도장" loading="lazy"><figcaption><b>도장 찍기 (control)</b>620 · 280 · 150 · 240 · 620 ms, 찍는 순간 몸 4 % 납작<span class="src">acting.ts STAMP · squashAt · props.ts — s3-1440-light · 2026-11-10</span></figcaption></figure>
+    <figure class="wide"><img src="motion/landing/start-wave.webp" alt="손 흔들기" loading="lazy"><figcaption><b>손 흔들기 (start)</b>1.2 Hz · 2100 ms(두 번 반)<span class="src">acting.ts waveAt — s4-1440-light · 2026-11-10</span></figcaption></figure>
+  </div>
+</section>
+
+<section id="issues">
+  <h2>알려진 문제 · 열린 질문</h2>
+  <p class="lead">위 렌더를 보고 적은 것. 고칠지는 정하지 않았다 — 반응을 주면 다음 디자인에 반영한다.</p>
+  <div class="card">
+    <ol class="issues">
+      <li><b>눈 · 볼이 각져 보인다</b> — 원판이 16 × 6 분할이라 가까이서 16각형이 보인다. 규격은 정원.</li>
+      <li><b>박음질 조각이 육각형 칩처럼 보인다</b> — 조각마다 5 × 3 구라 실이 아니라 작은 돌처럼 보인다.</li>
+      <li><b>발이 몸에서 떨어져 앞에 떠 있다</b> — 옆모습에서 발과 배 사이에 틈이 보인다(발 중심 y −0.12 가 몸 앞면보다 앞).</li>
+      <li><b>날개가 거의 안 보인다</b> — 몸 옆에 붙은 납작한 타원이라 정면 실루엣은 그냥 달걀이다.</li>
+      <li><b>"납작한 봉제 인형"이 아니다</b> — 깊이가 폭의 68 % 라 옆에서 보면 두툼한 달걀이다.</li>
+      <li><b>흰 앞판이 너무 넓다?</b> — 눈 높이 앞판 폭이 몸 폭의 68 %, 검정은 테두리처럼 남아 "검은 후드를 쓴 흰 달걀"로 읽힌다.</li>
+      <li><b>목이 없다</b> — <code>head</code> 뼈가 키의 44 % 에서 꺾여, 졸기 · 실패의 고개 숙임이 상체 전체를 접는다.</li>
+      <li><b>넥타이 · 나비넥타이가 배에 있다</b> — 가슴 소켓이 키의 33 % 높이라 목이 아니라 배꼽 높이다.</li>
+      <li><b>2D 와 3D 몸 비율이 다르다</b> — 얼굴 좌표만 공유하고 몸 윤곽은 따로 그렸다(2D 1.71 : 1 · 3D 1.59 : 1). 2D 에만 윤곽선이 있다.</li>
+      <li><b>저녁 몸색이 남색으로 보인다</b> — <code>#474855</code> 에 파란 빛이 더해져 검정 펭귄보다 푸른 회색으로 읽힌다.</li>
+      <li><b>뒷모습 · 위 모습에 특징이 없다</b> — 꼬리 · 등 무늬가 없어 뒤는 검은 덩어리 하나다.</li>
+      <li><b>작은 아이콘에서 부리가 흐려진다?</b> — 흰 앞판 위 흰 부리를 박음질 실선만으로 구분한다. 20 · 28px 에서 읽히는지 위 아이콘 줄에서 확인.</li>
+      <li><b>소품 위치</b> — 손 소품은 날개 끝 앞에 떠 있고(쥐는 모양 없음), 왕관은 머리 꼭대기에 작게 얹혀 있다.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  identity/ — 배포하지 않는 브랜드 아이덴티티 기록 · 다시 만들기: <span class="mono">identity/README.md</span> · 2026-11-10
+</footer>
+</div>
+
+<script>
+  // 2D 아이콘 줄: 크기 × (소품 없음 + 15 역할 + 표에 없는 역할). 파일만 나열하는 것이라 빌드 없이 file:// 에서 돈다.
+  (function () {
+    var roles = ['plain', 'chief', 'product-manager', 'product-designer', 'researcher', 'data-analyst', 'frontend-engineer', 'backend-engineer', 'data-engineer', 'infra', 'quality-assurance', 'business-strategy', 'sales', 'finance', 'marketer', 'creative', 'custom-role'];
+    var names = { plain: '소품 없음', 'custom-role': '표에 없음' };
+    var sizes = [20, 28, 40, 64];
+    ['icons-light', 'icons-dark'].forEach(function (id) {
+      var box = document.getElementById(id);
+      var grid = document.createElement('div');
+      grid.className = 'icons';
+      grid.appendChild(Object.assign(document.createElement('span'), { className: 'lbl', textContent: id === 'icons-light' ? '라이트' : '다크' }));
+      roles.forEach(function (r) {
+        grid.appendChild(Object.assign(document.createElement('span'), { className: 'head', textContent: names[r] || r, title: names[r] || r }));
+      });
+      sizes.forEach(function (s) {
+        grid.appendChild(Object.assign(document.createElement('span'), { className: 'lbl', textContent: s + 'px' }));
+        roles.forEach(function (r) {
+          var img = document.createElement('img');
+          img.src = 'character/2d/' + s + '/' + r + '.svg';
+          img.width = s; img.height = s; img.alt = r + ' ' + s + 'px';
+          grid.appendChild(img);
+        });
+      });
+      box.appendChild(grid);
+    });
+  })();
+</script>
+</body>
+</html>
