@@ -678,11 +678,29 @@ html:has(.landing[data-mode="live"]) {
   pointer-events: none;
 }
 
-/* ── section 3: the org chart (DESIGN.md `### 조직도`, landing variant) ── */
+/* ── section 3: the org chart (DESIGN.md `### 조직도`, landing variant) ──
+   The same connector lines as the app (components/orgGeometry.ts — one SVG over the chart, it
+   unrolls with the paper's clip-path), the team spines in CSS. Two columns, 2 + 2; a tree on a phone. */
 .landing-org {
+  --org-spine-x: 4px; /* the team dot's centre */
+  --org-indent: 18px;
+  --org-tree-indent: 20px;
+  --lorg-gap: var(--space-2); /* a team button's label → members */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.landing-org .org-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  pointer-events: none;
 }
 
 .landing-org button {
@@ -693,7 +711,7 @@ html:has(.landing[data-mode="live"]) {
 .landing-org-team {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--lorg-gap);
   width: 100%;
   margin: 0;
   padding: var(--space-2);
@@ -708,12 +726,28 @@ html:has(.landing[data-mode="live"]) {
     border-color 0.15s ease;
 }
 
-/* the top row in one line: "owner and Chief" · the two of them */
+/* the owner, Chief under them, their icons on the paper's centre line — the same line as the gap
+   between the two team columns, so 대표 → 임원 → both buses is one straight line, icon to icon */
 .landing-org-top {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  column-gap: var(--space-5);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4) 0;
+}
+
+.landing-org-top > .landing-org-node {
+  grid-column: 2;
+  justify-self: start;
+  max-width: calc(100% + 10px);
+  margin-left: -10px; /* half the 20px icon */
+}
+
+.landing-org[data-layout="tree"] .landing-org-top {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.landing-org[data-layout="tree"] .landing-org-top > .landing-org-node {
+  grid-column: 1;
+  margin-left: 0;
 }
 
 .landing-org-top:hover,
@@ -742,31 +776,72 @@ html:has(.landing[data-mode="live"]) {
   font-variant-numeric: tabular-nums;
 }
 
-.landing-org-pair {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
-}
-
 .landing-org-teams {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2) var(--space-3);
+  grid-template-columns: repeat(var(--org-cols, 2), minmax(0, 1fr));
+  gap: var(--space-4) var(--space-3); /* the second row's bus runs in the row gap */
   margin: 0;
   padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--line);
   list-style: none;
 }
 
+.landing-org[data-layout="tree"] .landing-org-teams {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0;
+  padding-top: 0;
+}
+
+.landing-org[data-layout="tree"] .landing-org-teams > li {
+  padding-left: var(--org-tree-indent);
+}
+
+/* the team's own spine: from under its dot, a tick into each member */
 .landing-org-team .landing-org-label {
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+
+.landing-org-team .landing-org-label::after {
+  position: absolute;
+  top: calc(50% + 4px);
+  bottom: calc(-1 * var(--lorg-gap));
+  left: var(--org-spine-x);
+  border-left: 1px solid var(--line);
+  content: "";
 }
 
 .landing-org-members {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.landing-org-members > .landing-org-node {
+  position: relative;
+  padding-left: var(--org-indent);
+}
+
+.landing-org-members > .landing-org-node::before {
+  position: absolute;
+  top: 0;
+  left: var(--org-spine-x);
+  width: calc(var(--org-indent) - var(--org-spine-x) - 3px);
+  height: 50%;
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  content: "";
+}
+
+.landing-org-members > .landing-org-node:last-child::before {
+  border-bottom-left-radius: 4px;
+}
+
+.landing-org-members > .landing-org-node:not(:last-child)::after {
+  position: absolute;
+  top: 50%;
+  bottom: 0;
+  left: var(--org-spine-x);
+  border-left: 1px solid var(--line);
+  content: "";
 }
 
 .landing-org-node {
@@ -1247,8 +1322,12 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-pin .landing-org-top,
   .landing-pin .landing-org-team {
-    gap: var(--space-1);
+    --lorg-gap: var(--space-1);
     padding: var(--space-1) var(--space-2);
+  }
+
+  .landing-pin .landing-org-top {
+    row-gap: var(--space-3);
   }
 
   .landing-pin .landing-org-node {
@@ -1257,7 +1336,7 @@ html:has(.landing[data-mode="live"]) {
   }
 
   .landing-pin .landing-org-teams {
-    row-gap: 0;
+    row-gap: var(--space-3);
     padding-top: var(--space-2);
   }
 
@@ -1428,14 +1507,18 @@ html:has(.landing[data-mode="live"]) {
   }
 
   .landing-org-teams {
-    row-gap: 0;
+    row-gap: var(--space-3);
     padding-top: var(--space-2);
   }
 
   .landing-org-top,
   .landing-org-team {
-    gap: var(--space-1);
+    --lorg-gap: var(--space-1);
     padding: var(--space-1) var(--space-2);
+  }
+
+  .landing-org-top {
+    row-gap: var(--space-3);
   }
 
   .landing-org-node {
@@ -1445,6 +1528,23 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-scroll-sheet {
     padding: var(--space-6) var(--space-2) var(--space-3);
+  }
+
+  /* the phone's tree is one tall column — close it up so the penguin still peeks over the paper */
+  .landing-org[data-layout="tree"] {
+    gap: var(--space-1);
+  }
+
+  .landing-org[data-layout="tree"] .landing-org-top {
+    row-gap: var(--space-2);
+  }
+
+  .landing-org[data-layout="tree"] .landing-org-team {
+    padding-block: 2px;
+  }
+
+  .landing-org[data-layout="tree"] .landing-org-node {
+    min-height: 20px;
   }
 
   .landing-card {

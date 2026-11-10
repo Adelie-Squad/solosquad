@@ -15,6 +15,7 @@
   --surface: #FBF9F4;
   --surface-2: #F3EFE6;
   --line: #DED6C6;
+  --line-strong: #C6BBA6;
   --ink: #1E1C17;
   --ink-2: #575143;
   --ink-3: #8A8371;
@@ -82,6 +83,7 @@
     --surface: #1E1F26;
     --surface-2: #272832;
     --line: #353745;
+    --line-strong: #4B4E60;
     --ink: #ECE8DF;
     --ink-2: #B7B2A6;
     --ink-3: #858174;
@@ -113,6 +115,7 @@
   --surface: #1E1F26;
   --surface-2: #272832;
   --line: #353745;
+  --line-strong: #4B4E60;
   --ink: #ECE8DF;
   --ink-2: #B7B2A6;
   --ink-3: #858174;
