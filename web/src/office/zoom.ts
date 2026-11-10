@@ -1,5 +1,5 @@
 // Zoom and pan for the office scene (DESIGN.md `## 사무실 장면` — 확대 · 축소). Pure: the five
-// levels come from the layout (room, pods, one desk) and the stage's pixel size, and the
+// levels come from the layout (the room and one desk) and the stage's pixel size, and the
 // controller below holds where the camera looks — the scene applies it, the page drives it
 // (buttons, keys, wheel, drag, pinch, double-click). No three.js here, so it is tested as is.
 //
@@ -68,11 +68,11 @@ export interface OfficeFrame {
   fit: { u: number; v: number; w: number; h: number };
   /** The room seen from the camera; the pan keeps the view inside it (plus a margin). */
   bounds: ViewRect;
-  /** Five increasing zooms (×fit): whole office · half · large team · small team · one agent. */
+  /** Five zooms (×fit), evenly spaced — one constant ratio from the whole office (1) to one agent. */
   levels: number[];
   /** Where to look for each agent's desk. */
   agents: Record<string, { u: number; v: number }>;
-  /** Each team pod: its centre and the level that frames it (3 or 4). */
+  /** Each team pod: its centre and the closest level that still frames the whole pod. */
   teams: Record<string, { u: number; v: number; level: number }>;
 }
 
@@ -87,11 +87,10 @@ const centre = (r: ViewRect) => ({ u: (r.u0 + r.u1) / 2, v: (r.v0 + r.v1) / 2 })
 const STEP = 1.2;
 
 /**
- * The five levels, derived from the layout so any team size or room works:
- * L1 = the whole room · L2 = halfway (geometric) between L1 and L3 — about half the office ·
- * L3 = the largest team pod · L4 = the smallest team pod · L5 = one desk with its penguin.
- * (Zooming in goes whole → large team → small team; with every pod the same size L4 sits
- * halfway to L5.) Each step is at least ×1.2 so the five are always distinct.
+ * The five levels, evenly spaced (user 2026-11-10 — "확대 5단계 간격 일정하게"): L1 = the whole
+ * room fitted to the stage, L5 = one desk with its penguin, and L2–L4 in between at one constant
+ * ratio (geometric), so every wheel notch or button press feels the same. The ratio is at least
+ * ×1.2. A team label frames its pod at the closest level that still shows all of it.
  */
 export function officeFrame(pods: Pod[], room: Room, width: number, height: number, desk: Footprint = DESK): OfficeFrame {
   const bounds = viewRect(room.minX, room.maxX, 0, WALL_H, room.minZ, room.maxZ);
@@ -103,32 +102,26 @@ export function officeFrame(pods: Pod[], room: Room, width: number, height: numb
   else w = h * aspect;
   const fit = { ...centre(bounds), w, h };
 
-  const teamPods = pods.filter((p) => !p.desks.some((d) => d.chief));
-  const sized = (teamPods.length ? teamPods : pods).map((p) => ({ p, zoom: zoomFor(fit, podRect(p), 0.3) }));
-  const large = sized.length ? Math.min(...sized.map((s) => s.zoom)) : 2;
-  const small = sized.length ? Math.max(...sized.map((s) => s.zoom)) : 3;
   // one desk set up to the top of its name tag, tight — the neighbours only peek in at the edges
   const one = zoomFor(fit, viewRect(-desk.w / 2, desk.w / 2, 0, DESK_TOP, -desk.d / 2, desk.d / 2), 0.1);
-
-  const l1 = 1;
-  const l3 = Math.max(large, l1 * STEP * STEP);
-  const l5 = Math.max(one, l3 * STEP * STEP);
-  const between = (lo: number, hi: number, want: number) => (want >= lo * STEP && want <= hi / STEP ? want : Math.sqrt(lo * hi));
-  const l2 = between(l1, l3, Math.sqrt(l1 * l3));
-  const l4 = between(l3, l5, small);
-  const levels = [l1, l2, l3, l4, l5];
+  const last = Math.max(one, STEP ** (LEVELS - 1));
+  const levels = Array.from({ length: LEVELS }, (_, i) => last ** (i / (LEVELS - 1)));
 
   const agents: OfficeFrame['agents'] = {};
   const teams: OfficeFrame['teams'] = {};
   for (const p of pods) {
     for (const d of p.desks) agents[d.agent] = centre(viewRect(d.x - desk.w / 2, d.x + desk.w / 2, 0, DESK_TOP, d.z - desk.d / 2, d.z + desk.d / 2));
     if (p.desks.some((d) => d.chief)) continue;
-    const z = zoomFor(fit, podRect(p), 0.3);
-    // the closest of L3 / L4 that still shows the whole pod
-    const level = z >= levels[3] / 1.02 ? 4 : 3;
-    teams[p.key] = { ...centre(podRect(p)), level };
+    teams[p.key] = { ...centre(podRect(p)), level: teamLevel(levels, zoomFor(fit, podRect(p), 0.3)) };
   }
   return { width, height, fit, bounds, levels, agents, teams };
+}
+
+/** The deepest level that still frames a pod which needs `zoom` (at least L2 — a team is never the whole room). */
+export function teamLevel(levels: number[], zoom: number): number {
+  let best = 2;
+  for (let i = 2; i < levels.length; i++) if (levels[i] <= zoom * 1.02) best = i + 1;
+  return best;
 }
 
 /** The level a zoom is closest to (1–5, by ratio). */
@@ -176,22 +169,102 @@ export function collidingTags(tags: TagBox[], gap = 2): Set<string> {
 
 // ------------------------------------------------------------------ input rules
 
-export type WheelMode = 'modifier' | 'always';
-
 /**
- * Does this wheel event zoom? On the office page a plain wheel scrolls the page — only a pinch
- * (the browser sends it as ctrl+wheel) or ⌘/ctrl+wheel zooms. On the pop-out display there is
- * no page to scroll, so every wheel zooms.
+ * A wheel over the scene always zooms (user 2026-11-10 — on the office page too; the page still
+ * scrolls while the pointer is outside the scene). Three kinds of wheel event:
+ * - `pinch` — a trackpad pinch (the browser sends ctrl+wheel with small deltas): follows the
+ *   fingers continuously.
+ * - `notch` — a mouse wheel click: one notch = one level, eased. Chrome and Safari on macOS send a
+ *   notch as a multiple of 4.000244 px — often just 4 px, which scaled by the raw delta zoomed by
+ *   1% (the "wheel does nothing in full screen" of 2026-11-10); Firefox sends lines; elsewhere a
+ *   lone event of a round 50+ px or a 120-unit `wheelDelta`.
+ * - `smooth` — a two-finger trackpad scroll: its pixels add up to a level, one per push of the
+ *   fingers (WheelStepper) — a flick with a long inertia tail is still one level.
  */
-export function wheelZooms(e: { ctrlKey: boolean; metaKey: boolean }, mode: WheelMode): boolean {
-  return mode === 'always' || e.ctrlKey || e.metaKey;
+export type WheelKind = 'pinch' | 'notch' | 'smooth';
+
+/** The pixels a macOS browser sends per line of a mouse wheel notch. */
+const MAC_LINE = 4.000244140625;
+
+export interface WheelLike {
+  deltaY: number;
+  deltaMode: number;
+  ctrlKey: boolean;
+  /** Chrome / Safari's legacy delta: ±120 per notch of a mouse wheel. */
+  wheelDeltaY?: number;
 }
 
-/** The zoom factor for one wheel event (a pinch sends small deltas, a mouse wheel large ones). */
-export function wheelFactor(e: { deltaY: number; deltaMode: number; ctrlKey: boolean }): number {
+/** `gapMs` = time since the previous wheel event (a trackpad sends them ~16 ms apart). */
+export function wheelKind(e: WheelLike, gapMs = Infinity): WheelKind {
+  const dy = e.deltaY;
+  const lines = dy / MAC_LINE;
+  const notch =
+    e.deltaMode !== 0 ||
+    (dy !== 0 && !Number.isInteger(dy) && Math.abs(lines - Math.round(lines)) < 1e-6) ||
+    (gapMs > 30 && dy !== 0 && ((!!e.wheelDeltaY && e.wheelDeltaY % 120 === 0) || (Number.isInteger(dy) && Math.abs(dy) >= 50)));
+  if (notch) return 'notch';
+  return e.ctrlKey ? 'pinch' : 'smooth';
+}
+
+/** The zoom factor for one pinch event (ctrl+wheel deltas are small and follow the fingers). */
+export function wheelFactor(e: { deltaY: number; deltaMode: number }): number {
   const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
-  const k = e.ctrlKey ? 0.01 : 0.0025;
-  return Math.exp(-Math.max(-300, Math.min(300, dy)) * k);
+  return Math.exp(-Math.max(-300, Math.min(300, dy)) * 0.01);
+}
+
+/** Trackpad pixels that make one level. */
+export const SMOOTH_STEP_PX = 90;
+/** A pause this long ends a trackpad gesture (its inertia included). */
+const GESTURE_GAP_MS = 140;
+/** After a level, the same gesture has to push again (not just glide on) to make another. */
+const REARM_MS = 380;
+
+/**
+ * Turns wheel events into level steps: +1 (in), −1 (out) or 0. A notch is a step at once. A
+ * trackpad scroll adds its pixels up to SMOOTH_STEP_PX; after a step the rest of that gesture's
+ * glide is ignored — another step needs a fresh push (the deltas growing again after REARM_MS),
+ * a pause, or the other direction — so one flick does not run through several levels.
+ */
+export class WheelStepper {
+  private acc = 0;
+  private last = -Infinity;
+  private lastMag = 0;
+  private armed = true;
+  private stepAt = -Infinity;
+  private dir = 0;
+
+  /** `now` in ms; `kind` from `wheelKind`. */
+  push(e: WheelLike, kind: WheelKind, now: number): -1 | 0 | 1 {
+    const dy = e.deltaY;
+    const gap = now - this.last;
+    this.last = now;
+    if (kind === 'pinch' || dy === 0) return 0;
+    const dir = dy < 0 ? 1 : -1;
+    if (kind === 'notch') {
+      this.acc = 0;
+      this.armed = true;
+      this.dir = dir;
+      return dir;
+    }
+    const mag = Math.abs(dy);
+    const turned = dir !== this.dir;
+    this.dir = dir;
+    if (gap > GESTURE_GAP_MS || turned) {
+      this.acc = 0;
+      this.armed = true;
+    } else if (!this.armed && now - this.stepAt > REARM_MS && mag > this.lastMag * 1.25 + 0.5) {
+      this.acc = 0;
+      this.armed = true; // the fingers push again
+    }
+    this.lastMag = mag;
+    if (!this.armed) return 0;
+    this.acc += dir * mag;
+    if (Math.abs(this.acc) < SMOOTH_STEP_PX) return 0;
+    this.acc = 0;
+    this.armed = false;
+    this.stepAt = now;
+    return dir;
+  }
 }
 
 // ------------------------------------------------------------------ the controller
@@ -228,6 +301,9 @@ export function saveZoom(key: string | undefined, z: SavedZoom): void {
     // not remembered; the view still works
   }
 }
+
+/** How far past the bounds a drag can pull the room (share of the view), before it springs back. */
+export const RUBBER = 0.06;
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 const SETTLE_MS = 160;
@@ -314,6 +390,7 @@ export class ZoomController {
   /** Move to a view — eased over ZOOM_MS, or at once (reduced motion, `animate` false). */
   goTo(to: ZoomView, animate = true): void {
     if (!this.frame) return;
+    this.free = null;
     const end = this.clamp(to);
     if (!animate || this.reduced) {
       this.anim = null;
@@ -377,25 +454,47 @@ export class ZoomController {
 
   /** One level in (from where the view is, so a pinch between levels goes to the next one up). */
   stepIn(): void {
-    const f = this.frame;
-    if (!f) return;
-    const z = this.target().zoom;
-    const i = f.levels.findIndex((l) => l > z * 1.02);
-    if (i >= 0) this.setLevel(i + 1);
+    const i = this.nextLevel(1);
+    if (i) this.setLevel(i);
   }
 
   stepOut(): void {
+    const i = this.nextLevel(-1);
+    if (i) this.setLevel(i);
+  }
+
+  /** The level one step in (+1) or out (−1) from where the view is headed; 0 at the end. */
+  private nextLevel(dir: 1 | -1): number {
     const f = this.frame;
-    if (!f) return;
+    if (!f) return 0;
     const z = this.target().zoom;
+    if (dir > 0) return f.levels.findIndex((l) => l > z * 1.02) + 1;
     let i = -1;
     f.levels.forEach((l, k) => {
       if (l < z / 1.02) i = k;
     });
-    if (i >= 0) this.setLevel(i + 1);
+    return i + 1;
   }
 
-  /** 전체 보기 — back to L1, centred. */
+  /**
+   * One level in or out (a wheel notch), eased, keeping the point under (px, py) — stage pixels —
+   * where it is at the end. Steps during a running tween count from its end, so three quick
+   * notches go three levels.
+   */
+  stepAt(dir: 1 | -1, px: number, py: number): void {
+    const f = this.frame;
+    const n = this.nextLevel(dir);
+    if (!f || !n) return;
+    const cur = this.target();
+    const zoom = f.levels[n - 1];
+    const sx = px / Math.max(1, f.width) - 0.5;
+    const sy = 0.5 - py / Math.max(1, f.height);
+    const pu = cur.u + (sx * f.fit.w) / cur.zoom;
+    const pv = cur.v + (sy * f.fit.h) / cur.zoom;
+    this.goTo({ zoom, u: pu - (sx * f.fit.w) / zoom, v: pv - (sy * f.fit.h) / zoom });
+  }
+
+  /** 전체 보기 (the hidden `0` key) — back to L1, centred. */
   fit(): void {
     if (this.frame) this.goTo({ zoom: this.frame.levels[0], u: this.frame.fit.u, v: this.frame.fit.v });
   }
@@ -431,7 +530,7 @@ export class ZoomController {
     this.settleSoon();
   }
 
-  /** Drag the room by (dx, dy) stage pixels. */
+  /** Move the room by (dx, dy) stage pixels (the arrow keys), inside the bounds. */
   panBy(dx: number, dy: number): void {
     const f = this.frame;
     if (!f) return;
@@ -440,6 +539,47 @@ export class ZoomController {
     this.view = this.clamp({ zoom: cur.zoom, u: cur.u - (dx / Math.max(1, f.width)) * (f.fit.w / cur.zoom), v: cur.v + (dy / Math.max(1, f.height)) * (f.fit.h / cur.zoom) });
     this.changed();
     this.settleSoon();
+  }
+
+  /** A drag in progress: where the view would be without the bounds (view units). */
+  private free: { u: number; v: number } | null = null;
+
+  /**
+   * Drag the room by (dx, dy) stage pixels — the pointer's drag. Inside the bounds the room
+   * follows the pointer; past them (and at L1, where the whole room is already in view) it
+   * follows with resistance, at most RUBBER of the view, and `endDrag` springs it back. So a
+   * drag always answers, and at L1 it shows there is nothing more to see.
+   */
+  dragBy(dx: number, dy: number): void {
+    const f = this.frame;
+    if (!f) return;
+    this.anim = null;
+    const z = this.view.zoom;
+    const free = this.free ?? { ...this.clamp(this.view) };
+    free.u -= (dx / Math.max(1, f.width)) * (f.fit.w / z);
+    free.v += (dy / Math.max(1, f.height)) * (f.fit.h / z);
+    this.free = free;
+    const inside = this.clamp({ zoom: z, ...free });
+    const band = (over: number, span: number) => {
+      const max = span * RUBBER;
+      return Math.sign(over) * max * (1 - Math.exp(-Math.abs(over) / max / 2.5));
+    };
+    this.view = { zoom: z, u: inside.u + band(free.u - inside.u, f.fit.w / z), v: inside.v + band(free.v - inside.v, f.fit.h / z) };
+    this.changed();
+  }
+
+  /** A pointer drag is under way. */
+  dragging(): boolean {
+    return this.free !== null;
+  }
+
+  /** The drag let go: back inside the bounds (eased), then settle. */
+  endDrag(): void {
+    if (!this.free) return;
+    this.free = null;
+    const inside = this.clamp(this.view);
+    if (Math.abs(inside.u - this.view.u) > 1e-6 || Math.abs(inside.v - this.view.v) > 1e-6) this.goTo(inside);
+    else this.settleSoon();
   }
 
   /** More than the whole room — something to pan. */

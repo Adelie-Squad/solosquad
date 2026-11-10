@@ -41,13 +41,16 @@ import {
   waveAt,
 } from '../src/landing/acting';
 import { PromptAct, relayStep, StampAct, StepsAct } from '../src/landing/Acts';
-import { FRONT, fitEraser, makeEraser, ORDER } from '../src/landing/rig';
+import { fitEraser, makeEraser, ORDER } from '../src/landing/rig';
 import { makeStamp } from '../src/landing/props';
 import { paletteFor } from '../src/office/palette';
-import { BODY, centreOffset, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
+import { BODY, centreOffset, faceX, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
 import { AGENT_COUNT, TEAMS } from '../src/landing/catalog';
 import { DWELL_MS, GESTURE_GAP_MS, GLIDE_MS, keyStep, Stepper, WheelGesture, type StepperEnv } from '../src/landing/dwell';
 import { drawState, follow, GIVE_UP_SECONDS, LIMITS, lookAt, wander } from '../src/landing/gaze';
+import { ACT_YAW, actingWings, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETCH, MAX_TURN, nearWing, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint } from '../src/landing/arms';
+import { claimIntro, DROP, INTRO, INTRO_MS, introAt, resetIntro, REST, SQUASH_MAX } from '../src/landing/intro';
+import { makeMorph } from '../src/landing/morph';
 import { useHolder } from '../src/landing/holder';
 import { Landing } from '../src/landing/Landing';
 import { HOLD_ANSWER_MS, HOLD_TYPED_MS, PromptTyper, TYPE_MS } from '../src/landing/PromptTyper';
@@ -492,8 +495,8 @@ describe('the scene: the content centred, the penguin around it', () => {
     expect(rule('.landing-stage')).toMatch(/grid-template-columns: var\(--landing-cols\);/);
     expect(rule('.landing-mascot')).toMatch(/grid-column: 2;[\s\S]*height: 100%;/);
     expect(rule('.landing-scene')).toMatch(/grid-column: 2;/);
-    // layers: the 2D poster under the content, the 3D canvas over it, never catching clicks
-    expect(rule('.landing-poster')).toMatch(/z-index: 1;/);
+    // layers: the content, the 3D canvas over it, never catching clicks — and no 2D poster at all
+    expect(css).not.toMatch(/\.landing-poster/);
     expect(rule('.landing-pin .landing-slide')).toMatch(/z-index: 2;/);
     expect(rule('.landing-canvas')).toMatch(/z-index: 3;[\s\S]*pointer-events: none;/);
     // the prompt box never grows as it types (the spot would creep)
@@ -516,9 +519,9 @@ describe('the scene: the content centred, the penguin around it', () => {
     // the penguin stands behind the prompt box and the last card: nothing of it shows under them either
     expect(screen.getByTestId('landing-scene-hero').querySelector('[data-front="ground"]')).toBeTruthy();
     expect(screen.getByTestId('landing-scene-start').querySelector('[data-front="ground"]')).toBeTruthy();
-    // the relay: the right wing hands the request to card 1
+    // the relay: a wing hands the request to card 1 (which wing comes from the geometry — arms.ts)
     const what = screen.getByTestId('landing-scene-what');
-    expect(what.querySelector('li')!.querySelector('[data-hand="R"]')).toBeTruthy();
+    expect(what.querySelector('li')!.querySelector('[data-hand]')).toBeTruthy();
     const team = screen.getByTestId('landing-scene-team');
     expect(team.querySelector('[data-rod]')).toBeTruthy();
     expect(team.querySelectorAll('[data-front]')).toHaveLength(2); // the paper shown so far + the roll
@@ -531,7 +534,6 @@ describe('the scene: the content centred, the penguin around it', () => {
     const phone = css.slice(css.indexOf('@media (max-width: 860px)'));
     expect(phone).toMatch(/\.landing-pin \.landing-scene \{[^}]*order: -1;[^}]*flex: 1 1 auto;/);
     expect(phone).toMatch(/\.landing-mascot \{[^}]*position: absolute;[^}]*inset: 0;/);
-    expect(phone).toMatch(/--penguin: min\(\d+svh, \d+vw, \d+px\);/);
   });
 });
 
@@ -800,9 +802,121 @@ describe('the acting', () => {
 });
 
 describe('what shows in front of the content (occlusion)', () => {
-  it('only the wings that touch the content may show in front — never the head, body or feet', () => {
-    expect(FRONT).toEqual({ hero: ['L', 'R'], what: ['R'], team: ['R'], control: ['L'], start: ['L', 'R'] });
+  it('the acting wing is the one away from the content, from the screen geometry — the body turns to bring it round', () => {
+    // the penguin faces the reader: its right wing (R) is on the reader's left
+    expect(nearWing(500, 300)).toBe('R');
+    expect(farWing(500, 300)).toBe('L');
+    expect(farWing(500, 700)).toBe('R');
+    const h = 290;
+    const box = { left: 700, top: 300, width: 380, height: 260 };
+    const cx = box.left + box.width / 2;
+    const picked = Object.fromEntries(SECTIONS.map(({ id }) => [id, actingWings(id, spotFor(id, box, h, false).x, cx)]));
+    // relay: the penguin is right of the cards → its far (left) wing; scroll: the paper is to its right
+    // → its far (right) wing, on the knob at the paper's left end; hero: both type; start: the far one waves
+    expect(picked.what.wings).toEqual(['L']);
+    expect(picked.team.wings).toEqual(['R']);
+    expect(picked.hero.wings).toEqual(['L', 'R']);
+    expect(picked.start).toEqual({ wings: ['L', 'R'], wave: 'L' });
+    // the approval card is the measured exception: the near wing stamps (ARM_CHOICE)
+    expect(ARM_CHOICE.control).toBe('near');
+    expect(picked.control.wings).toEqual(['L']);
+    // mirrored content flips every choice — it comes from where things are, not from the section
+    expect(actingWings('what', 400, 700).wings).toEqual(['R']);
+    expect(actingWings('control', 1200, 900).wings).toEqual(['R']);
+    expect(actingWings('start', 500, 800).wave).toBe('R');
+    // the body turns towards the content to bring the far wing round, within natural limits
+    expect(actYaw('what', 1200, 900)).toBeLessThan(0);
+    expect(actYaw('what', 400, 700)).toBeGreaterThan(0);
+    for (const id of ['hero', 'team', 'control', 'start'] as const) expect(actYaw(id, 1200, 900)).toBe(0);
+    expect(Math.abs(bodyTurn(-0.18, -ACT_YAW))).toBeLessThanOrEqual(MAX_TURN);
+    expect(Math.abs(bodyTurn(-0.6, -0.6))).toBe(MAX_TURN);
+    // a clay wing stretches to reach across the body, never past its limit
+    expect(stretchFor(50, 100)).toBe(1);
+    expect(stretchFor(130, 100)).toBeCloseTo(1.326, 2);
+    expect(stretchFor(500, 100)).toBe(MAX_STRETCH);
     expect(ORDER.eraser).toBeLessThan(ORDER.front);
+  });
+
+  it('the near-wing stamp: its shoulder stands outside the card’s edge — a wing rooted behind the card could never come in front', () => {
+    const h = 290;
+    const box = { left: 700, top: 300, width: 380, height: 260 };
+    const control = spotFor('control', box, h, false);
+    expect(control.x + BODY.shoulderX * Math.cos(control.turn) * h).toBeLessThan(box.left);
+    const phone = spotFor('control', box, 170, true);
+    expect(phone.x + BODY.shoulderX * Math.cos(phone.turn) * phone.h).toBeLessThan(box.left);
+    // beside the cards the face stays clear of them even with the body turned to act
+    const what = spotFor('what', box, h, false);
+    expect(faceX(what.x, h, bodyTurn(what.turn, -ACT_YAW)) - BODY.face.half * h).toBeGreaterThan(box.left + box.width - 0.1 * h);
+    // behind the content (hero, start, phone relay) the shoulders are above the top edge
+    for (const s of [spotFor('hero', box, h, false), spotFor('start', box, h, false), spotFor('what', box, 170, true)]) expect(s.y - (1 - BODY.shoulder) * s.h).toBeLessThan(box.top);
+  });
+
+  it('the wing goes round the edge: drawn in front only once it is clear of the content, behind again once clear on the way back', () => {
+    // the hero: a box, the shoulder above its top edge, the hand at rest hanging down behind it
+    const rect = { left: 300, top: 300, right: 700, bottom: 900 };
+    const shoulder = { x: 420, y: 270 };
+    const rest = { x: 410, y: 360 }; // inside the box: behind it
+    const to = { x: 440, y: 304 }; // the key, just under the top edge: in front of it
+    const via = viaPoint(rect, shoulder, to, 18);
+    expect(via).toEqual({ x: 440, y: 282 }); // round the top edge, over the key
+    const path = { from: rest, via, to };
+    expect(pathAt(path, 0)).toEqual(rest);
+    expect(pathAt(path, 0.5)).toEqual(via);
+    expect(pathAt(path, 1)).toEqual(to);
+    expect(segmentHits(shoulder, to, rect)).toBe(true); // on the key the wing is over the box — it must be in front by then
+
+    const walk = (us: number[], start: boolean) => {
+      let front = start;
+      let last = us[0];
+      return us.map((u) => {
+        const tip = pathAt(path, u);
+        const clear = !segmentHits(shoulder, tip, rect);
+        const was = front;
+        front = nextFront(front, u, u - last, clear, outside(shoulder, rect));
+        last = u;
+        return { u, was, front, clear, tipOut: outside(tip, rect) };
+      });
+    };
+    const out = walk(
+      Array.from({ length: 61 }, (_, i) => i / 60),
+      false,
+    );
+    expect(out[0].front).toBe(false);
+    expect(out[out.length - 1].front).toBe(true);
+    // it switches exactly once, at a frame where the whole wing is off the box (it has crossed the edge)
+    const on = out.filter((f) => f.front !== f.was);
+    expect(on).toHaveLength(1);
+    expect(on[0].clear).toBe(true);
+    expect(on[0].tipOut).toBe(true);
+    // while the hand is still over the box from behind, never in front
+    for (const f of out.slice(0, out.findIndex((x) => x.tipOut))) expect(f.front).toBe(false);
+
+    // the way back: in front until it is clear past the edge again, then behind — never back over the box in front
+    const back = walk(
+      Array.from({ length: 61 }, (_, i) => 1 - i / 60),
+      true,
+    );
+    const off = back.filter((f) => f.front !== f.was);
+    expect(off).toHaveLength(1);
+    expect(off[0].clear).toBe(true);
+    expect(off[0].u).toBeLessThan(0.5);
+    for (const f of back) if (!f.clear && f.u < 0.5) expect(f.front).toBe(false);
+
+    // a shoulder behind the content never brings its wing in front; at rest, never in front
+    expect(nextFront(false, 1, 0.1, true, false)).toBe(false);
+    expect(nextFront(true, 1, 0, true, false)).toBe(false);
+    expect(nextFront(true, 0, -0.1, true, true)).toBe(false);
+  });
+
+  it('round the edge the shoulder is beyond; a held stamp must be off the card too', () => {
+    const card = { left: 300, top: 300, right: 600, bottom: 450 };
+    // beside the card (even with the shoulder level with its top) → round the side edge, level with the target
+    expect(viaPoint(card, { x: 250, y: 420 }, { x: 340, y: 430 }, 15)).toEqual({ x: 285, y: 430 });
+    expect(viaPoint(card, { x: 700, y: 300 }, { x: 560, y: 380 }, 15)).toEqual({ x: 615, y: 380 });
+    // above it → round the top edge
+    expect(viaPoint(card, { x: 400, y: 200 }, { x: 420, y: 330 }, 15)).toEqual({ x: 420, y: 285 });
+    expect(rectsOverlap({ left: 280, right: 310, top: 400, bottom: 440 }, card)).toBe(true);
+    expect(rectsOverlap({ left: 260, right: 300, top: 400, bottom: 440 }, card)).toBe(false);
   });
 
   it('the eraser wipes every pixel under the content whatever its depth, and covers the content rect exactly', () => {
@@ -910,19 +1024,27 @@ describe('regression: the penguin that appeared, then disappeared', () => {
     expect(kepts[kepts.length - 1].children).toHaveLength(0);
   });
 
-  it('the 2D penguin stays until the 3D one has really drawn', () => {
+  it('the stage waits for the 3D penguin to really draw, and gives up after a while', () => {
     expect(drawState(0, 0.5)).toBe('waiting');
     expect(drawState(7, 0.5)).toBe('drawn');
     expect(drawState(0, GIVE_UP_SECONDS)).toBe('empty');
   });
 
-  it('a 3D layer that never draws keeps the poster (never an empty stage) and the finished pictures', async () => {
+  it('while the 3D penguin loads there is no 2D penguin on the stage — nothing where it goes, the content as usual', async () => {
     canvas.behaviour = 'never';
     live();
     const { container } = landing();
+    const stage = () => container.querySelector('.landing-stage')!;
+    // before the 3D chunk (first paint) and while it has not drawn: no poster, no 2D penguin in the stage
+    expect(stage()).toBeTruthy();
+    expect(stage().querySelector('svg.penguin, .landing-poster')).toBeNull();
     await waitFor(() => expect(screen.getByTestId('mascot-canvas')).toBeTruthy());
+    expect(stage().querySelector('svg.penguin, .landing-poster')).toBeNull();
     expect(container.querySelector('.landing-mascot.is-ready')).toBeNull();
-    expect(container.querySelector('.landing-poster svg.penguin')).toBeTruthy();
+    expect(screen.queryByTestId('landing-static-mascot')).toBeNull();
+    // the content shows as usual (the finished pictures — no acting yet)
+    expect(screen.getByTestId('landing-prompt')).toBeTruthy();
+    expect(screen.getByTestId('landing-approval').getAttribute('data-state')).toBe('waiting');
     expect(container.querySelector('.landing-pin.is-acting')).toBeNull();
   });
 
@@ -950,6 +1072,79 @@ function useOldHolder(child: THREE.Object3D): THREE.Group {
     return g;
   }, [child]);
 }
+
+describe('the entrance: a clay ball that becomes the penguin', () => {
+  it('drops in, squashes ~15 %, stretches past its height, dips back a little, settles — in 0.9–1.3 s', () => {
+    expect(INTRO_MS).toBeGreaterThanOrEqual(900);
+    expect(INTRO_MS).toBeLessThanOrEqual(1300);
+    const samples = Array.from({ length: Math.ceil(INTRO_MS / 10) + 1 }, (_, i) => ({ ms: i * 10, ...introAt(i * 10) }));
+    // a ball at first, popping in from above
+    expect(introAt(0)).toMatchObject({ morph: 0, parts: 0, size: 0 });
+    expect(introAt(0).lift).toBeCloseTo(DROP);
+    expect(introAt(INTRO.fall).lift).toBe(0);
+    // squash on contact (~15 %), the stretch past its height, a small overshoot under, then rest
+    const contact = INTRO.fall;
+    const squash = Math.min(...samples.filter((x) => x.ms >= contact && x.ms <= contact + INTRO.squash + 30).map((x) => x.sy));
+    expect(squash).toBeCloseTo(1 - SQUASH_MAX, 2);
+    expect(SQUASH_MAX).toBeGreaterThanOrEqual(0.12);
+    expect(SQUASH_MAX).toBeLessThanOrEqual(0.18);
+    const peak = samples.reduce((a, b) => (b.sy > a.sy ? b : a));
+    expect(peak.sy).toBeGreaterThan(1.08);
+    expect(peak.ms).toBeGreaterThan(contact + INTRO.squash);
+    const dip = Math.min(...samples.filter((x) => x.ms > peak.ms).map((x) => x.sy));
+    expect(dip).toBeLessThan(1);
+    expect(dip).toBeGreaterThan(0.94);
+    expect(introAt(INTRO_MS)).toEqual(REST);
+    // the ball becomes the body during the stretch; the face, beak, wings and feet come after it
+    for (let i = 1; i < samples.length; i++) {
+      expect(samples[i].morph).toBeGreaterThanOrEqual(samples[i - 1].morph);
+      expect(samples[i].parts).toBeLessThanOrEqual(samples[i].morph + 1e-9);
+    }
+    expect(introAt(contact + INTRO.squash).morph).toBeLessThan(0.1);
+    expect(introAt(peak.ms).morph).toBeGreaterThan(0.3);
+    // smooth: no jump between 60 fps frames
+    for (let ms = 0; ms < INTRO_MS; ms += 16) expect(Math.abs(introAt(ms + 16).sy - introAt(ms).sy)).toBeLessThan(0.1);
+  });
+
+  it('plays once per page load, and never under reduced motion', () => {
+    resetIntro();
+    expect(claimIntro(true)).toBe(false); // reduced motion: skipped (and it does not use up the one play)
+    expect(claimIntro(false)).toBe(true);
+    expect(claimIntro(false)).toBe(false); // a remount shows the penguin as it is
+    resetIntro();
+    // the stacked page (what reduced motion gets) has no 3D stage at all
+    stubMotion(true);
+    stubWebGL();
+    const { container } = landing();
+    expect(container.querySelector('.landing-stage')).toBeNull();
+    expect(screen.queryByTestId('mascot-canvas')).toBeNull();
+  });
+
+  it('the ball comes from the body’s own bounds — a taller penguin gets its own ball', () => {
+    const make = (sx: number, sy: number) => {
+      const geo = new THREE.SphereGeometry(1, 12, 8);
+      geo.scale(sx, sy, sx);
+      const n = geo.attributes.position.count;
+      geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Array(n * 4).fill(0), 4));
+      geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(Array.from({ length: n * 4 }, (_, i) => (i % 4 === 0 ? 1 : 0)), 4));
+      const bone = new THREE.Bone();
+      bone.name = 'body';
+      const mesh = new THREE.SkinnedMesh(geo, new THREE.MeshStandardMaterial({ name: 'penguin.body' }));
+      mesh.add(bone);
+      mesh.bind(new THREE.Skeleton([bone]));
+      const root = new THREE.Group();
+      root.add(mesh);
+      const holder = new THREE.Group();
+      holder.add(root);
+      return makeMorph(root, holder)!;
+    };
+    const a = make(0.3, 0.4);
+    const b = make(0.3, 0.6);
+    expect(a.radius).toBeCloseTo(Math.cbrt(0.3 * 0.4 * 0.3), 2);
+    expect(b.radius).toBeGreaterThan(a.radius);
+    expect(a.core.length()).toBeLessThan(1e-6);
+  });
+});
 
 describe('stacked fallback', () => {
   it('reduced motion: the sections stacked, the 2D penguin, the prompt standing still, no acting', () => {
@@ -1000,8 +1195,13 @@ describe('section 3: the org chart and the team modal', () => {
   it('draws the owner and Chief on top, the teams below, names in the reader’s language', () => {
     landing('ko');
     const org = screen.getByTestId('landing-org');
-    expect(within(org).getByText('대표와 임원')).toBeTruthy();
-    expect(within(org).getByText('임원')).toBeTruthy();
+    // no "owner and Chief" caption any more — the line from 대표 down to 임원 says it; the button still does
+    const top = within(org).getByRole('button', { name: '대표와 임원 · 에이전트 보기' });
+    expect([...top.querySelectorAll('[data-org]')].map((n) => [n.getAttribute('data-org'), n.textContent])).toEqual([
+      ['owner', '대표'],
+      ['chief', '임원'],
+    ]);
+    expect(within(org).queryByText('대표와 임원')).toBeNull();
     const teams = within(org).getByRole('list', { name: '팀' });
     expect(within(teams).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
       '프로덕트 4명 · 에이전트 보기',

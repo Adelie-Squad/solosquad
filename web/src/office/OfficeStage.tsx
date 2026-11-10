@@ -10,7 +10,8 @@ import { teamName } from '../lib/names';
 import type { Theme } from '../theme';
 import type { SeatAgent } from './layout';
 import type { AgentStatus } from './state';
-import { LEVELS, tagPriority, tagsShowAll, wheelFactor, wheelZooms, ZoomController, type WheelMode } from './zoom';
+import { DRAG_PX } from './clicks';
+import { LEVELS, tagPriority, tagsShowAll, wheelFactor, wheelKind, WheelStepper, ZoomController } from './zoom';
 
 const OfficeCanvas = lazy(() => import('./OfficeCanvas'));
 
@@ -105,7 +106,7 @@ export function OfficeStage({
   fallback,
   highlight = null,
   paused = false,
-  wheel = 'modifier',
+  display = false,
   storageKey,
   onZoomable,
   ref,
@@ -119,8 +120,8 @@ export function OfficeStage({
   highlight?: string | null;
   /** Stop drawing (the scene is shown in the pop-out window instead). */
   paused?: boolean;
-  /** `modifier`: a plain wheel scrolls the page (the office screen); `always`: it zooms (the pop-out). */
-  wheel?: WheelMode;
+  /** The pop-out window: no page to scroll, so one finger pans at L1 too (`touch-action: none`). */
+  display?: boolean;
   /** localStorage key for the level and centre (`zoomKey`). */
   storageKey?: string;
   /** The scene is up and can zoom (false while loading, or with the fallback list). */
@@ -152,7 +153,6 @@ export function OfficeStage({
   zoom.reduced = reduced;
   const [level, setLevel] = useState(() => zoom.level());
   const [announce, setAnnounce] = useState('');
-  const [dragging, setDragging] = useState(false);
   const tRef = useRef(t);
   tRef.current = t;
   useEffect(() => {
@@ -202,7 +202,8 @@ export function OfficeStage({
     return () => io.disconnect();
   }, [failed]);
 
-  // wheel · pinch · drag — native listeners (a React wheel handler is passive and cannot stop the page)
+  // wheel · pinch · drag — native listeners on the stage (a React wheel handler is passive and
+  // cannot stop the page). The stage is the same node in a full-screen window, so they hold there.
   useEffect(() => {
     const el = wrap.current;
     if (!el || failed) return;
@@ -210,10 +211,22 @@ export function OfficeStage({
       const r = (el.querySelector('canvas') ?? el).getBoundingClientRect();
       return [x - r.left, y - r.top] as const;
     };
+    // every wheel over the scene zooms — and only over it, so the page scrolls elsewhere
+    const stepper = new WheelStepper();
+    let lastWheel = -Infinity;
     const onWheel = (e: WheelEvent) => {
-      if (!wheelZooms(e, wheel)) return; // a plain wheel scrolls the page
       e.preventDefault();
-      zoom.zoomAt(wheelFactor(e), ...local(e.clientX, e.clientY));
+      const now = e.timeStamp || performance.now();
+      const kind = wheelKind(e as WheelEvent & { wheelDeltaY?: number }, now - lastWheel);
+      lastWheel = now;
+      const [px, py] = local(e.clientX, e.clientY);
+      if (kind === 'pinch') {
+        stepper.push(e, kind, now);
+        zoom.zoomAt(wheelFactor(e), px, py);
+        return;
+      }
+      const dir = stepper.push(e, kind, now);
+      if (dir) zoom.stepAt(dir, px, py);
     };
     // Safari's trackpad pinch comes as gesture events, not ctrl+wheel
     let gestureScale = 1;
@@ -227,10 +240,14 @@ export function OfficeStage({
       zoom.zoomAt(g.scale / gestureScale, ...local(g.clientX, g.clientY));
       gestureScale = g.scale;
     };
-    // one pointer drags (once zoomed in), two pinch
+    // one pointer drags, two pinch. A drag starts anywhere on the scene — the canvas, a penguin,
+    // a team label — except the zoom buttons; it pans once the pointer travels DRAG_PX, and the
+    // click that ends it is swallowed (no agent modal, no team zoom). At L1 the room follows
+    // with resistance and springs back (dragBy) — the whole office is already in view.
     const down = new Map<number, { x: number; y: number }>();
     let start: { x: number; y: number } | null = null;
     let panning = false;
+    let swallowClick = false;
     let pinch: { d: number; x: number; y: number } | null = null;
     const pinchOf = () => {
       const [a, b] = [...down.values()];
@@ -238,10 +255,12 @@ export function OfficeStage({
     };
     const onDown = (e: PointerEvent) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      if ((e.target as HTMLElement).closest?.('button')) return;
+      if ((e.target as HTMLElement).closest?.('.office-zoom')) return;
+      swallowClick = false;
       down.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (down.size === 2) {
         pinch = pinchOf();
+        if (panning) zoom.endDrag();
         panning = false;
       } else if (down.size === 1) start = { x: e.clientX, y: e.clientY };
     };
@@ -257,18 +276,21 @@ export function OfficeStage({
         pinch = now;
         return;
       }
-      if (!panning && start && Math.hypot(p.x - start.x, p.y - start.y) > 4 && zoom.zoomed()) {
+      if (!panning && start && Math.hypot(p.x - start.x, p.y - start.y) > DRAG_PX) {
         panning = true;
-        setDragging(true);
+        swallowClick = true;
+        el.classList.add('is-dragging'); // not React state: a drag must not re-render the stage and its tags
         try {
           el.setPointerCapture(e.pointerId);
         } catch {
           // a synthetic pointer — the drag still works without capture
         }
+        zoom.dragBy(p.x - start.x, p.y - start.y); // the travel up to the threshold counts too
+        return;
       }
       if (panning) {
         e.preventDefault();
-        zoom.panBy(p.x - prev.x, p.y - prev.y);
+        zoom.dragBy(p.x - prev.x, p.y - prev.y);
       }
     };
     const onUp = (e: PointerEvent) => {
@@ -276,10 +298,25 @@ export function OfficeStage({
       if (down.size < 2) pinch = null;
       if (down.size === 0) {
         start = null;
-        if (panning) setDragging(false);
+        if (panning) {
+          el.classList.remove('is-dragging');
+          zoom.endDrag();
+        }
         panning = false;
       }
     };
+    // the click at the end of a drag is not a click (capture: before the canvas or a label sees it)
+    const onClick = (e: MouseEvent) => {
+      if (!swallowClick) return;
+      swallowClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    const onDblClick = (e: MouseEvent) => {
+      if (panning || swallowClick) e.stopPropagation();
+    };
+    el.addEventListener('click', onClick, true);
+    el.addEventListener('dblclick', onDblClick, true);
     el.addEventListener('wheel', onWheel, { passive: false });
     el.addEventListener('gesturestart', onGestureStart);
     el.addEventListener('gesturechange', onGestureChange);
@@ -288,6 +325,8 @@ export function OfficeStage({
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
     return () => {
+      el.removeEventListener('click', onClick, true);
+      el.removeEventListener('dblclick', onDblClick, true);
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('gesturestart', onGestureStart);
       el.removeEventListener('gesturechange', onGestureChange);
@@ -296,9 +335,9 @@ export function OfficeStage({
       el.removeEventListener('pointerup', onUp);
       el.removeEventListener('pointercancel', onUp);
     };
-  }, [zoom, wheel, failed]);
+  }, [zoom, failed]);
 
-  /** `+` / `-` / `0` (and arrows to pan, once zoomed) while the scene has focus. */
+  /** `+` / `-` (and arrows to pan, once zoomed) while the scene has focus; `0` — back to the whole office — is a hidden shortcut. */
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return; // ⌘+ / ctrl+ stay the browser's zoom
     const k = e.key;
@@ -317,12 +356,12 @@ export function OfficeStage({
   const teams = pods.filter((p) => !p.chief && p.team);
   return (
     <div
-      className={`office-stage ${level > 1 ? 'is-zoomed' : ''} ${dragging ? 'is-dragging' : ''} ${wheel === 'always' ? 'is-display' : ''}`}
+      className={`office-stage ${level > 1 ? 'is-zoomed' : ''} ${display ? 'is-display' : ''}`}
       ref={wrap}
       tabIndex={zoomable ? 0 : undefined}
       role={zoomable ? 'group' : undefined}
       aria-label={zoomable ? t('office.zoom.scene') : undefined}
-      aria-keyshortcuts={zoomable ? '+ - 0' : undefined}
+      aria-keyshortcuts={zoomable ? '+ -' : undefined}
       onKeyDown={zoomable ? onKeyDown : undefined}
     >
       <SceneBoundary onFail={fail}>
@@ -346,7 +385,7 @@ export function OfficeStage({
           />
         </Suspense>
       </SceneBoundary>
-      {/* team labels — a click zooms to that team (L3 or L4, whichever frames the pod) */}
+      {/* team labels — a click zooms to that team (the deepest level that still frames its pod) */}
       <div className={`office-teams ${ready && level < LEVELS ? '' : 'is-hidden'}`}>
         {teams.map((p) => {
           const name = teamName(p.team!, t);
@@ -411,37 +450,16 @@ export function OfficeStage({
   );
 }
 
-/** − · five level dots · + · 전체 보기 — on the scene's corner. */
+/** − · + on the scene's corner (user 2026-11-10: no level dots, no 전체 보기 button). */
 function ZoomControls({ zoom, level }: { zoom: ZoomController; level: number }) {
   const { t } = useI18n();
   return (
     <div className="office-zoom" role="toolbar" aria-label={t('office.zoom.controls')}>
-      <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.out')} title={`${t('office.zoom.out')} (-)`} disabled={level <= 1} onClick={() => zoom.stepOut()}>
+      <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.out')} title={`${t('office.zoom.out')} (-)`} disabled={level <= 1 && !zoom.zoomed()} onClick={() => zoom.stepOut()}>
         <ICON.zoomOut />
       </button>
-      <span className="office-zoom-dots">
-        {Array.from({ length: LEVELS }, (_, i) => {
-          const label = t('office.zoom.level', { n: i + 1, total: LEVELS });
-          return (
-            <button
-              key={i}
-              type="button"
-              className={`office-zoom-dot ${i + 1 === level ? 'is-on' : ''}`}
-              aria-label={label}
-              aria-pressed={i + 1 === level}
-              title={label}
-              onClick={() => zoom.setLevel(i + 1)}
-            >
-              <span />
-            </button>
-          );
-        })}
-      </span>
       <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.in')} title={`${t('office.zoom.in')} (+)`} disabled={level >= LEVELS} onClick={() => zoom.stepIn()}>
         <ICON.zoomIn />
-      </button>
-      <button type="button" className="office-zoom-btn" aria-label={t('office.zoom.fit')} title={`${t('office.zoom.fit')} (0)`} disabled={level <= 1 && !zoom.zoomed()} onClick={() => zoom.fit()}>
-        <ICON.zoomFit />
       </button>
     </div>
   );

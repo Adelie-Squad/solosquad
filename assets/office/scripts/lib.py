@@ -28,9 +28,9 @@ PALETTE = {
     'penguin.face': '#F3F0EA',
     'penguin.cheek': '#E01FAE',
     'penguin.eye': '#151410',
-    'penguin.beak': '#F0AE5E',
-    'penguin.feet': '#F0AE5E',
-    'penguin.stitch': '#8E8676',
+    'penguin.beak': '#FBF9F4',    # white felt, outlined by a black stitch
+    'penguin.feet': '#151410',
+    'penguin.stitch': '#151410',  # black thread (front edge + beak edge)
     'prop.gold': '#C9A227',
     'prop.wood': '#D8C3A2',   # fixed prop wood (clipboard, brush); not re-tinted per theme
     'prop.black': '#2B2A26',

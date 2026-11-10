@@ -85,6 +85,8 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "calendar.agent_access.update": ("PUT", f"{CUST}/calendar/agent-access", {"level": "off"}),
     "calendar.agent_view": ("GET", f"{CUST}/calendar/agent-view", None),
     "calendar.events": ("GET", f"{CUST}/calendar/events", None),
+    "digest.get": ("GET", f"{CUST}/me/digest", None),
+    "digest.ack": ("POST", f"{CUST}/me/digest/ack", {}),
     # org
     "org_chart": ("GET", f"{ORG}/org-chart", None),
     "people.list": ("GET", f"{ORG}/people", None),

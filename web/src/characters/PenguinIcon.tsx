@@ -1,7 +1,9 @@
-// The 2D penguin (DESIGN.md `## 에이전트 캐릭터`): front · upper body, the role's prop,
-// a ring in the team colour. Sizes 20 / 28 / 40. The mascot is the same penguin with no prop.
+// The 2D penguin (DESIGN.md `## 에이전트 캐릭터`): front view, the role's prop, a ring in the team
+// colour. Icon sizes 20 / 28 / 40 (64 in a modal head) show the upper body inside the ring; the
+// mascot is the same penguin, whole (feet included) and with no prop. Shape: ./penguinShape.ts.
 import { useId, type ReactNode } from 'react';
 import { PENGUIN_2D as C, teamColor } from './colors';
+import { BEAK_PATH, BEAK_SEAM, BODY, CHEEKS, EYES, FEET, FLIPPERS, FRONT, FRONT_STITCH, FULL_VIEW } from './penguinShape';
 import { lookOf, type Prop } from './roster';
 
 export type IconSize = 20 | 28 | 40 | 64;
@@ -9,8 +11,15 @@ export type IconSize = 20 | 28 | 40 | 64;
 const L = C.line;
 const SW = 0.9;
 
-/** Heart face = a lower ellipse + two brow circles (the 3D body shader's SDF, flattened). */
-const FACE = 'M20 35.5c-6.6 0-11-3.6-11-9.2 0-3.4 1.6-6 3.9-7.6-.6-.9-.9-1.9-.9-3 0-2.9 2.2-5 5-5 1.2 0 2.2.4 3 1 .8-.6 1.8-1 3-1 2.8 0 5 2.1 5 5 0 1.1-.3 2.1-.9 3 2.3 1.6 3.9 4.2 3.9 7.6 0 5.6-4.4 9.2-11 9.2z';
+/**
+ * How the stitch is drawn at a size. From 40px up it is a dashed seam; below that a dash would be
+ * a sub-pixel speck, so it becomes one thin continuous line (it still reads as the seam and keeps
+ * the white beak's edge visible on the white front).
+ */
+export function stitchStyle(size: number): { width: number; dash?: string; beakWidth: number; beakDash?: string } {
+  if (size >= 40) return { width: 0.5, dash: '0.9 0.7', beakWidth: 0.45, beakDash: '0.62 0.45' };
+  return { width: 0.55, beakWidth: size <= 20 ? 0.75 : 0.6 };
+}
 
 function PropArt({ prop, accent }: { prop: Prop; accent: string }): ReactNode {
   switch (prop) {
@@ -18,7 +27,7 @@ function PropArt({ prop, accent }: { prop: Prop; accent: string }): ReactNode {
       return (
         <>
           <path d="M14.5 8.2l1.6-4 2.3 2.6L20 3l1.6 3.8 2.3-2.6 1.6 4z" fill={C.gold} stroke={L} strokeWidth={SW} strokeLinejoin="round" />
-          <path d="M16.6 33.4l3.4 1.7 3.4-1.7v3.4L20 35.1l-3.4 1.7z" fill={accent} stroke={L} strokeWidth={SW} strokeLinejoin="round" />
+          <path d="M16.6 27.6l3.4 1.7 3.4-1.7v3.4L20 29.3l-3.4 1.7z" fill={accent} stroke={L} strokeWidth={SW} strokeLinejoin="round" />
         </>
       );
     case 'clipboard':
@@ -35,9 +44,9 @@ function PropArt({ prop, accent }: { prop: Prop; accent: string }): ReactNode {
       const frame = prop === 'gold-glasses' ? C.gold : L;
       return (
         <>
-          <circle cx="16.4" cy="18.6" r="2.8" fill="none" stroke={frame} strokeWidth={1.1} />
-          <circle cx="23.6" cy="18.6" r="2.8" fill="none" stroke={frame} strokeWidth={1.1} />
-          <path d="M19.2 18.4h1.6" stroke={frame} strokeWidth={1.1} />
+          <circle cx={EYES[0].cx} cy={EYES[0].cy} r="2.9" fill="none" stroke={frame} strokeWidth={1.1} />
+          <circle cx={EYES[1].cx} cy={EYES[1].cy} r="2.9" fill="none" stroke={frame} strokeWidth={1.1} />
+          <path d="M19.1 18.2h1.8" stroke={frame} strokeWidth={1.1} />
           {prop === 'gold-glasses' && (
             <g>
               <rect x="27" y="27" width="7" height="9" rx="1" fill={C.metal} stroke={L} strokeWidth={SW} />
@@ -126,12 +135,13 @@ function PropArt({ prop, accent }: { prop: Prop; accent: string }): ReactNode {
   }
 }
 
-/** The penguin itself. `prop` none = the mascot. */
+/** The penguin itself. `prop` none = the mascot. `full` = the whole body (the mascot's framing). */
 export function Penguin({
   size = 40,
   prop = null,
   team = null,
   ring = true,
+  full = false,
   label,
   className,
 }: {
@@ -139,12 +149,31 @@ export function Penguin({
   prop?: Prop | null;
   team?: string | null;
   ring?: boolean;
+  full?: boolean;
   label?: string;
   className?: string;
 }) {
   const clip = useId();
   const accent = teamColor(team);
   const decorative = !label;
+  const st = stitchStyle(size);
+  const body = (
+    <>
+      {/* body: a tall plush pear, the flippers behind it */}
+      <path d={FLIPPERS} fill={C.bodyTop} stroke={L} strokeWidth={SW} strokeLinejoin="round" />
+      <path d={BODY} fill={C.body} stroke={L} strokeWidth={SW} />
+      {/* the white front, forehead to bottom, and its black stitch */}
+      <path d={FRONT} fill={C.face} />
+      <path d={FRONT_STITCH} fill="none" stroke={C.stitch} strokeWidth={st.width} strokeDasharray={st.dash} strokeLinecap="round" strokeLinejoin="round" data-part="stitch" />
+      {full && FEET.map((f, i) => <ellipse key={i} cx={f.cx} cy={f.cy} rx={f.rx} ry={f.ry} fill={C.feet} stroke={L} strokeWidth={SW} data-part="foot" />)}
+      {EYES.map((e, i) => <circle key={i} cx={e.cx} cy={e.cy} r={e.r} fill={C.eye} data-part="eye" />)}
+      {CHEEKS.map((c, i) => <circle key={i} cx={c.cx} cy={c.cy} r={c.r} style={{ fill: 'var(--cheek)' }} data-part="cheek" />)}
+      {/* white diamond beak, its outer edge sewn in black */}
+      <path d={BEAK_PATH} fill={C.beak} data-part="beak" />
+      <path d={BEAK_SEAM} stroke={C.faceShade} strokeWidth={0.45} strokeLinecap="round" />
+      <path d={BEAK_PATH} fill="none" stroke={C.stitch} strokeWidth={st.beakWidth} strokeDasharray={st.beakDash} strokeLinejoin="round" data-part="beak-stitch" />
+    </>
+  );
   return (
     <svg
       className={`penguin ${className ?? ''}`}
@@ -156,23 +185,20 @@ export function Penguin({
       aria-hidden={decorative || undefined}
       data-prop={prop ?? 'none'}
     >
-      <clipPath id={clip}>
-        <circle cx="20" cy="20" r={ring ? 18.6 : 20} />
-      </clipPath>
-      <g clipPath={`url(#${clip})`}>
-        {/* body: a plump keyring silhouette, cut at the chest */}
-        <path d="M20 5c8 0 12.5 6.4 12.5 15.5 0 7.8-1.4 13-1.8 19.5H9.3C8.9 33.5 7.5 28.3 7.5 20.5 7.5 11.4 12 5 20 5z" fill={C.body} stroke={L} strokeWidth={SW} />
-        <path d="M7.9 25c-1.6 2.5-2.2 6-1.8 9.5l3.6-1.6z M32.1 25c1.6 2.5 2.2 6 1.8 9.5l-3.6-1.6z" fill={C.bodyTop} stroke={L} strokeWidth={SW} strokeLinejoin="round" />
-        <path d={FACE} fill={C.face} stroke={L} strokeWidth={SW} />
-        <path d={FACE} fill="none" stroke={C.stitch} strokeWidth={0.5} strokeDasharray="0.9 0.9" transform="translate(20 23) scale(.9) translate(-20 -23)" />
-        <ellipse cx="16.4" cy="18.6" rx="1.35" ry="1.8" fill={C.eye} />
-        <ellipse cx="23.6" cy="18.6" rx="1.35" ry="1.8" fill={C.eye} />
-        <ellipse cx="13.6" cy="22.6" rx="1.7" ry="1.1" style={{ fill: 'var(--cheek)' }} />
-        <ellipse cx="26.4" cy="22.6" rx="1.7" ry="1.1" style={{ fill: 'var(--cheek)' }} />
-        <path d="M18.4 21.3h3.2L20 23.4z" fill={C.beak} stroke={L} strokeWidth={0.7} strokeLinejoin="round" />
-        {prop && <PropArt prop={prop} accent={accent} />}
-      </g>
-      {ring && <circle cx="20" cy="20" r="18.8" fill="none" stroke={accent} strokeWidth={2.2} />}
+      {full ? (
+        <g transform={FULL_VIEW}>{body}</g>
+      ) : (
+        <>
+          <clipPath id={clip}>
+            <circle cx="20" cy="20" r={ring ? 18.6 : 20} />
+          </clipPath>
+          <g clipPath={`url(#${clip})`}>
+            {body}
+            {prop && <PropArt prop={prop} accent={accent} />}
+          </g>
+          {ring && <circle cx="20" cy="20" r="18.8" fill="none" stroke={accent} strokeWidth={2.2} />}
+        </>
+      )}
     </svg>
   );
 }
@@ -183,7 +209,7 @@ export function AgentIcon({ agent, team, size = 28, label }: { agent: string; te
   return <Penguin size={size} prop={look.prop} team={look.team} label={label ?? agent} />;
 }
 
-/** The mascot — the plain penguin (login, empty states). */
+/** The mascot — the plain penguin, whole (login, empty states, the landing before 3D draws). */
 export function Mascot({ size = 72 }: { size?: number }) {
-  return <Penguin size={size} ring={false} className="mascot" />;
+  return <Penguin size={size} ring={false} full className="mascot" />;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAction, useApprovals, useArtifacts, useKeys, useScopedApi, useWork } from '../api/queries';
 import type { Artifact, WorkEntry } from '../api/types.gen';
@@ -126,12 +126,12 @@ function SectionHead({ id, title, count, tone }: { id: string; title: string; co
 }
 
 /** A work product waiting to be checked — open it, or mark it checked right here. */
-export function ReviewCard({ artifact: a }: { artifact: Artifact }) {
+export function ReviewCard({ artifact: a, from }: { artifact: Artifact; from?: ReactNode }) {
   const keys = useKeys();
   const { w: toWs } = useLinks();
   const { ws: wsApi } = useScopedApi();
   const { t, fmt, locale } = useI18n();
-  const review = useAction(() => wsApi.post<Artifact>(`/artifacts/${a.id}/review`), [keys.artifacts, keys.work]);
+  const review = useAction(() => wsApi.post<Artifact>(`/artifacts/${a.id}/review`), [keys.artifacts, keys.work, keys.digest]);
   return (
     <article className="panel approval-card review-card" data-testid="review-card">
       <header className="approval-card-head">
@@ -146,6 +146,12 @@ export function ReviewCard({ artifact: a }: { artifact: Artifact }) {
       </header>
       <p className="approval-meta">
         {a.workflow ? t('approvals.fromWorkflow', { name: a.workflow }) : t('tasks.kind.artifact')}
+        {from && (
+          <>
+            {' · '}
+            {from}
+          </>
+        )}
         {' · '}
         {fmt.relative(a.created)}
       </p>
@@ -165,7 +171,7 @@ export function ReviewCard({ artifact: a }: { artifact: Artifact }) {
 }
 
 /** One piece of agent work as a row: who · what · where it is · what it made. */
-function WorkRow({ item: w }: { item: WorkEntry }) {
+export function WorkRow({ item: w, from }: { item: WorkEntry; from?: ReactNode }) {
   const { w: toWs } = useLinks();
   const { t, fmt } = useI18n();
   const nameOf = useAgentName();
@@ -186,6 +192,7 @@ function WorkRow({ item: w }: { item: WorkEntry }) {
           <span>{w.source === 'workflow' ? t('tasks.kind.workflow') : t('tasks.kind.chat')}</span>
           {w.cron && <span>{t('tasks.scheduled')}</span>}
           {w.agents.length > 0 && <span>{w.agents.map(nameOf).join(', ')}</span>}
+          {from && <span>{from}</span>}
           <span className="is-time">{fmt.relative(open ? w.created : endedAt(w))}</span>
         </span>
         {open && w.steps != null && (

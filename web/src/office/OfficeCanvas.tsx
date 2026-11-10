@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { Theme } from '../theme';
 import { seatClicks } from './clicks';
 import { checkGltf, formatReport, type GltfJson } from './contract';
-import { applyLook, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
+import { applyLook, applyNight, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
 import type { Room, SeatAgent } from './layout';
 import { paletteFor, type OfficePalette } from './palette';
 import { kitUrl, penguinUrl, withMeshopt } from './penguinAsset';
@@ -147,6 +147,14 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags,
     invalidate();
   }, [office, statuses, evening, reducedMotion, palette, bank, invalidate]);
 
+  // the evening's room lights (palette `night`) — on all evening, out of the scene by day
+  useLayoutEffect(() => {
+    applyNight(office.night, palette);
+    invalidate();
+    // `?office-debug`: `window.__office.night(false)` takes them out — to measure what they cost
+    if (stats) Object.assign(stats, { camera, office, night: (on: boolean) => (applyNight(office.night, on ? palette : { ...palette, night: null }), invalidate()) });
+  }, [office, palette, invalidate, stats, camera]);
+
   // tag elements come and go with React; the seat keeps a pointer
   useEffect(() => {
     for (const seat of office.seats.values()) seat.tag = tags.current?.get(seat.name) ?? null;
@@ -161,13 +169,29 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags,
   /** Measured tag sizes (px) — re-read now and then, not every frame (a layout read costs). */
   const sizes = useRef(new WeakMap<HTMLElement, { w: number; h: number; at: number }>());
   const frameNo = useRef(0);
+  /** The controller view the camera shows — a drag, a pinch, a wheel step or a tween replaces it. */
+  const shown = useRef<ZoomController['view'] | null>(null);
   useFrame((state, dt) => {
-    if (zoom.tick()) applyView(camera, zoom);
+    // the camera takes the controller's view on every frame it changed. (It used to follow only a
+    // running tween, so a drag or a pinch moved the controller but not the camera — the room
+    // jumped later, when some tween or resize happened to apply it: "sometimes, and choppy".)
+    zoom.tick();
+    if (zoom.view !== shown.current) {
+      applyView(camera, zoom);
+      shown.current = zoom.view;
+    }
     if (!reducedMotion) for (const seat of office.seats.values()) seat.mixer.update(Math.min(dt, 0.05));
     const n = ++frameNo.current;
     // tags keep one pixel size at every zoom (DESIGN — 12px floor); below L3 a tag that would
-    // cover a more important one is hidden instead of drawn smaller
-    const collide = !tagsShowAll(zoom.level());
+    // cover a more important one is hidden instead of drawn smaller. During a drag the check runs
+    // every 6th frame (~100 ms) — the tags slide together, nothing new comes to overlap.
+    const showAll = tagsShowAll(zoom.level());
+    const collide = !showAll && (!zoom.dragging() || n % 6 === 0);
+    // sizes are read before any transform is written this frame, so a read never forces a layout
+    if (collide && n % 30 === 0) for (const seat of office.seats.values()) if (seat.tag) sizes.current.delete(seat.tag);
+    const fresh: HTMLElement[] = [];
+    if (collide) for (const seat of office.seats.values()) if (seat.tag && !sizes.current.has(seat.tag) && !seat.tag.classList.contains('is-quiet')) fresh.push(seat.tag);
+    for (const el of fresh) sizes.current.set(el, { w: el.offsetWidth, h: el.offsetHeight, at: n });
     const boxes: (TagBox & { el: HTMLElement })[] = [];
     for (const seat of office.seats.values()) {
       const el = seat.tag ?? tags.current?.get(seat.name) ?? null;
@@ -176,15 +200,12 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags,
       seat.tagAnchor.getWorldPosition(v).project(state.camera);
       const [x, y] = toScreen(v, state.size);
       el.style.transform = `translate(${x.toFixed(1)}px, ${(y - TAG_GAP).toFixed(1)}px) translate(-50%, -100%)`;
-      if (!collide || el.classList.contains('is-quiet')) {
+      if (showAll || el.classList.contains('is-quiet')) {
         if (el.dataset.covered) delete el.dataset.covered;
         continue;
       }
-      let box = sizes.current.get(el);
-      if (!box || n - box.at > 30) {
-        box = { w: el.offsetWidth, h: el.offsetHeight, at: n };
-        sizes.current.set(el, box);
-      }
+      const box = sizes.current.get(el);
+      if (!collide || !box) continue;
       boxes.push({ el, name: seat.name, x, y: y - TAG_GAP, w: box.w, h: box.h, prio: Number(el.dataset.prio ?? 5) });
     }
     if (boxes.length) {
@@ -214,7 +235,7 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags,
 
   const hovered = useRef<string | null>(null);
   const hover = (name: string | null) => {
-    if (name === hovered.current) return;
+    if (name === hovered.current || zoom.dragging()) return; // no hover (and no re-render) while the room is dragged
     hovered.current = name;
     gl.domElement.style.cursor = name ? 'pointer' : '';
     onHover(name);

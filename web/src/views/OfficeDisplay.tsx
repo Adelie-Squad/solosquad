@@ -83,8 +83,8 @@ export function OfficeDisplay() {
   return (
     <main className="office-display" aria-label={title}>
       <section className="office-display-scene">
-        {/* no page to scroll here, so a plain wheel zooms; the zoom is remembered apart from the office screen's */}
-        <OfficeStage agents={seats} statuses={statuses} theme={theme} onSelect={() => {}} fallback={roster} wheel="always" storageKey={zoomKey(org, ws, true)} />
+        {/* the same controls as the office screen; the zoom is remembered apart from it */}
+        <OfficeStage agents={seats} statuses={statuses} theme={theme} onSelect={() => {}} fallback={roster} display storageKey={zoomKey(org, ws, true)} />
         <div className="office-display-top">
         <header className="office-display-overlay">
           <h1>{t('office.title')}</h1>

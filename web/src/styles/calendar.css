@@ -183,9 +183,9 @@
   color: var(--warn);
 }
 
-/* the coming 일정: a day and a time need more room than "in 2 hours" */
-.account-dashboard [data-testid='account-upcoming'] .next-run {
-  grid-template-columns: max-content minmax(0, 1fr);
+/* 진행 예정 mixes runs and 일정: a day and a time need more room than "in 2 hours" */
+.dash-tab-panel .next-run {
+  grid-template-columns: 10.5em minmax(0, 1fr);
 }
 
 .cost-sub {

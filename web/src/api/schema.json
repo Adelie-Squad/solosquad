@@ -186,6 +186,12 @@
     },
     "CalendarAgentView": {
       "$ref": "#/$defs/CalendarAgentView"
+    },
+    "Digest": {
+      "$ref": "#/$defs/Digest"
+    },
+    "DigestAck": {
+      "$ref": "#/$defs/DigestAck"
     }
   },
   "required": [
@@ -249,7 +255,9 @@
     "CalendarLabels",
     "CalendarEvent",
     "CalendarAgentAccess",
-    "CalendarAgentView"
+    "CalendarAgentView",
+    "Digest",
+    "DigestAck"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -1704,6 +1712,565 @@
       "type": "object",
       "title": "CustomerProfile"
     },
+    "Digest": {
+      "additionalProperties": false,
+      "description": "`GET /api/me/digest` — what happened in the person's scopes between `since` (when they\nwere last here) and `until` (now). Deterministic aggregation, no model call.",
+      "properties": {
+        "basis": {
+          "enum": [
+            "first",
+            "away",
+            "acknowledged"
+          ],
+          "type": "string"
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "until": {
+          "type": "number"
+        },
+        "finished": {
+          "items": {
+            "$ref": "#/$defs/DigestWork"
+          },
+          "type": "array"
+        },
+        "failed": {
+          "items": {
+            "$ref": "#/$defs/DigestWork"
+          },
+          "type": "array"
+        },
+        "approvals_mine": {
+          "items": {
+            "$ref": "#/$defs/DigestApproval"
+          },
+          "type": "array"
+        },
+        "approvals_others": {
+          "items": {
+            "$ref": "#/$defs/DigestApproval"
+          },
+          "type": "array"
+        },
+        "decided": {
+          "items": {
+            "$ref": "#/$defs/DigestDecision"
+          },
+          "type": "array"
+        },
+        "scheduled": {
+          "items": {
+            "$ref": "#/$defs/DigestScheduled"
+          },
+          "type": "array"
+        },
+        "calendar": {
+          "items": {
+            "$ref": "#/$defs/DigestCalendar"
+          },
+          "type": "array"
+        },
+        "cost": {
+          "$ref": "#/$defs/DigestCost"
+        },
+        "counts": {
+          "$ref": "#/$defs/DigestCounts"
+        },
+        "cap": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "basis",
+        "since",
+        "until",
+        "finished",
+        "failed",
+        "approvals_mine",
+        "approvals_others",
+        "decided",
+        "scheduled",
+        "calendar",
+        "cost",
+        "counts",
+        "cap"
+      ],
+      "type": "object",
+      "title": "Digest"
+    },
+    "DigestAck": {
+      "additionalProperties": false,
+      "description": "`POST /api/me/digest/ack` — the digest now starts here.",
+      "properties": {
+        "seen_until": {
+          "type": "number"
+        },
+        "basis": {
+          "enum": [
+            "first",
+            "away",
+            "acknowledged"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "seen_until",
+        "basis"
+      ],
+      "type": "object",
+      "title": "DigestAck"
+    },
+    "DigestApproval": {
+      "additionalProperties": false,
+      "description": "An approval that arrived in the window and still waits — `ApprovalItem` plus where.",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "company",
+            "workflow"
+          ],
+          "type": "string"
+        },
+        "thread_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "created": {
+          "type": "number"
+        },
+        "card": {
+          "$ref": "#/$defs/ApprovalCard"
+        },
+        "tier": {
+          "enum": [
+            "owner",
+            "team"
+          ],
+          "type": "string"
+        },
+        "can_approve": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "org",
+        "workspace",
+        "source",
+        "thread_id",
+        "run_id",
+        "created",
+        "card",
+        "tier",
+        "can_approve"
+      ],
+      "type": "object",
+      "title": "DigestApproval"
+    },
+    "DigestCalendar": {
+      "additionalProperties": false,
+      "description": "A 일정 item that began, or a 할 일 that came due, in the window (not done).",
+      "properties": {
+        "type": {
+          "enum": [
+            "item",
+            "todo"
+          ],
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "item_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "item_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "when": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "work",
+            "personal"
+          ],
+          "type": "string"
+        },
+        "org": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "item_id",
+        "title",
+        "item_title",
+        "when",
+        "kind",
+        "org"
+      ],
+      "type": "object",
+      "title": "DigestCalendar"
+    },
+    "DigestCost": {
+      "additionalProperties": false,
+      "properties": {
+        "spent_usd": {
+          "type": "number"
+        },
+        "orgs": {
+          "items": {
+            "$ref": "#/$defs/DigestOrgCost"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "spent_usd",
+        "orgs"
+      ],
+      "type": "object",
+      "title": "DigestCost"
+    },
+    "DigestCounts": {
+      "additionalProperties": false,
+      "description": "How many of each there were — the lists are capped, these are not.",
+      "properties": {
+        "finished": {
+          "type": "integer"
+        },
+        "failed": {
+          "type": "integer"
+        },
+        "approvals_mine": {
+          "type": "integer"
+        },
+        "approvals_others": {
+          "type": "integer"
+        },
+        "decided": {
+          "type": "integer"
+        },
+        "scheduled": {
+          "type": "integer"
+        },
+        "calendar": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "finished",
+        "failed",
+        "approvals_mine",
+        "approvals_others",
+        "decided",
+        "scheduled",
+        "calendar"
+      ],
+      "type": "object",
+      "title": "DigestCounts"
+    },
+    "DigestDecision": {
+      "additionalProperties": false,
+      "description": "An approval someone else answered in the window.",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "number"
+        },
+        "approver": {
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "approved",
+            "declined",
+            "other"
+          ],
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "company",
+            "workflow"
+          ],
+          "type": "string"
+        },
+        "thread_id": {
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "org",
+        "workspace",
+        "ts",
+        "approver",
+        "decision",
+        "source",
+        "thread_id",
+        "title",
+        "category"
+      ],
+      "type": "object",
+      "title": "DigestDecision"
+    },
+    "DigestOrgCost": {
+      "additionalProperties": false,
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        },
+        "spent_usd": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "org",
+        "display",
+        "spent_usd"
+      ],
+      "type": "object",
+      "title": "DigestOrgCost"
+    },
+    "DigestScheduled": {
+      "additionalProperties": false,
+      "description": "A run a schedule started in the window (a failed one is under `failed` instead).",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "thread_id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "workflow",
+            "cron"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "success",
+            "error",
+            "interrupted",
+            "cancelled",
+            "superseded"
+          ],
+          "type": "string"
+        },
+        "created": {
+          "type": "number"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/WorkArtifact"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "org",
+        "workspace",
+        "run_id",
+        "thread_id",
+        "kind",
+        "name",
+        "title",
+        "status",
+        "created",
+        "artifacts"
+      ],
+      "type": "object",
+      "title": "DigestScheduled"
+    },
+    "DigestWork": {
+      "additionalProperties": false,
+      "description": "A conversation or workflow run that ended in the window (by its newest run).",
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "workspace": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "chat",
+            "workflow"
+          ],
+          "type": "string"
+        },
+        "thread_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "workflow": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cron": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "running",
+            "success",
+            "error",
+            "interrupted",
+            "cancelled",
+            "superseded"
+          ],
+          "type": "string"
+        },
+        "ended": {
+          "type": "number"
+        },
+        "agents": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/WorkArtifact"
+          },
+          "type": "array"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "org",
+        "workspace",
+        "source",
+        "thread_id",
+        "run_id",
+        "title",
+        "workflow",
+        "cron",
+        "status",
+        "ended",
+        "agents",
+        "artifacts",
+        "error"
+      ],
+      "type": "object",
+      "title": "DigestWork"
+    },
     "EngineEvent": {
       "additionalProperties": true,
       "description": "One server-sent event (`data:`); `id:` carries the replay sequence (Last-Event-ID).",
@@ -1966,7 +2533,9 @@
         "calendar_color_invalid",
         "calendar_assignee_invalid",
         "calendar_reorder_invalid",
-        "calendar_agent_access_invalid"
+        "calendar_agent_access_invalid",
+        "digest_since_invalid",
+        "digest_until_invalid"
       ],
       "type": "string",
       "title": "ErrorCode"

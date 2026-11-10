@@ -3,28 +3,15 @@
 // (its tip moves on a sphere around the shoulder); the bone turns so its tip points there. And the
 // content hides the penguin's body in three passes: the penguin, then an invisible quad over each
 // content box that wipes every pixel there (`makeEraser` — no depth test, so no pose can push a body
-// part through it), then the wings allowed to touch the content drawn again on top
-// (`useFrontPass` — a twin of the penguin's skinned meshes that keeps only those wings' fragments).
+// part through it), then the acting wing drawn again on top once it has come round the content's
+// edge (arms.ts decides which wing and when; `useFrontPass` — a twin of the penguin's skinned meshes
+// that keeps only those wings' fragments).
 // Part of the lazily loaded 3D chunk.
 import { useLayoutEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import type { SectionId } from './sections';
+import type { Side } from './arms';
 
-export type Side = 'L' | 'R';
-
-/**
- * The only body parts that may show in front of a section's content (the penguin's left wing is on
- * the reader's right): the two typing wings on the prompt box's top edge, the wing handing the
- * request to card 1, the wing on the scroll rod, the stamp wing, and on the last card the waving
- * wing and the one resting on its edge. Never the head, the body or the feet.
- */
-export const FRONT: Record<SectionId, readonly Side[]> = {
-  hero: ['L', 'R'],
-  what: ['R'],
-  team: ['R'],
-  control: ['L'],
-  start: ['L', 'R'],
-};
+export type { Side };
 
 /** Render order: the body (0) < the eraser (10) < the front wings and the props (20). */
 export const ORDER = { eraser: 10, front: 20 } as const;

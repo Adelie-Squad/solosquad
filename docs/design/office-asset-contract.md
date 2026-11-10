@@ -33,7 +33,7 @@ assets/office/
 - 바닥 타일 = 2 × 2 m. 벽 높이 2.4 m. 방은 타일을 붙여 넓힌다(웹이 인원에 맞춰 배치).
 - 각 모듈의 원점 = 바닥 면 가운데. 앞(열린 쪽) = +Z(glTF 기준). 책상 세트는 앉는 사람이 +Z 를 본다.
 - 기준 시점: 직교 · 위 30° · 옆 45°. 스타일 프레임은 이 시점으로 렌더한다.
-- 펭귄 크기: 의자에 앉은 키 **0.60 m**(폭 0.53 · 깊이 0.33), 책상 상판 높이 0.72 m 에 날개가 닿는 비례. 0.55 m 이면 위 30° 시점에서 얼굴이 노트북 뚜껑에 가려져 올렸다(스타일 프레임 실측, 2026-11-07).
+- 펭귄 크기: 의자에 앉은 키 **0.70 m**(폭 0.48 날개 포함 · 몸 0.44 · 깊이 0.32 앞판 포함 · 발까지 0.35), 책상 상판 높이 0.72 m 에 날개가 닿는 비례. 0.55 m 이면 위 30° 시점에서 얼굴이 노트북 뚜껑에 가려져 0.60 m 로 올렸고(스타일 프레임 실측, 2026-11-07), 2026-11-10 몸을 위로 길쭉하게 다시 그리며 0.70 m 로 올렸다(DESIGN.md `## 에이전트 캐릭터`). 앉는 자리 · 의자 · 상판 높이는 그대로.
 - 축: Blender Z-up 에서 glTF +Z(열린 앞쪽, 앉은 에이전트가 보는 쪽) = Blender −Y. 벽은 Blender −X(왼쪽) · +Y(뒤).
 
 ## 3. 모듈 (office-kit.glb) — 루트 노드 이름 = 아래 이름 그대로
@@ -64,7 +64,7 @@ assets/office/
 | `clay.lamp_bulb` | 스탠드 전구(저녁에 웹이 발광을 켠다) |
 | `team_sticker` | 노트북 뚜껑 스티커 — **웹이 팀 대표색으로 칠한다** |
 | `team_accent` | 역할 소품의 팀 색 부분 — 웹이 팀 대표색으로 칠한다 |
-| `penguin.body` · `penguin.face` · `penguin.cheek` · `penguin.eye` · `penguin.beak` · `penguin.feet` | 펭귄 |
+| `penguin.body` · `penguin.face` · `penguin.cheek` · `penguin.eye` · `penguin.beak` · `penguin.feet` · `penguin.stitch` | 펭귄. 웹이 테마별로 바꾸는 것은 `penguin.body` 뿐이고 나머지는 고정색(흰 앞판 `#F3F0EA` · 눈 `#151410` · 볼 `#E01FAE` · 부리 흰색 `#FBF9F4` · 박음질 검정 `#151410` · 발 검정 `#151410`). `penguin.stitch` 는 흰 앞판 가장자리와 부리 테두리 박음질 둘 다 |
 | `prop.<색 이름>` | 소품의 고정 색(예: `prop.gold` · `prop.black`) |
 
 - 모든 재질 = 무광(roughness 0.8 이상) · metallic 0(glTF 기본값이 1 이므로 꼭 명시) · 텍스처 무늬 없음.
@@ -74,7 +74,8 @@ assets/office/
 
 - 메시 `penguin` 하나 + 아마추어 `penguin_rig`. 뼈 이름: `root` · `body` · `head` · `wing.L` · `wing.R` · `foot.L` · `foot.R`.
 - 소품 붙는 자리(뼈) : `socket.head` · `socket.chest` · `socket.hand.R`.
-- 생김새 = SoloSquad 펭귄 2D 아이콘과 같은 캐릭터: 봉제 키링처럼 납작하고 통통한 실루엣 · 하트 모양 흰 얼굴 · 마젠타 볼 · 가장자리 스티치(얕은 홈). 잉크 윤곽선 없음.
+- 생김새 = SoloSquad 펭귄 2D 아이콘과 같은 캐릭터(DESIGN.md `## 에이전트 캐릭터`, 2026-11-10): 위로 길쭉한 봉제 인형 · 이마부터 배를 지나 엉덩이 밑까지 감싸는 흰 앞판 한 장(눈 옆은 매끈한 곡선, 배는 살짝 오목) · 정원 눈(볼보다 큼) · 정원 마젠타 볼 · 흰 마름모 부리 · 앞판 가장자리와 부리 테두리의 검정 박음질 · 검정 발. 잉크 윤곽선 없음.
+- 앞모습 좌표는 2D 와 하나다 — `assets/office/scripts/penguin.py` 의 `FRONT` · `EYES` · `CHEEKS` · `BEAK` = `web/src/characters/penguinShape.ts`(아이콘 단위, 3D 는 0.017 m/단위 · 눈 중심 z 0.49 m).
 - **역할 소품** = 별도 메시, 이름 `prop.<에이전트 id>.<부분>`, 사용자 정의 속성 `socket` = `head` | `chest` | `hand.R`. 15명 전부 + 팀 색 스카프 `prop.scarf`(소품 없는 역할용):
 
 | 에이전트 | 소품 |

@@ -1,8 +1,10 @@
-// The zoom on the page (DESIGN.md `## 사무실 장면` — 확대 · 축소): the corner control steps the
-// five levels and clamps, 전체 보기 resets, the keys work while the scene has focus, a plain
-// wheel scrolls the office page but zooms the pop-out, ctrl / ⌘ + wheel zooms, a double-click
-// on a penguin zooms to it (a single click still opens the modal), name tags all show from L3,
-// the level is announced and remembered, and the WebGL-off list has no zoom.
+// The zoom on the page (DESIGN.md `## 사무실 장면` — 확대 · 축소): the corner control is − · +
+// only (no level dots, no 전체 보기 — user 2026-11-10) and clamps, the keys work while the scene
+// has focus (`0` stays as a hidden shortcut), every wheel over the scene zooms — on the office
+// page too, and in full screen — while a wheel outside it is left to the page, a drag pans (at
+// L1 it springs back) and is never a click, a double-click on a penguin zooms to it (a single
+// click still opens the modal), name tags all show from L3, the level is announced and
+// remembered, and the WebGL-off list has no zoom.
 // The 3D chunk is replaced by a stub that hands the controller a real frame from the layout.
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { useEffect } from 'react';
@@ -22,8 +24,10 @@ const seats: SeatAgent[] = [
 ];
 
 let lastZoom: ZoomController | null = null;
+let canvasRenders = 0;
 vi.mock('../src/office/OfficeCanvas', () => ({
   default: function StubCanvas(props: OfficeCanvasProps) {
+    canvasRenders++;
     useEffect(() => {
       const pods = layoutOffice(props.agents, { aspect: 1200 / 760 });
       props.zoom.reduced = true;
@@ -32,7 +36,8 @@ vi.mock('../src/office/OfficeCanvas', () => ({
       props.onPods(pods.map((p) => ({ key: p.key, team: p.team, chief: p.desks.some((d) => d.chief) })));
       props.onReady();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
-    return <div data-testid="canvas" />;
+    // a click on the canvas is a click on penguin `a` (the real one raycasts)
+    return <div data-testid="canvas" onClick={() => props.onSelect('a')} />;
   },
 }));
 
@@ -64,17 +69,22 @@ async function mount(over: Partial<Parameters<typeof OfficeStage>[0]> = {}) {
   );
   await screen.findByTestId('canvas');
   await screen.findByRole('toolbar');
+  current = lastZoom;
   return { ...view, onSelect, zoom: lastZoom! };
 }
 
-const levelDot = (n: number) => screen.getByRole('button', { name: `확대 수준 ${n}/5` });
-const pressed = () => [1, 2, 3, 4, 5].find((n) => levelDot(n).getAttribute('aria-pressed') === 'true');
+let current: ZoomController | null = null;
+const pressed = () => current!.level();
+const goLevel = (n: number) => act(() => current!.setLevel(n));
 
 describe('zoom control', () => {
-  it('has labelled buttons: 축소 · five levels · 확대 · 전체 보기', async () => {
+  it('is − · + only: no level dots, no 전체 보기', async () => {
     await mount();
-    for (const name of ['축소', '확대', '전체 보기']) expect(screen.getByRole('button', { name })).toBeTruthy();
-    expect(pressed()).toBe(1);
+    const bar = screen.getByRole('toolbar');
+    expect([...bar.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual(['축소', '확대']);
+    expect(screen.queryByRole('button', { name: '전체 보기' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /확대 수준/ })).toBeNull();
+    expect(document.querySelector('.office-zoom-dot, .office-zoom-dots')).toBeNull();
   });
 
   it('steps the levels and clamps at 1 and 5', async () => {
@@ -91,17 +101,12 @@ describe('zoom control', () => {
     expect(pressed()).toBe(5);
     fireEvent.click(zoomOut);
     expect(pressed()).toBe(4);
-    fireEvent.click(levelDot(2));
-    expect(pressed()).toBe(2);
   });
 
-  it('전체 보기 goes back to L1 and announces the level politely', async () => {
+  it('announces the level politely when it settles', async () => {
     await mount();
-    fireEvent.click(levelDot(4));
+    goLevel(4);
     expect(screen.getByText('확대 수준 4/5', { selector: '[aria-live]' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '전체 보기' }));
-    expect(pressed()).toBe(1);
-    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('확대 수준 1/5');
   });
 
   it('+ · - · 0 work while the scene has focus', async () => {
@@ -128,28 +133,143 @@ describe('wheel', () => {
     return e;
   };
 
-  it('a plain wheel scrolls the office page — no zoom, not prevented', async () => {
+  it('on the office page a plain wheel over the scene zooms — one notch, one level — and the page does not scroll', async () => {
     const { zoom } = await mount();
-    const e = wheel(screen.getByRole('group'), { deltaY: -400 });
+    const e = wheel(screen.getByRole('group'), { deltaY: -100 });
+    expect(e.defaultPrevented).toBe(true);
+    expect(zoom.level()).toBe(2);
+    // a macOS mouse notch is 4.000244 px — still a whole level
+    const mac = wheel(screen.getByTestId('canvas'), { deltaY: -4.000244140625 });
+    expect(mac.defaultPrevented).toBe(true);
+    expect(zoom.level()).toBe(3);
+    wheel(screen.getByRole('group'), { deltaY: 100, deltaMode: 0 });
+    expect(zoom.level()).toBe(2);
+  });
+
+  it('a wheel outside the scene is left to the page', async () => {
+    const { zoom } = await mount();
+    const outside = document.createElement('div');
+    document.body.appendChild(outside);
+    const e = wheel(outside, { deltaY: 400 });
     expect(e.defaultPrevented).toBe(false);
     expect(zoom.view.zoom).toBe(1);
+    outside.remove();
   });
 
-  it('ctrl+wheel (a trackpad pinch) and ⌘+wheel zoom toward the pointer', async () => {
+  it('ctrl+wheel (a trackpad pinch) follows the fingers toward the pointer', async () => {
     const { zoom } = await mount();
-    const e = wheel(screen.getByRole('group'), { deltaY: -60, ctrlKey: true });
+    const e = wheel(screen.getByRole('group'), { deltaY: -6.5, ctrlKey: true });
     expect(e.defaultPrevented).toBe(true);
     expect(zoom.view.zoom).toBeGreaterThan(1);
-    const z = zoom.view.zoom;
-    wheel(screen.getByRole('group'), { deltaY: -200, metaKey: true });
-    expect(zoom.view.zoom).toBeGreaterThan(z);
+    expect(zoom.view.zoom).toBeLessThan(zoom.frame!.levels[1]);
   });
 
-  it('on the pop-out display a plain wheel zooms', async () => {
-    const { zoom } = await mount({ wheel: 'always', storageKey: zoomKey('tesla', 'charging', true) });
-    const e = wheel(screen.getByRole('group'), { deltaY: -400 });
+  it('zooms in full screen — the pop-out (or the page) made full screen keeps the same listeners', async () => {
+    const { zoom } = await mount({ display: true, storageKey: zoomKey('tesla', 'charging', true) });
+    const group = screen.getByRole('group');
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => document.documentElement });
+    document.dispatchEvent(new Event('fullscreenchange'));
+    const e = wheel(group, { deltaY: -100 });
     expect(e.defaultPrevented).toBe(true);
-    expect(zoom.view.zoom).toBeGreaterThan(1);
+    expect(zoom.level()).toBe(2);
+    delete (document as unknown as { fullscreenElement?: unknown }).fullscreenElement;
+  });
+});
+
+describe('drag', () => {
+  const ptr = (el: Element, type: string, x: number, y: number) => {
+    const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 });
+    Object.assign(e, { pointerId: 1, pointerType: 'mouse' });
+    el.dispatchEvent(e);
+  };
+  const drag = (el: Element, steps: [number, number][]) => {
+    const [x0, y0] = steps[0];
+    ptr(el, 'pointerdown', x0, y0);
+    for (const [x, y] of steps.slice(1)) ptr(el, 'pointermove', x, y);
+    const [x1, y1] = steps[steps.length - 1];
+    ptr(el, 'pointerup', x1, y1);
+    fireEvent.click(el, { clientX: x1, clientY: y1 });
+  };
+
+  it('pans the room (pointer down · move · up) and does not open the agent modal', async () => {
+    const { zoom, onSelect } = await mount();
+    goLevel(3);
+    const canvas = screen.getByTestId('canvas');
+    const before = { ...zoom.view };
+    drag(canvas, [
+      [600, 380],
+      [610, 384],
+      [640, 400],
+      [680, 420],
+    ]);
+    expect(zoom.view.u).toBeLessThan(before.u); // dragged right → the view moves left
+    expect(zoom.view.v).toBeGreaterThan(before.v); // dragged down → the view moves up
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('a small wobble (under 4 px) is still a click', async () => {
+    const { zoom, onSelect } = await mount();
+    goLevel(3);
+    const canvas = screen.getByTestId('canvas');
+    const before = { ...zoom.view };
+    drag(canvas, [
+      [600, 380],
+      [602, 381],
+    ]);
+    expect(onSelect).toHaveBeenCalledWith('a');
+    expect(zoom.view).toEqual(before);
+  });
+
+  it('at L1 the room follows the drag a little and springs back', async () => {
+    const { zoom } = await mount();
+    const canvas = screen.getByTestId('canvas');
+    const fit = zoom.frame!.fit;
+    ptr(canvas, 'pointerdown', 600, 380);
+    ptr(canvas, 'pointermove', 700, 380);
+    expect(zoom.view.u).toBeLessThan(fit.u);
+    ptr(canvas, 'pointerup', 700, 380);
+    expect(zoom.view.u).toBeCloseTo(fit.u, 6);
+  });
+
+  it('a drag that starts on a team label pans instead of zooming to the team', async () => {
+    const { zoom } = await mount();
+    goLevel(2);
+    const label = screen.getAllByRole('button', { name: /팀으로 확대/ })[0];
+    const before = { ...zoom.view };
+    drag(label, [
+      [300, 300],
+      [340, 300],
+    ]);
+    expect(zoom.view.zoom).toBe(before.zoom);
+    expect(zoom.view.u).not.toBe(before.u);
+  });
+
+  it('a drag re-renders nothing: the pan lives in the controller, the camera reads it per frame', async () => {
+    const { zoom } = await mount();
+    goLevel(3);
+    const canvas = screen.getByTestId('canvas');
+    const before = canvasRenders;
+    const views = new Set<unknown>();
+    act(() => {
+      ptr(canvas, 'pointerdown', 600, 380);
+      for (let i = 1; i <= 30; i++) {
+        ptr(canvas, 'pointermove', 600 + i * 3, 380 + i);
+        views.add(zoom.view);
+      }
+      ptr(canvas, 'pointerup', 690, 410);
+    });
+    expect(canvasRenders).toBe(before); // no React render of the stage (or its tags) for a drag
+    expect(views.size).toBeGreaterThan(25); // a new view per move — what the frame loop applies
+  });
+
+  it('shows the grab cursor class while dragging', async () => {
+    await mount();
+    const group = screen.getByRole('group');
+    ptr(screen.getByTestId('canvas'), 'pointerdown', 600, 380);
+    act(() => ptr(screen.getByTestId('canvas'), 'pointermove', 640, 380));
+    expect(group.classList.contains('is-dragging')).toBe(true);
+    act(() => ptr(screen.getByTestId('canvas'), 'pointerup', 640, 380));
+    expect(group.classList.contains('is-dragging')).toBe(false);
   });
 });
 
@@ -160,10 +280,10 @@ describe('name tags', () => {
     await mount({ statuses: { e1: 'typing' } });
     expect(tagOf('Ann').classList.contains('is-quiet')).toBe(true);
     expect(tagOf('Eng 1').classList.contains('is-quiet')).toBe(false);
-    fireEvent.click(levelDot(2));
+    goLevel(2);
     expect(tagOf('Ann').classList.contains('is-quiet')).toBe(true);
     for (const n of [3, 4, 5]) {
-      fireEvent.click(levelDot(n));
+      goLevel(n);
       expect(screen.getAllByTitle(/ · /).every((el) => !el.classList.contains('is-quiet'))).toBe(true);
     }
   });
@@ -183,7 +303,8 @@ describe('focus', () => {
     const labels = screen.getAllByRole('button', { name: /팀으로 확대/ });
     expect(labels).toHaveLength(2); // brand, engineering — not Chief's desk
     fireEvent.click(labels.find((b) => b.textContent !== '' && /engineering|엔지니어링/i.test(b.getAttribute('aria-label') ?? ''))!);
-    expect(zoom.level()).toBe(3);
+    expect(zoom.level()).toBe(zoom.frame!.teams.engineering.level);
+    expect(zoom.level()).toBeGreaterThan(1);
     const pod = zoom.frame!.teams.engineering;
     expect(zoom.view.u).toBeCloseTo(pod.u, 1);
   });
@@ -229,7 +350,7 @@ describe('memory', () => {
     expect(pressed()).toBe(5);
     expect(again.zoom.view.u).toBeCloseTo(saved.u, 2);
     again.unmount();
-    await mount({ wheel: 'always', storageKey: zoomKey('tesla', 'charging', true) });
+    await mount({ display: true, storageKey: zoomKey('tesla', 'charging', true) });
     expect(pressed()).toBe(1);
   });
 });

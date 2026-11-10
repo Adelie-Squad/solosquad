@@ -27,7 +27,7 @@ inspection.
 |---|---|
 | `lib.py` | Palette (material name = palette key), matte clay materials, bmesh helpers |
 | `kit.py` | `room.*` · `desk.set` · `desk.chief` · `lamp.desk` (+ `lamp.desk.light`) · `prop.plant/shelf/whiteboard/sofa/coffee_bar` |
-| `penguin.py` | Mesh `penguin` (body · heart felt face · stitch · eyes · cheeks · beak · wings · feet), rig `penguin_rig`, state key poses `POSES` |
+| `penguin.py` | Mesh `penguin` (tall body · white felt front wrapping under the bottom · black stitch · round eyes · round cheeks · white diamond beak with its own stitch · wings · black feet), rig `penguin_rig`, state key poses `POSES`. Front-view numbers (`FRONT` · `EYES` · `CHEEKS` · `BEAK`) are shared with `web/src/characters/penguinShape.ts` |
 | `props.py` | 19 role-prop meshes `prop.<agent-id>.<part>` + `prop.scarf`, with custom property `socket` |
 | `frames.py` | Style frames: 2×2-tile room, 4 penguins, ortho 30°/45°, light and evening, Cycles |
 | `anim.py` | The 7 state clips as actions + NLA tracks (sums of whole-cycle sines, so frame 0 = last frame) |
@@ -49,8 +49,10 @@ inspection.
 - **Desk lamp**: stands on the desk's back-left corner, at desk-local (−w/2 + 0.12, −0.02, 0.72)
   with w = 0.96 for `desk.set` and 1.30 for `desk.chief`. The light position is the child empty
   `lamp.desk.light`.
-- **Penguin**: seated height 0.60 m (the contract says about 0.55; raised so the face clears the
-  laptop lid at 30°), width 0.53 m, depth 0.33 m. Its right side is −X.
+- **Penguin**: seated height 0.70 m (redrawn taller on 2026-11-10; was 0.60, itself raised from
+  0.55 so the face clears the laptop lid at 30°), width 0.48 m with the wings (body 0.44), depth
+  0.32 m with the white front (0.35 m to the toes). Eyes at z 0.49, beak centre 0.43, shoulders
+  0.42, chest socket 0.23. Its right side is −X. Seat, chair and desk heights are unchanged.
 - **Rig bones**: `root` · `body` · `head` · `wing.L` · `wing.R` · `foot.L` · `foot.R`, plus the
   non-deforming sockets `socket.head` · `socket.chest` · `socket.hand.R`. Bone-local rotations:
   head and body X− lean forward, wing X− swings forward, and wings rise outward on Z− (L) or
@@ -59,7 +61,7 @@ inspection.
 
   | Item | Triangles | Budget |
   |---|---|---|
-  | `penguin` | 6,546 | 8k |
+  | `penguin` | 7,368 (body + wings 2,576 · front 1,748 · stitches 1,540 · beak 528 · eyes 320 · cheeks 320 · feet 336) | 8k |
   | `desk.set` / `desk.chief` | 2,636 | 3k |
   | `lamp.desk` | 1,228 | 2k |
   | `prop.sofa` / `prop.plant` / `prop.shelf` | 1,880 / 1,804 / 1,664 | 2k |
@@ -72,8 +74,8 @@ inspection.
 | File | Size (meshopt) | Contents |
 |---|---|---|
 | `export/office-kit.glb` | 651 KB | 12 module roots; 29 materials `<key>#<module>`; 8 AO maps `<module>_ao` (WebP; 1024 px for desks, sofa and shelf, 512 for coffee bar, plant and whiteboard, 256 for the lamp) |
-| `export/penguin.glb` | 185 KB | Skinned `penguin` + `penguin_rig` (10 joints); 19 props parented to socket bones with extras `socket`; 7 clips |
-| **Total** | **817 KB** | Budget 5 MB |
+| `export/penguin.glb` | 186 KB | Skinned `penguin` + `penguin_rig` (10 joints); 19 props parented to socket bones with extras `socket`; 7 clips |
+| **Total** | **822 KB** | Budget 5 MB |
 
 - **Kit materials** are per module, named `<palette key>#<module>` (contract §4, PR #57): for
   example `clay.furniture#desk.set` and `team_sticker#desk.chief`. Match the palette key with
@@ -110,11 +112,11 @@ than the material colours.
 | Key | Material (light) | Rendered light | Material (evening) | Rendered evening |
 |---|---|---|---|---|
 | `clay.backdrop` | `#EEE9DF` | `#EEE9DF` | `#15161B` | `#15161B` |
-| `clay.wall` (lit back wall) | `#F4F1EA` | `#F1EADD` | `#2B2D37` | `#100E13` |
-| `clay.wall` (left wall, shade side) | `#F4F1EA` | `#CFCBC1` | `#2B2D37` | `#1F212F` |
-| `clay.floor` | `#ECE7DE` | `#F0E8DA` | `#23252E` | `#1E2436` (moon rim) |
+| `clay.wall` (lit back wall) | `#F4F1EA` | `#F0EADD` | `#2B2D37` | `#0D0C12` |
+| `clay.wall` (left wall, shade side) | `#F4F1EA` | `#CFCAC0` | `#2B2D37` | `#20212F` |
+| `clay.floor` | `#ECE7DE` | `#F1E8DA` | `#23252E` | `#1E2436` (moon rim) |
 | `clay.furniture` (desk top) | `#F7F5F0` | `#FFFBF0` | `#3A3C47` | `#625863` (lamp-lit) |
-| `clay.wood` (coffee bar top) | `#D8C3A2` | `#A69275` (in shade) | `#5A4E3E` | `#1A120D` |
+| `clay.wood` (coffee bar top) | `#D8C3A2` | `#A59174` (in shade) | `#5A4E3E` | `#1A120D` |
 | `clay.plant` | `#8DB36B` | `#8DB06C` | `#4E6A3A` | `#273B34` |
 | `clay.screen` | `#2C74E0` | — | base `#1B2A4A` + emission `#8FB8FF` ×2.2 | — |
 | `clay.lamp_bulb` | `#FFF4DE` (off) | — | `#FFC56B` emission ×12 | — |
@@ -124,12 +126,13 @@ Lighting: light = sky `#FFFFFF` ×0.72 plus a sun `#FFF6E8` ×1.5 with a 14° an
 `#3A4566` ×0.9, a cool moon rim sun `#9FB2E8` ×2.5 from behind and above (it outlines heads,
 shoulders and props but not faces), lamp points `#FFC56B` 18 W, and screen area lights `#8FB8FF`
 14 W facing the agent. Lamps and screens are switched **per agent**: off for `idle` / `idle_doze`.
-Measured face centres in the evening frame: working agents `#E8BB9F` to `#FFF3C8`; the dozing
+Measured face centres in the evening frame (2026-11-07 penguin; not re-probed for the 2026-11-10 one): working agents `#E8BB9F` to `#FFF3C8`; the dozing
 agent `#5F5C6D`. No material emits on the face; the dozing face is lit only by ambient and spill.
 
-Fixed colours outside the DESIGN table: `penguin.face` `#F3F0EA` · `penguin.cheek` `#E01FAE` ·
-`penguin.eye` `#151410` · `penguin.beak` / `penguin.feet` `#F0AE5E` · `penguin.stitch` `#8E8676`
-(the 2D icon values, `web/src/characters/colors.ts`) · `prop.gold` `#C9A227` · `prop.black`
+Fixed penguin colours (DESIGN.md `## 에이전트 캐릭터` colour table, the 2D icon values in
+`web/src/characters/colors.ts`): `penguin.face` `#F3F0EA` · `penguin.cheek` `#E01FAE` ·
+`penguin.eye` `#151410` · `penguin.beak` `#FBF9F4` (white) · `penguin.stitch` `#151410` (black; the
+front's edge and the beak's edge) · `penguin.feet` `#151410` (black). Props: `prop.gold` `#C9A227` · `prop.black`
 `#2B2A26` · `prop.paper` `#F4F1EA` · `prop.metal` `#8A8371` · `prop.lens` `#C9DDF6` ·
 `prop.helmet` `#F0C640` · `prop.wood` `#D8C3A2`.
 

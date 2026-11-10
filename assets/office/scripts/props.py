@@ -20,6 +20,7 @@ ACC = 'team_accent'
 
 # Socket anchors in penguin space (rest pose)
 HEAD_TOP = Vector((0, 0, P.H - 0.005))
+RIM_R = P.EYE_R * P._S + 0.008   # glasses rim round the (larger) round eye
 HAND_R = Vector((-P.WING_TIP.x, P.WING_TIP.y - 0.05, P.WING_TIP.z + 0.03))  # just in front of the right wing tip
 
 
@@ -219,7 +220,7 @@ def _ring_tube(col, pts, r, mat, name, grow=0.0, flat=1.0, ring=10):
 
 
 def headset(col, body):
-    z_ear = 0.43
+    z_ear = P.EYE_Z                               # ears level with the eyes
     ring = body.ring(z_ear, 4)                     # +X, +Y, -X, -Y hits
     right, left = ring[2], ring[0]
     parts = []
@@ -250,21 +251,21 @@ def headset(col, body):
 
 def glasses(col, body, name, frame_mat):
     parts = []
-    for (x, y) in P._EYE:
+    for (x, y) in P.EYES:
         px, pz = P.icon_to_xz(x, y)
         hit, nrm = body.front(px, pz)
-        t = torus('rim', 0.036, 0.0045, col, frame_mat, 20, 5)
+        t = torus('rim', RIM_R, 0.0045, col, frame_mat, 20, 5)
         t.matrix_world = Matrix.Translation(hit + nrm * 0.028) @ _facing(nrm) @ Matrix.Rotation(math.radians(90), 4, 'X')
         parts.append(t)
-    lx, lz = P.icon_to_xz(*P._EYE[0])
-    rx, _ = P.icon_to_xz(*P._EYE[1])
+    lx, lz = P.icon_to_xz(*P.EYES[0])
+    rx, _ = P.icon_to_xz(*P.EYES[1])
     hit, nrm = body.front(0, lz)
-    parts.append(box('bridge', (abs(rx - lx) - 0.07, 0.008, 0.008), hit + nrm * 0.03 + Vector((0, 0, 0.006)), col, frame_mat, 0.003, 1))
+    parts.append(box('bridge', (abs(rx - lx) - 2 * RIM_R, 0.008, 0.008), hit + nrm * 0.03 + Vector((0, 0, 0.006)), col, frame_mat, 0.003, 1))
     # temples back to the sides of the head
     for sx in (-1, 1):
         ring = body.ring(lz, 4)
         side = ring[0] if sx > 0 else ring[2]
-        front_pt = Vector((sx * (abs(lx) + 0.036), side.y - 0.02, lz))
+        front_pt = Vector((sx * (abs(lx) + RIM_R), side.y - 0.02, lz))
         tip = side + Vector((sx * 0.01, 0.04, 0))
         d = tip - front_pt
         temple = cylinder('temple', 0.004, d.length, (0, 0, 0), col, frame_mat, 6, 0.0)
@@ -295,7 +296,7 @@ def bowtie(col, body):
     parts.append(ellipsoid('knot', (0.016, 0.012, 0.016), (0, -0.004, 0), col, M(ACC), 12, 8))
     ob = join(parts, 'bowtie')
     _bake(ob)
-    ob.matrix_world = _chest(body, 0.155, 0.018)
+    ob.matrix_world = _chest(body, P.icon_to_xz(20, 29.3)[1], 0.018)   # just under the beak
     return _finish(ob, 'prop.chief.bowtie', 'chest')
 
 
@@ -312,7 +313,7 @@ def tie(col, body):
     knot = box('knot', (0.04, 0.016, 0.03), (0, 0.004, 0.012), col, M(ACC), 0.008, 2)
     ob = join([t, knot], 'tie')
     _bake(ob)
-    hit, nrm = body.front(0, 0.21)
+    hit, nrm = body.front(0, P.icon_to_xz(20, 29.4)[1])
     ob.matrix_world = Matrix.Translation(hit + nrm * 0.008) @ _facing(nrm) @ Matrix.Rotation(math.radians(-6), 4, 'X')
     return _finish(ob, 'prop.business-strategy.tie', 'chest')
 

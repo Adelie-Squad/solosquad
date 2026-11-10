@@ -47,7 +47,7 @@ export const SEAT_OFFSET = fromBlender([0, 0.27, 0.42]);
 export const lampOffset = (desk: DeskModule): [number, number, number] => fromBlender([-DESK_WIDTH[desk] / 2 + 0.12, -0.02, 0.72]);
 
 /** §2 penguin seated height (m). */
-export const PENGUIN_HEIGHT = 0.6;
+export const PENGUIN_HEIGHT = 0.7;
 
 /** §4: kit materials are per-module instances `<palette key>#<module>`; the key is what the web paints. */
 export const paletteKey = (materialName: string): string => materialName.split('#')[0];
@@ -71,6 +71,7 @@ export const PENGUIN_MATERIALS = [
   'penguin.eye',
   'penguin.beak',
   'penguin.feet',
+  'penguin.stitch',
   'team_accent',
 ] as const;
 

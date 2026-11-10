@@ -40,6 +40,8 @@ import type {
   CalendarLabels,
   CalendarList,
   CalendarTodoOut,
+  Digest,
+  DigestAck,
 } from './types.gen';
 
 /** Customer-level keys — the same whatever org or workspace is open. */
@@ -52,6 +54,8 @@ export const keys = {
   passkeys: ['passkeys'] as const,
   profile: ['profile'] as const,
   snapshot: ['snapshot'] as const,
+  /** 자리를 비운 동안 — the account's digest (`GET /api/me/digest`). */
+  digest: ['digest'] as const,
 };
 
 /** Every org or workspace key starts with its scope, so two scopes never share a cache entry
@@ -321,3 +325,14 @@ export function useMe() {
     staleTime: 60_000,
   });
 }
+
+// -------------------------------------------------------------- 자리를 비운 동안 (the digest)
+
+/** What happened since the person was last here. The engine decides the window (the end of
+ * their previous visit, or their last 확인했어요), so a reload shows the same digest. */
+export const useDigest = (on = true) =>
+  useQuery({ queryKey: keys.digest, queryFn: () => api.get<Digest>('/me/digest'), ...enabledFor(on) });
+
+/** 확인했어요 — the digest starts at the `until` the person saw, so nothing that arrived while
+ * they read it is skipped. */
+export const ackDigest = (until: number) => api.post<DigestAck>('/me/digest/ack', { until });

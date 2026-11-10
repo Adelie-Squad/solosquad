@@ -52,7 +52,7 @@ describe('DESIGN.md `## 색` ↔ tokens.css', () => {
 
   it('reads the whole table', () => {
     expect(table.map((r) => r.token)).toEqual([
-      '--bg', '--surface', '--surface-2', '--line', '--ink', '--ink-2', '--ink-3',
+      '--bg', '--surface', '--surface-2', '--line', '--line-strong', '--ink', '--ink-2', '--ink-3',
       '--accent', '--on-accent', '--ok', '--warn', '--danger', '--cheek', '--focus',
     ]);
   });
@@ -97,7 +97,7 @@ describe('scene palette and team colours follow DESIGN.md', () => {
       .split('\n')
       .map((l) => l.match(/^\|\s*`(clay\.[a-z_]+)`/)?.[1])
       .filter(Boolean);
-    expect(keys).toEqual(['clay.backdrop', 'clay.wall', 'clay.floor', 'clay.furniture', 'clay.wood', 'clay.plant', 'clay.screen', 'clay.lamp', 'clay.sky', 'clay.penguin_body']);
+    expect(keys).toEqual(['clay.backdrop', 'clay.wall', 'clay.floor', 'clay.furniture', 'clay.wood', 'clay.plant', 'clay.screen', 'clay.lamp', 'clay.night', 'clay.sky', 'clay.penguin_body']);
     // the v2 keycap palette is gone with its code
     expect(scene).not.toMatch(/^\|\s*`(floor|ink|block|point)`/m);
   });
@@ -110,6 +110,7 @@ describe('scene palette and team colours follow DESIGN.md', () => {
     // day: the plain blue face; evening: the glow of a working screen
     ['clay.screen', [DAY.materials['clay.screen']], [EVENING.screenGlow!]],
     ['clay.lamp', [], [EVENING.lamp!.bulb]],
+    ['clay.night', [], [EVENING.night!.ceiling.color, EVENING.night!.fill.ground]],
     ['clay.sky', [DAY.sky.ambient], [EVENING.sky.ambient]],
     ['clay.penguin_body', [DAY.penguinBody], [EVENING.penguinBody]],
   ] as const)('%s', (key, day, evening) => {
@@ -120,10 +121,25 @@ describe('scene palette and team colours follow DESIGN.md', () => {
     expect(DAY.lamp).toBeNull();
     expect(DAY.screenGlow).toBeNull();
     expect(DAY.agentLights).toBeNull();
+    expect(DAY.night).toBeNull();
     // the lights carry the table's lamp and screen colours
     expect(EVENING.agentLights?.lamp.color).toBe(EVENING.lamp?.bulb);
     expect(EVENING.agentLights?.screen.color).toBe(EVENING.screenGlow);
     expect(EVENING.lamp?.pool).toBe(EVENING.lamp?.bulb);
+    // the room's night lights are the lamp's warm colour too (DESIGN `clay.night`)
+    for (const l of [EVENING.night!.fill.sky, EVENING.night!.ceiling.color, EVENING.night!.board.color, EVENING.night!.floorLamp.color]) expect(l).toBe(EVENING.lamp?.bulb);
+    expect(EVENING.night!.fill.ground).toBe(EVENING.sky.ambient);
+  });
+
+  it('the night-light table carries the palette values', () => {
+    const n = EVENING.night!;
+    const line = (start: string) => scene.split('\n').find((l) => l.trim().startsWith(`| ${start}`)) ?? '';
+    expect(line('채움빛')).toContain(`| ${n.fill.intensity} |`);
+    expect(line('천장 빛')).toContain(`| ${n.ceiling.intensity} · 거리 ${n.ceiling.distance} |`);
+    expect(line('천장 빛')).toContain(`${n.ceiling.height}m`);
+    expect(line('천장 빛')).toContain(`불투명도 ${n.poolOpacity}`);
+    expect(line('화이트보드 조명')).toContain(`| ${n.board.intensity} · 거리 ${n.board.distance} |`);
+    expect(line('스탠드 두 개')).toContain(`| ${n.floorLamp.intensity} · 거리 ${n.floorLamp.distance} |`);
   });
 
   it('team colours', () => {
