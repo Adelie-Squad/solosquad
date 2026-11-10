@@ -69,22 +69,113 @@
 <body>
 <div class="page">
 <header>
-  <span class="badge">시안 · 승인 대기</span>
+  <span class="badge">시안 · 승인 대기 · 2차</span>
   <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
   <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
   <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
   <nav>
-    <a href="#compare">비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
     <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
   </nav>
 </header>
+
+<section id="r2">
+  <span class="badge">2차 수정 · 2026-11-11</span>
+  <h2>2차 수정 — 사용자 피드백 반영</h2>
+  <p class="lead">"사무실에서는 앉아있을 것임 · 부리는 하나로(정면 마름모, 옆에서 튀어나오게) · 볼 조금 더 크게 · 뒤는 원통처럼 통통하게, 이마 · 뒤통수 더 둥글게 · 몸색 더 까맣게 · 박음질은 검정 쪽에 · 날개 뿌리 넓게 · 발목 없애고 발 넓게 · 발바닥 납작하게 · 눈썹 더 원에 가깝게, 이마 V 는 뾰족하게"</p>
+
+  <div class="card">
+    <figure><img src="r2/compare.webp" alt="초안 1, 2차 정면, 1차 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>2차</span><span>1차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세 (사무실)</h3>
+  <p class="lead">의자 좌판 0.42 m · 책상 0.72 m(계약 §2). 몸 바닥이 좌판에 닿고, 다리가 엉덩이에서 27° 앞으로 돌아 평평한 발바닥이 좌판 앞쪽에 놓인다. 사무실 카메라(30° · 45°)에서 얼굴이 노트북 뚜껑 위로 보인다. 오른쪽 두 장은 office-kit <code>desk.set</code> 그대로.</p>
+  <div class="grid g4">
+    <figure><img src="r2/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b>소품 · 가구 없이</figcaption></figure>
+    <figure><img src="r2/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b>사무실 카메라 각도</figcaption></figure>
+    <figure><img src="r2/seated/seated-desk-front.webp" alt="책상 세트에 앉은 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b>얼굴 · 부리가 뚜껑 위</figcaption></figure>
+    <figure><img src="r2/seated/seated-desk-iso.webp" alt="책상 세트에 앉은 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b>사무실 장면과 같은 시점</figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음)</h3>
+  <div class="grid g4">
+    <figure><img src="r2/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r2/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>45°</figcaption></figure>
+    <figure><img src="r2/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>부리가 튀어나옴 · 둥근 뒤 · 넓은 날개 뿌리</figcaption></figure>
+    <figure><img src="r2/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135°</figcaption></figure>
+    <figure><img src="r2/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>원통처럼 둥근 등</figcaption></figure>
+    <figure><img src="r2/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>아래쪽이 앞 — 앞은 살짝 평평, 뒤는 반원</figcaption></figure>
+    <figure><img src="r2/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b>몸색 <code>#474855</code></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">관절 시험 (다시 확인)</h3>
+  <div class="grid g2">
+    <div class="card">
+      <figure><img src="r2/motion/hop.webp" alt="뛰기 동작" loading="lazy"></figure>
+      <figcaption><b>뛰기</b>발목이 거의 안 보이지만, 다리 뼈가 늘어나면 발이 몸 밑에서 내려와 같이 움직인다. 공중에서 발끝이 접히고 착지하며 평평해진다.</figcaption>
+      <figure style="margin-top:12px"><img src="r2/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r2/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure>
+      <figcaption><b>날개 흔들기</b>넓어진 어깨 뿌리가 몸과 한 피부로 늘어난다. 흰 안쪽 면이 앞을 본다.</figcaption>
+      <figure style="margin-top:12px"><img src="r2/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>1차</th><th>2차</th></tr></thead>
+    <tbody>
+      <tr><td>사무실에서 앉음</td><td>선 자세만</td><td>앉은 자세 추가: 몸 바닥 = 좌판 0.42 m, 눈 높이 0.93 m(책상 0.72 m 위 0.21 m), 다리 27° 앞으로 + 발 −27° 로 발바닥 평평. 선 턴어라운드는 그대로</td></tr>
+      <tr><td>부리 하나로 · 정면 마름모 · 옆에서 튀어나옴</td><td>두 삼각형 사이 틈, 높이 1 cm</td><td>한 조각 마름모(폭 0.10 m = 0.24 W, 위 0.050 · 아래 0.058 m). 네 면 피라미드로 <b>3.8 cm</b> 튀어나옴, 검정 테두리(2.6 mm) + 박음질</td></tr>
+      <tr><td>볼 조금 더 크게</td><td>눈의 0.65</td><td>눈의 <b>0.75</b>(지름 0.089 m = 0.22 W)</td></tr>
+      <tr><td>뒤 원통처럼 통통 · 이마 · 뒤통수 둥글게</td><td>앞뒤 같은 단면, 깊이 0.27 m(0.66 W)</td><td>앞 반쪽 0.125 m(살짝 평평, 지수 2.6) + 뒤 반쪽 0.170 m(반원, 지수 2.0) = 깊이 <b>0.295 m = 0.72 W</b>. 머리 쪽은 최대 10 % 더 깊음(0.79 W). 머리 위 반축 0.24 → 0.21 m(거의 반원)</td></tr>
+      <tr><td>몸색 더 까맣게</td><td><code>#2B2A26</code> · 반사 0.32</td><td><code>#1E1D1A</code> · 반사(Specular) 0.22 · 거칠기 0.50 (흰 앞판 0.62)</td></tr>
+      <tr><td>박음질은 검정 쪽에</td><td>흰 앞판 안쪽 6 mm</td><td>흰 경계 <b>바깥 5.8 mm, 검정 가죽 위</b>. 실은 살짝 광택(거칠기 0.30)이라 검정 위에서도 보인다. 날개 흰 안쪽의 솔기도 검정 테두리 쪽. 눈 · 볼 · 부리 박음질은 각자 조각 위 그대로</td></tr>
+      <tr><td>날개 뿌리 넓게</td><td>뿌리가 가늘고 끝이 넓음</td><td>폭 · 두께 배율 뿌리 1.18 → 끝 0.80(뿌리가 끝의 약 1.5배), 날개 반축 0.165 · 0.058 · 0.024 m, 어깨 주름 0.035 → 0.045 m</td></tr>
+      <tr><td>발목 없애고 발 넓게 · 발등 둥글게 · 발바닥 납작</td><td>둥근 갓 + 보이는 기둥</td><td>발 폭 0.10 → <b>0.12 m</b>, 길이 0.16 m, 발등 높이 4 cm 둥근 반구 + 평평한 발바닥(가장자리 반경 8 mm). 몸 바닥을 0.04 → 0.03 m 로 내려 발등이 1 cm 몸속으로 들어감. 다리는 몸속 캡슐(반경 2.4 cm)</td></tr>
+      <tr><td>눈썹 더 원에 가깝게 · 이마 V 뾰족</td><td>스플라인 곡선, 둥근 V</td><td>눈 위 흰 덩이 = <b>반지름 0.21 W 원호</b> 그대로. 두 원이 가운데에서 만나 V 꼭짓점 각 약 36°. 박음질은 꼭짓점 1.2–1.7 cm 앞에서 끝나 끝이 뭉개지지 않음</td></tr>
+      <tr><td>전체 높이 · 삼각형</td><td>0.745 m · 89,064</td><td>0.735 m · 94,160 (피부 71,888 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>앉은 자세에서 발 뒤쪽 절반이 배 아래 모서리 속으로 들어간다(겉에서는 안 보임). 제품용이면 앉은 자세 교정 모양키가 필요하다</li>
+        <li>정면 높이 0°에서 보면 노트북 뚜껑이 부리를 가린다. 사무실 카메라(30°)에서는 얼굴 전체가 보인다</li>
+        <li>흰 앞판 아래 모서리의 꺾임, 저녁 정면이 푸르게 밝은 것은 1차와 같다</li>
+        <li>제품 LOD 계획은 1차와 같음(피부 6–7k + 조각 0.8k, 앞판 · 솔기는 텍스처로 굽기)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>앉을 때 발을 좌판 앞에 <b>내놓을까</b>(지금), 몸 밑에 <b>숨길까</b>?</li>
+        <li>부리 3.8 cm 돌출 — 옆에서 더 뾰족하게(더 길게) 갈까, 지금이 좋은가?</li>
+        <li>검정 위 박음질이 지금 정도(은은하게 광택)면 되는가, 실을 회색으로 더 보이게 할까?</li>
+        <li>몸색 <code>#1E1D1A</code> 를 제품(DESIGN.md · 2D 아이콘 <code>#2B2A26</code>)에도 맞출까?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r1-head" style="margin-top:56px">
+  <span class="badge" style="color:var(--ink-3)">1차 시안 · 2026-11-10</span>
+  <h2>1차 시안 (비교용으로 남김)</h2>
+  <p class="lead">아래는 1차 그대로다(커밋 <code>c9c4e89</code> 의 스크립트). 위 2차와 비교해 보도록 남겨 둔다.</p>
+</section>
 
 <section id="compare">
   <h2>나란히 보기</h2>
   <p class="lead">왼쪽 초안 · 가운데 v3 · 오른쪽 지금 v2. 초안은 사진이라 크기 · 원근이 다르다. v3 · v2 는 같은 정면 정사영 카메라.</p>
   <div class="card">
-    <figure><img src="compare.webp" alt="초안 1, v3 정면, 현재 v2 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
-    <div class="cmp-labels"><span>초안 draft_1</span><span>v3 시안</span><span>현재 v2</span></div>
+    <figure><img src="r1/compare.webp" alt="초안 1, v3 정면, 현재 v2 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>v3 1차</span><span>현재 v2</span></div>
   </div>
 </section>
 
@@ -92,13 +183,13 @@
   <h2>턴어라운드 (소품 없음)</h2>
   <p class="lead">모든 방향이 같은 정사영 틀(폭 0.98 m · 중심 높이 0.40 m)이다. 라이트 조명 + 저녁 정면 한 장. 1200 px.</p>
   <div class="grid g4">
-    <figure><img src="turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>앞</figcaption></figure>
-    <figure><img src="turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>펭귄의 왼쪽으로 45°</figcaption></figure>
-    <figure><img src="turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>펭귄의 왼쪽 90° — 두께 · 어깨 주름 · 발</figcaption></figure>
-    <figure><img src="turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135° — 날개 안쪽 흰 면이 살짝 보인다</figcaption></figure>
-    <figure><img src="turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>180°</figcaption></figure>
-    <figure><img src="turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>정수리에서 — 아래쪽이 앞</figcaption></figure>
-    <figure><img src="turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b>몸색 <code>#474855</code> + 화면 빛 채움광</figcaption></figure>
+    <figure><img src="r1/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>앞</figcaption></figure>
+    <figure><img src="r1/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>펭귄의 왼쪽으로 45°</figcaption></figure>
+    <figure><img src="r1/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>펭귄의 왼쪽 90° — 두께 · 어깨 주름 · 발</figcaption></figure>
+    <figure><img src="r1/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135° — 날개 안쪽 흰 면이 살짝 보인다</figcaption></figure>
+    <figure><img src="r1/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>180°</figcaption></figure>
+    <figure><img src="r1/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>정수리에서 — 아래쪽이 앞</figcaption></figure>
+    <figure><img src="r1/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b>몸색 <code>#474855</code> + 화면 빛 채움광</figcaption></figure>
   </div>
 </section>
 
@@ -108,15 +199,15 @@
   <div class="grid g2">
     <div class="card">
       <h3>뛰기 (1.2초)</h3>
-      <figure><img src="motion/hop.webp" alt="뛰기 동작" loading="lazy"></figure>
+      <figure><img src="r1/motion/hop.webp" alt="뛰기 동작" loading="lazy"></figure>
       <figcaption>준비하며 몸을 눌렀다가(squash) → 다리가 밀어 몸이 늘어나고 → 공중에서 발이 들리며 발끝이 접히고 → 착지하며 다시 눌린다. 땅에 닿아 있는 동안 다리가 늘어나 발이 바닥에 붙어 있는다.</figcaption>
-      <figure style="margin-top:12px"><img src="motion/hop-strip.webp" alt="뛰기 키 프레임 12장" loading="lazy"><figcaption>3프레임마다 한 장, 왼쪽 위 → 오른쪽 아래</figcaption></figure>
+      <figure style="margin-top:12px"><img src="r1/motion/hop-strip.webp" alt="뛰기 키 프레임 12장" loading="lazy"><figcaption>3프레임마다 한 장, 왼쪽 위 → 오른쪽 아래</figcaption></figure>
     </div>
     <div class="card">
       <h3>날개 흔들기 (1.6초)</h3>
-      <figure><img src="motion/wave.webp" alt="날개 흔들기 동작" loading="lazy"></figure>
+      <figure><img src="r1/motion/wave.webp" alt="날개 흔들기 동작" loading="lazy"></figure>
       <figcaption>왼쪽 날개(화면 오른쪽)가 어깨에서 들려 두 번 흔든다. 들면서 날개를 비틀어 흰 안쪽 면이 앞을 본다(초안의 든 날개). 어깨 피부가 늘어나며 몸과 이어진다.</figcaption>
-      <figure style="margin-top:12px"><img src="motion/wave-strip.webp" alt="날개 흔들기 키 프레임 12장" loading="lazy"><figcaption>4프레임마다 한 장</figcaption></figure>
+      <figure style="margin-top:12px"><img src="r1/motion/wave-strip.webp" alt="날개 흔들기 키 프레임 12장" loading="lazy"><figcaption>4프레임마다 한 장</figcaption></figure>
     </div>
   </div>
 </section>
@@ -211,12 +302,13 @@
 </section>
 
 <footer>
-  <p>만든 날 2026-11-10 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
+  <p>1차 2026-11-10 · 2차 2026-11-11 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
 <pre>B=/Applications/Blender.app/Contents/MacOS/Blender
 dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
-dwebp identity/character/turnaround/front-light.webp -o /tmp/v2-front.png
-$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --v2 /tmp/v2-front.png
-python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3</pre>
+dwebp identity/_drafts/penguin-v3/r1/turnaround/front-light.webp -o /tmp/v3r1-front.png
+$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --right /tmp/v3r1-front.png
+python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r2
+# 1차 = 커밋 c9c4e89 의 같은 스크립트 (--v2 /tmp/v2-front.png, 출력 r1/)</pre>
 </footer>
 </div>
 </body>

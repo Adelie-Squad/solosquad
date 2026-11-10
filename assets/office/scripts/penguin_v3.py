@@ -39,56 +39,66 @@ import lib
 # ---------------------------------------------------------------------------
 W = 0.41           # body width (without wings)
 HB = 0.705         # body height (bottom of the body -> top of the head); HB / W = 1.72
-D = 0.27           # body depth; D / W = 0.66
-Z0 = 0.040         # body bottom (the feet are below it)
+# Horizontal cross-section: two half-superellipses joined at the widest line (y = 0). The front
+# is a little flatter (for the white panel); the back is a plump half-cylinder (round, deeper).
+D_FRONT, P_FRONT = 0.125, 2.6
+D_BACK, P_BACK = 0.170, 2.0
+D = D_FRONT + D_BACK  # body depth 0.295; D / W = 0.72
+HEAD_FULL = 0.10   # the head is up to 10 % deeper than the body below it (rounder forehead + crown)
+Z0 = 0.030         # body bottom (the feet tuck under it)
 Z1 = Z0 + HB       # top of the head
-P_XSEC = 2.3       # horizontal cross-section superellipse exponent (2 = ellipse)
 R_BOTTOM = 0.075   # bottom corner radius (front view)
-R_TOP = 0.24       # vertical semi-axis of the round top
+R_TOP = 0.21       # vertical semi-axis of the round top (~ the half width: a near-semicircle)
 
 EYE_Z = Z0 + 0.72 * HB          # eye centres at 72 % of the body height
 EYE_X = 0.22 * W                # eye centres +/- 0.22 W (0.44 W apart)
 EYE_R = 0.145 * W               # eye diameter 0.29 W
-CHEEK_R = 0.65 * EYE_R          # blush diameter 0.65 x eye
+CHEEK_R = 0.75 * EYE_R          # blush diameter 0.75 x eye
 CHEEK_DX, CHEEK_DZ = 0.20 * 2 * EYE_R, -0.58 * 2 * EYE_R   # low-outside of the eye, tucked under it
-BEAK_Z = EYE_Z - 0.168 * W      # beak centre (the line between upper and lower beak)
+BEAK_Z = EYE_Z - 0.168 * W      # beak centre (its widest line)
 
-# White front outline, right half, top centre -> bottom, in body widths relative to the eye
-# centre (x right, z up). The left half mirrors it. Forehead: a soft V (widow's peak) at the
-# centre, a round lobe over each eye. Sides: smooth, no notch. Bottom: wraps under the body.
-FRONT_W = [
-    (0.000, 0.146), (0.012, 0.150), (0.030, 0.170), (0.055, 0.200), (0.090, 0.236), (0.160, 0.272), (0.225, 0.283),
-    (0.290, 0.262), (0.345, 0.212), (0.385, 0.132), (0.405, 0.040), (0.410, -0.060),
+# White front outline, in body widths relative to the eye centre (x right, z up); the left half
+# mirrors it. Forehead: one circular lobe over each eye (the "eyebrow" bumps); the two circles
+# cross on the centre line, so the black hood comes down between them to a sharp V point.
+LOBE_C, LOBE_R = (0.200, 0.086), 0.210
+# Sides, from the lobe's outermost point down: smooth, no notch. Below: wraps under the body.
+FRONT_SIDE = [
+    (0.410, 0.086), (0.410, -0.060),
     (0.408, -0.200), (0.402, -0.400), (0.396, -0.600), (0.394, -0.800), (0.396, -0.980),
     (0.393, -1.100), (0.386, -1.160),
 ]
 ZC = Z0 + 0.36 * HB              # polar centre for the wrap under the bottom
 PHI_UNDER = math.radians(158)   # how far the white wraps under (0 = straight up, 180 = down)
 
-# Beak (front view, metres from the beak centre): upper triangle larger, apex up and a little
-# left; lower triangle smaller, set slightly lower and angled - the draft's open-ish beak.
-BEAK_UP = [(-0.056, -0.003), (0.057, 0.008), (-0.007, 0.063)]
-BEAK_LO = [(-0.045, -0.012), (0.048, -0.003), (-0.012, -0.050)]
-BEAK_CORNER = 0.009
+# Beak: one white piece. From the front a diamond (kite: the lower half a little longer); from
+# the side a four-sided pyramid standing out of the face.
+BEAK_HW, BEAK_UP_H, BEAK_DN_H = 0.050, 0.050, 0.058
+BEAK_PEAK = 0.038               # how far the tip stands out of the face
+BEAK_CORNER = 0.008
 
 # Wings (paddle flippers). Shoulder pivot inside the body side; at rest the paddle hangs down,
 # splayed outward and turned so its flat face looks a little forward.
 SHOULDER = (0.19, 0.005, Z0 + 0.56 * HB)
 WING_SPLAY = math.radians(22)
 WING_YAW = math.radians(15)
-WING_C, WING_AU, WING_AV, WING_AW = 0.115, 0.150, 0.052, 0.022   # ellipsoid centre + semi-axes
+WING_C, WING_AU, WING_AV, WING_AW = 0.100, 0.165, 0.058, 0.024   # ellipsoid centre + semi-axes
+WING_ROOT, WING_TIP = 1.18, 0.80  # width / thickness factor at the root vs the tip (broad base)
 WING_CUT = 0.105                # the white underside starts this far out from the pivot
 WING_RIM = 0.005                # ...and this far in from the rim, so the rim stays black
-WING_K = 0.035                  # shoulder crease softness
+WING_K = 0.045                  # shoulder crease softness
 
 # Legs + feet. Hip pivot inside the body bottom.
-HIP = (0.085, -0.015, Z0 + 0.05)
-ANKLE = (0.088, -0.030, 0.026)
-LEG_R = 0.030
-FOOT_C = (0.090, -0.062, 0.0155)
-FOOT_R = (0.050, 0.076, 0.0155)
+# The foot is a wide half-dome with a flat sole on the ground; its rounded top tucks into the
+# body bottom, so there is (almost) no visible ankle. The leg is a short capsule hidden inside.
+HIP = (0.088, -0.020, Z0 + 0.05)
+ANKLE = (0.090, -0.045, 0.018)
+LEG_R = 0.024
+FOOT_C = (0.092, -0.066, 0.0)
+FOOT_R = (0.060, 0.082, 0.040)
+FOOT_SOLE_K = 0.008             # roundness of the sole edge
 FOOT_YAW = math.radians(12)
-LEG_K, FOOT_K = 0.024, 0.012
+LEG_K, FOOT_K = 0.030, 0.012
+SEAT_Z = 0.42                   # office chair seat (contract §2); desk top 0.72
 
 NECK_Z = Z0 + 0.64 * HB         # body -> head weight blend centre (above the shoulders)
 CHEST_Z = Z0 + 0.50 * HB
@@ -96,7 +106,7 @@ CHEST_Z = Z0 + 0.50 * HB
 GRID = 0.006                    # surface-nets cell (m)
 
 COLORS = {
-    'body': '#2B2A26', 'white': '#F3F0EA', 'feet': '#151410', 'eye': '#151410',
+    'body': '#1E1D1A', 'white': '#F3F0EA', 'feet': '#151410', 'eye': '#151410',
     'cheek': '#E01FAE', 'beak': '#FBF9F4', 'thread': '#151410',
 }
 
@@ -194,8 +204,12 @@ def _profile():
 
 def f_body(P):
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
-    a, b = W / 2, D / 2
-    rn = (np.abs(x / a) ** P_XSEC + np.abs(y / b) ** P_XSEC) ** (1 / P_XSEC)
+    a = W / 2
+    full = 1 + HEAD_FULL * _smoothstep(0.55, 0.92, (z - Z0) / HB)
+    front = y < 0
+    b = np.where(front, D_FRONT, D_BACK) * full
+    p = np.where(front, P_FRONT, P_BACK)
+    rn = (np.abs(x / a) ** p + np.abs(y / b) ** p) ** (1 / p)
     return _profile()(rn * a, z)
 
 
@@ -234,8 +248,8 @@ def _ellipsoid(q, r):
 def f_wing(P, side):
     q = _wing_local(P, side)
     q = q - np.array([WING_C, 0, 0])
-    # a little narrower toward the root, fuller toward the tip (a paddle, not an egg)
-    taper = 0.86 + 0.14 * _smoothstep(-WING_AU, WING_AU * 0.4, q[:, 0])
+    # broad at the shoulder, tapering a little to the tip
+    taper = WING_ROOT + (WING_TIP - WING_ROOT) * _smoothstep(-WING_AU, WING_AU, q[:, 0])
     q = q / np.stack([np.ones_like(taper), taper, taper], 1)
     return _ellipsoid(q, np.array([WING_AU, WING_AV, WING_AW])) * 0.95
 
@@ -260,7 +274,11 @@ def f_foot(P, side):
     s = 1 if side == 'L' else -1
     c = np.array(_sx(FOOT_C, s))
     q = (P - c) @ _rz(-s * FOOT_YAW)    # into foot-local (toes point -Y, splayed outward)
-    return _ellipsoid(q, np.array(FOOT_R))
+    dome = _ellipsoid(q, np.array(FOOT_R))
+    sole = -(P[:, 2] - FOOT_C[2])       # flat sole on the ground
+    k = FOOT_SOLE_K
+    h = np.maximum(k - np.abs(dome - sole), 0) / k
+    return np.maximum(dome, sole) + h * h * k * 0.25
 
 
 def fields(P):
@@ -477,7 +495,12 @@ def _phi(P):
 
 def front_outline():
     """Closed 3D outline of the white front on the body: (points, (x, phi) polygon)."""
-    half = _catmull(FRONT_W, 10)
+    cx, cz = LOBE_C
+    a0 = math.acos(-cx / LOBE_R)                      # where the lobe circle crosses x = 0
+    ang = np.linspace(a0, 0.0, 48, endpoint=False)    # over the top to the outermost point
+    lobe = np.stack([cx + LOBE_R * np.cos(ang), cz + LOBE_R * np.sin(ang)], 1)
+    lobe[0, 0] = 0.0                                  # the V tip exactly on the centre line
+    half = np.concatenate([lobe, _catmull(FRONT_SIDE, 10)])
     xz = np.stack([half[:, 0] * W, EYE_Z + half[:, 1] * W], 1)
     right = _front_view_points(xz)
     # continue under the bottom in the polar domain, narrowing, then close across the seat
@@ -528,6 +551,7 @@ def _polyline_distance(P, L, closed=True, side=False):
     best = np.full(len(P), np.inf)
     s = np.zeros(len(P))
     sd = np.zeros(len(P), bool)
+    at_vertex = np.zeros(len(P), bool)
     nrm = _grad(f_body, A)
     for chunk in np.array_split(np.arange(len(P)), max(1, len(P) // 2000)):
         p = P[chunk][:, None, :]
@@ -539,8 +563,10 @@ def _polyline_distance(P, L, closed=True, side=False):
         s[chunk] = cum[k] + t[np.arange(len(chunk)), k] * seg_len[k]
         off = P[chunk] - (A[k] + t[np.arange(len(chunk)), k][:, None] * seg[k])
         sd[chunk] = (np.cross(nrm[k], seg[k]) * off).sum(1) > 0
+        tk = t[np.arange(len(chunk)), k]
+        at_vertex[chunk] = (tk <= 1e-6) | (tk >= 1 - 1e-6)
     if side:
-        return best, s, cum[-1], sd
+        return best, s, cum[-1], sd, at_vertex
     return best, s, cum[-1]
 
 
@@ -584,16 +610,16 @@ def body_attributes(V):
 
     # white front
     loop, poly = front_outline()
-    dist, s, total, side = _polyline_distance(V, loop, side=True)
+    dist, s, total, side, at_vertex = _polyline_distance(V, loop, side=True)
     inside = _point_in_poly(V[:, 0], _phi(V), poly) & (V[:, 1] < 0.02)
     # near the seam trust the local side of the curve (tangent x normal), not the polygon in
     # (x, phi), so the white edge has no zigzag where the two disagree by a hair
     ref_in = side[np.argmax(np.where(inside, dist, -1))]
-    near = dist < 0.03
+    near = (dist < 0.03) & ~at_vertex        # at a corner (the V tip) the polygon test decides
     inside = np.where(near, side == ref_in, inside)
     front_d = np.where(inside, dist, -dist)
     nb = max(1, round(total / PERIOD_BODY))
-    use = body_dom
+    use = ~((fw < fl['body']) & (fw <= flf))          # everything the wings do not own
     seam_d[use] = front_d[use]
     seam_phase[use] = s[use] / total
     seam_n[use] = nb
@@ -612,7 +638,11 @@ def body_attributes(V):
         seam_n[mine] = nw
 
     feet = fl['upper'] - flf              # > 0 where a leg or foot owns the vertex
+    # the stitch stops just short of the forehead V so the point stays sharp
+    tip = loop[0]
+    stitch_on = _smoothstep(0.012, 0.017, np.linalg.norm(V - tip, axis=1))
     return {
+        'stitch_on': stitch_on,
         'seam_d': seam_d,
         'seam_c': np.cos(2 * math.pi * seam_phase),
         'seam_sn': np.sin(2 * math.pi * seam_phase),
@@ -660,36 +690,33 @@ def _circle_ring(cx, cz, r, n):
     return np.stack([cx + r * np.cos(a), cz + r * np.sin(a)], 1)
 
 
-def _inradius(tri):
-    tri = np.asarray(tri, float)
-    a = np.linalg.norm(tri[1] - tri[2])
-    b = np.linalg.norm(tri[2] - tri[0])
-    c = np.linalg.norm(tri[0] - tri[1])
-    s = (a + b + c) / 2
-    return math.sqrt(max(s * (s - a) * (s - b) * (s - c), 1e-12)) / s
+def _kite_ring(d, rc=None, n_arc=24, n_edge=40):
+    """The beak diamond (kite) with rounded corners, offset inward by d (front view, metres).
+    Returns (ring points, inradius)."""
+    rc = BEAK_CORNER if rc is None else rc
+    poly = np.array([(0, BEAK_UP_H), (-BEAK_HW, 0), (0, -BEAK_DN_H), (BEAK_HW, 0)]) + np.array([0, BEAK_Z])
 
-
-def _rounded_tri_ring(tri, d, rc, n_arc=40, n_edge=24):
-    """Rounded triangle (corner radius rc) offset inward by d, as a closed point ring."""
-    tri = np.asarray(tri, float)
-    if np.cross(tri[1] - tri[0], tri[2] - tri[0]) < 0:
-        tri = tri[::-1]
-    # incentre + inradius
-    a = np.linalg.norm(tri[1] - tri[2])
-    b = np.linalg.norm(tri[2] - tri[0])
-    c = np.linalg.norm(tri[0] - tri[1])
-    inc = (a * tri[0] + b * tri[1] + c * tri[2]) / (a + b + c)
-    s = (a + b + c) / 2
-    rin = math.sqrt(max(s * (s - a) * (s - b) * (s - c), 1e-12)) / s
+    def edge_dist(y):
+        out = []
+        for a, b in ((poly[0], poly[3]), (poly[3], poly[2])):
+            e = b - a
+            n = np.array([e[1], -e[0]]) / np.linalg.norm(e)
+            out.append(abs(np.dot(np.array([0, y]) - a, n)))
+        return out
+    # incircle of the kite: on the axis, equally far from the upper and the lower edges
+    ys = np.linspace(poly[2][1], poly[0][1], 2001)
+    best = max(ys, key=lambda y: min(edge_dist(y)))
+    inc, rin = np.array([0.0, best]), min(edge_dist(best))
     rho = max(rc - d, 0.0004)
-    shrink = rc + max(d - rc, 0)       # inner (sharp) triangle = outline offset inward by this
-    k = max(rin - shrink, rin * 0.02) / rin
-    core = inc + (tri - inc) * k
+    shrink = rc + max(d - rc, 0)
+    core = inc + (poly - inc) * (max(rin - shrink, rin * 0.02) / rin)
+    if np.cross(core[1] - core[0], core[2] - core[0]) < 0:
+        core = core[::-1]
     pts = []
-    for i in range(3):
-        p_prev, p, p_next = core[i - 1], core[i], core[(i + 1) % 3]
-        e_in = p - p_prev
-        e_out = p_next - p
+    m = len(core)
+    for i in range(m):
+        p_prev, p, p_next = core[i - 1], core[i], core[(i + 1) % m]
+        e_in, e_out = p - p_prev, p_next - p
         n_in = np.array([e_in[1], -e_in[0]]) / np.linalg.norm(e_in)
         n_out = np.array([e_out[1], -e_out[0]]) / np.linalg.norm(e_out)
         a0, a1 = math.atan2(n_in[1], n_in[0]), math.atan2(n_out[1], n_out[0])
@@ -698,14 +725,14 @@ def _rounded_tri_ring(tri, d, rc, n_arc=40, n_edge=24):
         for t in np.linspace(0, 1, n_arc, endpoint=False):
             ang = a0 + (a1 - a0) * t
             pts.append(p + rho * np.array([math.cos(ang), math.sin(ang)]))
-        q0 = p + rho * n_out
-        q1 = p_next + rho * n_out
+        q0, q1 = p + rho * n_out, p_next + rho * n_out
         for t in np.linspace(0, 1, n_edge, endpoint=False):
             pts.append(q0 + (q1 - q0) * t)
-    return np.array(pts)
+    return np.array(pts), rin
 
 
-def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, lift=0.0):
+def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, lift=0.0,
+             pyramid=None):
     """Build a felt pillow. ring_fn(d) -> (n, 2) front-view ring offset inward by d.
     Returns verts, quads (as index tuples; centre fan uses triangles), per-vertex seam attrs."""
     rings = [ring_fn(d) for d in depths]
@@ -719,6 +746,12 @@ def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, li
     prof = np.sqrt(np.clip(1 - (1 - np.clip(dd / edge_round, 0, 1)) ** 2, 0, 1))
     dome = 1 + 0.25 * np.clip((dd - edge_round) / 0.05, 0, 1)
     h = lift + 0.0004 + height * prof * dome
+    if pyramid is not None:
+        # rounded edge, then straight faces rising to the tip: inset rings of a kite give the
+        # four ridges of a pyramid; the very tip is softened
+        peak, d_max = pyramid
+        ramp = np.clip(dd / d_max, 0, 1)
+        h = lift + 0.0004 + height * prof + (peak - height) * (ramp - 0.18 * ramp ** 6)
     top = base + nrm * h[:, None]
     skirt = _front_view_points(rings[0])
     sn = _grad(f_body, skirt)
@@ -749,6 +782,7 @@ def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, li
         'seam_sn': np.sin(2 * math.pi * ph),
         'seam_n': np.full(len(V), max(1, round(L / period))),
         'feet': np.full(len(V), -1.0),
+        'stitch_on': np.ones(len(V)),
     }
     # face winding: the top must face out of the body
     a, b, cc = V[faces[-1][0]], V[faces[-1][1]], V[faces[-1][2]]
@@ -776,12 +810,11 @@ def build_appliques():
                                        _disc_depths(CHEEK_R), 0.0028, 0.004, 0.0046, PERIOD_EYE)))
         out.append(('eye', *applique(lambda d, ex=ex: _circle_ring(ex, EYE_Z, EYE_R - d, 128),
                                      _disc_depths(EYE_R), 0.0055, 0.0055, 0.0050, PERIOD_EYE, lift=0.0016)))
-    for tri, hgt in ((BEAK_UP, 0.0105), (BEAK_LO, 0.0085)):
-        t = np.asarray(tri) + np.array([0.0, BEAK_Z])
-        ds = np.array([0.0, 0.0006, 0.0016, 0.003, 0.0048, 0.0070, 0.0095, 0.013, 0.018, 0.024])
-        ds = ds[ds < 0.85 * _inradius(t)]
-        out.append(('beak', *applique(lambda d, t=t: _rounded_tri_ring(t, d, BEAK_CORNER),
-                                      ds, hgt, 0.010, 0.0058, PERIOD_BEAK)))
+    _, rin = _kite_ring(0.0)
+    ds = np.concatenate([[0.0, 0.0006, 0.0016, 0.003, 0.0048, 0.0070, 0.0095],
+                         np.linspace(0.0125, 0.97 * rin, 9)])
+    out.append(('beak', *applique(lambda d: _kite_ring(d)[0], ds, 0.006, 0.006, 0.0058,
+                                  PERIOD_BEAK, pyramid=(BEAK_PEAK, rin))))
     return out
 
 
@@ -840,7 +873,7 @@ class _NT:
 
 
 def leather_material(name, base_key, inset, region=False, piping=0.0, thread=None,
-                     rough=0.46, groove=1.0, spec=0.32):
+                     rough=0.46, groove=1.0, spec=0.32, thread_gloss=0.30):
     """region=True: the body skin (black, with the white front / wing underside where seam_d > 0
     and black feet where feet > 0). Otherwise a flat applique colour."""
     mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
@@ -865,8 +898,11 @@ def leather_material(name, base_key, inset, region=False, piping=0.0, thread=Non
     tw = 0.00125
     b = T.math('DIVIDE', T.math('SUBTRACT', d, inset), tw)
     r2 = T.math('ADD', T.math('MULTIPLY', a, a), T.math('MULTIPLY', b, b))
-    stitch = T.math('LESS_THAN', r2, 1.0)
+    stitch = T.math('MULTIPLY', T.math('LESS_THAN', r2, 1.0), T.math('GREATER_THAN', T.attr('stitch_on'), 0.5))
+    if region:      # no thread over the black feet
+        stitch = T.math('MULTIPLY', stitch, T.math('LESS_THAN', T.attr('feet'), 0.0))
     thread_h = T.math('MULTIPLY', T.math('SQRT', T.math('MAXIMUM', T.math('SUBTRACT', 1.0, r2), 0.0)), 0.0006)
+    thread_h = T.math('MULTIPLY', thread_h, stitch)
     # the stitch holes pull the leather in a little along the stitch line
     pull = T.math('EXPONENT', T.math('MULTIPLY', T.math('MULTIPLY', b, b), -0.35))
     # seam groove at the colour edge (body) / around the piece edge
@@ -896,6 +932,9 @@ def leather_material(name, base_key, inset, region=False, piping=0.0, thread=Non
         col = T.mix(feet, rgb.outputs[0], _hex3(COLORS['feet']))
         col = T.mix(T.math('MULTIPLY', white, T.math('SUBTRACT', 1.0, feet)), col, _hex3(COLORS['white']))
         rough_s = T.math('ADD', T.math('MULTIPLY', white, 0.12), rough)
+        # the waxed thread catches a little light, so a black stitch still reads on black leather
+        rough_s = T.math('ADD', T.math('MULTIPLY', rough_s, T.math('SUBTRACT', 1.0, stitch)),
+                         T.math('MULTIPLY', stitch, thread_gloss))
         T.link(rough_s, bsdf.inputs['Roughness'])
     else:
         col = T.mix(0.0, _hex3(COLORS[base_key]), _hex3(COLORS[base_key]))
@@ -915,7 +954,8 @@ def leather_material(name, base_key, inset, region=False, piping=0.0, thread=Non
 
 def materials():
     return [
-        leather_material('v3.leather', 'body', inset=0.0062, region=True),
+        # inset < 0: the front-panel / wing seam stitch runs on the black side of the edge
+        leather_material('v3.leather', 'body', inset=-0.0058, region=True, rough=0.50, spec=0.22),
         leather_material('v3.eye', 'eye', inset=0.0050, thread='#45423B', rough=0.42),
         leather_material('v3.cheek', 'cheek', inset=0.0046, rough=0.55, groove=0.35, spec=0.4),
         leather_material('v3.beak', 'beak', inset=0.0058, piping=0.0026, rough=0.58, spec=0.4),
@@ -1143,6 +1183,28 @@ def pose_wave(rig_ob, f, rest=None):
     _set(rig_ob, rest, 'body', _about((0, 0, Z0), Matrix.Rotation(math.radians(-3.5 * k), 4, 'Y')))
     tilt = Matrix.Rotation(math.radians(6 * k), 4, 'Y') @ Matrix.Rotation(math.radians(3 * k), 4, 'X')
     _set(rig_ob, rest, 'head', _about((0, 0, NECK_Z), tilt))
+
+
+def pose_seated(rig_ob, f=0, rest=None, offset=(0.0, 0.0, SEAT_Z)):
+    """Sitting on a chair seat: the body bottom rests at offset z (default the office seat, 0.42 m
+    above the floor); the legs swing forward at the hip so the flat soles rest on the seat in front
+    of the belly; the feet counter-rotate to stay flat."""
+    rest = rest or _bone_rest(rig_ob)
+    reset_pose(rig_ob)
+    ox, oy, oz = offset
+    _set(rig_ob, rest, 'root', Matrix.Translation((ox, oy, oz - Z0)))
+    _set(rig_ob, rest, 'body', _about((0, 0, Z0), Matrix.Rotation(math.radians(-2.5), 4, 'X')))
+    hip, foot = np.array(HIP), np.array(FOOT_C)
+    v = foot - hip
+    L = math.hypot(v[1], v[2])
+    want = Z0 - hip[2]                                # sole up to the body bottom
+    theta = math.acos(min(1.0, -want / L)) - math.atan2(-v[1], -v[2])
+    for side in 'LR':
+        s = 1 if side == 'L' else -1
+        _set(rig_ob, rest, f'leg.{side}', _about(_sx(HIP, s), Matrix.Rotation(-theta, 4, 'X')))
+        _set(rig_ob, rest, f'foot.{side}', _about(_sx(ANKLE, s), Matrix.Rotation(theta, 4, 'X')))
+        piv, _ = wing_frame(side)
+        _set(rig_ob, rest, f'wing.{side}', _about(piv, Matrix.Rotation(math.radians(-8), 4, 'X')))
 
 
 CLIPS = {'hop': (HOP_LEN, pose_hop), 'wave': (WAVE_LEN, pose_wave)}

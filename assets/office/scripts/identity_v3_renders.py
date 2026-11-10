@@ -4,18 +4,20 @@ framing for every view:
 
   turnaround/  front, three-quarter-front-left, side-left, three-quarter-back-left, back, top
                (light) + front-evening
-  compare.png  draft_1 (left) | v3 front (middle) | current v2 front (right)
+  compare.png  draft_1 (left) | this front (middle) | --right image (right: round 1 or v2)
+  seated/      on the office chair (seat 0.42 m, desk 0.72 m): front + iso 3/4 (30 deg / 45 deg),
+               alone and with office-kit desk.set
   motion/      hop + wave frames (motion/<clip>/NNN.png) and a 2 x 6 key-frame strip <clip>-strip.png
 
     B=/Applications/Blender.app/Contents/MacOS/Blender
     dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
-    dwebp identity/character/turnaround/front-light.webp -o /tmp/v2-front.png
+    dwebp identity/_drafts/penguin-v3/r1/turnaround/front-light.webp -o /tmp/v3r1-front.png
     $B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 \\
-        --draft /tmp/draft_1.png --v2 /tmp/v2-front.png
-    python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3
+        --draft /tmp/draft_1.png --right /tmp/v3r1-front.png
+    python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r2
 
 Options: --res 1200 (stills) · --samples 96 · --motion-res 480 · --motion-samples 24 ·
---only turnaround,compare,motion
+--only turnaround,compare,seated,motion
 """
 import math
 import os
@@ -44,8 +46,8 @@ SAMPLES = int(arg('--samples', '96'))
 MRES = int(arg('--motion-res', '480'))
 MSAMPLES = int(arg('--motion-samples', '24'))
 DRAFT = arg('--draft')
-V2 = arg('--v2')
-ONLY = set(arg('--only', 'turnaround,compare,motion').split(','))
+RIGHT = arg('--right', arg('--v2'))
+ONLY = set(arg('--only', 'turnaround,compare,seated,motion').split(','))
 
 SCALE, TARGET_Z = 0.98, 0.40          # one framing for the whole turnaround
 M_SCALE, M_TARGET_Z = 1.16, 0.47       # motion framing (room for the hop and the raised wing)
@@ -223,7 +225,7 @@ def compare(cam, rig):
         yc = (y_top + y_bot) // 2
         ya, yb = h - (yc + ch // 2), h - (yc - ch // 2)     # bottom-up rows
         panels.append(_resize(px[max(ya, 0):yb, x0:x1], PW, PH))
-    for path, frac in ((front, 1.0), (V2, 1.0)):
+    for path, frac in ((front, 1.0), (RIGHT, 1.0)):
         if not path or not os.path.exists(path):
             continue
         px = _load(path)
@@ -234,6 +236,33 @@ def compare(cam, rig):
         x0 = (w - cw) // 2
         panels.append(_resize(px[:, x0:x0 + cw], PW, PH))
     _save(sheet(panels, len(panels), 16, BACKDROP['light']), os.path.join(OUT, 'compare.png'))
+
+
+def seated(cam, rig):
+    """Seated on the office chair. Alone (on the floor, seat height 0) and in desk.set (the penguin
+    at desk-local (0, +0.27, 0.42), contract §2), front and the office iso view."""
+    import kit
+    d = os.path.join(OUT, 'seated')
+    theme('light')
+    rest = pv3._bone_rest(rig)
+    col = lib.collection('kit')
+    desk = kit.desk_set(col)
+    floor = bpy.data.objects['floor']
+    floor.hide_render = False
+    shots = [
+        ('alone', (0.0, 0.0, 0.0), [('front', 0, 0, SCALE, 0.36), ('iso', 45, 30, 1.05, 0.36)]),
+        ('desk', (0.0, 0.27, pv3.SEAT_Z), [('front', 0, 30, 1.45, 0.62), ('iso', 45, 30, 1.6, 0.62)]),
+    ]
+    for name, offset, views in shots:
+        desk.hide_render = name != 'desk'
+        pv3.pose_seated(rig, 0, rest, offset)
+        for view, az, el, scale, tz in views:
+            aim(cam, az, el, scale, tz)
+            if name == 'desk':
+                cam.location = cam.location + Vector((0, 0.27, 0))
+            shoot(os.path.join(d, f'seated-{name}-{view}.png'), BACKDROP['light'])
+    desk.hide_render = True
+    pv3.reset_pose(rig)
 
 
 def motion(cam, rig):
@@ -268,6 +297,8 @@ def main():
         turnaround(cam, rig)
     if 'compare' in ONLY:
         compare(cam, rig)
+    if 'seated' in ONLY:
+        seated(cam, rig)
     if 'motion' in ONLY:
         motion(cam, rig)
 
