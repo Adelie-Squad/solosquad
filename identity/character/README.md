@@ -9,6 +9,7 @@ SoloSquad 의 모든 에이전트는 같은 펭귄이고, 역할은 소품으로
 | [`palette.json`](palette.json) | 색(키 = 3D 재질 이름, `2d` = `PENGUIN_2D` 키) | `lib.py` · `colors.ts` |
 | `turnaround/` | 정면 · 3/4(펭귄 왼쪽) · 옆(왼쪽) · 뒤 · 3/4(펭귄 오른쪽) · 위, 라이트 · 저녁 (800px) | `identity_renders.py turnaround` |
 | `renders/` | 얼굴 확대(정면 라이트 · 저녁, 3/4) · 소품 없는 펭귄(1200px) · `props/` 15역할 + 표에 없는 역할(스카프) | `identity_renders.py face · bare · props` |
+| `reference/` | 사용자 초안(2026-11-10): `draft_1` · `draft_2` = 가죽 키링 펭귄 사진, `style-moto` = 다른 캐릭터(가죽 · 박음질 질감 참고만). 원본은 `docs/ideation/reference/penguin-character/`, 여기는 1600px 이하 WebP | 원본에서 `cwebp` 로 줄임 |
 | `2d/` | `20/ 28/ 40/ 64/` 크기별 아이콘 SVG(`plain` = 소품 없음, 역할 15개, `custom-role` = 스카프) · `mascot-96/240.svg` 전신 | `web/scripts/identity-icons.mjs` |
 
 렌더는 투명 바탕 + 바닥 그림자(shadow catcher), Cycles 64 샘플 · 디노이즈, Standard 뷰 변환이다. 라이트 · 저녁 조명은 사무실 스타일 프레임과 같고(`frames.py`), 저녁에는 앞에서 화면 빛 같은 파란 채움광을 하나 더했다.

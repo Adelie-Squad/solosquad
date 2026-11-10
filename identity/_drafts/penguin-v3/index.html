@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>펭귄 v3 시안</title>
+<style>
+  /* DESIGN.md `## 색` 토큰 — 라이트 · 다크는 시스템 설정을 따른다 */
+  :root {
+    --bg: #EEE9DF; --surface: #FBF9F4; --surface-2: #F3EFE6; --line: #DED6C6;
+    --ink: #1E1C17; --ink-2: #575143; --ink-3: #8A8371; --accent: #2867D0;
+    --warn: #A85A12; --cheek: #E01FAE;
+    --shadow-2: 0 4px 18px rgba(30,28,23,.08);
+    --radius: 12px; --measure: 46em;
+    --scene-light: #EEE9DF; --scene-evening: #15161B;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15161B; --surface: #1E1F26; --surface-2: #272832; --line: #353745;
+      --ink: #ECE8DF; --ink-2: #B7B2A6; --ink-3: #858174; --accent: #7FA6F5;
+      --warn: #F0AE5E; --cheek: #F25CC8;
+      --shadow-2: 0 0 0 1px var(--line);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    word-break: keep-all; overflow-wrap: break-word;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 48px 40px 64px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 1px 10px; margin-bottom: 10px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
+  header p { color: var(--ink-2); max-width: var(--measure); margin: 0 0 12px; text-wrap: pretty; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+  nav a { color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+  nav a:hover { border-color: var(--accent); }
+  section { margin-top: 36px; }
+  h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h3 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; max-width: var(--measure); text-wrap: pretty; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-2); padding: 20px; }
+  .grid { display: grid; gap: 16px; }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .g4, .g3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .page { padding: 24px 16px 48px; } .g4, .g3, .g2 { grid-template-columns: 1fr; } }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--scene-light); }
+  figcaption { font-size: 12px; line-height: 1.45; color: var(--ink-2); margin-top: 6px; }
+  figcaption b { color: var(--ink); font-weight: 600; font-size: 13px; display: block; }
+  .cmp-labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .cmp-labels span:nth-child(2) { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--ink-2); font-size: 13px; }
+  td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .q li { margin: 8px 0; }
+  .src { color: var(--ink-3); font-size: 12px; }
+  footer { margin-top: 40px; color: var(--ink-3); font-size: 13px; }
+  footer pre { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <span class="badge">시안 · 승인 대기</span>
+  <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
+  <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
+  <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
+  <nav>
+    <a href="#compare">비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
+  </nav>
+</header>
+
+<section id="compare">
+  <h2>나란히 보기</h2>
+  <p class="lead">왼쪽 초안 · 가운데 v3 · 오른쪽 지금 v2. 초안은 사진이라 크기 · 원근이 다르다. v3 · v2 는 같은 정면 정사영 카메라.</p>
+  <div class="card">
+    <figure><img src="compare.webp" alt="초안 1, v3 정면, 현재 v2 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>v3 시안</span><span>현재 v2</span></div>
+  </div>
+</section>
+
+<section id="turnaround">
+  <h2>턴어라운드 (소품 없음)</h2>
+  <p class="lead">모든 방향이 같은 정사영 틀(폭 0.98 m · 중심 높이 0.40 m)이다. 라이트 조명 + 저녁 정면 한 장. 1200 px.</p>
+  <div class="grid g4">
+    <figure><img src="turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>앞</figcaption></figure>
+    <figure><img src="turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>펭귄의 왼쪽으로 45°</figcaption></figure>
+    <figure><img src="turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>펭귄의 왼쪽 90° — 두께 · 어깨 주름 · 발</figcaption></figure>
+    <figure><img src="turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135° — 날개 안쪽 흰 면이 살짝 보인다</figcaption></figure>
+    <figure><img src="turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>180°</figcaption></figure>
+    <figure><img src="turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>정수리에서 — 아래쪽이 앞</figcaption></figure>
+    <figure><img src="turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b>몸색 <code>#474855</code> + 화면 빛 채움광</figcaption></figure>
+  </div>
+</section>
+
+<section id="motion">
+  <h2>관절 시험</h2>
+  <p class="lead">날개 · 발이 몸에 붙은 채로 뼈가 움직이는지 보는 시험 동작이다. 움직이는 그림은 30 fps 로 반복된다.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>뛰기 (1.2초)</h3>
+      <figure><img src="motion/hop.webp" alt="뛰기 동작" loading="lazy"></figure>
+      <figcaption>준비하며 몸을 눌렀다가(squash) → 다리가 밀어 몸이 늘어나고 → 공중에서 발이 들리며 발끝이 접히고 → 착지하며 다시 눌린다. 땅에 닿아 있는 동안 다리가 늘어나 발이 바닥에 붙어 있는다.</figcaption>
+      <figure style="margin-top:12px"><img src="motion/hop-strip.webp" alt="뛰기 키 프레임 12장" loading="lazy"><figcaption>3프레임마다 한 장, 왼쪽 위 → 오른쪽 아래</figcaption></figure>
+    </div>
+    <div class="card">
+      <h3>날개 흔들기 (1.6초)</h3>
+      <figure><img src="motion/wave.webp" alt="날개 흔들기 동작" loading="lazy"></figure>
+      <figcaption>왼쪽 날개(화면 오른쪽)가 어깨에서 들려 두 번 흔든다. 들면서 날개를 비틀어 흰 안쪽 면이 앞을 본다(초안의 든 날개). 어깨 피부가 늘어나며 몸과 이어진다.</figcaption>
+      <figure style="margin-top:12px"><img src="motion/wave-strip.webp" alt="날개 흔들기 키 프레임 12장" loading="lazy"><figcaption>4프레임마다 한 장</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="ratio">
+  <h2>비율</h2>
+  <p class="lead">W = 몸 폭(날개 빼고) 0.41 m 기준. 값은 <code>penguin_v3.py</code> 맨 위 상수에서 옮겼다.</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>항목</th><th>v3 시안</th><th>초안에서 잰 값</th><th>지금 v2</th></tr></thead>
+    <tbody>
+      <tr><td>키 : 폭 (몸)</td><td class="n">1.72 (0.705 / 0.41 m)</td><td class="n">≈ 1.8–1.9 (납작해서 길어 보임)</td><td class="n">1.59</td></tr>
+      <tr><td>깊이 : 폭</td><td class="n">0.66 (0.27 m)</td><td class="n">— (납작)</td><td class="n">0.68</td></tr>
+      <tr><td>몸 모양</td><td>둥근 캡슐: 옆이 거의 곧고 살짝 불룩, 큰 둥근 머리, 바닥이 넓고 살짝 평평</td><td>같음</td><td>서양배(달걀)</td></tr>
+      <tr><td>눈 지름</td><td class="n">0.29 W</td><td class="n">≈ 0.30–0.34 W</td><td class="n">0.15 W</td></tr>
+      <tr><td>눈 사이(중심 간)</td><td class="n">0.44 W</td><td class="n">≈ 0.44 W</td><td class="n">0.29 W</td></tr>
+      <tr><td>눈 높이</td><td class="n">몸 키의 72 %</td><td class="n">≈ 75 %</td><td class="n">70 %</td></tr>
+      <tr><td>볼 지름</td><td class="n">0.65 × 눈</td><td class="n">≈ 0.8 × 눈</td><td class="n">0.78 × 눈</td></tr>
+      <tr><td>볼 자리</td><td>눈 중심에서 바깥 0.20 · 아래 0.58 눈지름 — 눈 아래 가장자리에 반쯤 들어감</td><td>같음</td><td>눈 바깥 아래, 떨어져 있음</td></tr>
+      <tr><td>부리</td><td>폭 0.28 W · 윗 삼각형(꼭짓점 위 · 살짝 왼쪽) + 더 작은 아래 삼각형(살짝 내려가고 기울어짐) · 검정 테두리 + 박음질</td><td>같음</td><td>마름모 한 조각</td></tr>
+      <tr><td>흰 앞판 폭 (정면에서)</td><td class="n">눈 높이 0.82 W · 배 0.79 W</td><td class="n">≈ 0.85 W · 0.75 W</td><td class="n">0.68 W</td></tr>
+      <tr><td>이마 V 꼭짓점</td><td class="n">눈 중심 위 0.15 W (눈 윗선 높이) · 볼록한 두 덩이는 0.28 W 위</td><td class="n">≈ 0.15 W · 0.28 W</td><td>둥근 아치</td></tr>
+      <tr><td>날개</td><td class="n">길이 0.38 × 키 · 폭 0.25 W · 두께 0.044 m · 22° 벌어짐</td><td class="n">≈ 0.37 × 키</td><td>몸 옆 납작한 타원(따로 떠 있음)</td></tr>
+      <tr><td>전체 높이 (발 포함)</td><td class="n">0.745 m · 날개 포함 폭 ≈ 0.62 m</td><td>—</td><td class="n">0.70 m(앉은 키)</td></tr>
+      <tr><td>삼각형</td><td class="n">89,064 (피부 68,328 · 눈 · 볼 · 부리 20,736)</td><td>—</td><td class="n">7,368</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="changes">
+  <h2>초안에서 가져온 것 / 3D 로 바꾼 것</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>draft에서 가져온 것</h3>
+      <ul>
+        <li>위로 긴 둥근 캡슐 실루엣, 옆은 거의 곧고 바닥은 넓다</li>
+        <li>검은 후드: 등 · 머리 · 옆을 감싸고, 이마 가운데로 V 자로 내려온다</li>
+        <li>흰 앞판이 앞면 대부분을 덮고 발 바로 위까지 내려온다. 눈 옆은 매끈한 곡선</li>
+        <li>아주 큰 검은 정원 눈, 높고 가깝게</li>
+        <li>볼은 눈 아래 바깥, 눈 가장자리에 반쯤 깔린 자홍 정원</li>
+        <li>흰 부리 두 조각: 큰 윗 삼각형 + 작고 비스듬한 아랫 삼각형, 검정 테두리</li>
+        <li>날개 안쪽은 흰색(초안의 든 날개)</li>
+        <li>몸 밑으로 나온 작은 검은 발</li>
+        <li>가장자리마다 박음질 — 가죽 조각을 꿰맨 느낌 (style-moto 는 질감 참고만)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>3D로 바꾼 것</h3>
+      <ul>
+        <li>납작한 판 대신 깊이 0.66 W 의 쿠션: 앞 · 뒤가 둥글고 단면은 둥근 사각</li>
+        <li>날개 · 다리 · 발을 몸과 한 장의 피부로 이었다(부드러운 주름으로 합침). 따로 떠 있는 조각 없음</li>
+        <li>날개는 아래로 늘어뜨리되 22° 벌리고 15° 앞으로 돌려, 정면에서도 노 모양이 읽힌다. 흰 안쪽은 들 때 보인다</li>
+        <li>발은 몸 밑에 반쯤 숨고, 짧은 다리로 몸에 붙는다. 다리 뼈가 늘어나고 발 뼈가 꺾인다</li>
+        <li>흰 앞판 가장자리 = 파인 솔기 + 실 땀(셰이더, 해상도와 상관없이 선명). 육각 칩 조각 없음</li>
+        <li>흰 앞판이 바닥 밑으로 조금 말려 들어간다</li>
+        <li>눈 · 볼 · 부리는 도톰한 덧댄 조각(아플리케), 정면 방향으로 몸에 붙여 정면에서 정원으로 보인다. 128 분할</li>
+        <li>무광-새틴 가죽: 아주 옅은 가죽 결(절차적 범프)</li>
+        <li>초안의 꼬리표(hj!) · 고리 · 별 장식은 넣지 않았다</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="open">
+  <h2>남은 일 · 정해 줄 것</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>더 고치고 싶은 것</h3>
+      <ul>
+        <li>발: 정면에서 버섯처럼(납작한 갓 + 짧은 기둥) 보인다. 초안처럼 더 납작한 노 모양 · 발가락 끝 살짝 넓게</li>
+        <li>날개를 들 때 어깨 피부가 조금 울퉁불퉁 늘어난다. 어깨에 보조 뼈 하나(또는 교정 모양키)를 두면 매끈해진다</li>
+        <li>날개 안쪽 흰 면이 뒤 · 3/4 뒤에서 보인다(진짜 펭귄과 같음). 싫으면 쉴 때 날개를 덜 돌린다</li>
+        <li>흰 앞판 아래 모서리가 바닥으로 꺾이는 곳이 살짝 각져 있다</li>
+        <li>저녁 정면은 흰 앞판이 화면 빛에 푸르게 밝다. 사무실 조명으로 다시 맞춰야 한다</li>
+        <li>제품용 LOD: 지금 89k 삼각형. 리토폴로지로 피부 ≈ 6–7k, 눈 · 볼 · 부리 ≈ 0.8k(48 분할) = 8k 예산 안. 흰 앞판 · 솔기 · 땀은 셰이더 대신 텍스처(알베도 + 노멀) 1024 px 로 구워야 glTF 로 나간다</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li><b>서 있는 펭귄</b>으로 만들었다(초안처럼). 사무실에서는 의자에 앉는데, 앉은 자세도 같은 몸으로 갈까, 아니면 사무실은 서서 일하는 걸로 바꿀까?</li>
+        <li><b>눈 크기</b> 0.29 W(초안은 0.30–0.34 W). 더 키울까?</li>
+        <li><b>볼</b>을 눈의 0.65 로 했다(초안은 0.8 정도로 더 큼). 초안만큼 키울까?</li>
+        <li><b>부리</b> 두 조각 사이 틈(살짝 벌린 입)이 좋은가, 붙인 마름모가 좋은가?</li>
+        <li><b>깊이</b> 0.66 W — 더 납작한(키링에 가까운) 쪽, 더 통통한 쪽?</li>
+        <li><b>몸 검정</b>: 지금 <code>#2B2A26</code> 그대로인데 가죽 광택 때문에 진회색으로 보인다. 더 까맣게 갈까?</li>
+        <li>뼈 이름 계약에 <code>leg.L/R</code> 를 더해도 될까? (발 <code>foot.*</code> 는 이제 <code>leg.*</code> 의 자식)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>만든 날 2026-11-10 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
+<pre>B=/Applications/Blender.app/Contents/MacOS/Blender
+dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
+dwebp identity/character/turnaround/front-light.webp -o /tmp/v2-front.png
+$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --v2 /tmp/v2-front.png
+python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3</pre>
+</footer>
+</div>
+</body>
+</html>
