@@ -52,7 +52,7 @@ describe('DESIGN.md `## 색` ↔ tokens.css', () => {
 
   it('reads the whole table', () => {
     expect(table.map((r) => r.token)).toEqual([
-      '--bg', '--surface', '--surface-2', '--line', '--ink', '--ink-2', '--ink-3',
+      '--bg', '--surface', '--surface-2', '--line', '--line-strong', '--ink', '--ink-2', '--ink-3',
       '--accent', '--on-accent', '--ok', '--warn', '--danger', '--cheek', '--focus',
     ]);
   });

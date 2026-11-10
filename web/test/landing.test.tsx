@@ -1195,8 +1195,13 @@ describe('section 3: the org chart and the team modal', () => {
   it('draws the owner and Chief on top, the teams below, names in the reader’s language', () => {
     landing('ko');
     const org = screen.getByTestId('landing-org');
-    expect(within(org).getByText('대표와 임원')).toBeTruthy();
-    expect(within(org).getByText('임원')).toBeTruthy();
+    // no "owner and Chief" caption any more — the line from 대표 down to 임원 says it; the button still does
+    const top = within(org).getByRole('button', { name: '대표와 임원 · 에이전트 보기' });
+    expect([...top.querySelectorAll('[data-org]')].map((n) => [n.getAttribute('data-org'), n.textContent])).toEqual([
+      ['owner', '대표'],
+      ['chief', '임원'],
+    ]);
+    expect(within(org).queryByText('대표와 임원')).toBeNull();
     const teams = within(org).getByRole('list', { name: '팀' });
     expect(within(teams).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
       '프로덕트 4명 · 에이전트 보기',

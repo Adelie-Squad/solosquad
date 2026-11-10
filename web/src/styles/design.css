@@ -1414,19 +1414,59 @@ h3.with-icon {
   color: var(--ink-2);
 }
 
-/* ── rows, top to bottom: the owner and Chief, then one row per department ──
-   No tree lines, no tinted bands, no shadows (user, 2026-11-07): a quiet label over a
-   row of nodes that wraps on a narrow screen. */
+/* ── structure, top to bottom: the owner, Chief, then the departments as columns ──
+   Connector lines (user, 2026-11-10 — replaces "no tree lines" of 2026-11-07): between levels one
+   SVG drawn from measured boxes (components/orgGeometry.ts — 대표 → 임원 → a bus per row of columns →
+   a drop onto each team's dot), inside a team a CSS spine from the dot with a tick to each member.
+   1px, no arrows, 4px at a turn; still no tinted bands or shadows. */
 
-.orgchart-rows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
+.orgchart {
+  --org-spine-x: 4px; /* the team dot's centre — the spine runs on from it */
+  --org-indent: 16px; /* members sit this far right of the spine's left edge */
+  --org-tree-indent: 32px; /* a team under Chief in the tree layout */
+  position: relative;
 }
 
-.orgchart-row + .orgchart-row {
-  padding-top: var(--space-6);
-  border-top: 1px solid var(--line);
+.org-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.orgchart-rows {
+  position: relative; /* paints the nodes over the lines */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8); /* the bus runs in here */
+}
+
+/* the owner(s) in a row, Chief on the line under them — centred over the columns */
+.orgchart-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6) var(--space-4);
+}
+
+.orgchart-top > li {
+  flex: 0 1 220px;
+  min-width: 0;
+}
+
+.orgchart-top > .orgchart-top-chief {
+  display: flex;
+  flex-basis: 100%;
+  justify-content: center;
+}
+
+.orgchart-top-chief > .org-node {
+  width: 220px;
+  max-width: 100%;
 }
 
 .orgchart-label {
@@ -1454,31 +1494,76 @@ h3.with-icon {
   font-variant-numeric: tabular-nums;
 }
 
-/* departments side by side, members listed below each (user, 2026-11-07) — columns wrap
-   to a new line when they run out of room, one column on a phone */
+/* departments side by side, members listed below each (user, 2026-11-07). The column count comes
+   from the chart's width (orgGeometry.ts columnsFor — balanced rows, so 4 teams wrap 2 + 2), each row
+   gets its own bus in the row gap */
 .orgchart-depts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: var(--space-6) var(--space-5);
+  grid-template-columns: repeat(var(--org-cols, 4), minmax(0, 1fr));
+  gap: var(--space-8) var(--space-5);
   align-items: start;
 }
 
-.orgchart-depts .orgchart-dept {
+.orgchart-dept {
   min-width: 0;
 }
 
-.orgchart-depts .orgchart-row + .orgchart-row {
-  padding-top: 0;
-  border-top: 0;
+/* the team's own spine: from under its dot down to the last member */
+.orgchart-depts .orgchart-label {
+  position: relative;
 }
 
-.orgchart-depts .orgchart-label {
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--line);
+.orgchart-depts .orgchart-label::after {
+  position: absolute;
+  top: calc(50% + 4px);
+  bottom: calc(-1 * var(--space-3));
+  left: var(--org-spine-x);
+  border-left: 1px solid var(--line);
+  content: "";
 }
 
 .orgchart-depts .orgchart-members {
+  display: grid;
   grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.orgchart-depts .orgchart-members > li {
+  position: relative;
+  padding-left: var(--org-indent);
+}
+
+/* a tick into each member: the spine down to the member's middle, then across */
+.orgchart-depts .orgchart-members > li::before {
+  position: absolute;
+  top: calc(-1 * var(--space-2));
+  left: var(--org-spine-x);
+  width: calc(var(--org-indent) - var(--org-spine-x));
+  height: calc(50% + var(--space-2));
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  content: "";
+  pointer-events: none;
+}
+
+.orgchart-depts .orgchart-members > li:first-child::before {
+  top: 0;
+  height: 50%;
+}
+
+.orgchart-depts .orgchart-members > li:last-child::before {
+  border-bottom-left-radius: 4px;
+}
+
+/* the spine goes on past a member that is not the last */
+.orgchart-depts .orgchart-members > li:not(:last-child)::after {
+  position: absolute;
+  top: 50%;
+  bottom: 0;
+  left: var(--org-spine-x);
+  border-left: 1px solid var(--line);
+  content: "";
+  pointer-events: none;
 }
 
 /* in a column the name gets the whole line; the status tag sits under it */
@@ -1505,16 +1590,24 @@ h3.with-icon {
   justify-self: start;
 }
 
-.orgchart-members {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--space-2);
+/* a narrow chart (phone, a narrow panel): one indented column — Chief's spine runs down the left
+   with a tick into each team's dot, each team's own spine under it */
+.orgchart[data-layout="tree"] .orgchart-rows {
+  gap: var(--space-6);
 }
 
-@media (max-width: 860px) {
-  .orgchart-members {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.orgchart[data-layout="tree"] .orgchart-top,
+.orgchart[data-layout="tree"] .orgchart-top > .orgchart-top-chief {
+  justify-content: flex-start;
+}
+
+.orgchart[data-layout="tree"] .orgchart-depts {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--space-5);
+}
+
+.orgchart[data-layout="tree"] .orgchart-dept {
+  padding-left: var(--org-tree-indent);
 }
 
 /* ── modal scroll containment (every overlay) ──────────────────────
