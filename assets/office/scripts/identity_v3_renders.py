@@ -7,7 +7,7 @@ framing for every view:
   compare.png  draft_1 (left) | this front (middle) | --right image (right: round 1 or v2)
   seated/      on the office chair (seat 0.42 m, desk 0.72 m): front + iso 3/4 (30 deg / 45 deg),
                alone and with office-kit desk.set
-  motion/      hop + wave frames (motion/<clip>/NNN.png) and a 2 x 6 key-frame strip <clip>-strip.png
+  motion/      hop + wave + walk (front, 3/4) frames (motion/<clip>/NNN.png) and a 2 x 6 key-frame strip <clip>-strip.png
 
     B=/Applications/Blender.app/Contents/MacOS/Blender
     dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
@@ -272,20 +272,22 @@ def motion(cam, rig):
     sc.cycles.samples = MSAMPLES
     theme('light')
     rest = pv3._bone_rest(rig)
+    views = {'hop': [('hop', (30, 6))], 'wave': [('wave', (0, 0))],
+             'walk': [('walk-front', (0, 0)), ('walk-3q', (35, 8))]}
     for clip, (length, fn) in pv3.CLIPS.items():
-        d = os.path.join(OUT, 'motion', clip)
-        view = (30, 6) if clip == 'hop' else (0, 0)
-        aim(cam, *view, M_SCALE, M_TARGET_Z)
-        paths = []
-        for f in range(length):
-            fn(rig, f, rest)
-            sc.frame_set(f)
-            p = os.path.join(d, f'{f:03d}.png')
-            shoot(p, BACKDROP['light'])
-            paths.append(p)
-        picks = [round(i * length / 12) for i in range(12)]
-        tiles = [_resize(_load(paths[i]), 260, 260) for i in picks]
-        _save(sheet(tiles, 6, 6, BACKDROP['light']), os.path.join(OUT, 'motion', f'{clip}-strip.png'))
+        for name, view in views[clip]:
+            d = os.path.join(OUT, 'motion', name)
+            aim(cam, *view, M_SCALE, M_TARGET_Z)
+            paths = []
+            for f in range(length):
+                fn(rig, f, rest)
+                sc.frame_set(f)
+                p = os.path.join(d, f'{f:03d}.png')
+                shoot(p, BACKDROP['light'])
+                paths.append(p)
+            picks = [round(i * length / 12) for i in range(12)]
+            tiles = [_resize(_load(paths[i]), 260, 260) for i in picks]
+            _save(sheet(tiles, 6, 6, BACKDROP['light']), os.path.join(OUT, 'motion', f'{name}-strip.png'))
     pv3.reset_pose(rig)
     sc.cycles.samples = keep
     sc.render.resolution_x = sc.render.resolution_y = RES

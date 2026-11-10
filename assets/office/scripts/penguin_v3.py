@@ -16,7 +16,7 @@ How it is built
   count (`seam_n`). The shader thresholds those per pixel, so the white edge, the seam groove and
   the thread dashes are crisp at any resolution while the mesh stays coarse. `feet` marks the
   leg/foot region (black), `rest` keeps the rest position for the leather grain.
-* **Appliques** (eyes, cheeks, the two beak pieces) are thin felt pillows projected onto the body
+* **Appliques** (eyes, cheeks, the beak) are thin felt pillows projected onto the body
   along the front view (-Y), so they read as perfect circles from the front. 128 segments.
 * **Rig**: root -> body -> head, wing.L/R (shoulder pivot inside the body side), leg.L/R -> foot.L/R
   (hip pivot inside the body bottom), socket.head / socket.chest / socket.hand.R. Weights come from
@@ -44,10 +44,12 @@ HB = 0.705         # body height (bottom of the body -> top of the head); HB / W
 D_FRONT, P_FRONT = 0.125, 2.6
 D_BACK, P_BACK = 0.170, 2.0
 D = D_FRONT + D_BACK  # body depth 0.295; D / W = 0.72
-HEAD_FULL = 0.10   # the head is up to 10 % deeper than the body below it (rounder forehead + crown)
+HEAD_FULL = 0.04   # the head is a little deeper than a plain scale-down (round forehead + crown)
+BELLY_SWELL = (0.14, 0.34, 0.24)   # front depth +14 % around 34 % of the height (the belly)
+BACK_SWELL = (0.12, 0.46, 0.22)    # back depth +12 % around 46 % (the upper back, below the head)
 Z0 = 0.030         # body bottom (the feet tuck under it)
 Z1 = Z0 + HB       # top of the head
-R_BOTTOM = 0.075   # bottom corner radius (front view)
+R_BOTTOM = 0.115   # bottom corner radius (front view): a soft roll into the base
 R_TOP = 0.21       # vertical semi-axis of the round top (~ the half width: a near-semicircle)
 
 EYE_Z = Z0 + 0.72 * HB          # eye centres at 72 % of the body height
@@ -62,10 +64,11 @@ BEAK_Z = EYE_Z - 0.168 * W      # beak centre (its widest line)
 # cross on the centre line, so the black hood comes down between them to a sharp V point.
 LOBE_C, LOBE_R = (0.200, 0.086), 0.210
 # Sides, from the lobe's outermost point down: smooth, no notch. Below: wraps under the body.
+# A soft S on each side, after draft_1: out beside the face, in at the waist, out again to the bottom.
 FRONT_SIDE = [
-    (0.410, 0.086), (0.410, -0.060),
-    (0.408, -0.200), (0.402, -0.400), (0.396, -0.600), (0.394, -0.800), (0.396, -0.980),
-    (0.393, -1.100), (0.386, -1.160),
+    (0.410, 0.086), (0.426, -0.060), (0.432, -0.200), (0.418, -0.360), (0.384, -0.540),
+    (0.356, -0.700), (0.360, -0.840), (0.388, -0.970), (0.408, -1.060), (0.392, -1.130),
+    (0.366, -1.170),
 ]
 ZC = Z0 + 0.36 * HB              # polar centre for the wrap under the bottom
 PHI_UNDER = math.radians(158)   # how far the white wraps under (0 = straight up, 180 = down)
@@ -75,15 +78,19 @@ PHI_UNDER = math.radians(158)   # how far the white wraps under (0 = straight up
 BEAK_HW, BEAK_UP_H, BEAK_DN_H = 0.050, 0.050, 0.058
 BEAK_PEAK = 0.038               # how far the tip stands out of the face
 BEAK_CORNER = 0.008
+BEAK_STEP = 0.15                # the lower beak is set back 15 % of its height (6 mm at the tip)
 
 # Wings (paddle flippers). Shoulder pivot inside the body side; at rest the paddle hangs down,
 # splayed outward and turned so its flat face looks a little forward.
-SHOULDER = (0.19, 0.005, Z0 + 0.56 * HB)
-WING_SPLAY = math.radians(22)
+SHOULDER = (0.198, 0.005, Z0 + 0.56 * HB)
+WING_SPLAY = math.radians(27)
 WING_YAW = math.radians(15)
 WING_C, WING_AU, WING_AV, WING_AW = 0.100, 0.165, 0.058, 0.024   # ellipsoid centre + semi-axes
-WING_ROOT, WING_TIP = 1.18, 0.80  # width / thickness factor at the root vs the tip (broad base)
-WING_CUT = 0.105                # the white underside starts this far out from the pivot
+WING_ROOT, WING_TIP = 1.18, 0.80  # width factor at the root vs the tip (broad base)
+WING_CUT = 0.095                # the white underside starts this far out from the pivot (arc top)
+ARM_AU, ARM_AV = 0.120, 0.090   # ellipse of the underside panel in the wing plane (u, v)
+ARM_C = WING_CUT + ARM_AU       # its centre: the top of the arc sits at u = WING_CUT
+WING_ROUND = 0.012              # softness of the underside panel's corners
 WING_RIM = 0.005                # ...and this far in from the rim, so the rim stays black
 WING_K = 0.045                  # shoulder crease softness
 
@@ -205,9 +212,12 @@ def _profile():
 def f_body(P):
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     a = W / 2
-    full = 1 + HEAD_FULL * _smoothstep(0.55, 0.92, (z - Z0) / HB)
+    t = (z - Z0) / HB
+    full = 1 + HEAD_FULL * _smoothstep(0.60, 0.92, t)
+    belly = 1 + BELLY_SWELL[0] * np.exp(-((t - BELLY_SWELL[1]) / BELLY_SWELL[2]) ** 2)
+    back = 1 + BACK_SWELL[0] * np.exp(-((t - BACK_SWELL[1]) / BACK_SWELL[2]) ** 2)
     front = y < 0
-    b = np.where(front, D_FRONT, D_BACK) * full
+    b = np.where(front, D_FRONT * belly, D_BACK * back) * full
     p = np.where(front, P_FRONT, P_BACK)
     rn = (np.abs(x / a) ** p + np.abs(y / b) ** p) ** (1 / p)
     return _profile()(rn * a, z)
@@ -250,7 +260,9 @@ def f_wing(P, side):
     q = q - np.array([WING_C, 0, 0])
     # broad at the shoulder, tapering a little to the tip
     taper = WING_ROOT + (WING_TIP - WING_ROOT) * _smoothstep(-WING_AU, WING_AU, q[:, 0])
-    q = q / np.stack([np.ones_like(taper), taper, taper], 1)
+    # width tapers root -> tip; thickness stays slim at the root so the paddle clears the body side
+    thick = 1.0 - 0.2 * _smoothstep(-WING_AU, WING_AU, q[:, 0])
+    q = q / np.stack([np.ones_like(taper), taper, thick], 1)
     return _ellipsoid(q, np.array([WING_AU, WING_AV, WING_AW])) * 0.95
 
 
@@ -619,29 +631,46 @@ def body_attributes(V):
     inside = np.where(near, side == ref_in, inside)
     front_d = np.where(inside, dist, -dist)
     nb = max(1, round(total / PERIOD_BODY))
-    use = ~((fw < fl['body']) & (fw <= flf))          # everything the wings do not own
+    # the front field everywhere, but a wing vertex is never inside the front panel (the panel's
+    # cheek bulge passes close to the shoulder; there the side-of-curve test means nothing)
+    wing_owned = (fw < fl['body']) & (fw <= flf)
+    front_d = np.where(wing_owned, -dist, front_d)
+    use = np.ones(len(V), bool)
     seam_d[use] = front_d[use]
     seam_phase[use] = s[use] / total
     seam_n[use] = nb
 
-    # white wing underside: the inner half of the paddle (w < 0), past the shoulder
+    # white wing underside: the inner half of the paddle (w < 0) past the shoulder, and only on the
+    # wing (its distance from the body, which is 0 in the shoulder crease = the armpit). A smooth
+    # min of three continuous fields, so the edge is one clean curve that drops into the armpit
+    # (no per-vertex ownership switch, no zigzag). The front and wing regions are a union (max).
     th_tab, s_tab = _wing_rim_table()
+    nw = max(1, round(s_tab[-1] / PERIOD_WING))
     for side in 'LR':
         q = _wing_local(V, side)
-        mine = (fl['wing.' + side] < fl['body']) & (fl['wing.' + side] <= flf)
-        und = np.minimum(-q[:, 2] - WING_RIM, q[:, 0] - WING_CUT)
+        # the panel's top end is an ellipse arc in the wing's own (u, v) plane: a clean curve at
+        # the armpit, just past the shoulder crease (so it never lands on the stretchy crease skin)
+        qe = np.stack([(q[:, 0] - ARM_C) / ARM_AU, q[:, 1] / ARM_AV], 1)
+        arc = (1 - np.linalg.norm(qe, axis=1)) * min(ARM_AU, ARM_AV)
+        und = _smin(-q[:, 2] - WING_RIM, arc, WING_ROUND)
+        # ...and only on the wing, never on the body side it hangs against. Ownership only clamps:
+        # the two surfaces meet only in the shoulder crease, where the arc is already negative,
+        # so the switch never touches the white edge
+        owned = fl['wing.' + side] < fl['body']
+        und = np.where(owned, und, np.minimum(und, -0.03))
         th = np.arctan2(q[:, 1] / WING_AV, (q[:, 0] - WING_C) / WING_AU)
         sw = np.interp(th, th_tab, s_tab)
-        nw = max(1, round(s_tab[-1] / PERIOD_WING))
-        seam_d[mine] = und[mine]
-        seam_phase[mine] = sw[mine] / s_tab[-1]
-        seam_n[mine] = nw
+        win = und > seam_d
+        seam_d[win] = und[win]
+        seam_phase[win] = sw[win] / s_tab[-1]
+        seam_n[win] = nw
 
     feet = fl['upper'] - flf              # > 0 where a leg or foot owns the vertex
     # the stitch stops just short of the forehead V so the point stays sharp
     tip = loop[0]
     stitch_on = _smoothstep(0.012, 0.017, np.linalg.norm(V - tip, axis=1))
     return {
+        'line_d': np.ones(len(V)),
         'stitch_on': stitch_on,
         'seam_d': seam_d,
         'seam_c': np.cos(2 * math.pi * seam_phase),
@@ -661,7 +690,7 @@ def body_weights(V, fl, edges):
     for s in 'LR':
         u = _wing_local(V, s)[:, 0]
         dom = _smoothstep(-0.008, 0.008, rest_upper - fw[s])
-        w['wing.' + s] = dom * _smoothstep(-0.02, 0.07, u)
+        w['wing.' + s] = dom * _smoothstep(-0.035, 0.05, u)
         others = np.minimum(fl['body'], np.minimum(fw['L'], fw['R']))
         legdom = _smoothstep(-0.010, 0.010, others - flf[s])
         footdom = _smoothstep(-0.005, 0.005, fl['leg.' + s] - fl['foot.' + s])
@@ -732,7 +761,7 @@ def _kite_ring(d, rc=None, n_arc=24, n_edge=40):
 
 
 def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, lift=0.0,
-             pyramid=None):
+             pyramid=None, split=None):
     """Build a felt pillow. ring_fn(d) -> (n, 2) front-view ring offset inward by d.
     Returns verts, quads (as index tuples; centre fan uses triangles), per-vertex seam attrs."""
     rings = [ring_fn(d) for d in depths]
@@ -752,6 +781,11 @@ def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, li
         peak, d_max = pyramid
         ramp = np.clip(dd / d_max, 0, 1)
         h = lift + 0.0004 + height * prof + (peak - height) * (ramp - 0.18 * ramp ** 6)
+    if split is not None:
+        # below the split line the piece is set back (the lower beak sits behind the upper)
+        z_line, frac = split
+        below = _smoothstep(0.0, 0.0012, z_line - flat[:, 1])
+        h = h * (1 - frac * below)
     top = base + nrm * h[:, None]
     skirt = _front_view_points(rings[0])
     sn = _grad(f_body, skirt)
@@ -783,6 +817,7 @@ def applique(ring_fn, depths, height, edge_round, inset, period, sink=0.0025, li
         'seam_n': np.full(len(V), max(1, round(L / period))),
         'feet': np.full(len(V), -1.0),
         'stitch_on': np.ones(len(V)),
+        'line_d': (np.concatenate([rings[0][:, 1], flat[:, 1]]) - split[0]) if split else np.ones(len(V)),
     }
     # face winding: the top must face out of the body
     a, b, cc = V[faces[-1][0]], V[faces[-1][1]], V[faces[-1][2]]
@@ -814,7 +849,7 @@ def build_appliques():
     ds = np.concatenate([[0.0, 0.0006, 0.0016, 0.003, 0.0048, 0.0070, 0.0095],
                          np.linspace(0.0125, 0.97 * rin, 9)])
     out.append(('beak', *applique(lambda d: _kite_ring(d)[0], ds, 0.006, 0.006, 0.0058,
-                                  PERIOD_BEAK, pyramid=(BEAK_PEAK, rin))))
+                                  PERIOD_BEAK, pyramid=(BEAK_PEAK, rin), split=(BEAK_Z, BEAK_STEP))))
     return out
 
 
@@ -941,6 +976,10 @@ def leather_material(name, base_key, inset, region=False, piping=0.0, thread=Non
         if piping > 0:
             pipe = T.math('LESS_THAN', d, piping)
             col = T.mix(pipe, col, _hex3(COLORS['thread']))
+            # the line between the upper and the lower beak
+            ld = T.attr('line_d')
+            line = T.math('LESS_THAN', T.math('ABSOLUTE', ld), 0.0008)
+            col = T.mix(line, col, _hex3(COLORS['thread']))
         bsdf.inputs['Roughness'].default_value = rough
     # groove shadow + thread colour
     col = T.mix(T.math('MULTIPLY', g, 0.6), col, _hex3('#1E1D19'))
@@ -957,7 +996,8 @@ def materials():
         # inset < 0: the front-panel / wing seam stitch runs on the black side of the edge
         leather_material('v3.leather', 'body', inset=-0.0058, region=True, rough=0.50, spec=0.22),
         leather_material('v3.eye', 'eye', inset=0.0050, thread='#45423B', rough=0.42),
-        leather_material('v3.cheek', 'cheek', inset=0.0046, rough=0.55, groove=0.35, spec=0.4),
+        leather_material('v3.cheek', 'cheek', inset=0.0046, rough=0.55, groove=0.35, spec=0.4,
+                         thread='#A8127F'),
         leather_material('v3.beak', 'beak', inset=0.0058, piping=0.0026, rough=0.58, spec=0.4),
     ]
 
@@ -1207,7 +1247,43 @@ def pose_seated(rig_ob, f=0, rest=None, offset=(0.0, 0.0, SEAT_Z)):
         _set(rig_ob, rest, f'wing.{side}', _about(piv, Matrix.Rotation(math.radians(-8), 4, 'X')))
 
 
-CLIPS = {'hop': (HOP_LEN, pose_hop), 'wave': (WAVE_LEN, pose_wave)}
+WALK_LEN = 32          # one waddle cycle = two steps, 30 fps (~1.07 s), loops
+WALK_ROLL = 7.0        # degrees the body rocks onto the standing foot
+WALK_STEP = 0.022      # how far each foot swings forward / back (m)
+WALK_LIFT = 0.026      # how high the swinging foot lifts (m)
+WALK_BOB = 0.008       # up-down of the body (m)
+
+
+def pose_walk(rig_ob, f, rest=None):
+    """Waddle in place: the body rocks side to side over the standing foot (pivot = that foot's
+    sole), the other foot lifts and swings forward, a small bob, wings out for balance."""
+    rest = rest or _bone_rest(rig_ob)
+    reset_pose(rig_ob)
+    ph = 2 * math.pi * f / WALK_LEN
+    sn, cs = math.sin(ph), math.cos(ph)
+    roll = WALK_ROLL * sn                       # + = lean onto the left foot (+X)
+    stance = 1 if sn >= 0 else -1
+    _set(rig_ob, rest, 'root', Matrix.Translation((0, 0, WALK_BOB * abs(math.sin(ph)))))
+    pivot = (stance * FOOT_C[0], FOOT_C[1], 0.0)
+    R = Matrix.Rotation(math.radians(roll), 4, 'Y') @ Matrix.Rotation(math.radians(3.5 * cs), 4, 'Z')
+    _set(rig_ob, rest, 'body', _about(pivot, R))
+    _set(rig_ob, rest, 'head', _about((0, 0, NECK_Z), Matrix.Rotation(math.radians(-0.45 * roll), 4, 'Y')))
+    for side in 'LR':
+        s = 1 if side == 'L' else -1
+        swing = max(0.0, -s * sn)               # L swings while leaning right, R while leaning left
+        y = -s * WALK_STEP * cs                 # back -> front while swinging, front -> back on the ground
+        lift = WALK_LIFT * swing ** 1.5
+        # the leg undoes the body roll so the sole stays level, then lifts / swings the foot
+        hip = _sx(HIP, s)
+        Lr = _about(hip, Matrix.Rotation(math.radians(-roll), 4, 'Y'))
+        _set(rig_ob, rest, f'leg.{side}', Matrix.Translation((0, y, lift)) @ Lr)
+        _set(rig_ob, rest, f'foot.{side}', _about(_sx(ANKLE, s), Matrix.Rotation(math.radians(-14 * swing), 4, 'X')))
+        piv, _ = wing_frame(side)
+        out = 9 + 9 * swing                      # the wing on the lifting side swings out
+        _set(rig_ob, rest, f'wing.{side}', _about(piv, Matrix.Rotation(math.radians(-s * out), 4, 'Y')))
+
+
+CLIPS = {'hop': (HOP_LEN, pose_hop), 'wave': (WAVE_LEN, pose_wave), 'walk': (WALK_LEN, pose_walk)}
 
 
 def build_actions(rig_ob):
