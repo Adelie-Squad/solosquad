@@ -459,3 +459,19 @@ async def test_agent_access_levels_people_still_blocked_and_audited(office: Offi
         assert [e["detail"] for e in changes] == ["busy -> full", "off -> busy"]
         assert all(e["user_id"] == kim_id for e in changes)
         del hb
+
+
+async def test_default_labels_are_written_in_the_requesting_persons_language(
+    office: Office,
+) -> None:
+    """2026-11-11: no customer default language. What the engine writes in a language (here
+    the default label names an org is seeded with) follows the person whose request made
+    it, else ko."""
+    async with office.client() as boss:
+        h = await office.login(boss, "boss", Role.OWNER)
+        assert (await boss.patch("/api/me", json={"locale": "en"}, headers=h)).status_code == 200
+        got = (await boss.get("/api/calendar/labels")).json()
+        spacex = {lb["name"] for lb in got["labels"] if lb["scope"] == "spacex"}
+        assert spacex == {"Work", "Meeting", "Deadline", "Important", "Documents"}
+        mine = {lb["name"] for lb in got["labels"] if lb["scope_kind"] == "user"}
+        assert mine == {"Personal", "Health", "Important"}

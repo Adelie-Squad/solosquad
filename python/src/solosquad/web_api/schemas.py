@@ -79,8 +79,9 @@ class PublicUser(Closed):
     role: Role
     """The customer-level role: `owner` = the customer's owner, owner of every org;
     `staff` = only what `assignments` give (decision 57 ⑵)."""
-    locale: str
-    """The person's own choice; empty = follow the customer default (`Me.locale`)."""
+    locale: Locale = DEFAULT_LOCALE
+    """The person's own screen language (2026-11-11 — no customer default; ko until they
+    choose)."""
     two_factor: bool
     disabled: bool
     title: str = ""
@@ -129,9 +130,8 @@ class Me(Closed):
     local: bool = False
     """The local CLI token (no account) — owner rights on its own machine."""
     locale: Locale = DEFAULT_LOCALE
-    """The language the web shows: the person's choice, else the customer default (I31)."""
-    org_locale: Locale = DEFAULT_LOCALE
-    """The customer's default language (`core/server.yaml` `web.locale`)."""
+    """The language the web shows: the person's own (`PublicUser.locale`); ko when there
+    is no account (the local token, a finished session)."""
     relogin: bool = False
     """A password change ended every session — log in again."""
     scopes: list[ScopeOrg] = Field(default_factory=list)
@@ -160,12 +160,6 @@ class AuditEntry(Closed):
     detail: str | None
     workspace: str | None = None
     """In an org's audit: the workspace the action was in (null = the org itself)."""
-
-
-class WebSettings(Closed):
-    """The customer's default web settings (I31 · I41) — the customer owner changes them."""
-
-    locale: Locale = DEFAULT_LOCALE
 
 
 # ---------------------------------------------------------------------- threads · runs
@@ -646,8 +640,9 @@ class ProfileEntity(Closed):
 
 
 class ProfileLanguages(Closed):
-    default: Locale
     enabled: list[Locale]
+    """The languages the customer uses. There is no default here any more (2026-11-11):
+    each person picks their own screen language, ko until they do."""
 
 
 class ProfilePrivacy(Closed):
@@ -1048,7 +1043,6 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     TotpBegin,
     AccessPolicy,
     AuditEntry,
-    WebSettings,
     ChatMessage,
     Thread,
     ThreadCreated,

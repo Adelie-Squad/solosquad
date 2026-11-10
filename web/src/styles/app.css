@@ -103,6 +103,7 @@
 }
 
 .field > span,
+.field > label,
 .field > legend {
   font-weight: 600;
   color: var(--ink-2);
@@ -112,13 +113,13 @@
   color: var(--ink-3);
 }
 
+.field small.form-error {
+  color: var(--danger);
+}
+
 .field input,
-.field select,
 .field textarea,
-.form-row input,
-.form-row select,
-.tiers select,
-.users select {
+.form-row input {
   padding: 9px 11px;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -126,8 +127,16 @@
   font-size: 14px;
 }
 
+/* one-line inputs line up with the dropdown and the buttons (36px, 2026-11-11) */
+.field input:not([type='checkbox']):not([type='radio']),
+.form-row input {
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 12px;
+  line-height: 1.3;
+}
+
 .field input:focus,
-.field select:focus,
 .field textarea:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-color: var(--accent);

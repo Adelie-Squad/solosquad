@@ -3,7 +3,7 @@
 Decision 57 · PRD v2.1.0 I40 · I22 rev7: the scope is in the address.
 
     /api/...                    the customer: health · auth · me · users · login audit ·
-                                profile · snapshot · server settings (access default · locale)
+                                profile · snapshot · server settings (access default)
     /api/o/{org}/...            an org: org chart · people · approval policy · teams · agent
                                 and workflow definitions · screens · connections · org audit
     /api/o/{org}/w/{ws}/...     a workspace: threads · runs · events · ledger · budget ·
@@ -107,6 +107,7 @@ from solosquad.web_api.accounts import (
     Session,
     SessionStage,
     User,
+    known_locale,
 )
 from solosquad.web_api.errors import ApiError, CodedError, for_status
 from solosquad.web_api.errors import ErrorCode as E
@@ -164,8 +165,6 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "access.get": EVERYONE,
     "access.update": OWNER,
     "audit": OWNER,
-    "settings.get": EVERYONE,
-    "settings.update": OWNER,
     "profile.get": EVERYONE,
     "profile.update": OWNER,
     "snapshot.get": EVERYONE,
@@ -647,9 +646,8 @@ def create_app(cfg: AppConfig) -> Starlette:
             raise ApiError(400, E.INVALID_REQUEST, "expected a JSON object")
         return data
 
-    def locale_error(nullable: bool) -> ApiError:
-        tail = " or null" if nullable else ""
-        return ApiError(400, E.LOCALE_INVALID, f"locale must be one of {list(S.LOCALES)}{tail}")
+    def locale_error() -> ApiError:
+        return ApiError(400, E.LOCALE_INVALID, f"locale must be one of {list(S.LOCALES)}")
 
     # ------------------------------------------------------------------ audit · scopes
 
@@ -717,9 +715,11 @@ def create_app(cfg: AppConfig) -> Starlette:
                 return {"org": s["org"], "workspace": w["name"]}
         return None
 
-    def customer_locale() -> str:
-        loc = server_cfg().web.locale
-        return loc if loc in S.LOCALES else S.DEFAULT_LOCALE
+    def person_locale(who: Principal) -> str:
+        """The language the engine writes in for this request (2026-11-11): the requesting
+        person's own screen language, else ko (the local token has no account). There is no
+        customer default any more."""
+        return known_locale(who.session.user.locale if who.session else None)
 
     def user_public(user: User) -> dict[str, Any]:
         return {
@@ -728,15 +728,13 @@ def create_app(cfg: AppConfig) -> Starlette:
         }
 
     def me_payload(session: Session) -> dict[str, Any]:
-        own = session.user.locale
         who = Principal(session.user.role, session)
         scopes = scopes_for(who)
         return {
             "user": user_public(session.user),
             "stage": session.stage.value,
             "csrf": session.csrf,
-            "locale": own if own in S.LOCALES else customer_locale(),
-            "org_locale": customer_locale(),
+            "locale": known_locale(session.user.locale),
             "scopes": scopes,
             "last_scope": last_scope_for(who, scopes),
         }
@@ -794,17 +792,17 @@ def create_app(cfg: AppConfig) -> Starlette:
             scopes = scopes_for(who)
             return respond(
                 S.Me,
-                {**local, "locale": customer_locale(), "org_locale": customer_locale(),
-                 "scopes": scopes, "last_scope": last_scope_for(who, scopes)},
+                {**local, "locale": S.DEFAULT_LOCALE, "scopes": scopes,
+                 "last_scope": last_scope_for(who, scopes)},
             )  # fmt: skip
         if request.method == "PATCH":
             data = await body(request)
             uid = who.session.user.id
             if "locale" in data:
-                # null or "" = follow the customer default (I31)
+                # one of the three — there is no customer default to follow (2026-11-11)
                 loc = str(data["locale"] or "")
-                if loc and loc not in S.LOCALES:
-                    raise locale_error(nullable=True)
+                if loc not in S.LOCALES:
+                    raise locale_error()
                 accounts().set_locale(uid, loc)
             if isinstance(data.get("last_scope"), dict):
                 want = (
@@ -821,9 +819,7 @@ def create_app(cfg: AppConfig) -> Starlette:
             session = accounts().session(request.cookies.get(SESSION_COOKIE))
             if session is None:  # a password change ends every session, this one too
                 gone = {"user": None, "stage": "full", "csrf": None, "relogin": True}
-                return respond(
-                    S.Me, {**gone, "locale": customer_locale(), "org_locale": customer_locale()}
-                )
+                return respond(S.Me, {**gone, "locale": S.DEFAULT_LOCALE})
             return respond(S.Me, me_payload(session))
         return respond(S.Me, me_payload(who.session))
 
@@ -1064,12 +1060,15 @@ def create_app(cfg: AppConfig) -> Starlette:
             who = need(request, "users.create")
             data = await body(request)
             assigned = parse_assignments(data.get("assignments") or [])
+            loc = str(data.get("locale") or S.DEFAULT_LOCALE)
+            if loc not in S.LOCALES:
+                raise locale_error()
             user = accounts().create_user(
                 str(data.get("username") or ""),
                 str(data.get("password") or ""),
                 Role(str(data.get("role") or Role.STAFF.value)),
                 display=str(data.get("display") or ""),
-                locale=str(data.get("locale") or ""),  # "" = follow the customer default
+                locale=loc,  # ko unless given — the new person changes it in 언어
                 assignments=assigned,
             )
             accounts().audit(
@@ -1194,20 +1193,6 @@ def create_app(cfg: AppConfig) -> Starlette:
         need(request, "audit")
         rows = accounts().audit_log(int(request.query_params.get("limit", "200")))
         return respond(list[S.AuditEntry], rows)
-
-    async def settings(request: Request) -> Response:
-        if request.method == "PUT":
-            who = need(request, "settings.update")
-            data = await body(request)
-            loc = str(data.get("locale") or "")
-            if loc not in S.LOCALES:
-                raise locale_error(nullable=False)
-            web = server_cfg().web.model_copy(update={"locale": loc})
-            cfg.solution.update_server_config(web=web)
-            accounts().audit(who.user_id, "settings.update", f"locale={loc}")
-            return respond(S.WebSettings, {"locale": loc})
-        need(request, "settings.get")
-        return respond(S.WebSettings, {"locale": customer_locale()})
 
     # ------------------------------------------------------------------ profile · snapshot
 
@@ -2301,7 +2286,11 @@ def create_app(cfg: AppConfig) -> Starlette:
 
         return ok
 
-    def preset_for(errors: dict[str, str]) -> Callable[[str], Preset]:
+    def preset_for(errors: dict[str, str], locale: str) -> Callable[[str], Preset]:
+        """An org's label preset; without one, the default names in `locale` — the
+        language of the person whose request seeds the org (2026-11-11, was the customer
+        default)."""
+
         def find(org: str) -> Preset:
             try:
                 found = load_preset(cfg.solution.org(org).root)
@@ -2310,7 +2299,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 found = None
             except LayoutError:
                 found = None
-            return found or default_preset(customer_locale())
+            return found or default_preset(locale)
 
         return find
 
@@ -2459,11 +2448,11 @@ def create_app(cfg: AppConfig) -> Starlette:
         wanted = request.query_params.get("org")
         orgs = [wanted] if wanted else sorted(served_orgs())
         errors: dict[str, str] = {}
-        own_locale = (who.session.user.locale if who.session else "") or customer_locale()
+        own_locale = person_locale(who)
         found = cal.labels(
             viewer(who),
             orgs,
-            preset_for=preset_for(errors),
+            preset_for=preset_for(errors, own_locale),
             personal_preset=default_preset(own_locale, personal=True),
         )
         return respond(S.CalendarLabels, {**found, "preset_errors": errors})
@@ -2894,7 +2883,6 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/users/{uid}", user_update, ["PATCH"]),
         ("/access", access, ["GET", "PUT"]),
         ("/audit", audit, ["GET"]),
-        ("/settings", settings, ["GET", "PUT"]),
         ("/profile", profile, ["GET", "PUT"]),
         ("/snapshot", snapshot, ["GET", "PUT"]),
         ("/snapshot/run", snapshot_run, ["POST"]),

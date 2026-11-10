@@ -38,7 +38,6 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
     access: p.server.access ?? '',
   });
   const [entities, setEntities] = useState<ProfileEntity[]>(p.entities);
-  const [langDefault, setLangDefault] = useState<Locale>(p.languages.default);
   const [enabled, setEnabled] = useState<Set<Locale>>(() => new Set(p.languages.enabled));
   const [regimes, setRegimes] = useState(p.privacy.regimes.join(', '));
   const [reviewer, setReviewer] = useState(p.privacy.reviewer ?? '');
@@ -59,7 +58,7 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
         access: server.access.trim() || null,
       },
       entities: entities.map((e) => ({ ...e, controlled_by: e.controlled_by || null })),
-      languages: { default: langDefault, enabled: LOCALES.filter((l) => enabled.has(l)) },
+      languages: { enabled: LOCALES.filter((l) => enabled.has(l)) },
       privacy: {
         regimes: regimes.split(',').map((r) => r.trim()).filter(Boolean),
         reviewer: reviewer.trim() || null,
@@ -140,16 +139,6 @@ function ProfileForm({ data }: { data: ProfileResponse }) {
 
       <fieldset className="form-grid" disabled={ro}>
         <legend className="panel-title">{t('profile.languages')}</legend>
-        <label className="field">
-          <span>{t('profile.defaultLanguage')}</span>
-          <select value={langDefault} onChange={(e) => setLangDefault(e.target.value as Locale)}>
-            {LOCALES.map((l) => (
-              <option key={l} value={l}>
-                {LOCALE_NAMES[l]}
-              </option>
-            ))}
-          </select>
-        </label>
         <div className="field">
           <span>{t('profile.enabledLanguages')}</span>
           <div className="perm-chips">

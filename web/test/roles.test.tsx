@@ -55,7 +55,6 @@ const OWNER_ONLY: Record<string, { path: string; probe: () => HTMLElement | null
   'settings tab: access policy (access.update)': { path: '/o/tesla/settings', probe: tab(t('settings.access')) },
   'settings tab: approval tiers (approval_policy.update)': { path: '/o/tesla/settings', probe: tab(t('settings.tiers')) },
   'settings tab: people (users.*)': { path: '/o/tesla/settings', probe: tab(t('settings.users')) },
-  'company language (settings.update)': { path: '/o/tesla/settings', probe: () => screen.queryByText(t('settings.orgLanguage'))?.closest('label')?.querySelector('select') ?? null },
   'profile save (profile.update)': { path: '/o/tesla/settings/profile', probe: () => screen.queryByRole('button', { name: t('common.save') }) },
   'snapshot save (snapshot.update)': { path: '/o/tesla/settings/snapshot', probe: () => screen.queryByRole('button', { name: t('common.save') }) },
   'snapshot now (snapshot.run)': { path: '/o/tesla/settings/snapshot', probe: () => screen.queryByRole('button', { name: t('snapshot.runNow') }) },

@@ -24,7 +24,6 @@ import type {
   Thread,
   ThreadState,
   Upload,
-  WebSettings,
   Health,
   Passkey,
   ProfileResponse,
@@ -49,7 +48,6 @@ export const keys = {
   me: ['me'] as const,
   users: ['users'] as const,
   access: ['access'] as const,
-  settings: ['settings'] as const,
   health: ['health'] as const,
   passkeys: ['passkeys'] as const,
   profile: ['profile'] as const,
@@ -243,9 +241,6 @@ export const useProfile = () =>
   useQuery({ queryKey: keys.profile, queryFn: () => api.get<ProfileResponse>('/profile') });
 export const useSnapshot = () =>
   useQuery({ queryKey: keys.snapshot, queryFn: () => api.get<SnapshotSettings>('/snapshot') });
-export const useSettings = () =>
-  useQuery({ queryKey: keys.settings, queryFn: () => api.get<WebSettings>('/settings') });
-
 /** A mutation that refreshes the given queries when it succeeds. */
 export function useAction<In, Out>(fn: (input: In) => Promise<Out>, invalidate: QueryKey[] = []) {
   const qc = useQueryClient();

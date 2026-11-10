@@ -157,31 +157,48 @@ def test_validate_checks_screen_files(tmp_path: Path, repo_root: Path) -> None:
 # ---------------------------------------------------------------------- language (I31)
 
 
-async def test_locale_per_person_with_an_org_default(tmp_path: Path) -> None:
+async def test_locale_is_each_persons_own_with_ko_as_the_fixed_default(tmp_path: Path) -> None:
+    """2026-11-11: no customer default language. Each person's screen language lives on
+    their account (core.db `users.locale`), ko until they choose."""
     o = Office(tmp_path)
     async with o.client() as boss, o.client("203.0.113.9") as kim:
         hb, hk = await _boss_and_staff(o, boss, kim)
-        assert (await kim.get("/api/settings")).json() == {"locale": "ko"}
-        assert (
-            await kim.put("/api/settings", json={"locale": "en"}, headers=hk)
-        ).status_code == 403
-        bad = await boss.put("/api/settings", json={"locale": "fr"}, headers=hb)
-        assert bad.status_code == 400 and bad.json()["code"] == "locale_invalid"
-        assert (await boss.put("/api/settings", json={"locale": "zh-CN"}, headers=hb)).json() == {
-            "locale": "zh-CN"
-        }
-        assert o.workspace.org.solution.server_config().web.locale == "zh-CN"  # core/server.yaml
+        # the company default is gone — no endpoint, no field
+        assert (await kim.get("/api/settings")).status_code == 404
+        assert (await boss.put("/api/settings", json={"locale": "en"}, headers=hb)).status_code in (
+            404,
+            405,
+        )
         me = (await kim.get("/api/me")).json()
-        assert me["org_locale"] == "zh-CN" and me["locale"] == "ko"  # kim's own choice (ko)
-        me = (await kim.patch("/api/me", json={"locale": None}, headers=hk)).json()
-        assert me["user"]["locale"] == "" and me["locale"] == "zh-CN"  # follows the org
-        me = (await kim.patch("/api/me", json={"locale": "en"}, headers=hk)).json()
-        assert me["locale"] == "en"
-        assert (await kim.patch("/api/me", json={"locale": "fr"}, headers=hk)).status_code == 400
+        assert "org_locale" not in me
+        assert (me["locale"], me["user"]["locale"]) == ("ko", "ko")  # the fixed default
+        me = (await kim.patch("/api/me", json={"locale": "zh-CN"}, headers=hk)).json()
+        assert (me["locale"], me["user"]["locale"]) == ("zh-CN", "zh-CN")
+        # one person's choice is theirs alone
+        assert (await boss.get("/api/me")).json()["locale"] == "ko"
+        # there is nothing to "follow" any more: null, "" and unknown languages are refused
+        for bad in (None, "", "fr"):
+            r = await kim.patch("/api/me", json={"locale": bad}, headers=hk)
+            assert (r.status_code, r.json()["code"]) == (400, "locale_invalid"), bad
+        assert (await kim.get("/api/me")).json()["locale"] == "zh-CN"
         new = await boss.post(
             "/api/users", json={"username": "lee", "password": PASSWORD}, headers=hb
         )
-        assert new.json()["locale"] == ""  # a new person follows the org default
+        assert new.json()["locale"] == "ko"  # a new person starts in Korean
+        given = await boss.post(
+            "/api/users",
+            json={"username": "park", "password": PASSWORD, "locale": "en"},
+            headers=hb,
+        )
+        assert given.json()["locale"] == "en"
+        bad = await boss.post(
+            "/api/users",
+            json={"username": "choi", "password": PASSWORD, "locale": "fr"},
+            headers=hb,
+        )
+        assert (bad.status_code, bad.json()["code"]) == (400, "locale_invalid")
+        listed = {u["username"]: u["locale"] for u in (await boss.get("/api/users")).json()}
+        assert listed["kim"] == "zh-CN" and listed["lee"] == "ko"
 
 
 # ---------------------------------------------------------------------- serving (W5 · I2)

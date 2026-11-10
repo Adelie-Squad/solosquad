@@ -1,4 +1,4 @@
-// One modal for an agent or a person (DESIGN.md `## 컴포넌트` — 에이전트 · 사람 모달), opened
+// One modal for an agent or a person (DESIGN.md `## 컴포넌트` — 에이전트 · 구성원 모달), opened
 // from the org chart and from the office scene. The org chart nodes show only a name and a
 // status; what the agent does, what it works on and what waits for an answer live here.
 import { useState } from 'react';

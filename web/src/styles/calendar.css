@@ -747,8 +747,7 @@
   color: var(--ink-3);
 }
 
-.cal-todo-due,
-.cal-todo-who {
+.cal-todo-due {
   padding: 4px 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-chip);

@@ -100,7 +100,6 @@ export interface SoloSquadWebApi {
   TotpBegin: TotpBegin;
   AccessPolicy: AccessPolicy;
   AuditEntry: AuditEntry;
-  WebSettings: WebSettings;
   ChatMessage: ChatMessage;
   Thread: Thread;
   ThreadCreated: ThreadCreated;
@@ -207,7 +206,7 @@ export interface PublicUser {
   username: string;
   display: string;
   role: 'owner' | 'staff';
-  locale: string;
+  locale: 'ko' | 'en' | 'zh-CN';
   two_factor: boolean;
   disabled: boolean;
   title: string;
@@ -255,7 +254,6 @@ export interface Me {
   csrf: string | null;
   local: boolean;
   locale: 'ko' | 'en' | 'zh-CN';
-  org_locale: 'ko' | 'en' | 'zh-CN';
   relogin: boolean;
   scopes: ScopeOrg[];
   last_scope: ScopeRef | null;
@@ -286,15 +284,6 @@ export interface AuditEntry {
   action: string;
   detail: string | null;
   workspace: string | null;
-}
-/**
- * The customer's default web settings (I31 · I41) — the customer owner changes them.
- *
- * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
- * via the `definition` "WebSettings".
- */
-export interface WebSettings {
-  locale: 'ko' | 'en' | 'zh-CN';
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -998,7 +987,6 @@ export interface ProfileEntity {
  * via the `definition` "ProfileLanguages".
  */
 export interface ProfileLanguages {
-  default: 'ko' | 'en' | 'zh-CN';
   enabled: ('ko' | 'en' | 'zh-CN')[];
 }
 /**

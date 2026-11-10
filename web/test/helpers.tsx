@@ -15,7 +15,6 @@ export function me(over: Partial<Me> = {}): Me {
     csrf: 'c',
     local: false,
     locale: 'ko',
-    org_locale: 'ko',
     relogin: false,
     scopes: [
       { org: 'tesla', display: 'Tesla', role: 'owner', whole_org: true, workspaces: [{ name: 'charging', display: 'charging', role: 'owner', running: true }, { name: 'vehicles', display: 'Vehicles', role: 'owner', running: true }] },

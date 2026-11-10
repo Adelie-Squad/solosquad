@@ -229,9 +229,6 @@ def init(
         list[str] | None,
         typer.Option("--entity", help="Account-holding entity: id=name:country[:controlled_by]"),
     ] = None,
-    language: Annotated[
-        str | None, typer.Option(help="Default UI language: ko · en · zh-CN")
-    ] = None,
     privacy_regime: Annotated[
         list[str] | None, typer.Option("--privacy-regime", help="e.g. PIPA, PIPL")
     ] = None,
@@ -243,7 +240,7 @@ def init(
     bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
     try:
         profile = _apply_profile(
-            CustomerProfile(), server_country, cloud, region, cloud_access, entity, language,
+            CustomerProfile(), server_country, cloud, region, cloud_access, entity,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
         display_name(display), display_name(workspace_display)  # refuse before writing anything
@@ -821,7 +818,6 @@ def _apply_profile(
     region: str | None,
     cloud_access: str | None,
     entity: list[str] | None,
-    language: str | None,
     privacy_regime: list[str] | None,
     privacy_reviewer: str | None,
 ) -> CustomerProfile:
@@ -837,8 +833,6 @@ def _apply_profile(
             parsed = parse_entity(spec)
             by_id[parsed.id] = parsed.model_dump()
         data["entities"] = list(by_id.values())
-    if language is not None:
-        data["languages"]["default"] = language
     if privacy_regime:
         data["privacy"]["regimes"] = sorted({*data["privacy"]["regimes"], *privacy_regime})
     if privacy_reviewer is not None:
@@ -879,9 +873,6 @@ def profile_set(
         list[str] | None,
         typer.Option("--entity", help="Account-holding entity: id=name:country[:controlled_by]"),
     ] = None,
-    language: Annotated[
-        str | None, typer.Option(help="Default UI language: ko · en · zh-CN")
-    ] = None,
     privacy_regime: Annotated[
         list[str] | None, typer.Option("--privacy-regime", help="e.g. PIPA, PIPL")
     ] = None,
@@ -892,7 +883,7 @@ def profile_set(
     """Fill in or change profile items; the server country is kept in core/server.yaml."""
     try:
         profile = _apply_profile(
-            load_profile(solution), server_country, cloud, region, cloud_access, entity, language,
+            load_profile(solution), server_country, cloud, region, cloud_access, entity,
             privacy_regime, privacy_reviewer,
         )  # fmt: skip
         save_profile(solution, profile)

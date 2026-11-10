@@ -82,7 +82,6 @@
 }
 
 input:focus,
-select:focus,
 textarea:focus {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
 }
@@ -1691,4 +1690,131 @@ h3.with-icon {
 /* neutral chips stay visible on the modal head (its ground is --surface-2, like theirs) */
 .entity-modal-head .chip:not(.is-accent):not(.is-ok):not(.is-warn):not(.is-danger) {
   background: var(--surface);
+}
+
+/* ── 구성원 탭 · 구성원 추가 모달 (DESIGN.md `## 컴포넌트` 설정 탭, 2026-11-11) ─────────── */
+.members-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 36px;
+}
+
+.members-head .settings-hint {
+  margin: 0;
+}
+
+.members-head .btn {
+  flex: none;
+}
+
+.statement.users tr:focus {
+  outline: none;
+}
+
+.statement.users tr:focus-visible,
+.statement.users tr.is-new:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: -2px;
+}
+
+.member-modal {
+  gap: var(--space-4);
+}
+
+.member-modal-title {
+  margin: 0;
+  padding-right: var(--space-10);
+  font-size: 18px;
+}
+
+.member-modal .settings-hint {
+  margin: 0;
+}
+
+.member-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.member-grid input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.member-modal .assign-row {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 860px) {
+  .members-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .members-head .btn {
+    align-self: flex-start;
+  }
+
+  .member-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── 드롭다운 (DESIGN.md `## 컴포넌트` 드롭다운, 2026-11-11) ─────────────────────────────
+   The one style for every native <select>: no browser arrow, a Lucide ChevronDown 16px at
+   12px from the right edge, 36px right padding so the value never runs under it, the
+   button height (36 · small 32). No other stylesheet sets a select's box
+   (web/test/select.test.ts). */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  height: 36px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 36px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface) var(--select-chevron) no-repeat right 12px center / 16px 16px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+select:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+select:focus {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  outline: none;
+}
+
+select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  outline-offset: 1px;
+}
+
+select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+select.is-small {
+  height: 32px;
+  padding: 0 32px 0 10px;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  font-size: 13px;
+}
+
+select option {
+  background: var(--surface);
+  color: var(--ink);
 }

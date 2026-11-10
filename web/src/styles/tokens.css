@@ -74,6 +74,9 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --leading: 1.6;
 
+  /* the select chevron (DESIGN.md `## 컴포넌트` 드롭다운) — Lucide ChevronDown in --ink-2 */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23575143' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
   color-scheme: light;
 }
 
@@ -106,6 +109,8 @@
     --shadow-3: 0 24px 70px rgba(0,0,0,.55);
     --scrim: color-mix(in srgb, #000000 55%, transparent);
 
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B7B2A6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
     color-scheme: dark;
   }
 }
@@ -137,6 +142,8 @@
   --shadow-2: 0 0 0 1px var(--line);
   --shadow-3: 0 24px 70px rgba(0,0,0,.55);
   --scrim: color-mix(in srgb, #000000 55%, transparent);
+
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B7B2A6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 
   color-scheme: dark;
 }

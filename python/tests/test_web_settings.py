@@ -154,7 +154,7 @@ async def test_profile_read_by_all_written_by_the_owner(office: Settings) -> Non
             office.workspace.org.solution.server_config().server_country == "KR"
         )  # one place (I41)
         for bad in (
-            {"languages": {"default": "fr"}},
+            {"languages": {"enabled": ["fr"]}},
             {"entities": [{"id": "a", "name": "A", "country": "KR"}] * 2},
             {"notes": "free text"},
         ):

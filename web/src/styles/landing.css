@@ -97,16 +97,6 @@ html:has(.landing[data-mode="live"]) {
   min-width: 0;
 }
 
-.landing-top .locale-picker select {
-  height: 36px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-btn);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
-}
-
 .landing-top-cta {
   white-space: nowrap;
 }

@@ -165,7 +165,7 @@ def test_customer_profile_at_setup(tmp_path: Path, repo_root: Path) -> None:
             "init", str(sol), "--org", "moa", "--server-country", "kr", "--cloud", "aws",
             "--region", "ap-northeast-2", "--cloud-access", "FDE IAM role",
             "--entity", "moa-kr=Moa Korea Co.:KR", "--entity", "moa-qd=Moa Qingdao 3PL:CN",
-            "--language", "ko", "--privacy-regime", "PIPA", "--privacy-regime", "PIPL",
+            "--privacy-regime", "PIPA", "--privacy-regime", "PIPL",
             "--privacy-reviewer", "고객 법무팀",
         ],
     )  # fmt: skip

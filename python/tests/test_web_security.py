@@ -62,8 +62,6 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "access.get": ("GET", f"{CUST}/access", None),
     "access.update": ("PUT", f"{CUST}/access", {"allowed_networks": []}),
     "audit": ("GET", f"{CUST}/audit", None),
-    "settings.get": ("GET", f"{CUST}/settings", None),
-    "settings.update": ("PUT", f"{CUST}/settings", {"locale": "en"}),
     "profile.get": ("GET", f"{CUST}/profile", None),
     "profile.update": ("PUT", f"{CUST}/profile", {}),
     "snapshot.get": ("GET", f"{CUST}/snapshot", None),
@@ -341,7 +339,7 @@ async def test_c15_staff_is_refused_every_owner_only_key(office: Office) -> None
         before = office.conn_file.read_text(encoding="utf-8")
 
         owner_only = sorted(k for k, roles in ROUTE_ROLES.items() if roles == OWNER)
-        assert len(owner_only) >= 17
+        assert len(owner_only) >= 16
         for key in owner_only:
             method, template, body = KEYS[key]
             r = await kim.request(method, _fill(template, **ids), json=body, headers=hk)

@@ -43,9 +43,6 @@
     "AuditEntry": {
       "$ref": "#/$defs/AuditEntry"
     },
-    "WebSettings": {
-      "$ref": "#/$defs/WebSettings"
-    },
     "ChatMessage": {
       "$ref": "#/$defs/ChatMessage"
     },
@@ -208,7 +205,6 @@
     "TotpBegin",
     "AccessPolicy",
     "AuditEntry",
-    "WebSettings",
     "ChatMessage",
     "Thread",
     "ThreadCreated",
@@ -2674,15 +2670,6 @@
           ],
           "type": "string"
         },
-        "org_locale": {
-          "default": "ko",
-          "enum": [
-            "ko",
-            "en",
-            "zh-CN"
-          ],
-          "type": "string"
-        },
         "relogin": {
           "default": false,
           "type": "boolean"
@@ -2711,7 +2698,6 @@
         "csrf",
         "local",
         "locale",
-        "org_locale",
         "relogin",
         "scopes",
         "last_scope"
@@ -3125,14 +3111,6 @@
     "ProfileLanguages": {
       "additionalProperties": false,
       "properties": {
-        "default": {
-          "enum": [
-            "ko",
-            "en",
-            "zh-CN"
-          ],
-          "type": "string"
-        },
         "enabled": {
           "items": {
             "enum": [
@@ -3146,7 +3124,6 @@
         }
       },
       "required": [
-        "default",
         "enabled"
       ],
       "type": "object",
@@ -3277,6 +3254,12 @@
           "type": "string"
         },
         "locale": {
+          "default": "ko",
+          "enum": [
+            "ko",
+            "en",
+            "zh-CN"
+          ],
           "type": "string"
         },
         "two_factor": {
@@ -4088,26 +4071,6 @@
       ],
       "type": "object",
       "title": "Version"
-    },
-    "WebSettings": {
-      "additionalProperties": false,
-      "description": "The customer's default web settings (I31 · I41) — the customer owner changes them.",
-      "properties": {
-        "locale": {
-          "default": "ko",
-          "enum": [
-            "ko",
-            "en",
-            "zh-CN"
-          ],
-          "type": "string"
-        }
-      },
-      "required": [
-        "locale"
-      ],
-      "type": "object",
-      "title": "WebSettings"
     },
     "WidgetSpec": {
       "additionalProperties": true,

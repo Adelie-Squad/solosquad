@@ -119,10 +119,12 @@ class ExecutionPolicy(BaseModel):
 
 
 class WebPrefs(BaseModel):
+    """Web settings that belong to the server. The customer default language (`locale`)
+    was retired on 2026-11-11 — each person keeps their own (`users.locale`, default ko).
+    An old file's `locale` is still read (extra field) once, by `legacy_web_locale`, and
+    then removed (`drop_legacy_web_locale`)."""
+
     model_config = ConfigDict(extra="allow")
-    locale: str = "ko"
-    """The customer's default web language (I31 · decision 53): ko · en · zh-CN. A person's
-    own choice (`users.locale`) wins over it."""
 
 
 class Placement(BaseModel):
@@ -153,7 +155,6 @@ class ServerConfig(_Doc):
     """The customer's default access policy; a workspace can only narrow it."""
     placement: Placement = Field(default_factory=Placement)
     web: WebPrefs = Field(default_factory=WebPrefs)
-    """The default web language — a person's own choice wins over it."""
 
 
 SERVER_FIELDS = ("public_url", "server_country", "type", "snapshot", "web")
@@ -392,6 +393,35 @@ class Solution:
         if self.has_legacy_server_fields() or not self.server_config_path.is_file():
             self.save_server_config(cfg)
         return cfg
+
+    def legacy_web_locale(self) -> str | None:
+        """The retired customer default language (`web.locale`) if a file still holds it —
+        server.yaml first, then a rev6 workspace.yaml."""
+        for path in (
+            self.server_config_path,
+            *(ws.root / "workspace.yaml" for ws in self.workspaces()),
+        ):
+            web = _raw(path).get("web")
+            if isinstance(web, dict) and web.get("locale"):
+                return str(web["locale"])
+        return None
+
+    def drop_legacy_web_locale(self) -> bool:
+        """Remove `web.locale` everywhere once the accounts carry it (2026-11-11)."""
+        dropped = False
+        for path in (
+            self.server_config_path,
+            *(ws.root / "workspace.yaml" for ws in self.workspaces()),
+        ):
+            raw = _raw(path)
+            web = raw.get("web")
+            if isinstance(web, dict) and "locale" in web:
+                web.pop("locale")
+                if not web:
+                    raw.pop("web")
+                _dump(path, raw)
+                dropped = True
+        return dropped
 
     def update_server_config(self, **changes: Any) -> ServerConfig:
         """Set some server fields. Setting a field settles a disagreement about it; one

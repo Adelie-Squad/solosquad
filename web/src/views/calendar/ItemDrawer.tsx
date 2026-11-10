@@ -277,7 +277,7 @@ export function Todos({ item, todos, people }: { item: CalendarItem; todos: Cale
               </button>
               <span className="cal-todo-title">{td.title}</span>
               <input type="date" className="cal-todo-due" aria-label={t('calendar.due')} title={t('calendar.due')} value={td.due ?? ''} onChange={(e) => change.mutate({ id: td.id, body: { due: e.target.value || null } })} />
-              <select className="cal-todo-who" aria-label={t('calendar.assignee')} value={td.assignee_id ?? ''} onChange={(e) => change.mutate({ id: td.id, body: { assignee_id: e.target.value || null } })}>
+              <select className="cal-todo-who is-small" aria-label={t('calendar.assignee')} value={td.assignee_id ?? ''} onChange={(e) => change.mutate({ id: td.id, body: { assignee_id: e.target.value || null } })}>
                 <option value="">{t('calendar.nobody')}</option>
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>

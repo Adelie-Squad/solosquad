@@ -11,7 +11,7 @@ refusing only what the provider-eligibility rules forbid (decision 45).
     entities:
       - {id: moa-kr, name: Moa Korea Co., country: KR}
       - {id: moa-qd, name: Moa Qingdao 3PL, country: CN}
-    languages: {default: ko, enabled: [ko, en, zh-CN]}
+    languages: {enabled: [ko, en, zh-CN]}
     privacy: {regimes: [PIPA, PIPL], reviewer: 고객 법무팀}
 
 The server's country is one value in one place since decision 57 ⑷: `server_country` in
@@ -55,14 +55,17 @@ class ProfileEntity(Entity):
 
 
 class Languages(BaseModel):
-    default: str = "ko"
+    """The languages the customer uses. The old `default` (a customer default language)
+    was retired on 2026-11-11 — each person picks their own screen language, ko until
+    they do. An old file's `default:` is ignored and dropped at the next save."""
+
     enabled: list[str] = Field(default_factory=lambda: list(LANGUAGES))
 
-    @field_validator("default")
+    @field_validator("enabled")
     @classmethod
-    def _known(cls, v: str) -> str:
-        if v not in LANGUAGES:
-            raise ValueError(f"language must be one of {LANGUAGES}")
+    def _known(cls, v: list[str]) -> list[str]:
+        if any(lang not in LANGUAGES for lang in v):
+            raise ValueError(f"languages must be among {LANGUAGES}")
         return v
 
 

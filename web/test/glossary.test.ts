@@ -26,6 +26,8 @@ const BANNED: Record<Locale, RegExp[]> = {
     /예산/, // 한도
     /부서/, // 팀
     /부탁/, // 요청
+    /인원/, /멤버/, // 구성원 (2026-11-11)
+    /내 계정/, // 계정 (2026-11-11)
   ],
   en: [
     /\bartifacts?\b/i, // work product
@@ -39,6 +41,7 @@ const BANNED: Record<Locale, RegExp[]> = {
     /\bdepartments?\b/i, // team
     /\btasks?\b/, // lower-case "task" = a piece of work; "Tasks" is the menu only
     /\bjobs?\b/i, // work
+    /\bmy account\b/i, // Account (2026-11-11)
   ],
   'zh-CN': [
     /老板/, /负责人/, // 代表
@@ -55,11 +58,44 @@ const BANNED: Record<Locale, RegExp[]> = {
     /等待审批/, // 待审批
     /审核/, // 确认
     /智能体/, // 代理
+    /(?<!部署)人员/, // 成员 (2026-11-11 — 部署人员 is the glossary's 구축 담당자)
+    /我的账户/, // 账户
   ],
 };
 
 /** Paths and placeholders are not words — `orgs/<org>/screens/` names a folder. */
 const words = (s: string) => s.replace(/\S*\/\S*/g, ' ').replace(/\{\w+\}/g, ' ');
+
+/**
+ * 구성원 (2026-11-11): the people of the company — the settings tab, its list and modal, the org
+ * chart, the team counts, who may be assigned. '사람' · 'people' stay for a human as opposed to an
+ * agent ("사람이 할 일"), so they are checked only in the copy that means the company's members.
+ */
+const MEMBER_KEY = /^(settings\.users$|users\.|org\.(lead|unassigned)$|widget\.teamCounts$|error\.calendar_assignee_invalid$)/;
+const NOT_MEMBER: Record<Locale, RegExp> = { ko: /사람/, en: /\b(people|person|users?)\b/i, 'zh-CN': /人员|用户(?!名)/ };
+const MEMBER_WORD: Record<Locale, RegExp> = { ko: /구성원/, en: /\bmembers?\b/i, 'zh-CN': /成员/ };
+
+describe('구성원 — the company members are called one thing', () => {
+  it.each(Object.keys(NOT_MEMBER) as Locale[])('%s: the member copy never says 사람 · people · 人员', (locale) => {
+    const keys = Object.keys(dictionaries[locale]).filter((k) => MEMBER_KEY.test(k));
+    expect(keys.length).toBeGreaterThan(20);
+    const hits = keys.filter((k) => NOT_MEMBER[locale].test(words(dictionaries[locale][k as keyof (typeof dictionaries)[Locale]])));
+    expect(hits).toEqual([]);
+  });
+
+  it.each(Object.keys(MEMBER_WORD) as Locale[])('%s: the tab, the button, the org chart and the team counts name them', (locale) => {
+    const d = dictionaries[locale];
+    for (const k of ['settings.users', 'users.add', 'org.unassigned', 'widget.teamCounts'] as const) expect(d[k]).toMatch(MEMBER_WORD[locale]);
+  });
+
+  it('the ban list catches the old words and keeps 部署人员', () => {
+    expect(BANNED.ko.some((re) => re.test('인원 추가'))).toBe(true);
+    expect(BANNED.ko.some((re) => re.test('내 계정'))).toBe(true);
+    expect(BANNED['zh-CN'].some((re) => re.test('添加人员'))).toBe(true);
+    expect(BANNED['zh-CN'].some((re) => re.test('请联系部署人员。'))).toBe(false);
+    expect(NOT_MEMBER.ko.test('사람 추가')).toBe(true);
+  });
+});
 
 describe('the glossary ban-list (DESIGN.md `## 문구` 용어집)', () => {
   it.each(Object.keys(BANNED) as Locale[])('%s uses no word the glossary rules out', (locale) => {

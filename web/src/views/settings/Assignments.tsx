@@ -1,5 +1,5 @@
 // Who may open which business (decision 57 · I39): a person's assignments — an org (whole)
-// or one workspace of it — each with a role. The owner edits them in Settings › People.
+// or one workspace of it — each with a role. The owner edits them in Settings › Members (구성원).
 import { useState } from 'react';
 import type { AssignmentOut, ScopeOrg } from '../../api/types.gen';
 import { useI18n } from '../../i18n';
