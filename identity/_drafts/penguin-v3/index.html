@@ -69,17 +69,122 @@
 <body>
 <div class="page">
 <header>
-  <span class="badge">시안 · 승인 대기 · 4차</span>
+  <span class="badge">시안 · 승인 대기 · 5차</span>
   <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
   <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
   <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
   <nav>
-    <a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
     <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
   </nav>
 </header>
 
-<section id="r4">
+<section id="r5">
+  <span class="badge">5차 수정 · 2026-11-11</span>
+  <h2>5차 수정 — 초안과 같은 축척으로 맞춤</h2>
+  <p class="lead">"관자놀이가 들어가고 볼이 너무 튀어나옴 · 배 오목한 부분은 더 아래로 · 날개는 겨드랑이만 들어가고, 날개 위 머리 · 어깨가 떠 보이지 않게 · 흰색은 엉덩이까지 말고 발 뒤꿈치 위까지만, 엉덩이는 더 위로 올라가며 둥글게 · 날개 안쪽 삼두 부분 흰색 더 채우기"</p>
+
+  <h3>초안과 같은 축척으로 나란히</h3>
+  <p class="lead">두 몸통(정수리 → 몸 바닥, 발 제외)을 같은 높이로 맞추고 바닥 · 가운데 선을 맞췄다. 파란 선 = 몸 높이의 0 · 25 · 50 · 75 · 100 %. 초안이 더 가늘어 보이는 것은 키 : 폭 비율 차이다(초안 1.88, 시안 1.72 — 1차에 정한 1.65–1.75 범위).</p>
+  <div class="card">
+    <figure><img src="r5/samescale.webp" alt="초안 1과 5차 정면을 같은 축척으로 나란히" width="1568" height="1032"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>초안 draft_1</span><span>5차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">같은 높이에서 잰 폭 (전 / 후)</h3>
+  <p class="lead">값 = 각자의 몸 최대 반폭을 1 로 한 반폭. 초안 몸 윤곽은 사진에서 손으로 짚었다(검정 가죽과 청바지 배경이 자동으로 안 갈림, 날개에 가린 높이는 –). 초안 흰 경계는 왼쪽(펭귄 오른쪽)에서 자동으로 쟀고, 시안 값은 모델의 몸 식에서 바로 잰 것(날개 제외).</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>높이(몸 키 대비)</th><th>초안 몸</th><th>4차 몸</th><th>5차 몸</th><th>초안 흰색</th><th>4차 흰색</th><th>5차 흰색</th></tr></thead>
+    <tbody>
+      <tr><td>0.95 (정수리 근처)</td><td class="n">0.59</td><td class="n">0.55</td><td class="n">0.61</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.90</td><td class="n">0.80</td><td class="n">0.75</td><td class="n">0.79</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.85 (관자놀이)</td><td class="n">0.89</td><td class="n">0.87</td><td class="n">0.90</td><td class="n">0.75</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.80</td><td class="n">0.95</td><td class="n">0.94</td><td class="n">0.96</td><td class="n">0.85</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.75 (눈)</td><td class="n">0.97</td><td class="n">0.99</td><td class="n">0.99</td><td class="n"><b>0.89</b></td><td class="n">0.82</td><td class="n"><b>0.86</b></td></tr>
+      <tr><td>0.65 (볼)</td><td class="n">1.00</td><td class="n">0.99</td><td class="n">1.00</td><td class="n">0.85</td><td class="n"><b>0.89</b></td><td class="n">0.86</td></tr>
+      <tr><td>0.55</td><td class="n">–</td><td class="n">0.95</td><td class="n">0.98</td><td class="n">0.73</td><td class="n">0.85</td><td class="n">0.77</td></tr>
+      <tr><td>0.45 (겨드랑이)</td><td class="n">–</td><td class="n"><b>0.93</b></td><td class="n">0.93</td><td class="n">0.60</td><td class="n">0.74</td><td class="n">0.67</td></tr>
+      <tr><td>0.35</td><td class="n">–</td><td class="n">0.95</td><td class="n">0.97</td><td class="n">0.54</td><td class="n">0.70</td><td class="n">0.59</td></tr>
+      <tr><td>0.30 (배 가장 오목)</td><td class="n">0.96</td><td class="n">0.97</td><td class="n">0.97</td><td class="n"><b>0.54</b></td><td class="n">0.72</td><td class="n"><b>0.58</b></td></tr>
+      <tr><td>0.20</td><td class="n">0.96</td><td class="n">1.00</td><td class="n">0.98</td><td class="n">0.59</td><td class="n">0.81</td><td class="n">0.63</td></tr>
+      <tr><td>0.10</td><td class="n">0.96</td><td class="n">0.96</td><td class="n">0.97</td><td class="n">0.75</td><td class="n">0.84</td><td class="n">0.79</td></tr>
+      <tr><td>0.05</td><td class="n">0.94</td><td class="n">0.84</td><td class="n">0.89</td><td class="n">0.86</td><td class="n">–</td><td class="n">–</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r5/compare.webp" alt="초안 1, 5차 정면, 4차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>5차</span><span>4차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음) · 뒤 · 아래</h3>
+  <div class="grid g4">
+    <figure><img src="r5/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>머리 옆이 정수리부터 볼까지 한 호, 옆선은 거의 곧게</figcaption></figure>
+    <figure><img src="r5/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r5/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>엉덩이가 더 위로 둥글게, 흰색은 발 뒤꿈치 위까지</figcaption></figure>
+    <figure><img src="r5/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r5/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>검정 엉덩이, 흰색은 바닥 가장자리에 낮은 선만</figcaption></figure>
+    <figure><img src="r5/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r5/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b>흰 바닥 + 평평한 발바닥</figcaption></figure>
+    <figure><img src="r5/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r5/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r5/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r5/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r5/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r5/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r5/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r5/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r5/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r5/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r5/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r5/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure><figcaption>날개 안쪽 흰색이 삼두 부분(뿌리 쪽 앞뒤 가장자리)까지 차고, 겨드랑이에서 둥근 곡선으로 끝난다.</figcaption>
+      <figure style="margin-top:12px"><img src="r5/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>4차</th><th>5차</th></tr></thead>
+    <tbody>
+      <tr><td>관자놀이 · 볼</td><td>머리 위가 원형(가늘어 관자놀이가 들어가 보임), 얼굴 아래가 불룩(모래시계), 흰색은 볼에서 가장 넓음(0.89)</td><td>머리 위를 초안처럼 더 꽉 찬 곡선으로(지수 2 → <b>2.2</b>, 정수리 0.95 높이 반폭 0.55 → 0.61, 초안 0.59), 모래시계 제거: 옆선은 눈 높이부터 바닥까지 0.97–1.00. 흰색은 <b>눈 높이에서 가장 넓고</b>(0.86) 볼까지 그대로(0.86) — 눈썹 원 반지름 0.210 → 0.225 W, V 꼭짓점 높이는 그대로</td></tr>
+      <tr><td>배 오목을 더 아래로</td><td>가장 오목한 곳 키의 약 38 %, 폭 0.70</td><td>가장 오목한 곳 <b>키의 30 %</b>(25–35 % 구간 0.58–0.59, 초안 0.54–0.55), 엉덩이 쪽으로 짧게 퍼짐(10 % 높이 0.79, 초안 0.75)</td></tr>
+      <tr><td>날개: 겨드랑이만 들어가게</td><td>날개 자리 전체가 7 % 들어가 머리 · 어깨가 떠 보임</td><td>몸 옆선은 곧게, <b>겨드랑이 바로 아래(키의 46 %)만 7 %</b> 좁아지는 국소 오목(폭 ±7.5 %). 머리가 몸통보다 넓지 않음(얼굴 1.00 · 몸통 0.97–0.98)</td></tr>
+      <tr><td>흰색은 발 뒤꿈치 위까지, 엉덩이는 더 올라가고 둥글게</td><td>엉덩이로 올라가는 흰 아치(가운데 234°)</td><td>흰색은 바닥을 감싸고 뒤에서 <b>196–203°</b> 에서 끝남(발 뒤꿈치 바로 위 낮은 선). 엉덩이는 검정으로, 등 깊이 +6 %(키의 21 %) 더해 더 높고 둥글게, 바닥에서 −7 %(3 %) 들어 올림. 옆에서 잰 뒤쪽 깊이: 10 % 높이 0.376 → <b>0.405 W</b>, 18 % 0.402 → <b>0.443 W</b></td></tr>
+      <tr><td>날개 안쪽 삼두 부분 흰색 더 채우기</td><td>타원 0.18 × 0.10 m(뿌리 쪽이 좁아 앞뒤 가장자리가 검정)</td><td>타원 <b>0.20 × 0.20 m</b> — 위끝이 넓고 평평한 호가 되어 뿌리 쪽 앞뒤 가장자리까지 흰색, 검정은 바깥 테두리 5 mm 와 끝만. 위끝 어깨축에서 4.5 cm, 날개는 2.5 cm 부터 단단히 붙음(몸에 붙어 찢어지던 막 없음)</td></tr>
+      <tr><td>삼각형</td><td>97,924</td><td>98,660 (피부 76,388 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>초안은 키 : 폭이 1.88 로 더 가늘다. 시안은 1차에 정한 1.72 를 유지했다</li>
+        <li>날개를 크게 들면 겨드랑이 피부가 접힌다(제품용이면 교정 모양키)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>몸을 초안처럼 더 가늘게(키 : 폭 1.8 이상) 할까?</li>
+        <li>배의 흰색을 초안만큼(0.54) 더 좁힐까? 지금 0.58</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r4" style="margin-top:56px">
   <span class="badge">4차 수정 · 2026-11-11</span>
   <h2>4차 수정 — 이어지는 곡선 · 모래시계 실루엣 · 흰 엉덩이</h2>
   <p class="lead">"흰색 얼굴 배 곡선을 더 곡선적으로 · 날개 위치 조금 내리고 날개 부분이 들어가며 얼굴 · 엉덩이가 둥글게 · 옆모습도 엉덩이가 들어오며 전체가 유려한 곡선 · 흰색이 발을 지나 엉덩이까지 · 날개 안쪽 흰색을 겨드랑이까지 크게 · 발바닥 평평하게"</p>
@@ -484,13 +589,13 @@
 </section>
 
 <footer>
-  <p>1차 2026-11-10 · 2차 · 3차 · 4차 2026-11-11 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
+  <p>1차 2026-11-10 · 2–5차 2026-11-11 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
 <pre>B=/Applications/Blender.app/Contents/MacOS/Blender
 dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
-dwebp identity/_drafts/penguin-v3/r3/turnaround/front-light.webp -o /tmp/v3r3-front.png
-$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --right /tmp/v3r3-front.png
-python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r4
-# 3차 = 커밋 dbdf4d5 (r3/), 2차 = a540271 (r2/), 1차 = c9c4e89 (r1/)</pre>
+dwebp identity/_drafts/penguin-v3/r4/turnaround/front-light.webp -o /tmp/v3r4-front.png
+$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --right /tmp/v3r4-front.png
+python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r5
+# 4차 = 94e1fdb (r4/), 3차 = dbdf4d5 (r3/), 2차 = a540271 (r2/), 1차 = c9c4e89 (r1/)</pre>
 </footer>
 </div>
 </body>

@@ -11,4 +11,4 @@
 
 | 시안 | 무엇 | 만든 스크립트 | 날짜 |
 |---|---|---|---|
-| [`penguin-v3/`](penguin-v3/index.html) | 초안(가죽 키링) 비율로 다시 만든 펭귄, 날개 · 발이 몸에 붙은 한 덩어리 피부 + 관절. `r4/` = 4차(아래 보기 포함), `r3/` = 3차(걷기), `r2/` = 2차(앉은 자세), `r1/` = 1차 | `assets/office/scripts/penguin_v3.py` · `identity_v3_renders.py` · `identity_v3_pack.py` | 2026-11-10 · 2–4차 11-11 |
+| [`penguin-v3/`](penguin-v3/index.html) | 초안(가죽 키링) 비율로 다시 만든 펭귄, 날개 · 발이 몸에 붙은 한 덩어리 피부 + 관절. `r5/` = 5차(초안과 같은 축척 비교 포함), `r4/` = 4차(아래 보기), `r3/` = 3차(걷기), `r2/` = 2차(앉은 자세), `r1/` = 1차 | `assets/office/scripts/penguin_v3.py` · `identity_v3_renders.py` · `identity_v3_pack.py` | 2026-11-10 · 2–5차 11-11 |

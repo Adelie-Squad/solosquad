@@ -4,7 +4,8 @@ framing for every view:
 
   turnaround/  front, three-quarter-front-left, side-left, three-quarter-back-left, back, top, bottom
                (light) + front-evening
-  compare.png  draft_1 (left) | this front (middle) | --right image (right: round 1 or v2)
+  compare.png  draft_1 (left) | this front (middle) | --right image (right: the previous round)
+  samescale.png  draft_1 | this front at the same body height, aligned, guides every 25 %
   seated/      on the office chair (seat 0.42 m, desk 0.72 m): front + iso 3/4 (30 deg / 45 deg),
                alone and with office-kit desk.set
   motion/      hop + wave + walk (front, 3/4) frames (motion/<clip>/NNN.png) and a 2 x 6 key-frame strip <clip>-strip.png
@@ -46,6 +47,9 @@ SAMPLES = int(arg('--samples', '96'))
 MRES = int(arg('--motion-res', '480'))
 MSAMPLES = int(arg('--motion-samples', '24'))
 DRAFT = arg('--draft')
+# draft_1's body box in its own pixels (top of the head, bottom of the body, centre line), for the
+# same-scale side-by-side; read off draft_1.webp (1280 x 1600)
+DRAFT_BOX = tuple(int(v) for v in arg('--draft-box', '445,1341,699').split(','))
 RIGHT = arg('--right', arg('--v2'))
 ONLY = set(arg('--only', 'turnaround,compare,seated,motion').split(','))
 
@@ -205,6 +209,45 @@ def turnaround(cam, rig):
     theme('light')
 
 
+def _crop_td(px, cx, by, pw, ph, bx, bpy_, bg):
+    """Crop a top-down image so the point (cx, by) lands at (bx, bpy_) in a pw x ph panel."""
+    out = np.ones((ph, pw, 4), np.float32)
+    out[..., :3] = _hex01(bg)
+    h, w = px.shape[:2]
+    x0, y0 = int(round(cx - bx)), int(round(by - bpy_))
+    sx0, sy0 = max(x0, 0), max(y0, 0)
+    sx1, sy1 = min(x0 + pw, w), min(y0 + ph, h)
+    if sx1 > sx0 and sy1 > sy0:
+        out[sy0 - y0:sy1 - y0, sx0 - x0:sx1 - x0] = px[sy0:sy1, sx0:sx1]
+    return out
+
+
+def samescale(front):
+    """draft_1 and this front at the same scale: both bodies (top of the head to the bottom of the
+    body, feet excluded) the same height, bottoms and centre lines aligned, guides every 25 %."""
+    if not DRAFT:
+        return
+    top, bot, cx = DRAFT_BOX
+    d = _load(DRAFT)[::-1]                              # top-down
+    r = _load(front)[::-1]
+    res = r.shape[0]
+    body_px = (pv3.Z1 - pv3.Z0) * res / SCALE
+    k = body_px / (bot - top)
+    dh, dw = d.shape[:2]
+    ds = _resize(d[::-1].copy(), int(round(dw * k)), int(round(dh * k)))[::-1]
+    r_bot = res / 2 - (pv3.Z0 - TARGET_Z) * res / SCALE
+    PW, PH, BX, BY = 760, 1000, 380, 880
+    panels = [_crop_td(ds, cx * k, bot * k, PW, PH, BX, BY, BACKDROP['light']),
+              _crop_td(r, res / 2, r_bot, PW, PH, BX, BY, BACKDROP['light'])]
+    for pnl in panels:
+        for f in (0.0, 0.25, 0.5, 0.75, 1.0):
+            y = int(round(BY - f * body_px))
+            pnl[y - 1:y + 1, :, :3] = pnl[y - 1:y + 1, :, :3] * 0.5 + np.array([0.16, 0.40, 0.82]) * 0.5
+        pnl[:, BX, :3] = pnl[:, BX, :3] * 0.5 + np.array([0.16, 0.40, 0.82]) * 0.5
+    tiles = [pp[::-1].copy() for pp in panels]
+    _save(sheet(tiles, 2, 16, BACKDROP['light']), os.path.join(OUT, 'samescale.png'))
+
+
 def compare(cam, rig):
     """draft_1 | v3 front | v2 front, each cropped to the penguin at a 4:5 panel."""
     front = os.path.join(OUT, 'turnaround', 'front-light.png')
@@ -237,6 +280,7 @@ def compare(cam, rig):
         x0 = (w - cw) // 2
         panels.append(_resize(px[:, x0:x0 + cw], PW, PH))
     _save(sheet(panels, len(panels), 16, BACKDROP['light']), os.path.join(OUT, 'compare.png'))
+    samescale(front)
 
 
 def seated(cam, rig):
