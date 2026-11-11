@@ -107,7 +107,7 @@ export const zhCN: Record<MarketingKey, string> = {
   'login.router.id': "账号",
   'login.router.next': '下一步',
   'login.help.title': '请确认公司服务器地址',
-  'login.help.body': "无法用这个公司代码和账号直接进入登录页面。请使用公司给你的办公室地址，或询问为你搭建办公室的工作人员。",
+  'login.help.body': "无法用这个公司代码和账号直接进入登录页面。请使用公司给你的办公室地址，或询问为你搭建办公室的部署人员。",
   'login.help.retry': '重新输入',
   'login.router.demo': '有演示账号吗？',
   'login.router.demoLink': '演示登录',
@@ -135,5 +135,5 @@ export const zhCN: Record<MarketingKey, string> = {
   'landing.apply.requests.consult': "咨询",
   'landing.apply.consent.demo': "我同意按演示账号记录我的演示使用情况（登录、浏览的页面、运行的示例、点击的审批）并用于咨询（申请演示时必选）",
   'login.router.title': "登录",
-  'login.router.code.help': "不知道公司代码？请询问为你搭建办公室的工作人员。",
+  'login.router.code.help': "不知道公司代码？请询问为你搭建办公室的部署人员。",
 };

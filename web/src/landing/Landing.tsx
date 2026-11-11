@@ -375,7 +375,7 @@ export function Landing() {
         <div className="landing-top-inner">
           <p className="landing-brand">SoloSquad</p>
           <div className="landing-top-actions">
-            <LocalePicker bare />
+            <LocalePicker />
             {demo('btn is-primary landing-top-cta')}
             {login('btn landing-top-cta')}
           </div>
