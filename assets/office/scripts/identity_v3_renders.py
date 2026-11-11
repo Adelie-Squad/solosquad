@@ -9,6 +9,13 @@ framing for every view:
   seated/      on the office chair (seat 0.42 m, desk 0.72 m): front + iso 3/4 (30 deg / 45 deg),
                alone and with office-kit desk.set
   motion/      hop + wave + walk (front, 3/4) frames (motion/<clip>/NNN.png) and a 2 x 6 key-frame strip <clip>-strip.png
+  detail/      close-ups for the before/after: face (front), wing-3q (3/4 front, the wing's inner
+               white), wing-up (wing raised to the side, the armpit and joint)
+  beforeafter-face.png / beforeafter-wing.png   --prev <previous round's detail/ dir> | this round
+
+The previous round's detail/ is rendered by running this script with --only detail next to that
+round's penguin_v3.py (copy assets/office/scripts/ to a temp dir and put that round's
+penguin_v3.py in it: git show <commit>:assets/office/scripts/penguin_v3.py).
 
     B=/Applications/Blender.app/Contents/MacOS/Blender
     dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
@@ -18,7 +25,7 @@ framing for every view:
     python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r2
 
 Options: --res 1200 (stills) · --samples 96 · --motion-res 480 · --motion-samples 24 ·
---only turnaround,compare,seated,motion
+--only turnaround,compare,seated,motion,detail · --prev <dir with face/wing-3q/wing-up.png>
 """
 import math
 import os
@@ -51,7 +58,8 @@ DRAFT = arg('--draft')
 # same-scale side-by-side; read off draft_1.webp (1280 x 1600)
 DRAFT_BOX = tuple(int(v) for v in arg('--draft-box', '445,1341,699').split(','))
 RIGHT = arg('--right', arg('--v2'))
-ONLY = set(arg('--only', 'turnaround,compare,seated,motion').split(','))
+ONLY = set(arg('--only', 'turnaround,compare,seated,motion,detail').split(','))
+PREV = arg('--prev')
 
 SCALE, TARGET_Z = 0.98, 0.40          # one framing for the whole turnaround
 M_SCALE, M_TARGET_Z = 1.16, 0.47       # motion framing (room for the hop and the raised wing)
@@ -338,6 +346,60 @@ def motion(cam, rig):
     sc.render.resolution_x = sc.render.resolution_y = RES
 
 
+# close-ups: (name, azim, elev, ortho scale, target (x, y, z), pose)
+def _detail_views():
+    return [
+        ('face', 0, 0, 0.50, (0.0, 0.0, pv3.EYE_Z), None),
+        ('wing-3q', 45, 0, 0.50, (-0.245, -0.055, 0.29), None),
+        ('wing-up', 0, -12, 0.50, (0.27, 0.0, 0.42), 'raise'),
+    ]
+
+
+def aim_at(cam, azim, elev, scale, target):
+    a, e = math.radians(azim), math.radians(elev)
+    t = Vector(target)
+    d = Vector((math.sin(a) * math.cos(e), -math.cos(a) * math.cos(e), math.sin(e)))
+    cam.location = t + d * 5
+    cam.rotation_euler = (math.radians(90) - e, 0, a)
+    cam.data.ortho_scale = scale
+
+
+def detail(cam, rig):
+    """Close-ups at a fixed world framing (same in every round, so before/after line up). The
+    wing-up view raises the left wing 100 deg to the side with the wave's twist (underside shown)."""
+    d = os.path.join(OUT, 'detail')
+    theme('light')
+    rest = pv3._bone_rest(rig)
+    sc = bpy.context.scene
+    sc.render.resolution_x = sc.render.resolution_y = 900
+    for name, az, el, scale, target, pose in _detail_views():
+        pv3.reset_pose(rig)
+        if pose == 'raise':
+            pv3._set(rig, rest, 'wing.L', pv3._wing_raise('L', 100, pv3.WAVE_TWIST * 100 / 128))
+        bpy.context.view_layer.update()
+        bpy.data.objects['floor'].hide_render = el < 0      # from below: no shadow catcher in the way
+        aim_at(cam, az, el, scale, target)
+        shoot(os.path.join(d, f'{name}.png'), BACKDROP['light'])
+    pv3.reset_pose(rig)
+    bpy.data.objects['floor'].hide_render = False
+    sc.render.resolution_x = sc.render.resolution_y = RES
+
+
+def beforeafter():
+    """previous round | this round, the same close-ups side by side."""
+    if not PREV:
+        return
+    d = os.path.join(OUT, 'detail')
+    for out, names in (('face', ['face']), ('wing', ['wing-3q', 'wing-up'])):
+        tiles = []
+        for n in names:
+            a, b = os.path.join(PREV, f'{n}.png'), os.path.join(d, f'{n}.png')
+            if os.path.exists(a) and os.path.exists(b):
+                tiles += [_resize(_load(a), 720, 720), _resize(_load(b), 720, 720)]
+        if tiles:
+            _save(sheet(tiles, 2, 16, BACKDROP['light']), os.path.join(OUT, f'beforeafter-{out}.png'))
+
+
 def main():
     mesh, rig, cam = build()
     if 'turnaround' in ONLY:
@@ -348,6 +410,9 @@ def main():
         seated(cam, rig)
     if 'motion' in ONLY:
         motion(cam, rig)
+    if 'detail' in ONLY:
+        detail(cam, rig)
+        beforeafter()
 
 
 main()

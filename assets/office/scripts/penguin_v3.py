@@ -53,7 +53,8 @@ BUTT_IN = (0.07, 0.03, 0.07)       # back depth -7 % at the very bottom (the but
 BUTT_UP = (0.06, 0.21, 0.10)       # back depth +6 % around 21 %: a fuller, higher, rounder butt
 # Front-view hourglass (half-width factor of W / 2)
 HG_BASE = 1.00
-HG_ARMPIT = (0.070, 0.46, 0.075)   # a local pinch where the wing meets the body, under the shoulder
+HG_ARMPIT = (0.070, 0.43, 0.075)   # a local pinch where the wing meets the body, under the shoulder
+                                   # (follows the shoulder down: 0.46 -> 0.43 in round 6)
 HG_WAIST = (0.030, 0.27, 0.14)     # the belly is a touch narrower than the face (draft: 0.96)
 P_TOP = 2.2                        # head dome superellipse: fuller toward the crown (draft_1)
 Z0 = 0.030         # body bottom (the feet tuck under it)
@@ -63,24 +64,34 @@ R_TOP = 0.21       # vertical semi-axis of the round top (~ the half width: a ne
 
 EYE_Z = Z0 + 0.72 * HB          # eye centres at 72 % of the body height
 EYE_X = 0.22 * W                # eye centres +/- 0.22 W (0.44 W apart)
-EYE_R = 0.145 * W               # eye diameter 0.29 W
-CHEEK_R = 0.75 * EYE_R          # blush diameter 0.75 x eye
+EYE_R = 0.131 * W               # eye diameter 0.262 W (round 6: -10 %, was 0.29 W)
+CHEEK_R = 0.75 * EYE_R          # blush diameter 0.75 x eye (follows the eye: -10 %)
 CHEEK_DX, CHEEK_DZ = 0.20 * 2 * EYE_R, -0.58 * 2 * EYE_R   # low-outside of the eye, tucked under it
 BEAK_Z = EYE_Z - 0.168 * W      # beak centre (its widest line)
 
 # White front outline, in body widths relative to the eye centre (x right, z up); the left half
 # mirrors it. Forehead: one circular lobe over each eye (the "eyebrow" bumps); the two circles
 # cross on the centre line, so the black hood comes down between them to a sharp V point.
-LOBE_C, LOBE_R = (0.205, 0.057), 0.225
+# Round 6: the face white is a little smaller - the brow circles scaled 0.95 about the eye centre
+# (was (0.205, 0.057), 0.225), so the V tip keeps its place relative to the (smaller) face.
+LOBE_C, LOBE_R = (0.195, 0.054), 0.214
 # Sides, from the lobe's outermost point down: smooth, no notch. Below: wraps under the body.
 # The side edge, after draft_1, as one smooth function of the height (sum of gaussians, blended
 # out of the brow circle with a smootherstep, so it is curvature-continuous - no straight runs, no
 # kinks): out beside the face, a gentle concave waist, a round flare toward the bottom. In body
 # widths relative to the eye centre: (amount, centre zn, width).
 SIDE_BASE = 0.400
-SIDE_FACE = (0.045, 0.00, 0.30)     # widest at eye level, broad, so the cheeks stay calm
-SIDE_WAIST = (-0.110, -0.72, 0.38)  # deepest at ~30 % of the height
-SIDE_FLARE = (0.045, -1.10, 0.14)   # a short round flare to the bottom
+SIDE_FACE = (0.015, 0.00, 0.30)     # widest at eye level, broad, so the cheeks stay calm (round 6:
+                                    # 0.045 -> 0.015, the face white a little narrower)
+# Round 6: the waist back to round 4 (round 5 had (-0.110, -0.72, 0.38) and (0.045, -1.10, 0.14))
+SIDE_WAIST = (-0.052, -0.60, 0.25)  # a gentle concave waist
+SIDE_FLARE = (0.028, -1.00, 0.16)   # a round flare toward the bottom
+# The temple: the brow circle is left this far above its outermost point and joined to the side
+# function at TEMPLE_B (zn) with a quintic that matches position, slope and curvature at both ends
+# (G2), so there is no straight run between the brow and the cheek (round 5 blended out of a
+# vertical line at the circle's outermost point: a short straight, slightly hollow stretch).
+TEMPLE_A = math.radians(30)
+TEMPLE_B = -0.15
 SIDE_END = -1.10                # where the front-view edge hands over to the wrap under the body
 ZC = Z0 + 0.36 * HB              # polar centre for the wrap under the bottom
 PHI_BACK_SIDE = math.radians(196)   # the white wraps under the base and ends low at the back, just
@@ -89,20 +100,24 @@ WRAP_NARROW = 0.25                  # the white narrows by this much as it goes 
 
 # Beak: one white piece. From the front a diamond (kite: the lower half a little longer); from
 # the side a four-sided pyramid standing out of the face.
-BEAK_HW, BEAK_UP_H, BEAK_DN_H = 0.050, 0.050, 0.058
-BEAK_PEAK = 0.038               # how far the tip stands out of the face
-BEAK_CORNER = 0.008
+# Round 6: -10 % (was 0.050, 0.050, 0.058, peak 0.038, corner 0.008)
+BEAK_HW, BEAK_UP_H, BEAK_DN_H = 0.045, 0.045, 0.052
+BEAK_PEAK = 0.034               # how far the tip stands out of the face
+BEAK_CORNER = 0.0072
 BEAK_STEP = 0.15                # the lower beak is set back 15 % of its height (6 mm at the tip)
 
 # Wings (paddle flippers). Shoulder pivot inside the body side; at rest the paddle hangs down,
 # splayed outward and turned so its flat face looks a little forward.
-SHOULDER = (0.202, 0.005, Z0 + 0.535 * HB)
+SHOULDER = (0.202, 0.005, Z0 + 0.505 * HB)   # round 6: 0.535 -> 0.505 HB (2.1 cm lower)
 WING_SPLAY = math.radians(31)
 WING_YAW = math.radians(15)
-WING_C, WING_AU, WING_AV, WING_AW = 0.100, 0.165, 0.058, 0.024   # ellipsoid centre + semi-axes
+# round 6: the paddle 9 % shorter (centre 0.100 -> 0.091, half-length 0.165 -> 0.150: tip 0.265 -> 0.241 m
+# from the pivot); with the lower shoulder the tip stays at the same height
+WING_C, WING_AU, WING_AV, WING_AW = 0.091, 0.150, 0.058, 0.024   # ellipsoid centre + semi-axes
 WING_ROOT, WING_TIP = 1.18, 0.80  # width factor at the root vs the tip (broad base)
-WING_CUT = 0.045                # the white underside starts this far out from the pivot (arc top,
-                                # at the armpit)
+WING_CUT = 0.012                # the white underside starts this far out from the pivot (arc top,
+                                # at the armpit; round 6: 0.045 -> 0.012, the white reaches the joint,
+                                # cut off smoothly in the shoulder crease)
 ARM_AU, ARM_AV = 0.200, 0.200   # ellipse of the underside panel in the wing plane (u, v); it runs
                                 # past the tip, so only the rim keeps it black there
 ARM_C = WING_CUT + ARM_AU       # its centre: the top of the arc sits at u = WING_CUT
@@ -533,21 +548,39 @@ def _smootherstep(a, b, x):
     return t * t * t * (t * (6 * t - 15) + 10)
 
 
-def _front_side(n=90):
-    """Right side edge of the white front from the brow circle's outermost point down, (x, zn)."""
-    top = LOBE_C[1]
-    zn = np.linspace(top, SIDE_END, n + 1)[1:]
-    raw = SIDE_BASE + sum(a * _g(zn, c, w) for a, c, w in (SIDE_FACE, SIDE_WAIST, SIDE_FLARE))
-    x0 = LOBE_C[0] + LOBE_R
-    blend = _smootherstep(top, top - 0.20, zn)
-    return np.stack([x0 + (raw - x0) * blend, zn], 1)
+def _side_raw(zn):
+    return SIDE_BASE + sum(a * _g(zn, c, w) for a, c, w in (SIDE_FACE, SIDE_WAIST, SIDE_FLARE))
+
+
+def _front_side(n=100):
+    """Right side edge of the white front from the brow circle (left at TEMPLE_A) down, (x, zn).
+    Brow circle -> side function through a quintic Hermite in zn that matches x, dx/dzn and
+    d2x/dzn2 at both ends: curvature-continuous through the temple, no straight run."""
+    cx, cz = LOBE_C
+    za, xa = cz + LOBE_R * math.sin(TEMPLE_A), cx + LOBE_R * math.cos(TEMPLE_A)
+    c = LOBE_R * math.cos(TEMPLE_A)
+    d1a, d2a = -(za - cz) / c, -LOBE_R ** 2 / c ** 3          # the circle as x(zn)
+    zb, e = TEMPLE_B, 1e-4
+    xb = float(_side_raw(zb))
+    d1b = float(_side_raw(zb + e) - _side_raw(zb - e)) / (2 * e)
+    d2b = float(_side_raw(zb + e) - 2 * xb + _side_raw(zb - e)) / e ** 2
+    h = zb - za
+    zn = np.linspace(za, SIDE_END, n + 1)[1:]
+    t = np.clip((zn - za) / h, 0.0, 1.0)
+    t3, t4, t5 = t ** 3, t ** 4, t ** 5
+    x = (xa * (1 - 10 * t3 + 15 * t4 - 6 * t5) + d1a * h * (t - 6 * t3 + 8 * t4 - 3 * t5) +
+         d2a * h * h * (0.5 * t * t - 1.5 * t3 + 1.5 * t4 - 0.5 * t5) +
+         xb * (10 * t3 - 15 * t4 + 6 * t5) + d1b * h * (-4 * t3 + 7 * t4 - 3 * t5) +
+         d2b * h * h * (0.5 * t3 - t4 + 0.5 * t5))
+    x = np.where(zn < zb, _side_raw(zn), x)
+    return np.stack([x, zn], 1)
 
 
 def front_outline():
     """Closed 3D outline of the white front on the body: (points, (x, phi) polygon)."""
     cx, cz = LOBE_C
     a0 = math.acos(-cx / LOBE_R)                      # where the lobe circle crosses x = 0
-    ang = np.linspace(a0, 0.0, 48, endpoint=False)    # over the top to the outermost point
+    ang = np.linspace(a0, TEMPLE_A, 48)               # over the top to the temple join
     lobe = np.stack([cx + LOBE_R * np.cos(ang), cz + LOBE_R * np.sin(ang)], 1)
     lobe[0, 0] = 0.0                                  # the V tip exactly on the centre line
     half = np.concatenate([lobe, _front_side()])
@@ -695,8 +728,11 @@ def body_attributes(V):
         # ...and only on the wing, never on the body side it hangs against. Ownership only clamps:
         # the two surfaces meet only in the shoulder crease, where the arc is already negative,
         # so the switch never touches the white edge
-        owned = fl['wing.' + side] < fl['body']
-        und = np.where(owned, und, np.minimum(und, -0.03))
+        # Round 6: the arc top moved up into the joint, so the cut in the crease is now the edge
+        # there; a continuous field (wing vs body distance, 0 mid-crease) instead of a hard
+        # ownership switch, so that end is one smooth curve too
+        crease = fl['body'] - fl['wing.' + side] - 0.002
+        und = _smin(und, crease, WING_ROUND)
         th = np.arctan2(q[:, 1] / WING_AV, (q[:, 0] - WING_C) / WING_AU)
         sw = np.interp(th, th_tab, s_tab)
         win = und > seam_d
