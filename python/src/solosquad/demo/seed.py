@@ -15,6 +15,7 @@ init, so a builder can adjust the example data per server without touching the e
 from __future__ import annotations
 
 import datetime as dt
+import gc
 import json
 import secrets
 import shutil
@@ -350,10 +351,27 @@ def _shift(path: Path, since: float, delta: float) -> None:
 def wipe_org(sol: Solution, home: Path, acct: DemoAccount, accounts: AccountStore) -> None:
     """Remove the visitor's copy: org files, data, calendar, example people. The demo login,
     its row and its usage stay. The runtime must already be stopped."""
-    shutil.rmtree(sol.orgs_dir / acct.org, ignore_errors=True)
-    shutil.rmtree(EngineStore(home).solution_data_dir(sol) / acct.org, ignore_errors=True)
+    _remove_tree(sol.orgs_dir / acct.org)
+    _remove_tree(EngineStore(home).solution_data_dir(sol) / acct.org)
     with accounts.lock:
         _delete(accounts.connection(), acct)
+
+
+def _remove_tree(path: Path, tries: int = 20) -> None:
+    """`rmtree` that waits for handles a just-stopped runtime still holds (Windows refuses to
+    delete an open file; SQLite closes its files only when the connection is collected). Raises
+    if the copy is still there after the retries, so a reset never silently keeps old data."""
+    for i in range(tries):
+        if not path.exists():
+            return
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError:
+            if i == tries - 1:
+                raise
+            gc.collect()
+            time.sleep(0.1 * (i + 1))
 
 
 def _delete(db: sqlite3.Connection, acct: DemoAccount) -> None:
