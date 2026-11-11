@@ -125,3 +125,25 @@ jobs:
       - name: The engine serves the build (same origin, client routes → index.html)
         working-directory: python
         run: uv run pytest -q tests/test_web_contract.py
+      - name: C62 — the customer build carries no landing, request or demo login code or copy
+        run: "! grep -rlE '데모 계정 신청하기|landing-track|/api/login/route|/api/inquiry' dist"
+      - name: The marketing build (landing · login router · demo login, decision 62)
+        run: npm run build:marketing
+
+  # v2.1.0 — the marketing site Worker (marketing/, decision 62 · PRD §3.6). Runs in Miniflare with
+  # an in-memory D1 through @cloudflare/vitest-plugin: no Cloudflare account or credentials.
+  marketing:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: marketing
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: marketing/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
