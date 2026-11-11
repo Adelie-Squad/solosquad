@@ -265,8 +265,9 @@ async def test_an_english_account_runs_in_english(tmp_path: Path) -> None:
     accounts, store = stores(sol)
     D.ensure_company(accounts)
     acct, _pw = create_account(
-        sol, store, accounts, "acmeDemo", "INQ-1", time.time() + 86400, locale="en"
-    )
+        sol, store, accounts, "acmeDemo", "INQ-1", time.time() + 86400, locale="en",
+        company_no="ACME-12345",
+    )  # fmt: skip
     build = demo_builder(FAST)
     await seed_account(sol, solosquad_home(), acct, accounts, build=build)
     org = sol.org("acmedemo")
