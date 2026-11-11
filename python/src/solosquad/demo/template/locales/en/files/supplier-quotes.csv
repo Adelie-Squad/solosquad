@@ -1,0 +1,4 @@
+Supplier,Region,Unit price (CNY),FX rate,Shipping per unit,Duty rate,MOQ,Lead days,Defect rate,Note
+(example) Yiwu Huaxing Trading 义乌华星贸易,"Yiwu, Zhejiang",48,190,620,8,500,18,0.6,Current supplier · free engraving
+(example) Ningbo Dawen Home 宁波达温家居,"Ningbo, Zhejiang",44,190,780,8,2000,25,1.2,Lowest unit price · large minimum order
+(example) Guangzhou Future Kitchen 广州未来厨具,"Guangzhou, Guangdong",52,190,540,8,300,14,0.4,Shortest lead time · higher unit price

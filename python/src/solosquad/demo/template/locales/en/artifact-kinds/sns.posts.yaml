@@ -1,0 +1,4 @@
+name: sns.posts
+title: Post drafts
+required: [posts]
+schema_version: 1

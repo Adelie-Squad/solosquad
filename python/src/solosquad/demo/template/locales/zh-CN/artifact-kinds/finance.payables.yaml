@@ -1,0 +1,4 @@
+name: finance.payables
+title: 供应商付款方案
+required: [items, total]
+schema_version: 1

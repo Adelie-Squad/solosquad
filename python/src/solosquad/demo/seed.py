@@ -30,6 +30,7 @@ from solosquad.calendars import CalendarStore, Viewer, seed_demo
 from solosquad.company_info import Company
 from solosquad.demo import ORG_WORKSPACE, DemoConfig, check_id, load_config, org_for, save_config
 from solosquad.demo.harness import DemoHarness
+from solosquad.demo.i18n import L, Lang, known, pick, read_locale, write_locale
 from solosquad.demo.scenario import SCENARIOS, Pace, register_tools, run_through, set_pace
 from solosquad.demo.store import DemoAccount, DemoStore
 from solosquad.instance import Instance, build_instance, start_instance, stop_instance
@@ -56,8 +57,8 @@ COMPANY = Company(
     country="KR",
     address="경기도 광주시 오포읍 물류로 00 (예시 주소)",
 )
-ORG_DISPLAY = "모아 리빙 (예시)"
-WS_DISPLAY = "본사"
+ORG_DISPLAY = L("모아 리빙 (예시)", "Moa Living (example)", "Moa Living（示例）")
+WS_DISPLAY = L("본사", "HQ", "总部")
 SCRIPTED = Connection(
     id="demo-scripted",
     kind=ConnectionKind.LOCAL_LLM,
@@ -72,9 +73,37 @@ SCRIPTED = Connection(
 (PRD §3.6.4 ②) and the 연결 settings show nothing to add or toggle."""
 MEMBERS = (
     # (username suffix, display, title, teams) — made-up names, never able to sign in
-    ("finance", "김재무 (예시 인물)", "재무 담당", ["business"]),
-    ("marketing", "이마케 (예시 인물)", "마케팅 담당", ["brand"]),
+    ("finance", L("김재무 (예시 인물)", "Jaemu Kim (example person)", "金财务（示例人物）"),
+     L("재무 담당", "Finance", "财务"), ["business"]),
+    ("marketing", L("이마케 (예시 인물)", "Make Lee (example person)", "李营销（示例人物）"),
+     L("마케팅 담당", "Marketing", "营销"), ["brand"]),
+)  # fmt: skip
+OWNER_TITLE = L("대표 (데모)", "Owner (demo)", "代表（演示）")
+QUESTION = (
+    L(
+        "어제 B2B 납품 매출 어땠어?",
+        "How were yesterday's B2B sales?",
+        "昨天的 B2B 供货销售怎么样？",
+    ),
+    L(
+        "어제 B2B 납품 매출 어땠어? 손익 기준으로 알려줘.",
+        "How were yesterday's B2B sales? Tell me in P&L terms.",
+        "昨天的 B2B 供货销售怎么样？按损益告诉我。",
+    ),
 )
+"""The example conversation of yesterday — (title, the request)."""
+CALENDAR = (
+    # (title, from day, to day, notes)
+    (L("11월 정기 발주 마감", "November regular orders close", "11月定期订货截止"), 2, 2,
+     L("B2B 거래처 정기 발주를 마감해요. (예시)", "The B2B customers' regular orders close. "
+       "(example)", "B2B 客户的定期订货截止。（示例）")),
+    (L("부가세 예정 신고 준비", "Prepare the VAT preliminary return", "准备增值税预缴申报"), 4, 9,
+     L("10월 손익표가 확정되면 자료를 묶어요.", "Once the October P&L is final, gather the "
+       "records.", "10月损益表定稿后整理资料。")),
+    (L("겨울 텀블러 신상품 출시", "Winter tumbler launch", "冬季保温杯新品上市"), 7, 7,
+     L("SNS 게시물 · 광고가 이 날에 맞춰 나가요.", "The social posts · ads go out on this day.",
+       "社媒帖子 · 广告在这一天发布。")),
+)  # fmt: skip
 PAST_SHIFT_S = 18 * 3600
 """The seeded past runs happened this long before the copy was made (yesterday)."""
 DIGEST_FROM_S = 22 * 3600
@@ -109,7 +138,9 @@ def init_solution(path: Path, config: DemoConfig | None = None) -> Solution:
     shutil.copytree(TEMPLATE, sol.root / "demo" / "template")
     (sol.root / "demo" / "README.md").write_text(
         "# Demo template\n\nEvery demo account gets a fresh copy of `template/` as its own org"
-        " (`solosquad demo issue`). Edit the example files here; `solosquad demo reset <id>`"
+        " (`solosquad demo issue`). Edit the example files here — `locales/en/` and"
+        " `locales/zh-CN/` hold the same files for an English or Chinese account;"
+        " `solosquad demo reset <id>`"
         " (or the nightly reset) applies them to an account.\n",
         encoding="utf-8",
     )
@@ -138,7 +169,8 @@ def demo_builder(
         inst = build_instance(solution, org, workspace, **kw)
         inst.router.connections = [SCRIPTED]
         inst.connections = [SCRIPTED]
-        inst.router.harness_factory = lambda _conn, _secrets: harness
+        voice = harness.speaking(lambda: read_locale(Path(solution) / "orgs" / org))
+        inst.router.harness_factory = lambda _conn, _secrets: voice
         if on_step is not None and inst.workflows is not None:
             inst.workflows.on_step = lambda *a: on_step(org, *a)
         return inst
@@ -194,46 +226,76 @@ async def seed_account(
     build: Callable[..., Instance] | None = None,
     now: float | None = None,
 ) -> None:
-    """The visitor's copy from the template, people, calendar and yesterday's runs."""
+    """The visitor's copy from the template, people, calendar and yesterday's runs — in the
+    visitor's screen language (their `users.locale` now, else the language it was issued in)."""
     t = time.time() if now is None else now
-    org = scaffold_org(sol, acct.org, "bundled", __version__, ORG_DISPLAY)
-    ws = scaffold_workspace(org, ORG_WORKSPACE, WS_DISPLAY)
+    lang = account_locale(accounts, acct)
+    org = scaffold_org(sol, acct.org, "bundled", __version__, pick(ORG_DISPLAY, lang))
+    ws = scaffold_workspace(org, ORG_WORKSPACE, pick(WS_DISPLAY, lang))
     ws.save_config(ws.config().model_copy(update={"execution": DEMO_EXECUTION}))
     files = org.root / "files"
-    src_root = template_dir(sol)
-    for src in sorted(src_root.rglob("*")):
-        if src.is_dir():
-            continue
-        dest = org.root / src.relative_to(src_root)
+    for rel, src in template_files(sol, lang).items():
+        dest = org.root / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         text = src.read_text(encoding="utf-8")
         dest.write_text(text.replace("__FILES__", files.as_posix()), encoding="utf-8")
+    write_locale(org.root, lang)
     ensure_company(accounts)
-    members = _people(sol, home, acct, accounts)
-    _calendar(accounts, acct, t)
-    await _past_runs(sol, home, acct, members, build=build, now=t)
+    members = _people(sol, home, acct, accounts, lang)
+    _calendar(accounts, acct, t, lang)
+    await _past_runs(sol, home, acct, members, build=build, now=t, lang=lang)
     accounts.touch(acct.user_id, t - DIGEST_FROM_S, new_visit=True)
 
 
-def _people(sol: Solution, home: Path, acct: DemoAccount, accounts: AccountStore) -> dict[str, str]:
+def account_locale(accounts: AccountStore, acct: DemoAccount) -> Lang:
+    try:
+        chosen = accounts.user(acct.user_id).locale
+    except Exception:  # the login was removed — the language it was issued in
+        chosen = None
+    return known(chosen or acct.locale)
+
+
+def template_files(sol: Solution, lang: str) -> dict[Path, Path]:
+    """{path in the copy: source} — the template's files, with `locales/<lang>/` in place of
+    the Korean ones (the solution's own template first, then the bundled one's language)."""
+    root = template_dir(sol)
+    out = {
+        src.relative_to(root): src
+        for src in sorted(root.rglob("*"))
+        if src.is_file() and src.relative_to(root).parts[0] != "locales"
+    }
+    if known(lang) != "ko":
+        for base in (root, TEMPLATE):
+            layer = base / "locales" / known(lang)
+            if layer.is_dir():
+                for src in sorted(layer.rglob("*")):
+                    if src.is_file():
+                        out[src.relative_to(layer)] = src
+                break
+    return out
+
+
+def _people(
+    sol: Solution, home: Path, acct: DemoAccount, accounts: AccountStore, lang: Lang = "ko"
+) -> dict[str, str]:
     """The example people of the copy → {suffix: user id}. Random passwords nobody knows,
     and a demo server signs in demo accounts only — they can never log in."""
     org_store = open_org(sol, acct.org, home)
-    org_store.set_member(acct.user_id, title="대표 (데모)", teams=[])
+    org_store.set_member(acct.user_id, title=pick(OWNER_TITLE, lang), teams=[])
     out = {}
     for suffix, display, title, teams in MEMBERS:
         name = f"{acct.org}.{suffix}"
         found = [u for u in accounts.users() if u.username == name]
         user = found[0] if found else accounts.create_user(
-            name, secrets.token_urlsafe(24), Role.STAFF, display=display,
+            name, secrets.token_urlsafe(24), Role.STAFF, display=pick(display, lang),
             assignments=[Assignment(acct.org, None, Role.STAFF)],
         )  # fmt: skip
-        org_store.set_member(user.id, title=title, teams=teams)
+        org_store.set_member(user.id, title=pick(title, lang), teams=teams)
         out[suffix] = user.id
     return out
 
 
-def _calendar(accounts: AccountStore, acct: DemoAccount, now: float) -> None:
+def _calendar(accounts: AccountStore, acct: DemoAccount, now: float, lang: Lang = "ko") -> None:
     today = dt.date.fromtimestamp(now)
     cal = CalendarStore(accounts.path)
     seed_demo(cal, acct.org, acct.user_id, today=today.isoformat())
@@ -242,15 +304,11 @@ def _calendar(accounts: AccountStore, acct: DemoAccount, now: float) -> None:
     def day(n: int) -> str:
         return (today + dt.timedelta(days=n)).isoformat()
 
-    for title, start, end, notes in (
-        ("11월 정기 발주 마감", day(2), day(2), "B2B 거래처 정기 발주를 마감해요. (예시)"),
-        ("부가세 예정 신고 준비", day(4), day(9), "10월 손익표가 확정되면 자료를 묶어요."),
-        ("겨울 텀블러 신상품 출시", day(7), day(7), "SNS 게시물 · 광고가 이 날에 맞춰 나가요."),
-    ):
+    for title, start, end, notes in CALENDAR:
         cal.create_item(
             who,
-            {"kind": "work", "org": acct.org, "title": title, "start": start, "end": end,
-             "status": "planned", "notes": notes},
+            {"kind": "work", "org": acct.org, "title": pick(title, lang), "start": day(start),
+             "end": day(end), "status": "planned", "notes": pick(notes, lang)},
         )  # fmt: skip
 
 
@@ -262,6 +320,7 @@ async def _past_runs(
     *,
     build: Callable[..., Instance] | None,
     now: float,
+    lang: Lang = "ko",
 ) -> None:
     """Play each scenario once, fast, answering every card — then move it all to yesterday,
     so the dashboard, 과제 and the workflow screens have history before anything runs live.
@@ -288,8 +347,8 @@ async def _past_runs(
             for card in cards:
                 value = answers.get(name, {}).get(str(card.get("step")), "approved")
                 decided.append((tid, card, value))
-        tid = inst.manager.create_thread("어제 B2B 납품 매출 어땠어?")
-        rid = await inst.manager.submit(tid, "어제 B2B 납품 매출 어땠어? 손익 기준으로 알려줘.")
+        tid = inst.manager.create_thread(pick(QUESTION[0], lang))
+        rid = await inst.manager.submit(tid, pick(QUESTION[1], lang))
         await inst.manager.wait(rid, 30)
     finally:
         await stop_instance(inst)
@@ -405,6 +464,7 @@ def open_stores(sol: Solution, home: Path | None = None) -> tuple[AccountStore, 
 __all__ = [
     "COMPANY",
     "SCRIPTED",
+    "account_locale",
     "create_account",
     "demo_builder",
     "ensure_company",
@@ -412,5 +472,6 @@ __all__ = [
     "open_stores",
     "reset_account",
     "seed_account",
+    "template_files",
     "wipe_org",
 ]

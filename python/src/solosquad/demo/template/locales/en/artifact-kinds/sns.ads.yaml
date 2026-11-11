@@ -1,0 +1,4 @@
+name: sns.ads
+title: Ad plan
+required: [channel, budget, days]
+schema_version: 1

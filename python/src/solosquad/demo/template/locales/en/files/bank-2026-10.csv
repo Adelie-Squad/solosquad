@@ -1,0 +1,18 @@
+Date,Type,Account,Amount,Memo
+2026-10-01,revenue,B2B sales,18400000,(example) Regular supply to 3 marts
+2026-10-03,expense,Purchases,9800000,(example) Tumblers from the Yiwu supplier
+2026-10-07,expense,Logistics,1450000,(example) Sea freight · customs
+2026-10-08,revenue,B2B sales,21300000,(example) Supply to a café franchise
+2026-10-10,expense,Payroll,19600000,October payroll
+2026-10-11,expense,Rent,3800000,Warehouse rent
+2026-10-12,expense,Advertising,2100000,Instagram · search ads
+2026-10-15,expense,Purchases,14200000,(example) Kitchenware from the Ningbo supplier
+2026-10-17,revenue,B2B sales,16800000,(example) Hotel amenity supply
+2026-10-20,expense,Duties,2310000,October import duty · VAT
+2026-10-23,expense,Staff welfare,980000,Meals · snacks
+2026-10-24,revenue,B2B sales,19500000,(example) Extra supply to 3 marts
+2026-10-27,expense,Purchases,16300000,(example) Tumblers from the Yiwu supplier
+2026-10-29,expense,Supplies,640000,Packaging
+2026-10-30,expense,Telecom,380000,Internet · phone
+2026-10-31,expense,Depreciation,1900000,Vehicles · equipment
+2026-10-31,expense,Transfer fees,1240000,(example) Overseas transfer — 40 times the usual · needs review
