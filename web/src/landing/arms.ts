@@ -17,7 +17,7 @@
 //   once it is clear again, outside the edge.
 //
 // Plain numbers, no three.js and no DOM, so the choice and the switch are testable.
-import type { SectionId } from './sections';
+import type { ActId } from './sections';
 
 export type Side = 'L' | 'R';
 
@@ -53,22 +53,22 @@ export function farWing(penguinX: number, contentCentreX: number): Side {
  * the near wing stamps, coming round the card's left edge from outside it (its shoulder stands
  * outside the edge, staging.ts). Re-check when the redesigned (taller) penguin lands.
  */
-export const ARM_CHOICE = { what: 'far', team: 'far', control: 'near' } as const satisfies Partial<Record<SectionId, 'far' | 'near'>>;
+export const ARM_CHOICE = { point: 'far', unroll: 'far', stamp: 'near' } as const satisfies Partial<Record<ActId, 'far' | 'near'>>;
 
 /**
- * The wings that act in a section (and so the only ones that may come in front of its content).
- * - hero: both — the prompt box is in front of the penguin's middle; the hands come up from behind
+ * The wings that act (and so the only ones that may come in front of the content).
+ * - type: both — the prompt box is in front of the penguin's middle; the hands come up from behind
  *   it, over the top edge, and type.
- * - what · team: the wing away from the content (the relay to card 1, the rod's knob); the near one
- *   stays tucked. control: the near wing (`ARM_CHOICE`); the far one stays at rest.
- * - start: both — the far (outside) wing waves, the near one rests on the top edge.
- * `wave` = which wing waves in `start`.
+ * - point · unroll: the wing away from the content (out to price card 1, the rod's knob); the near
+ *   one stays tucked. stamp: the near wing (`ARM_CHOICE`); the far one stays at rest.
+ * - wave: both — the far (outside) wing waves, the near one rests on the top edge.
+ * `wave` = which wing waves.
  */
-export function actingWings(id: SectionId, penguinX: number, contentCentreX: number): { wings: Side[]; wave: Side | null } {
+export function actingWings(id: ActId, penguinX: number, contentCentreX: number): { wings: Side[]; wave: Side | null } {
   switch (id) {
-    case 'hero':
+    case 'type':
       return { wings: ['L', 'R'], wave: null };
-    case 'start':
+    case 'wave':
       return { wings: ['L', 'R'], wave: farWing(penguinX, contentCentreX) };
     default:
       return { wings: [ARM_CHOICE[id] === 'near' ? nearWing(penguinX, contentCentreX) : farWing(penguinX, contentCentreX)], wave: null };
@@ -79,14 +79,14 @@ export function actingWings(id: SectionId, penguinX: number, contentCentreX: num
  * The turn of the body towards the content while acting (rad, + = towards the reader's right),
  * on top of the spot's own turn, eased in with the acting. Enough for the far wing to come round in
  * front of the body, little enough that the face stays well in view (`MAX_TURN` in all). Only where
- * the far wing reaches across the body (the relay); none in the hero and the last card (the penguin
+ * the far wing reaches across the body (point); none over the prompt box and behind the cards (the penguin
  * is behind the content, facing the reader), none on the scroll (the far wing is already on the
  * rod's side; turning would hide the peeking face) and none for the near-wing stamp.
  */
 export const ACT_YAW = 0.5;
 export const MAX_TURN = 0.72;
-export function actYaw(id: SectionId, penguinX: number, contentCentreX: number): number {
-  if (id !== 'what') return 0;
+export function actYaw(id: ActId, penguinX: number, contentCentreX: number): number {
+  if (id !== 'point') return 0;
   return Math.sign(contentCentreX - penguinX) * ACT_YAW;
 }
 

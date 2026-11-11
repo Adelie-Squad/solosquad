@@ -7,15 +7,16 @@ import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { hasWebGL, isMobile, prefersReducedMotion, webglForcedOff } from '../office/OfficeStage';
 import { useTheme } from '../theme';
-import { PromptAct, ScrollAct, SignAct, StampAct, StepsAct } from './Acts';
-import { AGENT_COUNT, TEAMS } from './catalog';
+import { CompanyAct, PricingAct, PromptAct, ScrollAct, SignAct, WorkflowAct } from './Acts';
 import { keyStep, ownsKeys, SETTLE_MS, Stepper, wheelPixels } from './dwell';
 import { useInquiry } from '../marketing/Inquiry';
 import '../marketing/messages';
 import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
-import { sectionAnchor, SECTIONS, stepAt, type SectionId } from './sections';
+import { PersonFace } from './people';
+import { firstStop, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
+import { WORKFLOW_EXAMPLES } from './workflows';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
@@ -36,9 +37,9 @@ export function landingMode(): LandingMode {
   return webglForcedOff() || prefersReducedMotion() || short || !hasWebGL() ? 'static' : 'live';
 }
 
-const stopOffsets = () => SECTIONS.map((s) => document.getElementById(sectionAnchor(s.id))).map((el) => (el ? el.getBoundingClientRect().top + window.scrollY : 0));
+const stopOffsets = () => STOPS.map((s) => document.getElementById(s.anchor)).map((el) => (el ? el.getBoundingClientRect().top + window.scrollY : 0));
 
-/** Which slide is up: the stop nearest the scroll position (`stepAt`) — native scroll is the truth. */
+/** Which stop is up: the one nearest the scroll position (`stepAt`) — native scroll is the truth. */
 function useStep(enabled: boolean) {
   const [step, setStep] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -69,7 +70,7 @@ const inDialog = (target: EventTarget | null) => target instanceof Element && !!
 const pressable = (target: EventTarget | null) => target instanceof Element && !!target.closest('button, a, summary, [role="button"]');
 
 /**
- * The step controller on the live landing (dwell.ts): one wheel or touch gesture = one section,
+ * The step controller on the live landing (dwell.ts): one wheel or touch gesture = one stop,
  * then a hold; the keyboard and the progress links go through it too. `?landing-debug` keeps a log
  * of the steps at `window.__landingLog`.
  */
@@ -109,7 +110,7 @@ function useStepper(enabled: boolean) {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || scrollLocked() || ownsKeys(e.target)) return;
       if ((e.key === ' ' || e.key === 'Spacebar') && pressable(e.target)) return;
-      const to = keyStep(e, s.current(), SECTIONS.length - 1);
+      const to = keyStep(e, s.current(), STOPS.length - 1);
       if (to === null) return;
       e.preventDefault();
       s.go(to, 'key');
@@ -152,17 +153,22 @@ const POINTS: { icon: keyof typeof ICON; title: MessageKey; body: MessageKey }[]
 ];
 
 /**
- * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`): a pinned stage, one screen high, the
- * section names at the left edge. Each section is the message on one side and, on the other, the
- * section's content centred in its scene; the 3D penguin walks to a spot by the content and acts on
- * it (pretends to type over the prompt, hands the request along the step cards, peeks over the
- * scroll, stamps the approval from its corner, waves from behind the last card). One wheel or swipe
- * moves one section and the page holds there a moment. Reduced motion, no WebGL and short screens get the same
- * sections stacked with the 2D penguin and native scroll. The landing is the marketing site's only
- * (decision 62 — customer servers open on their login): 데모 체험하기 (primary, `/demo`) and 로그인
- * (`/login`, the login router) in the top bar (beside the language select, no label), the first
- * section and the last; under the last, "데모 계정이 없으세요? 데모 계정 신청하기" opens the request
- * modal. No arrows.
+ * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`, PRD v2.1.0 §3.5): a pinned stage, one
+ * screen high, the section names at the left edge. Six sections (decision 61): 시작 (the company
+ * card — what is sold: a team of agents built on the company's server) · 맡기기 (a request to Chief,
+ * split among the agents) · 조직도 (agents and team members on one chart) · 워크플로우 (three example
+ * workflows, one stop each — what runs on its own and where it stops for approval) · 가격 (from
+ * ₩6,000,000 for a 3-month build, the call free, an exact quote on request) · 문의 (the last card).
+ * Each section is the message on one side and, on the other, the section's content centred in its
+ * scene; the 3D penguin walks to a spot by the content and acts on it (waves from behind the company
+ * card, pretends to type over the prompt, peeks over the scroll, stamps each workflow's owner
+ * approval from the card's corner, points at the build price, waves from behind the last card). One
+ * wheel or swipe moves one stop and the page holds there a moment. Reduced motion, no WebGL and short
+ * screens get the same sections stacked (the three workflows one under another) with the 2D penguin
+ * and native scroll. The landing is the marketing site's only (decision 62 — customer servers open
+ * on their login): 데모 체험하기 (primary, `/demo`) and 로그인 (`/login`, the login router) in the top
+ * bar (beside the language select, no label), the first section and the last; the price section's
+ * button and the line under the last card open the request modal. No arrows.
  */
 export function Landing() {
   const { t } = useI18n();
@@ -176,7 +182,8 @@ export function Landing() {
   const live = mode === 'live';
   const acting = live && ready;
   const { step, scrolled } = useStep(live);
-  const active: SectionId = live ? SECTIONS[step].id : 'hero';
+  const stop = live ? STOPS[step] : STOPS[0];
+  const active: SectionId = stop.section;
   const fail = useCallback(() => setMode('static'), []);
   const onReady = useCallback(() => setReady(true), []);
   const stepper = useStepper(live);
@@ -215,29 +222,40 @@ export function Landing() {
   }, [live]);
 
   // Tab into a slide that is not up (its content stays in the page for keyboards and screen
-  // readers) brings that slide up through the step controller
+  // readers) brings that slide up through the step controller — at its first stop
   const stage = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = stage.current;
     if (!live || !el) return;
     const onFocus = (e: FocusEvent) => {
       const slide = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
-      const i = SECTIONS.findIndex((s) => s.id === slide?.dataset.slide);
-      if (i < 0 || i === step) return;
+      const id = slide?.dataset.slide as SectionId | undefined;
+      if (!id || id === active) return;
+      const i = firstStop(id);
+      if (i < 0) return;
       if (stepper.current) stepper.current.go(i, 'focus');
-      else document.getElementById(sectionAnchor(SECTIONS[i].id))?.scrollIntoView({ block: 'start' });
+      else document.getElementById(STOPS[i].anchor)?.scrollIntoView({ block: 'start' });
     };
     el.addEventListener('focusin', onFocus);
     return () => el.removeEventListener('focusin', onFocus);
-  }, [live, step, stepper]);
+  }, [live, active, stepper]);
 
+  /** To stop `i` through the step controller (the progress links, the workflow tabs). */
+  const goTo = useCallback(
+    (i: number) => {
+      const s = stepper.current;
+      if (!s) return;
+      window.history.pushState(null, '', `#${STOPS[i].anchor}`);
+      s.go(i, 'link');
+    },
+    [stepper],
+  );
   const onProgress = (i: number) => (e: MouseEvent<HTMLAnchorElement>) => {
-    const s = stepper.current;
-    if (!s || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (!stepper.current || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    window.history.pushState(null, '', `#${sectionAnchor(SECTIONS[i].id)}`);
-    s.go(i, 'link');
+    goTo(i);
   };
+  const workflowsAt = firstStop('workflows');
 
   // the two buttons (PRD §3.5.2 rev10): 데모 체험하기 (primary → /demo) · 로그인 (→ the login router),
   // in the top bar, the first section and the last one, in that order
@@ -254,7 +272,7 @@ export function Landing() {
 
   const slide = (id: SectionId, copy: ReactNode, act: ReactNode) => {
     const on = !live || active === id;
-    const passed = live && SECTIONS.findIndex((s) => s.id === id) < step;
+    const passed = live && SECTIONS.findIndex((s) => s.id === id) < SECTIONS.findIndex((s) => s.id === active);
     return (
       <section
         key={id}
@@ -276,11 +294,11 @@ export function Landing() {
     slide(
       'hero',
       <>
-        <p className="landing-mono landing-eyebrow">{t('landing.eyebrow')}</p>
+        <p className="landing-mono landing-eyebrow">{t('landing.hero.eyebrow')}</p>
         <h1 id="landing-hero-title" className="landing-display">
-          {t('landing.title')}
+          {t('landing.hero.title')}
         </h1>
-        <p className="landing-lead">{t('landing.lead')}</p>
+        <p className="landing-lead">{t('landing.hero.lead')}</p>
         <div className="landing-ctas">
           {demo('btn is-primary landing-cta')}
           {login('btn landing-cta')}
@@ -292,40 +310,55 @@ export function Landing() {
             <Mascot size={160} />
           </div>
         )}
-        <PromptAct on={isOn('hero')} acting={acting} still={reduced} />
+        <CompanyAct on={isOn('hero')} acting={acting} />
       </>,
     ),
     slide(
-      'what',
+      'delegate',
       <>
-        <h2 id="landing-what-title" className="landing-title">
-          {t('landing.what.title')}
+        <h2 id="landing-delegate-title" className="landing-title">
+          {t('landing.delegate.title')}
         </h2>
-        <p className="landing-lead">{t('landing.what.lead')}</p>
+        <p className="landing-lead">{t('landing.delegate.lead')}</p>
+        <p className="landing-aside">
+          <ICON.messenger />
+          {t('landing.delegate.where')}
+        </p>
       </>,
-      <StepsAct on={isOn('what')} acting={acting} />,
+      <PromptAct on={isOn('delegate')} acting={acting} still={reduced || !acting} />,
     ),
     slide(
-      'team',
+      'org',
       <>
-        <h2 id="landing-team-title" className="landing-title">
-          {t('landing.team.title', { n: AGENT_COUNT, teams: TEAMS.length })}
+        <h2 id="landing-org-title" className="landing-title">
+          {t('landing.org.title')}
         </h2>
-        <p className="landing-lead">{t('landing.team.lead')}</p>
+        <p className="landing-lead">{t('landing.org.lead')}</p>
+        <ul className="landing-legend">
+          <li>
+            <Mascot size={20} />
+            {t('landing.org.legend.agent')}
+          </li>
+          <li>
+            <PersonFace size={20} />
+            {t('landing.org.legend.person')}
+          </li>
+        </ul>
+        <p className="landing-aside">{t('landing.org.note')}</p>
         <button type="button" className="btn landing-org-all" onClick={() => team.open(null)}>
           <ICON.team />
           {t('landing.team.all')}
         </button>
       </>,
-      <ScrollAct on={isOn('team')} acting={acting} onOpen={team.open} />,
+      <ScrollAct on={isOn('org')} acting={acting} onOpen={team.open} />,
     ),
     slide(
-      'control',
+      'workflows',
       <>
-        <h2 id="landing-control-title" className="landing-title">
-          {t('landing.control.title')}
+        <h2 id="landing-workflows-title" className="landing-title">
+          {t('landing.workflows.title')}
         </h2>
-        <p className="landing-lead">{t('landing.control.lead')}</p>
+        <p className="landing-lead">{t('landing.workflows.lead')}</p>
         <ul className="landing-points">
           {POINTS.map((p) => {
             const Icon = ICON[p.icon];
@@ -340,19 +373,35 @@ export function Landing() {
             );
           })}
         </ul>
+        <p className="landing-aside">{t('landing.workflows.note')}</p>
       </>,
-      <StampAct on={isOn('control')} acting={acting} />,
+      <WorkflowAct on={isOn('workflows')} acting={acting} at={active === 'workflows' ? stop.sub : 0} stacked={!live} onPick={(i) => goTo(workflowsAt + i)} />,
     ),
     slide(
-      'start',
+      'pricing',
       <>
-        <h2 id="landing-start-title" className="landing-title">
+        <h2 id="landing-pricing-title" className="landing-title">
+          {t('landing.pricing.title')}
+        </h2>
+        <p className="landing-lead">{t('landing.pricing.lead')}</p>
+        <div className="landing-ctas">
+          <button type="button" className="btn is-primary landing-cta" onClick={() => openInquiry({ source: 'pricing', requests: ['consult'] })}>
+            {t('landing.pricing.cta')}
+          </button>
+        </div>
+      </>,
+      <PricingAct on={isOn('pricing')} acting={acting} />,
+    ),
+    slide(
+      'contact',
+      <>
+        <h2 id="landing-contact-title" className="landing-title">
           {t('landing.start.title')}
         </h2>
         <p className="landing-lead">{t('landing.start.lead')}</p>
       </>,
       <SignAct
-        on={isOn('start')}
+        on={isOn('contact')}
         acting={acting}
         cta={
           <div className="landing-final">
@@ -384,26 +433,45 @@ export function Landing() {
 
       <nav className="landing-progress" aria-label={t('landing.nav')}>
         <ol>
-          {SECTIONS.map((s, i) => (
-            <li key={s.id}>
-              <a
-                href={`#${sectionAnchor(s.id)}`}
-                onClick={onProgress(i)}
-                aria-current={active === s.id && live ? 'step' : undefined}
-                className={active === s.id && live ? 'is-on' : ''}
-              >
-                <span className="landing-progress-mark" aria-hidden="true" />
-                <span className="landing-progress-label">{t(s.label)}</span>
-              </a>
-            </li>
-          ))}
+          {SECTIONS.map((s) => {
+            const i = firstStop(s.id);
+            const on = live && active === s.id;
+            return (
+              <li key={s.id}>
+                <a href={`#${STOPS[i].anchor}`} onClick={onProgress(i)} aria-current={on ? 'step' : undefined} className={on ? 'is-on' : ''}>
+                  <span className="landing-progress-mark" aria-hidden="true" />
+                  <span className="landing-progress-label">{t(s.label)}</span>
+                </a>
+                {s.id === 'workflows' && (
+                  <ol className="landing-progress-stops">
+                    {WORKFLOW_EXAMPLES.map((w, sub) => {
+                      const here = on && stop.sub === sub;
+                      return (
+                        <li key={w.id}>
+                          <a
+                            href={`#${STOPS[i + sub].anchor}`}
+                            onClick={onProgress(i + sub)}
+                            aria-label={t(w.name)}
+                            aria-current={here ? 'step' : undefined}
+                            className={here ? 'is-on' : ''}
+                          >
+                            <span className="landing-progress-dot" aria-hidden="true" />
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </li>
+            );
+          })}
         </ol>
       </nav>
 
       {live ? (
-        <div className="landing-track" style={{ '--steps': SECTIONS.length } as CSSProperties}>
-          {SECTIONS.map((s, i) => (
-            <span key={s.id} id={sectionAnchor(s.id)} className="landing-stop" style={{ '--n': i } as CSSProperties} data-testid={`landing-stop-${s.id}`} />
+        <div className="landing-track" style={{ '--steps': STOPS.length } as CSSProperties}>
+          {STOPS.map((s, i) => (
+            <span key={s.anchor} id={s.anchor} className="landing-stop" style={{ '--n': i } as CSSProperties} data-testid={`landing-stop-${s.anchor.slice('landing-'.length)}`} />
           ))}
           <div className={`landing-pin ${acting ? 'is-acting' : ''}`} ref={stage}>
             <div className="landing-grid" aria-hidden="true">

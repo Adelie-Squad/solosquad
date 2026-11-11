@@ -1,10 +1,11 @@
 // Where the landing penguin stands in each section and how it gets there (DESIGN.md `## 랜딩` —
 // 자리). The content of a section is centred in its scene; the penguin moves to a spot picked from
-// that content's rectangle: above the prompt box (hero), beside the step cards (what), peeking over
-// the paper's upper-left corner (team), just outside the approval card's lower-left corner
-// (control), popping up behind the last card's upper-right (start). Plain numbers, no three.js and
-// no DOM, so every spot, the move between them and the motion limits are testable.
-import type { SectionId } from './sections';
+// that content's rectangle, one per act (sections.ts `ActId`): above the prompt box (type — 맡기기),
+// beside the price cards (point — 가격), peeking over the paper's upper-left corner (unroll — 조직도),
+// just outside the workflow card's lower-left corner (stamp — 워크플로우), popping up behind the
+// card's upper-right (wave — the company card at the start and the last card). Plain numbers, no
+// three.js and no DOM, so every spot, the move between them and the motion limits are testable.
+import type { ActId } from './sections';
 
 export interface Box {
   left: number;
@@ -53,29 +54,29 @@ const bottom = (b: Box) => b.top + b.height;
 const cx = (b: Box) => b.left + b.width / 2;
 
 /**
- * The spot for a section, from its centred content box `c` and the penguin's height `h`.
- * - hero: centred over the prompt box, shoulders just above its top edge (the wings rest on it),
+ * The spot for an act, from the section's centred content box `c` and the penguin's height `h`.
+ * - type: centred over the prompt box, shoulders just above its top edge (the wings rest on it),
  *   the feet hidden behind it.
- * - what: desktop = standing beside the step cards' right edge, shoulders level with their top,
+ * - point: desktop = standing beside the price cards' right edge, shoulders level with their top,
  *   turned to them; the body turns further to act (arms.ts `actYaw`) and the far (left — the
  *   reader's right) wing comes down round in front of the belly — below the face — to card 1's
  *   lower right; phone = over the cards' upper right.
- * - team: behind the paper's upper-left corner, leaning out to the left so the face peeks over the
+ * - unroll: behind the paper's upper-left corner, leaning out to the left so the face peeks over the
  *   rod; the body stays behind the paper.
- * - control: just outside the card's lower-left corner, turned to the card, the near (left — the
+ * - stamp: just outside the workflow card's lower-left corner, turned to the card, the near (left — the
  *   reader's right) shoulder outside the card's left edge so that wing comes round it with the stamp
  *   to the approve button (arms.ts `ARM_CHOICE`; a phone: a smaller penguin).
- * - start: behind the card's upper right, head and shoulders above its top edge.
+ * - wave: behind the card's upper right, head and shoulders above its top edge.
  */
-export function spotFor(id: SectionId, c: Box, h: number, mobile: boolean): Spot {
+export function spotFor(id: ActId, c: Box, h: number, mobile: boolean): Spot {
   switch (id) {
-    case 'hero':
+    case 'type':
       return { x: cx(c), y: c.top + (1 - BODY.shoulder - 0.1) * h, h, lean: 0, turn: 0 };
-    case 'what':
+    case 'point':
       return mobile ? { x: right(c) - 0.42 * h, y: c.top + 0.52 * h, h, lean: 0, turn: -0.15 } : { x: right(c) + 0.24 * h, y: c.top + 0.6 * h, h, lean: 0, turn: -0.18 };
-    case 'team':
+    case 'unroll':
       return { x: c.left + (mobile ? 0.38 : 0.3) * h, y: c.top + 0.54 * h, h, lean: 0.32, turn: -0.1 };
-    case 'control':
+    case 'stamp':
       if (mobile) {
         // a phone has no room at the card's side for a full-size penguin: a smaller one, and the card
         // sits to the right of the middle (landing.css) so the two of them are centred together
@@ -83,7 +84,7 @@ export function spotFor(id: SectionId, c: Box, h: number, mobile: boolean): Spot
         return { x: c.left - besideEdge(0.5) * s, y: bottom(c) + 0.3 * s, h: s, lean: 0, turn: 0.5 };
       }
       return { x: c.left - besideEdge(0.5) * h, y: bottom(c) + 0.34 * h, h, lean: 0, turn: 0.5 };
-    case 'start':
+    case 'wave':
       return { x: right(c) - (mobile ? 0.42 : 0.24) * h, y: c.top + 0.5 * h, h, lean: mobile ? 0 : -0.05, turn: -0.12 };
   }
 }
@@ -132,7 +133,7 @@ export function moveAt(from: Spot, to: Spot, ms: number): Spot {
   };
 }
 
-// ── hero: pretending to type ───────────────────────────────────────────
+// ── type: pretending to type ───────────────────────────────────────────
 
 /**
  * Key strokes per second, both wings together (they alternate). Not one per character — a steady,
