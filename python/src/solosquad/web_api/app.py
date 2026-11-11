@@ -834,11 +834,11 @@ def create_app(cfg: AppConfig) -> Starlette:
             "scopes": scopes,
             "last_scope": last_scope_for(who, scopes),
             "demo": cfg.demo is not None,
-            "demo_info": demo_info(acct) if acct is not None else None,
+            "demo_info": demo_info(acct, session.user.locale) if acct is not None else None,
         }
 
-    def demo_info(acct: DemoAccount) -> dict[str, Any]:
-        from solosquad.demo.harness import SUGGESTIONS
+    def demo_info(acct: DemoAccount, locale: str | None) -> dict[str, Any]:
+        from solosquad.demo.harness import suggestions
 
         settings = server_cfg().demo
         contact = (settings.contact_url if settings else None) or (
@@ -852,7 +852,7 @@ def create_app(cfg: AppConfig) -> Starlette:
             "expires": acct.expires,
             "locked": sorted(DEMO_READ_ONLY) + list(SELF_LOCKED),
             "contact_url": contact,
-            "suggestions": list(SUGGESTIONS),
+            "suggestions": list(suggestions(locale)),  # in the screen language
         }
 
     # ------------------------------------------------------------------ health · auth

@@ -11,6 +11,7 @@ import { seatClicks } from './clicks';
 import { checkGltf, formatReport, type GltfJson } from './contract';
 import { applyLook, applyNight, buildOffice, KIT_LAYER, MaterialBank, playStatus, type Office } from './kit';
 import type { Room, SeatAgent } from './layout';
+import { measureNowObserver, type FrameLoop } from './measure';
 import { paletteFor, type OfficePalette } from './palette';
 import { kitUrl, penguinUrl, withMeshopt } from './penguinAsset';
 import { SkyLight } from './SkyLight';
@@ -27,8 +28,8 @@ export interface OfficeCanvasProps {
   theme: Theme;
   reducedMotion: boolean;
   mobile: boolean;
-  /** Hidden tab or scrolled off-screen — stop drawing. */
-  paused: boolean;
+  /** When to draw (`frameLoop` — never in the pop-out or off-screen, on demand in a hidden page). */
+  frameloop: FrameLoop;
   tags: RefObject<Map<string, HTMLElement>>;
   /** Team labels under each pod (pod key → element), placed like the tags. */
   teamTags: RefObject<Map<string, HTMLElement>>;
@@ -43,6 +44,8 @@ export interface OfficeCanvasProps {
   /** `?office-debug` — frames per second land here. */
   stats?: { fps: number };
 }
+
+const MEASURE = { polyfill: measureNowObserver() };
 
 /** Elevation 30°, azimuth 45° (contract §2) — the direction from the room towards the camera. */
 const VIEW = new THREE.Vector3(...VIEW_DIR);
@@ -59,7 +62,10 @@ export default function OfficeCanvas(props: OfficeCanvasProps) {
       orthographic
       flat
       dpr={props.mobile ? 1.5 : 2}
-      frameloop={props.paused ? 'never' : props.reducedMotion ? 'demand' : 'always'}
+      frameloop={props.frameloop}
+      // measure once from a timer too — a page that is not rendering never gets the first
+      // ResizeObserver report, and R3F mounts nothing until it has a size (measure.ts)
+      resize={MEASURE}
       gl={{ antialias: true, powerPreference: 'low-power' }}
       // one soft shadow map for the day sun; drawn on demand only (the kit does not move)
       shadows={{ enabled: true, type: THREE.PCFSoftShadowMap, autoUpdate: false }}

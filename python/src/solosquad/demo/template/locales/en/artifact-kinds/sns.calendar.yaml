@@ -1,0 +1,4 @@
+name: sns.calendar
+title: Content calendar
+required: [week, entries]
+schema_version: 1

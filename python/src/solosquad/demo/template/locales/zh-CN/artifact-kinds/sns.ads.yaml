@@ -1,0 +1,4 @@
+name: sns.ads
+title: 广告投放方案
+required: [channel, budget, days]
+schema_version: 1

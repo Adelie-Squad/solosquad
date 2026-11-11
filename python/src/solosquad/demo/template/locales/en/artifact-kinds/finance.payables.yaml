@@ -1,0 +1,4 @@
+name: finance.payables
+title: Vendor payment plan
+required: [items, total]
+schema_version: 1

@@ -379,7 +379,8 @@ async def test_every_activation_is_the_scripted_harness(demo: tuple[Demo, dict[s
     assert isinstance(harness, DemoHarness) and harness.name == NAME == "scripted"
     for inst in d.engine.runtimes.values():
         assert inst.router.connections == [SCRIPTED]
-        assert inst.router.harness_factory(SCRIPTED, inst.secrets) is harness
+        voice = inst.router.harness_factory(SCRIPTED, inst.secrets)
+        assert voice.name == NAME and getattr(voice, "base", None) is harness  # one per copy
     before = harness.calls
     rt = d.engine.runtime("samsungdemo", ORG_WORKSPACE)
     assert rt is not None

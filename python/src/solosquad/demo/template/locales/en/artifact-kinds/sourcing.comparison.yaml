@@ -1,0 +1,4 @@
+name: sourcing.comparison
+title: Landed cost comparison
+required: [product, suppliers]
+schema_version: 1
