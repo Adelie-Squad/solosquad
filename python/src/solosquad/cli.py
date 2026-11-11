@@ -1437,8 +1437,8 @@ def demo_init(
         raise _fail(str(e)) from e
     ensure_company(_accounts(path))
     console.print(f"demo server created at {path} (SOLOSQUAD_HOME={solosquad_home()})")
-    console.print(f"next: solosquad demo issue --id <slug>Demo --inquiry <id> -s {path}"
-                  f" · solosquad serve -s {path}")  # fmt: skip
+    console.print("next: solosquad demo issue --id <slug>Demo --inquiry <id> --company-no <n>"
+                  f" -s {path} · solosquad serve -s {path}")  # fmt: skip
 
 
 @demo_app.command("issue")
@@ -1446,6 +1446,14 @@ def demo_issue(
     demo_id: IdArg = None,
     id_: IdOpt = None,
     inquiry: Annotated[str, typer.Option("--inquiry", help="The inquiry this demo answers.")] = "",
+    company_no: Annotated[
+        str,
+        typer.Option(
+            "--company-no",
+            help="The inquiry's company registration number (사업자 · 법인등록번호, or another"
+            " country's) — asked for at the demo login with the id and password.",
+        ),
+    ] = "",
     days: Annotated[int | None, typer.Option(help="Days until it expires (default 14).")] = None,
     expires: Annotated[str | None, typer.Option(help="Or: 14d · 48h · 2w · 2026-12-31")] = None,
     locale: Annotated[str, typer.Option(help="The visitor's screen language.")] = "ko",
@@ -1461,39 +1469,45 @@ def demo_issue(
 
     sol = _demo_solution(solution)
     wanted = _one_id(demo_id, id_)
-    if not wanted or not inquiry:
-        raise _fail("give the demo id (--id samsungDemo) and --inquiry <id>")
+    if not wanted or not inquiry or not company_no.strip():
+        raise _fail("give the demo id (--id samsungDemo), --inquiry <id> and --company-no <number>")
     if locale not in LOCALES:
         raise _fail(f"locale must be one of {list(LOCALES)}")
     cfg = load_config(sol)
     accounts, store = open_stores(sol)
     try:
         until = parse_expiry(expires or f"{days or cfg.default_days}d")
-        acct, password = create_account(sol, store, accounts, wanted, inquiry, until, name, locale)
+        acct, password = create_account(
+            sol, store, accounts, wanted, inquiry, until, name, locale, company_no=company_no
+        )
     except ValueError as e:
         raise _fail(str(e)) from e
     _run(seed_account(sol, solosquad_home(), acct, accounts))
     store.mark_seeded(acct.demo_id, acct.generation)
     console.print(f"[green]issued {acct.demo_id}[/green] · inquiry {acct.inquiry_id} ·"
                   f" expires {_when(acct.expires)}")  # fmt: skip
+    console.print(f"company no: {acct.company_no}")
     console.print(f"login id: {acct.demo_id}")
     console.print(f"password: [bold]{password}[/bold]  (shown once — only its hash is kept)")
     # stable lines for the marketing admin's script (ssh demo 'solosquad demo issue …')
     typer.echo(f"demo_id={acct.demo_id}")
     typer.echo(f"password={password}")
     typer.echo(f"expires={_when(acct.expires)}")
+    typer.echo(f"company_no={acct.company_no}")
 
 
 @demo_app.command("list")
 def demo_list(solution: SolutionOpt = Path(".")) -> None:
-    """Demo accounts with their inquiry, status and expiry."""
+    """Demo accounts with their inquiry, company number, status and expiry."""
     from solosquad.demo.seed import open_stores
 
     _, store = open_stores(_demo_solution(solution))
-    table = Table("demo id", "inquiry", "label", "status", "expires", "issued", "last reset")
+    table = Table(
+        "demo id", "inquiry", "company no", "label", "status", "expires", "issued", "last reset"
+    )
     for a in store.accounts():
-        table.add_row(a.demo_id, a.inquiry_id, a.label, a.status(), _when(a.expires),
-                      _when(a.created), _when(a.last_reset))  # fmt: skip
+        table.add_row(a.demo_id, a.inquiry_id, a.company_no or "-", a.label, a.status(),
+                      _when(a.expires), _when(a.created), _when(a.last_reset))  # fmt: skip
     console.print(table)
 
 

@@ -2,9 +2,11 @@
 // from the company or applicant, Hangul romanised, Chinese in pinyin, legal forms dropped, 3–16,
 // collisions 2, 3, …), the demo server's command, what `route add` accepts, and SQL quoting.
 import { describe, expect, it } from 'vitest';
+import { normalizeCompanyNo as scriptCompanyNo } from '../../scripts/lib/company-no.mjs';
 import { lit, parseArgs, sql } from '../../scripts/lib/d1.mjs';
 import { demoIdFor, demoIssueArgs, nextDemoId, pinyinOf, romaniseHangul, slugFrom } from '../../scripts/lib/demo-id.mjs';
 import { checkCode, checkServer } from '../../scripts/lib/routes.mjs';
+import { normalizeCompanyNo } from '../../src/validate';
 
 describe('demo IDs', () => {
   it('slug from the name: Latin as is, legal forms dropped, a long name keeps its first word', () => {
@@ -40,8 +42,19 @@ describe('demo IDs', () => {
     expect(nextDemoId('samsung', ['samsungDemo', 'samsungDemo2'])).toBe('samsungDemo3');
   });
 
-  it('the demo server’s command (engine demo mode)', () => {
-    expect(demoIssueArgs({ demoId: 'samsungDemo2', inquiryId: '01J', days: 14, locale: 'ko' }).join(' ')).toBe('solosquad demo issue --id samsungDemo2 --inquiry 01J --days 14 --locale ko');
+  it('the demo server’s command (engine demo mode) carries the inquiry’s company number', () => {
+    expect(demoIssueArgs({ demoId: 'samsungDemo2', inquiryId: '01J', companyNo: '1234567890', days: 14, locale: 'ko' }).join(' ')).toBe(
+      'solosquad demo issue --id samsungDemo2 --inquiry 01J --company-no 1234567890 --days 14 --locale ko',
+    );
+    expect(() => demoIssueArgs({ demoId: 'samsungDemo2', inquiryId: '01J', companyNo: null })).toThrow(/company registration number/);
+  });
+
+  it('the scripts normalise a company number exactly as the Worker does', () => {
+    const samples = ['123-45-67890', ' 110111-1234567 ', '１２３４５６７８９０', 'hrb-12345', '91310000MA1FL', '123', 'x'.repeat(31), '12_34', ''];
+    for (const country of ['kr', 'cn', 'other', undefined]) {
+      for (const raw of samples) expect(scriptCompanyNo(raw, country)).toBe(normalizeCompanyNo(raw, country));
+    }
+    expect(scriptCompanyNo('123-45-67890')).toBe('1234567890');
   });
 });
 

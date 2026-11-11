@@ -28,7 +28,15 @@ from typing import Any
 from solosquad import __version__
 from solosquad.calendars import CalendarStore, Viewer, seed_demo
 from solosquad.company_info import Company
-from solosquad.demo import ORG_WORKSPACE, DemoConfig, check_id, load_config, org_for, save_config
+from solosquad.demo import (
+    ORG_WORKSPACE,
+    DemoConfig,
+    check_id,
+    load_config,
+    normalize_company_no,
+    org_for,
+    save_config,
+)
 from solosquad.demo.harness import DemoHarness
 from solosquad.demo.scenario import SCENARIOS, Pace, register_tools, run_through, set_pace
 from solosquad.demo.store import DemoAccount, DemoStore
@@ -165,14 +173,18 @@ def create_account(
     expires: float,
     label: str = "",
     locale: str = "ko",
+    *,
+    company_no: str,
 ) -> tuple[DemoAccount, str]:
-    """The login and the row — its copy is seeded next (`seed_account`)."""
+    """The login and the row — its copy is seeded next (`seed_account`). `company_no` is the
+    inquiry's registration number, asked for at the demo login with the id and password."""
     check_id(demo_id)
     org = org_for(demo_id)
     if store.taken(demo_id):
         raise ValueError(f"demo id {demo_id!r} is already issued")
     if not inquiry_id.strip():
         raise ValueError("an inquiry id is required — the demo is issued from an inquiry")
+    number = normalize_company_no(company_no)
     if any(u.username == org for u in accounts.users()) or (sol.orgs_dir / org).exists():
         raise ValueError(f"{demo_id!r} collides with an existing account or org")
     password = new_password()
@@ -180,7 +192,7 @@ def create_account(
         org, password, Role.STAFF, display=label or demo_id, locale=locale,
         assignments=[Assignment(org, None, Role.OWNER)],
     )  # fmt: skip
-    acct = store.add(demo_id, user.id, inquiry_id, expires, label, locale)
+    acct = store.add(demo_id, user.id, inquiry_id, expires, label, locale, company_no=number)
     accounts.audit(None, "demo.issue", f"{demo_id} inquiry={inquiry_id}")
     return acct, password
 

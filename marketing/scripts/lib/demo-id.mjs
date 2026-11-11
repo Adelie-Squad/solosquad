@@ -75,5 +75,9 @@ export function nextDemoId(slug, taken) {
   }
 }
 
-/** The demo server's command that makes the account (engine demo mode, PRD §3.6.3 issue ③). */
-export const demoIssueArgs = ({ demoId, inquiryId, days = 14, locale = 'ko' }) => ['solosquad', 'demo', 'issue', '--id', demoId, '--inquiry', inquiryId, '--days', String(days), '--locale', locale];
+/** The demo server's command that makes the account (engine demo mode, PRD §3.6.3 issue ③). The
+ * inquiry's company registration number goes with it — the demo login asks for it (2026-11-12). */
+export function demoIssueArgs({ demoId, inquiryId, companyNo, days = 14, locale = 'ko' }) {
+  if (!companyNo) throw new Error('a demo account needs the inquiry’s company registration number');
+  return ['solosquad', 'demo', 'issue', '--id', demoId, '--inquiry', inquiryId, '--company-no', companyNo, '--days', String(days), '--locale', locale];
+}

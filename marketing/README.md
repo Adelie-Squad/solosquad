@@ -12,7 +12,7 @@ its own login, and the customer web build carries none of this code or copy (C62
 | Route | What it does |
 |---|---|
 | `POST /api/login/route` | A **plain form post** `{code, id}`, so it works without JS, always answered with a **303**. A known active company code → `https://<company server>/login?u=<id>` (the ID is passed through as typed: no code prefix, never stored or checked beyond length and characters). The reserved code `demo` → `/demo?u=<id>`. Unknown, suspended, malformed or over the limit → `/login/help`. Every answer runs the same D1 lookup and is padded to the same time (`ROUTE_PAD_MS`, 250 ms). Limit per hashed IP: 10 a minute and 60 an hour. No password ever reaches this route |
-| `POST /api/inquiry` | A demo account request (JSON from the modal) → D1 `inquiries` (status `new`) plus one `inquiry_log` row (`created`). Spam protection: a honeypot field (`website`, answered as received and dropped), the 3-second rule (a signed token from `GET /api/form-token`), a per-IP limit (5 an hour) and 3 per email a day. Turnstile only runs if `TURNSTILE_ENABLED = "true"`; it is off by default because it is blocked in mainland China, and review is the real gate. Neither the IP nor the user-agent is stored |
+| `POST /api/inquiry` | A demo account request (JSON from the modal) → D1 `inquiries` (status `new`) plus one `inquiry_log` row (`created`). One required `company_no`, the company's representative registration number (below). Spam protection: a honeypot field (`website`, answered as received and dropped), the 3-second rule (a signed token from `GET /api/form-token`), a per-IP limit (5 an hour) and 3 per email a day. Turnstile only runs if `TURNSTILE_ENABLED = "true"`; it is off by default because it is blocked in mainland China, and review is the real gate. Neither the IP nor the user-agent is stored |
 | `GET /api/config` · `GET /api/form-token` | What the pages need (the demo login URL, the consent version, Turnstile on/off) and the form-opened token |
 | cron (daily 03:17 UTC) | Deletes inquiries past `retain_until`, with their log (`RETAIN_DAYS`, 365) |
 
@@ -20,15 +20,30 @@ There is **no admin HTTP API**. The agency works through `wrangler d1 execute` (
 on the internet needs guarding.
 
 The demo login (`/demo`) is a plain form that the browser **posts straight to the demo server**
-(`DEMO_LOGIN_URL`, the engine's demo-mode `POST /api/auth/demo-login`, PRD §3.6.8), with the fields
-`username` and `password`. The marketing site never sees the password.
+(`DEMO_LOGIN_URL`, the engine's demo-mode `POST /api/auth/demo-login`, PRD §3.6.8), with three
+fields: `company_no` (법인(사업자)등록번호 — the number given in the request), `username` (the demo
+ID) and `password`. The demo server signs in only when the number matches the one stored with the
+account, ignoring dashes, spaces and case. A wrong number, ID or password, and an expired account,
+all get the same answer (back to `/demo?error=1`), and a wrong number counts as a failed login. The
+marketing site never sees the password.
 
-## D1 schema (`migrations/0001_init.sql`, PRD §3.6.3)
+**The company registration number** (`company_no`, decided 2026-11-12) is one representative
+number per request:
+- A Korean 사업자등록번호 (10 digits, `123-45-67890`) or 법인등록번호 (13 digits,
+  `110111-1234567`) is stored as digits only. A request with country `kr` must give one of these
+  two.
+- Another country's number is 4–30 letters, digits and dashes, stored upper-cased.
+- The Worker (`src/validate.ts` `normalizeCompanyNo`) decides. The modal checks the same rule, and
+  `scripts/lib/company-no.mjs` and the engine (`solosquad.demo.normalize_company_no`) keep the same
+  rule.
+
+## D1 schema (`migrations/0001_init.sql` · `0002_company_no.sql`, PRD §3.6.3)
 
 - `inquiries`:
   - id (ULID), created_at, updated_at
-  - the form: company, business_type, country, contact_name, email, reach_kind, reach_value,
-    wants, requests (`demo` · `consult`), message
+  - the form: company, company_no (normalised; `0002`, NULL only on older rows), business_type,
+    country, contact_name, email, reach_kind, reach_value, wants, requests (`demo` · `consult`),
+    message
   - consent: consent_required, consent_demo (DM6 ⓑ), consent_version, consent_news
   - locale, source (`landing_hero` · `landing_start` · `pricing` · `demo_login`), opened_at
   - handling: status (`new` · `reviewed` · `issued` · `rejected`), reviewed_at, reviewed_by,
@@ -76,7 +91,7 @@ node scripts/inquiry.mjs list [--status new|reviewed|issued|rejected]
 node scripts/inquiry.mjs show <id>
 node scripts/inquiry.mjs review <id> [--note …]
 node scripts/inquiry.mjs reject <id> --note …
-node scripts/inquiry.mjs issue <id> [--slug samsung] [--days 14] [--record]
+node scripts/inquiry.mjs issue <id> [--slug samsung] [--days 14] [--company-no …] [--record]
 node scripts/inquiry.mjs extend <id> --days 7
 node scripts/inquiry.mjs revoke <id>
 ```
@@ -91,12 +106,17 @@ node scripts/inquiry.mjs revoke <id>
 Then it creates the account on the demo server:
 
 ```
-ssh $DEMO_SSH solosquad demo issue --id samsungDemo2 --inquiry <id> --days 14 --locale ko
+ssh $DEMO_SSH solosquad demo issue --id samsungDemo2 --inquiry <id> --company-no 1234567890 --days 14 --locale ko
 ```
+
+The inquiry's `company_no` goes with it and is stored on the demo account (`solosquad demo list`
+shows it). A request from before the number was asked has none: `issue` stops and asks for
+`--company-no …`, which it also writes to the inquiry. `list` and `show` print the number.
 
 The demo server prints the password once, in your terminal, and stores only its hash. `issue` then
 records `issued`, `demo_id` and `demo_expires_at` in D1, adds the log row and prints a mail draft in
-the request's language for you to send from the agency mailbox (DM4).
+the request's language for you to send from the agency mailbox (DM4). The draft lists the three
+things the demo login asks for: the number, the ID and the password.
 
 Without `$DEMO_SSH`, `issue` prints the demo server command instead. Run it yourself, then run
 `issue … --record`.
