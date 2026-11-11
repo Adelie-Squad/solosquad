@@ -1,0 +1,26 @@
+{
+  "name": "solosquad-marketing",
+  "private": true,
+  "version": "2.1.0",
+  "description": "SoloSquad marketing site: the landing, the login router, the demo login and the demo account request on Cloudflare Workers + D1 (decision 62, PRD v2.1.0 §3.6).",
+  "type": "module",
+  "scripts": {
+    "build:web": "npm --prefix ../web run build:marketing",
+    "dev": "wrangler d1 migrations apply solosquad-marketing --local && wrangler dev",
+    "migrate:local": "wrangler d1 migrations apply solosquad-marketing --local",
+    "migrate:remote": "wrangler d1 migrations apply solosquad-marketing --remote",
+    "deploy": "npm run build:web && wrangler deploy",
+    "route": "node scripts/route.mjs",
+    "inquiry": "node scripts/inquiry.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.5.0",
+    "@cloudflare/workers-types": "5.20261103.1",
+    "pinyin-pro": "3.29.5",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11",
+    "wrangler": "4.156.2"
+  }
+}
