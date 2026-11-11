@@ -2657,11 +2657,28 @@
         "passkeys": {
           "default": false,
           "type": "boolean"
+        },
+        "demo": {
+          "default": false,
+          "type": "boolean"
+        },
+        "demo_login_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
         "ok",
-        "passkeys"
+        "passkeys",
+        "demo",
+        "demo_login_url"
       ],
       "type": "object",
       "title": "Health"

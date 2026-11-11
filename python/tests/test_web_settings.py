@@ -71,9 +71,19 @@ def _actions(o: Office) -> list[str]:
 
 async def test_passkey_flow_through_the_contract(office: Settings) -> None:
     async with office.client() as c:
-        assert (await c.get("/api/health")).json() == {"ok": True, "passkeys": False}
+        assert (await c.get("/api/health")).json() == {
+            "ok": True,
+            "passkeys": False,
+            "demo": False,
+            "demo_login_url": None,
+        }
         office.workspace.org.solution.update_server_config(public_url=ORIGIN)
-        assert (await c.get("/api/health")).json() == {"ok": True, "passkeys": True}
+        assert (await c.get("/api/health")).json() == {
+            "ok": True,
+            "passkeys": True,
+            "demo": False,
+            "demo_login_url": None,
+        }
 
     phone = SoftAuthenticator()
     office.accounts.create_user("kim", PASSWORD, Role.STAFF)

@@ -232,7 +232,12 @@ async def test_the_engine_serves_the_web_and_the_api_same_origin(tmp_path: Path)
     assert (await _get(app, "/assets/app.js")).text == "console.log(1)"
     assert (await _get(app, "/assets/missing.js")).status_code == 404  # files are not faked
     health = await _get(app, "/api/health")
-    assert health.json() == {"ok": True, "passkeys": False}  # no public_url here
+    assert health.json() == {
+        "ok": True,
+        "passkeys": False,
+        "demo": False,
+        "demo_login_url": None,
+    }  # no public_url here
     api_miss = await _get(app, "/api/no-such-route")
     assert api_miss.status_code == 404 and "SoloSquad" not in api_miss.text
     # C62 (decision 62): a company server takes no requests or login routes — those are the

@@ -177,6 +177,8 @@ export interface Ok {
 export interface Health {
   ok: boolean;
   passkeys: boolean;
+  demo: boolean;
+  demo_login_url: string | null;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema

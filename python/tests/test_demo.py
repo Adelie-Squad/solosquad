@@ -22,6 +22,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 import pytest
@@ -271,12 +272,18 @@ class Demo:
         return plain_client(self.app, ip)
 
     async def login(self, c: httpx.AsyncClient, demo_id: str, password: str) -> dict[str, str]:
+        """The one way in for a demo account: the marketing demo login's form post."""
+        form = {"company_no": {k.lower(): v for k, v in COMPANY_NO.items()}.get(demo_id.lower(), "1234567890"),
+                "username": demo_id,
+                "password": password}  # fmt: skip
         r = await c.post(
-            "/api/auth/login?demo=1", json={"username": demo_id, "password": password},
-            headers={"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile"},
+            "/api/auth/demo-login", content=urlencode(form),
+            headers={"content-type": "application/x-www-form-urlencoded", "origin": MARKETING,
+                     "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile"},
         )  # fmt: skip
-        assert r.status_code == 200, r.text
-        return {CSRF_HEADER: r.json()["csrf"]}
+        assert r.status_code == 303 and r.headers["location"] == "/dashboard", r.headers
+        me = (await c.get("/api/me")).json()
+        return {CSRF_HEADER: me["csrf"]}
 
 
 @pytest.fixture
@@ -607,20 +614,57 @@ async def test_expired_and_non_demo_logins(demo: tuple[Demo, dict[str, str]]) ->
         for path in ("/api/auth/login?demo=1", "/api/auth/login"):
             r = await c.post(path, json={"username": "operator", "password": "0123456789ab"})
             assert r.status_code == 401 and r.json()["code"] == "login_failed", path
-        r = await c.post("/api/auth/login?demo=1",
-                         json={"username": "lgDemo", "password": "wrong-password"})  # fmt: skip
-        assert r.status_code == 401 and r.json()["code"] == "login_failed"
-        r = await c.post("/api/auth/login?demo=1",
-                         json={"username": "LGDEMO", "password": pw["lgDemo"]})  # fmt: skip
-        assert r.status_code == 200  # the id is case-insensitive
+        await d.login(c, "LGDEMO", pw["lgDemo"])  # the id is case-insensitive
+        assert (await c.get("/api/me")).status_code == 200
         d.store.extend("lgDemo", time.time() - 1)
         r = await c.get("/api/me")
         assert r.status_code == 401 and r.json()["code"] == "demo_expired"
-        r = await c.post("/api/auth/login?demo=1",
-                         json={"username": "lgDemo", "password": pw["lgDemo"]})  # fmt: skip
-        assert r.status_code == 401 and r.json()["code"] == "demo_expired"
+        again = f"company_no=110111-1234567&username=lgDemo&password={pw['lgDemo']}"
+        r = await c.post("/api/auth/demo-login", content=again,
+                         headers={"content-type": "application/x-www-form-urlencoded",
+                                  "origin": MARKETING})  # fmt: skip
+        assert r.headers["location"] == f"{MARKETING}/demo?error=1"
     acct = d.store.get("lgDemo")
     assert acct is not None and d.store.summary(acct)["refused"] == 1
+
+
+async def test_a_demo_account_never_signs_in_through_the_json_login(
+    demo: tuple[Demo, dict[str, str]],
+) -> None:
+    """Only the marketing demo login (number + id + password) lets a demo account in; the
+    JSON login answers a right password exactly like a wrong one (2026-11-12)."""
+    d, pw = demo
+    async with d.client() as c:
+        answers = []
+        for path in ("/api/auth/login?demo=1", "/api/auth/login"):
+            for password in (pw["samsungDemo"], "wrong-password"):
+                body = {"username": "samsungDemo", "password": password,
+                        "company_no": "123-45-67890"}  # fmt: skip
+                r = await c.post(path, json=body)
+                answers.append((r.status_code, r.json()["code"]))
+                assert (await c.get("/api/me")).status_code == 401
+        assert set(answers) == {(401, "login_failed")}
+        fails = d.engine.accounts._q(
+            "SELECT COUNT(*) FROM login_failures WHERE key = 'user:samsungdemo'"
+        )[0][0]
+        assert fails == 4  # each counts — a right password does not wipe the count
+    acct = d.store.get("samsungDemo")
+    assert acct is not None and d.store.summary(acct)["logins"] == 0
+
+
+async def test_health_tells_the_login_screen_where_the_demo_login_is(
+    demo: tuple[Demo, dict[str, str]], tmp_path: Path
+) -> None:
+    d, _ = demo
+    async with d.client() as c:
+        r = (await c.get("/api/health")).json()
+    assert r["demo"] is True and r["demo_login_url"] == f"{MARKETING}/demo"
+    from engine_fixtures import Customer
+
+    cust = Customer(tmp_path / "customer")
+    async with plain_client(create_app(AppConfig.for_engine(cust.engine, "tok"))) as c:
+        r = (await c.get("/api/health")).json()
+    assert r["demo"] is False and r["demo_login_url"] is None
 
 
 async def test_the_marketing_form_post_signs_in(demo: tuple[Demo, dict[str, str]]) -> None:

@@ -49,6 +49,13 @@ class Health(Closed):
     passkeys: bool = False
     """Passkey sign-in is possible here (the office has its `public_url`) — the login
     screen shows the passkey button only then."""
+    demo: bool = False
+    """A demo server (decision 62). Its demo accounts sign in only through the marketing
+    site's demo login (registration number + id + password, 2026-11-12), so the login
+    screen sends visitors there instead of showing a password form."""
+    demo_login_url: str | None = None
+    """The marketing site's `/demo` (from `server.yaml` `demo.marketing_url`); null when
+    not set — the screen then shows a neutral line."""
 
 
 class Version(Closed):
