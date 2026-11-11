@@ -2,7 +2,7 @@
 changes. Builds penguin_v3 (no props) and renders, on a neutral backdrop with one orthographic
 framing for every view:
 
-  turnaround/  front, three-quarter-front-left, side-left, three-quarter-back-left, back, top
+  turnaround/  front, three-quarter-front-left, side-left, three-quarter-back-left, back, top, bottom
                (light) + front-evening
   compare.png  draft_1 (left) | this front (middle) | --right image (right: round 1 or v2)
   seated/      on the office chair (seat 0.42 m, desk 0.72 m): front + iso 3/4 (30 deg / 45 deg),
@@ -59,6 +59,7 @@ TURNAROUND = [
     ('three-quarter-back-left', 135, 0),
     ('back', 180, 0),
     ('top', 0, 90),
+    ('bottom', 0, -90),
 ]
 
 
@@ -195,7 +196,7 @@ def turnaround(cam, rig):
     floor = bpy.data.objects['floor']
     for name, azim, elev in TURNAROUND:
         aim(cam, azim, elev, SCALE, TARGET_Z)
-        floor.hide_render = elev > 60          # the top view looks straight down at the shadow
+        floor.hide_render = abs(elev) > 60     # top / bottom: no shadow catcher in the way
         shoot(os.path.join(d, f'{name}-light.png'), BACKDROP['light'])
     floor.hide_render = False
     theme('evening')

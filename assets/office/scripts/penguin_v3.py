@@ -44,9 +44,17 @@ HB = 0.705         # body height (bottom of the body -> top of the head); HB / W
 D_FRONT, P_FRONT = 0.125, 2.6
 D_BACK, P_BACK = 0.170, 2.0
 D = D_FRONT + D_BACK  # body depth 0.295; D / W = 0.72
-HEAD_FULL = 0.04   # the head is a little deeper than a plain scale-down (round forehead + crown)
-BELLY_SWELL = (0.14, 0.34, 0.24)   # front depth +14 % around 34 % of the height (the belly)
-BACK_SWELL = (0.12, 0.46, 0.22)    # back depth +12 % around 46 % (the upper back, below the head)
+HEAD_FULL = 0.05   # the head is a little deeper than a plain scale-down (round forehead + crown)
+# Depth shape along the height t (0 bottom .. 1 top), as (amount, centre, width) gaussians. The
+# front-view hourglass is divided out, so the side outline is only these: one flowing S.
+BELLY_SWELL = (0.10, 0.34, 0.26)   # front depth +10 % around 34 % (the belly)
+BACK_SWELL = (0.07, 0.50, 0.26)    # back depth +7 % around 50 % (the upper back)
+BUTT_IN = (0.07, 0.10, 0.12)       # back depth -7 % around 10 % (the butt drawn in)
+# Front-view hourglass (half-width factor of W / 2)
+HG_BASE = 0.93
+HG_BOTTOM = (0.07, 0.18, 0.17)     # the bottom rounds out
+HG_HEAD = (0.07, 0.72, 0.16)       # the face rounds out
+HG_WAIST = (0.015, 0.42, 0.10)     # a slight pinch at the wing zone
 Z0 = 0.030         # body bottom (the feet tuck under it)
 Z1 = Z0 + HB       # top of the head
 R_BOTTOM = 0.115   # bottom corner radius (front view): a soft roll into the base
@@ -64,14 +72,19 @@ BEAK_Z = EYE_Z - 0.168 * W      # beak centre (its widest line)
 # cross on the centre line, so the black hood comes down between them to a sharp V point.
 LOBE_C, LOBE_R = (0.200, 0.086), 0.210
 # Sides, from the lobe's outermost point down: smooth, no notch. Below: wraps under the body.
-# A soft S on each side, after draft_1: out beside the face, in at the waist, out again to the bottom.
-FRONT_SIDE = [
-    (0.410, 0.086), (0.426, -0.060), (0.432, -0.200), (0.418, -0.360), (0.384, -0.540),
-    (0.356, -0.700), (0.360, -0.840), (0.388, -0.970), (0.408, -1.060), (0.392, -1.130),
-    (0.366, -1.170),
-]
+# The side edge, after draft_1, as one smooth function of the height (sum of gaussians, blended
+# out of the brow circle with a smootherstep, so it is curvature-continuous - no straight runs, no
+# kinks): out beside the face, a gentle concave waist, a round flare toward the bottom. In body
+# widths relative to the eye centre: (amount, centre zn, width).
+SIDE_BASE = 0.400
+SIDE_FACE = (0.048, -0.17, 0.22)
+SIDE_WAIST = (-0.052, -0.60, 0.25)
+SIDE_FLARE = (0.028, -1.00, 0.16)
+SIDE_END = -1.10                # where the front-view edge hands over to the wrap under the body
 ZC = Z0 + 0.36 * HB              # polar centre for the wrap under the bottom
-PHI_UNDER = math.radians(158)   # how far the white wraps under (0 = straight up, 180 = down)
+PHI_BACK_SIDE = math.radians(208)   # the white wraps under and up the butt: its edge at the sides
+PHI_BACK_MID = math.radians(234)    # ...and in the middle of the back: a round arch over the butt
+WRAP_NARROW = 0.42                  # the white narrows by this much as it goes round to the back
 
 # Beak: one white piece. From the front a diamond (kite: the lower half a little longer); from
 # the side a four-sided pyramid standing out of the face.
@@ -82,13 +95,15 @@ BEAK_STEP = 0.15                # the lower beak is set back 15 % of its height 
 
 # Wings (paddle flippers). Shoulder pivot inside the body side; at rest the paddle hangs down,
 # splayed outward and turned so its flat face looks a little forward.
-SHOULDER = (0.198, 0.005, Z0 + 0.56 * HB)
-WING_SPLAY = math.radians(27)
+SHOULDER = (0.202, 0.005, Z0 + 0.535 * HB)
+WING_SPLAY = math.radians(31)
 WING_YAW = math.radians(15)
 WING_C, WING_AU, WING_AV, WING_AW = 0.100, 0.165, 0.058, 0.024   # ellipsoid centre + semi-axes
 WING_ROOT, WING_TIP = 1.18, 0.80  # width factor at the root vs the tip (broad base)
-WING_CUT = 0.095                # the white underside starts this far out from the pivot (arc top)
-ARM_AU, ARM_AV = 0.120, 0.090   # ellipse of the underside panel in the wing plane (u, v)
+WING_CUT = 0.035                # the white underside starts this far out from the pivot (arc top,
+                                # at the armpit)
+ARM_AU, ARM_AV = 0.180, 0.100   # ellipse of the underside panel in the wing plane (u, v); it runs
+                                # past the tip, so only the rim keeps it black there
 ARM_C = WING_CUT + ARM_AU       # its centre: the top of the arc sits at u = WING_CUT
 WING_ROUND = 0.012              # softness of the underside panel's corners
 WING_RIM = 0.005                # ...and this far in from the rim, so the rim stays black
@@ -98,7 +113,7 @@ WING_K = 0.045                  # shoulder crease softness
 # The foot is a wide half-dome with a flat sole on the ground; its rounded top tucks into the
 # body bottom, so there is (almost) no visible ankle. The leg is a short capsule hidden inside.
 HIP = (0.088, -0.020, Z0 + 0.05)
-ANKLE = (0.090, -0.045, 0.018)
+ANKLE = (0.090, -0.045, 0.030)
 LEG_R = 0.024
 FOOT_C = (0.092, -0.066, 0.0)
 FOOT_R = (0.060, 0.082, 0.040)
@@ -133,9 +148,20 @@ def _smin(a, b, k):
     return np.minimum(a, b) - h * h * k * 0.25
 
 
+def _g(t, c, w):
+    return np.exp(-((t - c) / w) ** 2)
+
+
+def _hourglass(t):
+    """Front-view half-width factor (1 = W / 2): the face and the bottom round out, the wing zone
+    pinches in a little - a soft peanut, not a straight capsule."""
+    t = np.clip(t, 0.0, 1.0)
+    return (HG_BASE + HG_BOTTOM[0] * _g(t, HG_BOTTOM[1], HG_BOTTOM[2]) +
+            HG_HEAD[0] * _g(t, HG_HEAD[1], HG_HEAD[2]) - HG_WAIST[0] * _g(t, HG_WAIST[1], HG_WAIST[2]))
+
+
 def _side_half_width(z):
-    t = (z - Z0) / HB
-    return (W / 2) * (0.955 + 0.045 * np.exp(-((t - 0.33) / 0.30) ** 2))
+    return (W / 2) * _hourglass((z - Z0) / HB)
 
 
 def _profile_polygon(n=240):
@@ -213,9 +239,10 @@ def f_body(P):
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     a = W / 2
     t = (z - Z0) / HB
-    full = 1 + HEAD_FULL * _smoothstep(0.60, 0.92, t)
-    belly = 1 + BELLY_SWELL[0] * np.exp(-((t - BELLY_SWELL[1]) / BELLY_SWELL[2]) ** 2)
-    back = 1 + BACK_SWELL[0] * np.exp(-((t - BACK_SWELL[1]) / BACK_SWELL[2]) ** 2)
+    full = (1 + HEAD_FULL * _smoothstep(0.62, 0.92, t)) / _hourglass(t)
+    belly = 1 + BELLY_SWELL[0] * _g(t, BELLY_SWELL[1], BELLY_SWELL[2])
+    back = (1 + BACK_SWELL[0] * _g(t, BACK_SWELL[1], BACK_SWELL[2]) -
+            BUTT_IN[0] * _g(t, BUTT_IN[1], BUTT_IN[2]))
     front = y < 0
     b = np.where(front, D_FRONT * belly, D_BACK * back) * full
     p = np.where(front, P_FRONT, P_BACK)
@@ -310,8 +337,14 @@ def fields(P):
         ff = f_foot(P, side)
         leg_foot = _smin(fl, ff, FOOT_K)
         f = _smin(f, leg_foot, LEG_K)
-        out['leg.' + side] = fl
-        out['foot.' + side] = ff
+    # flat soles: nothing goes below the ground plane (slightly rounded where it meets the sole)
+    k = 0.004
+    g = -P[:, 2]
+    h = np.maximum(k - np.abs(f - g), 0) / k
+    f = np.maximum(f, g) + h * h * k * 0.25
+    for side in 'LR':
+        out['leg.' + side] = f_leg(P, side)
+        out['foot.' + side] = f_foot(P, side)
     out['all'] = f
     return out
 
@@ -450,20 +483,6 @@ def _smooth_values(vals, e, iters):
 # Colour regions: the white front and the white wing underside
 # ---------------------------------------------------------------------------
 
-def _catmull(pts, n=12):
-    pts = np.asarray(pts, float)
-    P = np.concatenate([[2 * pts[0] - pts[1]], pts, [2 * pts[-1] - pts[-2]]])
-    out = []
-    for i in range(1, len(P) - 2):
-        p0, p1, p2, p3 = P[i - 1], P[i], P[i + 1], P[i + 2]
-        for k in range(n):
-            t = k / n
-            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t +
-                              (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
-    out.append(pts[-1])
-    return np.array(out)
-
-
 def _ray_to_surface(fn, origins, dirs, tmax=0.6, iters=40):
     """Bisection along rays from inside-or-outside origins to the first sign change."""
     n = len(origins)
@@ -502,7 +521,23 @@ def _polar_points(x, phi):
 
 
 def _phi(P):
-    return np.arctan2(-P[:, 1], P[:, 2] - ZC)
+    """Polar angle round the x axis through (0, 0, ZC): 0 up, 90 deg front, 180 down, 270 back."""
+    return np.mod(np.arctan2(-P[:, 1], P[:, 2] - ZC), 2 * math.pi)
+
+
+def _smootherstep(a, b, x):
+    t = np.clip((x - a) / (b - a), 0.0, 1.0)
+    return t * t * t * (t * (6 * t - 15) + 10)
+
+
+def _front_side(n=90):
+    """Right side edge of the white front from the brow circle's outermost point down, (x, zn)."""
+    top = LOBE_C[1]
+    zn = np.linspace(top, SIDE_END, n + 1)[1:]
+    raw = SIDE_BASE + sum(a * _g(zn, c, w) for a, c, w in (SIDE_FACE, SIDE_WAIST, SIDE_FLARE))
+    x0 = LOBE_C[0] + LOBE_R
+    blend = _smootherstep(top, top - 0.20, zn)
+    return np.stack([x0 + (raw - x0) * blend, zn], 1)
 
 
 def front_outline():
@@ -512,18 +547,19 @@ def front_outline():
     ang = np.linspace(a0, 0.0, 48, endpoint=False)    # over the top to the outermost point
     lobe = np.stack([cx + LOBE_R * np.cos(ang), cz + LOBE_R * np.sin(ang)], 1)
     lobe[0, 0] = 0.0                                  # the V tip exactly on the centre line
-    half = np.concatenate([lobe, _catmull(FRONT_SIDE, 10)])
+    half = np.concatenate([lobe, _front_side()])
     xz = np.stack([half[:, 0] * W, EYE_Z + half[:, 1] * W], 1)
     right = _front_view_points(xz)
-    # continue under the bottom in the polar domain, narrowing, then close across the seat
+    # continue round the lower side, past the feet and under the bottom, up onto the butt (polar
+    # domain), then close across the back in one smooth curve, higher in the middle
     x0, p0 = right[-1, 0], _phi(right[-1:])[0]
-    n_u = 12
+    n_u = 30
     t = np.arange(1, n_u + 1) / n_u
-    xu = x0 * (1 - 0.18 * t * t)
-    pu = p0 + (PHI_UNDER - p0) * t
-    a = (math.pi / 2) * np.arange(1, 10) / 10
+    pu = p0 + (PHI_BACK_SIDE - p0) * t
+    xu = x0 * (1 - WRAP_NARROW * _smootherstep(math.radians(165), PHI_BACK_SIDE + 0.1, pu))
+    a = (math.pi / 2) * np.arange(1, 24) / 24
     xb = xu[-1] * np.cos(a)
-    pb = PHI_UNDER + math.radians(4) * np.sin(a)
+    pb = PHI_BACK_SIDE + (PHI_BACK_MID - PHI_BACK_SIDE) * np.sin(a)
     under = _polar_points(np.concatenate([xu, xb]), np.concatenate([pu, pb]))
     half3 = np.concatenate([right, under])
     left3 = half3[::-1] * np.array([-1, 1, 1])
@@ -623,7 +659,7 @@ def body_attributes(V):
     # white front
     loop, poly = front_outline()
     dist, s, total, side, at_vertex = _polyline_distance(V, loop, side=True)
-    inside = _point_in_poly(V[:, 0], _phi(V), poly) & (V[:, 1] < 0.02)
+    inside = _point_in_poly(V[:, 0], _phi(V), poly)
     # near the seam trust the local side of the curve (tangent x normal), not the polygon in
     # (x, phi), so the white edge has no zigzag where the two disagree by a hair
     ref_in = side[np.argmax(np.where(inside, dist, -1))]
@@ -689,7 +725,7 @@ def body_weights(V, fl, edges):
     rest_upper = fl['body']
     for s in 'LR':
         u = _wing_local(V, s)[:, 0]
-        dom = _smoothstep(-0.008, 0.008, rest_upper - fw[s])
+        dom = _smoothstep(-0.004, 0.004, rest_upper - fw[s])
         w['wing.' + s] = dom * _smoothstep(-0.035, 0.05, u)
         others = np.minimum(fl['body'], np.minimum(fw['L'], fw['R']))
         legdom = _smoothstep(-0.010, 0.010, others - flf[s])

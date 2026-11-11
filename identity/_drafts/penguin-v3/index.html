@@ -69,17 +69,105 @@
 <body>
 <div class="page">
 <header>
-  <span class="badge">시안 · 승인 대기 · 3차</span>
+  <span class="badge">시안 · 승인 대기 · 4차</span>
   <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
   <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
   <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
   <nav>
-    <a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
     <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
   </nav>
 </header>
 
-<section id="r3">
+<section id="r4">
+  <span class="badge">4차 수정 · 2026-11-11</span>
+  <h2>4차 수정 — 이어지는 곡선 · 모래시계 실루엣 · 흰 엉덩이</h2>
+  <p class="lead">"흰색 얼굴 배 곡선을 더 곡선적으로 · 날개 위치 조금 내리고 날개 부분이 들어가며 얼굴 · 엉덩이가 둥글게 · 옆모습도 엉덩이가 들어오며 전체가 유려한 곡선 · 흰색이 발을 지나 엉덩이까지 · 날개 안쪽 흰색을 겨드랑이까지 크게 · 발바닥 평평하게"</p>
+
+  <div class="card">
+    <figure><img src="r4/compare.webp" alt="초안 1, 4차 정면, 3차 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>4차</span><span>3차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음) + 아래</h3>
+  <div class="grid g4">
+    <figure><img src="r4/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>얼굴 · 엉덩이가 둥글게 나오고 날개 자리가 살짝 들어간 실루엣</figcaption></figure>
+    <figure><img src="r4/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>흰 앞판 옆선이 끊김 없는 곡선</figcaption></figure>
+    <figure><img src="r4/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>이마 → 정수리 → 뒤통수 → 등 → 엉덩이가 한 곡선, 엉덩이까지 흰색</figcaption></figure>
+    <figure><img src="r4/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>엉덩이의 흰 아치</figcaption></figure>
+    <figure><img src="r4/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>검정 등과 흰 엉덩이가 둥근 아치로 만남</figcaption></figure>
+    <figure><img src="r4/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>아래쪽이 앞</figcaption></figure>
+    <figure><img src="r4/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래 (새로)</b>바닥에서 올려다봄, 위쪽이 앞 — 흰 바닥 + 평평한 검정 발바닥</figcaption></figure>
+    <figure><img src="r4/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r4/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r4/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b>평평한 발바닥이 앞에</figcaption></figure>
+    <figure><img src="r4/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r4/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b>발은 좌판 앞</figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card">
+      <figure><img src="r4/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure>
+      <figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r4/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r4/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure>
+      <figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r4/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r4/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r4/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r4/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure>
+      <figcaption>날개 안쪽 흰 면이 겨드랑이까지, 검정은 바깥 테두리 · 끝에만.</figcaption>
+      <figure style="margin-top:12px"><img src="r4/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>3차</th><th>4차</th></tr></thead>
+    <tbody>
+      <tr><td>흰 얼굴 · 배 곡선을 더 곡선적으로</td><td>점 11개를 지나는 스플라인(구간마다 직선처럼 보임)</td><td>옆선을 <b>가우스 곡선 세 개의 합</b> 하나의 식으로 만들고, 눈썹 원에서 smootherstep 으로 이어 곡률까지 연속(G2) — 직선 구간 · 꺾임 없음. 흰 앞판 반폭: 얼굴 옆 0.445 W → 배 0.349 W → 엉덩이 0.424 W</td></tr>
+      <tr><td>날개 위치 조금 내리기</td><td>어깨축 키의 56 %</td><td><b>53.5 %</b>(−2.5 %, 약 1.8 cm 아래)</td></tr>
+      <tr><td>정면 실루엣: 날개 부분이 들어가고 얼굴 · 엉덩이가 둥글게</td><td>거의 곧은 캡슐</td><td>폭 = 0.93 + 엉덩이(키의 18 %) +0.07 + 얼굴(72 %) +0.07 − 날개 자리(42 %) 0.015. 실측 반폭: 엉덩이 0.500 W · 날개 자리 0.463 W · 얼굴 0.499 W(<b>7 % 오목</b>)</td></tr>
+      <tr><td>옆모습: 엉덩이 들어오고 한 곡선</td><td>등만 불룩(+12 %)</td><td>정면 모래시계를 옆 깊이에서 나눠 없애고, 깊이 모양만 남김: 배 +10 %(34 %), 등 +7 %(50 %), 엉덩이 −7 %(10 %), 머리 +5 %. 실측(몸 폭 W 기준, 앞 / 뒤): 키 10 % 0.31 / 0.38 · 34 % 0.34 / 0.43 · 50 % 0.33 / 0.44 · 72 % 0.31 / 0.43 · 85 % 0.29 / 0.39. 최대 깊이 0.77 W(42 %)</td></tr>
+      <tr><td>흰색이 발을 지나 엉덩이까지</td><td>바닥 밑 158° 에서 끝남</td><td>바닥 전체를 지나 엉덩이로 올라감: 옆에서는 208°, 가운데는 234°(등 아래)까지, 뒤로 갈수록 42 % 좁아지며 <b>둥근 아치</b>로 검정 등과 만남. 박음질은 그 경계의 검정 쪽</td></tr>
+      <tr><td>날개 안쪽 흰색을 겨드랑이까지</td><td>어깨축에서 9.5 cm 부터</td><td><b>3.5 cm</b> 부터(겨드랑이), 타원 0.18 × 0.10 m 가 끝을 넘어가 검정은 바깥 테두리(5 mm)와 끝에만. 겨드랑이 피부가 몸에 붙지 않게 어깨축 x 0.198 → 0.202 m, 벌어짐 27 → 31°</td></tr>
+      <tr><td>발바닥 평평하게</td><td>숨은 다리 캡슐이 발바닥 밑으로 6 mm 튀어나옴</td><td>발목 높이 0.018 → 0.030 m, 그리고 몸 전체를 땅 평면에서 잘라(가장자리 4 mm 둥글게) <b>완전히 평평</b>. 아래 · 옆 · 앉은 자세에서 확인</td></tr>
+      <tr><td>삼각형</td><td>97,344</td><td>97,924 (피부 75,652 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>날개를 크게 들면 겨드랑이 피부가 접히며 늘어난다(흰 면이 거기까지 오므로 3차보다 잘 보인다). 제품용이면 교정 모양키</li>
+        <li>날개를 31° 벌려서, 정면 실루엣에서 날개 끝이 3차보다 바깥으로 나온다</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>엉덩이 흰 아치 높이가 적당한가, 더 낮게 / 높게?</li>
+        <li>정면 모래시계(7 % 오목)를 더 뚜렷하게 할까?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r3" style="margin-top:56px">
   <span class="badge">3차 수정 · 2026-11-11</span>
   <h2>3차 수정 — 곡선 · 부피 · 걷기</h2>
   <p class="lead">"앉았을 때 발 의자 앞으로 · 윗부리와 아랫부리를 구분하는 선, 아랫부리가 좀 더 들어간 모양 · 볼 박음질은 볼 색으로 · 뒤뚱뒤뚱 걷기 · 배랑 등 더 두껍게 곡선으로 · 엉덩이 덜 각지게 · 흰색/검정 경계는 얼굴 옆 볼록 · 배 오목 · 엉덩이로 다시 퍼지는 곡선 · 팔 안쪽 경계는 겨드랑이로 떨어지는 곡선"</p>
@@ -396,13 +484,13 @@
 </section>
 
 <footer>
-  <p>1차 2026-11-10 · 2차 · 3차 2026-11-11 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
+  <p>1차 2026-11-10 · 2차 · 3차 · 4차 2026-11-11 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
 <pre>B=/Applications/Blender.app/Contents/MacOS/Blender
 dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
-dwebp identity/_drafts/penguin-v3/r2/turnaround/front-light.webp -o /tmp/v3r2-front.png
-$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --right /tmp/v3r2-front.png
-python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r3
-# 2차 = 커밋 a540271 (출력 r2/), 1차 = 커밋 c9c4e89 (출력 r1/)</pre>
+dwebp identity/_drafts/penguin-v3/r3/turnaround/front-light.webp -o /tmp/v3r3-front.png
+$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --right /tmp/v3r3-front.png
+python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r4
+# 3차 = 커밋 dbdf4d5 (r3/), 2차 = a540271 (r2/), 1차 = c9c4e89 (r1/)</pre>
 </footer>
 </div>
 </body>
