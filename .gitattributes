@@ -8,3 +8,6 @@
 *.tsv text eol=lf
 *.jsonl text eol=lf
 *.glb binary
+*.png binary
+*.webp binary
+*.svg text eol=lf

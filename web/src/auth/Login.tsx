@@ -40,9 +40,10 @@ export function authReason(err: unknown): MessageKey {
 export function Login() {
   const { t } = useI18n();
   const qc = useQueryClient();
+  // `?u=<id>` — the marketing site's login router passes the ID it was given on (decision 62)
   const [params] = useSearchParams();
   const demo = params.get('demo') === '1';
-  const [username, setUsername] = useState(params.get('u') ?? '');
+  const [username, setUsername] = useState(() => (params.get('u') ?? '').slice(0, 120));
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [askCode, setAskCode] = useState(!demo);

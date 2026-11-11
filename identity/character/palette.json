@@ -1,0 +1,43 @@
+{
+  "$comment": "Penguin colours as of 2026-11-10 (feat/v2.1-penguin-redesign). Keys = 3D material names (assets/office/scripts/lib.py PALETTE / EVENING). `2d` = the key in web/src/characters/colors.ts PENGUIN_2D. A record, not a source: change lib.py, colors.ts and DESIGN.md, then this file.",
+  "materials": {
+    "penguin.body": { "light": "#2B2A26", "evening": "#474855", "2d": "body", "part": "몸 · 날개" },
+    "penguin.face": { "light": "#F3F0EA", "evening": "#F3F0EA", "2d": "face", "part": "흰 앞판(얼굴 + 배)" },
+    "penguin.eye": { "light": "#151410", "evening": "#151410", "2d": "eye", "part": "눈" },
+    "penguin.cheek": { "light": "#E01FAE", "evening": "#E01FAE", "2d": "var(--cheek)", "part": "볼" },
+    "penguin.beak": { "light": "#FBF9F4", "evening": "#FBF9F4", "2d": "beak", "part": "부리" },
+    "penguin.stitch": { "light": "#151410", "evening": "#151410", "2d": "stitch", "part": "박음질(앞판 가장자리 · 부리 테두리)" },
+    "penguin.feet": { "light": "#151410", "evening": "#151410", "2d": "feet", "part": "발" }
+  },
+  "2d_only": {
+    "bodyTop": { "value": "#3D3B35", "part": "날개(2D, 몸 뒤)" },
+    "faceShade": { "value": "#C9BD98", "part": "부리 이음선(2D)" },
+    "line": { "value": "#111008", "part": "2D 잉크 윤곽선(몸 · 날개 · 소품, 0.9 단위) — 3D 에는 없음" }
+  },
+  "ui_tokens": {
+    "--cheek": { "light": "#E01FAE", "dark": "#F25CC8", "part": "캐릭터 전용 볼색(DESIGN.md `## 색`) — 2D 아이콘 볼이 이 변수를 쓴다" }
+  },
+  "props": {
+    "prop.gold": "#C9A227",
+    "prop.black": "#2B2A26",
+    "prop.paper": "#F4F1EA",
+    "prop.metal": "#8A8371",
+    "prop.lens": "#C9DDF6",
+    "prop.helmet": "#F0C640",
+    "prop.wood": "#D8C3A2",
+    "team_accent": "팀 대표색(아래 teams) — 웹이 칠한다"
+  },
+  "teams": {
+    "core": "#C9A227",
+    "product": "#2C74E0",
+    "engineering": "#9AC22D",
+    "business": "#9B6A3C",
+    "brand": "#E01FAE",
+    "fallback": "#8A8371"
+  },
+  "material_rules": {
+    "roughness": 0.9,
+    "metallic": 0,
+    "textures": "none (penguin and props carry no AO map)"
+  }
+}

@@ -1,0 +1,3 @@
+# copy to .dev.vars for `wrangler dev` (never commit .dev.vars)
+FORM_SECRET=dev-form-secret
+IP_SALT=dev-salt

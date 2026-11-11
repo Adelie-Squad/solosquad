@@ -4,7 +4,7 @@ import { ApiError, setCsrf } from './api/client';
 import { useMe } from './api/queries';
 import { Enrol } from './auth/Enrol';
 import { Login } from './auth/Login';
-import { loginFor, officeHref, safeNext, signedIn } from './auth/next';
+import { LOGIN, loginFor, officeHref, safeNext, signedIn } from './auth/next';
 import { useSessionSync } from './auth/sessionSync';
 import { isLocale, useI18n } from './i18n';
 import { SessionContext, sessionFrom } from './session';
@@ -17,11 +17,9 @@ import { MessengerView } from './views/MessengerView';
 // the calendar is its own chunk — month · week · list, the drawer and the settings
 const CalendarView = lazy(() => import('./views/calendar/CalendarView').then((m) => ({ default: m.CalendarView })));
 
-// the landing is its own chunk — people inside the app never download it (its 3D part is a further chunk)
-const Landing = lazy(() => import('./landing/Landing').then((m) => ({ default: m.Landing })));
-
 /**
- * Addresses (DESIGN.md `## 레이아웃`): `/` the landing (outside the shell, signed in or not) ·
+ * Addresses (DESIGN.md `## 레이아웃`): `/` → this server's login, or the account dashboard when
+ * signed in (decision 62 — the landing lives only on the marketing site, `src/marketing.tsx`) ·
  * `/login` login and first-login enrolment · `/o/<org>/…` the app. A signed-out visit to an
  * app address goes to `/login?next=<it>`; after login, `next` (same-origin paths only) or
  * the last scope.
@@ -40,14 +38,7 @@ export function App() {
 
   return (
     <Routes>
-      <Route
-        index
-        element={
-          <Suspense fallback={<div className="splash" />}>
-            <Landing />
-          </Suspense>
-        }
-      />
+      <Route index element={<RootRoute />} />
       <Route path="login" element={<LoginRoute />} />
       <Route path="*" element={<AppRoute />} />
     </Routes>
@@ -64,6 +55,13 @@ function MeProblem() {
 }
 
 const loggedOut = (error: unknown) => error instanceof ApiError && error.status === 401;
+
+/** `/` on a company server: its login, or where a signed-in person lands. */
+function RootRoute() {
+  const me = useMe();
+  if (me.isPending || (me.error && !loggedOut(me.error))) return <MeProblem />;
+  return <Navigate to={me.data && signedIn(me.data) ? officeHref(me.data) : LOGIN} replace />;
+}
 
 function LoginRoute() {
   const me = useMe();

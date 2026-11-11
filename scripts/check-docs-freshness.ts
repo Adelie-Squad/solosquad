@@ -16,6 +16,7 @@
  *      §3.2 †). Absent manual = skip, not fail.
  *   4. Invariant: package.json `files` must not expose anything under docs/
  *      (internal docs must not leak into the npm package).
+ *   5. Invariant: package.json `files` must not ship identity/ (brand identity record)
  *
  * Wired into `npm run prepublishOnly` so a stale doc blocks `npm publish`.
  * Supersedes the v0.8.5 4-docs gate; aligns with feedback_three_docs_pre_publish.
@@ -93,6 +94,18 @@ if (leak.length > 0) {
   failed++;
 } else {
   console.log(`✓ package.json files does not leak docs/`);
+}
+
+// 5. Invariant: identity/ (brand identity record) never ships — also guarded in CI by
+// python/tests/test_identity_not_shipped.py (npm files, Python package, release archive list).
+const identityLeak = (pkg.files ?? []).filter((f) =>
+  /^\.?\/?identity(\/|$)/.test(String(f).trim()),
+);
+if (identityLeak.length > 0) {
+  console.error(`✗ package.json files exposes identity/: ${identityLeak.join(", ")}`);
+  failed++;
+} else {
+  console.log(`✓ package.json files does not ship identity/`);
 }
 
 if (failed > 0) {

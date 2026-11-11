@@ -1,0 +1,314 @@
+/* The marketing site's own pages (decision 62): the login router, the demo login, the privacy
+   page and the inquiry modal. Tokens only; no tinted bands, no shadows beyond the modal's own,
+   nothing under 12px. */
+
+/* ── login router · demo login ─────────────────────────────── */
+.site-auth .auth-card {
+  gap: var(--space-4);
+}
+
+.site-auth .auth-card a:not(.btn) {
+  color: var(--accent);
+}
+
+.site-auth-body {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.site-demo-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) 0;
+  border-block: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.site-auth-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.site-auth-more .btn {
+  white-space: nowrap;
+}
+
+/* ── privacy ───────────────────────────────────────────────── */
+.site-privacy {
+  min-height: 100%;
+  padding: var(--space-12) var(--space-4);
+  background: var(--bg);
+}
+
+.site-privacy .panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.site-privacy .chip {
+  align-self: flex-start;
+  margin: 0;
+}
+
+.site-privacy h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.site-privacy h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 15px;
+}
+
+.site-privacy section p {
+  max-width: var(--measure, 46em);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.site-privacy-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.site-privacy-foot a {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+/* ── the inquiry modal ─────────────────────────────────────── */
+.dialog.is-wide.inquiry-modal {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100svh - 48px);
+  margin: 0 auto;
+  overscroll-behavior: contain;
+}
+
+.inquiry-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.inquiry-head h2,
+.inquiry-done h2 {
+  margin: 0 var(--space-10) var(--space-2) 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.inquiry-head p,
+.inquiry-done p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.inquiry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.inquiry-form .field input,
+.inquiry-form .field select,
+.inquiry-form .field textarea {
+  width: 100%;
+  min-width: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.inquiry-form .field textarea {
+  resize: vertical;
+}
+
+.inquiry-form [aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.inquiry-error {
+  color: var(--danger) !important;
+  font-size: 12px;
+}
+
+.inquiry-optional {
+  color: var(--ink-3);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.inquiry-phone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.inquiry-phone select {
+  width: auto;
+}
+
+.inquiry-wants legend {
+  margin-bottom: var(--space-2);
+}
+
+.inquiry-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.inquiry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inquiry-chip.is-on {
+  border-color: var(--accent);
+}
+
+.inquiry-chip input,
+.inquiry-check input {
+  accent-color: var(--accent);
+}
+
+.inquiry-consent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.inquiry-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.inquiry-check input {
+  margin-top: 3px;
+}
+
+.inquiry-consent details {
+  margin-left: var(--space-6);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.inquiry-consent summary {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.inquiry-consent details p {
+  margin: var(--space-2) 0;
+}
+
+.inquiry-consent details a {
+  color: var(--accent);
+}
+
+/* the honeypot: off screen, out of reach — never display:none (some bots skip hidden fields) */
+.inquiry-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.inquiry-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inquiry-done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.inquiry-done-icon {
+  color: var(--ok);
+}
+
+.inquiry-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-block: 1px solid var(--line);
+  width: 100%;
+  font-size: 14px;
+}
+
+.inquiry-summary dt {
+  color: var(--ink-2);
+}
+
+.inquiry-summary dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+@media (max-width: 860px) {
+  .inquiry-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inquiry-actions .btn {
+    width: 100%;
+  }
+}
+
+.site-auth .site-apply {
+  align-self: flex-start;
+}

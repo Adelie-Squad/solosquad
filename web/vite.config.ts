@@ -86,21 +86,40 @@ function agentCatalog(): Plugin {
   };
 }
 
+/**
+ * `vite build --mode marketing` (decision 62): the same index.html with the marketing entry — the
+ * landing, the login router, the demo login and the privacy page, no app shell — written to
+ * `../marketing/public` for the site Worker's static assets. Customer servers never serve the landing.
+ */
+function marketingEntry(): Plugin {
+  return {
+    name: 'solosquad-marketing-entry',
+    // 'pre': before Vite reads the entry script out of the page
+    transformIndexHtml: { order: 'pre', handler: (html) => html.replace('/src/main.tsx', '/src/marketing/main.tsx') },
+  };
+}
+
 // The engine serves the build from the same origin (PRD v2.1.0 W5 · I2). In development,
 // `solosquad serve` runs on 7420 and Vite proxies /api to it — still one origin for the
 // browser, so the session cookie and CSRF token work the same way. No LLM call is ever
 // made from here or from the browser: everything goes through the engine.
-export default defineConfig({
-  plugins: [react(), officeAssets(), agentCatalog()],
-  server: {
-    port: 5180,
-    // SOLOSQUAD_API points the proxy at another engine (a second local demo on its own port)
-    proxy: { '/api': { target: process.env.SOLOSQUAD_API ?? 'http://127.0.0.1:7420', changeOrigin: false } },
-  },
-  // the 3D chunk (three.js · R3F · drei) loads only on the office screen and the landing — the warning is expected there
-  build: { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1100 },
-  test: {
-    environment: 'jsdom',
-    include: ['test/**/*.test.{ts,tsx}'],
-  },
+export default defineConfig(({ mode }) => {
+  const marketing = mode === 'marketing';
+  return {
+    plugins: [react(), officeAssets(), agentCatalog(), ...(marketing ? [marketingEntry()] : [])],
+    server: {
+      port: 5180,
+      // SOLOSQUAD_API points the proxy at another engine (a second local demo on its own port);
+      // in marketing mode /api is the marketing Worker (`wrangler dev`, 8787)
+      proxy: { '/api': { target: process.env.SOLOSQUAD_API ?? (marketing ? 'http://127.0.0.1:8787' : 'http://127.0.0.1:7420'), changeOrigin: false } },
+    },
+    // the 3D chunk (three.js · R3F · drei) loads only on the office screen and the landing — the warning is expected there
+    build: marketing
+      ? { outDir: join(here, '..', 'marketing', 'public'), emptyOutDir: true, sourcemap: false, chunkSizeWarningLimit: 1100 }
+      : { outDir: 'dist', sourcemap: false, chunkSizeWarningLimit: 1100 },
+    test: {
+      environment: 'jsdom',
+      include: ['test/**/*.test.{ts,tsx}'],
+    },
+  };
 });

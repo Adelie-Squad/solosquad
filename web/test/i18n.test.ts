@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { dictionaries, LOCALES, translate } from '../src/i18n';
 import { ko } from '../src/i18n/ko';
+import { marketingMessages } from '../src/marketing/messages';
+import { ko as marketingKo } from '../src/marketing/messages/ko';
 
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
@@ -23,6 +25,17 @@ describe('dictionaries (I31 · K36)', () => {
     }
   });
 
+  it.each(LOCALES)('%s: the marketing words (a separate set, marketing build only) have every key and the same {placeholders}', (locale) => {
+    const dict = marketingMessages[locale] as Record<string, string>;
+    expect(Object.keys(dict).sort()).toEqual(Object.keys(marketingKo).sort());
+    for (const k of Object.keys(marketingKo)) {
+      expect(dict[k].trim(), `${locale} ${k}`).not.toBe('');
+      expect(placeholders(dict[k]), `${locale} ${k}`).toEqual(placeholders((marketingKo as Record<string, string>)[k]));
+    }
+    // no key in both sets
+    expect(Object.keys(marketingKo).filter((k) => k in ko)).toEqual([]);
+  });
+
   it('fills placeholders and defaults to ko', () => {
     expect(translate('en', 'approvals.needsTeam', { team: 'core' })).toBe('Members of team core, or the owner, approve this.');
     expect(translate('ko', 'nav.dashboard')).toBe('대시보드');
@@ -37,14 +50,14 @@ describe('no unused keys', () => {
       for (const name of readdirSync(dir)) {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) {
-          if (name !== 'i18n') walk(p);
+          if (name !== 'i18n' && name !== 'messages') walk(p);
         } else if (/\.tsx?$/.test(name)) code.push(readFileSync(p, 'utf8'));
       }
     };
     walk(src);
     const all = code.join('\n');
-    const built = ['category.', 'connections.kind.', 'artifact.kind.', 'messenger.channel.', 'calendar.view.', 'calendar.kind.', 'calendar.color.', 'company.name.']; // `category.${c}` · `connections.kind.${k}` · `artifact.kind.${k}` · `messenger.channel.${c}`
-    const unused = Object.keys(ko).filter((k) => !all.includes(`'${k}'`) && !built.some((p) => k.startsWith(p)));
+    const built = ['category.', 'connections.kind.', 'artifact.kind.', 'messenger.channel.', 'calendar.view.', 'calendar.kind.', 'calendar.color.', 'company.name.', 'landing.contact.business.', 'landing.contact.country.', 'landing.contact.wants.', 'landing.contact.phoneKind.', 'landing.apply.requests.']; // `category.${c}` · `connections.kind.${k}` · `artifact.kind.${k}` · `messenger.channel.${c}`
+    const unused = [...Object.keys(ko), ...Object.keys(marketingKo)].filter((k) => !all.includes(`'${k}'`) && !built.some((p) => k.startsWith(p)));
     expect(unused).toEqual([]);
   });
 });
@@ -56,7 +69,7 @@ describe('no hard-coded Korean in components', () => {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name);
       if (statSync(p).isDirectory()) {
-        if (name !== 'i18n') walk(p);
+        if (name !== 'i18n' && name !== 'messages') walk(p);
       } else if (/\.(tsx?|mts)$/.test(name) && !name.endsWith('.gen.ts')) files.push(p);
     }
   };
