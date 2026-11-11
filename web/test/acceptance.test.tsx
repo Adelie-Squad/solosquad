@@ -169,6 +169,33 @@ describe('C9 — a connection near its cap is flagged in the dashboard cost area
   it('no warning under the line', async () => {
     await openApp('/o/tesla/w/charging/screens/dashboard', engineData());
     expect(within(costArea()).queryByText(t('budget.warning'))).toBeNull();
+    expect(within(costArea()).queryByTestId('budget-suggestions')).toBeNull(); // nothing to suggest
+  });
+
+  it("Chief's suggestions sit under the bars: another connection and a cap, in every language", async () => {
+    const suggested = budget({
+      ...warned,
+      suggestions: [
+        { kind: 'switch_connection', subject: 'claude-max', to_connection: 'local', budget_usd: null },
+        { kind: 'raise_budget', subject: 'claude-max', to_connection: null, budget_usd: 140 },
+        { kind: 'raise_budget', subject: null, to_connection: null, budget_usd: 130 },
+      ],
+    });
+    for (const locale of ['en', 'ko', 'zh-CN'] as const) {
+      await openApp('/o/tesla/w/charging/screens/dashboard', engineData({ '/budget': suggested }), staffMe, locale);
+      const box = await waitFor(() => within(costArea()).getByTestId('budget-suggestions'));
+      expect(within(box).getByRole('heading', { name: t('budget.suggestTitle', undefined, locale) })).toBeTruthy();
+      const usd = (n: number) => new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(n);
+      expect([...box.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+        t('budget.suggestSwitch', { from: 'claude-max', to: 'local' }, locale),
+        t('budget.suggestRaise', { subject: 'claude-max', amount: usd(140) }, locale),
+        t('budget.suggestRaise', { subject: t('budget.org', undefined, locale), amount: usd(130) }, locale),
+      ]);
+      expect(within(box).getByText(t('budget.suggestHint', undefined, locale))).toBeTruthy();
+      expect(within(box).queryByRole('button')).toBeNull(); // shown, never applied from here
+      cleanup();
+      vi.unstubAllGlobals();
+    }
   });
 });
 

@@ -81,6 +81,7 @@ const budget: Budget = {
     { id: 'max', spent_usd: 9, budget_usd: 10, remaining_usd: 1, warning: true, exhausted: false },
     { id: 'router', spent_usd: 3.4, budget_usd: null, remaining_usd: null, warning: false, exhausted: false },
   ],
+  suggestions: [],
 };
 
 const schedules: ScheduleList = {

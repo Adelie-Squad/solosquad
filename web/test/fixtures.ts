@@ -79,6 +79,7 @@ export const budget = (over: Partial<Budget> = {}): Budget => ({
   warn_at: 0.8,
   org: line,
   connections: [{ ...line, id: 'claude-max' }],
+  suggestions: [],
   ...over,
 });
 

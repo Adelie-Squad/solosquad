@@ -22,6 +22,7 @@ from solosquad.context.ledger import LedgerEntry
 from solosquad.harness.base import SpawnRequest
 from solosquad.harness.events import End, Start, TextDelta, ToolResult
 from solosquad.harness.guard_hook import MARKER
+from solosquad.layout import ExecutionPolicy
 from solosquad.routing.eligibility import Entity, judge
 from solosquad.runtime import RunManager, RunStatus
 from solosquad.runtime.store import RunStore
@@ -273,6 +274,8 @@ async def test_budget_reports_month_spend_and_warnings(office: Office) -> None:
             "monthly_budget_usd": 10.0,
         }
         assert (await web.post("/api/connections", json=body, headers=h)).status_code == 201
+        spare = {**body, "id": "spare", "monthly_budget_usd": 50.0}
+        assert (await web.post("/api/connections", json=spare, headers=h)).status_code == 201
         office.company.ledger.record(
             LedgerEntry(thread_id="t", org="tesla", workspace="hq", agent="chief", connection_id="kimi",
                         harness="lite", model="kimi-k2", input_tokens=10, output_tokens=5, cost_usd=8.5)
@@ -282,6 +285,17 @@ async def test_budget_reports_month_spend_and_warnings(office: Office) -> None:
         assert row["spent_usd"] == 8.5 and row["remaining_usd"] == 1.5
         assert row["warning"] is True and row["exhausted"] is False
         assert data["org"]["spent_usd"] >= 8.5 and data["warn_at"] == 0.8
+        # C9 — next to the warning, Chief's suggestions: another connection, a higher cap
+        about_kimi = [s for s in data["suggestions"] if s["subject"] == "kimi"]
+        assert [s["kind"] for s in about_kimi] == ["switch_connection", "raise_budget"]
+        switch, cap = about_kimi
+        assert switch["to_connection"] == "spare" and switch["budget_usd"] is None
+        assert cap["to_connection"] is None and cap["budget_usd"] >= 11  # 8.5 back under 80%
+        assert all(s["subject"] == "kimi" for s in data["suggestions"])  # nothing else warned
+        # a workspace that may not use outside APIs is never told to move work to one (C8)
+        office.company.router.workspace_policy = ExecutionPolicy(allow_external_api=False)
+        data = (await web.get("/api/budget")).json()
+        assert [s["kind"] for s in data["suggestions"]] == ["raise_budget"]
 
 
 # ---------------------------------------------------------------------- event replay

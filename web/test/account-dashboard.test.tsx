@@ -207,6 +207,31 @@ describe('the account dashboard', () => {
     expect(await screen.findByText('없는 페이지예요')).toBeTruthy();
     expect(again.calls.some((c) => c.url.includes('spacexai'))).toBe(false);
   });
+
+  it("C9 — Chief's suggestions under the cost, named by business and said once", async () => {
+    const warned = budget({
+      org: { spent_usd: 85, budget_usd: 100, remaining_usd: 15, warning: true, exhausted: false },
+      suggestions: [
+        { kind: 'switch_connection', subject: 'claude-max', to_connection: 'local', budget_usd: null },
+        { kind: 'raise_budget', subject: null, to_connection: null, budget_usd: 130 },
+      ],
+    });
+    stubEngine(data({ '/budget': warned }));
+    open('/dashboard'); // tesla/charging and tesla/vehicles answer the same: one business, one set
+    const box = await waitFor(() => within(screen.getByTestId('account-cost')).getByTestId('budget-suggestions'));
+    expect(within(box).getByRole('heading', { name: '임원의 제안' })).toBeTruthy();
+    expect([...box.querySelectorAll('li')].map((li) => li.textContent)).toEqual([
+      'Tesla · claude-max 의 작업을 한도에 여유가 있는 local 로 옮겨 보세요.',
+      'Tesla 의 월 한도를 US$130.00 로 올려 보세요. 이번 달 쓰는 속도에 맞춘 금액이에요.',
+    ]);
+  });
+
+  it('no suggestions, no suggestion block', async () => {
+    stubEngine(data());
+    open('/dashboard');
+    await waitFor(() => expect(within(screen.getByTestId('account-cost')).getAllByText(/\$20\.00/).length).toBe(2));
+    expect(screen.queryByTestId('budget-suggestions')).toBeNull();
+  });
 });
 
 describe('자리를 비운 동안', () => {

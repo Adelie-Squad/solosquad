@@ -431,11 +431,24 @@ class ConnectionBudget(BudgetLine):
     id: str
 
 
+class BudgetSuggestion(Closed):
+    """What Chief suggests next to a warning (C9) — shown, never applied by itself."""
+
+    kind: Literal["switch_connection", "raise_budget"]
+    subject: str | None
+    """The connection over its warning line; `None` = the company line."""
+    to_connection: str | None
+    """`switch_connection`: the connection with room to move the work to."""
+    budget_usd: float | None
+    """`raise_budget`: the proposed monthly cap (this month's pace, back under the line)."""
+
+
 class Budget(Closed):
     month_start: float
     warn_at: float
     org: BudgetLine
     connections: list[ConnectionBudget]
+    suggestions: list[BudgetSuggestion]
 
 
 # ---------------------------------------------------------------------- workflows · artifacts

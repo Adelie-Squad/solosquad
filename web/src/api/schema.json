@@ -933,13 +933,20 @@
             "$ref": "#/$defs/ConnectionBudget"
           },
           "type": "array"
+        },
+        "suggestions": {
+          "items": {
+            "$ref": "#/$defs/BudgetSuggestion"
+          },
+          "type": "array"
         }
       },
       "required": [
         "month_start",
         "warn_at",
         "org",
-        "connections"
+        "connections",
+        "suggestions"
       ],
       "type": "object",
       "title": "Budget"
@@ -986,6 +993,57 @@
       ],
       "type": "object",
       "title": "BudgetLine"
+    },
+    "BudgetSuggestion": {
+      "additionalProperties": false,
+      "description": "What Chief suggests next to a warning (C9) — shown, never applied by itself.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "switch_connection",
+            "raise_budget"
+          ],
+          "type": "string"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_connection": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "budget_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "subject",
+        "to_connection",
+        "budget_usd"
+      ],
+      "type": "object",
+      "title": "BudgetSuggestion"
     },
     "CalendarAgentAccess": {
       "additionalProperties": false,

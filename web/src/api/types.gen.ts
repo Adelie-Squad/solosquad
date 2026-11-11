@@ -628,6 +628,7 @@ export interface Budget {
   warn_at: number;
   org: BudgetLine;
   connections: ConnectionBudget[];
+  suggestions: BudgetSuggestion[];
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
@@ -651,6 +652,18 @@ export interface ConnectionBudget {
   warning: boolean;
   exhausted: boolean;
   id: string;
+}
+/**
+ * What Chief suggests next to a warning (C9) — shown, never applied by itself.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "BudgetSuggestion".
+ */
+export interface BudgetSuggestion {
+  kind: 'switch_connection' | 'raise_budget';
+  subject: string | null;
+  to_connection: string | null;
+  budget_usd: number | null;
 }
 /**
  * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema

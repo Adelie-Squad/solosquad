@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useBudget } from '../api/queries';
-import type { BudgetLine } from '../api/types.gen';
+import type { BudgetLine, BudgetSuggestion } from '../api/types.gen';
 import { useI18n } from '../i18n';
 import { Loading, QueryError } from './Status';
 
@@ -29,6 +29,32 @@ export function BudgetBar({ label, line }: { label: string; line: BudgetLine }) 
           <span style={{ width: `${pct}%` }} />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * What Chief suggests next to a warning (C9): move the work to a connection with room, or a
+ * monthly cap for this month's pace. The engine decides (I14); the web only words it, and
+ * nothing is applied by itself. `name` turns a line's subject (a connection id, or `null`
+ * for the company line) into the words on screen.
+ */
+export function BudgetSuggestions({ items, name }: { items: BudgetSuggestion[]; name: (subject: string | null) => string }) {
+  const { t, fmt } = useI18n();
+  if (items.length === 0) return null;
+  return (
+    <div className="cost-suggest" data-testid="budget-suggestions">
+      <h3 className="cost-sub">{t('budget.suggestTitle')}</h3>
+      <ul className="cost-suggest-list">
+        {items.map((s, i) => (
+          <li key={i} data-kind={s.kind}>
+            {s.kind === 'switch_connection'
+              ? t('budget.suggestSwitch', { from: name(s.subject), to: s.to_connection ?? '' })
+              : t('budget.suggestRaise', { subject: name(s.subject), amount: fmt.usd(s.budget_usd ?? 0) })}
+          </li>
+        ))}
+      </ul>
+      <p className="dash-hint">{t('budget.suggestHint')}</p>
     </div>
   );
 }
@@ -75,6 +101,7 @@ export function CostSection() {
               </div>
             </>
           )}
+          <BudgetSuggestions items={q.data.suggestions} name={(id) => id ?? t('budget.org')} />
         </>
       )}
     </section>
