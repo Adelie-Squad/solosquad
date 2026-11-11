@@ -1,6 +1,6 @@
 // The office scene on the page: lazy-loads the 3D chunk (three.js · R3F · drei · the GLBs — only
 // this screen pays for it), lays the name tags and team labels over the canvas, owns the zoom
-// (five levels, buttons, keys, wheel, drag, pinch — zoom.ts), pauses when hidden or scrolled
+// (five levels, buttons, keys, wheel, drag, pinch — zoom.ts), draws on demand when hidden, stops when scrolled
 // away, and falls back to a list when WebGL is missing or fails. The scene is decoration
 // (aria-hidden); the list next to it is what a screen reader reads.
 import { Component, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from 'react';
@@ -11,6 +11,7 @@ import type { Theme } from '../theme';
 import type { SeatAgent } from './layout';
 import type { AgentStatus } from './state';
 import { DRAG_PX } from './clicks';
+import { frameLoop } from './measure';
 import { LEVELS, tagPriority, tagsShowAll, wheelFactor, wheelKind, WheelStepper, ZoomController } from './zoom';
 
 const OfficeCanvas = lazy(() => import('./OfficeCanvas'));
@@ -372,7 +373,7 @@ export function OfficeStage({
             theme={theme}
             reducedMotion={reduced}
             mobile={mobile}
-            paused={paused || hidden || offScreen}
+            frameloop={frameLoop({ paused, offScreen, hidden, reducedMotion: reduced })}
             tags={tags}
             teamTags={teamTags}
             zoom={zoom}
