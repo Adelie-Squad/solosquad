@@ -16,6 +16,7 @@ Runs live in their own `workflow-runs.sqlite`, next to the company's runs.sqlite
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import secrets
 import time
@@ -36,6 +37,8 @@ from solosquad.workflows.tools import TOOLS
 
 AskAgent = Callable[[str, str, str, str], Awaitable[str]]
 """(agent, prompt, workflow thread id, step id) → the company's final answer."""
+StepHook = Callable[[str, str, int, str, str], None]
+"""(thread id, workflow, step number, step id, status after it) — told after every step."""
 
 UPLOAD_LIMIT = 20 * 1024 * 1024
 UPLOAD_TYPES = (".xlsx", ".csv")
@@ -49,7 +52,7 @@ class WorkflowState(TypedDict, total=False):
     outputs: dict[str, Any]
     artifacts: list[str]
     status: str
-    """running · done · declined"""
+    """running · done · declined · stopped"""
 
 
 class WorkflowEngine:
@@ -69,6 +72,8 @@ class WorkflowEngine:
         self.uploads = data_dir / "uploads"
         self.defs, self.errors = load_workflows(org_root / "workflows")
         self._state_path = data_dir / "workflow-state.json"
+        self._stopping: set[str] = set()
+        self.on_step: StepHook | None = None
         self.graph = self._build()
         self.manager = RunManager(
             self.graph,
@@ -140,6 +145,35 @@ class WorkflowEngine:
             tid, {"workflow": name, "inputs": given}, source=source
         )
         return tid, rid
+
+    def open_runs(self, name: str | None = None) -> list[dict[str, Any]]:
+        """Runs still pending, running or waiting for an answer (newest first)."""
+        out = []
+        for r in self.manager.store.runs(limit=500):
+            if r["status"] not in ("pending", "running", "interrupted"):
+                continue
+            meta = (self.manager.store.thread(r["thread_id"]) or {}).get("metadata") or {}
+            newest = self.manager.store.runs(thread_id=r["thread_id"], limit=1)
+            if newest and newest[0]["id"] != r["id"]:
+                continue
+            if name is None or meta.get("workflow") == name:
+                out.append(r)
+        return out
+
+    def stop_run(self, thread_id: str) -> None:
+        """Stop a run: one waiting for an answer is cancelled now; one in a step ends
+        before its next step."""
+        newest = self.manager.store.runs(thread_id=thread_id, limit=1)
+        if not newest:
+            return
+        run = newest[0]
+        if run["status"] in ("interrupted", "pending"):
+            self.manager.store.set_status(run["id"], "cancelled")
+            self.manager._publish(
+                {"event": "run.cancelled", "run_id": run["id"], "thread_id": thread_id}
+            )
+        elif run["status"] == "running":
+            self._stopping.add(thread_id)
 
     def summaries(self) -> list[dict[str, Any]]:
         out = []
@@ -223,7 +257,8 @@ class WorkflowEngine:
         builder.add_node("step", self._step)
         builder.add_edge(START, "step")
         builder.add_conditional_edges(
-            "step", lambda s: END if s.get("status") in ("done", "declined") else "step"
+            "step",
+            lambda s: END if s.get("status") in ("done", "declined", "stopped") else "step",
         )
         self.data_dir.mkdir(parents=True, exist_ok=True)
         return builder.compile(
@@ -240,12 +275,21 @@ class WorkflowEngine:
             return {"status": "done"}
         step = wf.steps[index]
         tid = str((config.get("configurable") or {}).get("thread_id", ""))
+        if tid in self._stopping:
+            self._stopping.discard(tid)
+            return {"status": "stopped", "current_step": step.id}
         outputs = dict(state.get("outputs") or {})
         scope = {"inputs": self._resolved_inputs(wf, state.get("inputs") or {}), "steps": outputs}
         update: dict[str, Any] = {"current_step": step.id}
         result = await self._run(step, scope, wf, tid)
         if step.approval is not None and result.get("decision") != "approved":
             outputs[step.id] = result
+            branch = step.approval.on_decline
+            if branch is not None:
+                nxt = next(i for i, s in enumerate(wf.steps) if s.id == branch)
+                self._told(tid, name, index, step.id, "running")
+                return {**update, "outputs": outputs, "status": "running", "step": nxt}
+            self._told(tid, name, index, step.id, "declined")
             return {**update, "outputs": outputs, "status": "declined", "step": index + 1}
         if step.save_as is not None:
             art = self.artifacts.save(
@@ -259,13 +303,19 @@ class WorkflowEngine:
             result = {**result, "artifact_id": art.id}
             update["artifacts"] = [*(state.get("artifacts") or []), art.id]
         outputs[step.id] = result
-        done = index + 1 >= len(wf.steps)
+        done = step.end or index + 1 >= len(wf.steps)
+        self._told(tid, name, index, step.id, "done" if done else "running")
         return {
             **update,
             "outputs": outputs,
             "step": index + 1,
             "status": "done" if done else "running",
         }
+
+    def _told(self, tid: str, name: str, index: int, step_id: str, status: str) -> None:
+        if self.on_step is not None:
+            with contextlib.suppress(Exception):  # a listener never stops a run
+                self.on_step(tid, name, index, step_id, status)
 
     def _resolved_inputs(self, wf: WorkflowDef, given: dict[str, Any]) -> dict[str, Any]:
         out = dict(given)

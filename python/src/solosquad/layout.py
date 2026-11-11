@@ -42,7 +42,7 @@ import secrets
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -141,8 +141,41 @@ class Placement(BaseModel):
         return org in self.include or f"{org}/{workspace}" in self.include
 
 
+class DemoSettings(BaseModel):
+    """`server.yaml` `demo:` — how a demo server behaves (decision 62 · PRD §3.6.4). Read
+    only when `mode: demo`."""
+
+    model_config = ConfigDict(extra="allow")
+    step_seconds: float = Field(default=4.0, ge=0)
+    """One scenario step (an agent's turn); a tool step takes half."""
+    chat_seconds: float = Field(default=1.5, ge=0)
+    """A scripted chat reply streams over this long."""
+    default_days: int = Field(default=14, ge=1)
+    """A demo account lasts this long unless `demo issue --days` says otherwise (DM3)."""
+    nightly_reset: str | None = "04:00"
+    """`HH:MM` server time — every copy is made again from the template; None = off."""
+    idle_minutes: int = Field(default=30, ge=1)
+    """A visitor's runtime starts at login and stops after this long without them (DM2)."""
+    delete_after_days: int = Field(default=7, ge=0)
+    """A copy is removed this long after its account expired (usage stays)."""
+    usage_keep_days: int = Field(default=365, ge=1)
+    """Usage rows are removed this long after the account expired (L9 — like inquiries)."""
+    marketing_url: str | None = None
+    """The marketing site (e.g. https://solosquad.example) — the only `Origin` the demo
+    login form is accepted from, and where a failed form login returns (`/demo?error=…`)."""
+    contact_url: str | None = None
+    """The 상담 요청 link in the demo band (default: `<marketing_url>/?contact=demo`)."""
+
+
 class ServerConfig(_Doc):
     """`core/server.yaml` — what belongs to the engine server, not to one business (I41)."""
+
+    mode: Literal["customer", "demo"] | None = None
+    """`demo` = a demo server (decision 62): scripted agents, one copy of the example company
+    per demo account, settings read-only — enforced by the server, shown by the web. Unset =
+    a customer's server."""
+    demo: DemoSettings | None = None
+    """Only read when `mode: demo`; unset = the defaults."""
 
     public_url: str | None = None
     """The server's HTTPS address (e.g. https://ai.example.co.kr) — passkeys are bound

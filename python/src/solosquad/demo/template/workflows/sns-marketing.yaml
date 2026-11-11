@@ -1,0 +1,50 @@
+# Demo scenario (decision 62 · PRD §3.5.2 ④) — SNS 마케팅: 한 주 콘텐츠.
+name: sns-marketing
+title: SNS 마케팅
+description: 지난주 반응 → 한 주 콘텐츠 일정 → 한국어 · 중국어 게시 초안(팀 승인) → 광고비 결제(대표 승인). 데모 — 실제 게시 · 광고는 없어요.
+enabled: true
+team: brand
+steps:
+  - id: reactions
+    agent: data-analyst
+    prompt: "#demo:sns.reactions 지난주 게시물 반응을 정리해줘."
+  - id: calendar
+    tool: demo.sns_calendar
+    with: {week: "__FILES__/sns-week.csv", last_week: "__FILES__/sns-last-week.csv"}
+    save_as: {kind: sns.calendar, title: 이번 주 콘텐츠 일정}
+  - id: plan
+    agent: marketer
+    prompt: "#demo:sns.plan 지난주 반응을 보고 한 주 콘텐츠 일정을 짜줘."
+  - id: write
+    agent: creative
+    prompt: "#demo:sns.drafts 게시 문구와 이미지 초안을 한국어 · 중국어로 써줘."
+  - id: posts
+    tool: demo.sns_posts
+    with: {file: "__FILES__/sns-posts.csv"}
+    save_as: {kind: sns.posts, title: 게시 초안 (한국어 · 중국어)}
+  - id: publish_ok
+    approval:
+      title: 게시물 게시
+      summary: "{{ steps.posts.summary }} — 문구와 이미지 메모를 확인해 주세요 · 데모 — 실제로 게시하지 않아요"
+      risk: low
+      category: publish
+  - id: ads
+    tool: demo.ad_plan
+    with: {budget: 300000}
+    save_as: {kind: sns.ads, title: 인스타그램 광고 집행안}
+  - id: ad_spend
+    approval:
+      title: "광고비 결제 {{ steps.ads.budget_text }}"
+      summary: "{{ steps.ads.summary }} · 데모 — 실제로 결제하지 않아요"
+      risk: high
+      category: payment
+      on_decline: organic
+  - id: launched
+    agent: marketer
+    prompt: "#demo:sns.launched 승인된 게시물과 광고를 예약해줘."
+    save_as: {kind: brief, title: 게시 · 광고 예약 결과}
+    end: true
+  - id: organic
+    agent: marketer
+    prompt: "#demo:sns.organic 광고 없이 게시물만 다시 정리해줘."
+    save_as: {kind: brief, title: 광고 없이 게시}

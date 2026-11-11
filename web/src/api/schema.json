@@ -31,8 +31,14 @@
     "ScopeRef": {
       "$ref": "#/$defs/ScopeRef"
     },
+    "DemoInfo": {
+      "$ref": "#/$defs/DemoInfo"
+    },
     "Me": {
       "$ref": "#/$defs/Me"
+    },
+    "DemoRestarted": {
+      "$ref": "#/$defs/DemoRestarted"
     },
     "TotpBegin": {
       "$ref": "#/$defs/TotpBegin"
@@ -121,6 +127,24 @@
     "BriefData": {
       "$ref": "#/$defs/BriefData"
     },
+    "PayablesData": {
+      "$ref": "#/$defs/PayablesData"
+    },
+    "SupplierComparisonData": {
+      "$ref": "#/$defs/SupplierComparisonData"
+    },
+    "PurchaseOrderData": {
+      "$ref": "#/$defs/PurchaseOrderData"
+    },
+    "SnsCalendarData": {
+      "$ref": "#/$defs/SnsCalendarData"
+    },
+    "SnsPostsData": {
+      "$ref": "#/$defs/SnsPostsData"
+    },
+    "AdPlanData": {
+      "$ref": "#/$defs/AdPlanData"
+    },
     "Screen": {
       "$ref": "#/$defs/Screen"
     },
@@ -198,7 +222,9 @@
     "ScopeWorkspace",
     "ScopeOrg",
     "ScopeRef",
+    "DemoInfo",
     "Me",
+    "DemoRestarted",
     "TotpBegin",
     "AccessPolicy",
     "AuditEntry",
@@ -228,6 +254,12 @@
     "Artifact",
     "PnlData",
     "BriefData",
+    "PayablesData",
+    "SupplierComparisonData",
+    "PurchaseOrderData",
+    "SnsCalendarData",
+    "SnsPostsData",
+    "AdPlanData",
     "Screen",
     "ScreenResponse",
     "EngineEvent",
@@ -276,6 +308,52 @@
       ],
       "type": "object",
       "title": "AccessPolicy"
+    },
+    "AdPlanData": {
+      "additionalProperties": true,
+      "description": "`sns.ads` — the ad plan waiting for the owner's 대표 승인.",
+      "properties": {
+        "channel": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "number"
+        },
+        "budget_text": {
+          "type": "string"
+        },
+        "days": {
+          "type": "integer"
+        },
+        "start": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "expected_reach": {
+          "type": "string"
+        },
+        "creative": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "budget",
+        "budget_text",
+        "days",
+        "start",
+        "audience",
+        "expected_reach",
+        "creative",
+        "summary"
+      ],
+      "type": "object",
+      "title": "AdPlanData"
     },
     "Agent": {
       "additionalProperties": false,
@@ -1702,6 +1780,69 @@
       "type": "object",
       "title": "ConnectionOut"
     },
+    "DemoInfo": {
+      "additionalProperties": false,
+      "description": "The demo account signed in, and what the demo server locks (PRD §3.6.4 ③).",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "expires": {
+          "type": "number"
+        },
+        "locked": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "contact_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "suggestions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "expires",
+        "locked",
+        "contact_url",
+        "suggestions"
+      ],
+      "type": "object",
+      "title": "DemoInfo"
+    },
+    "DemoRestarted": {
+      "additionalProperties": false,
+      "properties": {
+        "workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "workflows"
+      ],
+      "type": "object",
+      "title": "DemoRestarted"
+    },
     "Digest": {
       "additionalProperties": false,
       "description": "`GET /api/me/digest` — what happened in the person's scopes between `since` (when they\nwere last here) and `until` (now). Deterministic aggregation, no model call.",
@@ -2500,7 +2641,9 @@
         "calendar_reorder_invalid",
         "calendar_agent_access_invalid",
         "digest_since_invalid",
-        "digest_until_invalid"
+        "digest_until_invalid",
+        "demo_read_only",
+        "demo_expired"
       ],
       "type": "string",
       "title": "ErrorCode"
@@ -2659,6 +2802,21 @@
             }
           ],
           "default": null
+        },
+        "demo": {
+          "default": false,
+          "type": "boolean"
+        },
+        "demo_info": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DemoInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2669,7 +2827,9 @@
         "locale",
         "relogin",
         "scopes",
-        "last_scope"
+        "last_scope",
+        "demo",
+        "demo_info"
       ],
       "type": "object",
       "title": "Me"
@@ -2878,6 +3038,72 @@
       "type": "object",
       "title": "PasskeyOptions"
     },
+    "PayableItem": {
+      "additionalProperties": false,
+      "properties": {
+        "vendor": {
+          "type": "string"
+        },
+        "invoice": {
+          "type": "string"
+        },
+        "item": {
+          "type": "string"
+        },
+        "due": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "vendor",
+        "invoice",
+        "item",
+        "due",
+        "amount"
+      ],
+      "type": "object",
+      "title": "PayableItem"
+    },
+    "PayablesData": {
+      "additionalProperties": true,
+      "description": "`finance.payables` — the payments waiting for the owner's 대표 승인.",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PayableItem"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "number"
+        },
+        "total_text": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string"
+        },
+        "pay_on": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "total_text",
+        "account",
+        "pay_on",
+        "summary"
+      ],
+      "type": "object",
+      "title": "PayablesData"
+    },
     "Person": {
       "additionalProperties": false,
       "properties": {
@@ -3044,6 +3270,39 @@
       "type": "object",
       "title": "PnlReviewRow"
     },
+    "PoLine": {
+      "additionalProperties": false,
+      "properties": {
+        "sku": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "name_local": {
+          "type": "string"
+        },
+        "qty": {
+          "type": "integer"
+        },
+        "unit_price": {
+          "type": "number"
+        },
+        "amount": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "sku",
+        "name",
+        "name_local",
+        "qty",
+        "unit_price",
+        "amount"
+      ],
+      "type": "object",
+      "title": "PoLine"
+    },
     "PublicUser": {
       "additionalProperties": false,
       "properties": {
@@ -3109,6 +3368,67 @@
       ],
       "type": "object",
       "title": "PublicUser"
+    },
+    "PurchaseOrderData": {
+      "additionalProperties": true,
+      "description": "`sourcing.po` — a draft; nothing is sent.",
+      "properties": {
+        "supplier": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "title_local": {
+          "type": "string"
+        },
+        "po_number": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/PoLine"
+          },
+          "type": "array"
+        },
+        "subtotal": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "total_text": {
+          "type": "string"
+        },
+        "delivery": {
+          "type": "string"
+        },
+        "terms_local": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "supplier",
+        "language",
+        "title_local",
+        "po_number",
+        "currency",
+        "lines",
+        "subtotal",
+        "total",
+        "total_text",
+        "delivery",
+        "terms_local",
+        "summary"
+      ],
+      "type": "object",
+      "title": "PurchaseOrderData"
     },
     "Run": {
       "additionalProperties": false,
@@ -3707,6 +4027,258 @@
       ],
       "type": "object",
       "title": "SnapshotSettings"
+    },
+    "SnsCalendarData": {
+      "additionalProperties": true,
+      "description": "`sns.calendar`.",
+      "properties": {
+        "week": {
+          "type": "string"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/SnsCalendarEntry"
+          },
+          "type": "array"
+        },
+        "last_week": {
+          "items": {
+            "$ref": "#/$defs/SnsReaction"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "week",
+        "entries",
+        "last_week",
+        "summary"
+      ],
+      "type": "object",
+      "title": "SnsCalendarData"
+    },
+    "SnsCalendarEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "theme": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "channel",
+        "language",
+        "theme",
+        "format",
+        "owner"
+      ],
+      "type": "object",
+      "title": "SnsCalendarEntry"
+    },
+    "SnsPost": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "hashtags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "image_note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "date",
+        "language",
+        "caption",
+        "hashtags",
+        "image_note"
+      ],
+      "type": "object",
+      "title": "SnsPost"
+    },
+    "SnsPostsData": {
+      "additionalProperties": true,
+      "description": "`sns.posts` — drafts; nothing is posted.",
+      "properties": {
+        "posts": {
+          "items": {
+            "$ref": "#/$defs/SnsPost"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "posts",
+        "summary"
+      ],
+      "type": "object",
+      "title": "SnsPostsData"
+    },
+    "SnsReaction": {
+      "additionalProperties": false,
+      "properties": {
+        "post": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "reach": {
+          "type": "integer"
+        },
+        "likes": {
+          "type": "integer"
+        },
+        "comments": {
+          "type": "integer"
+        },
+        "saves": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "post",
+        "channel",
+        "reach",
+        "likes",
+        "comments",
+        "saves"
+      ],
+      "type": "object",
+      "title": "SnsReaction"
+    },
+    "SupplierComparisonData": {
+      "additionalProperties": true,
+      "description": "`sourcing.comparison`.",
+      "properties": {
+        "product": {
+          "type": "string"
+        },
+        "retail_price": {
+          "type": "number"
+        },
+        "suppliers": {
+          "items": {
+            "$ref": "#/$defs/SupplierRow"
+          },
+          "type": "array"
+        },
+        "recommended": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "product",
+        "retail_price",
+        "suppliers",
+        "recommended",
+        "summary"
+      ],
+      "type": "object",
+      "title": "SupplierComparisonData"
+    },
+    "SupplierRow": {
+      "additionalProperties": false,
+      "properties": {
+        "supplier": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "unit_price_cny": {
+          "type": "number"
+        },
+        "shipping": {
+          "type": "number"
+        },
+        "duty_rate": {
+          "type": "number"
+        },
+        "landed_krw": {
+          "type": "number"
+        },
+        "moq": {
+          "type": "integer"
+        },
+        "lead_days": {
+          "type": "integer"
+        },
+        "defect_rate": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "recommended": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "supplier",
+        "region",
+        "unit_price_cny",
+        "shipping",
+        "duty_rate",
+        "landed_krw",
+        "moq",
+        "lead_days",
+        "defect_rate",
+        "note",
+        "score",
+        "recommended"
+      ],
+      "type": "object",
+      "title": "SupplierRow"
     },
     "Team": {
       "additionalProperties": false,

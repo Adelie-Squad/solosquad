@@ -1,0 +1,49 @@
+# Demo scenario (decision 62 · PRD §3.5.2 ④) — 상품 소싱: 공급처 비교와 발주서.
+name: product-sourcing
+title: 상품 소싱
+description: 공급처 견적 3곳 → 원가 비교표(팀 승인) → 중국어 발주서 초안 → 발주 확정(대표 승인). 데모 — 실제 발주는 없어요.
+enabled: true
+team: business
+steps:
+  - id: quotes
+    agent: researcher
+    prompt: "#demo:sourcing.quotes 보온 텀블러 공급처 견적과 최소 주문량을 모아줘."
+  - id: compare
+    tool: demo.supplier_compare
+    with: {file: "__FILES__/supplier-quotes.csv"}
+    save_as: {kind: sourcing.comparison, title: 보온 텀블러 원가 비교표}
+  - id: analyze
+    agent: data-analyst
+    prompt: "#demo:sourcing.analyze 단가에 배송비와 관세를 더해 원가를 비교해줘."
+  - id: margin
+    agent: finance
+    prompt: "#demo:sourcing.margin 공급처별 예상 마진을 계산해줘."
+  - id: shortlist
+    approval:
+      title: 공급처 비교표 확인
+      summary: "{{ steps.compare.summary }}"
+      risk: low
+      category: review
+  - id: draft
+    agent: sales
+    prompt: "#demo:sourcing.draft 추천 공급처의 언어(중국어)로 발주서 초안을 써줘."
+  - id: po
+    tool: demo.purchase_order
+    with: {file: "__FILES__/po-lines.csv", supplier: "{{ steps.compare.recommended }}"}
+    save_as: {kind: sourcing.po, title: 발주서 초안 (중국어)}
+  - id: order
+    approval:
+      title: "발주 확정 {{ steps.po.total_text }}"
+      summary: "{{ steps.po.summary }} · 데모 — 실제로 보내지 않아요"
+      risk: high
+      category: purchase
+      on_decline: renegotiate
+  - id: sent
+    agent: sales
+    prompt: "#demo:sourcing.sent 발주를 확정하고 입고 일정을 알려줘."
+    save_as: {kind: brief, title: 발주 처리 결과}
+    end: true
+  - id: renegotiate
+    agent: sales
+    prompt: "#demo:sourcing.renegotiate 발주를 멈추고 조건을 다시 정리해줘."
+    save_as: {kind: brief, title: 재협상 메모}

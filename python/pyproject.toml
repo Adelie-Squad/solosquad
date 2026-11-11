@@ -57,6 +57,8 @@ explicit-preview-rules = true
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E501"]  # wire-format fixtures read best on one line
+# the demo's scripted Chinese text uses full-width punctuation on purpose
+"src/solosquad/demo/**" = ["RUF001"]
 
 [tool.mypy]
 strict = true

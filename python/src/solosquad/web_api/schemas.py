@@ -122,6 +122,27 @@ class ScopeRef(Closed):
     workspace: str
 
 
+class DemoInfo(Closed):
+    """The demo account signed in, and what the demo server locks (PRD §3.6.4 ③)."""
+
+    id: str
+    """e.g. `samsungDemo`."""
+    label: str
+    expires: float
+    locked: list[str]
+    """The lock table — route keys refused with `demo_read_only` (and a few own-account
+    actions); the web locks the same controls."""
+    contact_url: str | None
+    """상담 요청 — the demo band's link to the agency."""
+    suggestions: list[str]
+    """The suggested requests; each runs its scenario."""
+
+
+class DemoRestarted(Closed):
+    workflows: list[str]
+    """The scenario workflows started again."""
+
+
 class Me(Closed):
     user: PublicUser | None
     stage: Literal["full", "enroll"]
@@ -140,6 +161,11 @@ class Me(Closed):
     last_scope: ScopeRef | None = None
     """Where to open after login: the last workspace this person used, or their first one
     when that is gone or they never used one; null = nothing assigned."""
+    demo: bool = False
+    """A demo server (decision 62): settings are read-only, the web shows the 데모 chip and
+    posts screen changes (`POST /api/demo/events`). Decided by the server, never the web."""
+    demo_info: DemoInfo | None = None
+    """The demo account signed in — its id, expiry and the lock table."""
 
 
 class TotpBegin(Closed):
@@ -589,7 +615,150 @@ class BriefData(Open):
     agent: str | None = None
 
 
-ARTIFACT_DATA: dict[str, type[BaseModel]] = {"finance.pnl": PnlData, "brief": BriefData}
+# The demo's org-package kinds (decision 62) — `demo/scenario.py` writes them; the same kinds
+# serve a real commerce org package later (W11 · v2.2.0).
+
+
+class PayableItem(Closed):
+    vendor: str
+    invoice: str
+    item: str
+    due: str
+    amount: float
+
+
+class PayablesData(Open):
+    """`finance.payables` — the payments waiting for the owner's 대표 승인."""
+
+    items: list[PayableItem]
+    total: float
+    total_text: str
+    account: str
+    pay_on: str
+    summary: str
+
+
+class SupplierRow(Closed):
+    supplier: str
+    region: str
+    unit_price_cny: float
+    shipping: float
+    duty_rate: float
+    landed_krw: float
+    """Unit price in KRW + shipping + duty — the cost compared."""
+    moq: int
+    lead_days: int
+    defect_rate: float
+    note: str
+    score: float
+    recommended: bool
+
+
+class SupplierComparisonData(Open):
+    """`sourcing.comparison`."""
+
+    product: str
+    retail_price: float
+    suppliers: list[SupplierRow]
+    recommended: str | None
+    summary: str
+
+
+class PoLine(Closed):
+    sku: str
+    name: str
+    name_local: str
+    """The product name in the supplier's language."""
+    qty: int
+    unit_price: float
+    amount: float
+
+
+class PurchaseOrderData(Open):
+    """`sourcing.po` — a draft; nothing is sent."""
+
+    supplier: str
+    language: str
+    """The language the draft is written in for the supplier (zh-CN)."""
+    title_local: str
+    po_number: str
+    currency: str
+    lines: list[PoLine]
+    subtotal: float
+    total: float
+    total_text: str
+    delivery: str
+    terms_local: str
+    summary: str
+
+
+class SnsCalendarEntry(Closed):
+    date: str
+    channel: str
+    language: str
+    theme: str
+    format: str
+    owner: str
+
+
+class SnsReaction(Closed):
+    post: str
+    channel: str
+    reach: int
+    likes: int
+    comments: int
+    saves: int
+
+
+class SnsCalendarData(Open):
+    """`sns.calendar`."""
+
+    week: str
+    entries: list[SnsCalendarEntry]
+    last_week: list[SnsReaction]
+    summary: str
+
+
+class SnsPost(Closed):
+    channel: str
+    date: str
+    language: str
+    caption: str
+    hashtags: list[str]
+    image_note: str
+
+
+class SnsPostsData(Open):
+    """`sns.posts` — drafts; nothing is posted."""
+
+    posts: list[SnsPost]
+    summary: str
+
+
+class AdPlanData(Open):
+    """`sns.ads` — the ad plan waiting for the owner's 대표 승인."""
+
+    channel: str
+    budget: float
+    budget_text: str
+    days: int
+    start: str
+    audience: str
+    expected_reach: str
+    creative: str
+    summary: str
+
+
+ARTIFACT_DATA: dict[str, type[BaseModel]] = {
+    "finance.pnl": PnlData,
+    "brief": BriefData,
+    "finance.payables": PayablesData,
+    "sourcing.comparison": SupplierComparisonData,
+    "sourcing.po": PurchaseOrderData,
+    "sns.calendar": SnsCalendarData,
+    "sns.posts": SnsPostsData,
+    "sns.ads": AdPlanData,
+}
 
 
 # ---------------------------------------------------------------------- passkeys (W3)
@@ -1020,7 +1189,9 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     ScopeWorkspace,
     ScopeOrg,
     ScopeRef,
+    DemoInfo,
     Me,
+    DemoRestarted,
     TotpBegin,
     AccessPolicy,
     AuditEntry,
@@ -1050,6 +1221,12 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     Artifact,
     PnlData,
     BriefData,
+    PayablesData,
+    SupplierComparisonData,
+    PurchaseOrderData,
+    SnsCalendarData,
+    SnsPostsData,
+    AdPlanData,
     Screen,
     ScreenResponse,
     EngineEvent,

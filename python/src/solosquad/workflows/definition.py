@@ -47,6 +47,9 @@ class Approval(BaseModel):
     category: str = "review"
     """Decision 51: `review` is team-tier by default; purchase · payment · transfer ·
     delete are owner-tier. The owner can change tiers in the web."""
+    on_decline: str | None = None
+    """A step id to go on with when the answer is no (a branch); unset = the run ends
+    declined."""
 
 
 class Step(BaseModel):
@@ -57,6 +60,9 @@ class Step(BaseModel):
     agent: str | None = None
     prompt: str | None = None
     save_as: SaveAs | None = None
+    end: bool = False
+    """The run is done after this step — the steps after it are only reached by a branch
+    (`approval.on_decline`)."""
 
     model_config = {"populate_by_name": True}
 
@@ -102,6 +108,10 @@ class WorkflowDef(BaseModel):
             raise ValueError(f"workflow {self.name!r} has duplicate step ids")
         if not self.steps:
             raise ValueError(f"workflow {self.name!r} has no steps")
+        for s in self.steps:
+            target = s.approval.on_decline if s.approval else None
+            if target is not None and target not in ids:
+                raise ValueError(f"step {s.id!r}: on_decline {target!r} is not a step id")
         return self
 
     def public(self) -> dict[str, Any]:
@@ -118,7 +128,8 @@ class WorkflowDef(BaseModel):
 
 def _step_title(s: Step) -> str:
     if s.approval:
-        return s.approval.title
+        # a title that reads a run's value (`… {{ steps.pay.total }}`) has none before a run
+        return " ".join(_PLACEHOLDER.sub("", s.approval.title).split()) or s.id
     if s.agent:
         return f"{s.agent}: {s.id}"
     return s.id
