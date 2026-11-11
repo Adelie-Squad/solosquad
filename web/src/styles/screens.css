@@ -233,6 +233,25 @@
   border-top: 0;
 }
 
+/* Chief's suggestions: rows without boxes, under the bars (C9) */
+.cost-suggest-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cost-suggest-list li {
+  min-height: 40px;
+  padding: var(--space-2) 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.cost-suggest-list li + li {
+  border-top: 1px solid var(--line);
+}
+
 .budget-head span {
   font-variant-numeric: tabular-nums;
 }

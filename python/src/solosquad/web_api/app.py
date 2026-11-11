@@ -84,6 +84,7 @@ from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
 from solosquad.layout import LayoutError, ServerConfig, Solution, Workspace
 from solosquad.messages import Message as ChatMessage
+from solosquad.routing import budget_advice as advice
 from solosquad.routing.connections import (
     Connection,
     ConnectionKind,
@@ -92,6 +93,8 @@ from solosquad.routing.connections import (
 )
 from solosquad.routing.eligibility import Entity, Verdict, judge, providers_reached
 from solosquad.routing.router import Router as LlmRouter
+from solosquad.routing.router import allowed_by_workspace
+from solosquad.routing.router import eligible as route_eligible
 from solosquad.routing.vault import SecretStore
 from solosquad.runtime import RunManager, RunStatus
 from solosquad.runtime.manager import OPS_THREAD, load_crons
@@ -2162,20 +2165,33 @@ def create_app(cfg: AppConfig) -> Starlette:
             if rt.reload_connections
             else (list(rt.router.connections) if rt.router else [])
         )
+        router = rt.router
         rows = []
+        lines = []
         for c in conns:
             spent = by_conn.get(c.id, {}).get("cost_usd", 0.0)
             cap = c.monthly_budget_usd
+            warning = cap is not None and spent >= cap * warn_at
             rows.append(
                 {
                     "id": c.id,
                     "spent_usd": round(spent, 4),
                     "budget_usd": cap,
                     "remaining_usd": round(cap - spent, 4) if cap is not None else None,
-                    "warning": cap is not None and spent >= cap * warn_at,
+                    "warning": warning,
                     "exhausted": cap is not None and spent >= cap,
                 }
             )
+            usable = c.active and (
+                router is None
+                or (
+                    allowed_by_workspace(c, router.workspace_policy)
+                    and route_eligible(c, router.server_country, router.holder).ok
+                )
+            )
+            lines.append(advice.Line(c.id, spent, cap, warning, usable))
+        org_warning = org_cap is not None and total >= org_cap * warn_at
+        company = advice.Line(None, total, org_cap, org_warning)
         return respond(
             S.Budget,
             {
@@ -2185,10 +2201,11 @@ def create_app(cfg: AppConfig) -> Starlette:
                     "spent_usd": round(total, 4),
                     "budget_usd": org_cap,
                     "remaining_usd": round(org_cap - total, 4) if org_cap is not None else None,
-                    "warning": org_cap is not None and total >= org_cap * warn_at,
+                    "warning": org_warning,
                     "exhausted": org_cap is not None and total >= org_cap,
                 },
                 "connections": rows,
+                "suggestions": advice.suggestions(company, lines, warn_at, time.time()),
             },
         )
 

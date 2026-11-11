@@ -9,8 +9,8 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { scopedKeys, useCalendar, useCalendarLabels } from '../api/queries';
-import type { ApprovalItem, Artifact, Budget, CalendarItem, ScheduleList, ScopeOrg, WorkList } from '../api/types.gen';
-import { BudgetBar } from '../components/Cost';
+import type { ApprovalItem, Artifact, Budget, BudgetSuggestion, CalendarItem, ScheduleList, ScopeOrg, WorkList } from '../api/types.gen';
+import { BudgetBar, BudgetSuggestions } from '../components/Cost';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { addDays, colorOf, dayText, iso, timeOf } from '../lib/calendar';
@@ -175,6 +175,15 @@ export function AccountDashboard() {
     row.exhausted ||= data.org.exhausted;
     byOrg.set(r.org, row);
   });
+  // Chief's suggestions from every workspace, named by business; a connection shared by two
+  // workspaces of one business is suggested once
+  const suggested = new Map<string, BudgetSuggestion>();
+  zipped(budgets).forEach(({ r, data }) => {
+    for (const s of data?.suggestions ?? []) {
+      const named = { ...s, subject: s.subject === null ? r.orgDisplay : `${r.orgDisplay} · ${s.subject}` };
+      suggested.set(JSON.stringify(named), named);
+    }
+  });
 
   const orgs = me.scopes;
   const showWs = orgScope && orgScope.workspaces.length > 1;
@@ -249,6 +258,7 @@ export function AccountDashboard() {
                 {[...byOrg.entries()].map(([id, row]) => (
                   <BudgetBar key={id} label={row.display} line={{ spent_usd: row.spent, budget_usd: row.cap || null, remaining_usd: row.cap ? row.cap - row.spent : null, warning: row.warning, exhausted: row.exhausted }} />
                 ))}
+                <BudgetSuggestions items={[...suggested.values()]} name={(s) => s ?? ''} />
               </section>
             </div>
           </div>

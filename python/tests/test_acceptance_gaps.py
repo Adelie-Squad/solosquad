@@ -5,7 +5,8 @@ recorded) · C24 (another team's member is refused and the run keeps waiting) ·
 move takes effect in the same session) · C20 (a person's language survives a new login, is
 theirs alone, and never touches the conversation) · C11 (a web restart keeps sessions until
 they expire) · C22 (an .xlsx ledger through the API) · C25 (the owner opens an owner-tier
-category to a team) · C26 (people stay out of the repo).
+category to a team) · C26 (people stay out of the repo) · C1 (one customer's session,
+password and machine token open nothing on another customer's server).
 """
 
 from __future__ import annotations
@@ -22,11 +23,14 @@ import pandas as pd
 import pytest
 from test_approvals import _asks, _waiting
 from test_ops_api import Office
+from test_web_api import PASSWORD, _next_code, _secret
 from test_workflows import TEMPLATE
 
 from solosquad.artifacts import ArtifactStore
+from solosquad.context.ledger import LedgerEntry
 from solosquad.runtime import RunStatus
-from solosquad.web_api.accounts import AccountStore, Role
+from solosquad.web_api import totp
+from solosquad.web_api.accounts import AccountStore, Assignment, Role
 from solosquad.web_api.app import CSRF_HEADER, SESSION_COOKIE
 from solosquad.web_api.org_store import OrgStore
 from solosquad.workflows.engine import WorkflowEngine, company_asker
@@ -427,3 +431,77 @@ async def test_c26_people_never_reach_the_solution_repo(desk: Desk) -> None:
     # where they do live: the org's records and the customer's accounts, outside the repo
     for db in (o.accounts.path, o.web.org.path):
         assert repo not in db.resolve().parents
+
+
+# ---------------------------------------------------------------------- C1
+
+
+async def test_c1_one_customers_account_never_reaches_another_customers_server(
+    tmp_path: Path,
+) -> None:
+    """Customers A and B, each deployed on its own (decision 18 — a server per customer):
+    A's session, A's password and A's machine token open nothing on B, and B's books never
+    show A's spending. Same org name and same user name on both — only the deployment
+    separates them."""
+    a, b = Office(tmp_path / "a"), Office(tmp_path / "b")
+    b.web.rebuild(token="tok-b")  # each server mints its own machine token at setup
+    b.app = b.web.app
+    await a.manager.start()
+    await b.manager.start()
+    try:
+        boss_a = a.accounts.create_user(
+            "boss", PASSWORD, Role.OWNER, assignments=[Assignment("tesla", None, Role.OWNER)]
+        )
+        secret_a = _secret(a.accounts.begin_totp(boss_a.id))
+        assert a.accounts.confirm_totp(boss_a.id, totp.code_at(secret_a, totp.current_step()))
+        b.accounts.create_user(
+            "boss", "B's own long password", Role.OWNER,
+            assignments=[Assignment("tesla", None, Role.OWNER)],
+        )  # fmt: skip
+        a.company.ledger.record(
+            LedgerEntry(thread_id="t", org="tesla", workspace="hq", agent="chief", connection_id="max",
+                        harness="fake", model="sonnet", input_tokens=10, output_tokens=5, cost_usd=7.25)
+        )  # fmt: skip
+        async with a.client() as on_a:
+            r = await on_a.post(
+                "/api/auth/login",
+                json={"username": "boss", "password": PASSWORD, "otp": _next_code(secret_a)},
+            )
+            assert r.status_code == 200, r.text
+            csrf_a = r.json()["csrf"]
+            assert (await on_a.get("/api/me")).json()["user"]["username"] == "boss"
+            assert (await on_a.get("/api/budget")).json()["org"]["spent_usd"] == 7.25
+            cookie = r.headers["set-cookie"]
+            kept = dict(on_a.cookies)
+        # the browser keeps the cookie to A's own host: no Domain attribute widens it
+        assert SESSION_COOKIE in kept and "domain=" not in cookie.lower()
+
+        async with b.client() as on_b:
+            # A's session cookie carried to B by hand: B has never issued it
+            on_b.cookies.update(kept)
+            for path in ("/api/me", "/api/budget", "/api/threads", "/api/users", "/api/company"):
+                got = await on_b.get(path)
+                assert got.status_code == 401, (path, got.text)
+                assert got.json()["code"] == "unauthorized"
+            made = await on_b.post(
+                "/api/threads", json={"title": "x"}, headers={CSRF_HEADER: csrf_a}
+            )
+            assert made.status_code == 401
+            on_b.cookies.clear()
+            # A's password with a fresh code of A's factor does not sign in to B's "boss"
+            refused = await on_b.post(
+                "/api/auth/login",
+                json={"username": "boss", "password": PASSWORD, "otp": _next_code(secret_a)},
+            )
+            assert refused.status_code == 401 and SESSION_COOKIE not in on_b.cookies
+            assert "csrf" not in refused.json()
+        # A's machine token is not B's, even from B's own machine where a token is believed
+        async with b.client("127.0.0.1") as local_b:
+            got = await local_b.get("/api/budget", headers={"authorization": "Bearer tok"})
+            assert got.status_code == 401
+            mine = await local_b.get("/api/budget", headers={"authorization": "Bearer tok-b"})
+            assert mine.status_code == 200
+            assert mine.json()["org"]["spent_usd"] == 0  # A's spending is not in B's books
+    finally:
+        await a.manager.stop()
+        await b.manager.stop()
