@@ -25,6 +25,7 @@ import hashlib
 import json
 import sqlite3
 import time
+import weakref
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,17 +51,44 @@ LEGACY_FILES = (
 """Per-component files from before decision 54 — `doctor` reports any that are left."""
 
 
+class _Connection(sqlite3.Connection):
+    """A plain connection that can be referenced weakly (the base class can't) — see `_OPEN`."""
+
+
 def connect(path: Path | str) -> sqlite3.Connection:
     """The one way the engine opens a database: WAL, a busy timeout, autocommit."""
     p = Path(path)
     if str(path) != ":memory:":
         p.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(str(p), check_same_thread=False, isolation_level=None)
+    db = sqlite3.connect(str(p), check_same_thread=False, isolation_level=None, factory=_Connection)
     db.execute("PRAGMA journal_mode=WAL")
     db.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
     if str(path) != ":memory:":
         p.chmod(0o600)  # business records and personal data — owner-only on the VM
+        _OPEN.append((p.resolve(), weakref.ref(db)))
     return db
+
+
+_OPEN: list[tuple[Path, weakref.ref[sqlite3.Connection]]] = []
+"""Every file connection `connect` made (weakly) — so `close_under` can let go of a folder."""
+
+
+def close_under(folder: Path) -> int:
+    """Close every engine connection to a file inside `folder` (a stopped runtime's data, about
+    to be deleted — Windows can't delete a file that is still open). Returns how many."""
+    root = folder.resolve()
+    closed, keep = 0, []
+    for path, ref in _OPEN:
+        db = ref()
+        if db is None:
+            continue
+        if path.is_relative_to(root):
+            db.close()
+            closed += 1
+        else:
+            keep.append((path, ref))
+    _OPEN[:] = keep
+    return closed
 
 
 Step = str | Callable[[sqlite3.Connection], None]

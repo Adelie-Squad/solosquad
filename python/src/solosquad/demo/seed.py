@@ -45,7 +45,7 @@ from solosquad.layout import (
     solosquad_home,
 )
 from solosquad.routing.connections import Connection, ConnectionKind
-from solosquad.storage import OFFICE_DB, ORG_DB, connect
+from solosquad.storage import OFFICE_DB, ORG_DB, close_under, connect
 from solosquad.web_api.accounts import AccountStore, Assignment, Role
 from solosquad.web_api.org_store import open_accounts, open_org
 
@@ -361,6 +361,7 @@ def _remove_tree(path: Path, tries: int = 20) -> None:
     """`rmtree` that waits for handles a just-stopped runtime still holds (Windows refuses to
     delete an open file; SQLite closes its files only when the connection is collected). Raises
     if the copy is still there after the retries, so a reset never silently keeps old data."""
+    close_under(path)
     for i in range(tries):
         if not path.exists():
             return
