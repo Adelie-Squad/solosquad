@@ -12,6 +12,7 @@ import { ICON } from '../icons';
 import { cronText } from '../lib/cron';
 import { teamName } from '../lib/names';
 import { useOrgOwner } from '../scope';
+import { DemoRestart, useDemo } from '../demo/demo';
 
 export const RUN_STATUS: Record<Run['status'], { label: MessageKey; chip: string }> = {
   pending: { label: 'run.pending', chip: '' },
@@ -69,6 +70,7 @@ export function WorkflowsView() {
           <h1>{t('workflows.title')}</h1>
           <p>{t('workflows.lead')}</p>
         </div>
+        <DemoRestart />
       </header>
       <WorkflowTabs current="workflows" />
       {q.data.errors.length > 0 && <Placeholder title={t('workflows.brokenFiles')} detail={q.data.errors.join(' · ')} />}
@@ -105,6 +107,7 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
   const isOwner = useOrgOwner();
   const runs = useWorkflowRuns(wf.name);
   const toggle = useAction((on: boolean) => orgApi.patch<WorkflowSummary>(`/workflows/${wf.name}`, { enabled: on }), [keys.workflows, keys.schedules]);
+  const demo = useDemo();
 
   return (
     <>
@@ -123,7 +126,8 @@ function WorkflowDetail({ wf }: { wf: WorkflowSummary }) {
               role="switch"
               aria-checked={wf.enabled}
               aria-label={t('workflows.switch', { name: wf.title })}
-              disabled={toggle.isPending}
+              title={demo.locked('workflows.update') ? t('demo.locked') : undefined}
+              disabled={toggle.isPending || demo.locked('workflows.update')}
               onClick={() => toggle.mutate(!wf.enabled)}
             />
           )}

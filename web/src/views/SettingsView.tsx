@@ -23,6 +23,7 @@ import { CompanySettings } from './settings/CompanySettings';
 import { ServerSettings } from './settings/ServerSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
 import { ThemeSettings } from './settings/ThemeSettings';
+import { DemoLock } from '../demo/demo';
 
 interface Tab {
   id: string;
@@ -72,13 +73,42 @@ export function SettingsView() {
       {tab === 'language' && <LanguageSettings />}
       {tab === 'display' && <ThemeSettings />}
       {tab === 'account' && <AccountSettings />}
-      {tab === 'company' && <CompanySettings />}
-      {tab === 'server' && <ServerSettings />}
-      {tab === 'snapshot' && <SnapshotSettings />}
-      {tab === 'connections' && <ConnectionsSettings />}
-      {tab === 'access' && <AccessSettings />}
-      {tab === 'approvals' && <TierSettings />}
-      {tab === 'users' && <UserSettings />}
+      {/* a demo server shows every setting and takes none (decision 62 — 언어 · 화면 stay open) */}
+      {tab === 'company' && (
+        <DemoLock name="settings.company">
+          <CompanySettings />
+        </DemoLock>
+      )}
+      {tab === 'server' && (
+        <DemoLock name="settings.server">
+          <ServerSettings />
+        </DemoLock>
+      )}
+      {tab === 'snapshot' && (
+        <DemoLock name="settings.snapshot">
+          <SnapshotSettings />
+        </DemoLock>
+      )}
+      {tab === 'connections' && (
+        <DemoLock name="settings.connections">
+          <ConnectionsSettings />
+        </DemoLock>
+      )}
+      {tab === 'access' && (
+        <DemoLock name="settings.access">
+          <AccessSettings />
+        </DemoLock>
+      )}
+      {tab === 'approvals' && (
+        <DemoLock name="settings.approvals">
+          <TierSettings />
+        </DemoLock>
+      )}
+      {tab === 'users' && (
+        <DemoLock name="settings.users">
+          <UserSettings />
+        </DemoLock>
+      )}
     </div>
   );
 }
@@ -145,6 +175,7 @@ function AccountSettings() {
   if (me.local) return <section className="panel empty">{t('settings.localToken')}</section>;
   return (
     <>
+    <DemoLock name="settings.account">
     <section className="panel">
       <PasskeySettings />
     </section>
@@ -175,6 +206,7 @@ function AccountSettings() {
         {t('settings.changePassword')}
       </button>
     </form>
+    </DemoLock>
     <LogoutPanel />
     </>
   );

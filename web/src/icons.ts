@@ -39,6 +39,7 @@ import {
   Moon,
   Network,
   PenLine,
+  RotateCcw,
   Play,
   Plug,
   Plus,
@@ -112,6 +113,7 @@ export const ICON = {
   remove: Trash,
   collapseSidebar: PanelLeftClose,
   expandSidebar: PanelLeftOpen,
+  reset: RotateCcw,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON;

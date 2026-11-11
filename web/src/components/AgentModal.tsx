@@ -14,6 +14,7 @@ import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import type { AgentStatus } from '../office/state';
 import { useLinks } from '../scope';
 import { Modal } from './Modal';
+import { useDemo } from '../demo/demo';
 
 export function AgentModal({
   agent,
@@ -122,6 +123,7 @@ export function PersonModal({
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
+  const demo = useDemo();
   const role = person.role === 'owner' ? t('role.owner') : t('role.staff');
   const memberOf = editable?.teams ?? (team ? [team] : []);
   return (
@@ -147,7 +149,13 @@ export function PersonModal({
           </dl>
           {editable && person.role !== 'owner' && (
             <div className="dialog-actions is-start">
-              <button type="button" className="btn with-icon" onClick={() => setEditing(true)}>
+              <button
+                type="button"
+                className="btn with-icon"
+                disabled={demo.locked('people.update')}
+                title={demo.locked('people.update') ? t('demo.locked') : undefined}
+                onClick={() => setEditing(true)}
+              >
                 <ICON.draft />
                 {t('common.edit')}
               </button>

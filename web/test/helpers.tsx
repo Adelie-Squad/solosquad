@@ -21,6 +21,8 @@ export function me(over: Partial<Me> = {}): Me {
       { org: 'spacexai', display: 'SpaceXAI', role: 'owner', whole_org: true, workspaces: [{ name: 'hq', display: 'hq', role: 'owner', running: false }] },
     ],
     last_scope: null,
+    demo: false,
+    demo_info: null,
     ...over,
   };
 }

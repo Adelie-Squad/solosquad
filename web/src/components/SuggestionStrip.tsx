@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON, type LucideIcon } from '../icons';
+import { useDemo } from '../demo/demo';
 
 export interface Suggestion {
   id: string;
@@ -20,8 +21,11 @@ export const SUGGESTIONS: Suggestion[] = [
  * One row of suggestion chips, as wide as the input. The side that hides chips fades out;
  * a vertical wheel scrolls it sideways (ported from the prototype).
  */
+const DEMO_ICONS = [ICON.report, ICON.explore, ICON.draft];
+
 export function SuggestionStrip({ onPick }: { onPick: (text: string) => void }) {
   const { t } = useI18n();
+  const demo = useDemo();
   const ref = useRef<HTMLDivElement>(null);
   const [fadeLeft, setFadeLeft] = useState(false);
   const [fadeRight, setFadeRight] = useState(false);
@@ -56,12 +60,23 @@ export function SuggestionStrip({ onPick }: { onPick: (text: string) => void }) 
 
   return (
     <div ref={ref} className={`suggestions ${fadeClass}`} onScroll={updateFades} aria-label={t('chat.suggestions')}>
-      {SUGGESTIONS.map((p) => (
-        <button key={p.id} type="button" className="suggestion" onClick={() => onPick(t(p.text))}>
-          <p.icon />
-          {t(p.text)}
-        </button>
-      ))}
+      {demo.on && demo.info
+        ? // a demo server's suggested requests — each runs its scenario (engine words, as sent)
+          demo.info.suggestions.map((text, i) => {
+            const Icon = DEMO_ICONS[Math.floor(i / 2) % DEMO_ICONS.length];
+            return (
+              <button key={text} type="button" className="suggestion" onClick={() => onPick(text)}>
+                <Icon />
+                {text}
+              </button>
+            );
+          })
+        : SUGGESTIONS.map((p) => (
+            <button key={p.id} type="button" className="suggestion" onClick={() => onPick(t(p.text))}>
+              <p.icon />
+              {t(p.text)}
+            </button>
+          ))}
     </div>
   );
 }

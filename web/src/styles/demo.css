@@ -1,0 +1,178 @@
+/* Demo mode (decision 62 · DESIGN.md `### 데모`) — quiet: the demo band, the 데모 chip, the
+   lock line and the 처음 상태로 button. Colours only from tokens, light and dark alike. */
+
+.demo-band {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.demo-band-text {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.demo-band-hint {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.demo-band-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.demo-band-link:hover {
+  text-decoration: underline;
+}
+
+.demo-chip {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.account-button-role .demo-chip {
+  margin-left: 4px;
+}
+
+.demo-lock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.demo-lock.is-inline {
+  gap: 8px;
+}
+
+.demo-lock-note {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.demo-lock-body {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.demo-lock-body :disabled {
+  cursor: not-allowed;
+}
+
+.demo-reset {
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.is-rail .demo-reset-text {
+  display: none;
+}
+
+/* the demo's work products (WorkProducts.tsx) */
+.work-product {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.work-sub {
+  display: block;
+  font-weight: 400;
+}
+
+.statement tr.is-recommended th {
+  color: var(--ink);
+}
+
+.statement tr.is-recommended .chip {
+  margin-left: 6px;
+}
+
+.work-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.work-facts dt {
+  color: var(--ink-2);
+}
+
+.work-facts dd {
+  margin: 0;
+}
+
+.work-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.work-post {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--card-pad-compact);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.work-post p {
+  margin: 0;
+}
+
+.work-post-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.work-post-caption {
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+@media (max-width: 860px) {
+  .demo-band {
+    padding: 8px 16px;
+  }
+}
+
+/* 처음 상태로 sits above the account button, both full width */
+.sidebar-bottom:has(.demo-reset) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* locked fields read as locked, not just unclickable */
+.demo-lock-body :is(input, textarea):disabled {
+  opacity: 0.6;
+  color: var(--ink-2);
+}
