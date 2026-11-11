@@ -19,7 +19,9 @@ and shown by the web through `/api/me`:
 
 from __future__ import annotations
 
+import hmac
 import re
+import unicodedata
 
 from solosquad.layout import DemoSettings, Solution
 
@@ -60,6 +62,40 @@ def check_id(demo_id: str) -> str:
     return demo_id
 
 
+_KR_NO = re.compile(r"^(?:[0-9]{10}|[0-9]{13})$")
+_OTHER_NO = re.compile(r"^[A-Z0-9-]{4,30}$")
+
+
+def normalize_company_no(raw: str) -> str:
+    """The company's registration number as stored (2026-11-12 — the demo login asks for it).
+
+    A Korean 사업자등록번호 (`NNN-NN-NNNNN`) or 법인등록번호 (`NNNNNN-NNNNNNN`) → its 10 or 13
+    digits; any other country's number → 4 to 30 letters, digits and dashes, upper-cased. The
+    marketing Worker (`marketing/src/validate.ts`) applies the same rule to the request."""
+    text = unicodedata.normalize("NFKC", raw or "").strip()
+    digits = re.sub(r"[\s-]", "", text)
+    if _KR_NO.fullmatch(digits):
+        return digits
+    other = text.upper()
+    if _OTHER_NO.fullmatch(other):
+        return other
+    raise ValueError(
+        f"company number {raw!r} must be a 사업자등록번호 (10 digits), a 법인등록번호"
+        " (13 digits) or another country's number (4–30 letters, digits and dashes)"
+    )
+
+
+def company_no_matches(stored: str, typed: str) -> bool:
+    """The number typed at the demo login is the account's — dashes and case do not count."""
+    if not stored:
+        return False
+    try:
+        given = normalize_company_no(typed)
+    except ValueError:
+        return False
+    return hmac.compare_digest(given.replace("-", ""), stored.replace("-", ""))
+
+
 def org_for(demo_id: str) -> str:
     """The visitor's copy — and their login name: the id in lower case (`samsungdemo`).
     A login is case-insensitive (`samsungDemo` · `samsungdemo` are the same account)."""
@@ -71,8 +107,10 @@ __all__ = [
     "ORG_WORKSPACE",
     "DemoConfig",
     "check_id",
+    "company_no_matches",
     "is_demo",
     "load_config",
+    "normalize_company_no",
     "org_for",
     "save_config",
 ]

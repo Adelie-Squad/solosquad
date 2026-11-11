@@ -147,21 +147,40 @@ describe('the shell in a demo', () => {
 });
 
 describe('the demo login', () => {
-  it('?demo=1 is the demo login: a demo ID, no code, posts with demo=1', async () => {
-    const api = stubEngine({ '/health': { ok: true, passkeys: true }, 'POST /auth/login': () => ({ ...demoMe }) });
+  const demoHealth = { ok: true, passkeys: true, demo: true, demo_login_url: 'https://solosquad.example/demo' };
+
+  it('?demo=1 has no password form: it sends the visitor to the marketing demo login', async () => {
+    const api = stubEngine({ '/health': demoHealth });
     renderWith(<Login />, 'ko', { path: '/login?demo=1', me: me() });
-    expect(screen.getByText(t('demo.loginTitle'))).toBeTruthy();
-    expect(screen.queryByLabelText(t('auth.code'))).toBeNull();
-    fireEvent.change(screen.getByLabelText(t('demo.id')), { target: { value: 'samsungDemo' } });
-    fireEvent.change(screen.getByLabelText(t('auth.password')), { target: { value: 'x'.repeat(16) } });
-    fireEvent.click(screen.getByRole('button', { name: t('auth.login') }));
-    await waitFor(() => expect(api.calls.some((c) => c.url.includes('/api/auth/login?demo=1'))).toBe(true));
+    const go = await screen.findByRole('link', { name: t('demo.loginGo') });
+    expect(go.getAttribute('href')).toBe('https://solosquad.example/demo');
+    expect(screen.getByText(t('demo.loginElsewhere'))).toBeTruthy();
+    expect(screen.queryByLabelText(t('auth.password'))).toBeNull();
+    expect(screen.queryByRole('button', { name: t('auth.login') })).toBeNull();
+    expect(screen.queryByTestId('passkey-login')).toBeNull();
+    expect(api.calls.some((c) => c.url.includes('/api/auth/login'))).toBe(false);
   });
 
-  it('a failed form login comes back with one sentence', () => {
-    stubEngine({ '/health': { ok: true, passkeys: false } });
-    renderWith(<Login />, 'en', { path: '/login?demo=1&error=1', me: me() });
-    expect(screen.getByRole('alert').textContent).toBe(t('demo.loginWrong', undefined, 'en'));
+  it('a demo server’s plain /login is the same way there (where a visitor lands after logging out)', async () => {
+    stubEngine({ '/health': demoHealth });
+    renderWith(<Login />, 'en', { path: '/login', me: me() });
+    expect((await screen.findByRole('link', { name: t('demo.loginGo', undefined, 'en') })).getAttribute('href')).toBe('https://solosquad.example/demo');
+    expect(screen.queryByLabelText(t('auth.password', undefined, 'en'))).toBeNull();
+  });
+
+  it('without a marketing address: one neutral line, no link and no form', async () => {
+    stubEngine({ '/health': { ...demoHealth, demo_login_url: null } });
+    renderWith(<Login />, 'ko', { path: '/login?demo=1&error=1', me: me() });
+    expect(await screen.findByText(t('demo.loginNoSite'))).toBeTruthy();
+    expect(screen.queryByRole('link', { name: t('demo.loginGo') })).toBeNull();
+    expect(screen.queryByLabelText(t('auth.password'))).toBeNull();
+  });
+
+  it('a customer server keeps the account login', async () => {
+    stubEngine({ '/health': { ok: true, passkeys: false, demo: false, demo_login_url: null } });
+    renderWith(<Login />, 'ko', { path: '/login', me: me() });
+    expect(await screen.findByLabelText(t('auth.password'))).toBeTruthy();
+    expect(screen.queryByTestId('demo-login-elsewhere')).toBeNull();
   });
 });
 

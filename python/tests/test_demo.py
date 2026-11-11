@@ -22,12 +22,21 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 import httpx
 import pytest
 from web_fixtures import plain_client
 
-from solosquad.demo import ORG_WORKSPACE, DemoConfig, check_id, is_demo, load_config
+from solosquad.demo import (
+    ORG_WORKSPACE,
+    DemoConfig,
+    check_id,
+    company_no_matches,
+    is_demo,
+    load_config,
+    normalize_company_no,
+)
 from solosquad.demo.harness import FALLBACK, NAME, SUGGESTIONS, DemoHarness, match_intent, script
 from solosquad.demo.scenario import SCENARIOS, Pace, ensure_running
 from solosquad.demo.seed import (
@@ -55,6 +64,8 @@ from solosquad.web_api.app import CSRF_HEADER, DEMO_READ_ONLY, AppConfig, create
 
 MARKETING = "https://solosquad.example"
 FAST = DemoConfig(step_seconds=0, chat_seconds=0, marketing_url=MARKETING)
+COMPANY_NO = {"samsungDemo": "123-45-67890", "lgDemo": "110111-1234567"}
+"""Each inquiry's registration number (fictional) — a 사업자등록번호 and a 법인등록번호."""
 
 
 @pytest.fixture(autouse=True)
@@ -79,8 +90,9 @@ async def issue(
 ) -> tuple[Any, str]:
     accounts, store = open_stores(sol)
     acct, password = create_account(
-        sol, store, accounts, demo_id, f"INQ-{demo_id}", expires or time.time() + 86400
-    )
+        sol, store, accounts, demo_id, f"INQ-{demo_id}", expires or time.time() + 86400,
+        company_no=COMPANY_NO.get(demo_id, "1234567890"),
+    )  # fmt: skip
     await seed_account(sol, solosquad_home(), acct, accounts, build=build)
     store.mark_seeded(acct.demo_id, acct.generation)
     found = store.get(demo_id)
@@ -132,9 +144,60 @@ async def test_an_id_is_issued_once_whatever_the_case(tmp_path: Path) -> None:
     await issue(sol, "samsungDemo", build)
     accounts, store = open_stores(sol)
     with pytest.raises(ValueError, match="already issued"):
-        create_account(sol, store, accounts, "SamsungDemo", "INQ-2", time.time() + 99)
+        create_account(sol, store, accounts, "SamsungDemo", "INQ-2", time.time() + 99,
+                       company_no="1234567890")  # fmt: skip
     with pytest.raises(ValueError, match="inquiry"):
-        create_account(sol, store, accounts, "otherDemo", " ", time.time() + 99)
+        create_account(sol, store, accounts, "otherDemo", " ", time.time() + 99,
+                       company_no="1234567890")  # fmt: skip
+    with pytest.raises(ValueError, match="company number"):
+        create_account(sol, store, accounts, "otherDemo", "INQ-3", time.time() + 99,
+                       company_no="12")  # fmt: skip
+    assert not store.taken("otherDemo") and not any(
+        u.username == "otherdemo" for u in accounts.users()
+    )  # a refused number makes no login
+
+
+@pytest.mark.parametrize(
+    ("raw", "stored"),
+    [("123-45-67890", "1234567890"), (" 123 45 67890 ", "1234567890"),
+     ("110111-1234567", "1101111234567"), ("\uff11\uff12\uff13\uff14\uff15\uff16\uff17\uff18\uff19\uff10", "1234567890"),
+     ("91310000-MA1FL", "91310000-MA1FL"), ("hrb-12345", "HRB-12345"),
+     ("ab12", "AB12")],
+)  # fmt: skip
+def test_company_numbers_that_are_accepted(raw: str, stored: str) -> None:
+    assert normalize_company_no(raw) == stored
+
+
+@pytest.mark.parametrize("bad", ["", "   ", "abc", "x" * 31, "123_45_67890", "삼성전자", "12 34"])
+def test_company_numbers_that_are_refused(bad: str) -> None:
+    with pytest.raises(ValueError):
+        normalize_company_no(bad)
+
+
+def test_the_number_at_login_ignores_dashes_spaces_and_case() -> None:
+    assert company_no_matches("1234567890", "123-45-67890")
+    assert company_no_matches("1101111234567", "110111 1234567")
+    assert company_no_matches("HRB-12345", "hrb12345")
+    assert not company_no_matches("1234567890", "1234567891")
+    assert not company_no_matches("1234567890", "")
+    assert not company_no_matches("", "")  # an account issued without one never matches
+
+
+def test_a_store_from_before_the_company_number_gains_the_column(tmp_path: Path) -> None:
+    from solosquad.demo.store import COMPONENT, MIGRATIONS
+    from solosquad.storage import connect, migrate
+
+    path = tmp_path / "core.db"
+    db = connect(path)
+    migrate(db, COMPONENT, MIGRATIONS[:1], path=path)
+    db.execute(
+        "INSERT INTO demo_accounts (demo_id, key, user_id, org, inquiry_id, created, expires)"
+        " VALUES ('oldDemo', 'olddemo', 'u1', 'olddemo', 'INQ-0', 1, 9e12)"
+    )
+    db.commit()
+    db.close()
+    acct = DemoStore(path).get("oldDemo")
+    assert acct is not None and acct.company_no == ""  # the demo login refuses it
 
 
 def test_expiry_forms() -> None:
@@ -209,12 +272,18 @@ class Demo:
         return plain_client(self.app, ip)
 
     async def login(self, c: httpx.AsyncClient, demo_id: str, password: str) -> dict[str, str]:
+        """The one way in for a demo account: the marketing demo login's form post."""
+        form = {"company_no": {k.lower(): v for k, v in COMPANY_NO.items()}.get(demo_id.lower(), "1234567890"),
+                "username": demo_id,
+                "password": password}  # fmt: skip
         r = await c.post(
-            "/api/auth/login?demo=1", json={"username": demo_id, "password": password},
-            headers={"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile"},
+            "/api/auth/demo-login", content=urlencode(form),
+            headers={"content-type": "application/x-www-form-urlencoded", "origin": MARKETING,
+                     "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Mobile"},
         )  # fmt: skip
-        assert r.status_code == 200, r.text
-        return {CSRF_HEADER: r.json()["csrf"]}
+        assert r.status_code == 303 and r.headers["location"] == "/dashboard", r.headers
+        me = (await c.get("/api/me")).json()
+        return {CSRF_HEADER: me["csrf"]}
 
 
 @pytest.fixture
@@ -545,41 +614,98 @@ async def test_expired_and_non_demo_logins(demo: tuple[Demo, dict[str, str]]) ->
         for path in ("/api/auth/login?demo=1", "/api/auth/login"):
             r = await c.post(path, json={"username": "operator", "password": "0123456789ab"})
             assert r.status_code == 401 and r.json()["code"] == "login_failed", path
-        r = await c.post("/api/auth/login?demo=1",
-                         json={"username": "lgDemo", "password": "wrong-password"})  # fmt: skip
-        assert r.status_code == 401 and r.json()["code"] == "login_failed"
-        r = await c.post("/api/auth/login?demo=1",
-                         json={"username": "LGDEMO", "password": pw["lgDemo"]})  # fmt: skip
-        assert r.status_code == 200  # the id is case-insensitive
+        await d.login(c, "LGDEMO", pw["lgDemo"])  # the id is case-insensitive
+        assert (await c.get("/api/me")).status_code == 200
         d.store.extend("lgDemo", time.time() - 1)
         r = await c.get("/api/me")
         assert r.status_code == 401 and r.json()["code"] == "demo_expired"
-        r = await c.post("/api/auth/login?demo=1",
-                         json={"username": "lgDemo", "password": pw["lgDemo"]})  # fmt: skip
-        assert r.status_code == 401 and r.json()["code"] == "demo_expired"
+        again = f"company_no=110111-1234567&username=lgDemo&password={pw['lgDemo']}"
+        r = await c.post("/api/auth/demo-login", content=again,
+                         headers={"content-type": "application/x-www-form-urlencoded",
+                                  "origin": MARKETING})  # fmt: skip
+        assert r.headers["location"] == f"{MARKETING}/demo?error=1"
     acct = d.store.get("lgDemo")
     assert acct is not None and d.store.summary(acct)["refused"] == 1
+
+
+async def test_a_demo_account_never_signs_in_through_the_json_login(
+    demo: tuple[Demo, dict[str, str]],
+) -> None:
+    """Only the marketing demo login (number + id + password) lets a demo account in; the
+    JSON login answers a right password exactly like a wrong one (2026-11-12)."""
+    d, pw = demo
+    async with d.client() as c:
+        answers = []
+        for path in ("/api/auth/login?demo=1", "/api/auth/login"):
+            for password in (pw["samsungDemo"], "wrong-password"):
+                body = {"username": "samsungDemo", "password": password,
+                        "company_no": "123-45-67890"}  # fmt: skip
+                r = await c.post(path, json=body)
+                answers.append((r.status_code, r.json()["code"]))
+                assert (await c.get("/api/me")).status_code == 401
+        assert set(answers) == {(401, "login_failed")}
+        fails = d.engine.accounts._q(
+            "SELECT COUNT(*) FROM login_failures WHERE key = 'user:samsungdemo'"
+        )[0][0]
+        assert fails == 4  # each counts — a right password does not wipe the count
+    acct = d.store.get("samsungDemo")
+    assert acct is not None and d.store.summary(acct)["logins"] == 0
+
+
+async def test_health_tells_the_login_screen_where_the_demo_login_is(
+    demo: tuple[Demo, dict[str, str]], tmp_path: Path
+) -> None:
+    d, _ = demo
+    async with d.client() as c:
+        r = (await c.get("/api/health")).json()
+    assert r["demo"] is True and r["demo_login_url"] == f"{MARKETING}/demo"
+    from engine_fixtures import Customer
+
+    cust = Customer(tmp_path / "customer")
+    async with plain_client(create_app(AppConfig.for_engine(cust.engine, "tok"))) as c:
+        r = (await c.get("/api/health")).json()
+    assert r["demo"] is False and r["demo_login_url"] is None
 
 
 async def test_the_marketing_form_post_signs_in(demo: tuple[Demo, dict[str, str]]) -> None:
     d, pw = demo
     form = {"content-type": "application/x-www-form-urlencoded", "origin": MARKETING}
-    good = f"username=samsungDemo&password={pw['samsungDemo']}"
+    login = f"username=samsungDemo&password={pw['samsungDemo']}"
+    good = f"company_no=123-45-67890&{login}"
+    failed = f"{MARKETING}/demo?error=1"
     async with d.client() as c:
         r = await c.post("/api/auth/demo-login", content=good,
                          headers={**form, "origin": "https://evil.example"})  # fmt: skip
-        assert r.status_code == 303 and r.headers["location"] == f"{MARKETING}/demo?error=1"
+        assert r.status_code == 303 and r.headers["location"] == failed
         assert (await c.get("/api/me")).status_code == 401
-        r = await c.post("/api/auth/demo-login", content="username=samsungDemo&password=x",
+        r = await c.post("/api/auth/demo-login",
+                         content="company_no=1234567890&username=samsungDemo&password=x",
                          headers=form)  # fmt: skip
-        assert r.status_code == 303 and r.headers["location"] == f"{MARKETING}/demo?error=1"
+        assert r.status_code == 303 and r.headers["location"] == failed
+        # the right id and password with another company's number, or none, read the same
+        for number in ("company_no=110111-1234567&", "company_no=&", ""):
+            r = await c.post("/api/auth/demo-login", content=f"{number}{login}", headers=form)
+            assert r.status_code == 303 and r.headers["location"] == failed, number
+            assert (await c.get("/api/me")).status_code == 401, number
+        # each counts as a failed login (the password's success does not wipe the count)
+        fails = d.engine.accounts._q(
+            "SELECT COUNT(*) FROM login_failures WHERE key = 'user:samsungdemo'"
+        )[0][0]
+        assert fails == 4
         r = await c.post("/api/auth/demo-login", content=good, headers=form)
         assert r.status_code == 303 and r.headers["location"] == "/dashboard"
         assert (await c.get("/api/me")).json()["demo"] is True
+    async with d.client() as c:  # the number as typed: dashes and spaces do not count
+        r = await c.post("/api/auth/demo-login", content=f"company_no=123+45+67890&{login}",
+                         headers=form)  # fmt: skip
+        assert r.headers["location"] == "/dashboard"
+    acct = d.store.get("samsungDemo")
+    assert acct is not None and acct.company_no == "1234567890"
+    assert d.store.summary(acct)["logins"] == 2  # a refused number is not a login
     d.store.extend("samsungDemo", time.time() - 1)
     async with d.client() as c:
         r = await c.post("/api/auth/demo-login", content=good, headers=form)
-        assert r.headers["location"] == f"{MARKETING}/demo?error=1"  # the same for expired
+        assert r.headers["location"] == failed  # the same for expired
 
 
 async def test_a_customer_server_has_no_demo(tmp_path: Path) -> None:
@@ -715,28 +841,41 @@ def test_the_pace_is_configurable() -> None:
     assert Pace.tool_seconds == 0
 
 
-def test_the_cli_the_marketing_admin_calls(tmp_path: Path) -> None:
-    """`ssh demo 'solosquad demo issue --id … --inquiry … --days 14 --locale …'` · extend ·
-    revoke · usage — the shape the marketing site's admin script uses."""
+def test_the_cli_the_marketing_admin_calls(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`ssh demo 'solosquad demo issue --id … --inquiry … --company-no … --days 14 --locale …'` ·
+    list · extend · revoke · usage — the shape the marketing site's admin script uses."""
     from typer.testing import CliRunner
 
+    from solosquad import cli
     from solosquad.cli import app
 
+    monkeypatch.setattr(cli.console, "width", 200)  # the list table on one line
     sol = make_solution(tmp_path)
     run = CliRunner()
     s = ["-s", str(sol.root)]
+    r = run.invoke(app, ["demo", "issue", "--id", "samsungDemo", "--inquiry", "inq-7", *s])
+    assert r.exit_code == 1 and "--company-no" in r.output  # the number is required
     r = run.invoke(app, ["demo", "issue", "--id", "samsungDemo", "--inquiry", "inq-7",
-                         "--days", "14", "--locale", "zh-CN", *s])  # fmt: skip
+                         "--company-no", "12", *s])  # fmt: skip
+    assert r.exit_code == 1 and "company number" in r.output
+    r = run.invoke(app, ["demo", "issue", "--id", "samsungDemo", "--inquiry", "inq-7",
+                         "--company-no", "123-45-67890", "--days", "14", "--locale", "zh-CN",
+                         *s])  # fmt: skip
     assert r.exit_code == 0, r.output
     lines = dict(line.split("=", 1) for line in r.output.splitlines() if "=" in line)
     assert lines["demo_id"] == "samsungDemo" and len(lines["password"]) == 16
+    assert lines["company_no"] == "1234567890"
     accounts, store = open_stores(sol)
     acct = store.get("samsungDemo")
     assert acct is not None and acct.inquiry_id == "inq-7" and acct.locale == "zh-CN"
+    assert acct.company_no == "1234567890"
     assert 13.9 < (acct.expires - time.time()) / 86400 <= 14
     assert accounts.user(acct.user_id).locale == "zh-CN"
-    r = run.invoke(app, ["demo", "issue", "--id", "samsungdemo", "--inquiry", "x", *s])
+    r = run.invoke(app, ["demo", "issue", "--id", "samsungdemo", "--inquiry", "x",
+                         "--company-no", "1234567890", *s])  # fmt: skip
     assert r.exit_code == 1  # taken, whatever the case
+    r = run.invoke(app, ["demo", "list", *s])
+    assert r.exit_code == 0 and "1234567890" in r.output and "company no" in r.output
     r = run.invoke(app, ["demo", "extend", "--id", "samsungDemo", "--days", "30", *s])
     assert r.exit_code == 0, r.output
     got = store.get("samsungDemo")

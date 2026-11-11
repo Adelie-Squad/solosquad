@@ -6,7 +6,7 @@
 //   node scripts/inquiry.mjs show <id>
 //   node scripts/inquiry.mjs review <id> [--note …]
 //   node scripts/inquiry.mjs reject <id> --note …
-//   node scripts/inquiry.mjs issue <id> [--slug samsung] [--days 14] [--record]
+//   node scripts/inquiry.mjs issue <id> [--slug samsung] [--days 14] [--company-no …] [--record]
 //   node scripts/inquiry.mjs extend <id> --days 7
 //   node scripts/inquiry.mjs revoke <id>
 //   add --remote to work on the deployed D1 (without it: the local one `wrangler dev` uses)
@@ -14,10 +14,13 @@
 // The demo server: $DEMO_SSH (an ssh host, e.g. "demo") runs `solosquad demo issue|extend|revoke`
 // there. The account's password appears once, in this terminal, and is stored nowhere else. Without
 // $DEMO_SSH the command is printed for you to run; `issue … --record` then writes the result to D1.
+// The inquiry's company registration number goes to the demo server with the ID (the demo login
+// asks for it); `--company-no` stands in for it on a request from before the number was asked.
 // The agency handle is $SOLOSQUAD_HANDLE (else $USER). $MARKETING_URL is used in the mail draft.
 import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { execute, handle, iso, parseArgs, sql } from './lib/d1.mjs';
+import { normalizeCompanyNo } from './lib/company-no.mjs';
 import { demoIssueArgs, nextDemoId, SLUG, slugFrom } from './lib/demo-id.mjs';
 
 const { pos, opts } = parseArgs(process.argv.slice(2));
@@ -29,7 +32,7 @@ const die = (msg) => {
   console.error(msg);
   process.exit(1);
 };
-const usage = () => die('usage: inquiry.mjs list [--status …] | show <id> | review <id> [--note] | reject <id> --note | issue <id> [--slug] [--days 14] [--record] | extend <id> --days N | revoke <id>   [--remote]');
+const usage = () => die('usage: inquiry.mjs list [--status …] | show <id> | review <id> [--note] | reject <id> --note | issue <id> [--slug] [--days 14] [--company-no] [--record] | extend <id> --days N | revoke <id>   [--remote]');
 
 const DAY = 86_400_000;
 const days = (v, fallback) => {
@@ -65,9 +68,9 @@ async function ask(question, fallback) {
 }
 
 const MAIL = {
-  ko: (d) => `제목: SoloSquad 데모 계정을 보내 드려요\n\n${d.name}님, 신청해 주셔서 고마워요.\n\n데모 로그인: ${d.url}\n아이디: ${d.demoId}\n비밀번호: (데모 서버가 위에 한 번 보인 비밀번호)\n사용 기간: ${d.until}까지\n\n데모는 예시 데이터로 움직여요. 궁금한 점은 이 메일에 답장해 주세요.`,
-  en: (d) => `Subject: Your SoloSquad demo account\n\nHi ${d.name}, thank you for your request.\n\nDemo login: ${d.url}\nID: ${d.demoId}\nPassword: (the one the demo server showed above, once)\nAvailable until: ${d.until}\n\nThe demo runs on sample data. Reply to this email with any questions.`,
-  'zh-CN': (d) => `主题：您的 SoloSquad 演示账号\n\n${d.name}，您好，感谢您的申请。\n\n演示登录：${d.url}\n账号：${d.demoId}\n密码：（演示服务器在上方显示过一次的密码）\n使用期限：至 ${d.until}\n\n演示使用示例数据运行。如有问题，请直接回复此邮件。`,
+  ko: (d) => `제목: SoloSquad 데모 계정을 보내 드려요\n\n${d.name}님, 신청해 주셔서 고마워요.\n\n데모 로그인: ${d.url}\n법인(사업자)등록번호: ${d.companyNo}\n아이디: ${d.demoId}\n비밀번호: (데모 서버가 위에 한 번 보인 비밀번호)\n사용 기간: ${d.until}까지\n\n데모는 예시 데이터로 움직여요. 궁금한 점은 이 메일에 답장해 주세요.`,
+  en: (d) => `Subject: Your SoloSquad demo account\n\nHi ${d.name}, thank you for your request.\n\nDemo login: ${d.url}\nCompany registration number: ${d.companyNo}\nID: ${d.demoId}\nPassword: (the one the demo server showed above, once)\nAvailable until: ${d.until}\n\nThe demo runs on sample data. Reply to this email with any questions.`,
+  'zh-CN': (d) => `主题：您的 SoloSquad 演示账号\n\n${d.name}，您好，感谢您的申请。\n\n演示登录：${d.url}\n企业注册号：${d.companyNo}\n账号：${d.demoId}\n密码：（演示服务器在上方显示过一次的密码）\n使用期限：至 ${d.until}\n\n演示使用示例数据运行。如有问题，请直接回复此邮件。`,
 };
 
 async function issue(row) {
@@ -81,6 +84,8 @@ async function issue(row) {
     slug = String((await ask(`slug for "${row.company}" / "${row.contact_name}"`, suggestion ?? '')) ?? '').toLowerCase();
   }
   if (!SLUG.test(slug)) die('a slug is a-z then a-z 0-9, 3–16 characters (--slug)');
+  const companyNo = typeof opts['company-no'] === 'string' ? normalizeCompanyNo(opts['company-no']) : row.company_no;
+  if (!companyNo) die(typeof opts['company-no'] === 'string' ? '--company-no: a 사업자등록번호 (10 digits), 법인등록번호 (13) or another country’s number (4–30 letters, digits, dashes)' : `inquiry ${row.id} has no company registration number — ask for it and pass --company-no`);
 
   const [taken] = run([sql`SELECT demo_id FROM inquiries WHERE demo_id IS NOT NULL AND lower(demo_id) LIKE ${`${slug}demo%`}`]);
   const demoId = nextDemoId(
@@ -90,13 +95,14 @@ async function issue(row) {
   const now = Date.now();
   const expires = iso(now + length * DAY);
 
-  const demo = onDemoServer(demoIssueArgs({ demoId, inquiryId: row.id, days: length, locale: row.locale }));
+  const demo = onDemoServer(demoIssueArgs({ demoId, inquiryId: row.id, companyNo, days: length, locale: row.locale }));
   if (!demo.ran && opts.record !== true) {
-    console.log(`demo ID: ${demoId}  (inquiry ${row.id}, ${length} days)\n\nrun on the demo server:\n  ${demo.command}\n\nthen record it:\n  node scripts/inquiry.mjs issue ${row.id} --slug ${slug} --days ${length} --record${remote ? ' --remote' : ''}`);
+    const again = companyNo === row.company_no ? '' : ` --company-no ${companyNo}`;
+    console.log(`demo ID: ${demoId}  (inquiry ${row.id}, company no ${companyNo}, ${length} days)\n\nrun on the demo server:\n  ${demo.command}\n\nthen record it:\n  node scripts/inquiry.mjs issue ${row.id} --slug ${slug} --days ${length}${again} --record${remote ? ' --remote' : ''}`);
     return;
   }
   run([
-    sql`UPDATE inquiries SET status = 'issued', demo_id = ${demoId}, demo_issued_at = ${iso(now)}, demo_expires_at = ${expires},
+    sql`UPDATE inquiries SET status = 'issued', demo_id = ${demoId}, demo_issued_at = ${iso(now)}, demo_expires_at = ${expires}, company_no = ${companyNo},
           reviewed_at = coalesce(reviewed_at, ${iso(now)}), reviewed_by = coalesce(reviewed_by, ${handle()}), updated_at = ${iso(now)}
         WHERE id = ${row.id} AND demo_id IS NULL AND status != 'rejected'`,
     log(row.id, 'issued', { demo_id: demoId, days: length }),
@@ -104,7 +110,7 @@ async function issue(row) {
   const locale = MAIL[row.locale] ? row.locale : 'ko';
   const url = `${(process.env.MARKETING_URL ?? 'https://solosquad.example.com').replace(/\/+$/, '')}/demo?u=${encodeURIComponent(demoId)}`;
   console.log(`issued ${demoId} for inquiry ${row.id}, until ${expires}\n\n--- mail draft (${locale}) to ${row.email} — send it from the agency mailbox ---\n`);
-  console.log(MAIL[locale]({ name: row.contact_name, demoId, url, until: expires.slice(0, 10) }));
+  console.log(MAIL[locale]({ name: row.contact_name, companyNo, demoId, url, until: expires.slice(0, 10) }));
 }
 
 async function main() {
@@ -112,11 +118,11 @@ async function main() {
     const status = typeof opts.status === 'string' ? opts.status : null;
     const [rows] = run([
       status
-        ? sql`SELECT id, created_at, status, company, business_type, country, requests, source, demo_id, demo_expires_at FROM inquiries WHERE status = ${status} ORDER BY created_at DESC LIMIT 200`
-        : sql`SELECT id, created_at, status, company, business_type, country, requests, source, demo_id, demo_expires_at FROM inquiries ORDER BY created_at DESC LIMIT 200`,
+        ? sql`SELECT id, created_at, status, company, company_no, business_type, country, requests, source, demo_id, demo_expires_at FROM inquiries WHERE status = ${status} ORDER BY created_at DESC LIMIT 200`
+        : sql`SELECT id, created_at, status, company, company_no, business_type, country, requests, source, demo_id, demo_expires_at FROM inquiries ORDER BY created_at DESC LIMIT 200`,
     ]);
     for (const q of rows) {
-      console.log([q.id, q.created_at.slice(0, 16), q.status.padEnd(8), (q.demo_id ?? '-').padEnd(18), q.country.padEnd(5), q.requests.padEnd(18), q.source.padEnd(13), q.company].join('  '));
+      console.log([q.id, q.created_at.slice(0, 16), q.status.padEnd(8), (q.demo_id ?? '-').padEnd(18), (q.company_no ?? '-').padEnd(14), q.country.padEnd(5), q.requests.padEnd(18), q.source.padEnd(13), q.company].join('  '));
     }
     if (!rows.length) console.log('(none)');
     return;

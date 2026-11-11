@@ -856,7 +856,13 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def health(request: Request) -> Response:
         policy_check(request)
-        return respond(S.Health, {"ok": True, "passkeys": passkeys_available()})
+        out: dict[str, Any] = {"ok": True, "passkeys": passkeys_available()}
+        if cfg.demo is not None:
+            settings = server_cfg().demo
+            marketing = (settings.marketing_url or "").rstrip("/") if settings else ""
+            out["demo"] = True
+            out["demo_login_url"] = f"{marketing}/demo" if marketing else None
+        return respond(S.Health, out)
 
     async def version(request: Request) -> Response:
         principal(request)
@@ -868,10 +874,16 @@ def create_app(cfg: AppConfig) -> Starlette:
             secure=cfg.secure_cookies, samesite="lax", path="/",
         )  # fmt: skip
 
-    async def sign_in(request: Request, data: dict[str, Any]) -> tuple[str, Session]:
-        """Password (+ code) → a session. `?demo=1` (the demo login page, decision 62) takes
-        demo accounts only; an expired one is refused with `demo_expired` once the password
-        is right, so the code never tells an outsider which ids exist."""
+    async def sign_in(
+        request: Request, data: dict[str, Any], *, company_no: str | None = None
+    ) -> tuple[str, Session]:
+        """Password (+ code) → a session. A demo server signs in demo accounts only, and only
+        through the marketing demo login (`POST /api/auth/demo-login`, 2026-11-12): there
+        `company_no` must be the account's registration number. Anywhere else (the JSON
+        login, `?demo=1` or not) a demo account is refused like a wrong password —
+        `login_failed`, counted as a failure, after the same password check — so nothing
+        tells which field, or which way in, was wrong. An expired account on the form path
+        is refused with `demo_expired` once everything else is right."""
         w = policy_check(request)
         username = str(data.get("username") or "")
         demo_login = request.query_params.get("demo") == "1"
@@ -880,6 +892,11 @@ def create_app(cfg: AppConfig) -> Starlette:
         if (demo_login or cfg.demo is not None) and acct is None:
             accounts().record_failure(f"user:{username.strip().lower()}", f"ip:{w.address}")
             raise ApiError(401, E.LOGIN_FAILED, "wrong username or password")
+        number_ok = True
+        if acct is not None:
+            from solosquad.demo import company_no_matches
+
+            number_ok = company_no is not None and company_no_matches(acct.company_no, company_no)
         try:
             token, session = accounts().login(
                 username,
@@ -888,6 +905,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 require_second_factor=server_cfg().access.two_factor and acct is None,
                 ip=w.address,
                 ua=request.headers.get("user-agent", ""),
+                also=number_ok,
             )
         except AuthError as e:
             raise ApiError(401, e.code, str(e)) from e
@@ -938,10 +956,12 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def demo_login(request: Request) -> Response:
         """`POST /api/auth/demo-login` — the marketing site's demo login (PRD §3.6.4): a plain
-        form, ID + password, a top-level navigation, so the password never passes the
+        form, company registration number + ID + password (`company_no` · `username` ·
+        `password`, 2026-11-12), a top-level navigation, so the password never passes the
         marketing Worker and the session cookie is this server's own. Only on a demo server,
         only from the marketing site's `Origin` (login CSRF). → `/dashboard`, or back to the
-        marketing `/demo?error=1` — the same for a wrong, unknown or expired account."""
+        marketing `/demo?error=1` — the same for a wrong number, a wrong, unknown or expired
+        account."""
         policy_check(request)
         if cfg.demo is None:
             raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
@@ -956,7 +976,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         raw = (await request.body()).decode("utf-8", "replace")
         form = {k: v[0] for k, v in parse_qs(raw).items() if v}
         try:
-            token, _session = await sign_in(request, form)
+            token, _session = await sign_in(request, form, company_no=form.get("company_no", ""))
         except ApiError:
             # wrong · unknown · expired read the same here (the marketing contract): the
             # page shows one sentence; `demo_expired` stays on the JSON login for the app
@@ -1206,6 +1226,10 @@ def create_app(cfg: AppConfig) -> Starlette:
             store.record_failure(f"ip:{w.address}")
             raise unknown from e
         if store.user(uid).disabled:
+            raise unknown
+        if cfg.demo is not None and cfg.demo.by_user(uid) is not None:
+            # a demo account comes in through the marketing demo login only (2026-11-12)
+            store.record_failure(f"ip:{w.address}")
             raise unknown
         store.touch_passkey(str(cred["id"]), verified.new_sign_count)
         token, session = store.open_session(

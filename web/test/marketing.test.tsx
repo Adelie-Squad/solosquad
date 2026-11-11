@@ -1,7 +1,8 @@
 // The marketing site's pages (decision 62, PRD §3.6): the login router (a plain form: company code
 // + ID → POST /api/login/route, no password, the code remembered), its neutral /login/help, the
-// demo login (one ID + password form posting straight to the demo server, ?u= prefill) and the
-// request modal it opens (requests, source, the demo-usage consent, validation, submission,
+// demo login (one company registration number + ID + password form posting straight to the demo
+// server, ?u= prefill) and the request modal it opens (requests, source, the company registration
+// number, the demo-usage consent, validation, submission,
 // success and error states), the privacy placeholder, and the marketing build's entry.
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
@@ -9,6 +10,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider, type Locale } from '../src/i18n';
+import { normalizeCompanyNo } from '../src/marketing/Inquiry';
 import { MarketingApp } from '../src/marketing/MarketingApp';
 import { resetSiteConfig } from '../src/marketing/siteApi';
 
@@ -105,12 +107,18 @@ describe('the login router (/login)', () => {
 });
 
 describe('the demo login (/demo)', () => {
-  it('one ID + password form that posts straight to the demo server — the site never sees the password', async () => {
+  it('one form — company registration number + ID + password — that posts straight to the demo server; the site never sees the password', async () => {
     const calls = stubSite();
     site('/demo');
     const form = screen.getByTestId('demo-form') as HTMLFormElement;
     await waitFor(() => expect(form.getAttribute('action')).toBe('https://demo.example/api/auth/demo-login'));
     expect(form.method).toBe('post');
+    const number = within(form).getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement;
+    expect(number.name).toBe('company_no');
+    expect(number.required).toBe(true);
+    expect(within(form).getByText('데모를 신청할 때 적은 번호예요.')).toBeTruthy();
+    expect([...form.querySelectorAll('input')].map((i) => i.name)).toEqual(['company_no', 'username', 'password']);
+    expect(within(form).queryByLabelText(/법인명|회사 이름/)).toBeNull();
     expect(within(form).getByLabelText('아이디')).toHaveProperty('name', 'username');
     expect(within(form).getByLabelText('비밀번호')).toHaveProperty('name', 'password');
     expect((within(form).getByLabelText('아이디') as HTMLInputElement).placeholder).toBe('samsungDemo');
@@ -119,10 +127,20 @@ describe('the demo login (/demo)', () => {
     expect(calls.map((c) => c.url)).toEqual(['/api/config']);
   });
 
-  it('?u= fills the demo ID (the router sends the code demo here)', () => {
+  it('?u= fills the demo ID (the router sends the code demo here); the number is still asked for', () => {
     stubSite();
     site('/demo?u=samsungDemo');
     expect((screen.getByLabelText('아이디') as HTMLInputElement).value).toBe('samsungDemo');
+    expect((screen.getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement).value).toBe('');
+  });
+
+  it('the three fields in English and Chinese', () => {
+    stubSite();
+    site('/demo', 'en');
+    expect(screen.getByLabelText(/^Company registration number/)).toHaveProperty('name', 'company_no');
+    cleanup();
+    site('/demo', 'zh-CN');
+    expect(screen.getByLabelText(/^企业注册号/)).toHaveProperty('name', 'company_no');
   });
 });
 
@@ -134,6 +152,7 @@ describe('the request modal', () => {
   };
   const fill = (dialog: HTMLElement) => {
     fireEvent.change(within(dialog).getByLabelText(/^회사 이름/), { target: { value: '에이스상사' } });
+    fireEvent.change(within(dialog).getByLabelText(/^법인\(사업자\)등록번호/), { target: { value: '123-45-67890' } });
     fireEvent.change(within(dialog).getByLabelText(/^업종/), { target: { value: 'retail' } });
     fireEvent.change(within(dialog).getByLabelText(/^담당자 이름/), { target: { value: '김민지' } });
     fireEvent.change(within(dialog).getByLabelText(/^이메일/), { target: { value: 'minji@example.com' } });
@@ -152,7 +171,7 @@ describe('the request modal', () => {
     const dialog = await open();
     expect((within(dialog).getByLabelText('데모 계정') as HTMLInputElement).checked).toBe(true);
     expect((within(dialog).getByLabelText('상담') as HTMLInputElement).checked).toBe(false);
-    for (const label of [/^회사 이름/, /^업종/, /^나라/, /^담당자 이름/, /^이메일/, '연락 방법', '재무 관리', '상품 소싱', 'SNS 마케팅', '새 소식 받기(선택)']) expect(within(dialog).getByLabelText(label)).toBeTruthy();
+    for (const label of [/^회사 이름/, /^법인\(사업자\)등록번호/, /^업종/, /^나라/, /^담당자 이름/, /^이메일/, '연락 방법', '재무 관리', '상품 소싱', 'SNS 마케팅', '새 소식 받기(선택)']) expect(within(dialog).getByLabelText(label)).toBeTruthy();
     expect((within(dialog).getByLabelText(/^나라/) as HTMLSelectElement).value).toBe('kr');
     expect((within(dialog).getByLabelText('연락 방법') as HTMLSelectElement).value).toBe('kakao');
     expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/privacy');
@@ -179,7 +198,33 @@ describe('the request modal', () => {
     expect(within(dialog).getByText('하나 이상 골라 주세요.')).toBeTruthy();
     expect(within(dialog).getAllByText('동의해야 신청할 수 있어요.')).toHaveLength(2);
     expect(within(dialog).getByLabelText(/^회사 이름/).getAttribute('aria-invalid')).toBe('true');
+    expect(within(dialog).getByLabelText(/^법인\(사업자\)등록번호/).getAttribute('aria-invalid')).toBe('true');
     expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
+  });
+
+  it('the company registration number: one representative number, a Korean one checked by its digits', async () => {
+    const calls = stubSite();
+    const dialog = await open();
+    expect(within(dialog).getByText('대표 번호 하나면 돼요. 데모 로그인할 때 이 번호를 다시 적어요.')).toBeTruthy();
+    fill(dialog);
+    const number = within(dialog).getByLabelText(/^법인\(사업자\)등록번호/);
+    fireEvent.change(number, { target: { value: '123-45-6789' } });
+    await send(dialog);
+    expect(within(dialog).getByText('번호를 확인해 주세요. 한국 회사는 사업자등록번호(10자리)나 법인등록번호(13자리)를 적어요.')).toBeTruthy();
+    expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
+    fireEvent.change(number, { target: { value: '110111-1234567' } });
+    await send(dialog);
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body!.company_no).toBe('110111-1234567');
+  });
+
+  it.each([
+    ['123-45-67890', 'kr', '1234567890'],
+    ['110111 1234567', 'kr', '1101111234567'],
+    ['HRB-12345', 'kr', null],
+    ['hrb-12345', 'other', 'HRB-12345'],
+    ['ab', 'cn', null],
+  ])('normalizeCompanyNo(%s, %s) → %s (the Worker’s rule)', (raw, country, out) => {
+    expect(normalizeCompanyNo(raw, country)).toBe(out);
   });
 
   it('submits to /api/inquiry with source, requests and the form token, then the success state', async () => {
@@ -193,6 +238,7 @@ describe('the request modal', () => {
     const sent = calls.find((c) => c.url === '/api/inquiry')!.body!;
     expect(sent).toMatchObject({
       company: '에이스상사',
+      company_no: '123-45-67890',
       business_type: 'retail',
       country: 'kr',
       contact_name: '김민지',

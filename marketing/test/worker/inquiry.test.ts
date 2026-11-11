@@ -24,6 +24,7 @@ const opened = (msAgo = 5000) => formToken(env, Date.now() - msAgo);
 async function request(over: Record<string, unknown> = {}) {
   return {
     company: '에이스상사',
+    company_no: '123-45-67890',
     business_type: 'retail',
     country: 'kr',
     contact_name: '김민지',
@@ -51,6 +52,7 @@ describe('validation (the modal checks the same)', () => {
     const r = validateInquiry({ company: 'x'.repeat(81), business_type: 'bank', email: 'nope', wants: ['crypto'], requests: [], consent_required: false, locale: 'fr', source: 'ads' });
     expect(!r.ok && r.fields).toEqual({
       company: 'too_long',
+      company_no: 'required',
       contact_name: 'required',
       email: 'invalid',
       business_type: 'invalid',
@@ -64,10 +66,31 @@ describe('validation (the modal checks the same)', () => {
   });
 
   it('asking for a demo account needs the demo-usage consent too (DM6 ⓑ); a call alone does not', () => {
-    const base = { company: 'Acme', business_type: 'online', country: 'cn', contact_name: 'Li', email: 'LI@ACME.CN', wants: ['sourcing'], consent_required: true, locale: 'zh-CN', source: 'pricing' };
+    const base = { company: 'Acme', company_no: '91310000-ma1fl', business_type: 'online', country: 'cn', contact_name: 'Li', email: 'LI@ACME.CN', wants: ['sourcing'], consent_required: true, locale: 'zh-CN', source: 'pricing' };
     expect(validateInquiry({ ...base, requests: ['demo'] })).toEqual({ ok: false, fields: { consent_demo: 'required' } });
     const call = validateInquiry({ ...base, requests: ['consult'] });
-    expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', requests: ['consult'], consent_demo: false });
+    expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', company_no: '91310000-MA1FL', requests: ['consult'], consent_demo: false });
+  });
+
+  it('the company registration number: a Korean one (10 or 13 digits) stored as digits, another country’s 4–30 letters, digits and dashes', () => {
+    const base = { company: 'Acme', business_type: 'online', contact_name: 'Li', email: 'li@acme.cn', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing' };
+    const stored = (company_no: unknown, country: string) => {
+      const r = validateInquiry({ ...base, company_no, country });
+      return r.ok ? r.value.company_no : r.fields.company_no;
+    };
+    expect(stored('123-45-67890', 'kr')).toBe('1234567890'); // 사업자등록번호
+    expect(stored(' 123 45 67890 ', 'kr')).toBe('1234567890');
+    expect(stored('110111-1234567', 'kr')).toBe('1101111234567'); // 법인등록번호
+    expect(stored('１２３４５６７８９０', 'kr')).toBe('1234567890'); // full-width digits
+    expect(stored('123-45-6789', 'kr')).toBe('invalid'); // a Korean company gives one of the Korean two
+    expect(stored('HRB-12345', 'kr')).toBe('invalid');
+    expect(stored('hrb-12345', 'other')).toBe('HRB-12345');
+    expect(stored('123-45-67890', 'cn')).toBe('1234567890');
+    expect(stored('abc', 'other')).toBe('invalid');
+    expect(stored('x'.repeat(31), 'other')).toBe('invalid');
+    expect(stored('12_34', 'other')).toBe('invalid');
+    expect(stored('   ', 'kr')).toBe('required');
+    expect(stored(12345678, 'other')).toBe('required');
   });
 });
 
@@ -83,6 +106,7 @@ describe('POST /api/inquiry', () => {
     const row = await env.DB.prepare('SELECT * FROM inquiries WHERE email = ?1').bind(body.email).first<Record<string, unknown>>();
     expect(row).toMatchObject({
       company: '에이스상사',
+      company_no: '1234567890',
       business_type: 'retail',
       country: 'kr',
       contact_name: '김민지',

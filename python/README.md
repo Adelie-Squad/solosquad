@@ -32,7 +32,8 @@ settings read-only (`403 demo_read_only`). Set-up, issuing, reset and export:
 
 ```bash
 uv run solosquad demo init ~/demo --marketing-url https://<marketing site>
-uv run solosquad demo issue --id samsungDemo --inquiry <inquiry id> --days 14 --locale ko -s ~/demo
+uv run solosquad demo issue --id samsungDemo --inquiry <inquiry id> --company-no <number> \
+    --days 14 --locale ko -s ~/demo
 uv run solosquad serve -s ~/demo
 uv run solosquad demo usage --all --format csv -s ~/demo
 ```

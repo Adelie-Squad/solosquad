@@ -1,7 +1,9 @@
 """Demo accounts and their usage — component `demo` of the demo server's `core.db`.
 
     demo_accounts   one row per issued id: inquiry id · label · locale · expiry · revoked ·
-                    the reset generation (`generation` asked for, `seeded` done)
+                    the reset generation (`generation` asked for, `seeded` done) · the
+                    company's registration number from the inquiry (`company_no`, asked
+                    for at the demo login next to the id and password — 2026-11-12)
     demo_sessions   one row per sign-in: started · last seen · device kind · language
     demo_usage      one row per event (PRD §3.6.3 사용 기록), kept apart from the copies —
                     a nightly reset or a removed copy never touches it:
@@ -35,7 +37,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from solosquad.demo import check_id, org_for
+from solosquad.demo import check_id, normalize_company_no, org_for
 from solosquad.storage import Migration, connect, migrate
 
 COMPONENT = "demo"
@@ -72,7 +74,12 @@ CREATE TABLE IF NOT EXISTS demo_usage (
 CREATE INDEX IF NOT EXISTS demo_usage_by ON demo_usage (demo_id, ts)
 """
 
-MIGRATIONS = (Migration(1, SCHEMA),)  # decision 62 — demo accounts and usage
+COMPANY_NO = "ALTER TABLE demo_accounts ADD COLUMN company_no TEXT NOT NULL DEFAULT ''"
+
+MIGRATIONS = (
+    Migration(1, SCHEMA),  # decision 62 — demo accounts and usage
+    Migration(2, COMPANY_NO),  # 2026-11-12 — the demo login asks for the company's number
+)
 
 _IDS = re.compile(r"^(?:[a-z]+-[0-9a-f]{6,}|wf-[0-9a-f-]+|[0-9a-f]{8,})$")
 
@@ -135,6 +142,9 @@ class DemoAccount:
     generation: int
     seeded: int
     last_reset: float | None
+    company_no: str = ""
+    """Normalized (`normalize_company_no`); '' on an account issued before 2026-11-12, which
+    the demo login then refuses until it is issued again."""
 
     def status(self, now: float | None = None) -> str:
         t = time.time() if now is None else now
@@ -158,7 +168,7 @@ class DemoAccount:
 
 _COLS = (
     "demo_id, user_id, org, inquiry_id, label, locale, created, expires, revoked, generation,"
-    " seeded, last_reset"
+    " seeded, last_reset, company_no"
 )
 
 
@@ -184,16 +194,20 @@ class DemoStore:
         label: str = "",
         locale: str = "ko",
         now: float | None = None,
+        *,
+        company_no: str,
     ) -> DemoAccount:
         check_id(demo_id)
         if not inquiry_id.strip():
             raise ValueError("an inquiry id is required — the demo is issued from an inquiry")
+        number = normalize_company_no(company_no)
         try:
             self._q(
                 f"INSERT INTO demo_accounts (key, {_COLS})"
-                " VALUES (?,?,?,?,?,?,?,?,?,NULL,1,0,NULL)",
+                " VALUES (?,?,?,?,?,?,?,?,?,NULL,1,0,NULL,?)",
                 (demo_id.lower(), demo_id, user_id, org_for(demo_id), inquiry_id.strip(),
-                 label.strip()[:80], locale, time.time() if now is None else now, expires),
+                 label.strip()[:80], locale, time.time() if now is None else now, expires,
+                 number),
             )  # fmt: skip
         except sqlite3.IntegrityError as e:
             raise ValueError(f"demo id {demo_id!r} is already issued") from e

@@ -1,7 +1,8 @@
 // The demo account request (decision 62, PRD §3.5.2 ⑥ + §3.6.3): a modal on the shared Modal
 // frame, opened from the landing's last section and the demo login (and the pricing section once it
-// exists), each with its `source`. Fields = §3.5.2 ⑥ + 요청 (demo · consult) + the demo-usage
-// consent when a demo account is asked for (DM6 ⓑ); the page checks them for convenience, the
+// exists), each with its `source`. Fields = §3.5.2 ⑥ + 요청 (demo · consult) + the company's
+// registration number (one representative number — the demo login asks for it again, 2026-11-12)
+// + the demo-usage consent when a demo account is asked for (DM6 ⓑ); the page checks them for convenience, the
 // marketing Worker decides (POST /api/inquiry). Spam: a hidden honeypot field, a
 // "form opened" token for the minimum fill time, and Turnstile only when the site turns it on.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
@@ -25,6 +26,7 @@ export type Source = 'landing_hero' | 'landing_start' | 'pricing' | 'demo_login'
 
 interface Form {
   company: string;
+  company_no: string;
   business_type: string;
   country: string;
   contact_name: string;
@@ -42,6 +44,7 @@ interface Form {
 
 const blank = (locale: Locale, requests: Request[]): Form => ({
   company: '',
+  company_no: '',
   business_type: '',
   country: locale === 'zh-CN' ? 'cn' : locale === 'ko' ? 'kr' : '',
   contact_name: '',
@@ -57,7 +60,19 @@ const blank = (locale: Locale, requests: Request[]): Form => ({
   website: '',
 });
 
-/** The same rules as the site Worker (site/src/validate.ts), for the marks before sending. */
+/** The company's registration number as the Worker stores it (marketing/src/validate.ts
+ * `normalizeCompanyNo`): a Korean 사업자 · 법인등록번호 → its 10 or 13 digits (a Korean company must
+ * give one of those), another country's → 4–30 letters, digits and dashes, upper-cased; else null. */
+export function normalizeCompanyNo(raw: string, country?: string): string | null {
+  const text = raw.normalize('NFKC').trim();
+  const digits = text.replace(/[\s-]/g, '');
+  if (/^(?:\d{10}|\d{13})$/.test(digits)) return digits;
+  if (country === 'kr') return null;
+  const other = text.toUpperCase();
+  return /^[A-Z0-9-]{4,30}$/.test(other) ? other : null;
+}
+
+/** The same rules as the marketing Worker (marketing/src/validate.ts), for the marks before sending. */
 export function checkInquiry(f: Form): Record<string, FieldError> {
   const out: Record<string, FieldError> = {};
   const text = (k: keyof typeof MAX, required: boolean) => {
@@ -66,6 +81,8 @@ export function checkInquiry(f: Form): Record<string, FieldError> {
     else if (v.length > MAX[k]) out[k] = 'too_long';
   };
   text('company', true);
+  if (!f.company_no.trim()) out.company_no = 'required';
+  else if (!normalizeCompanyNo(f.company_no, f.country)) out.company_no = 'invalid';
   text('contact_name', true);
   text('email', true);
   if (f.email.trim() && !out.email && !EMAIL.test(f.email.trim())) out.email = 'invalid';
@@ -82,6 +99,7 @@ export function checkInquiry(f: Form): Record<string, FieldError> {
 
 const FIELD_MESSAGE: Record<string, Partial<Record<FieldError, MessageKey>>> = {
   email: { invalid: 'landing.contact.invalidEmail' },
+  company_no: { invalid: 'landing.contact.invalidCompanyNo' },
   wants: { required: 'landing.contact.pickOne', invalid: 'landing.contact.pickOne' },
   requests: { required: 'landing.contact.pickOne', invalid: 'landing.contact.pickOne' },
   consent_required: { required: 'landing.contact.needConsent' },
@@ -175,6 +193,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
     const reach = form.reach_value.trim();
     const res = await sendInquiry({
       company: form.company.trim(),
+      company_no: form.company_no.trim(),
       business_type: form.business_type,
       country: form.country,
       contact_name: form.contact_name.trim(),
@@ -226,6 +245,8 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
           <dl className="inquiry-summary">
             <dt>{t('landing.contact.company')}</dt>
             <dd>{done.company.trim()}</dd>
+            <dt>{t('landing.contact.companyNo')}</dt>
+            <dd>{done.company_no.trim()}</dd>
             <dt>{t('landing.apply.requests')}</dt>
             <dd>{done.requests.map((r) => t(`landing.apply.requests.${r}`)).join(' · ')}</dd>
             <dt>{t('landing.contact.wants')}</dt>
@@ -270,6 +291,22 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             <span>{t('landing.contact.company')}</span>
             <input name="company" autoComplete="organization" maxLength={MAX.company} value={form.company} onChange={(e) => set('company', e.target.value)} {...invalid('company')} />
             {err('company')}
+          </label>
+          <label className="field">
+            <span>{t('landing.contact.companyNo')}</span>
+            <small>{t('landing.contact.companyNoHint')}</small>
+            <input
+              name="company_no"
+              inputMode="text"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={40}
+              placeholder="123-45-67890"
+              value={form.company_no}
+              onChange={(e) => set('company_no', e.target.value)}
+              {...invalid('company_no')}
+            />
+            {err('company_no')}
           </label>
           <label className="field">
             <span>{t('landing.contact.kind')}</span>

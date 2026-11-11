@@ -1,5 +1,7 @@
-// The demo login (`/demo`, PRD §3.6 · decision 62): one ID + password form (demo IDs look like
-// `samsungDemo`) that the browser posts straight to the demo server — the URL comes from the site
+// The demo login (`/demo`, PRD §3.6 · decision 62): one form of three fields — the company's
+// registration number given in the request (법인(사업자)등록번호, 2026-11-12: the number says which
+// company), the ID (demo IDs look like `samsungDemo`) and the password — that the browser posts
+// straight to the demo server — the URL comes from the site
 // config (`DEMO_LOGIN_URL`, the engine's demo-mode `POST /api/auth/demo-login`). The marketing site
 // never holds or sees a demo password. `?u=` fills the ID (the login router sends the code `demo`
 // here). The request line opens the request modal (source demo_login, 데모 계정 pre-checked).
@@ -43,12 +45,17 @@ export function DemoLogin() {
           {t('demo.login.note')}
         </p>
         <label className="field">
+          <span>{t('landing.contact.companyNo')}</span>
+          <small>{t('demo.login.companyNoHint')}</small>
+          <input name="company_no" autoComplete="off" spellCheck={false} placeholder="123-45-67890" maxLength={40} required autoFocus />
+        </label>
+        <label className="field">
           <span>{t('auth.username')}</span>
-          <input name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="samsungDemo" defaultValue={prefill} required autoFocus={!prefill} />
+          <input name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="samsungDemo" defaultValue={prefill} required />
         </label>
         <label className="field">
           <span>{t('auth.password')}</span>
-          <input name="password" type="password" autoComplete="current-password" required autoFocus={!!prefill} />
+          <input name="password" type="password" autoComplete="current-password" required />
         </label>
         <button className="btn is-primary is-block" disabled={!action}>
           {action ? t('demo.login.submit') : t('common.wait')}

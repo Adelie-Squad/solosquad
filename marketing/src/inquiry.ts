@@ -77,8 +77,9 @@ export async function postInquiry(req: Request, env: Env, ctx?: ExecutionContext
   await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO inquiries (id, created_at, updated_at, company, business_type, country, contact_name, email, reach_kind, reach_value,
-         wants, requests, message, consent_required, consent_demo, consent_version, consent_news, locale, source, opened_at, status, retain_until)
-       VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?15, ?16, ?17, ?18, 'new', ?19)`,
+         wants, requests, message, consent_required, consent_demo, consent_version, consent_news, locale, source, opened_at, status, retain_until,
+         company_no)
+       VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?15, ?16, ?17, ?18, 'new', ?19, ?20)`,
     ).bind(
       id,
       at,
@@ -99,6 +100,7 @@ export async function postInquiry(req: Request, env: Env, ctx?: ExecutionContext
       v.source,
       iso(token.opened),
       retain,
+      v.company_no,
     ),
     env.DB.prepare("INSERT INTO inquiry_log (inquiry_id, ts, actor, action, detail) VALUES (?1, ?2, 'system', 'created', ?3)").bind(id, at, JSON.stringify({ source: v.source, requests: v.requests })),
   ]);

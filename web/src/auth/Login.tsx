@@ -34,20 +34,61 @@ export function authReason(err: unknown): MessageKey {
   }
 }
 
+/** A demo server's login screen (decision 62, 2026-11-12): a demo account signs in only through the
+ * marketing site's demo login (company registration number + ID + password — the server refuses
+ * it anywhere else), so there is no password form here, only the way there. Without a marketing
+ * address (`Health.demo_login_url` null) a neutral line instead. */
+function DemoLoginElsewhere({ url }: { url: string | null | undefined }) {
+  const { t } = useI18n();
+  return (
+    <div className="auth-page">
+      <div className="auth-card" data-testid="demo-login-elsewhere">
+        <div className="auth-brand">
+          <Mascot size={56} />
+          <div>
+            <h1>
+              SoloSquad
+              <span className="chip is-accent demo-chip">{t('demo.chip')}</span>
+            </h1>
+            <p>{t('demo.loginTitle')}</p>
+          </div>
+        </div>
+        {url ? (
+          <>
+            <p className="auth-hint">{t('demo.loginElsewhere')}</p>
+            <a className="btn is-primary is-block" href={url}>
+              {t('demo.loginGo')}
+            </a>
+          </>
+        ) : (
+          <p className="auth-hint">{t('demo.loginNoSite')}</p>
+        )}
+        <LocalePicker />
+      </div>
+    </div>
+  );
+}
+
 /** Login — account + one-time code (decision 41). A first login without a code goes to enrolment.
- * `?demo=1` (decision 62) is the demo login: a demo ID and its password, no code or passkey; the
- * server takes demo accounts only there. Whether the app is a demo comes from `Me.demo` after. */
+ * On a demo server (`Health.demo`) or at `?demo=1` (decision 62) it is the way to the marketing
+ * demo login instead (`DemoLoginElsewhere`). Whether a signed-in app is a demo comes from `Me.demo`. */
 export function Login() {
+  const [params] = useSearchParams();
+  const health = useHealth();
+  if (params.get('demo') === '1' || health.data?.demo) return <DemoLoginElsewhere url={health.data?.demo_login_url} />;
+  return <AccountLogin />;
+}
+
+function AccountLogin() {
   const { t } = useI18n();
   const qc = useQueryClient();
   // `?u=<id>` — the marketing site's login router passes the ID it was given on (decision 62)
   const [params] = useSearchParams();
-  const demo = params.get('demo') === '1';
   const [username, setUsername] = useState(() => (params.get('u') ?? '').slice(0, 120));
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [askCode, setAskCode] = useState(!demo);
-  const [error, setError] = useState<MessageKey | null>(() => (demo && params.get('error') ? 'demo.loginWrong' : null));
+  const [askCode, setAskCode] = useState(true);
+  const [error, setError] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
   const health = useHealth();
   const [refused, setRefused] = useState(false);
@@ -55,7 +96,7 @@ export function Login() {
     officeAllows: health.data?.passkeys,
     browserSupports: passkeySupported(),
     refused,
-  }) && !demo;
+  });
 
   const withPasskey = async () => {
     setBusy(true);
@@ -78,11 +119,11 @@ export function Login() {
     setBusy(true);
     setError(null);
     try {
-      const me = await api.post<Me>('/auth/login', { username, password, otp: otp || undefined }, demo ? { query: { demo: 1 } } : {});
+      const me = await api.post<Me>('/auth/login', { username, password, otp: otp || undefined });
       setCsrf(me.csrf);
       qc.setQueryData(keys.me, me);
     } catch (err) {
-      const reason = demo && errorCode(err) === 'login_failed' ? 'demo.loginWrong' : authReason(err);
+      const reason = authReason(err);
       if (reason === 'auth.needCode') setAskCode(true);
       setError(reason);
     } finally {
@@ -96,16 +137,12 @@ export function Login() {
         <div className="auth-brand">
           <Mascot size={56} />
           <div>
-            <h1>
-              SoloSquad
-              {demo && <span className="chip is-accent demo-chip">{t('demo.chip')}</span>}
-            </h1>
-            <p>{demo ? t('demo.loginTitle') : t('auth.subtitle')}</p>
+            <h1>SoloSquad</h1>
+            <p>{t('auth.subtitle')}</p>
           </div>
         </div>
-        {demo && <p className="auth-hint">{t('demo.loginHint')}</p>}
         <label className="field">
-          <span>{demo ? t('demo.id') : t('auth.username')}</span>
+          <span>{t('auth.username')}</span>
           <input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
         </label>
         <label className="field">
@@ -145,7 +182,7 @@ export function Login() {
             </button>
           </>
         )}
-        {!demo && <p className="auth-hint">{t('auth.firstHint')}</p>}
+        <p className="auth-hint">{t('auth.firstHint')}</p>
         <LocalePicker />
       </form>
     </div>

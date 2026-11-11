@@ -13,8 +13,26 @@ export const MAX = { company: 80, contact_name: 40, email: 254, reach_value: 60,
 
 export type FieldError = 'required' | 'too_long' | 'invalid';
 
+/**
+ * The company's registration number (2026-11-12 — one representative number; the demo login asks
+ * for it with the ID and password). A Korean 사업자등록번호 `NNN-NN-NNNNN` or 법인등록번호
+ * `NNNNNN-NNNNNNN` → its 10 or 13 digits; another country's → 4–30 letters, digits and dashes,
+ * upper-cased. A Korean company (country kr) must give one of the Korean two. The engine's
+ * `solosquad.demo.normalize_company_no` keeps the same rule. → the stored form, or null.
+ */
+export function normalizeCompanyNo(raw: unknown, country?: string | null): string | null {
+  if (typeof raw !== 'string') return null;
+  const text = raw.normalize('NFKC').trim();
+  const digits = text.replace(/[\s-]/g, '');
+  if (/^(?:\d{10}|\d{13})$/.test(digits)) return digits;
+  if (country === 'kr') return null;
+  const other = text.toUpperCase();
+  return /^[A-Z0-9-]{4,30}$/.test(other) ? other : null;
+}
+
 export interface Inquiry {
   company: string;
+  company_no: string;
   business_type: (typeof BUSINESS_TYPES)[number];
   country: (typeof COUNTRIES)[number];
   contact_name: string;
@@ -69,6 +87,9 @@ export function validateInquiry(body: Record<string, unknown>): { ok: true; valu
   if (!businessType) fields.business_type = body.business_type ? 'invalid' : 'required';
   const country = oneOf(COUNTRIES, body.country);
   if (!country) fields.country = body.country ? 'invalid' : 'required';
+  const companyNo = text(body.company_no) ? normalizeCompanyNo(body.company_no, country) : null;
+  if (!text(body.company_no)) fields.company_no = 'required';
+  else if (!companyNo) fields.company_no = 'invalid';
   const reachKind = reachValue ? oneOf(REACH_KINDS, body.reach_kind ?? 'phone') : null;
   if (reachValue && !reachKind) fields.reach_kind = 'invalid';
 
@@ -89,6 +110,7 @@ export function validateInquiry(body: Record<string, unknown>): { ok: true; valu
     ok: true,
     value: {
       company,
+      company_no: companyNo!,
       business_type: businessType!,
       country: country!,
       contact_name: contactName,

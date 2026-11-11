@@ -66,37 +66,41 @@ solosquad service install -s /srv/demo        # 상시 운영 (절차서 4절)
 
 ## 3. 문의에서 발급하기
 
-마케팅 관리자 스크립트(`marketing/scripts/inquiry.ts issue <id>`)가 ssh 로 부르는 명령 — 직접 쳐도 같다:
+마케팅 관리자 스크립트(`marketing/scripts/inquiry.mjs issue <id>`)가 ssh 로 부르는 명령 — 직접 쳐도 같다:
 
 ```bash
-ssh demo 'solosquad demo issue --id samsungDemo --inquiry <문의 번호> --days 14 --locale ko -s /srv/demo'
+ssh demo 'solosquad demo issue --id samsungDemo --inquiry <문의 번호> --company-no 1234567890 --days 14 --locale ko -s /srv/demo'
 ```
 
-출력(마지막 세 줄은 스크립트가 읽는 고정 형식):
+출력(`key=value` 네 줄은 스크립트가 읽는 고정 형식):
 
 ```
 issued samsungDemo · inquiry <문의 번호> · expires 2026-11-25 18:58
+company no: 1234567890
 login id: samsungDemo
 password: Xk7m…   (shown once — only its hash is kept)
 demo_id=samsungDemo
 password=<16자>
 expires=2026-11-25 18:58
+company_no=1234567890
 ```
+
+- **법인(사업자)등록번호** `--company-no`(필수) — 문의에 적힌 대표 번호 하나. 사업자등록번호(10자리, `123-45-67890`) · 법인등록번호(13자리, `110111-1234567`)는 숫자만, 다른 나라 번호는 영문 · 숫자 · `-` 4–30자를 대문자로 저장한다. 데모 로그인에서 아이디 · 비밀번호와 함께 이 번호를 받는다(2026-11-12). 이 열이 생기기 전에 발급한 계정은 번호가 비어 있어 데모 로그인이 늘 실패한다 — 다시 발급한다.
 
 - **아이디 형식** `<slug>Demo`(대문자 D) — 영문 · 숫자, 영문으로 시작, 겹치면 `samsungDemo2`. 대소문자 무시로 유일. 형식이 틀리면 거절.
 - 발급하면 그 계정 몫 **사본 1개**(org `samsungdemo` · 워크스페이스 `hq` 본사)가 생긴다: 세 워크플로우 · 예시 사람 2명(김재무 · 이마케 — 지어낸 이름, 로그인 불가) · 일정 · **어제 돌린 것처럼 끝난 실행 · 산출물 · 승인 기록**(대시보드 "자리를 비운 동안" 이 비지 않게).
 - 서버가 돌고 있어도 된다 — 서버가 몇 초 안에 새 계정을 알아본다(재시작 없음).
 - 다른 언어 방문자: `--locale en` · `--locale zh-CN`(화면 언어 — 방문자가 언어 탭에서 바꿀 수도 있다).
 
-데모 로그인 경로 두 가지:
+데모 로그인 경로는 **하나뿐**이다(2026-11-12):
 
-1. **마케팅 사이트 `/demo`** — 폼이 `POST https://demo.<도메인>/api/auth/demo-login`(form-urlencoded `username` · `password`, 최상위 이동)으로 직접 보낸다 → 성공 303 `/dashboard` · 실패(틀림 · 없는 아이디 · 만료 모두 같게) 303 `<marketing_url>/demo?error=1`. `Origin` 이 `marketing_url`(또는 서버 자신의 `public_url`)이 아니면 받지 않는다.
-2. **데모 서버의 `/login?demo=1`** — 같은 웹의 데모 로그인(아이디 · 비밀번호만, 코드 칸 없음). 만료면 "데모 기간이 끝났어요".
+1. **마케팅 사이트 `/demo`** — 폼이 `POST https://demo.<도메인>/api/auth/demo-login`(form-urlencoded `company_no` · `username` · `password`, 최상위 이동)으로 직접 보낸다 → 성공 303 `/dashboard` · 실패(번호 틀림 · 비밀번호 틀림 · 없는 아이디 · 만료 모두 같게) 303 `<marketing_url>/demo?error=1`. 번호는 계정에 저장된 번호와 같아야 한다(`-` · 공백 · 대소문자 무시). 번호가 틀리면 비밀번호 틀림과 같이 실패 횟수에 들어간다. `Origin` 이 `marketing_url`(또는 서버 자신의 `public_url`)이 아니면 받지 않는다.
+2. ~~데모 서버의 `/login?demo=1`~~ — 이제 비밀번호 폼이 없다. 데모 서버의 `/login`(`?demo=1` 이든 아니든 — 로그아웃 뒤 오는 곳)은 마케팅 `/demo` 로 가는 링크 하나를 보인다(`GET /api/health` 의 `demo_login_url` = `<marketing_url>/demo`). `marketing_url` 이 없으면 중립 문장 한 줄만 보인다. 서버도 막는다. 데모 계정이 JSON 로그인(`POST /api/auth/login`, `?demo=1` 포함)이나 패스키로 들어오면 비밀번호가 맞아도 틀린 비밀번호와 같은 `login_failed` 로 거절하고, 실패 횟수에 넣는다. 데모 서버는 원래 데모 계정이 아닌 계정(운영자 등)을 받지 않는다. 이 규칙은 바뀌지 않았다.
 
 ## 4. 운영 명령
 
 ```bash
-solosquad demo list -s /srv/demo                                   # 아이디 · 문의 · 상태 · 만료
+solosquad demo list -s /srv/demo                                   # 아이디 · 문의 · 번호 · 상태 · 만료
 solosquad demo extend --id samsungDemo --days 7 -s /srv/demo       # 만료를 지금부터 7일로 (만료된 계정도 다시 로그인)
 solosquad demo revoke --id samsungDemo -s /srv/demo                # 즉시 끝: 로그인 꺼짐 + 사본 삭제 (사용 기록은 남음)
 solosquad demo reset  --id samsungDemo -s /srv/demo                # 그 계정 사본을 처음 상태로
