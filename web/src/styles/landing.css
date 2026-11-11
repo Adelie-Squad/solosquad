@@ -97,18 +97,13 @@ html:has(.landing[data-mode="live"]) {
   min-width: 0;
 }
 
-.landing-top .locale-picker select {
-  height: 36px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-btn);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 13px;
-}
-
 .landing-top-cta {
   white-space: nowrap;
+}
+
+/* the top bar's language select has no label (the languages are named in themselves) */
+.landing-top .locale-picker.is-bare {
+  gap: 0;
 }
 
 /* ── the track: one screen of scroll per section, the stage pinned in it ─ */
@@ -1241,6 +1236,60 @@ html:has(.landing[data-mode="live"]) {
   white-space: nowrap;
 }
 
+/* the first section's two buttons, under the message (rev10 — DESIGN `## 랜딩`) */
+.landing-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.landing-cta {
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  font-size: 15px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+/* the last card: 데모 체험하기 (primary) · 로그인, then the request line */
+.landing-final {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.landing-final-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.landing-final-login {
+  min-height: 52px;
+  padding: 0 var(--space-6);
+  font-size: 15px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.landing-apply-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.landing-apply-link:hover {
+  text-decoration: underline;
+}
+
 .landing-foot {
   width: var(--landing-w);
   margin: 0 auto;
@@ -1353,8 +1402,13 @@ html:has(.landing[data-mode="live"]) {
     --landing-cols: minmax(0, 1fr);
   }
 
-  .landing-top .locale-picker > span {
-    display: none;
+  .landing-top-actions {
+    gap: var(--space-2);
+  }
+
+  .landing-top .btn {
+    height: 34px;
+    padding: 0 var(--space-3);
   }
 
   .landing-grid {

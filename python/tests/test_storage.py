@@ -246,3 +246,14 @@ def test_doctor_reports_leftover_per_component_files(tmp_path: Path, repo_root: 
     assert (
         checks["legacy:moa/hq"].status == "warn" and "runs.sqlite" in checks["legacy:moa/hq"].detail
     )
+
+
+def test_close_under_lets_go_of_a_folder(tmp_path: Path) -> None:
+    # a reset deletes a stopped runtime's data; Windows can't delete a file still open
+    inside = storage.connect(tmp_path / "org" / "hq" / "office.db")
+    outside = storage.connect(tmp_path / "other" / "office.db")
+    assert storage.close_under(tmp_path / "org") == 1
+    with pytest.raises(sqlite3.ProgrammingError):
+        inside.execute("SELECT 1")
+    assert outside.execute("SELECT 1").fetchone() == (1,)
+    outside.close()

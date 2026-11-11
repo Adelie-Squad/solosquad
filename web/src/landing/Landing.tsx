@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useMe } from '../api/queries';
-import { LOGIN, officeHref, signedIn } from '../auth/next';
 import { Mascot } from '../characters/PenguinIcon';
 import { LocalePicker } from '../components/LocalePicker';
 import { scrollLocked } from '../components/scrollLock';
@@ -12,6 +10,8 @@ import { useTheme } from '../theme';
 import { PromptAct, ScrollAct, SignAct, StampAct, StepsAct } from './Acts';
 import { AGENT_COUNT, TEAMS } from './catalog';
 import { keyStep, ownsKeys, SETTLE_MS, Stepper, wheelPixels } from './dwell';
+import { useInquiry } from '../marketing/Inquiry';
+import '../marketing/messages';
 import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
@@ -19,6 +19,10 @@ import { sectionAnchor, SECTIONS, stepAt, type SectionId } from './sections';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
+
+/** The marketing site's pages (MarketingApp). */
+export const LOGIN = '/login';
+export const DEMO = '/demo';
 
 /** Shorter than this, a slide does not fit one screen — the page stacks its sections instead. */
 export const MIN_STAGE_HEIGHT = 600;
@@ -154,13 +158,15 @@ const POINTS: { icon: keyof typeof ICON; title: MessageKey; body: MessageKey }[]
  * it (pretends to type over the prompt, hands the request along the step cards, peeks over the
  * scroll, stamps the approval from its corner, waves from behind the last card). One wheel or swipe
  * moves one section and the page holds there a moment. Reduced motion, no WebGL and short screens get the same
- * sections stacked with the 2D penguin and native scroll. The only buttons out are the login (top
- * bar) and the last section's; they go to `/login`, or to the office when signed in.
+ * sections stacked with the 2D penguin and native scroll. The landing is the marketing site's only
+ * (decision 62 — customer servers open on their login): 데모 체험하기 (primary, `/demo`) and 로그인
+ * (`/login`, the login router) in the top bar (beside the language select, no label), the first
+ * section and the last; under the last, "데모 계정이 없으세요? 데모 계정 신청하기" opens the request
+ * modal. No arrows.
  */
 export function Landing() {
   const { t } = useI18n();
-  const me = useMe();
-  const inside = signedIn(me.data) ? me.data : undefined;
+  const openInquiry = useInquiry();
   const { theme } = useTheme();
   const [mode, setMode] = useState<LandingMode>(landingMode);
   const [reduced, setReduced] = useState(prefersReducedMotion);
@@ -233,9 +239,16 @@ export function Landing() {
     s.go(i, 'link');
   };
 
-  const cta = (cls: string) => (
-    <Link className={cls} to={inside ? officeHref(inside) : LOGIN}>
-      {t(inside ? 'landing.goOffice' : 'auth.login')}
+  // the two buttons (PRD §3.5.2 rev10): 데모 체험하기 (primary → /demo) · 로그인 (→ the login router),
+  // in the top bar, the first section and the last one, in that order
+  const demo = (cls: string) => (
+    <Link className={cls} to={DEMO}>
+      {t('landing.cta.demo')}
+    </Link>
+  );
+  const login = (cls: string) => (
+    <Link className={cls} to={LOGIN}>
+      {t('landing.cta.login')}
     </Link>
   );
 
@@ -268,6 +281,10 @@ export function Landing() {
           {t('landing.title')}
         </h1>
         <p className="landing-lead">{t('landing.lead')}</p>
+        <div className="landing-ctas">
+          {demo('btn is-primary landing-cta')}
+          {login('btn landing-cta')}
+        </div>
       </>,
       <>
         {!live && (
@@ -332,9 +349,23 @@ export function Landing() {
         <h2 id="landing-start-title" className="landing-title">
           {t('landing.start.title')}
         </h2>
-        <p className="landing-lead">{t(inside ? 'landing.start.in' : 'landing.start.out')}</p>
+        <p className="landing-lead">{t('landing.start.lead')}</p>
       </>,
-      <SignAct on={isOn('start')} acting={acting} cta={cta('btn is-primary is-large landing-final-cta')} />,
+      <SignAct
+        on={isOn('start')}
+        acting={acting}
+        cta={
+          <div className="landing-final">
+            <div className="landing-final-actions">
+              {demo('btn is-primary is-large landing-final-cta')}
+              {login('btn is-large landing-final-login')}
+            </div>
+            <button type="button" className="landing-apply-link" onClick={() => openInquiry({ source: 'landing_start' })}>
+              {t('landing.apply.open')}
+            </button>
+          </div>
+        }
+      />,
     ),
   ];
 
@@ -345,7 +376,8 @@ export function Landing() {
           <p className="landing-brand">SoloSquad</p>
           <div className="landing-top-actions">
             <LocalePicker />
-            {cta('btn landing-top-cta')}
+            {demo('btn is-primary landing-top-cta')}
+            {login('btn landing-top-cta')}
           </div>
         </div>
       </header>

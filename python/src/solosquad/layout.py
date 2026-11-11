@@ -42,12 +42,13 @@ import secrets
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from solosquad.assets.text import load_yaml
+from solosquad.server_facts import ServerFacts, detect
 from solosquad.snapshots import SnapshotTarget
 
 SCHEMA_VERSION = 1
@@ -119,10 +120,12 @@ class ExecutionPolicy(BaseModel):
 
 
 class WebPrefs(BaseModel):
+    """Web settings that belong to the server. The customer default language (`locale`)
+    was retired on 2026-11-11 — each person keeps their own (`users.locale`, default ko).
+    An old file's `locale` is still read (extra field) once, by `legacy_web_locale`, and
+    then removed (`drop_legacy_web_locale`)."""
+
     model_config = ConfigDict(extra="allow")
-    locale: str = "ko"
-    """The customer's default web language (I31 · decision 53): ko · en · zh-CN. A person's
-    own choice (`users.locale`) wins over it."""
 
 
 class Placement(BaseModel):
@@ -138,22 +141,67 @@ class Placement(BaseModel):
         return org in self.include or f"{org}/{workspace}" in self.include
 
 
+class DemoSettings(BaseModel):
+    """`server.yaml` `demo:` — how a demo server behaves (decision 62 · PRD §3.6.4). Read
+    only when `mode: demo`."""
+
+    model_config = ConfigDict(extra="allow")
+    step_seconds: float = Field(default=4.0, ge=0)
+    """One scenario step (an agent's turn); a tool step takes half."""
+    chat_seconds: float = Field(default=1.5, ge=0)
+    """A scripted chat reply streams over this long."""
+    default_days: int = Field(default=14, ge=1)
+    """A demo account lasts this long unless `demo issue --days` says otherwise (DM3)."""
+    nightly_reset: str | None = "04:00"
+    """`HH:MM` server time — every copy is made again from the template; None = off."""
+    idle_minutes: int = Field(default=30, ge=1)
+    """A visitor's runtime starts at login and stops after this long without them (DM2)."""
+    delete_after_days: int = Field(default=7, ge=0)
+    """A copy is removed this long after its account expired (usage stays)."""
+    usage_keep_days: int = Field(default=365, ge=1)
+    """Usage rows are removed this long after the account expired (L9 — like inquiries)."""
+    marketing_url: str | None = None
+    """The marketing site (e.g. https://solosquad.example) — the only `Origin` the demo
+    login form is accepted from, and where a failed form login returns (`/demo?error=…`)."""
+    contact_url: str | None = None
+    """The 상담 요청 link in the demo band (default: `<marketing_url>/?contact=demo`)."""
+
+
 class ServerConfig(_Doc):
     """`core/server.yaml` — what belongs to the engine server, not to one business (I41)."""
+
+    mode: Literal["customer", "demo"] | None = None
+    """`demo` = a demo server (decision 62): scripted agents, one copy of the example company
+    per demo account, settings read-only — enforced by the server, shown by the web. Unset =
+    a customer's server."""
+    demo: DemoSettings | None = None
+    """Only read when `mode: demo`; unset = the defaults."""
 
     public_url: str | None = None
     """The server's HTTPS address (e.g. https://ai.example.co.kr) — passkeys are bound
     to this domain, so they stay off until it is set (decision 47 S4)."""
     server_country: str | None = None
     """ISO country where the server runs (decision 45 region rule), e.g. KR."""
-    type: ServerType = ServerType.LOCAL
+    type: ServerType | None = None
+    """The builder's override of where the server runs (local · intranet · cloud). Unset =
+    detected (`server_facts`); an old file's `type: local` counts as the builder's choice."""
+    cloud: str | None = None
+    """Override of the detected cloud provider (aws · gcp · azure · ncp …)."""
+    region: str | None = None
+    """Override of the detected region (e.g. ap-northeast-2) — the country follows it."""
+    agency_access: str | None = None
+    """Builder's note: how the agency reaches the customer's cloud (role, account, VPN) — no
+    credentials. Not shown in the web (moved from the retired customer profile, 2026-11-11)."""
     snapshot: SnapshotTarget = Field(default_factory=SnapshotTarget)
     """Where the daily snapshot goes — the customer's own bucket (decision 54)."""
     access: AccessPolicy = Field(default_factory=AccessPolicy)
     """The customer's default access policy; a workspace can only narrow it."""
     placement: Placement = Field(default_factory=Placement)
     web: WebPrefs = Field(default_factory=WebPrefs)
-    """The default web language — a person's own choice wins over it."""
+
+    def facts(self) -> ServerFacts:
+        """What this server is, detected — with this file's values as overrides."""
+        return detect(self.model_dump(mode="json", exclude_none=True))
 
 
 SERVER_FIELDS = ("public_url", "server_country", "type", "snapshot", "web")
@@ -393,6 +441,35 @@ class Solution:
             self.save_server_config(cfg)
         return cfg
 
+    def legacy_web_locale(self) -> str | None:
+        """The retired customer default language (`web.locale`) if a file still holds it —
+        server.yaml first, then a rev6 workspace.yaml."""
+        for path in (
+            self.server_config_path,
+            *(ws.root / "workspace.yaml" for ws in self.workspaces()),
+        ):
+            web = _raw(path).get("web")
+            if isinstance(web, dict) and web.get("locale"):
+                return str(web["locale"])
+        return None
+
+    def drop_legacy_web_locale(self) -> bool:
+        """Remove `web.locale` everywhere once the accounts carry it (2026-11-11)."""
+        dropped = False
+        for path in (
+            self.server_config_path,
+            *(ws.root / "workspace.yaml" for ws in self.workspaces()),
+        ):
+            raw = _raw(path)
+            web = raw.get("web")
+            if isinstance(web, dict) and "locale" in web:
+                web.pop("locale")
+                if not web:
+                    raw.pop("web")
+                _dump(path, raw)
+                dropped = True
+        return dropped
+
     def update_server_config(self, **changes: Any) -> ServerConfig:
         """Set some server fields. Setting a field settles a disagreement about it; one
         about any other field still stops the write (K50)."""
@@ -480,7 +557,7 @@ def scaffold_solution(
     root: Path,
     engine_version: str,
     owner_templates: Path | None = None,
-    server_type: ServerType = ServerType.LOCAL,
+    server_type: ServerType | None = None,
 ) -> Solution:
     """Create `core/` for a new customer. Refuses to touch a non-empty directory.
 

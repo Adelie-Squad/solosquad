@@ -3,7 +3,7 @@
 Decision 57 · PRD v2.1.0 I40 · I22 rev7: the scope is in the address.
 
     /api/...                    the customer: health · auth · me · users · login audit ·
-                                profile · snapshot · server settings (access default · locale)
+                                서버 facts · 회사 · snapshot · server settings (access default)
     /api/o/{org}/...            an org: org chart · people · approval policy · teams · agent
                                 and workflow definitions · screens · connections · org audit
     /api/o/{org}/w/{ws}/...     a workspace: threads · runs · events · ledger · budget ·
@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import hmac
 import json
 import time
@@ -35,8 +36,8 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
-from urllib.parse import urlsplit
+from typing import TYPE_CHECKING, Any, Literal, Protocol
+from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 import webauthn
@@ -46,7 +47,7 @@ from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import JSONResponse, RedirectResponse, Response, StreamingResponse
 from starlette.routing import BaseRoute, Mount, Route, Router
 from starlette.staticfiles import StaticFiles
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -78,11 +79,11 @@ from solosquad.calendars import (
     default_preset,
     load_preset,
 )
+from solosquad.company_info import validate_company
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
 from solosquad.layout import LayoutError, ServerConfig, Solution, Workspace
 from solosquad.messages import Message as ChatMessage
-from solosquad.profile import load_profile, save_profile, update_profile
 from solosquad.routing.connections import (
     Connection,
     ConnectionKind,
@@ -107,6 +108,7 @@ from solosquad.web_api.accounts import (
     Session,
     SessionStage,
     User,
+    known_locale,
 )
 from solosquad.web_api.errors import ApiError, CodedError, for_status
 from solosquad.web_api.errors import ErrorCode as E
@@ -115,12 +117,15 @@ from solosquad.web_api.org_store import OrgStore
 from solosquad.workflows.engine import UPLOAD_LIMIT, UPLOAD_TYPES, WorkflowEngine
 
 if TYPE_CHECKING:
+    from solosquad.demo.store import DemoAccount, DemoStore
     from solosquad.engine_server import EngineServer
     from solosquad.instance import Instance
 
 SESSION_COOKIE = "ss_session"
 CSRF_HEADER = "x-csrf-token"
-ENTITY_REQUIRED = "enter the entity that holds this account (entity: {name, country})"
+COMPANY_REQUIRED = (
+    "enter the company's country (회사, 소재지) first — the provider rules judge the company"
+)
 UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 NOT_FOUND = "Not Found"
 """The one answer for a scope that is not yours and for one that does not exist (C3 · C30) —
@@ -164,10 +169,9 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "access.get": EVERYONE,
     "access.update": OWNER,
     "audit": OWNER,
-    "settings.get": EVERYONE,
-    "settings.update": OWNER,
-    "profile.get": EVERYONE,
-    "profile.update": OWNER,
+    "server.get": EVERYONE,
+    "company.get": EVERYONE,
+    "company.update": OWNER,
     "snapshot.get": EVERYONE,
     "snapshot.update": OWNER,
     "snapshot.run": OWNER,
@@ -232,7 +236,36 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     # one of the scopes they may enter, checked the way the scope gate checks
     "digest.get": EVERYONE,
     "digest.ack": EVERYONE,
+    # demo mode (decision 62) — only on a demo server
+    "demo.events": EVERYONE,
+    "demo.restart": EVERYONE,
+    "demo.reset": EVERYONE,
 }
+
+DEMO_READ_ONLY: frozenset[str] = frozenset(
+    {
+        # customer settings
+        "users.create", "users.update", "access.update", "company.update",
+        "snapshot.update", "snapshot.run",
+        # org settings
+        "people.update", "connections.create", "connections.update", "connections.delete",
+        "workflows.update", "approval_policy.update",
+        # workspace settings · files from outside
+        "ws_access.update", "uploads.create",
+        # calendar settings (구분 · 태그 and what agents may read) and deleting; adding and
+        # editing entries and to-dos stays open (in the visitor's own copy)
+        "calendar.labels.create", "calendar.labels.update", "calendar.agent_access.update",
+        "calendar.delete", "calendar.todos.delete",
+    }
+)  # fmt: skip
+"""The lock table of a demo server (decision 62 · PRD §3.6.4 ③) — refused with
+`demo_read_only`; the web gets the same list in `/api/me` (`demo_info.locked`) and locks the
+same controls. Also refused there, in the handlers that have no route key (`SELF_LOCKED`): a
+password change, a one-time code, adding or removing a passkey, reordering calendar labels.
+Open: the screen language, approvals, 지금 실행, conversations, calendar entries and to-dos,
+marking a work product checked, logging out, 처음 상태로."""
+SELF_LOCKED = ("me.password", "auth.totp", "auth.passkey", "me.passkeys.delete",
+               "calendar.labels.reorder")  # fmt: skip
 
 PRESENCE_HEADER = "x-presence"
 """The web sends `X-Presence: 1` only while the person is really there (they touched the
@@ -290,6 +323,8 @@ class Principal:
     """The customer-level role."""
     session: Session | None
     """None for the local CLI token, which acts with owner rights on its own machine."""
+    demo: DemoAccount | None = None
+    """A demo visitor (decision 62): owner of their own org only, settings read-only."""
 
     @property
     def user_id(self) -> str | None:
@@ -358,6 +393,10 @@ class AppConfig:
     """Set on shutdown so open event streams end instead of holding the server."""
     calendar: CalendarStore | None = None
     """The account's calendar (decision 60) — opened on `core.db` when not given."""
+    demo: DemoStore | None = None
+    """Set on a demo server (decision 62): every web session is a demo visitor's."""
+    demo_control: DemoControl | None = None
+    """The demo supervisor — wakes a visitor's copy, applies 처음 상태로."""
 
     @property
     def placed(self) -> set[Key]:
@@ -372,6 +411,7 @@ class AppConfig:
         static_dir: Path | None = None,
         secure_cookies: bool = True,
         closing: asyncio.Event | None = None,
+        demo: DemoStore | None = None,
     ) -> AppConfig:
         from solosquad.maintenance import run_snapshot
 
@@ -387,7 +427,14 @@ class AppConfig:
             static_dir=static_dir,
             secure_cookies=secure_cookies,
             closing=closing,
+            demo=demo,
         )
+
+
+class DemoControl(Protocol):
+    async def ensure(self, acct: DemoAccount) -> None: ...
+
+    async def reset(self, acct: DemoAccount) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -567,7 +614,46 @@ def create_app(cfg: AppConfig) -> Starlette:
             raise ApiError(403, E.ENROL_REQUIRED, "set up the one-time code first")
         if request.method in UNSAFE or request.headers.get(PRESENCE_HEADER) == "1":
             present(session.user.id)
+        if cfg.demo is not None:
+            acct = cfg.demo.by_user(session.user.id)
+            if acct is not None and not acct.active():
+                cfg.accounts.revoke_user_sessions(session.user.id)
+                raise ApiError(401, E.DEMO_EXPIRED, "this demo account has expired")
+            if acct is not None:
+                if request.method in UNSAFE or request.headers.get(PRESENCE_HEADER) == "1":
+                    cfg.demo.seen(session_key(request))
+                # the customer-level owner for reading (settings tabs); every scope still
+                # goes through the assignment table — their own org only
+                return Principal(Role.OWNER, session, acct)
         return Principal(session.user.role, session)
+
+    def session_key(request: Request) -> str:
+        token = request.cookies.get(SESSION_COOKIE) or ""
+        return hashlib.sha256(token.encode()).hexdigest()[:16]
+
+    def demo_session(request: Request) -> bool:
+        """A web session on a demo server — the local CLI token is the operator."""
+        return cfg.demo is not None and not request.headers.get("authorization", "").startswith(
+            "Bearer "
+        )
+
+    def read_only(request: Request, name: str = "") -> None:
+        if demo_session(request):
+            acct = demo_of(request)
+            if acct is not None and cfg.demo is not None:
+                cfg.demo.record(acct.demo_id, "blocked_click", {"name": name, "via": "api"},
+                                session=session_key(request))  # fmt: skip
+            raise ApiError(403, E.DEMO_READ_ONLY, "settings cannot be changed in the demo")
+
+    def demo_of(request: Request) -> DemoAccount | None:
+        if cfg.demo is None:
+            return None
+        session = cfg.accounts.session(request.cookies.get(SESSION_COOKIE))
+        return cfg.demo.by_user(session.user.id) if session is not None else None
+
+    def usage(who: Principal, request: Request, kind: str, **detail: Any) -> None:
+        if cfg.demo is not None and who.demo is not None:
+            cfg.demo.record(who.demo.demo_id, kind, detail, session=session_key(request))
 
     def present(uid: str, *, new_visit: bool = False) -> None:
         """The person is here (`AccountStore.touch`) — at most once a minute, except a
@@ -626,6 +712,8 @@ def create_app(cfg: AppConfig) -> Starlette:
         sc: InScope | None = getattr(request.state, "in_scope", None)
         who = sc.who if sc is not None else principal(request)
         role = sc.role if sc is not None else who.role
+        if route in DEMO_READ_ONLY:
+            read_only(request, route)
         if role not in ROUTE_ROLES[route]:
             raise ApiError(403, E.ROLE_FORBIDDEN, "not allowed for your role")
         return who
@@ -647,9 +735,8 @@ def create_app(cfg: AppConfig) -> Starlette:
             raise ApiError(400, E.INVALID_REQUEST, "expected a JSON object")
         return data
 
-    def locale_error(nullable: bool) -> ApiError:
-        tail = " or null" if nullable else ""
-        return ApiError(400, E.LOCALE_INVALID, f"locale must be one of {list(S.LOCALES)}{tail}")
+    def locale_error() -> ApiError:
+        return ApiError(400, E.LOCALE_INVALID, f"locale must be one of {list(S.LOCALES)}")
 
     # ------------------------------------------------------------------ audit · scopes
 
@@ -717,9 +804,11 @@ def create_app(cfg: AppConfig) -> Starlette:
                 return {"org": s["org"], "workspace": w["name"]}
         return None
 
-    def customer_locale() -> str:
-        loc = server_cfg().web.locale
-        return loc if loc in S.LOCALES else S.DEFAULT_LOCALE
+    def person_locale(who: Principal) -> str:
+        """The language the engine writes in for this request (2026-11-11): the requesting
+        person's own screen language, else ko (the local token has no account). There is no
+        customer default any more."""
+        return known_locale(who.session.user.locale if who.session else None)
 
     def user_public(user: User) -> dict[str, Any]:
         return {
@@ -728,17 +817,39 @@ def create_app(cfg: AppConfig) -> Starlette:
         }
 
     def me_payload(session: Session) -> dict[str, Any]:
-        own = session.user.locale
-        who = Principal(session.user.role, session)
+        acct = cfg.demo.by_user(session.user.id) if cfg.demo is not None else None
+        who = Principal(Role.OWNER if acct else session.user.role, session, acct)
         scopes = scopes_for(who)
+        user = user_public(session.user)
+        if acct is not None:
+            user["role"] = Role.OWNER.value  # 대표 of their own org (scopes say which)
         return {
-            "user": user_public(session.user),
+            "user": user,
             "stage": session.stage.value,
             "csrf": session.csrf,
-            "locale": own if own in S.LOCALES else customer_locale(),
-            "org_locale": customer_locale(),
+            "locale": known_locale(session.user.locale),
             "scopes": scopes,
             "last_scope": last_scope_for(who, scopes),
+            "demo": cfg.demo is not None,
+            "demo_info": demo_info(acct) if acct is not None else None,
+        }
+
+    def demo_info(acct: DemoAccount) -> dict[str, Any]:
+        from solosquad.demo.harness import SUGGESTIONS
+
+        settings = server_cfg().demo
+        contact = (settings.contact_url if settings else None) or (
+            f"{settings.marketing_url.rstrip('/')}/?contact=demo"
+            if settings and settings.marketing_url
+            else None
+        )
+        return {
+            "id": acct.demo_id,
+            "label": acct.label,
+            "expires": acct.expires,
+            "locked": sorted(DEMO_READ_ONLY) + list(SELF_LOCKED),
+            "contact_url": contact,
+            "suggestions": list(SUGGESTIONS),
         }
 
     # ------------------------------------------------------------------ health · auth
@@ -757,23 +868,100 @@ def create_app(cfg: AppConfig) -> Starlette:
             secure=cfg.secure_cookies, samesite="lax", path="/",
         )  # fmt: skip
 
-    async def login(request: Request) -> Response:
+    async def sign_in(request: Request, data: dict[str, Any]) -> tuple[str, Session]:
+        """Password (+ code) → a session. `?demo=1` (the demo login page, decision 62) takes
+        demo accounts only; an expired one is refused with `demo_expired` once the password
+        is right, so the code never tells an outsider which ids exist."""
         w = policy_check(request)
-        data = await body(request)
+        username = str(data.get("username") or "")
+        demo_login = request.query_params.get("demo") == "1"
+        acct = cfg.demo.get(username) if cfg.demo is not None and username else None
+        # a demo server signs in demo accounts only — the example people of a copy never
+        if (demo_login or cfg.demo is not None) and acct is None:
+            accounts().record_failure(f"user:{username.strip().lower()}", f"ip:{w.address}")
+            raise ApiError(401, E.LOGIN_FAILED, "wrong username or password")
         try:
             token, session = accounts().login(
-                str(data.get("username") or ""),
+                username,
                 str(data.get("password") or ""),
                 str(data["otp"]) if data.get("otp") else None,
-                require_second_factor=server_cfg().access.two_factor,
+                require_second_factor=server_cfg().access.two_factor and acct is None,
                 ip=w.address,
                 ua=request.headers.get("user-agent", ""),
             )
         except AuthError as e:
             raise ApiError(401, e.code, str(e)) from e
+        if acct is not None and cfg.demo is not None:
+            from solosquad.demo.store import device_of
+
+            key = hashlib.sha256(token.encode()).hexdigest()[:16]
+            if not acct.active():
+                accounts().logout(token)
+                cfg.demo.record(acct.demo_id, "login_refused", {"status": acct.status()})
+                raise ApiError(401, E.DEMO_EXPIRED, "this demo account has expired")
+            device = device_of(request.headers.get("user-agent", ""))
+            locale = known_locale(session.user.locale)
+            cfg.demo.open_session(acct.demo_id, key, device=device, locale=locale)
+            cfg.demo.record(acct.demo_id, "login", {"page": "demo" if demo_login else "app",
+                            "device": device, "locale": locale}, session=key)  # fmt: skip
+            await wake(acct)
+            for rt in [r for (o, _w), r in sorted(cfg.runtimes.items()) if o == acct.org]:
+                if rt.workflows is not None:
+                    from solosquad.demo.scenario import ensure_running
+
+                    started = await ensure_running(rt.workflows, source="demo:login")
+                    for name in started:
+                        what = {"workflow": name, "how": "login"}
+                        cfg.demo.record(acct.demo_id, "scenario_start", what, session=key)
         accounts().audit(session.user.id, "login", w.address)
         present(session.user.id, new_visit=True)
+        return token, session
+
+    async def login(request: Request) -> Response:
+        token, session = await sign_in(request, await body(request))
         resp = respond(S.Me, me_payload(session))
+        set_session(resp, token)
+        return resp
+
+    async def wake(acct: DemoAccount) -> None:
+        """A visitor is here — their copy's runtime runs (it stops after they leave)."""
+        if cfg.demo_control is not None:
+            await cfg.demo_control.ensure(acct)
+
+    def own_origins() -> set[str]:
+        out = set()
+        url = server_cfg().public_url
+        if url:
+            parts = urlsplit(url)
+            out.add(f"{parts.scheme}://{parts.netloc}")
+        return out
+
+    async def demo_login(request: Request) -> Response:
+        """`POST /api/auth/demo-login` — the marketing site's demo login (PRD §3.6.4): a plain
+        form, ID + password, a top-level navigation, so the password never passes the
+        marketing Worker and the session cookie is this server's own. Only on a demo server,
+        only from the marketing site's `Origin` (login CSRF). → `/dashboard`, or back to the
+        marketing `/demo?error=1` — the same for a wrong, unknown or expired account."""
+        policy_check(request)
+        if cfg.demo is None:
+            raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
+        settings = server_cfg().demo
+        marketing = (settings.marketing_url or "").rstrip("/") if settings else ""
+        allowed_from = {o for o in (marketing,) if o} | own_origins()
+        sent_from = request.headers.get("origin", "")
+        back = f"{marketing}/demo" if marketing else "/login?demo=1"
+        sep = "&" if "?" in back else "?"
+        if sent_from not in allowed_from:
+            return RedirectResponse(f"{back}{sep}error=1", status_code=303)
+        raw = (await request.body()).decode("utf-8", "replace")
+        form = {k: v[0] for k, v in parse_qs(raw).items() if v}
+        try:
+            token, _session = await sign_in(request, form)
+        except ApiError:
+            # wrong · unknown · expired read the same here (the marketing contract): the
+            # page shows one sentence; `demo_expired` stays on the JSON login for the app
+            return RedirectResponse(f"{back}{sep}error=1", status_code=303)
+        resp = RedirectResponse("/dashboard", status_code=303)
         set_session(resp, token)
         return resp
 
@@ -781,6 +969,9 @@ def create_app(cfg: AppConfig) -> Starlette:
         who = principal(request, allow_enroll=True)
         token = request.cookies.get(SESSION_COOKIE)
         if token:
+            usage(who, request, "logout")
+            if cfg.demo is not None:
+                cfg.demo.end_session(session_key(request))
             accounts().logout(token)
             accounts().audit(who.user_id, "logout")
         resp = respond(S.Ok, {"ok": True})
@@ -794,17 +985,19 @@ def create_app(cfg: AppConfig) -> Starlette:
             scopes = scopes_for(who)
             return respond(
                 S.Me,
-                {**local, "locale": customer_locale(), "org_locale": customer_locale(),
-                 "scopes": scopes, "last_scope": last_scope_for(who, scopes)},
+                {**local, "locale": S.DEFAULT_LOCALE, "scopes": scopes,
+                 "last_scope": last_scope_for(who, scopes)},
             )  # fmt: skip
         if request.method == "PATCH":
             data = await body(request)
             uid = who.session.user.id
+            if "password" in data:
+                read_only(request, "me.password")
             if "locale" in data:
-                # null or "" = follow the customer default (I31)
+                # one of the three — there is no customer default to follow (2026-11-11)
                 loc = str(data["locale"] or "")
-                if loc and loc not in S.LOCALES:
-                    raise locale_error(nullable=True)
+                if loc not in S.LOCALES:
+                    raise locale_error()
                 accounts().set_locale(uid, loc)
             if isinstance(data.get("last_scope"), dict):
                 want = (
@@ -821,14 +1014,15 @@ def create_app(cfg: AppConfig) -> Starlette:
             session = accounts().session(request.cookies.get(SESSION_COOKIE))
             if session is None:  # a password change ends every session, this one too
                 gone = {"user": None, "stage": "full", "csrf": None, "relogin": True}
-                return respond(
-                    S.Me, {**gone, "locale": customer_locale(), "org_locale": customer_locale()}
-                )
+                return respond(S.Me, {**gone, "locale": S.DEFAULT_LOCALE})
             return respond(S.Me, me_payload(session))
+        if who.demo is not None:
+            await wake(who.demo)
         return respond(S.Me, me_payload(who.session))
 
     async def totp_begin(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
+        read_only(request, "auth.totp")
         if who.session is None:
             raise ApiError(
                 400, E.ACCOUNT_REQUIRED, "log in with an account to set up a one-time code"
@@ -853,6 +1047,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def totp_confirm(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
+        read_only(request, "auth.totp")
         if who.session is None:
             raise ApiError(
                 400, E.ACCOUNT_REQUIRED, "log in with an account to set up a one-time code"
@@ -892,6 +1087,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def passkey_register_begin(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
+        read_only(request, "auth.passkey")
         if who.session is None:
             raise ApiError(400, E.ACCOUNT_REQUIRED, "log in with an account to add a passkey")
         rp_id, _origin = relying_party()
@@ -917,6 +1113,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def passkey_register_finish(request: Request) -> Response:
         who = principal(request, allow_enroll=True)
+        read_only(request, "auth.passkey")
         if who.session is None:
             raise ApiError(400, E.ACCOUNT_REQUIRED, "log in with an account to add a passkey")
         rp_id, origin = relying_party()
@@ -1028,6 +1225,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     async def my_passkey_delete(request: Request) -> Response:
         who = principal(request)
+        read_only(request, "me.passkeys.delete")
         if who.session is None or not accounts().delete_passkey(
             who.session.user.id, request.path_params["pid"]
         ):
@@ -1064,12 +1262,15 @@ def create_app(cfg: AppConfig) -> Starlette:
             who = need(request, "users.create")
             data = await body(request)
             assigned = parse_assignments(data.get("assignments") or [])
+            loc = str(data.get("locale") or S.DEFAULT_LOCALE)
+            if loc not in S.LOCALES:
+                raise locale_error()
             user = accounts().create_user(
                 str(data.get("username") or ""),
                 str(data.get("password") or ""),
                 Role(str(data.get("role") or Role.STAFF.value)),
                 display=str(data.get("display") or ""),
-                locale=str(data.get("locale") or ""),  # "" = follow the customer default
+                locale=loc,  # ko unless given — the new person changes it in 언어
                 assignments=assigned,
             )
             accounts().audit(
@@ -1079,8 +1280,17 @@ def create_app(cfg: AppConfig) -> Starlette:
                 + ", ".join(f"{a.org}/{a.workspace or '*'}:{a.role.value}" for a in assigned),
             )
             return respond(S.PublicUser, user_public(user), 201)
-        need(request, "users.list")
-        return respond(list[S.PublicUser], [user_public(u) for u in accounts().users()])
+        who = need(request, "users.list")
+        people = accounts().users()
+        if who.demo is not None:  # only their own org's people — never another visitor
+            mine = who.demo.org
+            people = [u for u in people if any(a.org == mine for a in accounts().assignments(u.id))]
+        rows = [user_public(u) for u in people]
+        if who.demo is not None:
+            for r in rows:
+                if r["id"] == who.demo.user_id:
+                    r["role"] = Role.OWNER.value
+        return respond(list[S.PublicUser], rows)
 
     async def user_update(request: Request) -> Response:
         who = need(request, "users.update")
@@ -1191,52 +1401,40 @@ def create_app(cfg: AppConfig) -> Starlette:
         return respond(S.AccessPolicy, _access_public(ws_cfg.access))
 
     async def audit(request: Request) -> Response:
-        need(request, "audit")
+        who = need(request, "audit")
         rows = accounts().audit_log(int(request.query_params.get("limit", "200")))
+        if who.demo is not None:
+            rows = [r for r in rows if r.get("user_id") == who.demo.user_id]
         return respond(list[S.AuditEntry], rows)
 
-    async def settings(request: Request) -> Response:
+    # ------------------------------------------------------------------ 서버 · 회사 · snapshot
+
+    async def server_facts(request: Request) -> Response:
+        """The 서버 tab (read-only): detected, with core/server.yaml as the override."""
+        need(request, "server.get")
+        return respond(S.ServerFacts, server_cfg().facts().public())
+
+    def holder() -> Entity | None:
+        """The account holder every connection is judged on — the customer company."""
+        return accounts().company().holder()
+
+    async def company(request: Request) -> Response:
         if request.method == "PUT":
-            who = need(request, "settings.update")
+            who = need(request, "company.update")
             data = await body(request)
-            loc = str(data.get("locale") or "")
-            if loc not in S.LOCALES:
-                raise locale_error(nullable=False)
-            web = server_cfg().web.model_copy(update={"locale": loc})
-            cfg.solution.update_server_config(web=web)
-            accounts().audit(who.user_id, "settings.update", f"locale={loc}")
-            return respond(S.WebSettings, {"locale": loc})
-        need(request, "settings.get")
-        return respond(S.WebSettings, {"locale": customer_locale()})
-
-    # ------------------------------------------------------------------ profile · snapshot
-
-    def profile_payload() -> dict[str, Any]:
-        profile = load_profile(cfg.solution.root)
-        return {"profile": profile.model_dump(mode="json"), "checklist": profile.checklist()}
-
-    async def profile(request: Request) -> Response:
-        if request.method == "PUT":
-            who = need(request, "profile.update")
-            root = cfg.solution.root
-            before = load_profile(root)
-            data = await body(request)
-            try:
-                updated = update_profile(before, data)
-            except ValueError as e:  # the model's own rules, pydantic's included
-                raise ApiError(400, E.PROFILE_INVALID, str(e)) from e
-            save_profile(root, updated)  # the country goes to core/server.yaml (I41)
-            for rt in cfg.runtimes.values():
-                if rt.router is not None:
-                    rt.router.server_country = updated.server.country
+            before = accounts().company()
+            updated = accounts().set_company(validate_company(data), who.user_id)
             changed = sorted(
-                k for k in ("server", "entities", "languages", "privacy")
+                k for k in ("kind", "name", "representative", "country", "address", "controlled_by")
                 if getattr(updated, k) != getattr(before, k)
             )  # fmt: skip
-            accounts().audit(who.user_id, "profile.update", f"sections={changed}")
-            return respond(S.ProfileResponse, profile_payload())
-        need(request, "profile.get")
-        return respond(S.ProfileResponse, profile_payload())
+            accounts().audit(who.user_id, "company.update", f"fields={changed}")
+            for rt in cfg.runtimes.values():
+                if rt.router is not None:
+                    rt.router.holder = updated.holder()
+            return respond(S.Company, updated.public())
+        need(request, "company.get")
+        return respond(S.Company, accounts().company().public())
 
     def snapshot_payload() -> dict[str, Any]:
         target = server_cfg().snapshot
@@ -1535,7 +1733,7 @@ def create_app(cfg: AppConfig) -> Starlette:
     # ------------------------------------------------------------------ connections
 
     def server_country() -> str | None:
-        return server_cfg().server_country
+        return server_cfg().facts().country
 
     def own_file(request: Request) -> Path:
         """Connections added in the web go to the org's own file (core stays the owner's)."""
@@ -1561,7 +1759,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     def conn_public(c: Connection, source: str, org: str) -> dict[str, Any]:
         secret = org_secret(org, c.secret_ref) if c.secret_ref else None
-        verdict = judge(c.provider, c.harness, c.models, c.entity, server_country())
+        verdict = judge(c.provider, c.harness, c.models, holder(), server_country())
         return {
             "id": c.id,
             "kind": c.kind.value,
@@ -1572,7 +1770,6 @@ def create_app(cfg: AppConfig) -> Starlette:
             "slots": c.slots,
             "monthly_budget_usd": c.monthly_budget_usd,
             "network": c.network,
-            "entity": c.entity.model_dump() if c.entity else None,
             "secret_last4": secret[-4:] if secret and len(secret) >= 8 else None,
             "eligible": verdict.ok,
             "eligibility_reason": verdict.reason or None,
@@ -1580,13 +1777,13 @@ def create_app(cfg: AppConfig) -> Starlette:
             "source": source,
         }
 
-    def entity_required() -> ApiError:
-        return ApiError(400, E.ENTITY_REQUIRED, ENTITY_REQUIRED)
+    def company_required() -> ApiError:
+        return ApiError(400, E.COMPANY_REQUIRED, COMPANY_REQUIRED)
 
     def ineligible(verdict: Verdict) -> ApiError:
         code = (
             E.CONNECTION_INELIGIBLE_SERVER if verdict.by == "server"
-            else E.CONNECTION_INELIGIBLE_ENTITY
+            else E.CONNECTION_INELIGIBLE_COMPANY
         )  # fmt: skip
         return ApiError(
             422,
@@ -1602,7 +1799,6 @@ def create_app(cfg: AppConfig) -> Starlette:
         if request.method == "POST":
             need(request, "connections.create")
             data = await body(request)
-            entity = Entity.model_validate(data["entity"]) if data.get("entity") else None
             cid = str(data.get("id") or "").strip()
             if not cid:
                 raise ApiError(400, E.CONNECTION_ID_REQUIRED, "id is required")
@@ -1619,11 +1815,11 @@ def create_app(cfg: AppConfig) -> Starlette:
                 base_url=data.get("base_url"),
                 secret_env=data.get("secret_env"),
                 monthly_budget_usd=data.get("monthly_budget_usd"),
-                entity=entity,
             )
-            if entity is None and providers_reached(conn.provider, conn.harness, conn.models):
-                raise entity_required()  # C18 — eligibility is judged on the holder
-            verdict = judge(conn.provider, conn.harness, conn.models, entity, server_country())
+            company = holder()
+            if company is None and providers_reached(conn.provider, conn.harness, conn.models):
+                raise company_required()  # C18 — eligibility is judged on the company
+            verdict = judge(conn.provider, conn.harness, conn.models, company, server_country())
             if not verdict.ok:
                 raise ineligible(verdict)
             if data.get("secret"):
@@ -1671,17 +1867,9 @@ def create_app(cfg: AppConfig) -> Starlette:
             update["active"] = bool(data["active"])
         if "monthly_budget_usd" in data:
             update["monthly_budget_usd"] = data["monthly_budget_usd"]
-        if "entity" in data:
-            update["entity"] = Entity.model_validate(data["entity"]) if data["entity"] else None
         changed = found.model_copy(update=update)
-        if (
-            "entity" in data
-            and changed.entity is None
-            and providers_reached(changed.provider, changed.harness, changed.models)
-        ):
-            raise entity_required()
         verdict = judge(
-            changed.provider, changed.harness, changed.models, changed.entity, server_country()
+            changed.provider, changed.harness, changed.models, holder(), server_country()
         )
         if changed.active and not verdict.ok:
             raise ineligible(verdict)
@@ -1804,14 +1992,32 @@ def create_app(cfg: AppConfig) -> Starlette:
         return respond(S.ThreadState, await m.thread_state(tid))
 
     async def thread_run(request: Request) -> Response:
-        need(request, "threads.run")
+        who = need(request, "threads.run")
         m = runtime(request).manager
         text = (await body(request)).get("input")
         tid = request.path_params["tid"]
         if m.store.thread(tid) is None:
             raise KeyError(f"no thread {tid}")
         rid = await m.submit(tid, text if isinstance(text, str) else None)
+        if isinstance(text, str) and who.demo is not None:
+            await run_for_prompt(request, who, text)
         return respond(S.RunCreated, {"run_id": rid}, 201)
+
+    async def run_for_prompt(request: Request, who: Principal, text: str) -> None:
+        """A demo visitor's request: a suggested one (or one the keyword table matches) runs
+        its scenario; the text itself is never kept — only its number, the match, its
+        length (PRD §3.6.3)."""
+        from solosquad.demo.harness import match_intent, suggestion_number
+        from solosquad.demo.scenario import ensure_running
+
+        found = match_intent(text)
+        usage(who, request, "prompt", suggestion=suggestion_number(text),
+              matched=found is not None, length=len(text))  # fmt: skip
+        rt = runtime(request)
+        if found is None or found.scenario is None or rt.workflows is None:
+            return
+        for name in await ensure_running(rt.workflows, (found.scenario,), source="demo:prompt"):
+            usage(who, request, "scenario_start", workflow=name, how="prompt")
 
     async def thread_resume(request: Request) -> Response:
         who = need(request, "threads.resume")
@@ -1827,6 +2033,9 @@ def create_app(cfg: AppConfig) -> Starlette:
             "approval",
             approval_change(request, "company", tid, rid, value, card, who.name),
         )
+        usage(who, request, "approval_click", source="company", value=str(value),
+              category=(card or {}).get("category"),
+              tier=policy(request).tier((card or {}).get("category")).value)  # fmt: skip
         return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def runs(request: Request) -> Response:
@@ -1859,7 +2068,7 @@ def create_app(cfg: AppConfig) -> Starlette:
 
     def hub_for(rt: RuntimeView) -> EventHub:
         hub = hubs.get(rt.key)
-        if hub is None:
+        if hub is None or hub.manager is not rt.manager:  # a runtime rebuilt (demo reset)
             others = {"workflow": rt.workflows.manager} if rt.workflows else None
             hub = hubs[rt.key] = EventHub(rt.manager, others=others)
         return hub
@@ -1988,6 +2197,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         except ValueError as e:  # a missing input · an upload id that is not one
             raise ApiError(400, E.WORKFLOW_INPUT_INVALID, str(e)) from e
         org_audit(in_scope(request), "workflow.run", name)
+        usage(who, request, "scenario_start", workflow=name, how="button")
         return respond(S.WorkflowRunCreated, {"thread_id": tid, "run_id": rid}, 201)
 
     async def workflow_runs(request: Request) -> Response:
@@ -2039,6 +2249,10 @@ def create_app(cfg: AppConfig) -> Starlette:
             "approval",
             approval_change(request, "workflow", tid, rid, value, card, who.name),
         )
+        usage(who, request, "approval_click", source="workflow", value=str(value),
+              category=(card or {}).get("category"),
+              tier=policy(request).tier((card or {}).get("category")).value,
+              workflow=(card or {}).get("workflow"), step=(card or {}).get("step"))  # fmt: skip
         return respond(S.RunCreated, {"run_id": rid}, 201)
 
     async def uploads(request: Request) -> Response:
@@ -2301,7 +2515,11 @@ def create_app(cfg: AppConfig) -> Starlette:
 
         return ok
 
-    def preset_for(errors: dict[str, str]) -> Callable[[str], Preset]:
+    def preset_for(errors: dict[str, str], locale: str) -> Callable[[str], Preset]:
+        """An org's label preset; without one, the default names in `locale` — the
+        language of the person whose request seeds the org (2026-11-11, was the customer
+        default)."""
+
         def find(org: str) -> Preset:
             try:
                 found = load_preset(cfg.solution.org(org).root)
@@ -2310,7 +2528,7 @@ def create_app(cfg: AppConfig) -> Starlette:
                 found = None
             except LayoutError:
                 found = None
-            return found or default_preset(customer_locale())
+            return found or default_preset(locale)
 
         return find
 
@@ -2459,11 +2677,11 @@ def create_app(cfg: AppConfig) -> Starlette:
         wanted = request.query_params.get("org")
         orgs = [wanted] if wanted else sorted(served_orgs())
         errors: dict[str, str] = {}
-        own_locale = (who.session.user.locale if who.session else "") or customer_locale()
+        own_locale = person_locale(who)
         found = cal.labels(
             viewer(who),
             orgs,
-            preset_for=preset_for(errors),
+            preset_for=preset_for(errors, own_locale),
             personal_preset=default_preset(own_locale, personal=True),
         )
         return respond(S.CalendarLabels, {**found, "preset_errors": errors})
@@ -2491,6 +2709,8 @@ def create_app(cfg: AppConfig) -> Starlette:
         if not isinstance(ids, list):
             raise ApiError(400, E.CALENDAR_REORDER_INVALID, "ids must be a list")
         what = str(data.get("type") or "")
+        if what == "labels":
+            read_only(request, "calendar.labels.reorder")
         v = viewer(who)
         try:
             org = cal.reorder(v, what, [str(i) for i in ids])
@@ -2851,6 +3071,60 @@ def create_app(cfg: AppConfig) -> Starlette:
         assert pres.seen_until is not None
         return respond(S.DigestAck, {"seen_until": pres.seen_until, "basis": pres.basis})
 
+    # ------------------------------------------------------------------ demo (decision 62)
+
+    def demo_visitor(request: Request, route: str) -> Principal:
+        who = need(request, route)
+        if cfg.demo is None or who.demo is None:
+            raise ApiError(404, E.NOT_FOUND, NOT_FOUND)
+        return who
+
+    async def demo_events(request: Request) -> Response:
+        """What a demo visitor looks at — the web posts the screen it leaves (`page_view`,
+        its path made a pattern, and the time on it), a heartbeat while the person is
+        there (the session length), and a click on a locked control (`blocked_click`)."""
+        from solosquad.demo.store import PATH_KEEP, path_pattern
+
+        who = demo_visitor(request, "demo.events")
+        data = await body(request)
+        kind = str(data.get("kind") or "")
+        if kind == "page_view":
+            path = str(data.get("path") or "")[:PATH_KEEP]
+            if not path.startswith("/"):
+                raise ApiError(400, E.INVALID_REQUEST, "path must start with /")
+            raw_ms = data.get("ms")
+            ms = int(raw_ms) if isinstance(raw_ms, int | float) and raw_ms >= 0 else None
+            usage(who, request, "page_view", path=path_pattern(path), ms=ms)
+        elif kind == "blocked_click":
+            name = str(data.get("name") or "")[:40]
+            usage(who, request, "blocked_click", name=name, via="screen")
+        elif kind != "heartbeat":
+            raise ApiError(
+                400, E.INVALID_REQUEST, "kind must be page_view, blocked_click or heartbeat"
+            )
+        return respond(S.Ok, {"ok": True})
+
+    async def demo_reset(request: Request) -> Response:
+        """처음 상태로 — the visitor's own copy made again from the template, now."""
+        who = demo_visitor(request, "demo.reset")
+        assert who.demo is not None
+        usage(who, request, "reset", by="button")
+        if cfg.demo_control is None:
+            raise ApiError(503, E.WORKSPACE_NOT_STARTED, "the demo supervisor is not running")
+        await cfg.demo_control.reset(who.demo)
+        return respond(S.Ok, {"ok": True})
+
+    async def demo_restart(request: Request) -> Response:
+        """시나리오 다시 시작 — the open scenario runs stop and every scenario starts again."""
+        from solosquad.demo.scenario import restart
+
+        who = demo_visitor(request, "demo.restart")
+        e = engine(request)
+        started = await restart(e, source=f"user:{who.name}")
+        for name in started:
+            usage(who, request, "scenario_start", workflow=name, how="restart")
+        return respond(S.DemoRestarted, {"workflows": started})
+
     # ------------------------------------------------------------------ errors · routes
 
     def error(status: int, message: str, code: E, params: dict[str, Any] | None = None) -> Json:
@@ -2878,6 +3152,9 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/health", health, ["GET"]),
         ("/version", version, ["GET"]),
         ("/auth/login", login, ["POST"]),
+        ("/auth/demo-login", demo_login, ["POST"]),
+        ("/demo/events", demo_events, ["POST"]),
+        ("/demo/reset", demo_reset, ["POST"]),
         ("/auth/logout", logout, ["POST"]),
         ("/auth/totp/begin", totp_begin, ["POST"]),
         ("/auth/totp/confirm", totp_confirm, ["POST"]),
@@ -2894,8 +3171,8 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/users/{uid}", user_update, ["PATCH"]),
         ("/access", access, ["GET", "PUT"]),
         ("/audit", audit, ["GET"]),
-        ("/settings", settings, ["GET", "PUT"]),
-        ("/profile", profile, ["GET", "PUT"]),
+        ("/server", server_facts, ["GET"]),
+        ("/company", company, ["GET", "PUT"]),
         ("/snapshot", snapshot, ["GET", "PUT"]),
         ("/snapshot/run", snapshot_run, ["POST"]),
         ("/calendar/items", calendar_items, ["GET", "POST"]),
@@ -2948,6 +3225,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/artifacts/{aid}/review", artifact_review, ["POST"]),
         ("/schedules", schedules, ["GET"]),
         ("/work", work, ["GET"]),
+        ("/demo/restart", demo_restart, ["POST"]),
     ]
 
     def table(rows: Table) -> list[BaseRoute]:

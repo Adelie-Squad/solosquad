@@ -299,7 +299,7 @@ async def test_c20_a_language_is_the_persons_own_and_survives_a_new_login(desk: 
             boss_before["locale"],
             boss_before["user"]["locale"],
         ) == ("ko", "ko")  # fmt: skip
-        assert boss_after["org_locale"] == "ko"
+        assert "org_locale" not in boss_after  # no customer default (2026-11-11)
     assert hb
 
 

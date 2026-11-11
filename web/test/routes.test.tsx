@@ -1,8 +1,10 @@
-// Addresses (DESIGN.md `## 레이아웃` — 주소): `/` landing · `/login` · `/o/…` app; signed-out
-// app addresses go to `/login?next=`; logout lands on `/login` with the cache emptied;
-// connections moved into Settings with the old addresses redirected.
+// Addresses (DESIGN.md `## 레이아웃` — 주소): `/` → login, no landing (decision 62 · C62) · `/login` ·
+// `/o/…` app; signed-out app addresses go to `/login?next=`; logout lands on `/login` with the
+// cache emptied; connections moved into Settings with the old addresses redirected.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { App } from '../src/App';
@@ -106,19 +108,52 @@ describe('landing · login · app addresses', () => {
     await waitFor(() => expect(where()).toBe('/dashboard'));
   });
 
-  it('the landing offers Log in when signed out, Go to my office when signed in — and stays on /', async () => {
+  it('a company server’s / is its login, or the dashboard when signed in — no landing (decision 62)', async () => {
     stubApi(() => null);
     app('/');
-    const logins = await screen.findAllByRole('link', { name: /Log in/ });
-    for (const login of logins) expect(login.getAttribute('href')).toBe('/login');
-    expect(where()).toBe('/');
+    await waitFor(() => expect(where()).toBe('/login'));
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeTruthy();
+    expect(document.querySelector('.landing')).toBeNull();
     cleanup();
     stubApi(() => me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }));
     app('/');
-    const offices = await screen.findAllByRole('link', { name: /Go to my office/ });
-    for (const office of offices) expect(office.getAttribute('href')).toBe('/dashboard');
-    expect(screen.queryByRole('link', { name: /Log in/ })).toBeNull();
-    expect(where()).toBe('/');
+    await waitFor(() => expect(where()).toBe('/dashboard'));
+    expect(document.querySelector('.landing')).toBeNull();
+  });
+
+  it('the login takes ?u=<id> from the marketing login router to fill the ID', async () => {
+    stubApi(() => null);
+    app('/login?u=minji');
+    expect(((await screen.findByLabelText('Username')) as HTMLInputElement).value).toBe('minji');
+  });
+
+  it('C62: nothing the customer app imports reaches the landing or the marketing pages (code or words)', () => {
+    const root = join(process.cwd(), 'src');
+    const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
+    const resolve = (from: string, spec: string) => {
+      const base = join(from, '..', spec);
+      return [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts'), join(base, 'index.tsx')].find(isFile) ?? null;
+    };
+    const seen = new Set<string>();
+    const walk = (file: string) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      const code = readFileSync(file, 'utf8');
+      // static imports and re-exports (`import type` too — harmless, but keeps the rule simple), side-effect imports and lazy imports
+      for (const m of code.matchAll(/from\s*['"](\.[^'"]+)['"]|import\s*\(\s*['"](\.[^'"]+)['"]\s*\)|^import\s+['"](\.[^'"]+)['"]/gm)) {
+        const spec = m[1] ?? m[2] ?? m[3];
+        if (spec.endsWith('.css')) continue;
+        const next = resolve(file, spec);
+        if (next) walk(next);
+      }
+    };
+    walk(join(root, 'main.tsx'));
+    const reached = [...seen].map((f) => f.slice(root.length + 1).split('\\').join('/'));
+    expect(reached.length).toBeGreaterThan(50);
+    // the one allowed touch: a type-only import of the marketing keys in i18n (erased in the build)
+    const offending = reached.filter((f) => f.startsWith('landing/') || (f.startsWith('marketing/') && f !== 'marketing/messages/ko.ts'));
+    expect(offending).toEqual([]);
+    expect(readFileSync(join(root, 'i18n/index.tsx'), 'utf8')).toMatch(/import type \{ MarketingKey \} from '\.\.\/marketing\/messages\/ko'/);
   });
 });
 

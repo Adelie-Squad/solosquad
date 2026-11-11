@@ -43,6 +43,7 @@ from solosquad.storage import (
     snapshot,
 )
 from solosquad.web_api.accounts import (
+    DEFAULT_LOCALE,
     LEGACY_COMPONENT,
     LEGACY_MIGRATIONS,
     AccountStore,
@@ -323,9 +324,19 @@ def open_accounts(sol: Solution, home: Path | None = None) -> AccountStore:
             f" org ({listed}). Rename one of them in its org.db, then start again."
             " Nothing was changed."
         )
-    core = AccountStore(core_path(sol, home))
+    # the retired customer default language becomes the own choice of everyone who
+    # followed it (2026-11-11), then leaves the server settings
+    fill = sol.legacy_web_locale() or DEFAULT_LOCALE
+    core = AccountStore(core_path(sol, home), fill_locale=fill)
     for org in sol.orgs():
         migrate_org_accounts(core, org.name, org_path(sol, org.name, home))
+    core.settle_locales(fill)
+    sol.drop_legacy_web_locale()
+    from solosquad.profile import lift_customer_profile  # profile → 서버 · 회사 (2026-11-11)
+
+    moved = lift_customer_profile(sol, core)
+    if moved:
+        core.audit(None, "profile.retire", ", ".join(f"{k}={v}" for k, v in sorted(moved.items())))
     return core
 
 

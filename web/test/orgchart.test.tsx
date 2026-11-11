@@ -10,7 +10,7 @@ import { OrgChart } from '../src/components/OrgChart';
 import { ApiError } from '../src/api/client';
 import { errorText } from '../src/api/errors';
 import { translate, type Vars } from '../src/i18n';
-import type { MessageKey } from '../src/i18n/ko';
+import type { MessageKey } from '../src/i18n';
 import { agentName, agentSummary, readableId } from '../src/lib/agentNames';
 import { teamName } from '../src/lib/names';
 import { legacyTarget, ScopeLayout } from '../src/shell/ScopeLayout';

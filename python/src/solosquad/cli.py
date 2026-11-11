@@ -21,6 +21,7 @@ from rich.tree import Tree
 from solosquad import __version__
 from solosquad.assets.bundle import find_bundle_root, load_bundle
 from solosquad.client import Client, HttpClient, LocalClient, message_text, server_file
+from solosquad.company_info import Company
 from solosquad.layout import (
     EngineStore,
     LayoutError,
@@ -31,12 +32,6 @@ from solosquad.layout import (
     scaffold_solution,
     scaffold_workspace,
     solosquad_home,
-)
-from solosquad.profile import (
-    CustomerProfile,
-    load_profile,
-    parse_entity,
-    save_profile,
 )
 from solosquad.routing import (
     Connection,
@@ -66,8 +61,10 @@ accounts_app = typer.Typer(
 app.add_typer(add_app, name="add")
 app.add_typer(cron_app, name="cron")
 app.add_typer(accounts_app, name="accounts")
-profile_app = typer.Typer(no_args_is_help=True, help="The customer profile filled in at setup.")
-app.add_typer(profile_app, name="profile")
+server_app = typer.Typer(no_args_is_help=True, help="What this engine server is (서버).")
+app.add_typer(server_app, name="server")
+company_app = typer.Typer(no_args_is_help=True, help="The customer company (회사).")
+app.add_typer(company_app, name="company")
 workflows_app = typer.Typer(no_args_is_help=True, help="An org's workflows (steps · approvals).")
 app.add_typer(workflows_app, name="workflows")
 web_app = typer.Typer(no_args_is_help=True, help="The customer web: its API contract.")
@@ -216,7 +213,10 @@ def init(
         str | None,
         typer.Option("--workspace-display", help='Workspace name people read, e.g. "HQ".'),
     ] = None,
-    ws_type: Annotated[WorkspaceType, typer.Option("--type")] = WorkspaceType.LOCAL,
+    ws_type: Annotated[
+        WorkspaceType | None,
+        typer.Option("--type", help="Override where the server runs (default: detected)."),
+    ] = None,
     server_country: Annotated[
         str | None, typer.Option("--server-country", help="ISO country of the server, e.g. KR")
     ] = None,
@@ -225,37 +225,22 @@ def init(
     cloud_access: Annotated[
         str | None, typer.Option("--cloud-access", help="How the agency reaches it (no secrets)")
     ] = None,
-    entity: Annotated[
-        list[str] | None,
-        typer.Option("--entity", help="Account-holding entity: id=name:country[:controlled_by]"),
-    ] = None,
-    language: Annotated[
-        str | None, typer.Option(help="Default UI language: ko · en · zh-CN")
-    ] = None,
-    privacy_regime: Annotated[
-        list[str] | None, typer.Option("--privacy-regime", help="e.g. PIPA, PIPL")
-    ] = None,
-    privacy_reviewer: Annotated[
-        str | None, typer.Option("--privacy-reviewer", help="A role, e.g. 고객 법무팀")
-    ] = None,
 ) -> None:
-    """Create core/, the first org and its first workspace — and the customer profile."""
+    """Create core/, the first org and its first workspace. The server is detected; the
+    options here only override what detection finds (core/server.yaml)."""
     bundle = find_bundle_root(Path(__file__).resolve().parent) or find_bundle_root(Path.cwd())
     try:
-        profile = _apply_profile(
-            CustomerProfile(), server_country, cloud, region, cloud_access, entity, language,
-            privacy_regime, privacy_reviewer,
-        )  # fmt: skip
         display_name(display), display_name(workspace_display)  # refuse before writing anything
         sol = scaffold_solution(path, __version__, bundle / "user" if bundle else None, ws_type)
         new_org = scaffold_org(sol, org, BUNDLED_PACKAGE, __version__, display)
         scaffold_workspace(new_org, workspace, workspace_display)
-        save_profile(path, profile)  # the server country lands in core/server.yaml (I41)
+        _server_overrides(sol, server_country, cloud, region, cloud_access)
     except (LayoutError, ValueError) as e:
         raise _fail(str(e)) from e
-    console.print(f"created {path} — org {org!r}, workspace {workspace!r} ({ws_type.value})")
-    _print_checklist(profile)
-    console.print("next: solosquad connections add … , then solosquad chat -s " + str(path))
+    console.print(f"created {path} — org {org!r}, workspace {workspace!r}")
+    _print_server(sol)
+    console.print("next: solosquad company set … , solosquad connections add … ,"
+                  " then solosquad chat -s " + str(path))  # fmt: skip
 
 
 @app.command()
@@ -272,7 +257,7 @@ def layout(
         server = sol.server_config(strict=False)
     except ValueError as e:
         raise _fail(str(e)) from e
-    tree = Tree(f"{path} · {meta.id} · engine {lock.version} · server {server.type.value}")
+    tree = Tree(f"{path} · {meta.id} · engine {lock.version} · server {server.facts().where}")
     for o in sol.orgs():
         shown = f" ({o.config().display_name})" if o.config().display_name else ""
         node = tree.add(f"org {o.name}{shown} · {o.lock().package}@{o.lock().version}")
@@ -373,27 +358,19 @@ def conn_add(
     org: Annotated[
         str | None, typer.Option("--org", help="Add to one org only (separate billing).")
     ] = None,
-    entity: Annotated[
-        str | None,
-        typer.Option("--entity", help="Profile entity id that holds this account (decision 45)"),
-    ] = None,
 ) -> None:
-    """Add a subscription login or an API key (decision 22). Keys go in with `set-secret`."""
-    from solosquad.routing.eligibility import Entity, judge, providers_reached
+    """Add a subscription login or an API key (decision 22). Keys go in with `set-secret`.
+    The account holder is the customer company (회사) — `solosquad company set`."""
+    from solosquad.routing.eligibility import judge, providers_reached
 
-    holder: Entity | None = None
-    if entity is not None:
-        try:
-            pe = load_profile(solution).entity(entity)
-        except KeyError as e:
-            raise _fail(str(e).strip("'\"")) from e
-        holder = Entity(name=pe.name, country=pe.country, controlled_by=pe.controlled_by)
+    holder = _accounts(solution).company().holder()
     model_list = [m for m in models.split(",") if m]
     if holder is None and providers_reached(provider, harness, model_list):
         raise _fail(
-            "enter the entity that holds this account: --entity <id> (see `solosquad profile`)"
+            "enter the company's country first: solosquad company set --country <ISO> (회사 소재지)"
         )
-    verdict = judge(provider, harness, model_list, holder, load_profile(solution).server.country)
+    country = Solution(solution).server_config(strict=False).facts().country
+    verdict = judge(provider, harness, model_list, holder, country)
     if not verdict.ok:
         raise _fail(f"{verdict.reason} — see {verdict.source}")
     path = _conn_path(solution, org)
@@ -411,7 +388,6 @@ def conn_add(
             slots=slots,
             monthly_budget_usd=budget,
             network=network,
-            entity=holder,
         )
     )
     save_connections(path, conns)
@@ -509,13 +485,15 @@ def conn_check(
 # ---------------------------------------------------------------------- run
 
 
-def _engine(solution: Path, include: list[str] | None = None) -> EngineServer:
+def _engine(solution: Path, include: list[str] | None = None, build: Any = None) -> EngineServer:
     """Every placed workspace's runtime — refuses on a server-settings conflict (C33) or a
     failed account move (C32), never on one broken workspace (K49)."""
     from solosquad.engine_server import build_engine
     from solosquad.storage import MigrationFailed
 
     try:
+        if build is not None:
+            return build_engine(solution, include=include, build=build)
         return build_engine(solution, include=include)
     except (LayoutError, MigrationFailed) as e:
         raise _fail(str(e)) from e
@@ -550,15 +528,37 @@ def serve(
     from solosquad.server import ApiServer, load_or_create_token
 
     include = _placement(org, workspace)
+    from solosquad.demo import is_demo, load_config
+
+    demo = is_demo(Solution(solution))
 
     async def main() -> None:
-        engine = _engine(solution, include)
+        build = None
+        demo_store = None
+        if demo:
+            from solosquad.demo.seed import demo_builder
+            from solosquad.demo.store import DemoStore
+            from solosquad.demo.supervisor import step_recorder
+
+            demo_cfg = load_config(Solution(solution))
+            demo_store = DemoStore(_accounts(solution).path)
+            build = demo_builder(demo_cfg, step_recorder(demo_store))
+            console.print("[yellow]DEMO MODE[/yellow] — scripted agents, settings read-only")
+        engine = _engine(solution, include, build)
         resumed = await start_engine(engine)
         for (o, w), why in sorted(engine.failed.items()):
             console.print(f"[red]workspace {o}/{w} did not start:[/red] {escape(why)}")
         token = load_or_create_token(engine.data_dir)
         upkeep = asyncio.create_task(maintenance_loop(engine))
-        api = ApiServer.for_engine(engine, token, static_dir=_web_dist())
+        caretaker: asyncio.Task[None] | None = None
+        api = ApiServer.for_engine(engine, token, static_dir=_web_dist(), demo=demo_store)
+        if demo and demo_store is not None and build is not None:
+            from solosquad.demo.supervisor import DemoSupervisor
+
+            sup = DemoSupervisor(engine, demo_store, demo_cfg, build, api.config)
+            api.config.demo_control = sup
+            await sup.reconcile()
+            caretaker = asyncio.create_task(sup.run())
         bound = await api.start(host, port)
         sf = server_file(engine.data_dir)
         sf.write_text(
@@ -575,6 +575,8 @@ def serve(
                 loop.add_signal_handler(sig, stop.set)
         await stop.wait()
         upkeep.cancel()
+        if caretaker is not None:
+            caretaker.cancel()
         await api.stop()
         await stop_engine(engine)
         sf.unlink(missing_ok=True)
@@ -811,94 +813,110 @@ def cron_run(
     _run(main())
 
 
-# ---------------------------------------------------------------------- customer profile
+# ---------------------------------------------------------------------- 서버 · 회사 (2026-11-11)
 
 
-def _apply_profile(
-    base: CustomerProfile,
-    server_country: str | None,
+def _server_overrides(
+    sol: Solution,
+    country: str | None,
     cloud: str | None,
     region: str | None,
-    cloud_access: str | None,
-    entity: list[str] | None,
-    language: str | None,
-    privacy_regime: list[str] | None,
-    privacy_reviewer: str | None,
-) -> CustomerProfile:
-    data = base.model_dump()
-    srv = data["server"]
-    for key, val in (("country", server_country), ("cloud", cloud), ("region", region),
-                     ("access", cloud_access)):  # fmt: skip
+    access: str | None,
+) -> None:
+    """The builder's overrides of the detected server facts, in core/server.yaml."""
+    changes: dict[str, str | None] = {}
+    for key, val in (("cloud", cloud), ("region", region), ("agency_access", access)):
         if val is not None:
-            srv[key] = val
-    if entity:
-        by_id = {e["id"]: e for e in data["entities"]}
-        for spec in entity:
-            parsed = parse_entity(spec)
-            by_id[parsed.id] = parsed.model_dump()
-        data["entities"] = list(by_id.values())
-    if language is not None:
-        data["languages"]["default"] = language
-    if privacy_regime:
-        data["privacy"]["regimes"] = sorted({*data["privacy"]["regimes"], *privacy_regime})
-    if privacy_reviewer is not None:
-        data["privacy"]["reviewer"] = privacy_reviewer
-    return CustomerProfile.model_validate(data)
+            changes[key] = val.strip() or None
+    if country is not None:
+        changes["server_country"] = country.strip().upper() or None
+    if changes:
+        sol.update_server_config(**changes)
 
 
-def _print_checklist(profile: CustomerProfile) -> None:
-    table = Table("고객 프로필 (결정 50)", "")
-    for item in profile.checklist():
-        table.add_row(
-            item["label"], "[green]✓[/green]" if item["done"] else "[yellow]비어 있음[/yellow]"
-        )
+def _print_server(sol: Solution) -> None:
+    facts = sol.server_config(strict=False).facts()
+    table = Table("서버", "", "")
+    for key in ("where", "cloud", "region", "country", "os", "version"):
+        value = getattr(facts, key)
+        table.add_row(key, str(value) if value else "-", facts.sources.get(key, ""))
     console.print(table)
 
 
-@profile_app.command("show")
-def profile_show(solution: SolutionOpt = Path(".")) -> None:
-    """The customer profile and what is still missing for setup."""
-    profile = load_profile(solution)
-    console.print(escape(json.dumps(profile.model_dump(mode="json", exclude_none=True),
-                                    ensure_ascii=False, indent=1)))  # fmt: skip
-    _print_checklist(profile)
+@server_app.command("show")
+def server_show(solution: SolutionOpt = Path(".")) -> None:
+    """What this server is — detected, with core/server.yaml's overrides (the 서버 tab)."""
+    _print_server(Solution(solution))
 
 
-@profile_app.command("set")
-def profile_set(
+@server_app.command("set")
+def server_set(
     solution: SolutionOpt = Path("."),
-    server_country: Annotated[
-        str | None, typer.Option("--server-country", help="ISO country of the server, e.g. KR")
+    country: Annotated[
+        str | None, typer.Option("--country", help="ISO country of the server, e.g. KR ('' clears)")
     ] = None,
     cloud: Annotated[str | None, typer.Option(help="Cloud provider, e.g. aws · gcp · ncp")] = None,
     region: Annotated[str | None, typer.Option(help="Cloud region, e.g. ap-northeast-2")] = None,
-    cloud_access: Annotated[
-        str | None, typer.Option("--cloud-access", help="How the agency reaches it (no secrets)")
-    ] = None,
-    entity: Annotated[
-        list[str] | None,
-        typer.Option("--entity", help="Account-holding entity: id=name:country[:controlled_by]"),
-    ] = None,
-    language: Annotated[
-        str | None, typer.Option(help="Default UI language: ko · en · zh-CN")
-    ] = None,
-    privacy_regime: Annotated[
-        list[str] | None, typer.Option("--privacy-regime", help="e.g. PIPA, PIPL")
-    ] = None,
-    privacy_reviewer: Annotated[
-        str | None, typer.Option("--privacy-reviewer", help="A role, e.g. 고객 법무팀")
+    access: Annotated[
+        str | None, typer.Option("--access", help="How the agency reaches it (no secrets)")
     ] = None,
 ) -> None:
-    """Fill in or change profile items; the server country is kept in core/server.yaml."""
+    """Override detected facts — only when detection gets them wrong."""
+    sol = Solution(solution)
     try:
-        profile = _apply_profile(
-            load_profile(solution), server_country, cloud, region, cloud_access, entity, language,
-            privacy_regime, privacy_reviewer,
-        )  # fmt: skip
-        save_profile(solution, profile)
+        _server_overrides(sol, country, cloud, region, access)
     except (ValueError, LayoutError) as e:
         raise _fail(str(e)) from e
-    _print_checklist(profile)
+    _print_server(sol)
+
+
+def _print_company(company: Company) -> None:
+    table = Table("회사", "")
+    for key in ("kind", "name", "representative", "country", "address", "controlled_by"):
+        table.add_row(key, str(getattr(company, key) or "-"))
+    table.add_row("complete", "[green]yes[/green]" if company.complete else "[yellow]no[/yellow]")
+    console.print(table)
+
+
+@company_app.command("show")
+def company_show(solution: SolutionOpt = Path(".")) -> None:
+    """The customer company (회사) — the account holder for the provider rules."""
+    _print_company(_accounts(solution).company())
+
+
+@company_app.command("set")
+def company_set(
+    solution: SolutionOpt = Path("."),
+    kind: Annotated[
+        str | None,
+        typer.Option("--kind", help="corporation (법인) · sole_proprietor (개인 사업자)"),
+    ] = None,
+    name: Annotated[str | None, typer.Option("--name", help="법인명 or 상호")] = None,
+    representative: Annotated[str | None, typer.Option("--representative", help="대표자")] = None,
+    country: Annotated[
+        str | None, typer.Option("--country", help="소재지 country, e.g. KR")
+    ] = None,
+    address: Annotated[str | None, typer.Option("--address", help="소재지 address")] = None,
+    controlled_by: Annotated[
+        str | None,
+        typer.Option("--controlled-by", help="지배 회사 나라 (법인 only), e.g. CN"),
+    ] = None,
+) -> None:
+    """Fill in or change the company; options left out keep their value."""
+    from solosquad.company_info import validate_company
+
+    store = _accounts(solution)
+    current = store.company().public()
+    given = {"kind": kind, "name": name, "representative": representative, "country": country,
+             "address": address, "controlled_by": controlled_by}  # fmt: skip
+    current.pop("complete")
+    data = {**current, **{k: v for k, v in given.items() if v is not None}}
+    try:
+        company = store.set_company(validate_company(data))
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    store.audit(None, "company.update", "via CLI")
+    _print_company(company)
 
 
 # ---------------------------------------------------------------------- data upkeep
@@ -1345,3 +1363,278 @@ def service_uninstall(
     if p.path:
         p.path.unlink(missing_ok=True)
     console.print("uninstalled")
+
+
+# ---------------------------------------------------------------------- demo (decision 62)
+
+demo_app = typer.Typer(
+    no_args_is_help=True,
+    help="Demo server (server.yaml mode: demo): scripted scenarios, a copy per demo account.",
+)
+app.add_typer(demo_app, name="demo")
+
+IdOpt = Annotated[str | None, typer.Option("--id", help="The demo id, e.g. samsungDemo.")]
+IdArg = Annotated[str | None, typer.Argument(help="The demo id (or --id).")]
+
+
+def _demo_solution(solution: Path) -> Solution:
+    from solosquad.demo import is_demo
+
+    sol = Solution(solution)
+    if not is_demo(sol):
+        raise _fail(f"{solution} is not a demo server (server.yaml mode: demo) — demo init")
+    return sol
+
+
+def _server_running(solution: Path) -> bool:
+    sf = server_file(_customer_dir(solution))
+    if not sf.is_file():
+        return False
+    try:
+        pid = int(json.loads(sf.read_text(encoding="utf-8"))["pid"])
+        os.kill(pid, 0)
+    except (OSError, ValueError, KeyError):
+        return False
+    return True
+
+
+def _when(ts: float | None) -> str:
+    import time as _t
+
+    return _t.strftime("%Y-%m-%d %H:%M", _t.localtime(ts)) if ts else "-"
+
+
+def _one_id(arg: str | None, opt: str | None) -> str | None:
+    if arg and opt and arg != opt:
+        raise _fail("give the demo id once (argument or --id)")
+    return arg or opt
+
+
+@demo_app.command("init")
+def demo_init(
+    path: Annotated[Path, typer.Argument(help="Directory for the new demo server's solution.")],
+    step_seconds: Annotated[float, typer.Option(help="Seconds per scenario step.")] = 4.0,
+    nightly_reset: Annotated[
+        str, typer.Option(help="HH:MM — every copy made again daily; 'off' to turn it off.")
+    ] = "04:00",
+    marketing_url: Annotated[
+        str | None, typer.Option(help="The marketing site — the demo login form's Origin.")
+    ] = None,
+) -> None:
+    """A demo server: server.yaml mode: demo, the example company 모아 리빙, an empty
+    connection pool, the scenario template. Each demo account gets its own copy when issued."""
+    from solosquad.demo import DemoConfig
+    from solosquad.demo.seed import ensure_company, init_solution
+
+    try:
+        cfg = DemoConfig(
+            step_seconds=step_seconds,
+            nightly_reset=None if nightly_reset == "off" else nightly_reset,
+            marketing_url=marketing_url,
+        )
+        init_solution(path, cfg)
+    except (LayoutError, ValueError) as e:
+        raise _fail(str(e)) from e
+    ensure_company(_accounts(path))
+    console.print(f"demo server created at {path} (SOLOSQUAD_HOME={solosquad_home()})")
+    console.print(f"next: solosquad demo issue --id <slug>Demo --inquiry <id> -s {path}"
+                  f" · solosquad serve -s {path}")  # fmt: skip
+
+
+@demo_app.command("issue")
+def demo_issue(
+    demo_id: IdArg = None,
+    id_: IdOpt = None,
+    inquiry: Annotated[str, typer.Option("--inquiry", help="The inquiry this demo answers.")] = "",
+    days: Annotated[int | None, typer.Option(help="Days until it expires (default 14).")] = None,
+    expires: Annotated[str | None, typer.Option(help="Or: 14d · 48h · 2w · 2026-12-31")] = None,
+    locale: Annotated[str, typer.Option(help="The visitor's screen language.")] = "ko",
+    name: Annotated[str, typer.Option("--name", help="Label shown in the web.")] = "",
+    solution: SolutionOpt = Path("."),
+) -> None:
+    """A demo account (대표 of its own fresh copy) → its password, printed once (16 chars,
+    only the hash is kept)."""
+    from solosquad.demo import load_config
+    from solosquad.demo.seed import create_account, open_stores, seed_account
+    from solosquad.demo.store import parse_expiry
+    from solosquad.web_api.accounts import LOCALES
+
+    sol = _demo_solution(solution)
+    wanted = _one_id(demo_id, id_)
+    if not wanted or not inquiry:
+        raise _fail("give the demo id (--id samsungDemo) and --inquiry <id>")
+    if locale not in LOCALES:
+        raise _fail(f"locale must be one of {list(LOCALES)}")
+    cfg = load_config(sol)
+    accounts, store = open_stores(sol)
+    try:
+        until = parse_expiry(expires or f"{days or cfg.default_days}d")
+        acct, password = create_account(sol, store, accounts, wanted, inquiry, until, name, locale)
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    _run(seed_account(sol, solosquad_home(), acct, accounts))
+    store.mark_seeded(acct.demo_id, acct.generation)
+    console.print(f"[green]issued {acct.demo_id}[/green] · inquiry {acct.inquiry_id} ·"
+                  f" expires {_when(acct.expires)}")  # fmt: skip
+    console.print(f"login id: {acct.demo_id}")
+    console.print(f"password: [bold]{password}[/bold]  (shown once — only its hash is kept)")
+    # stable lines for the marketing admin's script (ssh demo 'solosquad demo issue …')
+    typer.echo(f"demo_id={acct.demo_id}")
+    typer.echo(f"password={password}")
+    typer.echo(f"expires={_when(acct.expires)}")
+
+
+@demo_app.command("list")
+def demo_list(solution: SolutionOpt = Path(".")) -> None:
+    """Demo accounts with their inquiry, status and expiry."""
+    from solosquad.demo.seed import open_stores
+
+    _, store = open_stores(_demo_solution(solution))
+    table = Table("demo id", "inquiry", "label", "status", "expires", "issued", "last reset")
+    for a in store.accounts():
+        table.add_row(a.demo_id, a.inquiry_id, a.label, a.status(), _when(a.expires),
+                      _when(a.created), _when(a.last_reset))  # fmt: skip
+    console.print(table)
+
+
+def _demo_get(store: Any, demo_id: str | None) -> Any:
+    acct = store.get(demo_id or "")
+    if acct is None:
+        raise _fail(f"no demo account {demo_id!r}")
+    return acct
+
+
+@demo_app.command("revoke")
+def demo_revoke(
+    demo_id: IdArg = None, id_: IdOpt = None, solution: SolutionOpt = Path(".")
+) -> None:
+    """End a demo now: the login stops working and its copy is removed (usage stays)."""
+    from solosquad.demo.seed import open_stores, wipe_org
+
+    sol = _demo_solution(solution)
+    accounts, store = open_stores(sol)
+    acct = _demo_get(store, _one_id(demo_id, id_))
+    store.revoke(acct.demo_id)
+    accounts.set_disabled(acct.user_id, True)
+    accounts.audit(None, "demo.revoke", acct.demo_id)
+    if _server_running(solution):
+        # the running server stops the runtime and removes the copy itself
+        console.print(f"revoked {acct.demo_id} — the server removes its copy within seconds")
+        return
+    wipe_org(sol, solosquad_home(), acct, accounts)
+    console.print(f"revoked {acct.demo_id}")
+
+
+@demo_app.command("extend")
+def demo_extend(
+    demo_id: IdArg = None,
+    id_: IdOpt = None,
+    days: Annotated[int | None, typer.Option(help="Days from now.")] = None,
+    expires: Annotated[str | None, typer.Option(help="Or: 7d · 48h · 2026-12-31")] = None,
+    solution: SolutionOpt = Path("."),
+) -> None:
+    """Move the expiry (an expired account can log in again)."""
+    from solosquad.demo.seed import open_stores
+    from solosquad.demo.store import parse_expiry
+
+    accounts, store = open_stores(_demo_solution(solution))
+    acct = _demo_get(store, _one_id(demo_id, id_))
+    if acct.revoked is not None:
+        raise _fail(f"{acct.demo_id} was revoked — issue a new id")
+    if not (days or expires):
+        raise _fail("give --days or --expires")
+    try:
+        store.extend(acct.demo_id, parse_expiry(expires or f"{days}d"))
+    except ValueError as e:
+        raise _fail(str(e)) from e
+    accounts.audit(None, "demo.extend", f"{acct.demo_id} → {expires or days}")
+    console.print(f"{acct.demo_id} expires {_when(_demo_get(store, acct.demo_id).expires)}")
+
+
+@demo_app.command("reset")
+def demo_reset(
+    demo_id: IdArg = None,
+    id_: IdOpt = None,
+    all_: Annotated[bool, typer.Option("--all", help="Every active demo account.")] = False,
+    solution: SolutionOpt = Path("."),
+) -> None:
+    """A fresh copy of the example company (처음 상태로) — usage stays. With a server
+    running it applies the reset within seconds; otherwise it is done here. The server
+    resets every copy at `nightly_reset` itself; `demo reset --all` is the cron fallback."""
+    from solosquad.demo.seed import open_stores, reset_account
+
+    sol = _demo_solution(solution)
+    accounts, store = open_stores(sol)
+    wanted = _one_id(demo_id, id_)
+    if all_ == (wanted is not None):
+        raise _fail("give one demo id or --all")
+    targets = [a for a in store.accounts() if a.active()] if all_ else [_demo_get(store, wanted)]
+    running = _server_running(solution)
+    for acct in targets:
+        store.request_reset(acct.demo_id)
+        store.record(acct.demo_id, "reset", {"by": "cli"})
+        if not running:
+            _run(
+                reset_account(
+                    sol, solosquad_home(), store, accounts, _demo_get(store, acct.demo_id)
+                )
+            )
+        accounts.audit(None, "demo.reset", acct.demo_id)
+    how = "the running server applies it" if running else "done"
+    console.print(f"reset {len(targets)} demo account(s) — {how}")
+
+
+@demo_app.command("usage")
+def demo_usage(
+    demo_id: IdArg = None,
+    id_: IdOpt = None,
+    all_: Annotated[bool, typer.Option("--all", help="Every demo account.")] = False,
+    fmt: Annotated[str, typer.Option("--format", help="table · csv")] = "table",
+    as_csv: Annotated[bool, typer.Option("--csv", help="Same as --format csv.")] = False,
+    events: Annotated[bool, typer.Option("--events", help="Every event, not the summary.")] = False,
+    since: Annotated[str | None, typer.Option(help="Only from this day (2026-11-01).")] = None,
+    solution: SolutionOpt = Path("."),
+) -> None:
+    """How a demo was used — logins, sessions, screens, scenarios, approval clicks, locked
+    settings clicked, requests (never their text) — per account, with its inquiry id to join
+    with the marketing site's inquiry on the agency's own machine."""
+    import datetime as dt
+
+    from solosquad.demo.seed import open_stores
+    from solosquad.demo.store import events_csv, summaries_csv
+
+    _, store = open_stores(_demo_solution(solution))
+    wanted = _one_id(demo_id, id_)
+    if all_ == (wanted is not None):
+        raise _fail("give one demo id or --all")
+    csv_out = as_csv or fmt == "csv"
+    start = dt.datetime.fromisoformat(since).timestamp() if since else 0.0
+    accts = store.accounts() if all_ else [_demo_get(store, wanted)]
+    if events:
+        rows = [e for a in accts for e in store.events(a.demo_id, since=start)]
+        if csv_out:
+            typer.echo(events_csv(rows, {a.demo_id: a.inquiry_id for a in accts}), nl=False)
+            return
+        for e in rows:
+            console.print(f"{_when(e['ts'])}  {e['demo_id']}  {e['kind']}  "
+                          f"{escape(json.dumps(e['detail'], ensure_ascii=False))}")  # fmt: skip
+        return
+    summaries = [store.summary(a, since=start) for a in accts]
+    if csv_out:
+        typer.echo(summaries_csv(summaries), nl=False)
+        return
+    for u in summaries:
+        console.print(f"[bold]{u['demo_id']}[/bold] · inquiry {u['inquiry_id']} · {u['status']}"
+                      f" · expires {_when(u['expires'])}")  # fmt: skip
+        console.print(f"  first login {_when(u['first_login'])} (+{u['days_to_first_login']}d) ·"
+                      f" logins {u['logins']} · sessions {u['sessions']} ·"
+                      f" {u['total_minutes']} min · last seen {_when(u['last_seen'])}")  # fmt: skip
+        console.print(f"  scenarios started {u['scenario_starts']} · finished"
+                      f" {', '.join(u['scenarios_done']) or '-'} · approvals"
+                      f" {u['approvals_approved']} yes / {u['approvals_declined']} no ·"
+                      f" requests {u['prompts']} ({u['prompts_matched']} matched)")  # fmt: skip
+        if u["blocked"]:
+            console.print("  locked settings clicked " + ", ".join(
+                f"{k} {v}" for k, v in u["blocked"].items()))  # fmt: skip
+        if u["screens"]:
+            console.print("  screens " + ", ".join(f"{k} {v}" for k, v in u["screens"].items()))

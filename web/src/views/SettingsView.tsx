@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { NavLink, Navigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { errorCode, errorText } from '../api/errors';
-import { keys, useAccess, useAction, useApprovalPolicy, useKeys, useScopedApi, useSettings, useUsers } from '../api/queries';
-import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser, WebSettings } from '../api/types.gen';
+import { keys, useAccess, useAction, useApprovalPolicy, useKeys, useScopedApi, useUsers } from '../api/queries';
+import type { AccessPolicy, ApprovalPolicyRow, Me, PublicUser } from '../api/types.gen';
 import { Loading, QueryError, SavedLine } from '../components/Status';
 import { categoryLabel, LOCALE_NAMES, LOCALES, useI18n, type Locale, type MessageKey } from '../i18n';
 import { useSession } from '../session';
@@ -13,14 +13,17 @@ import { useLogout } from '../auth/logout';
 import { AgentAccessPanel } from './calendar/common';
 import { ScopeEyebrow } from '../components/ScopeEyebrow';
 import { ScrollLock } from '../components/scrollLock';
+import { Modal } from '../components/Modal';
 import { ICON } from '../icons';
 import { workspaceName } from '../lib/names';
 import { AssignmentChips, AssignmentsDialog, AssignmentsEditor, type Assignment } from './settings/Assignments';
 import { ConnectionsSettings } from './settings/ConnectionsSettings';
 import { PasskeySettings } from './settings/PasskeySettings';
-import { ProfileSettings } from './settings/ProfileSettings';
+import { CompanySettings } from './settings/CompanySettings';
+import { ServerSettings } from './settings/ServerSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
 import { ThemeSettings } from './settings/ThemeSettings';
+import { DemoLock } from '../demo/demo';
 
 interface Tab {
   id: string;
@@ -33,7 +36,8 @@ const TABS: Tab[] = [
   { id: 'language', label: 'settings.language', ownerOnly: false },
   { id: 'display', label: 'settings.display', ownerOnly: false },
   { id: 'account', label: 'settings.account', ownerOnly: false },
-  { id: 'profile', label: 'settings.profile', ownerOnly: false },
+  { id: 'company', label: 'settings.company', ownerOnly: false },
+  { id: 'server', label: 'settings.server', ownerOnly: false },
   { id: 'snapshot', label: 'settings.snapshot', ownerOnly: false },
   { id: 'connections', label: 'connections.title', ownerOnly: false },
   { id: 'access', label: 'settings.access', ownerOnly: 'org' },
@@ -69,71 +73,88 @@ export function SettingsView() {
       {tab === 'language' && <LanguageSettings />}
       {tab === 'display' && <ThemeSettings />}
       {tab === 'account' && <AccountSettings />}
-      {tab === 'profile' && <ProfileSettings />}
-      {tab === 'snapshot' && <SnapshotSettings />}
-      {tab === 'connections' && <ConnectionsSettings />}
-      {tab === 'access' && <AccessSettings />}
-      {tab === 'approvals' && <TierSettings />}
-      {tab === 'users' && <UserSettings />}
+      {/* a demo server shows every setting and takes none (decision 62 — 언어 · 화면 stay open) */}
+      {tab === 'company' && (
+        <DemoLock name="settings.company">
+          <CompanySettings />
+        </DemoLock>
+      )}
+      {tab === 'server' && (
+        <DemoLock name="settings.server">
+          <ServerSettings />
+        </DemoLock>
+      )}
+      {tab === 'snapshot' && (
+        <DemoLock name="settings.snapshot">
+          <SnapshotSettings />
+        </DemoLock>
+      )}
+      {tab === 'connections' && (
+        <DemoLock name="settings.connections">
+          <ConnectionsSettings />
+        </DemoLock>
+      )}
+      {tab === 'access' && (
+        <DemoLock name="settings.access">
+          <AccessSettings />
+        </DemoLock>
+      )}
+      {tab === 'approvals' && (
+        <DemoLock name="settings.approvals">
+          <TierSettings />
+        </DemoLock>
+      )}
+      {tab === 'users' && (
+        <DemoLock name="settings.users">
+          <UserSettings />
+        </DemoLock>
+      )}
     </div>
   );
 }
 
-// ------------------------------------------------------------------ language (I31)
+// ------------------------------------------------------------------ language (I31 · 2026-11-11)
 
+/**
+ * My screen language — the only language setting. There is no company default any more: the
+ * choice is kept on my account (`PATCH /api/me`, core.db `users.locale`) and follows me to any
+ * browser; ko until I choose. This device remembers it too, for the screens before login.
+ */
 function LanguageSettings() {
-  const { t, setLocale } = useI18n();
-  const { me, isOwner } = useSession();
+  const { t, locale, setLocale } = useI18n();
+  const { me } = useSession();
   const qc = useQueryClient();
-  const org = useSettings();
-  const own = me.user?.locale ?? '';
-  const mine = useAction(async (locale: Locale | null) => {
-    const next = await api.patch<Me>('/me', { locale });
-    qc.setQueryData(keys.me, next);
-    setLocale(next.locale);
-    return next;
+  const mine = useAction(async (next: Locale) => {
+    const saved = await api.patch<Me>('/me', { locale: next });
+    qc.setQueryData(keys.me, saved);
+    setLocale(saved.locale);
+    return saved;
   });
-  const orgSave = useAction(
-    async (locale: Locale) => {
-      const saved = await api.put<WebSettings>('/settings', { locale });
-      await qc.invalidateQueries({ queryKey: keys.me });
-      return saved;
-    },
-    [keys.settings],
-  );
-
+  const own: Locale = me.user ? me.locale : locale;
   return (
     <section className="panel settings-body">
-      <label className="field">
-        <span>{t('settings.myLanguage')}</span>
+      <div className="field">
+        <label htmlFor="my-language">{t('settings.myLanguage')}</label>
         <select
+          id="my-language"
           value={own}
+          aria-describedby="my-language-hint"
           disabled={mine.isPending || me.local}
-          onChange={(e) => mine.mutate(e.target.value ? (e.target.value as Locale) : null)}
+          onChange={(e) => mine.mutate(e.target.value as Locale)}
         >
-          <option value="">{t('settings.followOrg', { lang: LOCALE_NAMES[me.org_locale] })}</option>
           {LOCALES.map((l) => (
             <option key={l} value={l}>
               {LOCALE_NAMES[l]}
             </option>
           ))}
         </select>
-      </label>
-      {isOwner && (
-        <label className="field">
-          <span>{t('settings.orgLanguage')}</span>
-          <select value={org.data?.locale ?? me.org_locale} disabled={orgSave.isPending} onChange={(e) => orgSave.mutate(e.target.value as Locale)}>
-            {LOCALES.map((l) => (
-              <option key={l} value={l}>
-                {LOCALE_NAMES[l]}
-              </option>
-            ))}
-          </select>
-          <small className="dash-hint">{t('settings.orgLanguageHint')}</small>
-        </label>
-      )}
+        <small id="my-language-hint" className="dash-hint">
+          {t('settings.myLanguageHint')}
+        </small>
+      </div>
       <p className="settings-note">{t('settings.notTranslated')}</p>
-      {(mine.error || orgSave.error) && <p className="form-error">{t('common.failed')}</p>}
+      {mine.isSuccess && <SavedLine />}
+      {mine.error && <p className="form-error">{t('common.failed')}</p>}
     </section>
   );
 }
@@ -154,6 +175,7 @@ function AccountSettings() {
   if (me.local) return <section className="panel empty">{t('settings.localToken')}</section>;
   return (
     <>
+    <DemoLock name="settings.account">
     <section className="panel">
       <PasskeySettings />
     </section>
@@ -184,6 +206,7 @@ function AccountSettings() {
         {t('settings.changePassword')}
       </button>
     </form>
+    </DemoLock>
     <LogoutPanel />
     </>
   );
@@ -436,15 +459,31 @@ function UserSettings() {
     update.mutate({ id, body }, { onError });
   };
 
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState<string | null>(null);
+  const table = useRef<HTMLTableElement>(null);
+  // the new member's row takes focus once the modal has handed focus back (2026-11-11)
+  useEffect(() => {
+    if (!added) return;
+    const id = setTimeout(() => {
+      table.current?.querySelector<HTMLElement>(`[data-user="${CSS.escape(added)}"]`)?.focus();
+    }, 30);
+    return () => clearTimeout(id);
+  }, [added, q.data]);
+
   if (q.isPending) return <Loading />;
   if (q.error) return <QueryError error={q.error} />;
   return (
     <div className="settings-stack">
-      <section className="panel settings-body">
-        <NewUser />
-      </section>
+      <div className="members-head">
+        <p className="settings-hint">{t('users.lead')}</p>
+        <button type="button" className="btn is-primary with-icon" onClick={() => setAdding(true)}>
+          <ICON.new />
+          {t('users.add')}
+        </button>
+      </div>
       {error && <p className="form-error">{error}</p>}
-      <table className="statement users">
+      <table className="statement users" ref={table} aria-label={t('settings.users')}>
         <thead>
           <tr>
             <th>{t('users.name')}</th>
@@ -457,7 +496,7 @@ function UserSettings() {
         </thead>
         <tbody>
           {q.data.map((u) => (
-            <tr key={u.id} className={u.disabled ? 'is-off' : ''}>
+            <tr key={u.id} className={`${u.disabled ? 'is-off' : ''} ${u.id === added ? 'is-new' : ''}`.trim() || undefined} data-user={u.id} tabIndex={-1}>
               <th>
                 {u.display} <span className="dash-hint">@{u.username}</span>
               </th>
@@ -526,6 +565,15 @@ function UserSettings() {
           ))}
         </tbody>
       </table>
+      {adding && (
+        <AddMemberModal
+          onClose={() => setAdding(false)}
+          onAdded={(u) => {
+            setAdding(false);
+            setAdded(u.id);
+          }}
+        />
+      )}
       {assigning && (
         <AssignmentsDialog
           name={assigning.display}
@@ -544,51 +592,160 @@ function UserSettings() {
   );
 }
 
-function NewUser() {
+const MIN_PASSWORD = 10;
+type Field = 'username' | 'password' | 'assignments';
+
+/**
+ * 구성원 추가 — a modal from the 구성원 tab's one button (2026-11-11; it was an inline form). The
+ * same fields the form had: username, display name, first password, role (대표 · 팀원), the
+ * businesses and workspaces a 팀원 may open (teams and titles stay in the org chart), plus the
+ * screen language they start with (ko). Checked here first, then by the server; a server error
+ * shows in the modal. On success the member is in the list and their row takes focus.
+ */
+function AddMemberModal({ onClose, onAdded }: { onClose: () => void; onAdded: (u: PublicUser) => void }) {
   const keys = useKeys();
+  const qc = useQueryClient();
   const { t } = useI18n();
   const scope = useScope();
   const { me: session } = useSession();
-  const blank = { username: '', display: '', password: '', role: 'staff' };
-  const [form, setForm] = useState(blank);
+  const [form, setForm] = useState({ username: '', display: '', password: '', role: 'staff' as 'staff' | 'owner', locale: 'ko' as Locale });
   const [assignments, setAssignments] = useState<Assignment[]>([{ org: scope.org, workspace: null, role: 'staff' }]);
+  const [problems, setProblems] = useState<Partial<Record<Field, string>>>({});
   const [error, setError] = useState<string | null>(null);
   const create = useAction(
     () => api.post<PublicUser>('/users', { ...form, assignments: form.role === 'owner' ? [] : assignments }),
     [keys.users, keys.orgChart, keys.people],
   );
-  const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    setProblems((p) => ({ ...p, [k]: undefined }));
+  };
+  const check = () => {
+    const found: Partial<Record<Field, string>> = {};
+    if (!form.username.trim()) found.username = t('users.usernameRequired');
+    if (form.password.length < MIN_PASSWORD) found.password = t('users.passwordShort', { n: MIN_PASSWORD });
+    if (form.role === 'staff' && !assignments.length) found.assignments = t('users.assignRequired');
+    setProblems(found);
+    return !Object.keys(found).length;
+  };
+  const describe = (f: Field) => (problems[f] ? `member-${f}-error` : undefined);
   return (
-    <form
-      className="form-row"
-      onSubmit={(e) => {
-        e.preventDefault();
-        setError(null);
-        create.mutate(undefined, {
-          onSuccess: () => setForm(blank),
-          onError: (err) => setError(errorText(err, t)),
-        });
-      }}
-    >
-      <input placeholder={t('users.username')} value={form.username} onChange={set('username')} required />
-      <input placeholder={t('users.display')} value={form.display} onChange={set('display')} />
-      <input placeholder={t('users.initialPassword')} type="password" autoComplete="new-password" minLength={10} value={form.password} onChange={set('password')} required />
-      <select value={form.role} onChange={set('role')} aria-label={t('users.role')}>
-        <option value="staff">{t('role.staff')}</option>
-        <option value="owner">{t('role.owner')}</option>
-      </select>
-      <button className="btn is-primary with-icon" disabled={create.isPending}>
-        <ICON.new />
-        {t('users.add')}
-      </button>
-      {form.role !== 'owner' && (
-        <div className="assign-new">
-          <span className="dash-hint">{t('assign.column')}</span>
-          <AssignmentsEditor value={assignments} scopes={session.scopes} onChange={setAssignments} />
+    <Modal label={t('users.addTitle')} onClose={onClose} className="member-modal" focusFirstField>
+      <form
+        className="settings-body"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          if (!check()) return;
+          create.mutate(undefined, {
+            onSuccess: (u) => {
+              qc.setQueryData<PublicUser[]>(keys.users, (list) => (list && !list.some((x) => x.id === u.id) ? [...list, u] : list));
+              onAdded(u);
+            },
+            onError: (err) => {
+              const code = errorCode(err);
+              if (code === 'username_taken' || code === 'username_invalid') setProblems({ username: errorText(err, t) });
+              else if (code === 'password_too_short') setProblems({ password: errorText(err, t) });
+              else setError(errorText(err, t));
+            },
+          });
+        }}
+      >
+        <h2 className="member-modal-title">{t('users.addTitle')}</h2>
+        <p className="settings-hint">{t('users.addHint')}</p>
+        <div className="member-grid">
+          <div className="field">
+            <label htmlFor="member-username">{t('users.username')}</label>
+            <input
+              id="member-username"
+              value={form.username}
+              autoComplete="off"
+              maxLength={64}
+              onChange={(e) => set('username', e.target.value)}
+              aria-invalid={!!problems.username}
+              aria-describedby={describe('username')}
+            />
+            {problems.username && (
+              <small id="member-username-error" className="form-error">
+                {problems.username}
+              </small>
+            )}
+          </div>
+          <label className="field">
+            <span>{t('users.display')}</span>
+            <input value={form.display} maxLength={80} onChange={(e) => set('display', e.target.value)} />
+          </label>
+          <div className="field">
+            <label htmlFor="member-password">{t('users.initialPassword')}</label>
+            <input
+              id="member-password"
+              type="password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={(e) => set('password', e.target.value)}
+              aria-invalid={!!problems.password}
+              aria-describedby={describe('password')}
+            />
+            {problems.password && (
+              <small id="member-password-error" className="form-error">
+                {problems.password}
+              </small>
+            )}
+          </div>
+          <label className="field">
+            <span>{t('users.role')}</span>
+            <select value={form.role} onChange={(e) => set('role', e.target.value as 'staff' | 'owner')}>
+              <option value="staff">{t('role.staff')}</option>
+              <option value="owner">{t('role.owner')}</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>{t('settings.myLanguage')}</span>
+            <select value={form.locale} onChange={(e) => set('locale', e.target.value as Locale)}>
+              {LOCALES.map((l) => (
+                <option key={l} value={l}>
+                  {LOCALE_NAMES[l]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      )}
-      {error && <p className="form-error">{error}</p>}
-      <p className="dash-hint">{t('users.addHint')}</p>
-    </form>
+        {form.role === 'owner' ? (
+          <p className="dash-hint">{t('users.ownerAll')}</p>
+        ) : (
+          <fieldset className="field" aria-describedby={describe('assignments')}>
+            <legend>{t('assign.column')}</legend>
+            <AssignmentsEditor
+              value={assignments}
+              scopes={session.scopes}
+              onChange={(next) => {
+                setAssignments(next);
+                setProblems((p) => ({ ...p, assignments: undefined }));
+              }}
+            />
+            {problems.assignments && (
+              <small id="member-assignments-error" className="form-error">
+                {problems.assignments}
+              </small>
+            )}
+          </fieldset>
+        )}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button className="btn is-primary with-icon" disabled={create.isPending}>
+            <ICON.new />
+            {t('users.submitAdd')}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

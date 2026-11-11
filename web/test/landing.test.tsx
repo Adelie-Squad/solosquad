@@ -52,10 +52,10 @@ import { ACT_YAW, actingWings, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETC
 import { claimIntro, DROP, INTRO, INTRO_MS, introAt, resetIntro, REST, SQUASH_MAX } from '../src/landing/intro';
 import { makeMorph } from '../src/landing/morph';
 import { useHolder } from '../src/landing/holder';
+import { InquiryProvider } from '../src/marketing/Inquiry';
 import { Landing } from '../src/landing/Landing';
 import { HOLD_ANSWER_MS, HOLD_TYPED_MS, PromptTyper, TYPE_MS } from '../src/landing/PromptTyper';
 import { SECTIONS, stepAt } from '../src/landing/sections';
-import { me } from './helpers';
 
 // the 3D chunk itself is not loaded in jsdom — a stand-in that says it has drawn (or, per test, fails)
 const canvas = vi.hoisted(() => ({ behaviour: 'draw' as 'draw' | 'never' | 'fail' }));
@@ -134,7 +134,9 @@ function landing(locale: Locale = 'en') {
     <QueryClientProvider client={qc}>
       <I18nProvider locale={locale}>
         <MemoryRouter>
-          <Landing />
+          <InquiryProvider>
+            <Landing />
+          </InquiryProvider>
         </MemoryRouter>
       </I18nProvider>
     </QueryClientProvider>,
@@ -232,7 +234,7 @@ describe('stepping the slides', () => {
     expect(links[1].className).toBe('is-on');
     expect(links[0].getAttribute('aria-current')).toBeNull();
     // section names only — no numbers (user, 2026-11-09)
-    expect(links.map((a) => a.textContent)).toEqual(['Intro', 'Work', 'Team', 'Control', 'Start']);
+    expect(links.map((a) => a.textContent)).toEqual(['Intro', 'Work', 'Team', 'Control', 'Get started']);
     expect(nav.textContent).not.toMatch(/\d/);
     expect(nav.querySelector('.landing-progress-index')).toBeNull();
   });
@@ -254,7 +256,7 @@ describe('stepping the slides', () => {
     live();
     landing();
     expect(screen.getByRole('heading', { level: 1, name: 'Say what you need. The team gets to work.' })).toBeTruthy();
-    for (const name of ['Ask in one place. The work happens at every desk.', `${AGENT_COUNT} agents in ${TEAMS.length} teams`, 'You make the decisions', 'Open your company’s office']) {
+    for (const name of ['Ask in one place. The work happens at every desk.', `${AGENT_COUNT} agents in ${TEAMS.length} teams`, 'You make the decisions', 'Try it, then decide']) {
       expect(screen.getByRole('heading', { level: 2, name })).toBeTruthy();
     }
     expect(document.querySelector('.landing-index')).toBeNull();
@@ -482,7 +484,7 @@ describe('the scene: the content centred, the penguin around it', () => {
     expect(within(screen.getByTestId('landing-scene-what')).getAllByRole('heading', { level: 3 })).toHaveLength(3);
     expect(within(screen.getByTestId('landing-scene-team')).getByTestId('landing-org')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-control')).getByTestId('landing-approval')).toBeTruthy();
-    expect(within(screen.getByTestId('landing-scene-start')).getByRole('link', { name: 'Log in' })).toBeTruthy();
+    expect(within(screen.getByTestId('landing-scene-start')).getAllByRole('link', { name: 'Try the demo' })).toHaveLength(1);
     expect(container.querySelector('.landing-present')).toBeNull();
   });
 
@@ -1307,33 +1309,51 @@ describe('the prompt to Chief', () => {
 });
 
 describe('the buttons', () => {
-  it('no call to action in the first slide; login only in the top bar and the last slide, with no arrow', async () => {
-    landing();
-    const hero = document.querySelector('[data-slide="hero"]') as HTMLElement;
-    expect(within(hero).queryAllByRole('link')).toHaveLength(0);
-    expect(within(hero).queryAllByRole('button')).toHaveLength(0);
-    const links = await screen.findAllByRole('link', { name: 'Log in' });
-    expect(links).toHaveLength(2);
-    expect(links[0].closest('.landing-top')).toBeTruthy();
-    expect(links[1].closest('[data-slide="start"]')).toBeTruthy();
-    for (const a of links) {
-      expect(a.getAttribute('href')).toBe('/login');
-      expect(a.querySelector('svg')).toBeNull();
-    }
-    expect(screen.getByText('Log in and you are straight in the office.')).toBeTruthy();
+  it('the top bar (decision 62): the language select with no 언어 label · 데모 체험하기 (primary) · 로그인 — no arrows', () => {
+    landing('ko');
+    const top = document.querySelector('.landing-top') as HTMLElement;
+    expect(within(top).queryByText('언어')).toBeNull();
+    expect(within(top).getByRole('combobox', { name: '언어' })).toBeTruthy(); // named for screen readers only
+    const demo = within(top).getByRole('link', { name: '데모 체험하기' });
+    const login = within(top).getByRole('link', { name: '로그인' });
+    expect(demo.getAttribute('href')).toBe('/demo');
+    expect(login.getAttribute('href')).toBe('/login');
+    expect(demo.className).toContain('is-primary');
+    expect(login.className).not.toContain('is-primary');
+    for (const a of [demo, login]) expect(a.querySelector('svg')).toBeNull();
+    // the language select comes before the two buttons
+    expect(top.querySelector('.landing-top-actions')!.firstElementChild!.classList.contains('locale-picker')).toBe(true);
   });
 
-  it('signed in: both go to the account dashboard (decision 60)', async () => {
-    stubMe(me({ last_scope: { org: 'tesla', workspace: 'vehicles' } }));
+  it('데모 체험하기 · 로그인 in the first slide (under the message) and the last; the last also opens the request modal (PRD §3.5.2 rev10)', async () => {
     landing();
-    const links = await screen.findAllByRole('link', { name: 'Go to my office' });
-    expect(links).toHaveLength(2);
-    for (const a of links) {
-      expect(a.getAttribute('href')).toBe('/dashboard');
-      expect(a.querySelector('svg')).toBeNull();
+    for (const id of ['hero', 'start']) {
+      const slide = document.querySelector(`[data-slide="${id}"]`) as HTMLElement;
+      const links = within(slide).getAllByRole('link');
+      expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+        ['Try the demo', '/demo'],
+        ['Log in', '/login'],
+      ]);
+      expect(links[0].className).toContain('is-primary');
+      expect(links[1].className).not.toContain('is-primary');
+      for (const a of links) expect(a.querySelector('svg')).toBeNull();
     }
-    expect(screen.queryByRole('link', { name: /Log in/ })).toBeNull();
-    expect(screen.getByText('Your team is waiting in the office.')).toBeTruthy();
+    const hero = document.querySelector('[data-slide="hero"]') as HTMLElement;
+    expect(within(hero).getAllByRole('link')[0].closest('.landing-copy')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'Try the demo' })).toHaveLength(3);
+    const start = document.querySelector('[data-slide="start"]') as HTMLElement;
+    expect(within(start).getByRole('heading', { name: 'Try it, then decide' })).toBeTruthy();
+    fireEvent.click(within(start).getByRole('button', { name: 'No demo account yet? Apply for one' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Apply for a demo account' });
+    // opened from the last section: a demo account is pre-checked
+    expect((within(dialog).getByLabelText('A demo account') as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('the landing asks the engine nothing (it is the marketing site only)', () => {
+    const fetch = vi.fn(async (_url: string) => new Response('{}'));
+    vi.stubGlobal('fetch', fetch);
+    landing();
+    expect(fetch.mock.calls.map((c) => String(c[0])).filter((u) => u.includes('/api/me'))).toEqual([]);
   });
 
   it('the top bar stays fixed on the page colour, with a hairline once the page has moved', () => {

@@ -3,7 +3,8 @@
 // titles written by the FDE and names from the engine are shown exactly as they are.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { en } from './en';
-import { ko, type MessageKey } from './ko';
+import type { MarketingKey } from '../marketing/messages/ko';
+import { ko, type MessageKey as AppKey } from './ko';
 import { zhCN } from './zh-CN';
 
 export type Locale = 'ko' | 'en' | 'zh-CN';
@@ -12,13 +13,30 @@ export const DEFAULT_LOCALE: Locale = 'ko';
 /** Each language is named in itself, so anyone can find their own. */
 export const LOCALE_NAMES: Record<Locale, string> = { ko: '한국어', en: 'English', 'zh-CN': '简体中文' };
 
-export const dictionaries: Record<Locale, Record<MessageKey, string>> = { ko, en, 'zh-CN': zhCN };
+/** The app's words. The marketing build adds its own (`addMessages`) — a company server's web
+ * never carries the landing, request or demo login copy (decision 62, C62). */
+export const dictionaries: Record<Locale, Record<AppKey, string>> = { ko, en, 'zh-CN': zhCN };
+
+/** Every key a component may ask for: the app's and the marketing site's. */
+export type MessageKey = AppKey | MarketingKey;
+
+const added: Record<Locale, Record<string, string>> = { ko: {}, en: {}, 'zh-CN': {} };
+
+/** Load another set of words (the marketing build's) next to the app's. */
+export function addMessages(set: Record<Locale, Record<string, string>>) {
+  for (const l of LOCALES) Object.assign(added[l], set[l]);
+}
+
+/** The app's words and any added set, per language (for tests that read every word). */
+export const allMessages = (locale: Locale): Record<string, string> => ({ ...dictionaries[locale], ...added[locale] });
 
 export type Vars = Record<string, string | number>;
 export type Translate = (key: MessageKey, vars?: Vars) => string;
 
 export function translate(locale: Locale, key: MessageKey, vars?: Vars): string {
-  const text = dictionaries[locale][key] ?? dictionaries[DEFAULT_LOCALE][key] ?? key;
+  const own = dictionaries[locale] as Record<string, string>;
+  const base = dictionaries[DEFAULT_LOCALE] as Record<string, string>;
+  const text = own[key] ?? added[locale][key] ?? base[key] ?? added[DEFAULT_LOCALE][key] ?? key;
   if (!vars) return text;
   return text.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
 }
@@ -121,11 +139,11 @@ export const useT = () => useContext(Ctx).t;
 /** An approval category in the reader's language; one the web does not know shows as sent. */
 export function categoryLabel(locale: Locale, category: string, fallback?: string): string {
   const key = `category.${category}`;
-  return key in ko ? translate(locale, key as MessageKey) : (fallback ?? category);
+  return key in ko ? translate(locale, key as AppKey) : (fallback ?? category);
 }
 /** An artifact kind (`finance.pnl`) in the reader's language; an unknown kind shows as sent. */
 export function kindLabel(locale: Locale, kind: string): string {
   const key = `artifact.kind.${kind}`;
-  return key in ko ? translate(locale, key as MessageKey) : kind;
+  return key in ko ? translate(locale, key as AppKey) : kind;
 }
-export type { MessageKey };
+

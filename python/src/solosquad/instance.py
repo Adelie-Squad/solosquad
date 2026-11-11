@@ -81,7 +81,7 @@ def build_instance(
         ledger,
         secrets,
         org=org,
-        server_country=ctx.server.server_country,
+        server_country=ctx.server.facts().country,
     )
     rt = AgentRuntime(ctx, Resolver(ctx), router, ledger, custom)
 

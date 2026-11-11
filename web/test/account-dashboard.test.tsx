@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import type { Digest, Me, WorkEntry } from '../src/api/types.gen';
-import { dictionaries, type Locale } from '../src/i18n';
+import { dictionaries, type Locale, type MessageKey } from '../src/i18n';
 import { addDays, iso } from '../src/lib/calendar';
 import { digestHeadline, durationText } from '../src/lib/digest';
 import { AccountDashboard, scopesIn } from '../src/views/AccountDashboard';
@@ -254,8 +254,8 @@ describe('자리를 비운 동안', () => {
 
   it('the headline in three languages', () => {
     const d = digest();
-    const t = (l: Locale) => (k: keyof (typeof dictionaries)['ko'], v?: Record<string, string | number>) =>
-      dictionaries[l][k].replace(/\{(\w+)\}/g, (m, n: string) => (v && n in v ? String(v[n]) : m));
+    const t = (l: Locale) => (k: MessageKey, v?: Record<string, string | number>) =>
+      (dictionaries[l] as Record<string, string>)[k].replace(/\{(\w+)\}/g, (m, n: string) => (v && n in v ? String(v[n]) : m));
     expect(digestHeadline(d, t('ko'), 'ko', '대표님')).toBe('자리를 비운 3시간 동안 2건이 끝났고, 1건이 대표님 승인을 기다리고, 1건이 다른 사람 승인을 기다려요.');
     expect(digestHeadline(d, t('en'), 'en', 'you')).toBe('While you were away for 3 hours, 2 finished, 1 wait for you to approve and 1 wait for someone else.');
     expect(digestHeadline(d, t('zh-CN'), 'zh-CN', '您')).toBe('您离开的3小时里，2 项已完成，1 项待您审批，1 项待他人审批。');

@@ -139,3 +139,51 @@ def test_org_members_and_audit(tmp_path: Path) -> None:
     assert org.set_member("u-1", teams=[]) == ("팀장", ())
     org.audit("u-1", "workflow.enable", "monthly-pnl", workspace="hq")
     assert org.audit_log()[0]["workspace"] == "hq"
+
+
+# ---------------------------------------------------------------------- language (2026-11-11)
+
+
+def _as_v5(path: Path, locales: dict[str, str]) -> None:
+    from solosquad.storage import connect
+
+    db = connect(path)
+    for name, loc in locales.items():
+        db.execute("UPDATE users SET locale = ? WHERE username = ?", (loc, name))
+    db.execute("UPDATE schema_versions SET version = 5 WHERE component = 'core'")
+    db.close()
+
+
+def test_the_retired_customer_language_becomes_each_followers_own(tmp_path: Path) -> None:
+    """Migration 6: people who followed the customer default (`locale` empty) keep the
+    language they were seeing as their own, a person's own choice stays, and the default
+    leaves `core/server.yaml`."""
+    import yaml
+
+    sol = _solution(tmp_path, "tesla")
+    core = AccountStore(core_path(sol))
+    for name in ("boss", "kim", "lee"):
+        core.create_user(name, PASSWORD, Role.STAFF)
+    _as_v5(core_path(sol), {"boss": "", "kim": "", "lee": "en"})
+    sol.server_config_path.write_text("schema_version: 1\nweb: {locale: zh-CN}\n", "utf-8")
+    assert sol.legacy_web_locale() == "zh-CN"
+
+    moved = open_accounts(sol)
+    assert {u.username: u.locale for u in moved.users()} == {
+        "boss": "zh-CN", "kim": "zh-CN", "lee": "en",
+    }  # fmt: skip
+    raw = yaml.safe_load(sol.server_config_path.read_text(encoding="utf-8"))
+    assert "web" not in raw and sol.legacy_web_locale() is None
+    assert "locale" not in sol.server_config().web.model_dump()
+
+
+def test_without_an_old_default_everyone_unset_gets_korean(tmp_path: Path) -> None:
+    sol = _solution(tmp_path, "tesla")
+    core = AccountStore(core_path(sol))
+    core.create_user("boss", PASSWORD, Role.OWNER)
+    core.create_user("kim", PASSWORD, Role.STAFF, locale="")
+    _as_v5(core_path(sol), {"boss": "fr"})
+    moved = open_accounts(sol)
+    assert sorted(u.locale for u in moved.users()) == ["ko", "ko"]
+    with pytest.raises(Exception, match="locale"):
+        moved.set_locale(moved.users()[0].id, "")

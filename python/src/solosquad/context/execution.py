@@ -75,7 +75,7 @@ def build_context(
         solution_id=sol.meta().id,
         org=org,
         workspace=workspace,
-        workspace_type=srv.type,
+        workspace_type=srv.type or WorkspaceType(srv.facts().where),
         timezone=cfg.timezone,
         engine_version=sol.engine_lock().version,
         data_dir=data_dir or store.data_dir(ws),

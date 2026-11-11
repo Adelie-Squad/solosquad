@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:marketing": "vite build --mode marketing",
+    "dev:marketing": "vite --mode marketing",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
     "check:office-assets": "node scripts/check-office-assets.mjs",

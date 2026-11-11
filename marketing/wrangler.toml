@@ -1,0 +1,49 @@
+# SoloSquad marketing site (decision 62, PRD v2.1.0 §3.6): the landing, the login router, the demo
+# login and the demo account request. Static pages = the marketing build of web/
+# (`npm --prefix ../web run build:marketing` writes ./public); /api/* = src/index.ts with D1.
+# Deploy steps: README.md.
+name = "solosquad-marketing"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# /login · /login/help · /demo · /privacy are client routes of one page
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "solosquad-marketing"
+# `wrangler d1 create solosquad-marketing` prints the id — paste it here before the first deploy
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# the retention sweep: inquiries past retain_until (and their log) are deleted every day
+[triggers]
+crons = ["17 3 * * *"]
+
+[vars]
+# where the demo login form posts (the demo server's login, demo mode)
+DEMO_LOGIN_URL = "https://demo.example.invalid/api/auth/demo-login"
+# the consent text the request modal shows; bump it when the text changes (C52 · DM6)
+CONSENT_VERSION = "2026-11-11.draft"
+# days an inquiry is kept (L9 — recommended one year; legal review pending)
+RETAIN_DAYS = "365"
+# Cloudflare Turnstile is off by default: it does not load from mainland China (L5)
+TURNSTILE_ENABLED = "false"
+TURNSTILE_SITE_KEY = ""
+# seconds between opening the form and sending it, at the least
+MIN_FILL_SECONDS = "3"
+# per hashed IP: requests per hour; per email: requests a day; login routes per minute and per hour
+INQUIRY_LIMIT_PER_HOUR = "5"
+INQUIRY_LIMIT_PER_EMAIL_DAY = "3"
+ROUTE_LIMIT_PER_MIN = "10"
+ROUTE_LIMIT_PER_HOUR = "60"
+
+# Secrets — `wrangler secret put <NAME>` (locally: .dev.vars, see .dev.vars.example):
+#   FORM_SECRET       signs the form-opened token (minimum fill time)
+#   IP_SALT           salts the IP hash used only for the rate limits
+#   NOTIFY_WEBHOOK    optional: where a new request is announced (no contact details — DM4)
+#   TURNSTILE_SECRET  only when TURNSTILE_ENABLED = "true"

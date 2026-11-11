@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { CommandBar } from '../components/CommandBar';
+import { DemoBand, useDemo, useDemoUsage } from '../demo/demo';
 import { useLive } from '../live/LiveProvider';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
@@ -18,6 +19,8 @@ export function Shell({ children }: { children?: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const [rail, toggleRail] = useRail();
   const location = useLocation();
+  const demo = useDemo();
+  useDemoUsage(demo.on);
 
   useEffect(() => setDrawer(false), [location.pathname]);
 
@@ -40,6 +43,7 @@ export function Shell({ children }: { children?: ReactNode }) {
       <Sidebar onCommand={() => setCommandOpen(true)} rail={rail} onToggleRail={toggleRail} />
       <div className="drawer-scrim" onClick={() => setDrawer(false)} aria-hidden />
       <main className="workspace-card">
+        <DemoBand />
         {!live.connected && (
           <div className="viewer-banner" role="status">
             <span>{t('live.reconnecting')}</span>

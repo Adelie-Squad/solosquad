@@ -281,8 +281,7 @@ kbd {
   font-size: 14px;
 }
 
-.settings-row input,
-.settings-row select {
+.settings-row input {
   height: 34px;
   padding: 0 10px;
   border: 1px solid var(--line);
@@ -292,8 +291,7 @@ kbd {
   outline: none;
 }
 
-.settings-row input:focus,
-.settings-row select:focus {
+.settings-row input:focus {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--surface));
 }
 

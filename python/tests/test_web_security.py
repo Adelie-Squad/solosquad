@@ -34,6 +34,7 @@ WEB_API = Path(errors.__file__).parent
 PUBLIC = {
     ("GET", "/api/health"),
     ("POST", "/api/auth/login"),
+    ("POST", "/api/auth/demo-login"),  # a demo server only (decision 62); 404 elsewhere
     ("POST", "/api/auth/passkey/login/begin"),
     ("POST", "/api/auth/passkey/login/finish"),
 }
@@ -62,10 +63,9 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "access.get": ("GET", f"{CUST}/access", None),
     "access.update": ("PUT", f"{CUST}/access", {"allowed_networks": []}),
     "audit": ("GET", f"{CUST}/audit", None),
-    "settings.get": ("GET", f"{CUST}/settings", None),
-    "settings.update": ("PUT", f"{CUST}/settings", {"locale": "en"}),
-    "profile.get": ("GET", f"{CUST}/profile", None),
-    "profile.update": ("PUT", f"{CUST}/profile", {}),
+    "server.get": ("GET", f"{CUST}/server", None),
+    "company.get": ("GET", f"{CUST}/company", None),
+    "company.update": ("PUT", f"{CUST}/company", {"name": "x"}),
     "snapshot.get": ("GET", f"{CUST}/snapshot", None),
     "snapshot.update": ("PUT", f"{CUST}/snapshot", {"type": None}),
     "snapshot.run": ("POST", f"{CUST}/snapshot/run", None),
@@ -87,6 +87,8 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "calendar.events": ("GET", f"{CUST}/calendar/events", None),
     "digest.get": ("GET", f"{CUST}/me/digest", None),
     "digest.ack": ("POST", f"{CUST}/me/digest/ack", {}),
+    "demo.events": ("POST", f"{CUST}/demo/events", {}),
+    "demo.reset": ("POST", f"{CUST}/demo/reset", {}),
     # org
     "org_chart": ("GET", f"{ORG}/org-chart", None),
     "people.list": ("GET", f"{ORG}/people", None),
@@ -126,6 +128,7 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "working": ("GET", f"{WS}/agents", None),
     "schedules.list": ("GET", f"{WS}/schedules", None),
     "work.list": ("GET", f"{WS}/work", None),
+    "demo.restart": ("POST", f"{WS}/demo/restart", None),
 }
 """Each role key → one route that checks it (`need(request, key)`). Other routes check the
 same key too (`workflows.list` guards the run lists), see `ALSO`."""
@@ -341,7 +344,7 @@ async def test_c15_staff_is_refused_every_owner_only_key(office: Office) -> None
         before = office.conn_file.read_text(encoding="utf-8")
 
         owner_only = sorted(k for k, roles in ROUTE_ROLES.items() if roles == OWNER)
-        assert len(owner_only) >= 17
+        assert len(owner_only) >= 16
         for key in owner_only:
             method, template, body = KEYS[key]
             r = await kim.request(method, _fill(template, **ids), json=body, headers=hk)

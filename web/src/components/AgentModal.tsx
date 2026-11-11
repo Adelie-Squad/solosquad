@@ -1,4 +1,4 @@
-// One modal for an agent or a person (DESIGN.md `## 컴포넌트` — 에이전트 · 사람 모달), opened
+// One modal for an agent or a person (DESIGN.md `## 컴포넌트` — 에이전트 · 구성원 모달), opened
 // from the org chart and from the office scene. The org chart nodes show only a name and a
 // status; what the agent does, what it works on and what waits for an answer live here.
 import { useState } from 'react';
@@ -14,6 +14,7 @@ import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import type { AgentStatus } from '../office/state';
 import { useLinks } from '../scope';
 import { Modal } from './Modal';
+import { useDemo } from '../demo/demo';
 
 export function AgentModal({
   agent,
@@ -122,6 +123,7 @@ export function PersonModal({
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
+  const demo = useDemo();
   const role = person.role === 'owner' ? t('role.owner') : t('role.staff');
   const memberOf = editable?.teams ?? (team ? [team] : []);
   return (
@@ -147,7 +149,13 @@ export function PersonModal({
           </dl>
           {editable && person.role !== 'owner' && (
             <div className="dialog-actions is-start">
-              <button type="button" className="btn with-icon" onClick={() => setEditing(true)}>
+              <button
+                type="button"
+                className="btn with-icon"
+                disabled={demo.locked('people.update')}
+                title={demo.locked('people.update') ? t('demo.locked') : undefined}
+                onClick={() => setEditing(true)}
+              >
                 <ICON.draft />
                 {t('common.edit')}
               </button>

@@ -10,6 +10,7 @@ import type { CalendarItem, CalendarTodo, OrgPerson } from '../../api/types.gen'
 import { Loading, QueryError } from '../../components/Status';
 import { useI18n } from '../../i18n';
 import { ICON } from '../../icons';
+import { useDemo } from '../../demo/demo';
 import { colorOf, timeOf } from '../../lib/calendar';
 import { orgName } from '../../lib/names';
 import { apiPath } from '../../scope';
@@ -48,6 +49,7 @@ function Body({ detail, onOpen, onClose }: { detail: Detail; onOpen: (id: string
     enabled: item.kind === 'work' && !!item.org,
   });
   const [newTag, setNewTag] = useState('');
+  const demo = useDemo();
   const [newSub, setNewSub] = useState('');
   const err = update.error ?? remove.error ?? addChild.error ?? addLabel.error;
 
@@ -162,7 +164,7 @@ function Body({ detail, onOpen, onClose }: { detail: Detail; onOpen: (id: string
           })}
           <form className="cal-inline-add" onSubmit={createTag}>
             <ICON.tag size={14} aria-hidden />
-            <input value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder={t('calendar.tagPlaceholder')} aria-label={t('calendar.newTag')} maxLength={40} />
+            <input disabled={demo.locked('calendar.labels.create')} value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder={t('calendar.tagPlaceholder')} aria-label={t('calendar.newTag')} maxLength={40} />
           </form>
         </div>
       </div>
@@ -226,6 +228,8 @@ function Body({ detail, onOpen, onClose }: { detail: Detail; onOpen: (id: string
       <div className="cal-detail-foot">
         <button
           className="btn with-icon is-danger-text"
+          disabled={demo.locked('calendar.delete')}
+          title={demo.locked('calendar.delete') ? t('demo.locked') : undefined}
           onClick={() => {
             if (window.confirm(t('calendar.deleteConfirm'))) remove.mutate(undefined, { onSuccess: () => (parent ? onOpen(parent.id) : onClose()) });
           }}
@@ -253,6 +257,7 @@ export function Todos({ item, todos, people }: { item: CalendarItem; todos: Cale
     }
   };
   const err = add.error ?? change.error ?? drop.error;
+  const demo = useDemo();
   return (
     <section className="cal-section" aria-labelledby="cal-todos" data-testid="todos">
       <h3 id="cal-todos" className="panel-title with-count">
@@ -277,7 +282,7 @@ export function Todos({ item, todos, people }: { item: CalendarItem; todos: Cale
               </button>
               <span className="cal-todo-title">{td.title}</span>
               <input type="date" className="cal-todo-due" aria-label={t('calendar.due')} title={t('calendar.due')} value={td.due ?? ''} onChange={(e) => change.mutate({ id: td.id, body: { due: e.target.value || null } })} />
-              <select className="cal-todo-who" aria-label={t('calendar.assignee')} value={td.assignee_id ?? ''} onChange={(e) => change.mutate({ id: td.id, body: { assignee_id: e.target.value || null } })}>
+              <select className="cal-todo-who is-small" aria-label={t('calendar.assignee')} value={td.assignee_id ?? ''} onChange={(e) => change.mutate({ id: td.id, body: { assignee_id: e.target.value || null } })}>
                 <option value="">{t('calendar.nobody')}</option>
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -285,7 +290,7 @@ export function Todos({ item, todos, people }: { item: CalendarItem; todos: Cale
                   </option>
                 ))}
               </select>
-              <button className="icon-btn" aria-label={t('calendar.removeTodo', { title: td.title })} title={t('calendar.removeTodo', { title: td.title })} onClick={() => drop.mutate(td.id)}>
+              <button className="icon-btn" disabled={demo.locked('calendar.todos.delete')} aria-label={t('calendar.removeTodo', { title: td.title })} title={t('calendar.removeTodo', { title: td.title })} onClick={() => drop.mutate(td.id)}>
                 <ICON.remove size={14} />
               </button>
             </li>

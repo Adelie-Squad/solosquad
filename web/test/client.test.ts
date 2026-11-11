@@ -20,7 +20,7 @@ describe('api client (I21)', () => {
     const fetch = mockFetch();
     setCsrf('tok-123');
     await api.post('/threads', { title: 'x' });
-    await api.put('/settings', { locale: 'en' });
+    await api.put('/access', { allowed_networks: [] });
     await api.patch('/me', { locale: 'ko' });
     await api.del('/connections/a');
     await api.upload('/uploads', new Blob(['a']), { filename: 'x.csv' });

@@ -23,6 +23,41 @@ uv run solosquad service install -s ~/clients/moa                    # … as an
 uv run solosquad agents watch -s ~/clients/moa                       # follow the agents
 ```
 
+## Demo server (decision 62)
+
+A demo server is the same engine with `core/server.yaml` `mode: demo` — scripted agents (the
+`scripted` harness, no model call), one copy of the example company 모아 리빙 per demo account,
+settings read-only (`403 demo_read_only`). Set-up, issuing, reset and export:
+[`docs/runbooks/demo.md`](../docs/runbooks/demo.md).
+
+```bash
+uv run solosquad demo init ~/demo --marketing-url https://<marketing site>
+uv run solosquad demo issue --id samsungDemo --inquiry <inquiry id> --days 14 --locale ko -s ~/demo
+uv run solosquad serve -s ~/demo
+uv run solosquad demo usage --all --format csv -s ~/demo
+```
+
+### 데모 모드 — 수집하는 데이터
+
+Per demo account, in the demo server's `core.db` (`demo_usage` · `demo_sessions` — apart from
+the copies, so a reset never removes them; removed `usage_keep_days` (365) after the account
+expired). The visitor is told on screen ("데모에서 어떤 화면을 봤는지 기록해요. 직접 쓴 글은
+기록하지 않아요."); the consent text of the marketing inquiry form must name it (PRD §3.6.3
+고지 — `[검토 필요]`).
+
+| event | kept | never kept |
+|---|---|---|
+| `login` · `logout` · `session_end` · `login_refused` | time · session number (a hash prefix) · language · device (desktop · phone) · session length | IP address · user agent string · browser fingerprint |
+| `page_view` | the screen as a path pattern (`/o/:org/w/:ws/office`) · time on it | the query string · ids |
+| `scenario_start` · `scenario_step` · `scenario_done` | workflow · step number · how it started (login · button · prompt · restart) · how it ended | — |
+| `approval_click` | card category · tier (owner · team) · approved / declined | — |
+| `prompt` | suggestion number · whether a script matched · length | **the text typed** (a visitor may type their real company's data) |
+| `blocked_click` | the locked setting's name | — |
+| `reset` | 처음 상태로 (button) · nightly · CLI | — |
+
+The demo server keeps the inquiry id only — names and contacts stay in the marketing
+site's D1, and the two are joined on the agency's own machine (`demo usage --format csv`).
+
 ## Develop
 
 ```bash

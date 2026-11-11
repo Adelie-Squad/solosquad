@@ -49,7 +49,11 @@ export const ERROR_KEYS: Record<ErrorCode, MessageKey> = {
   locale_invalid: 'error.locale_invalid',
   access_lockout: 'error.access_lockout',
   network_invalid: 'error.network_invalid',
-  profile_invalid: 'error.profile_invalid',
+  company_kind_invalid: 'error.company_kind_invalid',
+  company_field_invalid: 'error.company_field_invalid',
+  company_field_too_long: 'error.company_field_too_long',
+  company_country_invalid: 'error.company_country_invalid',
+  company_control_corporation_only: 'error.company_control_corporation_only',
   snapshot_invalid: 'error.snapshot_invalid',
   snapshot_keys_required: 'error.snapshot_keys_required',
   snapshot_unavailable: 'error.snapshot_unavailable',
@@ -61,8 +65,8 @@ export const ERROR_KEYS: Record<ErrorCode, MessageKey> = {
   approval_needs_team: 'error.approval_needs_team',
   connection_id_required: 'error.connection_id_required',
   connection_exists: 'error.connection_exists',
-  entity_required: 'error.entity_required',
-  connection_ineligible_entity: 'error.connection_ineligible_entity',
+  company_required: 'error.company_required',
+  connection_ineligible_company: 'error.connection_ineligible_company',
   connection_ineligible_server: 'error.connection_ineligible_server',
   workflow_input_invalid: 'error.workflow_input_invalid',
   upload_type: 'error.upload_type',
@@ -82,6 +86,8 @@ export const ERROR_KEYS: Record<ErrorCode, MessageKey> = {
   calendar_agent_access_invalid: 'error.calendar_agent_access_invalid',
   digest_since_invalid: 'error.digest_since_invalid',
   digest_until_invalid: 'error.digest_until_invalid',
+  demo_read_only: 'error.demo_read_only',
+  demo_expired: 'error.demo_expired',
 };
 
 export function isErrorCode(code: unknown): code is ErrorCode {

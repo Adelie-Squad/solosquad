@@ -162,9 +162,9 @@ describe('the sidebar menu (decision 60 — two groups)', () => {
   });
 
   it.each([
-    ['owner', 'ko', me(), '설정 · Boss 대표'],
-    ['staff', 'en', staff, 'Settings · Kim Team member'],
-    ['owner', 'zh-CN', me(), '设置 · Boss 代表'],
+    ['owner', 'ko', me(), '계정 설정 · Boss 대표'],
+    ['staff', 'en', staff, 'Account settings · Kim Team member'],
+    ['owner', 'zh-CN', me(), '账户设置 · Boss 代表'],
   ] as const)('%s (%s): the bottom is one control — who is here and settings, one focus stop', async (_who, locale, person, name) => {
     stubApi({ '/approvals': [], '/artifacts': [], '/threads': [] });
     renderWith(
@@ -181,7 +181,7 @@ describe('the sidebar menu (decision 60 — two groups)', () => {
     expect(account.getAttribute('href')).toBe('/o/tesla/settings');
     expect(account.querySelectorAll('svg')).toHaveLength(2); // the person icon and the trailing settings icon
     // no second settings button anywhere in the sidebar
-    expect(screen.getAllByRole('link', { name: new RegExp(translate(locale, 'nav.settings')) })).toEqual([account]);
+    expect(screen.getAllByRole('link', { name: new RegExp(translate(locale, 'nav.settings'), 'i') })).toEqual([account]);
     await act(async () => fireEvent.click(account));
     expect(screen.getByTestId('where').textContent).toBe('/o/tesla/settings');
   });

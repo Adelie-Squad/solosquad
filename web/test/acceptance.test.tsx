@@ -237,23 +237,27 @@ describe('C20 — switching my language redraws the screen, and only the screen'
     const next: Me = { ...staffMe, locale: 'en', user: { ...staffMe.user!, locale: 'en' } };
     const api = await openApp('/o/tesla/settings', engineData({ 'PATCH /me': () => next }), staffMe, 'ko');
     expect(screen.getByRole('heading', { name: t('nav.settings', undefined, 'ko') })).toBeTruthy();
-    const mine = screen.getByText(t('settings.myLanguage', undefined, 'ko')).closest('label')!.querySelector('select')!;
+    const mine = screen.getByLabelText(t('settings.myLanguage', undefined, 'ko'));
     fireEvent.change(mine, { target: { value: 'en' } });
     await waitFor(() => expect(screen.getByRole('heading', { name: t('nav.settings') })).toBeTruthy());
     expect(api.calls.filter((c) => c.method === 'PATCH')).toEqual([{ method: 'PATCH', url: '/api/me', body: { locale: 'en' } }]);
     expect(screen.getByText(t('settings.myLanguage'))).toBeTruthy();
     expect(screen.queryByText(t('settings.myLanguage', undefined, 'ko'))).toBeNull();
-    // staff changes only their own language: the company default is not offered
-    expect(screen.queryByText(t('settings.orgLanguage'))).toBeNull();
   });
 
-  it('the owner sees both, and choosing "follow the company" sends null', async () => {
-    const api = await openApp('/o/tesla/settings', engineData({ 'PATCH /me': () => ownerMe }, 'owner'), ownerMe);
-    expect(screen.getByText(t('settings.orgLanguage'))).toBeTruthy();
-    const mine = screen.getByText(t('settings.myLanguage')).closest('label')!.querySelector('select')!;
-    fireEvent.change(mine, { target: { value: '' } });
-    await waitFor(() => expect(api.calls.some((c) => c.method === 'PATCH')).toBe(true));
-    expect(api.calls.find((c) => c.method === 'PATCH')?.body).toEqual({ locale: null });
+  // 2026-11-11 — no company default language: the tab is my screen language and nothing else
+  it.each([
+    ['staff', staffMe],
+    ['owner', ownerMe],
+  ] as const)('the language tab shows only my language (%s)', async (role, who) => {
+    const api = await openApp('/o/tesla/settings', engineData({}, role === 'owner' ? 'owner' : undefined), who);
+    const panel = screen.getByText(t('settings.myLanguage')).closest('section')!;
+    const selects = panel.querySelectorAll('select');
+    expect(selects).toHaveLength(1);
+    // three languages, no "follow the company" choice
+    expect([...selects[0].options].map((o) => o.value)).toEqual(['ko', 'en', 'zh-CN']);
+    expect(selects[0].value).toBe('ko');
+    expect(api.calls.some((c) => c.url === '/api/settings')).toBe(false);
   });
 
   it('a conversation reads the same in every web language', async () => {
@@ -299,19 +303,20 @@ describe('C26 — the org chart widget follows the people and the teams', () => 
 
 // ---------------------------------------------------------------------- C18
 
-describe('C18 — a connection that reaches a provider asks for its holder', () => {
-  it('the add form explains the entity, and the refusal is shown in the reader’s language', async () => {
-    const refused = () => new Response(JSON.stringify({ error: 'an API key needs its entity', code: 'entity_required', params: {} }), { status: 400 });
+describe('C18 — a connection that reaches a provider waits for the company', () => {
+  it('the add form says the company holds it, and the refusal is shown in the reader’s language', async () => {
+    const refused = () => new Response(JSON.stringify({ error: 'enter the company country', code: 'company_required', params: {} }), { status: 400 });
     for (const locale of ['ko', 'en'] as const) {
       const api = await openApp('/o/tesla/settings/connections', engineData({ 'POST /connections': refused }, 'owner'), ownerMe, locale);
       fireEvent.click(screen.getByRole('button', { name: t('connections.add', undefined, locale) }));
       const form = screen.getByRole('heading', { name: t('connections.add', undefined, locale) }).closest('form') as HTMLElement;
-      expect(within(form).getByText(t('connections.entityHint', undefined, locale))).toBeTruthy();
+      expect(within(form).getByText(t('connections.holderHint', undefined, locale))).toBeTruthy();
+      expect(within(form).queryByPlaceholderText(/KR/)).toBeNull(); // no per-connection holder any more
       fireEvent.change(within(form).getAllByRole('textbox')[0], { target: { value: 'claude-api' } });
       fireEvent.submit(form);
-      await waitFor(() => expect(within(form).getByText(t('error.entity_required', undefined, locale))).toBeTruthy());
+      await waitFor(() => expect(within(form).getByText(t('error.company_required', undefined, locale))).toBeTruthy());
       expect(api.calls.find((c) => c.method === 'POST')?.body).toMatchObject({ id: 'claude-api', provider: 'anthropic' });
-      expect(within(form).queryByText('an API key needs its entity')).toBeNull(); // never the server's English
+      expect(within(form).queryByText('enter the company country')).toBeNull(); // never the server's English
       cleanup();
       vi.unstubAllGlobals();
     }

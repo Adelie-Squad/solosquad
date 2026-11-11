@@ -79,8 +79,9 @@ class PublicUser(Closed):
     role: Role
     """The customer-level role: `owner` = the customer's owner, owner of every org;
     `staff` = only what `assignments` give (decision 57 ⑵)."""
-    locale: str
-    """The person's own choice; empty = follow the customer default (`Me.locale`)."""
+    locale: Locale = DEFAULT_LOCALE
+    """The person's own screen language (2026-11-11 — no customer default; ko until they
+    choose)."""
     two_factor: bool
     disabled: bool
     title: str = ""
@@ -121,6 +122,27 @@ class ScopeRef(Closed):
     workspace: str
 
 
+class DemoInfo(Closed):
+    """The demo account signed in, and what the demo server locks (PRD §3.6.4 ③)."""
+
+    id: str
+    """e.g. `samsungDemo`."""
+    label: str
+    expires: float
+    locked: list[str]
+    """The lock table — route keys refused with `demo_read_only` (and a few own-account
+    actions); the web locks the same controls."""
+    contact_url: str | None
+    """상담 요청 — the demo band's link to the agency."""
+    suggestions: list[str]
+    """The suggested requests; each runs its scenario."""
+
+
+class DemoRestarted(Closed):
+    workflows: list[str]
+    """The scenario workflows started again."""
+
+
 class Me(Closed):
     user: PublicUser | None
     stage: Literal["full", "enroll"]
@@ -129,9 +151,8 @@ class Me(Closed):
     local: bool = False
     """The local CLI token (no account) — owner rights on its own machine."""
     locale: Locale = DEFAULT_LOCALE
-    """The language the web shows: the person's choice, else the customer default (I31)."""
-    org_locale: Locale = DEFAULT_LOCALE
-    """The customer's default language (`core/server.yaml` `web.locale`)."""
+    """The language the web shows: the person's own (`PublicUser.locale`); ko when there
+    is no account (the local token, a finished session)."""
     relogin: bool = False
     """A password change ended every session — log in again."""
     scopes: list[ScopeOrg] = Field(default_factory=list)
@@ -140,6 +161,11 @@ class Me(Closed):
     last_scope: ScopeRef | None = None
     """Where to open after login: the last workspace this person used, or their first one
     when that is gone or they never used one; null = nothing assigned."""
+    demo: bool = False
+    """A demo server (decision 62): settings are read-only, the web shows the 데모 chip and
+    posts screen changes (`POST /api/demo/events`). Decided by the server, never the web."""
+    demo_info: DemoInfo | None = None
+    """The demo account signed in — its id, expiry and the lock table."""
 
 
 class TotpBegin(Closed):
@@ -160,12 +186,6 @@ class AuditEntry(Closed):
     detail: str | None
     workspace: str | None = None
     """In an org's audit: the workspace the action was in (null = the org itself)."""
-
-
-class WebSettings(Closed):
-    """The customer's default web settings (I31 · I41) — the customer owner changes them."""
-
-    locale: Locale = DEFAULT_LOCALE
 
 
 # ---------------------------------------------------------------------- threads · runs
@@ -380,12 +400,6 @@ class ApprovalPolicyRow(Closed):
 # ---------------------------------------------------------------------- connections · budget
 
 
-class Entity(Closed):
-    name: str
-    country: str
-    controlled_by: str | None = None
-
-
 class ConnectionOut(Closed):
     id: str
     kind: Literal["subscription", "api_key", "local_llm"]
@@ -396,7 +410,6 @@ class ConnectionOut(Closed):
     slots: int
     monthly_budget_usd: float | None
     network: str
-    entity: Entity | None
     secret_last4: str | None
     eligible: bool
     eligibility_reason: str | None
@@ -602,7 +615,150 @@ class BriefData(Open):
     agent: str | None = None
 
 
-ARTIFACT_DATA: dict[str, type[BaseModel]] = {"finance.pnl": PnlData, "brief": BriefData}
+# The demo's org-package kinds (decision 62) — `demo/scenario.py` writes them; the same kinds
+# serve a real commerce org package later (W11 · v2.2.0).
+
+
+class PayableItem(Closed):
+    vendor: str
+    invoice: str
+    item: str
+    due: str
+    amount: float
+
+
+class PayablesData(Open):
+    """`finance.payables` — the payments waiting for the owner's 대표 승인."""
+
+    items: list[PayableItem]
+    total: float
+    total_text: str
+    account: str
+    pay_on: str
+    summary: str
+
+
+class SupplierRow(Closed):
+    supplier: str
+    region: str
+    unit_price_cny: float
+    shipping: float
+    duty_rate: float
+    landed_krw: float
+    """Unit price in KRW + shipping + duty — the cost compared."""
+    moq: int
+    lead_days: int
+    defect_rate: float
+    note: str
+    score: float
+    recommended: bool
+
+
+class SupplierComparisonData(Open):
+    """`sourcing.comparison`."""
+
+    product: str
+    retail_price: float
+    suppliers: list[SupplierRow]
+    recommended: str | None
+    summary: str
+
+
+class PoLine(Closed):
+    sku: str
+    name: str
+    name_local: str
+    """The product name in the supplier's language."""
+    qty: int
+    unit_price: float
+    amount: float
+
+
+class PurchaseOrderData(Open):
+    """`sourcing.po` — a draft; nothing is sent."""
+
+    supplier: str
+    language: str
+    """The language the draft is written in for the supplier (zh-CN)."""
+    title_local: str
+    po_number: str
+    currency: str
+    lines: list[PoLine]
+    subtotal: float
+    total: float
+    total_text: str
+    delivery: str
+    terms_local: str
+    summary: str
+
+
+class SnsCalendarEntry(Closed):
+    date: str
+    channel: str
+    language: str
+    theme: str
+    format: str
+    owner: str
+
+
+class SnsReaction(Closed):
+    post: str
+    channel: str
+    reach: int
+    likes: int
+    comments: int
+    saves: int
+
+
+class SnsCalendarData(Open):
+    """`sns.calendar`."""
+
+    week: str
+    entries: list[SnsCalendarEntry]
+    last_week: list[SnsReaction]
+    summary: str
+
+
+class SnsPost(Closed):
+    channel: str
+    date: str
+    language: str
+    caption: str
+    hashtags: list[str]
+    image_note: str
+
+
+class SnsPostsData(Open):
+    """`sns.posts` — drafts; nothing is posted."""
+
+    posts: list[SnsPost]
+    summary: str
+
+
+class AdPlanData(Open):
+    """`sns.ads` — the ad plan waiting for the owner's 대표 승인."""
+
+    channel: str
+    budget: float
+    budget_text: str
+    days: int
+    start: str
+    audience: str
+    expected_reach: str
+    creative: str
+    summary: str
+
+
+ARTIFACT_DATA: dict[str, type[BaseModel]] = {
+    "finance.pnl": PnlData,
+    "brief": BriefData,
+    "finance.payables": PayablesData,
+    "sourcing.comparison": SupplierComparisonData,
+    "sourcing.po": PurchaseOrderData,
+    "sns.calendar": SnsCalendarData,
+    "sns.posts": SnsPostsData,
+    "sns.ads": AdPlanData,
+}
 
 
 # ---------------------------------------------------------------------- passkeys (W3)
@@ -628,53 +784,42 @@ class PasskeyAdded(Closed):
     passkeys: list[Passkey]
 
 
-# ---------------------------------------------------------------------- profile · snapshot
+# ---------------------------------------------------------------------- 서버 · 회사 · snapshot
 
 
-class ProfileServer(Open):
-    country: str | None = None
-    cloud: str | None = None
-    region: str | None = None
-    access: str | None = None
+class ServerFacts(Closed):
+    """What this engine server is (the 서버 tab, read-only) — detected, with the builder's
+    `core/server.yaml` values as overrides (`solosquad.server_facts`)."""
+
+    where: Literal["local", "intranet", "cloud"]
+    """`local` = this computer (the web says 로컬)."""
+    cloud: str | None
+    region: str | None
+    country: str | None
+    """ISO country — the server half of decision 45's region rule; null = unknown."""
+    os: str
+    version: str
+    """The engine's version."""
+    sources: dict[str, Literal["override", "detected", "default"]]
 
 
-class ProfileEntity(Closed):
-    id: str
+class Company(Closed):
+    """The customer company (회사, 2026-11-11) — `core.db` table `company`. The account
+    holder for decision 45: its 소재지 country (and a 법인's 지배 회사 나라)."""
+
+    kind: Literal["corporation", "sole_proprietor"] | None
+    """법인 · 개인 사업자."""
     name: str
-    country: str
-    controlled_by: str | None = None
-
-
-class ProfileLanguages(Closed):
-    default: Locale
-    enabled: list[Locale]
-
-
-class ProfilePrivacy(Closed):
-    regimes: list[str]
-    reviewer: str | None = None
-
-
-class CustomerProfile(Open):
-    """`core/profile.yaml` (decision 50) — facts about the customer, no secrets."""
-
-    schema_version: int
-    server: ProfileServer
-    entities: list[ProfileEntity]
-    languages: ProfileLanguages
-    privacy: ProfilePrivacy
-
-
-class ChecklistItem(Closed):
-    item: str
-    """Stable id — the web names it in the reader's language."""
-    label: str
-    done: bool
-
-
-class ProfileResponse(Closed):
-    profile: CustomerProfile
-    checklist: list[ChecklistItem]
+    """법인명 or 상호."""
+    representative: str
+    """대표자."""
+    country: str | None
+    """소재지 country, ISO 3166-1 alpha-2."""
+    address: str
+    """소재지 address lines."""
+    controlled_by: str | None
+    """지배 회사 나라 (법인 only) — the controlling company's HQ country, if different."""
+    complete: bool
 
 
 class SnapshotSettings(Closed):
@@ -1044,11 +1189,12 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     ScopeWorkspace,
     ScopeOrg,
     ScopeRef,
+    DemoInfo,
     Me,
+    DemoRestarted,
     TotpBegin,
     AccessPolicy,
     AuditEntry,
-    WebSettings,
     ChatMessage,
     Thread,
     ThreadCreated,
@@ -1065,7 +1211,6 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     OrgPerson,
     ApprovalItem,
     ApprovalPolicyRow,
-    Entity,
     ConnectionOut,
     Budget,
     WorkflowList,
@@ -1076,14 +1221,20 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     Artifact,
     PnlData,
     BriefData,
+    PayablesData,
+    SupplierComparisonData,
+    PurchaseOrderData,
+    SnsCalendarData,
+    SnsPostsData,
+    AdPlanData,
     Screen,
     ScreenResponse,
     EngineEvent,
     PasskeyOptions,
     Passkey,
     PasskeyAdded,
-    CustomerProfile,
-    ProfileResponse,
+    ServerFacts,
+    Company,
     SnapshotSettings,
     SnapshotRunResult,
     CalendarItem,

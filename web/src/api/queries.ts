@@ -24,10 +24,10 @@ import type {
   Thread,
   ThreadState,
   Upload,
-  WebSettings,
   Health,
   Passkey,
-  ProfileResponse,
+  Company,
+  ServerFacts,
   SnapshotSettings,
   WorkflowList,
   WorkflowThreadState,
@@ -49,10 +49,10 @@ export const keys = {
   me: ['me'] as const,
   users: ['users'] as const,
   access: ['access'] as const,
-  settings: ['settings'] as const,
   health: ['health'] as const,
   passkeys: ['passkeys'] as const,
-  profile: ['profile'] as const,
+  server: ['server'] as const,
+  company: ['company'] as const,
   snapshot: ['snapshot'] as const,
   /** 자리를 비운 동안 — the account's digest (`GET /api/me/digest`). */
   digest: ['digest'] as const,
@@ -239,13 +239,12 @@ export const useHealth = () =>
   useQuery({ queryKey: keys.health, queryFn: () => api.get<Health>('/health'), staleTime: 60_000 });
 export const usePasskeys = (on = true) =>
   useQuery({ queryKey: keys.passkeys, queryFn: () => api.get<Passkey[]>('/me/passkeys'), ...enabledFor(on) });
-export const useProfile = () =>
-  useQuery({ queryKey: keys.profile, queryFn: () => api.get<ProfileResponse>('/profile') });
+export const useServerFacts = () =>
+  useQuery({ queryKey: keys.server, queryFn: () => api.get<ServerFacts>('/server') });
+export const useCompany = () =>
+  useQuery({ queryKey: keys.company, queryFn: () => api.get<Company>('/company') });
 export const useSnapshot = () =>
   useQuery({ queryKey: keys.snapshot, queryFn: () => api.get<SnapshotSettings>('/snapshot') });
-export const useSettings = () =>
-  useQuery({ queryKey: keys.settings, queryFn: () => api.get<WebSettings>('/settings') });
-
 /** A mutation that refreshes the given queries when it succeeds. */
 export function useAction<In, Out>(fn: (input: In) => Promise<Out>, invalidate: QueryKey[] = []) {
   const qc = useQueryClient();

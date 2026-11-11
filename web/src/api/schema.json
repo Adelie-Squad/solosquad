@@ -31,8 +31,14 @@
     "ScopeRef": {
       "$ref": "#/$defs/ScopeRef"
     },
+    "DemoInfo": {
+      "$ref": "#/$defs/DemoInfo"
+    },
     "Me": {
       "$ref": "#/$defs/Me"
+    },
+    "DemoRestarted": {
+      "$ref": "#/$defs/DemoRestarted"
     },
     "TotpBegin": {
       "$ref": "#/$defs/TotpBegin"
@@ -42,9 +48,6 @@
     },
     "AuditEntry": {
       "$ref": "#/$defs/AuditEntry"
-    },
-    "WebSettings": {
-      "$ref": "#/$defs/WebSettings"
     },
     "ChatMessage": {
       "$ref": "#/$defs/ChatMessage"
@@ -94,9 +97,6 @@
     "ApprovalPolicyRow": {
       "$ref": "#/$defs/ApprovalPolicyRow"
     },
-    "Entity": {
-      "$ref": "#/$defs/Entity"
-    },
     "ConnectionOut": {
       "$ref": "#/$defs/ConnectionOut"
     },
@@ -127,6 +127,24 @@
     "BriefData": {
       "$ref": "#/$defs/BriefData"
     },
+    "PayablesData": {
+      "$ref": "#/$defs/PayablesData"
+    },
+    "SupplierComparisonData": {
+      "$ref": "#/$defs/SupplierComparisonData"
+    },
+    "PurchaseOrderData": {
+      "$ref": "#/$defs/PurchaseOrderData"
+    },
+    "SnsCalendarData": {
+      "$ref": "#/$defs/SnsCalendarData"
+    },
+    "SnsPostsData": {
+      "$ref": "#/$defs/SnsPostsData"
+    },
+    "AdPlanData": {
+      "$ref": "#/$defs/AdPlanData"
+    },
     "Screen": {
       "$ref": "#/$defs/Screen"
     },
@@ -145,11 +163,11 @@
     "PasskeyAdded": {
       "$ref": "#/$defs/PasskeyAdded"
     },
-    "CustomerProfile": {
-      "$ref": "#/$defs/CustomerProfile"
+    "ServerFacts": {
+      "$ref": "#/$defs/ServerFacts"
     },
-    "ProfileResponse": {
-      "$ref": "#/$defs/ProfileResponse"
+    "Company": {
+      "$ref": "#/$defs/Company"
     },
     "SnapshotSettings": {
       "$ref": "#/$defs/SnapshotSettings"
@@ -204,11 +222,12 @@
     "ScopeWorkspace",
     "ScopeOrg",
     "ScopeRef",
+    "DemoInfo",
     "Me",
+    "DemoRestarted",
     "TotpBegin",
     "AccessPolicy",
     "AuditEntry",
-    "WebSettings",
     "ChatMessage",
     "Thread",
     "ThreadCreated",
@@ -225,7 +244,6 @@
     "OrgPerson",
     "ApprovalItem",
     "ApprovalPolicyRow",
-    "Entity",
     "ConnectionOut",
     "Budget",
     "WorkflowList",
@@ -236,14 +254,20 @@
     "Artifact",
     "PnlData",
     "BriefData",
+    "PayablesData",
+    "SupplierComparisonData",
+    "PurchaseOrderData",
+    "SnsCalendarData",
+    "SnsPostsData",
+    "AdPlanData",
     "Screen",
     "ScreenResponse",
     "EngineEvent",
     "PasskeyOptions",
     "Passkey",
     "PasskeyAdded",
-    "CustomerProfile",
-    "ProfileResponse",
+    "ServerFacts",
+    "Company",
     "SnapshotSettings",
     "SnapshotRunResult",
     "CalendarItem",
@@ -284,6 +308,52 @@
       ],
       "type": "object",
       "title": "AccessPolicy"
+    },
+    "AdPlanData": {
+      "additionalProperties": true,
+      "description": "`sns.ads` — the ad plan waiting for the owner's 대표 승인.",
+      "properties": {
+        "channel": {
+          "type": "string"
+        },
+        "budget": {
+          "type": "number"
+        },
+        "budget_text": {
+          "type": "string"
+        },
+        "days": {
+          "type": "integer"
+        },
+        "start": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "expected_reach": {
+          "type": "string"
+        },
+        "creative": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "budget",
+        "budget_text",
+        "days",
+        "start",
+        "audience",
+        "expected_reach",
+        "creative",
+        "summary"
+      ],
+      "type": "object",
+      "title": "AdPlanData"
     },
     "Agent": {
       "additionalProperties": false,
@@ -1494,26 +1564,68 @@
       "type": "object",
       "title": "ChatMessage"
     },
-    "ChecklistItem": {
+    "Company": {
       "additionalProperties": false,
+      "description": "The customer company (회사, 2026-11-11) — `core.db` table `company`. The account\nholder for decision 45: its 소재지 country (and a 법인's 지배 회사 나라).",
       "properties": {
-        "item": {
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "corporation",
+                "sole_proprietor"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
           "type": "string"
         },
-        "label": {
+        "representative": {
           "type": "string"
         },
-        "done": {
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "address": {
+          "type": "string"
+        },
+        "controlled_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "complete": {
           "type": "boolean"
         }
       },
       "required": [
-        "item",
-        "label",
-        "done"
+        "kind",
+        "name",
+        "representative",
+        "country",
+        "address",
+        "controlled_by",
+        "complete"
       ],
       "type": "object",
-      "title": "ChecklistItem"
+      "title": "Company"
     },
     "ConnectionBudget": {
       "additionalProperties": false,
@@ -1607,16 +1719,6 @@
         "network": {
           "type": "string"
         },
-        "entity": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Entity"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "secret_last4": {
           "anyOf": [
             {
@@ -1669,7 +1771,6 @@
         "slots",
         "monthly_budget_usd",
         "network",
-        "entity",
         "secret_last4",
         "eligible",
         "eligibility_reason",
@@ -1679,38 +1780,68 @@
       "type": "object",
       "title": "ConnectionOut"
     },
-    "CustomerProfile": {
-      "additionalProperties": true,
-      "description": "`core/profile.yaml` (decision 50) — facts about the customer, no secrets.",
+    "DemoInfo": {
+      "additionalProperties": false,
+      "description": "The demo account signed in, and what the demo server locks (PRD §3.6.4 ③).",
       "properties": {
-        "schema_version": {
-          "type": "integer"
+        "id": {
+          "type": "string"
         },
-        "server": {
-          "$ref": "#/$defs/ProfileServer"
+        "label": {
+          "type": "string"
         },
-        "entities": {
+        "expires": {
+          "type": "number"
+        },
+        "locked": {
           "items": {
-            "$ref": "#/$defs/ProfileEntity"
+            "type": "string"
           },
           "type": "array"
         },
-        "languages": {
-          "$ref": "#/$defs/ProfileLanguages"
+        "contact_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
-        "privacy": {
-          "$ref": "#/$defs/ProfilePrivacy"
+        "suggestions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
-        "schema_version",
-        "server",
-        "entities",
-        "languages",
-        "privacy"
+        "id",
+        "label",
+        "expires",
+        "locked",
+        "contact_url",
+        "suggestions"
       ],
       "type": "object",
-      "title": "CustomerProfile"
+      "title": "DemoInfo"
+    },
+    "DemoRestarted": {
+      "additionalProperties": false,
+      "properties": {
+        "workflows": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "workflows"
+      ],
+      "type": "object",
+      "title": "DemoRestarted"
     },
     "Digest": {
       "additionalProperties": false,
@@ -2397,35 +2528,6 @@
       "type": "object",
       "title": "EngineEvent"
     },
-    "Entity": {
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "country": {
-          "type": "string"
-        },
-        "controlled_by": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "name",
-        "country",
-        "controlled_by"
-      ],
-      "type": "object",
-      "title": "Entity"
-    },
     "ErrorBody": {
       "additionalProperties": false,
       "description": "Every error answer (`web_api/errors.py`). The web shows `code` in the person's language\n(`error.<code>`, `params` in its placeholders) — never `error`, which is for logs.",
@@ -2503,7 +2605,11 @@
         "locale_invalid",
         "access_lockout",
         "network_invalid",
-        "profile_invalid",
+        "company_kind_invalid",
+        "company_field_invalid",
+        "company_field_too_long",
+        "company_country_invalid",
+        "company_control_corporation_only",
         "snapshot_invalid",
         "snapshot_keys_required",
         "snapshot_unavailable",
@@ -2515,8 +2621,8 @@
         "approval_needs_team",
         "connection_id_required",
         "connection_exists",
-        "entity_required",
-        "connection_ineligible_entity",
+        "company_required",
+        "connection_ineligible_company",
         "connection_ineligible_server",
         "workflow_input_invalid",
         "upload_type",
@@ -2535,7 +2641,9 @@
         "calendar_reorder_invalid",
         "calendar_agent_access_invalid",
         "digest_since_invalid",
-        "digest_until_invalid"
+        "digest_until_invalid",
+        "demo_read_only",
+        "demo_expired"
       ],
       "type": "string",
       "title": "ErrorCode"
@@ -2674,15 +2782,6 @@
           ],
           "type": "string"
         },
-        "org_locale": {
-          "default": "ko",
-          "enum": [
-            "ko",
-            "en",
-            "zh-CN"
-          ],
-          "type": "string"
-        },
         "relogin": {
           "default": false,
           "type": "boolean"
@@ -2703,6 +2802,21 @@
             }
           ],
           "default": null
+        },
+        "demo": {
+          "default": false,
+          "type": "boolean"
+        },
+        "demo_info": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DemoInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -2711,10 +2825,11 @@
         "csrf",
         "local",
         "locale",
-        "org_locale",
         "relogin",
         "scopes",
-        "last_scope"
+        "last_scope",
+        "demo",
+        "demo_info"
       ],
       "type": "object",
       "title": "Me"
@@ -2923,6 +3038,72 @@
       "type": "object",
       "title": "PasskeyOptions"
     },
+    "PayableItem": {
+      "additionalProperties": false,
+      "properties": {
+        "vendor": {
+          "type": "string"
+        },
+        "invoice": {
+          "type": "string"
+        },
+        "item": {
+          "type": "string"
+        },
+        "due": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "vendor",
+        "invoice",
+        "item",
+        "due",
+        "amount"
+      ],
+      "type": "object",
+      "title": "PayableItem"
+    },
+    "PayablesData": {
+      "additionalProperties": true,
+      "description": "`finance.payables` — the payments waiting for the owner's 대표 승인.",
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/PayableItem"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "number"
+        },
+        "total_text": {
+          "type": "string"
+        },
+        "account": {
+          "type": "string"
+        },
+        "pay_on": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "items",
+        "total",
+        "total_text",
+        "account",
+        "pay_on",
+        "summary"
+      ],
+      "type": "object",
+      "title": "PayablesData"
+    },
     "Person": {
       "additionalProperties": false,
       "properties": {
@@ -3089,173 +3270,38 @@
       "type": "object",
       "title": "PnlReviewRow"
     },
-    "ProfileEntity": {
+    "PoLine": {
       "additionalProperties": false,
       "properties": {
-        "id": {
+        "sku": {
           "type": "string"
         },
         "name": {
           "type": "string"
         },
-        "country": {
+        "name_local": {
           "type": "string"
         },
-        "controlled_by": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
+        "qty": {
+          "type": "integer"
+        },
+        "unit_price": {
+          "type": "number"
+        },
+        "amount": {
+          "type": "number"
         }
       },
       "required": [
-        "id",
+        "sku",
         "name",
-        "country",
-        "controlled_by"
+        "name_local",
+        "qty",
+        "unit_price",
+        "amount"
       ],
       "type": "object",
-      "title": "ProfileEntity"
-    },
-    "ProfileLanguages": {
-      "additionalProperties": false,
-      "properties": {
-        "default": {
-          "enum": [
-            "ko",
-            "en",
-            "zh-CN"
-          ],
-          "type": "string"
-        },
-        "enabled": {
-          "items": {
-            "enum": [
-              "ko",
-              "en",
-              "zh-CN"
-            ],
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "default",
-        "enabled"
-      ],
-      "type": "object",
-      "title": "ProfileLanguages"
-    },
-    "ProfilePrivacy": {
-      "additionalProperties": false,
-      "properties": {
-        "regimes": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "reviewer": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "regimes",
-        "reviewer"
-      ],
-      "type": "object",
-      "title": "ProfilePrivacy"
-    },
-    "ProfileResponse": {
-      "additionalProperties": false,
-      "properties": {
-        "profile": {
-          "$ref": "#/$defs/CustomerProfile"
-        },
-        "checklist": {
-          "items": {
-            "$ref": "#/$defs/ChecklistItem"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "profile",
-        "checklist"
-      ],
-      "type": "object",
-      "title": "ProfileResponse"
-    },
-    "ProfileServer": {
-      "additionalProperties": true,
-      "properties": {
-        "country": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "cloud": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "region": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "access": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        }
-      },
-      "required": [
-        "country",
-        "cloud",
-        "region",
-        "access"
-      ],
-      "type": "object",
-      "title": "ProfileServer"
+      "title": "PoLine"
     },
     "PublicUser": {
       "additionalProperties": false,
@@ -3277,6 +3323,12 @@
           "type": "string"
         },
         "locale": {
+          "default": "ko",
+          "enum": [
+            "ko",
+            "en",
+            "zh-CN"
+          ],
           "type": "string"
         },
         "two_factor": {
@@ -3316,6 +3368,67 @@
       ],
       "type": "object",
       "title": "PublicUser"
+    },
+    "PurchaseOrderData": {
+      "additionalProperties": true,
+      "description": "`sourcing.po` — a draft; nothing is sent.",
+      "properties": {
+        "supplier": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "title_local": {
+          "type": "string"
+        },
+        "po_number": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/PoLine"
+          },
+          "type": "array"
+        },
+        "subtotal": {
+          "type": "number"
+        },
+        "total": {
+          "type": "number"
+        },
+        "total_text": {
+          "type": "string"
+        },
+        "delivery": {
+          "type": "string"
+        },
+        "terms_local": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "supplier",
+        "language",
+        "title_local",
+        "po_number",
+        "currency",
+        "lines",
+        "subtotal",
+        "total",
+        "total_text",
+        "delivery",
+        "terms_local",
+        "summary"
+      ],
+      "type": "object",
+      "title": "PurchaseOrderData"
     },
     "Run": {
       "additionalProperties": false,
@@ -3701,6 +3814,78 @@
       "type": "object",
       "title": "ScreenResponse"
     },
+    "ServerFacts": {
+      "additionalProperties": false,
+      "description": "What this engine server is (the 서버 tab, read-only) — detected, with the builder's\n`core/server.yaml` values as overrides (`solosquad.server_facts`).",
+      "properties": {
+        "where": {
+          "enum": [
+            "local",
+            "intranet",
+            "cloud"
+          ],
+          "type": "string"
+        },
+        "cloud": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "os": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "sources": {
+          "additionalProperties": {
+            "enum": [
+              "override",
+              "detected",
+              "default"
+            ],
+            "type": "string"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "where",
+        "cloud",
+        "region",
+        "country",
+        "os",
+        "version",
+        "sources"
+      ],
+      "type": "object",
+      "title": "ServerFacts"
+    },
     "SnapshotRunResult": {
       "additionalProperties": true,
       "properties": {
@@ -3842,6 +4027,258 @@
       ],
       "type": "object",
       "title": "SnapshotSettings"
+    },
+    "SnsCalendarData": {
+      "additionalProperties": true,
+      "description": "`sns.calendar`.",
+      "properties": {
+        "week": {
+          "type": "string"
+        },
+        "entries": {
+          "items": {
+            "$ref": "#/$defs/SnsCalendarEntry"
+          },
+          "type": "array"
+        },
+        "last_week": {
+          "items": {
+            "$ref": "#/$defs/SnsReaction"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "week",
+        "entries",
+        "last_week",
+        "summary"
+      ],
+      "type": "object",
+      "title": "SnsCalendarData"
+    },
+    "SnsCalendarEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "theme": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "channel",
+        "language",
+        "theme",
+        "format",
+        "owner"
+      ],
+      "type": "object",
+      "title": "SnsCalendarEntry"
+    },
+    "SnsPost": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "hashtags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "image_note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "date",
+        "language",
+        "caption",
+        "hashtags",
+        "image_note"
+      ],
+      "type": "object",
+      "title": "SnsPost"
+    },
+    "SnsPostsData": {
+      "additionalProperties": true,
+      "description": "`sns.posts` — drafts; nothing is posted.",
+      "properties": {
+        "posts": {
+          "items": {
+            "$ref": "#/$defs/SnsPost"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "posts",
+        "summary"
+      ],
+      "type": "object",
+      "title": "SnsPostsData"
+    },
+    "SnsReaction": {
+      "additionalProperties": false,
+      "properties": {
+        "post": {
+          "type": "string"
+        },
+        "channel": {
+          "type": "string"
+        },
+        "reach": {
+          "type": "integer"
+        },
+        "likes": {
+          "type": "integer"
+        },
+        "comments": {
+          "type": "integer"
+        },
+        "saves": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "post",
+        "channel",
+        "reach",
+        "likes",
+        "comments",
+        "saves"
+      ],
+      "type": "object",
+      "title": "SnsReaction"
+    },
+    "SupplierComparisonData": {
+      "additionalProperties": true,
+      "description": "`sourcing.comparison`.",
+      "properties": {
+        "product": {
+          "type": "string"
+        },
+        "retail_price": {
+          "type": "number"
+        },
+        "suppliers": {
+          "items": {
+            "$ref": "#/$defs/SupplierRow"
+          },
+          "type": "array"
+        },
+        "recommended": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "product",
+        "retail_price",
+        "suppliers",
+        "recommended",
+        "summary"
+      ],
+      "type": "object",
+      "title": "SupplierComparisonData"
+    },
+    "SupplierRow": {
+      "additionalProperties": false,
+      "properties": {
+        "supplier": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "unit_price_cny": {
+          "type": "number"
+        },
+        "shipping": {
+          "type": "number"
+        },
+        "duty_rate": {
+          "type": "number"
+        },
+        "landed_krw": {
+          "type": "number"
+        },
+        "moq": {
+          "type": "integer"
+        },
+        "lead_days": {
+          "type": "integer"
+        },
+        "defect_rate": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        },
+        "recommended": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "supplier",
+        "region",
+        "unit_price_cny",
+        "shipping",
+        "duty_rate",
+        "landed_krw",
+        "moq",
+        "lead_days",
+        "defect_rate",
+        "note",
+        "score",
+        "recommended"
+      ],
+      "type": "object",
+      "title": "SupplierRow"
     },
     "Team": {
       "additionalProperties": false,
@@ -4088,26 +4525,6 @@
       ],
       "type": "object",
       "title": "Version"
-    },
-    "WebSettings": {
-      "additionalProperties": false,
-      "description": "The customer's default web settings (I31 · I41) — the customer owner changes them.",
-      "properties": {
-        "locale": {
-          "default": "ko",
-          "enum": [
-            "ko",
-            "en",
-            "zh-CN"
-          ],
-          "type": "string"
-        }
-      },
-      "required": [
-        "locale"
-      ],
-      "type": "object",
-      "title": "WebSettings"
     },
     "WidgetSpec": {
       "additionalProperties": true,

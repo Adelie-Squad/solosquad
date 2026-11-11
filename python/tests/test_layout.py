@@ -55,7 +55,8 @@ def test_discovery(tmp_path: Path) -> None:
     tesla = sol.org("tesla")
     assert tesla.lock().package == "commerce-ax"
     assert [w.name for w in tesla.workspaces()] == ["busan", "hq"]
-    assert sol.server_config().type is WorkspaceType.LOCAL  # a server property (I41)
+    assert sol.server_config().type is None  # detected unless the builder overrides (I41)
+    assert sol.server_config().facts().where in ("local", "cloud")
     assert tesla.workspace("hq").config().execution.allow_external_api is True
 
 

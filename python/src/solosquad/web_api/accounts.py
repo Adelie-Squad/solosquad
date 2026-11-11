@@ -22,11 +22,14 @@ import secrets
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
+from solosquad.company_info import SCHEMA as COMPANY_SCHEMA
+from solosquad.company_info import Company, read_company, write_company
 from solosquad.storage import Migration, columns, connect, migrate
 from solosquad.web_api import totp
 from solosquad.web_api.errors import CodedError, ErrorCode
@@ -153,8 +156,22 @@ CREATE INDEX IF NOT EXISTS failures_key ON login_failures (key, ts);
 _USER_COLS = "id, username, display, role, locale, totp_secret IS NOT NULL, disabled"
 
 
+LOCALES = ("ko", "en", "zh-CN")
+"""The web's languages (decision 53)."""
+DEFAULT_LOCALE = "ko"
+"""The fixed default (2026-11-11): there is no customer default any more — each person
+chooses their own screen language, and anyone who has not is shown Korean."""
+
+
+def known_locale(locale: str | None) -> str:
+    """A person's language as the engine uses it: their choice, else ko."""
+    return locale if locale in LOCALES else DEFAULT_LOCALE
+
+
 def _user(row: Any) -> User:
-    return User(row[0], row[1], row[2], Role(row[3]), row[4], bool(row[5]), bool(row[6]))
+    return User(
+        row[0], row[1], row[2], Role(row[3]), known_locale(row[4]), bool(row[5]), bool(row[6])
+    )
 
 
 def _add_people_columns(db: sqlite3.Connection) -> None:
@@ -212,11 +229,39 @@ def _add_presence(db: sqlite3.Connection) -> None:
     )
 
 
-MIGRATIONS = (
-    *LEGACY_MIGRATIONS,
-    Migration(4, SCOPES_SCHEMA),  # decision 57 — assignments · last scope (I39)
-    Migration(5, _add_presence),  # 2026-11-10 — last seen, for the dashboard digest
-)
+def _settle_locales(fill: str) -> Callable[[sqlite3.Connection], None]:
+    """v6 (2026-11-11): the customer default language is gone. Everyone who followed it
+    (`locale` empty) keeps the language they were seeing — the old default, `fill` — as
+    their own choice; anything unknown becomes ko."""
+
+    def step(db: sqlite3.Connection) -> None:
+        settle_locales(db, fill)
+
+    return step
+
+
+def settle_locales(db: sqlite3.Connection, fill: str) -> int:
+    """Give every person without a known language `fill` (ko when `fill` is unknown)."""
+    marks = ",".join("?" * len(LOCALES))
+    cur = db.execute(
+        f"UPDATE users SET locale = ? WHERE locale IS NULL OR locale NOT IN ({marks})",
+        (known_locale(fill), *LOCALES),
+    )
+    return cur.rowcount
+
+
+def migrations(fill_locale: str = DEFAULT_LOCALE) -> tuple[Migration, ...]:
+    """The `core.db` steps. `fill_locale` = the retired customer default, for step 6."""
+    return (
+        *LEGACY_MIGRATIONS,
+        Migration(4, SCOPES_SCHEMA),  # decision 57 — assignments · last scope (I39)
+        Migration(5, _add_presence),  # 2026-11-10 — last seen, for the dashboard digest
+        Migration(6, _settle_locales(fill_locale)),  # 2026-11-11 — a language per person
+        Migration(7, COMPANY_SCHEMA),  # 2026-11-11 — the customer company (회사)
+    )
+
+
+MIGRATIONS = migrations()
 COMPONENT = "core"
 """The component name of these tables in `core.db`."""
 CHALLENGE_TTL_S = 5 * 60
@@ -256,10 +301,10 @@ class Assignment:
 
 
 class AccountStore:
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, fill_locale: str = DEFAULT_LOCALE) -> None:
         self.path = path
         self._db = connect(path)
-        migrate(self._db, COMPONENT, MIGRATIONS, path=path)
+        migrate(self._db, COMPONENT, migrations(fill_locale), path=path)
         self._lock = threading.Lock()
         path.chmod(0o600)
 
@@ -283,7 +328,7 @@ class AccountStore:
         password: str,
         role: Role,
         display: str = "",
-        locale: str = "ko",
+        locale: str = DEFAULT_LOCALE,
         *,
         assignments: list[Assignment] | None = None,
     ) -> User:
@@ -299,8 +344,8 @@ class AccountStore:
             self._q(
                 "INSERT INTO users (id, username, display, role, pw_hash, locale, created)"
                 " VALUES (?,?,?,?,?,?,?)",
-                (uid, username, display or username, role.value, hash_password(password), locale,
-                 time.time()),
+                (uid, username, display or username, role.value, hash_password(password),
+                 known_locale(locale), time.time()),
             )  # fmt: skip
         except sqlite3.IntegrityError as e:
             raise CodedError(
@@ -477,7 +522,30 @@ class AccountStore:
         self.revoke_user_sessions(uid)
 
     def set_locale(self, uid: str, locale: str) -> None:
+        if locale not in LOCALES:
+            raise CodedError(ErrorCode.LOCALE_INVALID, f"locale must be one of {list(LOCALES)}")
         self._q("UPDATE users SET locale = ? WHERE id = ?", (locale, uid))
+
+    # ------------------------------------------------------------------ company (회사)
+
+    def company(self) -> Company:
+        """The customer company — empty until the owner fills it in."""
+        with self._lock:
+            return read_company(self._db) or Company()
+
+    def set_company(self, company: Company, by: str | None = None) -> Company:
+        with self._lock:
+            write_company(self._db, company, by, time.time())
+        return self.company()
+
+    def has_company(self) -> bool:
+        with self._lock:
+            return read_company(self._db) is not None
+
+    def settle_locales(self, fill: str) -> int:
+        """`settle_locales` for accounts moved in after the migration (rev6 org.db)."""
+        with self._lock:
+            return settle_locales(self._db, fill)
 
     # ------------------------------------------------------------------ second factor
 

@@ -24,12 +24,12 @@ from solosquad.assets.renames import RENAMED_AGENTS, renamed_hint
 from solosquad.assets.skill import SkillParseError, parse_skill_md
 from solosquad.assets.text import load_yaml, match_frontmatter, normalize_line
 from solosquad.assets.validate import Report, validate_skill
+from solosquad.company_info import Company, read_company_at
 from solosquad.context.execution import ExecutionContext, build_context
 from solosquad.context.resolve import Kind, Resolver
 from solosquad.layout import AccessPolicy, LayoutError, ServerConfig, Solution
-from solosquad.profile import load_profile, profile_path
 from solosquad.routing.connections import load_connections
-from solosquad.routing.eligibility import judge, providers_reached
+from solosquad.routing.eligibility import Entity, judge, providers_reached
 from solosquad.routing.policy import load_policy
 from solosquad.routing.vault import SecretStore
 from solosquad.screens import parse_screen, screen_issues, screen_path
@@ -73,7 +73,9 @@ def _check_access(r: Report, access: AccessPolicy, where: str) -> None:
         r.add("ACCESS_NETWORK_INVALID", str(e), "access.allowed_networks", path=where)
 
 
-def validate_definitions(ctx: ExecutionContext, report: Report | None = None) -> Report:
+def validate_definitions(
+    ctx: ExecutionContext, report: Report | None = None, *, holder: Entity | None = None
+) -> Report:
     """Every agent/skill a workspace can see, its teams, crons, policy and connections."""
     r = report or Report()
     resolver = Resolver(ctx)
@@ -272,7 +274,7 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
     _check_access(r, ctx.workspace_config.access, "workspace.yaml")
 
     known_conn: set[str] = set()
-    server = ctx.server.server_country
+    server = ctx.server.facts().country
     for path in (ctx.solution.connections_path, ctx.org_root / "connections.yaml"):
         try:
             conns = load_connections(path)
@@ -282,20 +284,20 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
         known_conn |= {c.id for c in conns}
         for c in conns:
             reached = providers_reached(c.provider, c.harness, c.models)
-            verdict = judge(c.provider, c.harness, c.models, c.entity, server)
+            verdict = judge(c.provider, c.harness, c.models, holder, server)
             if not verdict.ok:
                 r.add(
                     "CONNECTION_INELIGIBLE",
                     f"{c.id}: {verdict.reason} ({verdict.source})",
-                    "entity",
+                    "company",
                     path=str(path),
                 )
-            elif reached and c.entity is None:
+            elif reached and holder is None:
                 r.add(
-                    "CONNECTION_ENTITY_UNKNOWN",
-                    f"{c.id} reaches {', '.join(sorted(reached))}"
-                    " but records no account-holding entity (decision 45)",
-                    "entity",
+                    "CONNECTION_COMPANY_UNKNOWN",
+                    f"{c.id} reaches {', '.join(sorted(reached))} but the company's country"
+                    " (회사 소재지) is not entered yet (decision 45)",
+                    "company",
                     "warn",
                     str(path),
                 )
@@ -324,6 +326,26 @@ def validate_definitions(ctx: ExecutionContext, report: Report | None = None) ->
                     path=str(policy_path),
                 )
     return r
+
+
+def company_missing(company: Company) -> list[str]:
+    fields = (
+        ("구분", company.kind),
+        ("법인명/상호", company.name),
+        ("대표자", company.representative),
+        ("소재지 나라", company.country),
+    )
+    return [label for label, ok in fields if not ok]
+
+
+def read_company(solution: Path) -> Company:
+    """The customer company from the data folder's `core.db`, read-only — empty if unknown."""
+    from solosquad.web_api.org_store import core_path
+
+    try:
+        return read_company_at(core_path(Solution(solution))) or Company()
+    except Exception:  # no data folder yet, a locked file — the company is just unknown
+        return Company()
 
 
 def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
@@ -360,6 +382,7 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
         base.add("SERVER_CONFIG_INVALID", str(e).splitlines()[0], path=server_path)
         server = ServerConfig()
     _check_access(base, server.access, server_path)
+    company = read_company(solution)
     for org in sol.orgs():
         try:
             org.lock()
@@ -376,20 +399,15 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
                 rep.add("LAYOUT", str(e).splitlines()[0])
                 out[key] = rep
                 continue
-            out[key] = validate_definitions(ctx)
-    try:
-        profile = load_profile(solution)
-    except Exception as e:  # yaml and validation errors alike
-        base.add("PROFILE_INVALID", str(e).splitlines()[0], path=str(profile_path(solution)))
-    else:
-        missing = [i["label"] for i in profile.checklist() if not i["done"]]
-        if missing:
-            base.add(
-                "PROFILE_INCOMPLETE",
-                "customer profile still needs: " + ", ".join(missing),
-                severity="warn",
-                path=str(profile_path(solution)),
-            )
+            out[key] = validate_definitions(ctx, holder=company.holder())
+    if not company.complete:
+        base.add(
+            "COMPANY_INCOMPLETE",
+            "회사 still needs: "
+            + ", ".join(company_missing(company))
+            + " — set it in the web (설정, 회사) or `solosquad company set`",
+            severity="warn",
+        )
     if base.issues or not out:
         out[""] = base
     return out
@@ -459,12 +477,20 @@ def doctor_checks(solution: Path, bundle: Path | None) -> list[Check]:
     warns = sum(len(r.warnings) for r in reports.values())
     status: Status = "fail" if errors else "warn" if warns else "ok"
     out.append(Check("definitions", status, f"{errors} errors · {warns} warnings"))
+    todo = company_missing(read_company(solution))
+    out.append(Check("company", "warn" if todo else "ok",
+                     "missing: " + ", ".join(todo) if todo else "complete"))  # fmt: skip
     try:
-        todo = [i["label"] for i in load_profile(solution).checklist() if not i["done"]]
-        out.append(Check("profile", "warn" if todo else "ok",
-                         "missing: " + ", ".join(todo) if todo else "complete"))  # fmt: skip
+        facts = Solution(solution).server_config(strict=False).facts()
+        where = (
+            facts.where
+            if facts.where != "cloud"
+            else f"{facts.cloud or 'cloud'} {facts.region or ''}"
+        )
+        out.append(Check("server", "ok" if facts.country else "warn",
+                         f"{where.strip()} · country {facts.country or 'unknown'}"))  # fmt: skip
     except Exception as e:
-        out.append(Check("profile", "fail", str(e).splitlines()[0]))
+        out.append(Check("server", "fail", str(e).splitlines()[0]))
 
     from solosquad.layout import EngineStore, solosquad_home
 
