@@ -2,9 +2,9 @@
 // plain penguin from the office loader (office/penguinAsset.ts), coloured by the office palette
 // (light = day, dark = evening overtime). The canvas covers the scene column; each section's content
 // is centred there and the penguin walks to a spot picked from that content's box (staging.ts) and
-// acts on it (DESIGN.md `## 랜딩` — 자리 · 연기): it patters above the prompt box, hands the request
-// to the step cards, peeks over the scroll and holds its rod, stamps the approval from the card's
-// corner, waves from behind the last card. The head follows the cursor, toned down while acting.
+// acts on it (DESIGN.md `## 랜딩` — 자리 · 연기): it waves from behind the company card, patters
+// above the prompt box, peeks over the scroll and holds its rod, stamps each workflow's owner
+// approval from the card's corner, points at the price card, waves again from behind the last card. The head follows the cursor, toned down while acting.
 //
 // It enters once per page load as a clay ball that drops in, squashes, stretches and settles into
 // the penguin (intro.ts · morph.ts); nothing of it shows before that — no 2D poster.
@@ -39,7 +39,7 @@ import { claimIntro, introAt, REST, type IntroPose } from './intro';
 import { makeMorph, type Morph } from './morph';
 import { makeRod, makeStamp, STAMP_LENGTH } from './props';
 import { aim, atDepth, fitEraser, makeEraser, ORDER, rayAt, reach, useFrontPass, type Side } from './rig';
-import type { SectionId } from './sections';
+import type { ActId, SectionId } from './sections';
 import { headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
 
 preloadPenguin();
@@ -70,8 +70,10 @@ export interface LandingStats {
 }
 
 export interface MascotCanvasProps {
-  /** The section on stage — which act. */
-  act: SectionId;
+  /** The section on stage — its slide holds the content the penguin stands by. */
+  section: SectionId;
+  /** What the penguin does there (sections.ts `ActId`). */
+  act: ActId;
   /** Acting on the content (otherwise the clip alone, the wings at rest). */
   acting: boolean;
   theme: Theme;
@@ -200,7 +202,7 @@ function occluderOf(slide: Element, bottom: number): Rect | null {
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const SIDES = ['L', 'R'] as const;
 
-function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
+function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
   const { penguin, clips } = useSoloPenguin();
   const palette = paletteFor(theme);
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
@@ -372,22 +374,22 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
 
     const pp = p.current;
     pp.acting += ((acting ? 1 : 0) - pp.acting) * k(4);
-    pp.typing += ((acting && act === 'hero' && cues.typing ? 1 : 0) - pp.typing) * k(5);
+    pp.typing += ((acting && act === 'type' && cues.typing ? 1 : 0) - pp.typing) * k(5);
 
     // ── where the penguin stands: the spot for this section's content, walked to over MOVE_MS ──
     const rect = gl.domElement.getBoundingClientRect();
     const stage = pin.current;
-    const slide = stage?.querySelector<HTMLElement>(`[data-slide="${act}"]`) ?? null;
+    const slide = stage?.querySelector<HTMLElement>(`[data-slide="${section}"]`) ?? null;
     const content = boxOf(slide?.querySelector('[data-content]'));
     const sceneBox = boxOf(slide?.querySelector('.landing-scene'));
     const m = move.current;
     let target = m.cur;
     if (content && sceneBox) target = spotFor(act, content, penguinHeight(sceneBox, mobile), mobile);
     if (!target) return;
-    if (m.act !== act) {
+    if (m.act !== section) {
       m.from = m.cur ?? target;
       m.at = m.cur ? t : -Infinity;
-      m.act = act;
+      m.act = section;
     }
     const cur = moveAt(m.from ?? target, target, t - m.at);
     m.cur = cur;
@@ -433,7 +435,7 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
 
     // the stamp's hit squashes the body a little
     const stampMs = t - cues.stampAt;
-    if (rig.body && act === 'control') {
+    if (rig.body && act === 'stamp') {
       const sy = squashAt(stampMs);
       if (sy !== 1) rig.body.scale.multiply(tmp.v.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy)));
     }
@@ -463,10 +465,10 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
     const occluder = slide ? occluderOf(slide, rect.bottom) : null;
     const marks: Record<Side, Pt | null> = { L: null, R: null };
     let actTarget: Pt | null = null;
-    const stampMark = act === 'control' ? mark('[data-stamp-target]') : null;
-    const handMark = act === 'what' ? mark('[data-hand]') : null;
+    const stampMark = act === 'stamp' ? mark('[data-stamp-target]') : null;
+    const handMark = act === 'point' ? mark('[data-hand]') : null;
     // team: the rod along the paper's top edge; the wing takes the knob on the penguin's side
-    const rodMark = act === 'team' ? mark('[data-rod]') : null;
+    const rodMark = act === 'unroll' ? mark('[data-rod]') : null;
     const sheet = mark('.landing-scroll');
     let knob: Pt | null = null;
     let rodWidth = 0;
@@ -476,27 +478,27 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
       const dir = cur.x < c.x ? -1 : 1;
       knob = { x: c.x + dir * (rodWidth / 2 + 0.022) * zoom, y: c.y };
     }
-    if (act === 'what' && handMark) actTarget = centre(handMark);
-    else if (act === 'control' && stampMark) {
+    if (act === 'point' && handMark) actTarget = centre(handMark);
+    else if (act === 'stamp' && stampMark) {
       // the stamp lands on the button's end nearest the penguin (it comes from beside the card)
       const r = stampMark.getBoundingClientRect();
       const near = cur.x < r.left + r.width / 2;
       const inset = Math.min(r.width / 2, 0.11 * H);
       actTarget = { x: near ? r.left + inset : r.right - inset, y: r.top + r.height / 2 };
     }
-    else if (act === 'team') actTarget = knob;
+    else if (act === 'unroll') actTarget = knob;
     const { wings: actingSet, wave } = actingWings(act, cur.x, contentCx);
     const stampSide: Side = actingSet[0] ?? 'R';
     if (live && content) {
       const edge = content.top + 0.015 * H;
-      if (act === 'hero' || act === 'start') {
+      if (act === 'type' || act === 'wave') {
         marks.L = { x: cur.x + REACH * H, y: edge };
         marks.R = { x: cur.x - REACH * H, y: edge };
       } else if (actTarget) marks[actingSet[0]] = actTarget;
     }
 
     // the rod sits at the depth where the wing on the knob reaches it
-    const rodBone = act === 'team' && actingSet[0] ? rig.wings[actingSet[0]].bone : null;
+    const rodBone = act === 'unroll' && actingSet[0] ? rig.wings[actingSet[0]].bone : null;
     const rodOn = live && !!knob && !!rodMark && !!rodBone;
     if (rodOn && knob && rodMark && rodBone) {
       const c = centre(rodMark);
@@ -520,14 +522,14 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
       const goalMark = actingSet.includes(side) ? marks[side] : null;
       if (goalMark) {
         // a new section starts from its own mark (never glides over from the last one)
-        wing.at = wing.at && wing.u > 0 && wing.act === act ? { x: wing.at.x + (goalMark.x - wing.at.x) * k(WING_GLIDE), y: wing.at.y + (goalMark.y - wing.at.y) * k(WING_GLIDE) } : { ...goalMark };
+        wing.at = wing.at && wing.u > 0 && wing.act === section ? { x: wing.at.x + (goalMark.x - wing.at.x) * k(WING_GLIDE), y: wing.at.y + (goalMark.y - wing.at.y) * k(WING_GLIDE) } : { ...goalMark };
         wing.rect = occluder;
-        wing.act = act;
+        wing.act = section;
       }
 
       // along the path: out and in over ARM_MS; the relay's hand follows its own curve (out · beat · back)
       const before = wing.u;
-      if (act === 'what' && actingSet.includes(side) && live) wing.u = relayHand(t - cues.relayAt);
+      if (act === 'point' && actingSet.includes(side) && live) wing.u = relayHand(t - cues.relayAt);
       else wing.u = Math.max(0, Math.min(1, wing.u + ((goalMark ? 1 : -1) * dt * 1000) / ARM_MS));
       const du = wing.u - before;
 
@@ -538,15 +540,15 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
 
       if (wing.u > 0 && wing.at) {
         let { x, y } = wing.at;
-        if (act === 'hero') {
+        if (act === 'type') {
           // pretend typing: small alternating strokes above the keys, eased in and out with the box
           y += pp.typing * (-STROKE_LIFT * H + (STROKE_LIFT + STROKE_DEPTH) * H * strokeAt(t / 1000, side));
-        } else if (act === 'start' && side === wave) {
+        } else if (act === 'wave' && side === wave) {
           const w = waveAt(t - cues.waveAt);
           const out = side === 'L' ? 1 : -1;
           x += out * (w.raise * 0.17 * H + w.swing * WAVE_SWING * H);
           y -= w.raise * 0.42 * H;
-        } else if (act === 'control' && side === stampSide && wing.rect) {
+        } else if (act === 'stamp' && side === stampSide && wing.rect) {
           // held aside — beside the card's corner, outside it — until the stamp comes over the button
           const dir = cur.x < x ? -1 : 1;
           const clearX = dir < 0 ? wing.rect.left - EDGE_MARGIN * H - 0.06 * zoom : wing.rect.right + EDGE_MARGIN * H + 0.06 * zoom;
@@ -558,7 +560,7 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
       const r = tmp.tip.distanceTo(tmp.shoulder);
       const rest = toPage(tmp.tip);
       let tipPt = rest;
-      const holding = act === 'control' && side === stampSide;
+      const holding = act === 'stamp' && side === stampSide;
       const hang = holding ? STAMP_GRIP * STAMP_LENGTH + stampLift(stampMs) : 0;
       let stretchTo = 1;
       if (wing.u > 0 && wing.to && wing.rect) {
@@ -577,7 +579,7 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
         const via = viaPoint(wing.rect, shoulderPt, wing.to, EDGE_MARGIN * H);
         const at = pathAt({ from: rest, via, to: wing.to }, wing.u);
         const reachR = r * wing.stretch;
-        if (act === 'what') {
+        if (act === 'point') {
           // the far wing sweeps out at full length (round the belly, not foreshortened towards the
           // camera, where it would pass in front of the face)
           const dx = at.x - shoulderPt.x;
@@ -602,7 +604,7 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
       tips[side] = tipPt;
       const box = wing.rect ?? occluder;
       let clear = !box || !segmentHits(shoulderPt, tipPt, box);
-      if (box && act === 'control' && side === stampSide && pp.stamp > 0.05) {
+      if (box && act === 'stamp' && side === stampSide && pp.stamp > 0.05) {
         // the stamp hangs under the tip: it must be off the card too before the pass changes
         const half = 0.05 * zoom * pp.stamp;
         clear &&= !rectsOverlap({ left: tipPt.x - half, right: tipPt.x + half, top: tipPt.y - (1 - STAMP_GRIP) * STAMP_LENGTH * zoom * pp.stamp, bottom: tipPt.y + STAMP_GRIP * STAMP_LENGTH * zoom * pp.stamp }, box);
@@ -621,7 +623,7 @@ function Mascot({ act, acting, theme, mobile, pointer, touch, pin, onReady, onFa
     front.set(frontNow);
 
     // props: grow in for their act, shrink away after; the stamp is drawn in front only with its wing
-    pp.stamp += ((act === 'control' && live ? 1 : 0) - pp.stamp) * k(6);
+    pp.stamp += ((act === 'stamp' && live ? 1 : 0) - pp.stamp) * k(6);
     pp.rod += ((rodOn ? 1 : 0) - pp.rod) * k(6);
     stamp.group.scale.setScalar(Math.max(0.0001, pp.stamp));
     rod.group.scale.setScalar(Math.max(0.0001, pp.rod));

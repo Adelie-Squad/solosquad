@@ -8,19 +8,19 @@
 // content never moves with the penguin (no nudge, no shake), the only repeating motion is the
 // typing patter (staging.ts `STROKE_RATE`, 3–4 strokes a second).
 import { MOVE_MS } from './staging';
-import type { SectionId } from './sections';
+import type { ActId } from './sections';
 
 /** Start times (`performance.now()` ms) of the timelines that are playing — one landing per page. */
 export const cues = {
   /** The prompt box is typing (the wings patter) — eased in and out by the canvas. */
   typing: false,
-  /** The relay of the step cards, from `relayAt`. */
+  /** The wing pointing at the price card, from `relayAt`. */
   relayAt: -Infinity,
   /** The stamp: raise · strike · lift, from `stampAt`. */
   stampAt: -Infinity,
   /** The scroll: the paper starts to unroll at `unrollAt`. */
   unrollAt: -Infinity,
-  /** The wave on the last card, from `waveAt`. */
+  /** The wave on the company card and the last card, from `waveAt`. */
   waveAt: -Infinity,
 };
 
@@ -40,12 +40,12 @@ export function resetCues() {
  * penguin; at landing size it read as trembling (the 2026-11-09 "덜덜 떨림").
  */
 export const ACT_CLIP = {
-  hero: 'idle',
-  what: 'idle',
-  team: 'idle',
-  control: 'idle',
-  start: 'idle',
-} as const satisfies Record<SectionId, string>;
+  wave: 'idle',
+  type: 'idle',
+  unroll: 'idle',
+  stamp: 'idle',
+  point: 'idle',
+} as const satisfies Record<ActId, string>;
 
 /** How long after a slide comes in its act starts (ms) — after the penguin has walked over. */
 export const ACT_DELAY_MS = MOVE_MS + 120;
@@ -54,9 +54,9 @@ export const ACT_DELAY_MS = MOVE_MS + 120;
 export const WING_GLIDE = 6;
 export const WING_WEIGHT_RATE = 4;
 
-// ── what: the relay along the step cards ─────────────────────────────
+// ── point: the wing out to a price card ────────────────────────────────
 
-/** The wing hands the request to card 1, then each card lights up in turn (ms from `relayAt`). */
+/** The wing reaches card 1, then the cards light up in turn (ms from `relayAt`). */
 export const RELAY = {
   /** the wing reaches card 1 */
   reach: 650,
@@ -82,7 +82,7 @@ export function relayHand(ms: number): number {
   return 1 - easeInOut(back / RELAY.release);
 }
 
-// ── team: unrolling the scroll ──────────────────────────────────────────
+// ── unroll: the scroll ──────────────────────────────────────────
 
 /** The paper comes down over this long (landing.css `--unroll` transition), a small settle at the end. */
 export const UNROLL_MS = 1600;
@@ -93,7 +93,7 @@ export function tugAt(ms: number): number {
   return Math.sin((ms / 700) * Math.PI) * TUG;
 }
 
-// ── control: the stamp ─────────────────────────────────────────────────
+// ── stamp: the owner's approval ────────────────────────────────────────────────
 
 export const STAMP = {
   /** lift the stamp up, past where it will strike from (anticipation) */
@@ -172,7 +172,7 @@ export function stampState(ms: number): StampState {
   return 'approved';
 }
 
-// ── start: a wave ───────────────────────────────────────────────────────
+// ── wave ───────────────────────────────────────────────────────────
 
 /** Two and a half slow waves, then the wing settles (the rate is well under the typing limit). */
 export const WAVE_HZ = 1.2;

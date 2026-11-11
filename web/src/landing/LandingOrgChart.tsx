@@ -1,7 +1,8 @@
-// Section 3 of the landing (DESIGN.md `## 랜딩` — 팀): the bundled team as the in-app org chart
+// Section 3 of the landing (DESIGN.md `## 랜딩` — 조직도): the bundled team as the in-app org chart
 // draws it (`### 조직도`) — the owner, Chief under them, the teams side by side below, joined by the
 // same connector lines (components/orgGeometry.ts; one indented column on a phone), names in the
-// reader's language. Before login there is no live state, so the nodes carry no status chip and
+// reader's language — and, under the business and brand teams, an example team member (a round
+// person, never a penguin; no name — PRD §3.5.2 ③: people and agents on one chart). Before login there is no live state, so the nodes carry no status chip and
 // are plain rows. Each team (and the top row) is one button that opens the team modal at that team:
 // the agent cards side by side, scrolling sideways. On the live landing the chart is the paper the
 // penguin unrolls (Acts.tsx `ScrollAct`).
@@ -17,6 +18,7 @@ import { agentName } from '../lib/agentNames';
 import { teamName } from '../lib/names';
 import { AGENT_COUNT, TEAMS } from './catalog';
 import { TeamStrip } from './TeamStrip';
+import { PEOPLE, PersonFace } from './people';
 
 /** Which team the modal opened at: a team id, `null` for all of them, `undefined` = closed. */
 export type TeamModalAt = string | null | undefined;
@@ -31,7 +33,7 @@ export function useTeamModal(): { open: (at: string | null) => void; modal: Reac
       <Modal label={title} onClose={() => setAt(undefined)} className="landing-team-modal">
         <header className="landing-team-modal-head">
           <h2>{title}</h2>
-          <p>{t('landing.team.lead')}</p>
+          <p>{t('landing.org.note')}</p>
         </header>
         <TeamStrip start={at} />
       </Modal>
@@ -86,6 +88,12 @@ export function LandingOrgChart({ onOpen }: { onOpen: (at: string | null) => voi
                       <span className="landing-org-name">{agentName(a.id, locale, a)}</span>
                     </span>
                   ))}
+                  {(PEOPLE as readonly string[]).includes(g.team) && (
+                    <span className="landing-org-node is-person" data-person>
+                      <PersonFace size={20} />
+                      <span className="landing-org-name">{t('landing.org.person')}</span>
+                    </span>
+                  )}
                 </span>
               </button>
             </li>

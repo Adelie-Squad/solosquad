@@ -8,7 +8,7 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { Theme } from '../theme';
 import type { LandingStats, Pointer } from './MascotCanvas';
-import type { SectionId } from './sections';
+import { actOf, type SectionId } from './sections';
 
 const MascotCanvas = lazy(() => import('./MascotCanvas'));
 
@@ -99,7 +99,8 @@ export function MascotStage({
           <Boundary onFail={onFail}>
             <Suspense fallback={null}>
               <MascotCanvas
-                act={section}
+                section={section}
+                act={actOf(section)}
                 acting={acting}
                 theme={theme}
                 mobile={mobile}

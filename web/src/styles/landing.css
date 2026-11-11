@@ -314,10 +314,10 @@ html:has(.landing[data-mode="live"]) {
   width: min(100%, 480px);
 }
 
-/* the cards sit left of the middle so the penguin beside their right edge — far enough out for its
-   face to stay clear of them while it turns to act — and the cards are centred together */
+/* the price cards sit left of the middle so the penguin beside their right edge — far enough out
+   for its face to stay clear of them while it turns to act — and the cards are centred together */
 .landing-pin .landing-act.is-relay {
-  width: min(60%, 360px);
+  width: min(60%, 400px);
   margin-right: min(32%, 240px);
 }
 
@@ -328,12 +328,16 @@ html:has(.landing[data-mode="live"]) {
 /* the card sits right of the middle so the penguin at its lower-left corner — far enough out for its
    near shoulder to clear the card's edge (staging.ts besideEdge) — and the card are centred together */
 .landing-pin .landing-act.is-stamp {
-  width: min(56%, 380px);
-  margin-left: min(32%, 240px);
+  width: min(60%, 420px);
+  margin-left: min(30%, 220px);
 }
 
 .landing-pin .landing-act.is-sign {
   width: min(100%, 460px);
+}
+
+.landing-pin .landing-act.is-company {
+  width: min(100%, 500px);
 }
 
 /* where a wing goes (empty, aria-hidden) */
@@ -421,22 +425,6 @@ html:has(.landing[data-mode="live"]) {
   }
 }
 
-.landing-prompt-answer {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 24px;
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.landing-prompt-answer.is-on {
-  opacity: 1;
-}
-
 .landing-prompt-bar {
   display: flex;
   align-items: center;
@@ -458,150 +446,7 @@ html:has(.landing[data-mode="live"]) {
   color: var(--on-accent);
 }
 
-/* ── what it does: the relay — the request lights the cards up one after another ── */
-.landing-steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* the lit card: an accent ring drawn inside the border (no layout change, no shadow) */
-.landing-step {
-  position: relative;
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  column-gap: var(--space-3);
-  row-gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  outline: 2px solid transparent;
-  outline-offset: -1px;
-  transition: outline-color 0.3s ease;
-}
-
-.landing-step.is-on {
-  outline-color: var(--accent);
-}
-
-.landing-step-badge {
-  display: grid;
-  grid-row: span 2;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  color: var(--ink-2);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
-}
-
-.landing-step.is-on .landing-step-badge {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.landing-step.is-done .landing-step-badge {
-  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
-  color: var(--ok);
-}
-
-.landing-step-words h3 {
-  margin: 0;
-  color: var(--ink);
-  font-size: 16px;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-}
-
-.landing-step-words p {
-  margin: var(--space-1) 0 0;
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* what the step holds — space kept, shown once the request has reached it */
-.landing-step-proof {
-  display: flex;
-  grid-column: 2;
-  align-items: center;
-  min-width: 0;
-  min-height: 28px;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-}
-
-.landing-step.is-on .landing-step-proof,
-.landing-step.is-done .landing-step-proof {
-  opacity: 1;
-}
-
-.landing-ask {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  max-width: 100%;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 13px;
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.landing-ask .icon {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-}
-
-.landing-handoff {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--ink-2);
-}
-
-.landing-handoff > .icon {
-  margin: 0 var(--space-1);
-}
-
-.landing-artifact {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.landing-artifact > .icon {
-  flex-shrink: 0;
-  color: var(--ok);
-}
-
-.landing-artifact-by {
-  color: var(--ink-2);
-  font-weight: 400;
-}
-
-/* the right wing hands the request to card 1 at its right edge */
-/* card 1's lower right: the far wing comes down to it in front of the belly, below the face */
+/* price card 1's lower right: the far wing comes down to it in front of the belly, below the face */
 .landing-hand.is-card {
   top: 82%;
   right: var(--space-2);
@@ -1028,55 +873,6 @@ html:has(.landing[data-mode="live"]) {
   position: relative;
 }
 
-.landing-approval-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 40px;
-}
-
-/* the reason and the "example" label, under the head */
-.landing-approval-foot {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.landing-live-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  line-height: 1.35;
-}
-
-.landing-live-text b {
-  font-size: 13.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.landing-live-text span {
-  color: var(--ink-2);
-  font-size: 12.5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.landing-approval-head .chip {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.landing-approval-reason {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
 /* the buttons along the bottom, approve first (bottom left — the stamp comes from the corner) */
 .landing-approval-actions {
   /* room for the stamp mark around the approve button */
@@ -1298,6 +1094,445 @@ html:has(.landing[data-mode="live"]) {
   color: var(--ink-3);
 }
 
+/* ── the six sections' own parts (PRD v2.1.0 §3.5 — decision 61) ─────── */
+/* the workflows' three stops: three small dots under its name */
+.landing-progress .landing-progress-stops {
+  flex-direction: row;
+  gap: 0;
+  padding-left: var(--space-5);
+}
+
+.landing-progress .landing-progress-stops a {
+  justify-content: center;
+  width: 18px;
+  min-height: 18px;
+}
+
+.landing-progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background-color 0.2s ease;
+}
+
+.landing-progress .landing-progress-stops a.is-on .landing-progress-dot {
+  background: var(--accent);
+}
+
+/* a short line under the message (where to ask, who sets the teams, what works today) */
+.landing-aside {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.landing-aside > .icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+/* a team member: a round person silhouette in --ink-2, never a penguin */
+.landing-person-face {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  box-sizing: border-box;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+.landing-person-face .icon {
+  width: 62%;
+  height: 62%;
+}
+
+/* ① 시작: the company card — the name, the faces, the promises */
+.landing-company-name {
+  color: var(--accent);
+}
+
+.landing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-chips .chip {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+/* ② 맡기기: the split under the prompt box — three rows' room kept from the start */
+.landing-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.landing-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.landing-split.is-on {
+  opacity: 1;
+}
+
+.landing-split-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.landing-split-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* a row coming in: an accent ring inside it; taken: an ok check (the app's colours) */
+.landing-split-row {
+  display: grid;
+  grid-template-columns: 20px auto minmax(0, 1fr) 16px;
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  font-size: 13px;
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    outline-color 0.3s ease;
+}
+
+.landing-split-row.is-on {
+  opacity: 1;
+  outline-color: var(--accent);
+}
+
+.landing-split-row.is-done {
+  opacity: 1;
+}
+
+/* not come in yet: an empty bar keeps its place (what it will say is not shown before the typing ends) */
+.landing-split-row.is-waiting {
+  background: var(--surface-2);
+  opacity: 0.6;
+}
+
+.landing-split-row.is-waiting > * {
+  visibility: hidden;
+}
+
+.landing-split-row b {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.landing-split-row > span:not(.landing-split-mark) {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-split-mark {
+  display: grid;
+  place-items: center;
+  color: var(--ok);
+}
+
+.landing-split-mark .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ③ 조직도: the legend beside the message, the team member's row on the paper */
+.landing-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 12px 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.landing-org-node.is-person .landing-org-name {
+  color: var(--ink-2);
+}
+
+/* ④ 워크플로우: the workflow card — the same rows in all three, the owner's button at the lower left */
+.landing-workflow {
+  gap: var(--space-3);
+}
+
+.landing-workflow-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.landing-workflow-tabs {
+  display: inline-flex;
+  min-width: 0;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.landing-workflow-tabs button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.landing-workflow-tabs button.is-on {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.landing-workflow-name {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.landing-workflow-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.landing-workflow-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.landing-workflow-label {
+  color: var(--ink-3);
+}
+
+.landing-workflow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-workflow-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.landing-workflow-people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.landing-workflow-people > .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.landing-workflow-people b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* an approval: the tier chip (and, for the owner's, its state on the right), what it is under them */
+.landing-workflow-gate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.landing-workflow-gate > .chip:first-child {
+  justify-self: start;
+}
+
+.landing-workflow-gate-words {
+  display: flex;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.landing-workflow-gate > .chip:last-child:not(:first-child) {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.landing-workflow-gate-words b {
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.landing-workflow-gate-words span {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.landing-workflow .landing-approval-actions {
+  padding-top: var(--space-2);
+  border-top: 0;
+}
+
+/* the stacked page: the three cards one under another */
+.landing-act.is-stamp.is-stacked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+/* ⑤ 가격: three cards — the build (from ₩6,000,000, VAT on top), the free call, usage at cost */
+.landing-prices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-price {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  outline: 2px solid transparent;
+  outline-offset: -1px;
+  transition: outline-color 0.3s ease;
+}
+
+.landing-price.is-on {
+  outline-color: var(--accent);
+}
+
+.landing-price-words h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.landing-price-words p {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.landing-price-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 0;
+  text-align: right;
+}
+
+.landing-price-amount b {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.landing-price:first-child .landing-price-amount b {
+  color: var(--accent);
+}
+
+.landing-price-amount span {
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 /* ── static (reduced motion · no WebGL · a short screen): stacked, two columns ── */
 .landing-stack {
   padding-top: var(--landing-gnb);
@@ -1389,9 +1624,6 @@ html:has(.landing[data-mode="live"]) {
     padding-top: var(--space-2);
   }
 
-  .landing-pin .landing-step {
-    padding-block: var(--space-2);
-  }
 }
 
 @media (max-width: 860px) {
@@ -1453,8 +1685,7 @@ html:has(.landing[data-mode="live"]) {
     margin-right: 0;
   }
 
-  /* the penguin is over card 1's upper right: its wing hands the request down onto the top edge */
-  /* near the cards' right end: the far wing reaches it from over card 1's upper right */
+  /* near the price cards' right end: the far wing reaches it from over card 1's upper right */
   .landing-hand.is-card {
     top: 0;
     right: 14%;
@@ -1473,6 +1704,51 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-pin .landing-act.is-sign {
     width: calc(100% - 24px);
+  }
+
+  /* a phone screen has room for the title and the lead only: the rest of the message stays on the
+     stacked page and the larger screens */
+  .landing-pin .landing-slide.is-workflows .landing-points,
+  .landing-pin .landing-slide.is-workflows .landing-aside,
+  .landing-pin .landing-slide.is-org .landing-aside {
+    display: none;
+  }
+
+  .landing-workflow {
+    gap: var(--space-2);
+  }
+
+  .landing-workflow-title {
+    font-size: 15px;
+  }
+
+  .landing-workflow-tabs button {
+    padding: 3px 7px;
+    font-size: 12px;
+  }
+
+  .landing-workflow-steps {
+    gap: 2px;
+  }
+
+  .landing-workflow-gate {
+    padding-top: var(--space-2);
+  }
+
+  .landing-price {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .landing-price-amount {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .landing-split {
+    padding: var(--space-2) var(--space-3);
   }
 
   .landing-pin .landing-copy {
@@ -1536,15 +1812,7 @@ html:has(.landing[data-mode="live"]) {
   }
 
   .landing-faces-row > * + * {
-    margin-left: -10px;
-  }
-
-  .landing-step {
-    padding: var(--space-2) var(--space-3);
-  }
-
-  .landing-step-words p {
-    font-size: 12.5px;
+    margin-left: -12px;
   }
 
   .landing-points {
@@ -1609,12 +1877,12 @@ html:has(.landing[data-mode="live"]) {
 @media (prefers-reduced-motion: reduce) {
   .landing-canvas,
   .landing-pin .landing-slide,
-  .landing-prompt-answer,
   .landing-progress a,
   .landing-progress-mark,
-  .landing-step,
-  .landing-step-badge,
-  .landing-step-proof,
+  .landing-split,
+  .landing-split-row,
+  .landing-price,
+  .landing-workflow-tabs button,
   .landing-top {
     transition: none;
   }
