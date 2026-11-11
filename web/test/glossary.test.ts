@@ -4,7 +4,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { dictionaries, type Locale } from '../src/i18n';
+import { allMessages, dictionaries, type Locale } from '../src/i18n';
+import '../src/marketing/messages';
 
 /** Words the glossary rules out, per locale. A lookahead keeps a compound that is allowed. */
 const BANNED: Record<Locale, RegExp[]> = {
@@ -64,7 +65,7 @@ const words = (s: string) => s.replace(/\S*\/\S*/g, ' ').replace(/\{\w+\}/g, ' '
 describe('the glossary ban-list (DESIGN.md `## 문구` 용어집)', () => {
   it.each(Object.keys(BANNED) as Locale[])('%s uses no word the glossary rules out', (locale) => {
     const hits: string[] = [];
-    for (const [key, text] of Object.entries(dictionaries[locale])) {
+    for (const [key, text] of Object.entries(allMessages(locale))) {
       for (const re of BANNED[locale]) if (re.test(words(text))) hits.push(`${key}: ${text}  (${re})`);
     }
     expect(hits).toEqual([]);

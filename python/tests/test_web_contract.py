@@ -218,6 +218,10 @@ async def test_the_engine_serves_the_web_and_the_api_same_origin(tmp_path: Path)
     assert health.json() == {"ok": True, "passkeys": False}  # no public_url here
     api_miss = await _get(app, "/api/no-such-route")
     assert api_miss.status_code == 404 and "SoloSquad" not in api_miss.text
+    # C62 (decision 62): a company server takes no requests or login routes — those are the
+    # marketing site's (marketing/)
+    for path in ("/api/inquiry", "/api/login/route"):
+        assert (await _get(app, path)).status_code == 404
     assert (await _get(app, "/api/me")).status_code == 401
 
 

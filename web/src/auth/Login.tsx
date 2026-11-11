@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api, ApiError, setCsrf } from '../api/client';
 import { errorCode, errorKey } from '../api/errors';
 import { keys, useHealth } from '../api/queries';
@@ -37,7 +38,9 @@ export function authReason(err: unknown): MessageKey {
 export function Login() {
   const { t } = useI18n();
   const qc = useQueryClient();
-  const [username, setUsername] = useState('');
+  // `?u=<id>` — the marketing site's login router passes the ID it was given on (decision 62)
+  const [params] = useSearchParams();
+  const [username, setUsername] = useState(() => (params.get('u') ?? '').slice(0, 120));
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [askCode, setAskCode] = useState(true);
