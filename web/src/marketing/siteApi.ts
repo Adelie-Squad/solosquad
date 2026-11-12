@@ -2,7 +2,6 @@
 // the marketing build has no session, no CSRF and no /api/me.
 
 export interface SiteConfig {
-  demo_login_url: string;
   consent_version: string;
   turnstile: { enabled: boolean; site_key: string };
 }

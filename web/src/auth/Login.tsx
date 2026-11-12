@@ -34,52 +34,8 @@ export function authReason(err: unknown): MessageKey {
   }
 }
 
-/** A demo server's login screen (decision 62, 2026-11-12): a demo account signs in only through the
- * marketing site's demo login (company registration number + ID + password — the server refuses
- * it anywhere else), so there is no password form here, only the way there. Without a marketing
- * address (`Health.demo_login_url` null) a neutral line instead. */
-function DemoLoginElsewhere({ url }: { url: string | null | undefined }) {
-  const { t } = useI18n();
-  return (
-    <div className="auth-page">
-      <div className="auth-card" data-testid="demo-login-elsewhere">
-        <div className="auth-brand">
-          <Mascot size={56} />
-          <div>
-            <h1>
-              SoloSquad
-              <span className="chip is-accent demo-chip">{t('demo.chip')}</span>
-            </h1>
-            <p>{t('demo.loginTitle')}</p>
-          </div>
-        </div>
-        {url ? (
-          <>
-            <p className="auth-hint">{t('demo.loginElsewhere')}</p>
-            <a className="btn is-primary is-block" href={url}>
-              {t('demo.loginGo')}
-            </a>
-          </>
-        ) : (
-          <p className="auth-hint">{t('demo.loginNoSite')}</p>
-        )}
-        <LocalePicker />
-      </div>
-    </div>
-  );
-}
-
-/** Login — account + one-time code (decision 41). A first login without a code goes to enrolment.
- * On a demo server (`Health.demo`) or at `?demo=1` (decision 62) it is the way to the marketing
- * demo login instead (`DemoLoginElsewhere`). Whether a signed-in app is a demo comes from `Me.demo`. */
+/** Login — account + one-time code (decision 41). A first login without a code goes to enrolment. */
 export function Login() {
-  const [params] = useSearchParams();
-  const health = useHealth();
-  if (params.get('demo') === '1' || health.data?.demo) return <DemoLoginElsewhere url={health.data?.demo_login_url} />;
-  return <AccountLogin />;
-}
-
-function AccountLogin() {
   const { t } = useI18n();
   const qc = useQueryClient();
   // `?u=<id>` — the marketing site's login router passes the ID it was given on (decision 62)

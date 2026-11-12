@@ -6,11 +6,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { calendarKeys } from '../api/queries';
 import type { EngineEvent } from '../api/types.gen';
+import { transport } from '../api/transport';
 import { LiveStream, type EventSourceFactory } from './stream';
 
 export const CALENDAR_EVENTS = '/api/calendar/events';
 
-const browserFactory: EventSourceFactory = (url) => new EventSource(url, { withCredentials: true });
+const browserFactory: EventSourceFactory = (url) => transport().events(url);
 
 export function CalendarLive({ factory = browserFactory }: { factory?: EventSourceFactory }) {
   const qc = useQueryClient();

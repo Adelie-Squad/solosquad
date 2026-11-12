@@ -1,0 +1,2538 @@
+{
+ "locale": "zh-CN",
+ "captured": 1794499721.276862,
+ "org": {
+  "id": "moa",
+  "display": "Moa Living（示例）",
+  "ws": "hq",
+  "ws_display": "总部"
+ },
+ "owner_title": "代表（演示）",
+ "company": {
+  "kind": "corporation",
+  "name": "Moa Living 株式会社（示例公司）",
+  "representative": "洪吉童（示例）",
+  "country": "KR",
+  "address": "京畿道广州市五浦邑物流路00号（示例地址）",
+  "controlled_by": null,
+  "complete": true
+ },
+ "server": {
+  "where": "local",
+  "cloud": null,
+  "region": null,
+  "country": "KR",
+  "os": "Darwin 25.5.0",
+  "version": "2.0.0.dev0",
+  "sources": {
+   "cloud": "default",
+   "where": "default",
+   "region": "default",
+   "country": "override"
+  }
+ },
+ "snapshot": {
+  "type": null,
+  "endpoint": null,
+  "region": "us-east-1",
+  "bucket": null,
+  "prefix": "solosquad",
+  "path": null,
+  "keep_days": 30,
+  "has_secret": false
+ },
+ "access": {
+  "require_login": true,
+  "two_factor": false,
+  "allowed_networks": []
+ },
+ "ws_access": {
+  "require_login": true,
+  "two_factor": true,
+  "allowed_networks": []
+ },
+ "users": [
+  {
+   "id": "u-demo-owner",
+   "username": "moa",
+   "display": "capzhcnDemo",
+   "role": "owner",
+   "locale": "zh-CN",
+   "two_factor": false,
+   "disabled": false,
+   "title": "",
+   "teams": [],
+   "assignments": [
+    {
+     "org": "moa",
+     "workspace": null,
+     "role": "owner"
+    }
+   ]
+  },
+  {
+   "id": "u-demo-finance",
+   "username": "finance",
+   "display": "金财务（示例人物）",
+   "role": "staff",
+   "locale": "ko",
+   "two_factor": false,
+   "disabled": false,
+   "title": "",
+   "teams": [],
+   "assignments": [
+    {
+     "org": "moa",
+     "workspace": null,
+     "role": "staff"
+    }
+   ]
+  },
+  {
+   "id": "u-demo-marketing",
+   "username": "marketing",
+   "display": "李营销（示例人物）",
+   "role": "staff",
+   "locale": "ko",
+   "two_factor": false,
+   "disabled": false,
+   "title": "",
+   "teams": [],
+   "assignments": [
+    {
+     "org": "moa",
+     "workspace": null,
+     "role": "staff"
+    }
+   ]
+  }
+ ],
+ "people": [
+  {
+   "id": "u-demo-owner",
+   "username": "moa",
+   "display": "capzhcnDemo",
+   "role": "owner",
+   "title": "代表（演示）",
+   "teams": [],
+   "workspaces": null
+  },
+  {
+   "id": "u-demo-finance",
+   "username": "finance",
+   "display": "金财务（示例人物）",
+   "role": "staff",
+   "title": "财务",
+   "teams": [
+    "business"
+   ],
+   "workspaces": null
+  },
+  {
+   "id": "u-demo-marketing",
+   "username": "marketing",
+   "display": "李营销（示例人物）",
+   "role": "staff",
+   "title": "营销",
+   "teams": [
+    "brand"
+   ],
+   "workspaces": null
+  }
+ ],
+ "teams": [
+  {
+   "name": "core",
+   "members": [
+    "chief"
+   ]
+  },
+  {
+   "name": "product",
+   "members": [
+    "product-manager",
+    "product-designer",
+    "researcher",
+    "data-analyst"
+   ]
+  },
+  {
+   "name": "engineering",
+   "members": [
+    "frontend-engineer",
+    "backend-engineer",
+    "data-engineer",
+    "infra",
+    "quality-assurance"
+   ]
+  },
+  {
+   "name": "business",
+   "members": [
+    "business-strategy",
+    "sales",
+    "finance"
+   ]
+  },
+  {
+   "name": "brand",
+   "members": [
+    "marketer",
+    "creative"
+   ]
+  }
+ ],
+ "org_chart": {
+  "owners": [
+   {
+    "id": "u-demo-owner",
+    "display": "capzhcnDemo",
+    "title": "代表（演示）",
+    "role": "owner"
+   }
+  ],
+  "teams": [
+   {
+    "name": "core",
+    "agents": [
+     {
+      "name": "chief",
+      "description": "Org 진입점. 사용자 소통 / 과제화 / 14 에이전트 직접 조율(팀장 없음, 결정 58) / 회고. 도메인 전문가 customized (org 단위 1개).",
+      "display_name": {
+       "ko": "임원",
+       "en": "Chief",
+       "zh-CN": "高管"
+      },
+      "summary": {
+       "ko": "회사의 대표 창구예요. 대표님과 팀원이 맡긴 일을 듣고 작업으로 나눠 알맞은 에이전트에게 맡긴 뒤, 결과를 모아 보고해요. 돈이 나가거나 밖으로 보내는 일처럼 결정이 필요한 일은 반드시 승인을 받아요.",
+       "en": "The front desk of your company. Chief listens to what you and your team members ask for, splits it into pieces of work, hands each one to the right agent and reports back with the results. Anything that needs a decision, such as spending money or sending something out, comes to you for approval first.",
+       "zh-CN": "公司的统一窗口。高管听取代表和团队成员交代的事情，拆成具体工作交给合适的代理，再把结果汇总汇报。凡是需要决定的事，比如花钱或对外发送，都会先请你审批。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": []
+   },
+   {
+    "name": "product",
+    "agents": [
+     {
+      "name": "product-manager",
+      "description": "Workspace-bundled autonomous Product Manager. 문제 정의 / PMF 가설·실험 / 마일스톤·WBS / 데이터 기반 판단. 사용자와 직접 대화 안 함 (Chief 경유). 구 pmf-planner 흡수.",
+      "display_name": {
+       "ko": "프로덕트 매니저",
+       "en": "Product Manager",
+       "zh-CN": "产品经理"
+      },
+      "summary": {
+       "ko": "고객이 겪는 문제를 정리하고 무엇을 먼저 만들지 정해요. 가설과 실험 계획, 일정표를 만들어 진행 상황을 숫자로 확인해요. 계획을 확정하거나 우선순위를 바꿀 때는 대표님의 승인을 받아요.",
+       "en": "Sorts out the problems your customers have and decides what to build first. Writes hypotheses, experiment plans and schedules, and tracks progress with numbers. Asks for your approval before a plan is fixed or priorities change.",
+       "zh-CN": "梳理客户遇到的问题，决定先做什么。制定假设、实验计划和时间表，并用数字跟踪进展。确定计划或调整优先级前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "product-designer",
+      "description": "제품 디자인 — 컨셉 발산·수렴(scope), 기능 기획(PRD·우선순위), UI/visual·prototype 을 단일 thread 로. design-system·policy skill 활용. ≥2 approaches 강제.",
+      "display_name": {
+       "ko": "프로덕트 디자이너",
+       "en": "Product Designer",
+       "zh-CN": "产品设计师"
+      },
+      "summary": {
+       "ko": "막연한 아이디어를 실제로 만들 수 있는 기능 계획과 화면 설계로 바꿔요. 기획서와 화면 시안을 두 가지 이상 방향으로 준비해 비교해 드려요. 어떤 방향으로 갈지는 대표님이 승인해요.",
+       "en": "Turns a rough idea into a feature plan and screen designs that can actually be built. Prepares the plan and at least two design directions so you can compare them. You approve which direction to take.",
+       "zh-CN": "把模糊的想法变成可以落地的功能方案和页面设计。准备方案书，并至少提供两种设计方向供你比较。走哪个方向由你审批决定。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "researcher",
+      "description": "User research + UX. 인터뷰·persona·market signal·competitor scan + user flow·wireframe·interaction·IA. 구 user/desk-researcher + ux-designer 통합.",
+      "display_name": {
+       "ko": "리서처",
+       "en": "Researcher",
+       "zh-CN": "研究员"
+      },
+      "summary": {
+       "ko": "고객 인터뷰와 시장, 경쟁사 자료를 조사해 고객이 실제로 원하는 것을 찾아요. 조사 보고서와 고객 유형, 사용 흐름을 정리해 드려요. 고객에게 연락하거나 설문을 보내기 전에는 승인을 받아요.",
+       "en": "Studies customer interviews, the market and competitors to find out what customers really want. Delivers research reports, customer profiles and the steps customers go through. Asks for approval before contacting customers or sending out a survey.",
+       "zh-CN": "通过客户访谈、市场和竞争对手资料，找出客户真正需要什么。整理调研报告、客户类型和使用流程。联系客户或发出问卷前会先请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "data-analyst",
+      "description": "메트릭·실험·KPI 분석. Confidence Score 추적 (RO-PNA), per-contributor breakdown + shipping streak (gstack). Amplitude pattern 차용.",
+      "display_name": {
+       "ko": "데이터 분석가",
+       "en": "Data Analyst",
+       "zh-CN": "数据分析师"
+      },
+      "summary": {
+       "ko": "매출과 고객 지표를 살펴 무엇이 잘되고 무엇이 막혔는지 알려 드려요. 지표 요약과 실험 결과 보고서를 만들어요. 지표 정의를 바꾸거나 결과를 밖에 공유할 때는 승인을 받아요.",
+       "en": "Looks at sales and customer numbers to tell you what is working and what is stuck. Produces metric summaries and experiment reports. Asks for approval before changing how a metric is defined or sharing results outside the company.",
+       "zh-CN": "查看销售和客户指标，告诉你哪些做得好、哪些卡住了。制作指标摘要和实验结果报告。修改指标定义或对外分享结果前会请你审批。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": []
+   },
+   {
+    "name": "engineering",
+    "agents": [
+     {
+      "name": "frontend-engineer",
+      "description": "프론트엔드 엔지니어 — UI 컴포넌트 / 시각화 / interaction. design system 구현. product-designer 와 1:1 협업. 구 frontend(결정 58 에서 id 변경).",
+      "display_name": {
+       "ko": "프론트엔드 엔지니어",
+       "en": "Frontend Engineer",
+       "zh-CN": "前端工程师"
+      },
+      "summary": {
+       "ko": "디자이너가 만든 화면을 실제로 동작하는 웹 화면으로 만들어요. 화면 코드와 그래프, 눌러 볼 수 있는 시안을 내놓아요. 고객이 쓰는 화면에 반영하기 전에는 승인을 받아요.",
+       "en": "Builds the designer’s screens into web pages that actually work. Delivers the screen code, charts and clickable previews. Asks for approval before a change goes live on screens your customers use.",
+       "zh-CN": "把设计师做好的页面做成真正能用的网页。交付页面代码、图表和可点击的预览。上线到客户使用的页面前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "backend-engineer",
+      "description": "백엔드 엔지니어 — 시스템 설계 · ADR(코드를 쓰지 않는 설계 단계) + 서버 로직 · API endpoint · DB 구현. 구 backend(backend-developer + api-developer) + system-architect 병합(결정 58).",
+      "display_name": {
+       "ko": "백엔드 엔지니어",
+       "en": "Backend Engineer",
+       "zh-CN": "后端工程师"
+      },
+      "summary": {
+       "ko": "서비스 뒤에서 돌아가는 서버와 데이터 저장 구조를 설계하고 만들어요. 설계 문서와 서버 기능, 다른 시스템과 연결하는 통로를 만들어요. 실제 운영 데이터나 서버 설정을 바꾸기 전에는 승인을 받아요.",
+       "en": "Designs and builds the servers and data storage behind your service. Delivers design documents, server features and the links to other systems. Asks for approval before changing live data or server settings.",
+       "zh-CN": "设计并搭建服务背后的服务器和数据存储。交付设计文档、服务器功能以及与其他系统的连接。修改正式数据或服务器设置前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "data-engineer",
+      "description": "데이터 수집 + 파이프라인 + warehouse. v1.0.x data-collector + data-engineer 병합 (데이터 lifecycle 단일).",
+      "display_name": {
+       "ko": "데이터 엔지니어",
+       "en": "Data Engineer",
+       "zh-CN": "数据工程师"
+      },
+      "summary": {
+       "ko": "흩어진 판매, 재고, 고객 데이터를 모아 한곳에서 볼 수 있게 정리해요. 데이터를 자동으로 모으고 다듬는 흐름과 분석용 표를 만들어요. 새 데이터 출처를 연결하거나 기존 기록을 지울 때는 승인을 받아요.",
+       "en": "Gathers scattered sales, stock and customer data into one place you can look at. Builds the steps that collect and clean data automatically, and the tables used for analysis. Asks for approval before connecting a new data source or deleting existing records.",
+       "zh-CN": "把分散的销售、库存和客户数据集中到一个地方，方便查看。搭建自动收集和整理数据的流程，以及用于分析的数据表。接入新的数据来源或删除已有记录前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "infra",
+      "description": "인프라 · 보안 — 클라우드 / CI/CD / monitoring / cost + threat model · 보안 audit · secrets · auth. 민감 변경(auth · crypto · secrets · PII · IAM · network) 확인 담당. 구 infra + security 병합(결정 58).",
+      "display_name": {
+       "ko": "인프라 엔지니어",
+       "en": "Infra Engineer",
+       "zh-CN": "基础设施工程师"
+      },
+      "summary": {
+       "ko": "서버와 클라우드가 멈추지 않고 안전하게 돌아가도록 관리해요. 배포 절차와 감시 설정, 비용 점검과 보안 점검 결과를 내놓아요. 접속 권한이나 비밀 키, 네트워크 설정을 바꾸는 일은 반드시 승인을 받아요.",
+       "en": "Keeps your servers and cloud running safely without interruption. Delivers release procedures, monitoring, cost checks and security reviews. Always asks for approval before changing access rights, secret keys or network settings.",
+       "zh-CN": "负责服务器和云端稳定、安全地运行。交付发布流程、监控设置、费用检查和安全检查结果。修改访问权限、密钥或网络设置前一定会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "quality-assurance",
+      "description": "Test automation / 회귀 / 품질 게이트. unit + integration + e2e. 구 qa(결정 58 에서 id 변경).",
+      "display_name": {
+       "ko": "QA 엔지니어",
+       "en": "Quality Assurance",
+       "zh-CN": "质量保证工程师"
+      },
+      "summary": {
+       "ko": "새 기능이나 수정이 기존 기능을 망가뜨리지 않는지 자동 시험으로 확인해요. 시험 결과 보고서와 발견한 문제 목록을 만들어요. 시험을 통과하지 못한 변경을 그대로 내보낼지는 대표님이 승인해요.",
+       "en": "Checks with automated tests that new features and fixes do not break what already works. Produces test reports and a list of the problems found. If a change fails its tests, you decide whether it may still go out.",
+       "zh-CN": "用自动化测试确认新功能和修改不会破坏原有功能。制作测试报告和问题清单。没有通过测试的修改是否照常发布，由你审批决定。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": []
+   },
+   {
+    "name": "business",
+    "agents": [
+     {
+      "name": "business-strategy",
+      "description": "비즈니스 전략 + Go-to-market — 시장·수익화·경쟁 전략(Lean Canvas · Value Proposition · Monetization) + 채널 mix · launch plan · 초기 사용자 획득. \"Status quo is your real competitor\". 구 business-strategy + go-to-market 병합(결정 58).",
+      "display_name": {
+       "ko": "사업 전략",
+       "en": "Business Strategy",
+       "zh-CN": "业务战略"
+      },
+      "summary": {
+       "ko": "어떤 시장에서 누구에게 얼마에 팔지 전략을 세워요. 시장 분석과 가격 제안, 출시 계획과 첫 고객을 모으는 방법을 정리해 드려요. 가격을 정하거나 출시 일정을 확정할 때는 승인을 받아요.",
+       "en": "Works out which market to sell in, to whom and at what price. Delivers market analysis, pricing proposals, launch plans and ways to win your first customers. Asks for approval before setting a price or fixing a launch date.",
+       "zh-CN": "制定在哪个市场、卖给谁、卖多少钱的策略。整理市场分析、定价建议、上市计划和获取首批客户的方法。确定价格或上市时间前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "sales",
+      "description": "세일즈 — 아웃바운드/인바운드 파이프라인, 리드 자격검증(BANT/MEDDIC), 딜 클로징, 전환 funnel. business-strategy 의 전략 · GTM 을 매출로 실행.",
+      "display_name": {
+       "ko": "세일즈",
+       "en": "Sales",
+       "zh-CN": "销售"
+      },
+      "summary": {
+       "ko": "가능성 있는 거래처를 찾고 문의를 계약까지 이어 가요. 거래처 목록과 제안서, 견적 초안과 진행 상황표를 만들어요. 견적을 보내거나 할인을 약속하기 전에는 승인을 받아요.",
+       "en": "Finds promising customers and moves inquiries all the way to a signed deal. Prepares customer lists, proposals, draft quotes and a progress board. Asks for approval before sending a quote or promising a discount.",
+       "zh-CN": "寻找有潜力的客户，把咨询一路推进到签约。准备客户名单、方案书、报价草稿和进度表。发出报价或承诺折扣前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "finance",
+      "description": "재무 — 중소 유통사(한국 · 중국) 장부 · 손익 · 현금흐름 · 매출/매입 대사, 세금계산서 · 부가세(한국) · 增值税 기본, 월 결산과 확인 필요 항목 분류. 엔진 `finance.pnl` 도구 · `monthly-pnl` 워크플로 담당. 돈은 직접 움직이지 않고 승인 카드로 올린다.",
+      "display_name": {
+       "ko": "재무",
+       "en": "Finance",
+       "zh-CN": "财务"
+      },
+      "summary": {
+       "ko": "장부와 매출, 매입을 맞춰 보고 매달 손익과 현금 흐름을 정리해요. 월 손익표와 세금계산서, 부가세 자료를 준비하고 확인이 필요한 거래를 따로 표시해요. 돈을 직접 보내지 않고, 결제나 송금은 승인 카드로 올려요.",
+       "en": "Reconciles your books, sales and purchases, and sums up profit and cash flow every month. Prepares the monthly profit and loss report, tax invoices and VAT papers, and flags any transaction that needs a closer look. It never moves money itself; payments and transfers come to you as approval cards.",
+       "zh-CN": "核对账簿、销售和采购，每月整理损益和现金流。准备月度损益表、发票和增值税资料，并单独标出需要确认的交易。它不会直接转账，付款和汇款都会以审批卡的形式交给你。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": [
+     {
+      "id": "u-demo-finance",
+      "display": "金财务（示例人物）",
+      "title": "财务",
+      "role": "staff"
+     }
+    ]
+   },
+   {
+    "name": "brand",
+    "agents": [
+     {
+      "name": "marketer",
+      "description": "마케터 — 브랜드 voice · positioning · messaging + 콘텐츠·퍼포먼스 마케팅(유료광고·그로스·전환). content-writing skill 직접 호출. 구 marketer(+ performance-marketer) + communication 병합(결정 58).",
+      "display_name": {
+       "ko": "마케터",
+       "en": "Marketer",
+       "zh-CN": "市场营销"
+      },
+      "summary": {
+       "ko": "브랜드가 어떤 말투로 무엇을 말할지 정하고 고객을 모으는 마케팅을 맡아요. 홍보 문구와 게시물, 광고 계획과 성과 보고서를 만들어요. 게시물을 올리거나 광고비를 쓰기 전에는 승인을 받아요.",
+       "en": "Decides what your brand says and how it sounds, and runs the marketing that brings in customers. Writes copy and posts, plans ads and reports on results. Asks for approval before publishing a post or spending on ads.",
+       "zh-CN": "确定品牌说什么、用什么语气，并负责吸引客户的营销。撰写宣传文案和帖子，制定广告计划并汇报效果。发布帖子或投放广告前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "creative",
+      "description": "비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브. design-system skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).",
+      "display_name": {
+       "ko": "크리에이티브",
+       "en": "Creative",
+       "zh-CN": "创意"
+      },
+      "summary": {
+       "ko": "브랜드의 얼굴이 되는 그림과 디자인을 만들어요. 로고와 상세 페이지 이미지, 배너와 캠페인 시안을 준비해요. 밖으로 내보낼 최종 디자인은 대표님의 승인을 받아요.",
+       "en": "Creates the images and designs that give your brand its face. Prepares logos, product page images, banners and campaign drafts. Final designs that go out to the public need your approval.",
+       "zh-CN": "制作代表品牌形象的图片和设计。准备标志、商品详情页图片、横幅和活动设计稿。对外发布的最终设计需要你审批。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": [
+     {
+      "id": "u-demo-marketing",
+      "display": "李营销（示例人物）",
+      "title": "营销",
+      "role": "staff"
+     }
+    ]
+   }
+  ],
+  "unassigned": []
+ },
+ "approval_policy": [
+  {
+   "category": "purchase",
+   "label": "구매",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "payment",
+   "label": "결제",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "transfer",
+   "label": "송금",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "delete",
+   "label": "삭제",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "account_change",
+   "label": "계정 변경",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "permission_change",
+   "label": "권한 변경",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "access_change",
+   "label": "접속 정책 변경",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "connection_add",
+   "label": "연결 추가",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "review",
+   "label": "검토 · 확인",
+   "tier": "team",
+   "recommended": "team",
+   "deviates": false
+  },
+  {
+   "category": "publish",
+   "label": "게시 · 발송",
+   "tier": "team",
+   "recommended": "team",
+   "deviates": false
+  },
+  {
+   "category": "other",
+   "label": "기타",
+   "tier": "team",
+   "recommended": "team",
+   "deviates": false
+  }
+ ],
+ "screens": {
+  "dashboard": {
+   "name": "dashboard",
+   "source": "default",
+   "screen": {
+    "format_version": 1,
+    "title": null,
+    "widgets": [
+     {
+      "widget": "stats",
+      "version": 1
+     },
+     {
+      "widget": "todo",
+      "version": 1
+     },
+     {
+      "widget": "office",
+      "version": 1
+     },
+     {
+      "widget": "artifact-latest",
+      "version": 1,
+      "kind": "finance.pnl"
+     },
+     {
+      "widget": "schedule",
+      "version": 1
+     },
+     {
+      "widget": "budget",
+      "version": 1
+     }
+    ]
+   },
+   "error": null
+  },
+  "artifacts": {
+   "name": "artifacts",
+   "source": "default",
+   "screen": {
+    "format_version": 1,
+    "title": null,
+    "widgets": [
+     {
+      "widget": "artifact-latest",
+      "version": 1,
+      "kind": "finance.pnl"
+     },
+     {
+      "widget": "artifact-list",
+      "version": 1
+     }
+    ]
+   },
+   "error": null
+  }
+ },
+ "agents": [
+  {
+   "name": "backend-engineer",
+   "description": "백엔드 엔지니어 — 시스템 설계 · ADR(코드를 쓰지 않는 설계 단계) + 서버 로직 · API endpoint · DB 구현. 구 backend(backend-developer + api-developer) + system-architect 병합(결정 58).",
+   "display_name": {
+    "ko": "백엔드 엔지니어",
+    "en": "Backend Engineer",
+    "zh-CN": "后端工程师"
+   },
+   "summary": {
+    "ko": "서비스 뒤에서 돌아가는 서버와 데이터 저장 구조를 설계하고 만들어요. 설계 문서와 서버 기능, 다른 시스템과 연결하는 통로를 만들어요. 실제 운영 데이터나 서버 설정을 바꾸기 전에는 승인을 받아요.",
+    "en": "Designs and builds the servers and data storage behind your service. Delivers design documents, server features and the links to other systems. Asks for approval before changing live data or server settings.",
+    "zh-CN": "设计并搭建服务背后的服务器和数据存储。交付设计文档、服务器功能以及与其他系统的连接。修改正式数据或服务器设置前会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "business-strategy",
+   "description": "비즈니스 전략 + Go-to-market — 시장·수익화·경쟁 전략(Lean Canvas · Value Proposition · Monetization) + 채널 mix · launch plan · 초기 사용자 획득. \"Status quo is your real competitor\". 구 business-strategy + go-to-market 병합(결정 58).",
+   "display_name": {
+    "ko": "사업 전략",
+    "en": "Business Strategy",
+    "zh-CN": "业务战略"
+   },
+   "summary": {
+    "ko": "어떤 시장에서 누구에게 얼마에 팔지 전략을 세워요. 시장 분석과 가격 제안, 출시 계획과 첫 고객을 모으는 방법을 정리해 드려요. 가격을 정하거나 출시 일정을 확정할 때는 승인을 받아요.",
+    "en": "Works out which market to sell in, to whom and at what price. Delivers market analysis, pricing proposals, launch plans and ways to win your first customers. Asks for approval before setting a price or fixing a launch date.",
+    "zh-CN": "制定在哪个市场、卖给谁、卖多少钱的策略。整理市场分析、定价建议、上市计划和获取首批客户的方法。确定价格或上市时间前会请你审批。"
+   },
+   "team": "business",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "chief",
+   "description": "Org 진입점. 사용자 소통 / 과제화 / 14 에이전트 직접 조율(팀장 없음, 결정 58) / 회고. 도메인 전문가 customized (org 단위 1개).",
+   "display_name": {
+    "ko": "임원",
+    "en": "Chief",
+    "zh-CN": "高管"
+   },
+   "summary": {
+    "ko": "회사의 대표 창구예요. 대표님과 팀원이 맡긴 일을 듣고 작업으로 나눠 알맞은 에이전트에게 맡긴 뒤, 결과를 모아 보고해요. 돈이 나가거나 밖으로 보내는 일처럼 결정이 필요한 일은 반드시 승인을 받아요.",
+    "en": "The front desk of your company. Chief listens to what you and your team members ask for, splits it into pieces of work, hands each one to the right agent and reports back with the results. Anything that needs a decision, such as spending money or sending something out, comes to you for approval first.",
+    "zh-CN": "公司的统一窗口。高管听取代表和团队成员交代的事情，拆成具体工作交给合适的代理，再把结果汇总汇报。凡是需要决定的事，比如花钱或对外发送，都会先请你审批。"
+   },
+   "team": "core",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "creative",
+   "description": "비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브. design-system skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).",
+   "display_name": {
+    "ko": "크리에이티브",
+    "en": "Creative",
+    "zh-CN": "创意"
+   },
+   "summary": {
+    "ko": "브랜드의 얼굴이 되는 그림과 디자인을 만들어요. 로고와 상세 페이지 이미지, 배너와 캠페인 시안을 준비해요. 밖으로 내보낼 최종 디자인은 대표님의 승인을 받아요.",
+    "en": "Creates the images and designs that give your brand its face. Prepares logos, product page images, banners and campaign drafts. Final designs that go out to the public need your approval.",
+    "zh-CN": "制作代表品牌形象的图片和设计。准备标志、商品详情页图片、横幅和活动设计稿。对外发布的最终设计需要你审批。"
+   },
+   "team": "brand",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "data-analyst",
+   "description": "메트릭·실험·KPI 분석. Confidence Score 추적 (RO-PNA), per-contributor breakdown + shipping streak (gstack). Amplitude pattern 차용.",
+   "display_name": {
+    "ko": "데이터 분석가",
+    "en": "Data Analyst",
+    "zh-CN": "数据分析师"
+   },
+   "summary": {
+    "ko": "매출과 고객 지표를 살펴 무엇이 잘되고 무엇이 막혔는지 알려 드려요. 지표 요약과 실험 결과 보고서를 만들어요. 지표 정의를 바꾸거나 결과를 밖에 공유할 때는 승인을 받아요.",
+    "en": "Looks at sales and customer numbers to tell you what is working and what is stuck. Produces metric summaries and experiment reports. Asks for approval before changing how a metric is defined or sharing results outside the company.",
+    "zh-CN": "查看销售和客户指标，告诉你哪些做得好、哪些卡住了。制作指标摘要和实验结果报告。修改指标定义或对外分享结果前会请你审批。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "data-engineer",
+   "description": "데이터 수집 + 파이프라인 + warehouse. v1.0.x data-collector + data-engineer 병합 (데이터 lifecycle 단일).",
+   "display_name": {
+    "ko": "데이터 엔지니어",
+    "en": "Data Engineer",
+    "zh-CN": "数据工程师"
+   },
+   "summary": {
+    "ko": "흩어진 판매, 재고, 고객 데이터를 모아 한곳에서 볼 수 있게 정리해요. 데이터를 자동으로 모으고 다듬는 흐름과 분석용 표를 만들어요. 새 데이터 출처를 연결하거나 기존 기록을 지울 때는 승인을 받아요.",
+    "en": "Gathers scattered sales, stock and customer data into one place you can look at. Builds the steps that collect and clean data automatically, and the tables used for analysis. Asks for approval before connecting a new data source or deleting existing records.",
+    "zh-CN": "把分散的销售、库存和客户数据集中到一个地方，方便查看。搭建自动收集和整理数据的流程，以及用于分析的数据表。接入新的数据来源或删除已有记录前会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "finance",
+   "description": "재무 — 중소 유통사(한국 · 중국) 장부 · 손익 · 현금흐름 · 매출/매입 대사, 세금계산서 · 부가세(한국) · 增值税 기본, 월 결산과 확인 필요 항목 분류. 엔진 `finance.pnl` 도구 · `monthly-pnl` 워크플로 담당. 돈은 직접 움직이지 않고 승인 카드로 올린다.",
+   "display_name": {
+    "ko": "재무",
+    "en": "Finance",
+    "zh-CN": "财务"
+   },
+   "summary": {
+    "ko": "장부와 매출, 매입을 맞춰 보고 매달 손익과 현금 흐름을 정리해요. 월 손익표와 세금계산서, 부가세 자료를 준비하고 확인이 필요한 거래를 따로 표시해요. 돈을 직접 보내지 않고, 결제나 송금은 승인 카드로 올려요.",
+    "en": "Reconciles your books, sales and purchases, and sums up profit and cash flow every month. Prepares the monthly profit and loss report, tax invoices and VAT papers, and flags any transaction that needs a closer look. It never moves money itself; payments and transfers come to you as approval cards.",
+    "zh-CN": "核对账簿、销售和采购，每月整理损益和现金流。准备月度损益表、发票和增值税资料，并单独标出需要确认的交易。它不会直接转账，付款和汇款都会以审批卡的形式交给你。"
+   },
+   "team": "business",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "frontend-engineer",
+   "description": "프론트엔드 엔지니어 — UI 컴포넌트 / 시각화 / interaction. design system 구현. product-designer 와 1:1 협업. 구 frontend(결정 58 에서 id 변경).",
+   "display_name": {
+    "ko": "프론트엔드 엔지니어",
+    "en": "Frontend Engineer",
+    "zh-CN": "前端工程师"
+   },
+   "summary": {
+    "ko": "디자이너가 만든 화면을 실제로 동작하는 웹 화면으로 만들어요. 화면 코드와 그래프, 눌러 볼 수 있는 시안을 내놓아요. 고객이 쓰는 화면에 반영하기 전에는 승인을 받아요.",
+    "en": "Builds the designer’s screens into web pages that actually work. Delivers the screen code, charts and clickable previews. Asks for approval before a change goes live on screens your customers use.",
+    "zh-CN": "把设计师做好的页面做成真正能用的网页。交付页面代码、图表和可点击的预览。上线到客户使用的页面前会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "infra",
+   "description": "인프라 · 보안 — 클라우드 / CI/CD / monitoring / cost + threat model · 보안 audit · secrets · auth. 민감 변경(auth · crypto · secrets · PII · IAM · network) 확인 담당. 구 infra + security 병합(결정 58).",
+   "display_name": {
+    "ko": "인프라 엔지니어",
+    "en": "Infra Engineer",
+    "zh-CN": "基础设施工程师"
+   },
+   "summary": {
+    "ko": "서버와 클라우드가 멈추지 않고 안전하게 돌아가도록 관리해요. 배포 절차와 감시 설정, 비용 점검과 보안 점검 결과를 내놓아요. 접속 권한이나 비밀 키, 네트워크 설정을 바꾸는 일은 반드시 승인을 받아요.",
+    "en": "Keeps your servers and cloud running safely without interruption. Delivers release procedures, monitoring, cost checks and security reviews. Always asks for approval before changing access rights, secret keys or network settings.",
+    "zh-CN": "负责服务器和云端稳定、安全地运行。交付发布流程、监控设置、费用检查和安全检查结果。修改访问权限、密钥或网络设置前一定会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "marketer",
+   "description": "마케터 — 브랜드 voice · positioning · messaging + 콘텐츠·퍼포먼스 마케팅(유료광고·그로스·전환). content-writing skill 직접 호출. 구 marketer(+ performance-marketer) + communication 병합(결정 58).",
+   "display_name": {
+    "ko": "마케터",
+    "en": "Marketer",
+    "zh-CN": "市场营销"
+   },
+   "summary": {
+    "ko": "브랜드가 어떤 말투로 무엇을 말할지 정하고 고객을 모으는 마케팅을 맡아요. 홍보 문구와 게시물, 광고 계획과 성과 보고서를 만들어요. 게시물을 올리거나 광고비를 쓰기 전에는 승인을 받아요.",
+    "en": "Decides what your brand says and how it sounds, and runs the marketing that brings in customers. Writes copy and posts, plans ads and reports on results. Asks for approval before publishing a post or spending on ads.",
+    "zh-CN": "确定品牌说什么、用什么语气，并负责吸引客户的营销。撰写宣传文案和帖子，制定广告计划并汇报效果。发布帖子或投放广告前会请你审批。"
+   },
+   "team": "brand",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "product-designer",
+   "description": "제품 디자인 — 컨셉 발산·수렴(scope), 기능 기획(PRD·우선순위), UI/visual·prototype 을 단일 thread 로. design-system·policy skill 활용. ≥2 approaches 강제.",
+   "display_name": {
+    "ko": "프로덕트 디자이너",
+    "en": "Product Designer",
+    "zh-CN": "产品设计师"
+   },
+   "summary": {
+    "ko": "막연한 아이디어를 실제로 만들 수 있는 기능 계획과 화면 설계로 바꿔요. 기획서와 화면 시안을 두 가지 이상 방향으로 준비해 비교해 드려요. 어떤 방향으로 갈지는 대표님이 승인해요.",
+    "en": "Turns a rough idea into a feature plan and screen designs that can actually be built. Prepares the plan and at least two design directions so you can compare them. You approve which direction to take.",
+    "zh-CN": "把模糊的想法变成可以落地的功能方案和页面设计。准备方案书，并至少提供两种设计方向供你比较。走哪个方向由你审批决定。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "product-manager",
+   "description": "Workspace-bundled autonomous Product Manager. 문제 정의 / PMF 가설·실험 / 마일스톤·WBS / 데이터 기반 판단. 사용자와 직접 대화 안 함 (Chief 경유). 구 pmf-planner 흡수.",
+   "display_name": {
+    "ko": "프로덕트 매니저",
+    "en": "Product Manager",
+    "zh-CN": "产品经理"
+   },
+   "summary": {
+    "ko": "고객이 겪는 문제를 정리하고 무엇을 먼저 만들지 정해요. 가설과 실험 계획, 일정표를 만들어 진행 상황을 숫자로 확인해요. 계획을 확정하거나 우선순위를 바꿀 때는 대표님의 승인을 받아요.",
+    "en": "Sorts out the problems your customers have and decides what to build first. Writes hypotheses, experiment plans and schedules, and tracks progress with numbers. Asks for your approval before a plan is fixed or priorities change.",
+    "zh-CN": "梳理客户遇到的问题，决定先做什么。制定假设、实验计划和时间表，并用数字跟踪进展。确定计划或调整优先级前会请你审批。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "quality-assurance",
+   "description": "Test automation / 회귀 / 품질 게이트. unit + integration + e2e. 구 qa(결정 58 에서 id 변경).",
+   "display_name": {
+    "ko": "QA 엔지니어",
+    "en": "Quality Assurance",
+    "zh-CN": "质量保证工程师"
+   },
+   "summary": {
+    "ko": "새 기능이나 수정이 기존 기능을 망가뜨리지 않는지 자동 시험으로 확인해요. 시험 결과 보고서와 발견한 문제 목록을 만들어요. 시험을 통과하지 못한 변경을 그대로 내보낼지는 대표님이 승인해요.",
+    "en": "Checks with automated tests that new features and fixes do not break what already works. Produces test reports and a list of the problems found. If a change fails its tests, you decide whether it may still go out.",
+    "zh-CN": "用自动化测试确认新功能和修改不会破坏原有功能。制作测试报告和问题清单。没有通过测试的修改是否照常发布，由你审批决定。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "researcher",
+   "description": "User research + UX. 인터뷰·persona·market signal·competitor scan + user flow·wireframe·interaction·IA. 구 user/desk-researcher + ux-designer 통합.",
+   "display_name": {
+    "ko": "리서처",
+    "en": "Researcher",
+    "zh-CN": "研究员"
+   },
+   "summary": {
+    "ko": "고객 인터뷰와 시장, 경쟁사 자료를 조사해 고객이 실제로 원하는 것을 찾아요. 조사 보고서와 고객 유형, 사용 흐름을 정리해 드려요. 고객에게 연락하거나 설문을 보내기 전에는 승인을 받아요.",
+    "en": "Studies customer interviews, the market and competitors to find out what customers really want. Delivers research reports, customer profiles and the steps customers go through. Asks for approval before contacting customers or sending out a survey.",
+    "zh-CN": "通过客户访谈、市场和竞争对手资料，找出客户真正需要什么。整理调研报告、客户类型和使用流程。联系客户或发出问卷前会先请你审批。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "sales",
+   "description": "세일즈 — 아웃바운드/인바운드 파이프라인, 리드 자격검증(BANT/MEDDIC), 딜 클로징, 전환 funnel. business-strategy 의 전략 · GTM 을 매출로 실행.",
+   "display_name": {
+    "ko": "세일즈",
+    "en": "Sales",
+    "zh-CN": "销售"
+   },
+   "summary": {
+    "ko": "가능성 있는 거래처를 찾고 문의를 계약까지 이어 가요. 거래처 목록과 제안서, 견적 초안과 진행 상황표를 만들어요. 견적을 보내거나 할인을 약속하기 전에는 승인을 받아요.",
+    "en": "Finds promising customers and moves inquiries all the way to a signed deal. Prepares customer lists, proposals, draft quotes and a progress board. Asks for approval before sending a quote or promising a discount.",
+    "zh-CN": "寻找有潜力的客户，把咨询一路推进到签约。准备客户名单、方案书、报价草稿和进度表。发出报价或承诺折扣前会请你审批。"
+   },
+   "team": "business",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  }
+ ],
+ "budget": {
+  "month_start": 1793458800.0,
+  "warn_at": 0.8,
+  "org": {
+   "spent_usd": 0.0,
+   "budget_usd": null,
+   "remaining_usd": null,
+   "warning": false,
+   "exhausted": false
+  },
+  "connections": [],
+  "suggestions": []
+ },
+ "schedules": {
+  "timezone": "Asia/Seoul",
+  "schedules": [],
+  "errors": []
+ },
+ "calendar": {
+  "labels": {
+   "labels": [
+    {
+     "id": "cl-9693a48ec251",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "申请",
+     "color": "blue",
+     "archived": false,
+     "position": 0
+    },
+    {
+     "id": "cl-a0569ecbdee4",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "开发",
+     "color": "teal",
+     "archived": false,
+     "position": 1
+    },
+    {
+     "id": "cl-2983c5eb5666",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "销售",
+     "color": "orange",
+     "archived": false,
+     "position": 2
+    },
+    {
+     "id": "cl-7a1f7eab3ae2",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "人事",
+     "color": "green",
+     "archived": false,
+     "position": 3
+    },
+    {
+     "id": "cl-1e16b646387f",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "人脉",
+     "color": "gold",
+     "archived": false,
+     "position": 4
+    },
+    {
+     "id": "cl-c08822332dd2",
+     "type": "tag",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "材料",
+     "color": "gray",
+     "archived": false,
+     "position": 0
+    },
+    {
+     "id": "cl-ead6cab38188",
+     "type": "tag",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "面试",
+     "color": "rose",
+     "archived": false,
+     "position": 1
+    },
+    {
+     "id": "cl-17dba65f29b1",
+     "type": "category",
+     "scope_kind": "user",
+     "scope": "u-demo-owner",
+     "name": "个人",
+     "color": "blue",
+     "archived": false,
+     "position": 0
+    },
+    {
+     "id": "cl-0ad1885d2944",
+     "type": "category",
+     "scope_kind": "user",
+     "scope": "u-demo-owner",
+     "name": "健康",
+     "color": "teal",
+     "archived": false,
+     "position": 1
+    },
+    {
+     "id": "cl-65e0445428c5",
+     "type": "tag",
+     "scope_kind": "user",
+     "scope": "u-demo-owner",
+     "name": "重要",
+     "color": "gray",
+     "archived": false,
+     "position": 0
+    }
+   ],
+   "seeded": {
+    "user:u-demo-owner": "default"
+   },
+   "preset_errors": {}
+  },
+  "items": [
+   {
+    "id": "ci-51d0d3f7f47a",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-23a2aa7f69c2",
+    "title": "申请",
+    "notes": "",
+    "start": "2026-11-07",
+    "end": "2026-11-11",
+    "all_day": true,
+    "category_id": "cl-9693a48ec251",
+    "tag_ids": [
+     "cl-c08822332dd2"
+    ],
+    "status": "done",
+    "position": 0,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.8317928,
+    "updated": 1794499623.8317928
+   },
+   {
+    "id": "ci-23a2aa7f69c2",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "创业计划第二期",
+    "notes": "创业计划第二期 — 从申请到辅导。",
+    "start": "2026-11-07",
+    "end": "2026-12-23",
+    "all_day": true,
+    "category_id": "cl-9693a48ec251",
+    "tag_ids": [],
+    "status": "active",
+    "position": 12,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.83132,
+    "updated": 1794499623.83132
+   },
+   {
+    "id": "ci-0876e16bb289",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-23a2aa7f69c2",
+    "title": "说明会",
+    "notes": "",
+    "start": "2026-11-14T14:00",
+    "end": "2026-11-14T16:00",
+    "all_day": false,
+    "category_id": "cl-9693a48ec251",
+    "tag_ids": [],
+    "status": "planned",
+    "position": 1,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.832225,
+    "updated": 1794499623.832225
+   },
+   {
+    "id": "ci-3297754c574a",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "11月定期订货截止",
+    "notes": "B2B 客户的定期订货截止。（示例）",
+    "start": "2026-11-15",
+    "end": "2026-11-15",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 15,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.835069,
+    "updated": 1794499623.835069
+   },
+   {
+    "id": "ci-330e9723febd",
+    "kind": "personal",
+    "org": null,
+    "workspace": null,
+    "owner_id": "u-demo-owner",
+    "parent_id": null,
+    "title": "牙医预约",
+    "notes": "",
+    "start": "2026-11-15T18:30",
+    "end": "2026-11-15T19:30",
+    "all_day": false,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 13,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.833942,
+    "updated": 1794499623.833942
+   },
+   {
+    "id": "ci-b6f6d59a1fa8",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "准备增值税预缴申报",
+    "notes": "10月损益表定稿后整理资料。",
+    "start": "2026-11-17",
+    "end": "2026-11-22",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 16,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.83532,
+    "updated": 1794499623.83532
+   },
+   {
+    "id": "ci-6e22f9910aaa",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-23a2aa7f69c2",
+    "title": "第一轮提交",
+    "notes": "",
+    "start": "2026-11-18",
+    "end": "2026-11-25",
+    "all_day": true,
+    "category_id": "cl-9693a48ec251",
+    "tag_ids": [
+     "cl-c08822332dd2"
+    ],
+    "status": "active",
+    "position": 2,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.832524,
+    "updated": 1794499623.832524
+   },
+   {
+    "id": "ci-97e1b6e8fa08",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "冬季保温杯新品上市",
+    "notes": "社媒帖子 · 广告在这一天发布。",
+    "start": "2026-11-20",
+    "end": "2026-11-20",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 17,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.835562,
+    "updated": 1794499623.835562
+   },
+   {
+    "id": "ci-ba10e9e904b3",
+    "kind": "personal",
+    "org": null,
+    "workspace": null,
+    "owner_id": "u-demo-owner",
+    "parent_id": null,
+    "title": "家庭旅行",
+    "notes": "",
+    "start": "2026-11-27",
+    "end": "2026-11-29",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 14,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.834777,
+    "updated": 1794499623.834777
+   },
+   {
+    "id": "ci-a6f9a9d59a90",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-23a2aa7f69c2",
+    "title": "辅导",
+    "notes": "",
+    "start": "2026-12-02T10:00",
+    "end": "2026-12-02T11:30",
+    "all_day": false,
+    "category_id": "cl-9693a48ec251",
+    "tag_ids": [
+     "cl-ead6cab38188"
+    ],
+    "status": "planned",
+    "position": 3,
+    "created_by": "u-demo-owner",
+    "created": 1794499623.8327491,
+    "updated": 1794499623.8327491
+   }
+  ],
+  "details": {
+   "ci-51d0d3f7f47a": {
+    "item": {
+     "id": "ci-51d0d3f7f47a",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-23a2aa7f69c2",
+     "title": "申请",
+     "notes": "",
+     "start": "2026-11-07",
+     "end": "2026-11-11",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [
+      "cl-c08822332dd2"
+     ],
+     "status": "done",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.8317928,
+     "updated": 1794499623.8317928
+    },
+    "parent": {
+     "id": "ci-23a2aa7f69c2",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "创业计划第二期",
+     "notes": "创业计划第二期 — 从申请到辅导。",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [],
+     "status": "active",
+     "position": 12,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.83132,
+     "updated": 1794499623.83132
+    },
+    "children": [],
+    "todos": [
+     {
+      "id": "ct-b02803e838c3",
+      "item_id": "ci-51d0d3f7f47a",
+      "title": "提交申请书",
+      "done": true,
+      "due": "2026-11-10",
+      "assignee_id": null,
+      "position": 0,
+      "created": 1794499623.8335319,
+      "updated": 1794499623.8337831
+     }
+    ],
+    "child_todos": []
+   },
+   "ci-23a2aa7f69c2": {
+    "item": {
+     "id": "ci-23a2aa7f69c2",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "创业计划第二期",
+     "notes": "创业计划第二期 — 从申请到辅导。",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [],
+     "status": "active",
+     "position": 12,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.83132,
+     "updated": 1794499623.83132
+    },
+    "parent": null,
+    "children": [
+     {
+      "id": "ci-51d0d3f7f47a",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-23a2aa7f69c2",
+      "title": "申请",
+      "notes": "",
+      "start": "2026-11-07",
+      "end": "2026-11-11",
+      "all_day": true,
+      "category_id": "cl-9693a48ec251",
+      "tag_ids": [
+       "cl-c08822332dd2"
+      ],
+      "status": "done",
+      "position": 0,
+      "created_by": "u-demo-owner",
+      "created": 1794499623.8317928,
+      "updated": 1794499623.8317928
+     },
+     {
+      "id": "ci-0876e16bb289",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-23a2aa7f69c2",
+      "title": "说明会",
+      "notes": "",
+      "start": "2026-11-14T14:00",
+      "end": "2026-11-14T16:00",
+      "all_day": false,
+      "category_id": "cl-9693a48ec251",
+      "tag_ids": [],
+      "status": "planned",
+      "position": 1,
+      "created_by": "u-demo-owner",
+      "created": 1794499623.832225,
+      "updated": 1794499623.832225
+     },
+     {
+      "id": "ci-6e22f9910aaa",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-23a2aa7f69c2",
+      "title": "第一轮提交",
+      "notes": "",
+      "start": "2026-11-18",
+      "end": "2026-11-25",
+      "all_day": true,
+      "category_id": "cl-9693a48ec251",
+      "tag_ids": [
+       "cl-c08822332dd2"
+      ],
+      "status": "active",
+      "position": 2,
+      "created_by": "u-demo-owner",
+      "created": 1794499623.832524,
+      "updated": 1794499623.832524
+     },
+     {
+      "id": "ci-a6f9a9d59a90",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-23a2aa7f69c2",
+      "title": "辅导",
+      "notes": "",
+      "start": "2026-12-02T10:00",
+      "end": "2026-12-02T11:30",
+      "all_day": false,
+      "category_id": "cl-9693a48ec251",
+      "tag_ids": [
+       "cl-ead6cab38188"
+      ],
+      "status": "planned",
+      "position": 3,
+      "created_by": "u-demo-owner",
+      "created": 1794499623.8327491,
+      "updated": 1794499623.8327491
+     }
+    ],
+    "todos": [],
+    "child_todos": [
+     {
+      "id": "ct-336dc2900be2",
+      "item_id": "ci-6e22f9910aaa",
+      "title": "撰写并提交商业计划书",
+      "done": false,
+      "due": "2026-11-22",
+      "assignee_id": "u-demo-owner",
+      "position": 0,
+      "created": 1794499623.83299,
+      "updated": 1794499623.83299
+     },
+     {
+      "id": "ct-b02803e838c3",
+      "item_id": "ci-51d0d3f7f47a",
+      "title": "提交申请书",
+      "done": true,
+      "due": "2026-11-10",
+      "assignee_id": null,
+      "position": 0,
+      "created": 1794499623.8335319,
+      "updated": 1794499623.8337831
+     },
+     {
+      "id": "ct-575e70c22575",
+      "item_id": "ci-6e22f9910aaa",
+      "title": "撰写并提交创业活动报告",
+      "done": false,
+      "due": "2026-11-25",
+      "assignee_id": "u-demo-owner",
+      "position": 1,
+      "created": 1794499623.833298,
+      "updated": 1794499623.833298
+     }
+    ]
+   },
+   "ci-0876e16bb289": {
+    "item": {
+     "id": "ci-0876e16bb289",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-23a2aa7f69c2",
+     "title": "说明会",
+     "notes": "",
+     "start": "2026-11-14T14:00",
+     "end": "2026-11-14T16:00",
+     "all_day": false,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [],
+     "status": "planned",
+     "position": 1,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.832225,
+     "updated": 1794499623.832225
+    },
+    "parent": {
+     "id": "ci-23a2aa7f69c2",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "创业计划第二期",
+     "notes": "创业计划第二期 — 从申请到辅导。",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [],
+     "status": "active",
+     "position": 12,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.83132,
+     "updated": 1794499623.83132
+    },
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-3297754c574a": {
+    "item": {
+     "id": "ci-3297754c574a",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "11月定期订货截止",
+     "notes": "B2B 客户的定期订货截止。（示例）",
+     "start": "2026-11-15",
+     "end": "2026-11-15",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 15,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.835069,
+     "updated": 1794499623.835069
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-330e9723febd": {
+    "item": {
+     "id": "ci-330e9723febd",
+     "kind": "personal",
+     "org": null,
+     "workspace": null,
+     "owner_id": "u-demo-owner",
+     "parent_id": null,
+     "title": "牙医预约",
+     "notes": "",
+     "start": "2026-11-15T18:30",
+     "end": "2026-11-15T19:30",
+     "all_day": false,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 13,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.833942,
+     "updated": 1794499623.833942
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-b6f6d59a1fa8": {
+    "item": {
+     "id": "ci-b6f6d59a1fa8",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "准备增值税预缴申报",
+     "notes": "10月损益表定稿后整理资料。",
+     "start": "2026-11-17",
+     "end": "2026-11-22",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 16,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.83532,
+     "updated": 1794499623.83532
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-6e22f9910aaa": {
+    "item": {
+     "id": "ci-6e22f9910aaa",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-23a2aa7f69c2",
+     "title": "第一轮提交",
+     "notes": "",
+     "start": "2026-11-18",
+     "end": "2026-11-25",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [
+      "cl-c08822332dd2"
+     ],
+     "status": "active",
+     "position": 2,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.832524,
+     "updated": 1794499623.832524
+    },
+    "parent": {
+     "id": "ci-23a2aa7f69c2",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "创业计划第二期",
+     "notes": "创业计划第二期 — 从申请到辅导。",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [],
+     "status": "active",
+     "position": 12,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.83132,
+     "updated": 1794499623.83132
+    },
+    "children": [],
+    "todos": [
+     {
+      "id": "ct-336dc2900be2",
+      "item_id": "ci-6e22f9910aaa",
+      "title": "撰写并提交商业计划书",
+      "done": false,
+      "due": "2026-11-22",
+      "assignee_id": "u-demo-owner",
+      "position": 0,
+      "created": 1794499623.83299,
+      "updated": 1794499623.83299
+     },
+     {
+      "id": "ct-575e70c22575",
+      "item_id": "ci-6e22f9910aaa",
+      "title": "撰写并提交创业活动报告",
+      "done": false,
+      "due": "2026-11-25",
+      "assignee_id": "u-demo-owner",
+      "position": 1,
+      "created": 1794499623.833298,
+      "updated": 1794499623.833298
+     }
+    ],
+    "child_todos": []
+   },
+   "ci-97e1b6e8fa08": {
+    "item": {
+     "id": "ci-97e1b6e8fa08",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "冬季保温杯新品上市",
+     "notes": "社媒帖子 · 广告在这一天发布。",
+     "start": "2026-11-20",
+     "end": "2026-11-20",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 17,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.835562,
+     "updated": 1794499623.835562
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-ba10e9e904b3": {
+    "item": {
+     "id": "ci-ba10e9e904b3",
+     "kind": "personal",
+     "org": null,
+     "workspace": null,
+     "owner_id": "u-demo-owner",
+     "parent_id": null,
+     "title": "家庭旅行",
+     "notes": "",
+     "start": "2026-11-27",
+     "end": "2026-11-29",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 14,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.834777,
+     "updated": 1794499623.834777
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-a6f9a9d59a90": {
+    "item": {
+     "id": "ci-a6f9a9d59a90",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-23a2aa7f69c2",
+     "title": "辅导",
+     "notes": "",
+     "start": "2026-12-02T10:00",
+     "end": "2026-12-02T11:30",
+     "all_day": false,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [
+      "cl-ead6cab38188"
+     ],
+     "status": "planned",
+     "position": 3,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.8327491,
+     "updated": 1794499623.8327491
+    },
+    "parent": {
+     "id": "ci-23a2aa7f69c2",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "创业计划第二期",
+     "notes": "创业计划第二期 — 从申请到辅导。",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-9693a48ec251",
+     "tag_ids": [],
+     "status": "active",
+     "position": 12,
+     "created_by": "u-demo-owner",
+     "created": 1794499623.83132,
+     "updated": 1794499623.83132
+    },
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   }
+  },
+  "agent_access": {
+   "level": "off"
+  }
+ },
+ "workflows": [
+  {
+   "name": "finance-monthly",
+   "title": "财务管理",
+   "description": "银行流水 · 平台结算 → 月度损益表（团队审批）→ 支付供应商货款（代表审批）。演示 — 不会实际汇款。",
+   "team": "business",
+   "steps": [
+    {
+     "id": "read",
+     "title": "finance: read",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.read",
+     "prompt": "读取10月的银行流水和平台结算文件。"
+    },
+    {
+     "id": "classify",
+     "title": "finance: classify",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.classify",
+     "prompt": "按科目整理交易。"
+    },
+    {
+     "id": "pnl",
+     "title": "pnl",
+     "type": "tool",
+     "output": {
+      "period": "2026-10-01 ~ 2026-10-31",
+      "currency": "KRW",
+      "revenue": 107600000.0,
+      "expenses": 77252000.0,
+      "net_income": 30348000.0,
+      "by_account": [
+       {
+        "account": "B2B 供货",
+        "type": "revenue",
+        "amount": 76000000.0
+       },
+       {
+        "account": "开放平台结算",
+        "type": "revenue",
+        "amount": 23200000.0
+       },
+       {
+        "account": "自营商城结算",
+        "type": "revenue",
+        "amount": 8400000.0
+       },
+       {
+        "account": "商品采购",
+        "type": "expense",
+        "amount": 40300000.0
+       },
+       {
+        "account": "工资",
+        "type": "expense",
+        "amount": 19600000.0
+       },
+       {
+        "account": "租金",
+        "type": "expense",
+        "amount": 3800000.0
+       },
+       {
+        "account": "平台手续费",
+        "type": "expense",
+        "amount": 2552000.0
+       },
+       {
+        "account": "关税",
+        "type": "expense",
+        "amount": 2310000.0
+       },
+       {
+        "account": "广告费",
+        "type": "expense",
+        "amount": 2100000.0
+       },
+       {
+        "account": "折旧费",
+        "type": "expense",
+        "amount": 1900000.0
+       },
+       {
+        "account": "物流费",
+        "type": "expense",
+        "amount": 1450000.0
+       },
+       {
+        "account": "汇款手续费",
+        "type": "expense",
+        "amount": 1240000.0
+       },
+       {
+        "account": "福利费",
+        "type": "expense",
+        "amount": 980000.0
+       },
+       {
+        "account": "耗材费",
+        "type": "expense",
+        "amount": 640000.0
+       },
+       {
+        "account": "通信费",
+        "type": "expense",
+        "amount": 380000.0
+       }
+      ],
+      "by_month": [
+       {
+        "month": "2026-10",
+        "revenue": 107600000.0,
+        "expenses": 77252000.0,
+        "net": 30348000.0
+       }
+      ],
+      "needs_review": [
+       {
+        "row": 26,
+        "reason": "无法读取金额",
+        "value": "待定"
+       }
+      ],
+      "rows": 25,
+      "summary": "期间 2026-10-01 ~ 2026-10-31 · 销售 107,600,000 · 费用 77,252,000 · 净利润 30,348,000 KRW · 1行需确认"
+     },
+     "save_as": {
+      "kind": "finance.pnl",
+      "title": "10月损益表"
+     }
+    },
+    {
+     "id": "compare",
+     "title": "data-analyst: compare",
+     "type": "agent",
+     "agent": "data-analyst",
+     "reply": "finance.compare",
+     "prompt": "与上月比较，并标出异常交易。"
+    },
+    {
+     "id": "review",
+     "title": "确认10月损益表",
+     "type": "approval",
+     "approval": {
+      "title": "确认10月损益表",
+      "summary": "{{ steps.pnl.summary }}",
+      "risk": "low",
+      "category": "review",
+      "on_decline": null
+     }
+    },
+    {
+     "id": "payables",
+     "title": "payables",
+     "type": "tool",
+     "output": {
+      "items": [
+       {
+        "vendor": "（示例）义乌华星贸易",
+        "invoice": "INV-1043",
+        "item": "保温杯 1,800个",
+        "due": "2026-11-04",
+        "amount": 17930000.0
+       },
+       {
+        "vendor": "（示例）宁波达温家居",
+        "invoice": "INV-0388",
+        "item": "厨房用品 12种",
+        "due": "2026-11-04",
+        "amount": 15620000.0
+       },
+       {
+        "vendor": "（示例）快捷海运",
+        "invoice": "2026-10-31 #0071",
+        "item": "10月海运",
+        "due": "2026-11-04",
+        "amount": 1595000.0
+       }
+      ],
+      "total": 35145000.0,
+      "total_text": "₩35,145,000",
+      "account": "（示例）企业银行 ***-1234",
+      "pay_on": "2026-11-04",
+      "summary": "供应商3家 · 合计 ₩35,145,000 · 预计11月4日付款"
+     },
+     "save_as": {
+      "kind": "finance.payables",
+      "title": "11月第1周供应商付款方案"
+     }
+    },
+    {
+     "id": "pay",
+     "title": "支付供应商货款",
+     "type": "approval",
+     "approval": {
+      "title": "支付供应商货款 {{ steps.payables.total_text }}",
+      "summary": "{{ steps.payables.summary }} · 演示 — 不会实际汇出",
+      "risk": "high",
+      "category": "payment",
+      "on_decline": "hold"
+     }
+    },
+    {
+     "id": "paid",
+     "title": "finance: paid",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.paid",
+     "prompt": "处理付款并告诉我结果。",
+     "save_as": {
+      "kind": "brief",
+      "title": "付款处理结果"
+     },
+     "end": true
+    },
+    {
+     "id": "hold",
+     "title": "finance: hold",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.hold",
+     "prompt": "暂停付款并重新整理。",
+     "save_as": {
+      "kind": "brief",
+      "title": "付款暂停备忘"
+     }
+    }
+   ]
+  },
+  {
+   "name": "product-sourcing",
+   "title": "商品采购",
+   "description": "3家供应商报价 → 成本对比表（团队审批）→ 中文采购订单草稿 → 确认下单（代表审批）。演示 — 不会实际下单。",
+   "team": "business",
+   "steps": [
+    {
+     "id": "quotes",
+     "title": "researcher: quotes",
+     "type": "agent",
+     "agent": "researcher",
+     "reply": "sourcing.quotes",
+     "prompt": "收集保温杯供应商的报价和最小起订量。"
+    },
+    {
+     "id": "compare",
+     "title": "compare",
+     "type": "tool",
+     "output": {
+      "product": "保温杯 500ml（冬季）",
+      "retail_price": 19900,
+      "suppliers": [
+       {
+        "supplier": "（示例）义乌华星贸易",
+        "region": "浙江义乌",
+        "unit_price_cny": 48.0,
+        "shipping": 620.0,
+        "duty_rate": 8.0,
+        "landed_krw": 10470,
+        "moq": 500,
+        "lead_days": 18,
+        "defect_rate": 0.6,
+        "note": "现有供应商 · 免费刻字",
+        "score": 49.1,
+        "recommended": true
+       },
+       {
+        "supplier": "（示例）宁波达温家居",
+        "region": "浙江宁波",
+        "unit_price_cny": 44.0,
+        "shipping": 780.0,
+        "duty_rate": 8.0,
+        "landed_krw": 9809,
+        "moq": 2000,
+        "lead_days": 25,
+        "defect_rate": 1.2,
+        "note": "单价最低 · 起订量大",
+        "score": 46.9,
+        "recommended": false
+       },
+       {
+        "supplier": "（示例）广州未来厨具",
+        "region": "广东广州",
+        "unit_price_cny": 52.0,
+        "shipping": 540.0,
+        "duty_rate": 8.0,
+        "landed_krw": 11210,
+        "moq": 300,
+        "lead_days": 14,
+        "defect_rate": 0.4,
+        "note": "交期最短 · 单价偏高",
+        "score": 43.2,
+        "recommended": false
+       }
+      ],
+      "recommended": "（示例）义乌华星贸易",
+      "summary": "3家供应商成本对比 — 推荐 （示例）义乌华星贸易"
+     },
+     "save_as": {
+      "kind": "sourcing.comparison",
+      "title": "保温杯成本对比表"
+     }
+    },
+    {
+     "id": "analyze",
+     "title": "data-analyst: analyze",
+     "type": "agent",
+     "agent": "data-analyst",
+     "reply": "sourcing.analyze",
+     "prompt": "在单价上加上运费和关税，比较到岸成本。"
+    },
+    {
+     "id": "margin",
+     "title": "finance: margin",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "sourcing.margin",
+     "prompt": "计算各供应商的预计毛利。"
+    },
+    {
+     "id": "shortlist",
+     "title": "确认供应商对比表",
+     "type": "approval",
+     "approval": {
+      "title": "确认供应商对比表",
+      "summary": "{{ steps.compare.summary }}",
+      "risk": "low",
+      "category": "review",
+      "on_decline": null
+     }
+    },
+    {
+     "id": "draft",
+     "title": "sales: draft",
+     "type": "agent",
+     "agent": "sales",
+     "reply": "sourcing.draft",
+     "prompt": "用推荐供应商的语言（中文）起草采购订单。"
+    },
+    {
+     "id": "po",
+     "title": "po",
+     "type": "tool",
+     "output": {
+      "supplier": "（示例）义乌华星贸易",
+      "language": "zh-CN",
+      "title_local": "采购订单（草稿）",
+      "po_number": "PO-2026-1107（示例）",
+      "currency": "CNY",
+      "lines": [
+       {
+        "sku": "TB-500-IV",
+        "name": "保温杯 500ml 象牙白",
+        "name_local": "保温杯 500ml 象牙白",
+        "qty": 500,
+        "unit_price": 48.0,
+        "amount": 24000.0
+       },
+       {
+        "sku": "TB-500-NV",
+        "name": "保温杯 500ml 藏青色",
+        "name_local": "保温杯 500ml 藏青色",
+        "qty": 400,
+        "unit_price": 48.0,
+        "amount": 19200.0
+       },
+       {
+        "sku": "TB-500-SG",
+        "name": "保温杯 500ml 鼠尾草绿",
+        "name_local": "保温杯 500ml 鼠尾草绿",
+        "qty": 300,
+        "unit_price": 48.0,
+        "amount": 14400.0
+       },
+       {
+        "sku": "GB-01",
+        "name": "礼品包装盒",
+        "name_local": "礼品包装盒",
+        "qty": 1200,
+        "unit_price": 3.0,
+        "amount": 3600.0
+       }
+      ],
+      "subtotal": 61200.0,
+      "total": 61200.0,
+      "total_text": "¥61,200（约 ₩11,628,000）",
+      "delivery": "2026-11-28 · 仁川港 → 京畿道广州物流中心",
+      "terms_local": "到港后30天内付款 · 每个产品单独包装 · 杯身激光刻字「MOA」",
+      "summary": "（示例）义乌华星贸易 · 4个品项 · ¥61,200"
+     },
+     "save_as": {
+      "kind": "sourcing.po",
+      "title": "采购订单草稿（中文）"
+     }
+    },
+    {
+     "id": "order",
+     "title": "确认下单",
+     "type": "approval",
+     "approval": {
+      "title": "确认下单 {{ steps.po.total_text }}",
+      "summary": "{{ steps.po.summary }} · 演示 — 不会实际发送",
+      "risk": "high",
+      "category": "purchase",
+      "on_decline": "renegotiate"
+     }
+    },
+    {
+     "id": "sent",
+     "title": "sales: sent",
+     "type": "agent",
+     "agent": "sales",
+     "reply": "sourcing.sent",
+     "prompt": "确认下单并告诉我到货日程。",
+     "save_as": {
+      "kind": "brief",
+      "title": "下单处理结果"
+     },
+     "end": true
+    },
+    {
+     "id": "renegotiate",
+     "title": "sales: renegotiate",
+     "type": "agent",
+     "agent": "sales",
+     "reply": "sourcing.renegotiate",
+     "prompt": "暂停下单并重新整理条件。",
+     "save_as": {
+      "kind": "brief",
+      "title": "重新议价备忘"
+     }
+    }
+   ]
+  },
+  {
+   "name": "sns-marketing",
+   "title": "社媒营销",
+   "description": "上周反馈 → 一周内容排期 → Instagram · 小红书帖子草稿（团队审批）→ 支付广告费（代表审批）。演示 — 不会实际发布或投放广告。",
+   "team": "brand",
+   "steps": [
+    {
+     "id": "reactions",
+     "title": "data-analyst: reactions",
+     "type": "agent",
+     "agent": "data-analyst",
+     "reply": "sns.reactions",
+     "prompt": "整理上周帖子的反馈。"
+    },
+    {
+     "id": "calendar",
+     "title": "calendar",
+     "type": "tool",
+     "output": {
+      "week": "2026-11-10 ~ 11-16",
+      "entries": [
+       {
+        "date": "2026-11-10",
+        "channel": "Instagram",
+        "language": "zh-CN",
+        "theme": "新品保温杯首次亮相",
+        "format": "15秒短视频",
+        "owner": "creative"
+       },
+       {
+        "date": "2026-11-10",
+        "channel": "小红书",
+        "language": "zh-CN",
+        "theme": "新品保温杯首发",
+        "format": "图文 6张",
+        "owner": "creative"
+       },
+       {
+        "date": "2026-11-12",
+        "channel": "Instagram",
+        "language": "zh-CN",
+        "theme": "冬季居家咖啡食谱",
+        "format": "轮播图 5张",
+        "owner": "marketer"
+       },
+       {
+        "date": "2026-11-13",
+        "channel": "博客",
+        "language": "zh-CN",
+        "theme": "保温杯保温实测",
+        "format": "文章 · 照片 6张",
+        "owner": "marketer"
+       },
+       {
+        "date": "2026-11-14",
+        "channel": "小红书",
+        "language": "zh-CN",
+        "theme": "冬季居家好物清单",
+        "format": "图文 5张",
+        "owner": "marketer"
+       }
+      ],
+      "last_week": [
+       {
+        "post": "过冬准备清单",
+        "channel": "Instagram",
+        "reach": 8200,
+        "likes": 612,
+        "comments": 41,
+        "saves": 230
+       },
+       {
+        "post": "保温杯怎么挑",
+        "channel": "博客",
+        "reach": 3100,
+        "likes": 98,
+        "comments": 12,
+        "saves": 45
+       },
+       {
+        "post": "居家咖啡食谱短视频",
+        "channel": "Instagram",
+        "reach": 15400,
+        "likes": 1380,
+        "comments": 96,
+        "saves": 512
+       }
+      ],
+      "summary": "本周5条 · 上周反馈最好：「居家咖啡食谱短视频」"
+     },
+     "save_as": {
+      "kind": "sns.calendar",
+      "title": "本周内容排期"
+     }
+    },
+    {
+     "id": "plan",
+     "title": "marketer: plan",
+     "type": "agent",
+     "agent": "marketer",
+     "reply": "sns.plan",
+     "prompt": "根据上周反馈安排一周内容。"
+    },
+    {
+     "id": "write",
+     "title": "creative: write",
+     "type": "agent",
+     "agent": "creative",
+     "reply": "sns.drafts",
+     "prompt": "用中文写 Instagram · 小红书的文案和图片草稿。"
+    },
+    {
+     "id": "posts",
+     "title": "posts",
+     "type": "tool",
+     "output": {
+      "posts": [
+       {
+        "channel": "Instagram",
+        "date": "2026-11-10",
+        "language": "zh-CN",
+        "caption": "新保温杯来了。象牙白 · 藏青 · 鼠尾草绿，握在手里刚刚好的 500ml。",
+        "hashtags": [
+         "#新品",
+         "#保温杯",
+         "#冬季配色"
+        ],
+        "image_note": "三色并排 · 手持镜头 · 15秒短视频"
+       },
+       {
+        "channel": "小红书",
+        "date": "2026-11-10",
+        "language": "zh-CN",
+        "caption": "新款保温杯上线啦！象牙白 · 藏青 · 鼠尾草绿，500ml 刚好一手握。",
+        "hashtags": [
+         "#保温杯",
+         "#冬季好物",
+         "#居家"
+        ],
+        "image_note": "三色并排 · 手持特写 · 暖色调"
+       },
+       {
+        "channel": "Instagram",
+        "date": "2026-11-12",
+        "language": "zh-CN",
+        "caption": "冷天从一杯热饮开始。滑动查看5款冬季居家咖啡食谱。",
+        "hashtags": [
+         "#居家咖啡",
+         "#冬季食谱",
+         "#MoaLiving"
+        ],
+        "image_note": "窗边 · 保温杯 · 针织小物 · 暖色调"
+       }
+      ],
+      "summary": "帖子草稿3条（zh-CN）"
+     },
+     "save_as": {
+      "kind": "sns.posts",
+      "title": "帖子草稿（Instagram · 小红书）"
+     }
+    },
+    {
+     "id": "publish_ok",
+     "title": "发布帖子",
+     "type": "approval",
+     "approval": {
+      "title": "发布帖子",
+      "summary": "{{ steps.posts.summary }} — 请确认文案和图片备注 · 演示 — 不会实际发布",
+      "risk": "low",
+      "category": "publish",
+      "on_decline": null
+     }
+    },
+    {
+     "id": "ads",
+     "title": "ads",
+     "type": "tool",
+     "output": {
+      "channel": "Instagram",
+      "budget": 300000,
+      "budget_text": "₩300,000",
+      "days": 5,
+      "start": "2026-11-10",
+      "audience": "首尔 · 京畿 · 25~44岁 · 兴趣：露营 · 居家咖啡",
+      "expected_reach": "40,000 ~ 60,000人",
+      "creative": "新品保温杯短视频 · 居家咖啡轮播图",
+      "summary": "Instagram 5天 · ₩300,000 · 预计触达4万~6万人"
+     },
+     "save_as": {
+      "kind": "sns.ads",
+      "title": "Instagram 广告投放方案"
+     }
+    },
+    {
+     "id": "ad_spend",
+     "title": "支付广告费",
+     "type": "approval",
+     "approval": {
+      "title": "支付广告费 {{ steps.ads.budget_text }}",
+      "summary": "{{ steps.ads.summary }} · 演示 — 不会实际付款",
+      "risk": "high",
+      "category": "payment",
+      "on_decline": "organic"
+     }
+    },
+    {
+     "id": "launched",
+     "title": "marketer: launched",
+     "type": "agent",
+     "agent": "marketer",
+     "reply": "sns.launched",
+     "prompt": "排期获批的帖子和广告。",
+     "save_as": {
+      "kind": "brief",
+      "title": "帖子 · 广告排期结果"
+     },
+     "end": true
+    },
+    {
+     "id": "organic",
+     "title": "marketer: organic",
+     "type": "agent",
+     "agent": "marketer",
+     "reply": "sns.organic",
+     "prompt": "不投广告，只重新整理帖子。",
+     "save_as": {
+      "kind": "brief",
+      "title": "不投广告发布"
+     }
+    }
+   ]
+  }
+ ],
+ "replies": {
+  "finance.read": "已读取10月银行流水17笔和平台结算8笔。自营商城有1笔支付结算的金额还是空的。",
+  "finance.classify": "已把交易分为销售 · 商品采购 · 物流 · 关税 · 手续费 · 人工。有1笔境外汇款手续费是平时的40倍，标为「需确认」。",
+  "finance.compare": "与上月相比，销售增长9%，商品采购因保温杯预订大幅增加。确认标记的2笔后即可定稿损益表。",
+  "finance.paid": "已处理付款（演示 — 实际未汇出）。已记录3笔款项于11月4日上午10点从（示例）企业银行 ***-1234 付出。",
+  "finance.hold": "好的，我重新整理。本周付款暂停，只起草了一份发给3家供应商的「下周二付款」通知（演示 — 不会发送）。",
+  "sourcing.quotes": "已收集保温杯（500ml）3家供应商 — 义乌 · 宁波 · 广州 — 的报价和最小起订量。",
+  "sourcing.analyze": "已在单价上加上每件运费和8%关税比较到岸成本。宁波单价最低，但起订量2,000件且交期长，综合得分义乌领先。",
+  "sourcing.margin": "按售价19,900韩元计算，预计毛利率义乌约48% · 宁波约50% · 广州约45%。考虑库存压力，义乌更稳妥。",
+  "sourcing.draft": "已用推荐供应商的语言（中文）起草采购订单 — 4个品项，写明刻字和单独包装条件。",
+  "sourcing.sent": "已确认下单（演示 — 实际未发送）。预计11月28日到达仁川港，入库前一天我会再发一份样品检查清单。",
+  "sourcing.renegotiate": "好的，我重新整理。下单暂停，已留下备忘：以单价降低3%或交期缩短5天为条件重新询价（演示 — 不会联系对方）。",
+  "sns.reactions": "上周3条帖子中，居家咖啡食谱短视频触达15,400，效果最好。收藏很多，建议多做食谱类内容。",
+  "sns.plan": "本周以新品保温杯发布为中心，在 Instagram · 博客 · 小红书安排了5条内容。",
+  "sns.drafts": "已写好 Instagram · 小红书的中文文案和图片草稿，符合品牌语气（温暖简短），并注明每张图需要的镜头。",
+  "sns.launched": "已排期获批的帖子和广告（演示 — 实际未发布也未付款）。广告第3天我会整理反馈并汇报。",
+  "sns.organic": "好的，我重新整理。改为不投广告、只排期帖子，并调整话题标签和发布时间来提升自然触达（演示 — 不会发布）。"
+ },
+ "handing": {
+  "finance": "把「财务管理」这一步交给对应的代理。",
+  "sourcing": "把「商品采购」这一步交给对应的代理。",
+  "sns": "把「社媒营销」这一步交给对应的代理。"
+ },
+ "step_done": "已完成。",
+ "chat": {
+  "intents": [
+   {
+    "key": "finance",
+    "words": [
+     "손익",
+     "매출",
+     "이익",
+     "재무",
+     "결산",
+     "지급",
+     "대금",
+     "부가세",
+     "정산",
+     "p&l",
+     "profit",
+     "revenue",
+     "payment",
+     "finance",
+     "利润",
+     "收入",
+     "付款",
+     "财务",
+     "损益"
+    ],
+    "chief": "已开始「财务管理」— 财务先读取银行流水和平台结算。",
+    "scenario": "finance-monthly",
+    "handoff": "finance",
+    "answer": "10月损益表几秒后出现在任务中。请确认两条标记的交易 — 损益表确认为团队审批，支付货款需代表审批。"
+   },
+   {
+    "key": "sourcing",
+    "words": [
+     "소싱",
+     "공급",
+     "발주",
+     "견적",
+     "텀블러",
+     "구매",
+     "원가",
+     "supplier",
+     "sourcing",
+     "order",
+     "quote",
+     "供应",
+     "采购",
+     "报价",
+     "订单"
+    ],
+    "chief": "已开始「商品采购」— 研究员先收集供应商报价。",
+    "scenario": "product-sourcing",
+    "handoff": "researcher",
+    "answer": "接下来会出现三家供应商的到岸成本对比和中文采购订单草稿。确认下单需代表审批。"
+   },
+   {
+    "key": "sns",
+    "words": [
+     "sns",
+     "인스타",
+     "마케팅",
+     "광고",
+     "게시",
+     "블로그",
+     "콘텐츠",
+     "홍보",
+     "샤오홍슈",
+     "instagram",
+     "marketing",
+     "post",
+     "营销",
+     "广告",
+     "小红书",
+     "内容",
+     "social",
+     "content",
+     "社媒",
+     "帖子"
+    ],
+    "chief": "已开始「社媒营销」— 数据分析师先整理上周的反馈。",
+    "scenario": "sns-marketing",
+    "handoff": "marketer",
+    "answer": "本周内容计划和 Instagram · 小红书的中文草稿随后出现。发布由品牌团队审批，广告费需代表审批。"
+   },
+   {
+    "key": "approvals",
+    "words": [
+     "승인",
+     "누가",
+     "허락",
+     "approve",
+     "approval",
+     "审批"
+    ],
+    "chief": "审批分两级：损益表确认、发布等由团队审批；付款、下单、广告费等花钱的事需代表审批。去任务里试试审批或拒绝。",
+    "scenario": null,
+    "handoff": null,
+    "answer": null
+   },
+   {
+    "key": "hello",
+    "words": [
+     "안녕",
+     "반가",
+     "누구",
+     "소개",
+     "hello",
+     "hi",
+     "who",
+     "你好",
+     "介绍"
+    ],
+    "chief": "您好，我是 Moa Living（示例）的高管代理。我把财务、采购和社媒工作分给各团队并汇报结果。请试试下方的推荐请求。",
+    "scenario": null,
+    "handoff": null,
+    "answer": null
+   }
+  ],
+  "fallback": "演示中只运行示例请求。请点击下方的推荐请求试试。",
+  "suggestions": [
+   "整理10月损益",
+   "制定本月供应商付款方案",
+   "比较保温杯供应商",
+   "写中文采购订单草稿",
+   "安排本周社媒内容",
+   "也做中文帖子"
+  ]
+ },
+ "past_chat": {
+  "title": "昨天的 B2B 供货销售怎么样？",
+  "request": "昨天的 B2B 供货销售怎么样？按损益告诉我。"
+ }
+}

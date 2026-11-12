@@ -176,6 +176,7 @@ export const ko = {
   'demo.login.lead': '받으신 데모 계정으로 예시 회사의 사무실을 둘러보세요.',
   'demo.login.note': '데모는 예시 데이터로 움직여요.',
   'demo.login.companyNoHint': '데모를 신청할 때 적은 번호예요.',
+  'demo.login.failed': "법인(사업자)등록번호 · 아이디 · 비밀번호를 다시 확인해 주세요. 데모 기간이 끝났다면 담당자에게 알려 주세요.",
   'demo.login.submit': '데모 시작하기',
   'demo.login.customer': "회사 계정으로 로그인",
   'privacy.title': '개인정보처리방침',
@@ -198,6 +199,16 @@ export const ko = {
   'landing.apply.consent.demo': "데모 사용 기록(로그인 · 본 화면 · 실행한 예시 · 누른 승인)을 데모 계정별로 남기고 상담에 쓰는 데 동의해요(데모 신청 시 필수)",
   'login.router.title': "로그인",
   'login.router.code.help': "회사 코드를 모르세요? 사무실을 만든 담당자에게 물어봐 주세요.",
+  // the demo app (/demo/app — frontend only, 2026-11-13)
+  'demo.chip': '데모',
+  'demo.band': '데모 화면이에요 · 예시 회사 · {date}까지',
+  'demo.notice': '어떤 화면을 보고 무엇을 눌렀는지만 기록해요. 직접 쓴 글은 기록하지 않아요. 새로 고치면 처음 상태로 돌아가요.',
+  'demo.contact': '상담 요청',
+  'demo.locked': '데모에서는 바꿀 수 없어요',
+  'demo.reset': '처음 상태로',
+  'demo.resetConfirm': '처음 상태로 되돌릴까요? 실행하고 승인한 것이 지워지고 예시 회사가 처음부터 다시 시작해요.',
+  'demo.loading': '데모를 준비하고 있어요',
+  'demo.failed': '데모를 열지 못했어요. 잠시 뒤 다시 시도해 주세요.',
 } as const;
 
 export type MarketingKey = keyof typeof ko;

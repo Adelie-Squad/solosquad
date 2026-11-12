@@ -13,7 +13,7 @@ import { PALETTE, type PaletteKey } from '../../lib/calendar';
 import { orgName } from '../../lib/names';
 import { useSession } from '../../session';
 import { AgentAccessPanel, Dot } from './common';
-import { DemoLock } from '../../demo/demo';
+import { ViewOnlyArea } from '../../shell/surface';
 
 export function CalendarSettings({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
@@ -31,7 +31,7 @@ export function CalendarSettings({ onClose }: { onClose: () => void }) {
     <Modal label={t('calendar.settingsTitle')} onClose={onClose} className="cal-settings">
       <h2 className="modal-title">{t('calendar.settingsTitle')}</h2>
       <p className="hint">{t('calendar.labelsHint')}</p>
-      <DemoLock name="calendar.settings" inline>
+      <ViewOnlyArea name="calendar.settings" inline>
       {scopes.length > 1 && (
         <div className="segmented cal-scope-tabs" role="tablist" aria-label={t('calendar.business')}>
           {scopes.map((s) => (
@@ -60,7 +60,7 @@ export function CalendarSettings({ onClose }: { onClose: () => void }) {
         )
       )}
       {current && !current.org && <AgentAccessPanel compact />}
-      </DemoLock>
+      </ViewOnlyArea>
     </Modal>
   );
 }

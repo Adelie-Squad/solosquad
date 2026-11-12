@@ -7,7 +7,7 @@ export const WANTS = ['finance', 'sourcing', 'sns', 'other'] as const;
 export const REQUESTS = ['demo', 'consult'] as const;
 export const REACH_KINDS = ['phone', 'kakao', 'wechat'] as const;
 export const LOCALES = ['ko', 'en', 'zh-CN'] as const;
-export const SOURCES = ['landing_hero', 'landing_start', 'pricing', 'demo_login'] as const;
+export const SOURCES = ['landing_hero', 'landing_start', 'pricing', 'demo_login', 'demo_app'] as const;
 
 export const MAX = { company: 80, contact_name: 40, email: 254, reach_value: 60, message: 1000 } as const;
 

@@ -1,38 +1,29 @@
-// The demo login (`/demo`, PRD §3.6 · decision 62): one form of three fields — the company's
-// registration number given in the request (법인(사업자)등록번호, 2026-11-12: the number says which
-// company), the ID (demo IDs look like `samsungDemo`) and the password — that the browser posts
-// straight to the demo server — the URL comes from the site
-// config (`DEMO_LOGIN_URL`, the engine's demo-mode `POST /api/auth/demo-login`). The marketing site
-// never holds or sees a demo password. `?u=` fills the ID (the login router sends the code `demo`
-// here). The request line opens the request modal (source demo_login, 데모 계정 pre-checked).
-import { useEffect, useState } from 'react';
+// The demo login (`/demo`, PRD §3.6 · decision 62 · 2026-11-13): one plain form of three fields —
+// the company's registration number given in the request (법인(사업자)등록번호, 2026-11-12: the
+// number says which company), the ID (demo IDs look like `samsungDemo`) and the password — posted
+// to this site's Worker (`POST /api/demo/login`, marketing/src/demo.ts), so it works without
+// JavaScript. Success → the demo itself at /demo/app; any failure comes back as `?error=1`, one
+// sentence for every kind. `?u=` fills the ID (the login router sends the code `demo` here). The
+// request line opens the request modal (source demo_login, 데모 계정 pre-checked).
 import { Link, useSearchParams } from 'react-router-dom';
 import { Mascot } from '../characters/PenguinIcon';
 import { LocalePicker } from '../components/LocalePicker';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { useInquiry } from './Inquiry';
-import { siteConfig } from './siteApi';
+
+export const DEMO_LOGIN_ACTION = '/api/demo/login';
 
 export function DemoLogin() {
   const { t } = useI18n();
   const openInquiry = useInquiry();
   const [params] = useSearchParams();
-  const [action, setAction] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    siteConfig()
-      .then((c) => live && setAction(c.demo_login_url))
-      .catch(() => undefined);
-    return () => {
-      live = false;
-    };
-  }, []);
   const prefill = (params.get('u') ?? '').slice(0, 120);
+  const failed = params.get('error') === '1';
 
   return (
     <div className="auth-page site-auth">
-      <form className="auth-card" method="post" action={action ?? undefined} data-testid="demo-form">
+      <form className="auth-card" method="post" action={DEMO_LOGIN_ACTION} data-testid="demo-form">
         <div className="auth-brand">
           <Mascot size={56} />
           <div>
@@ -44,6 +35,11 @@ export function DemoLogin() {
           <ICON.explore size={16} aria-hidden="true" />
           {t('demo.login.note')}
         </p>
+        {failed && (
+          <p className="form-error" role="alert">
+            {t('demo.login.failed')}
+          </p>
+        )}
         <label className="field">
           <span>{t('landing.contact.companyNo')}</span>
           <small>{t('demo.login.companyNoHint')}</small>
@@ -51,15 +47,13 @@ export function DemoLogin() {
         </label>
         <label className="field">
           <span>{t('auth.username')}</span>
-          <input name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="samsungDemo" defaultValue={prefill} required />
+          <input name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="samsungDemo" defaultValue={prefill} maxLength={40} required />
         </label>
         <label className="field">
           <span>{t('auth.password')}</span>
           <input name="password" type="password" autoComplete="current-password" required />
         </label>
-        <button className="btn is-primary is-block" disabled={!action}>
-          {action ? t('demo.login.submit') : t('common.wait')}
-        </button>
+        <button className="btn is-primary is-block">{t('demo.login.submit')}</button>
         <button type="button" className="landing-apply-link site-apply" onClick={() => openInquiry({ source: 'demo_login', requests: ['demo'] })} data-testid="demo-apply">
           {t('landing.apply.open')}
         </button>

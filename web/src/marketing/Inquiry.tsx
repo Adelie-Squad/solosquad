@@ -22,7 +22,7 @@ const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 type Want = (typeof WANTS)[number];
 export type Request = (typeof REQUESTS)[number];
-export type Source = 'landing_hero' | 'landing_start' | 'pricing' | 'demo_login';
+export type Source = 'landing_hero' | 'landing_start' | 'pricing' | 'demo_login' | 'demo_app';
 
 interface Form {
   company: string;

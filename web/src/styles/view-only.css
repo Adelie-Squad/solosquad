@@ -1,0 +1,117 @@
+/* Areas that show but take nothing (shell/surface.tsx `ViewOnlyArea` — the marketing demo's
+   settings), the role chip a surface adds, and the org-package work products (WorkProducts.tsx).
+   Colours only from tokens, light and dark alike. */
+
+.view-only {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.view-only.is-inline {
+  gap: 8px;
+}
+
+.view-only-note {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.view-only-body {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.view-only-body :disabled {
+  cursor: not-allowed;
+}
+
+/* org-package work products (WorkProducts.tsx) */
+.work-product {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.work-sub {
+  display: block;
+  font-weight: 400;
+}
+
+.statement tr.is-recommended th {
+  color: var(--ink);
+}
+
+.statement tr.is-recommended .chip {
+  margin-left: 6px;
+}
+
+.work-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.work-facts dt {
+  color: var(--ink-2);
+}
+
+.work-facts dd {
+  margin: 0;
+}
+
+.work-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.work-post {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--card-pad-compact);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.work-post p {
+  margin: 0;
+}
+
+.work-post-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.work-post-caption {
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* locked fields read as locked, not just unclickable */
+.view-only-body :is(input, textarea):disabled {
+  opacity: 0.6;
+  color: var(--ink-2);
+}
+
+
+.role-tag {
+  margin-left: 4px;
+  vertical-align: middle;
+}

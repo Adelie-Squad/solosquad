@@ -4,6 +4,7 @@
 
 import { broadcast, DATA_CHANNEL } from '../lib/channels';
 import { isPresent, PRESENCE_HEADER } from '../lib/presence';
+import { transport } from './transport';
 
 export const CSRF_HEADER = 'X-CSRF-Token';
 const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -73,7 +74,7 @@ export async function request<T>(method: string, path: string, opts: RequestOpti
   }
   if (UNSAFE.has(method) && csrfToken) headers[CSRF_HEADER] = csrfToken;
   if (isPresent()) headers[PRESENCE_HEADER] = '1';
-  const res = await fetch(url(path, opts.query), {
+  const res = await transport().fetch(url(path, opts.query), {
     method,
     headers,
     body,

@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { EngineEvent } from '../api/types.gen';
 import { scopedKeys } from '../api/queries';
 import { apiPath, useScope } from '../scope';
+import { transport } from '../api/transport';
 import { eventsUrl, invalidationsFor, LiveStream, type EventSourceFactory } from './stream';
 
 export interface LogLine {
@@ -40,7 +41,7 @@ const empty = emptyLive;
 const LiveContext = createContext<LiveState>(empty);
 const LOG_MAX = 8;
 
-const browserFactory: EventSourceFactory = (url) => new EventSource(url, { withCredentials: true });
+const browserFactory: EventSourceFactory = (url) => transport().events(url);
 
 /**
  * The live view of ONE workspace. Mounted per scope (keyed by it), so switching org or

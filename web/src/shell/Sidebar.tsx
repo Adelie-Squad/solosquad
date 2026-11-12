@@ -7,7 +7,7 @@ import { useSession } from '../session';
 import { useOrgOwner } from '../scope';
 import { ACCOUNT_NAV, navActive, navHref, visibleNav, WORKSPACE_NAV, type NavItem } from './nav';
 import { ScopeSwitcher } from './ScopeSwitcher';
-import { DemoResetButton, useDemo } from '../demo/demo';
+import { useSurface } from './surface';
 
 /** Sidebar — two groups of tiles (2 columns), the conversations, and who is logged in. Folded
  * (`rail`), it is a column of icons — each keeps its name as `aria-label` and a tooltip. */
@@ -16,7 +16,7 @@ export function Sidebar({ onCommand, rail = false, onToggleRail }: { onCommand: 
   const { t, fmt } = useI18n();
   const navigate = useNavigate();
   const { user } = useSession();
-  const demo = useDemo();
+  const surface = useSurface();
   const isOwner = useOrgOwner();
   const threads = useThreads();
   const approvals = useApprovals();
@@ -27,7 +27,7 @@ export function Sidebar({ onCommand, rail = false, onToggleRail }: { onCommand: 
   const chats = (threads.data ?? []).filter((th) => !th.metadata?.workflow_thread);
   const name = user?.display || user?.username || t('role.local');
   const role = isOwner ? t('role.owner') : t('role.staff');
-  const label = demo.on ? `${role} · ${t('demo.chip')}` : role;
+  const label = surface.roleTag ? `${role} · ${surface.roleTag}` : role;
 
   return (
     <aside className="sidebar">
@@ -99,7 +99,7 @@ export function Sidebar({ onCommand, rail = false, onToggleRail }: { onCommand: 
       </section>
 
       <div className="sidebar-bottom">
-        <DemoResetButton rail={rail} />
+        {surface.sidebarFooter?.(rail)}
         {/* one control for "who is here" and settings — one hit target, one focus stop (2026-11-08) */}
         <NavLink to={toOrg('/settings')} className="account-button" aria-label={t('nav.account', { name, role: label })} title={t('nav.account', { name, role: label })}>
           {isOwner ? <ICON.owner className="account-button-icon" /> : <ICON.person className="account-button-icon" />}
@@ -107,9 +107,9 @@ export function Sidebar({ onCommand, rail = false, onToggleRail }: { onCommand: 
             <span className="account-button-name">{name}</span>
             <span className="account-button-role">
               {role}
-              {demo.on && (
-                <span className="chip is-accent demo-chip" data-testid="demo-chip">
-                  {t('demo.chip')}
+              {surface.roleTag && (
+                <span className="chip is-accent role-tag" data-testid="role-tag">
+                  {surface.roleTag}
                 </span>
               )}
             </span>

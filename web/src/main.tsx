@@ -19,7 +19,7 @@ import './styles/app.css';
 import './styles/design.css';
 import './styles/screens.css';
 import './styles/calendar.css';
-import './styles/demo.css';
+import './styles/view-only.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {

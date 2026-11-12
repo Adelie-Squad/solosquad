@@ -18,6 +18,7 @@ import { useLive } from '../live/LiveProvider';
 import { ENTRY } from '../office/layout';
 import { OfficeStage, STATUS_CHIP, STATUS_LABEL, zoomKey, type OfficeStageApi } from '../office/OfficeStage';
 import { usePopout } from '../office/popout';
+import { useSurface } from '../shell/surface';
 import { agentStatuses, nextChange, type AgentStatus } from '../office/state';
 import { useOrgOwner, useScope } from '../scope';
 import { useTheme } from '../theme';
@@ -104,6 +105,7 @@ export function OfficeView() {
   const [liveModal, setLiveModal] = useState(false);
   const [quickChat, setQuickChat] = useState(false);
   const popout = usePopout(org, ws);
+  const canPopOut = useSurface().popout !== false;
   const stage = useRef<OfficeStageApi>(null);
   const [zoomable, setZoomable] = useState(false);
 
@@ -132,10 +134,12 @@ export function OfficeView() {
           <p>{t('office.lead')}</p>
         </div>
         <div className="office-actions">
-          <button className="btn with-icon" onClick={popout.launch} title={t('office.popoutHint')}>
-            <ICON.popout />
-            {t('office.popout')}
-          </button>
+          {canPopOut && (
+            <button className="btn with-icon" onClick={popout.launch} title={t('office.popoutHint')}>
+              <ICON.popout />
+              {t('office.popout')}
+            </button>
+          )}
           <button className={`btn ${liveOpen ? 'is-primary' : ''}`} aria-pressed={liveOpen} onClick={toggleLive}>
             <span className="live-dot btn-dot" /> {t('office.live')} {running}
           </button>

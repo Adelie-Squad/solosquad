@@ -1,0 +1,2538 @@
+{
+ "locale": "ko",
+ "captured": 1794499711.1630359,
+ "org": {
+  "id": "moa",
+  "display": "모아 리빙 (예시)",
+  "ws": "hq",
+  "ws_display": "본사"
+ },
+ "owner_title": "대표 (데모)",
+ "company": {
+  "kind": "corporation",
+  "name": "모아 리빙 주식회사 (예시 회사)",
+  "representative": "홍길동 (예시)",
+  "country": "KR",
+  "address": "경기도 광주시 오포읍 물류로 00 (예시 주소)",
+  "controlled_by": null,
+  "complete": true
+ },
+ "server": {
+  "where": "local",
+  "cloud": null,
+  "region": null,
+  "country": "KR",
+  "os": "Darwin 25.5.0",
+  "version": "2.0.0.dev0",
+  "sources": {
+   "cloud": "default",
+   "where": "default",
+   "region": "default",
+   "country": "override"
+  }
+ },
+ "snapshot": {
+  "type": null,
+  "endpoint": null,
+  "region": "us-east-1",
+  "bucket": null,
+  "prefix": "solosquad",
+  "path": null,
+  "keep_days": 30,
+  "has_secret": false
+ },
+ "access": {
+  "require_login": true,
+  "two_factor": false,
+  "allowed_networks": []
+ },
+ "ws_access": {
+  "require_login": true,
+  "two_factor": true,
+  "allowed_networks": []
+ },
+ "users": [
+  {
+   "id": "u-demo-owner",
+   "username": "moa",
+   "display": "capkoDemo",
+   "role": "owner",
+   "locale": "ko",
+   "two_factor": false,
+   "disabled": false,
+   "title": "",
+   "teams": [],
+   "assignments": [
+    {
+     "org": "moa",
+     "workspace": null,
+     "role": "owner"
+    }
+   ]
+  },
+  {
+   "id": "u-demo-finance",
+   "username": "finance",
+   "display": "김재무 (예시 인물)",
+   "role": "staff",
+   "locale": "ko",
+   "two_factor": false,
+   "disabled": false,
+   "title": "",
+   "teams": [],
+   "assignments": [
+    {
+     "org": "moa",
+     "workspace": null,
+     "role": "staff"
+    }
+   ]
+  },
+  {
+   "id": "u-demo-marketing",
+   "username": "marketing",
+   "display": "이마케 (예시 인물)",
+   "role": "staff",
+   "locale": "ko",
+   "two_factor": false,
+   "disabled": false,
+   "title": "",
+   "teams": [],
+   "assignments": [
+    {
+     "org": "moa",
+     "workspace": null,
+     "role": "staff"
+    }
+   ]
+  }
+ ],
+ "people": [
+  {
+   "id": "u-demo-owner",
+   "username": "moa",
+   "display": "capkoDemo",
+   "role": "owner",
+   "title": "대표 (데모)",
+   "teams": [],
+   "workspaces": null
+  },
+  {
+   "id": "u-demo-finance",
+   "username": "finance",
+   "display": "김재무 (예시 인물)",
+   "role": "staff",
+   "title": "재무 담당",
+   "teams": [
+    "business"
+   ],
+   "workspaces": null
+  },
+  {
+   "id": "u-demo-marketing",
+   "username": "marketing",
+   "display": "이마케 (예시 인물)",
+   "role": "staff",
+   "title": "마케팅 담당",
+   "teams": [
+    "brand"
+   ],
+   "workspaces": null
+  }
+ ],
+ "teams": [
+  {
+   "name": "core",
+   "members": [
+    "chief"
+   ]
+  },
+  {
+   "name": "product",
+   "members": [
+    "product-manager",
+    "product-designer",
+    "researcher",
+    "data-analyst"
+   ]
+  },
+  {
+   "name": "engineering",
+   "members": [
+    "frontend-engineer",
+    "backend-engineer",
+    "data-engineer",
+    "infra",
+    "quality-assurance"
+   ]
+  },
+  {
+   "name": "business",
+   "members": [
+    "business-strategy",
+    "sales",
+    "finance"
+   ]
+  },
+  {
+   "name": "brand",
+   "members": [
+    "marketer",
+    "creative"
+   ]
+  }
+ ],
+ "org_chart": {
+  "owners": [
+   {
+    "id": "u-demo-owner",
+    "display": "capkoDemo",
+    "title": "대표 (데모)",
+    "role": "owner"
+   }
+  ],
+  "teams": [
+   {
+    "name": "core",
+    "agents": [
+     {
+      "name": "chief",
+      "description": "Org 진입점. 사용자 소통 / 과제화 / 14 에이전트 직접 조율(팀장 없음, 결정 58) / 회고. 도메인 전문가 customized (org 단위 1개).",
+      "display_name": {
+       "ko": "임원",
+       "en": "Chief",
+       "zh-CN": "高管"
+      },
+      "summary": {
+       "ko": "회사의 대표 창구예요. 대표님과 팀원이 맡긴 일을 듣고 작업으로 나눠 알맞은 에이전트에게 맡긴 뒤, 결과를 모아 보고해요. 돈이 나가거나 밖으로 보내는 일처럼 결정이 필요한 일은 반드시 승인을 받아요.",
+       "en": "The front desk of your company. Chief listens to what you and your team members ask for, splits it into pieces of work, hands each one to the right agent and reports back with the results. Anything that needs a decision, such as spending money or sending something out, comes to you for approval first.",
+       "zh-CN": "公司的统一窗口。高管听取代表和团队成员交代的事情，拆成具体工作交给合适的代理，再把结果汇总汇报。凡是需要决定的事，比如花钱或对外发送，都会先请你审批。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": []
+   },
+   {
+    "name": "product",
+    "agents": [
+     {
+      "name": "product-manager",
+      "description": "Workspace-bundled autonomous Product Manager. 문제 정의 / PMF 가설·실험 / 마일스톤·WBS / 데이터 기반 판단. 사용자와 직접 대화 안 함 (Chief 경유). 구 pmf-planner 흡수.",
+      "display_name": {
+       "ko": "프로덕트 매니저",
+       "en": "Product Manager",
+       "zh-CN": "产品经理"
+      },
+      "summary": {
+       "ko": "고객이 겪는 문제를 정리하고 무엇을 먼저 만들지 정해요. 가설과 실험 계획, 일정표를 만들어 진행 상황을 숫자로 확인해요. 계획을 확정하거나 우선순위를 바꿀 때는 대표님의 승인을 받아요.",
+       "en": "Sorts out the problems your customers have and decides what to build first. Writes hypotheses, experiment plans and schedules, and tracks progress with numbers. Asks for your approval before a plan is fixed or priorities change.",
+       "zh-CN": "梳理客户遇到的问题，决定先做什么。制定假设、实验计划和时间表，并用数字跟踪进展。确定计划或调整优先级前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "product-designer",
+      "description": "제품 디자인 — 컨셉 발산·수렴(scope), 기능 기획(PRD·우선순위), UI/visual·prototype 을 단일 thread 로. design-system·policy skill 활용. ≥2 approaches 강제.",
+      "display_name": {
+       "ko": "프로덕트 디자이너",
+       "en": "Product Designer",
+       "zh-CN": "产品设计师"
+      },
+      "summary": {
+       "ko": "막연한 아이디어를 실제로 만들 수 있는 기능 계획과 화면 설계로 바꿔요. 기획서와 화면 시안을 두 가지 이상 방향으로 준비해 비교해 드려요. 어떤 방향으로 갈지는 대표님이 승인해요.",
+       "en": "Turns a rough idea into a feature plan and screen designs that can actually be built. Prepares the plan and at least two design directions so you can compare them. You approve which direction to take.",
+       "zh-CN": "把模糊的想法变成可以落地的功能方案和页面设计。准备方案书，并至少提供两种设计方向供你比较。走哪个方向由你审批决定。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "researcher",
+      "description": "User research + UX. 인터뷰·persona·market signal·competitor scan + user flow·wireframe·interaction·IA. 구 user/desk-researcher + ux-designer 통합.",
+      "display_name": {
+       "ko": "리서처",
+       "en": "Researcher",
+       "zh-CN": "研究员"
+      },
+      "summary": {
+       "ko": "고객 인터뷰와 시장, 경쟁사 자료를 조사해 고객이 실제로 원하는 것을 찾아요. 조사 보고서와 고객 유형, 사용 흐름을 정리해 드려요. 고객에게 연락하거나 설문을 보내기 전에는 승인을 받아요.",
+       "en": "Studies customer interviews, the market and competitors to find out what customers really want. Delivers research reports, customer profiles and the steps customers go through. Asks for approval before contacting customers or sending out a survey.",
+       "zh-CN": "通过客户访谈、市场和竞争对手资料，找出客户真正需要什么。整理调研报告、客户类型和使用流程。联系客户或发出问卷前会先请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "data-analyst",
+      "description": "메트릭·실험·KPI 분석. Confidence Score 추적 (RO-PNA), per-contributor breakdown + shipping streak (gstack). Amplitude pattern 차용.",
+      "display_name": {
+       "ko": "데이터 분석가",
+       "en": "Data Analyst",
+       "zh-CN": "数据分析师"
+      },
+      "summary": {
+       "ko": "매출과 고객 지표를 살펴 무엇이 잘되고 무엇이 막혔는지 알려 드려요. 지표 요약과 실험 결과 보고서를 만들어요. 지표 정의를 바꾸거나 결과를 밖에 공유할 때는 승인을 받아요.",
+       "en": "Looks at sales and customer numbers to tell you what is working and what is stuck. Produces metric summaries and experiment reports. Asks for approval before changing how a metric is defined or sharing results outside the company.",
+       "zh-CN": "查看销售和客户指标，告诉你哪些做得好、哪些卡住了。制作指标摘要和实验结果报告。修改指标定义或对外分享结果前会请你审批。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": []
+   },
+   {
+    "name": "engineering",
+    "agents": [
+     {
+      "name": "frontend-engineer",
+      "description": "프론트엔드 엔지니어 — UI 컴포넌트 / 시각화 / interaction. design system 구현. product-designer 와 1:1 협업. 구 frontend(결정 58 에서 id 변경).",
+      "display_name": {
+       "ko": "프론트엔드 엔지니어",
+       "en": "Frontend Engineer",
+       "zh-CN": "前端工程师"
+      },
+      "summary": {
+       "ko": "디자이너가 만든 화면을 실제로 동작하는 웹 화면으로 만들어요. 화면 코드와 그래프, 눌러 볼 수 있는 시안을 내놓아요. 고객이 쓰는 화면에 반영하기 전에는 승인을 받아요.",
+       "en": "Builds the designer’s screens into web pages that actually work. Delivers the screen code, charts and clickable previews. Asks for approval before a change goes live on screens your customers use.",
+       "zh-CN": "把设计师做好的页面做成真正能用的网页。交付页面代码、图表和可点击的预览。上线到客户使用的页面前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "backend-engineer",
+      "description": "백엔드 엔지니어 — 시스템 설계 · ADR(코드를 쓰지 않는 설계 단계) + 서버 로직 · API endpoint · DB 구현. 구 backend(backend-developer + api-developer) + system-architect 병합(결정 58).",
+      "display_name": {
+       "ko": "백엔드 엔지니어",
+       "en": "Backend Engineer",
+       "zh-CN": "后端工程师"
+      },
+      "summary": {
+       "ko": "서비스 뒤에서 돌아가는 서버와 데이터 저장 구조를 설계하고 만들어요. 설계 문서와 서버 기능, 다른 시스템과 연결하는 통로를 만들어요. 실제 운영 데이터나 서버 설정을 바꾸기 전에는 승인을 받아요.",
+       "en": "Designs and builds the servers and data storage behind your service. Delivers design documents, server features and the links to other systems. Asks for approval before changing live data or server settings.",
+       "zh-CN": "设计并搭建服务背后的服务器和数据存储。交付设计文档、服务器功能以及与其他系统的连接。修改正式数据或服务器设置前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "data-engineer",
+      "description": "데이터 수집 + 파이프라인 + warehouse. v1.0.x data-collector + data-engineer 병합 (데이터 lifecycle 단일).",
+      "display_name": {
+       "ko": "데이터 엔지니어",
+       "en": "Data Engineer",
+       "zh-CN": "数据工程师"
+      },
+      "summary": {
+       "ko": "흩어진 판매, 재고, 고객 데이터를 모아 한곳에서 볼 수 있게 정리해요. 데이터를 자동으로 모으고 다듬는 흐름과 분석용 표를 만들어요. 새 데이터 출처를 연결하거나 기존 기록을 지울 때는 승인을 받아요.",
+       "en": "Gathers scattered sales, stock and customer data into one place you can look at. Builds the steps that collect and clean data automatically, and the tables used for analysis. Asks for approval before connecting a new data source or deleting existing records.",
+       "zh-CN": "把分散的销售、库存和客户数据集中到一个地方，方便查看。搭建自动收集和整理数据的流程，以及用于分析的数据表。接入新的数据来源或删除已有记录前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "infra",
+      "description": "인프라 · 보안 — 클라우드 / CI/CD / monitoring / cost + threat model · 보안 audit · secrets · auth. 민감 변경(auth · crypto · secrets · PII · IAM · network) 확인 담당. 구 infra + security 병합(결정 58).",
+      "display_name": {
+       "ko": "인프라 엔지니어",
+       "en": "Infra Engineer",
+       "zh-CN": "基础设施工程师"
+      },
+      "summary": {
+       "ko": "서버와 클라우드가 멈추지 않고 안전하게 돌아가도록 관리해요. 배포 절차와 감시 설정, 비용 점검과 보안 점검 결과를 내놓아요. 접속 권한이나 비밀 키, 네트워크 설정을 바꾸는 일은 반드시 승인을 받아요.",
+       "en": "Keeps your servers and cloud running safely without interruption. Delivers release procedures, monitoring, cost checks and security reviews. Always asks for approval before changing access rights, secret keys or network settings.",
+       "zh-CN": "负责服务器和云端稳定、安全地运行。交付发布流程、监控设置、费用检查和安全检查结果。修改访问权限、密钥或网络设置前一定会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "quality-assurance",
+      "description": "Test automation / 회귀 / 품질 게이트. unit + integration + e2e. 구 qa(결정 58 에서 id 변경).",
+      "display_name": {
+       "ko": "QA 엔지니어",
+       "en": "Quality Assurance",
+       "zh-CN": "质量保证工程师"
+      },
+      "summary": {
+       "ko": "새 기능이나 수정이 기존 기능을 망가뜨리지 않는지 자동 시험으로 확인해요. 시험 결과 보고서와 발견한 문제 목록을 만들어요. 시험을 통과하지 못한 변경을 그대로 내보낼지는 대표님이 승인해요.",
+       "en": "Checks with automated tests that new features and fixes do not break what already works. Produces test reports and a list of the problems found. If a change fails its tests, you decide whether it may still go out.",
+       "zh-CN": "用自动化测试确认新功能和修改不会破坏原有功能。制作测试报告和问题清单。没有通过测试的修改是否照常发布，由你审批决定。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": []
+   },
+   {
+    "name": "business",
+    "agents": [
+     {
+      "name": "business-strategy",
+      "description": "비즈니스 전략 + Go-to-market — 시장·수익화·경쟁 전략(Lean Canvas · Value Proposition · Monetization) + 채널 mix · launch plan · 초기 사용자 획득. \"Status quo is your real competitor\". 구 business-strategy + go-to-market 병합(결정 58).",
+      "display_name": {
+       "ko": "사업 전략",
+       "en": "Business Strategy",
+       "zh-CN": "业务战略"
+      },
+      "summary": {
+       "ko": "어떤 시장에서 누구에게 얼마에 팔지 전략을 세워요. 시장 분석과 가격 제안, 출시 계획과 첫 고객을 모으는 방법을 정리해 드려요. 가격을 정하거나 출시 일정을 확정할 때는 승인을 받아요.",
+       "en": "Works out which market to sell in, to whom and at what price. Delivers market analysis, pricing proposals, launch plans and ways to win your first customers. Asks for approval before setting a price or fixing a launch date.",
+       "zh-CN": "制定在哪个市场、卖给谁、卖多少钱的策略。整理市场分析、定价建议、上市计划和获取首批客户的方法。确定价格或上市时间前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "sales",
+      "description": "세일즈 — 아웃바운드/인바운드 파이프라인, 리드 자격검증(BANT/MEDDIC), 딜 클로징, 전환 funnel. business-strategy 의 전략 · GTM 을 매출로 실행.",
+      "display_name": {
+       "ko": "세일즈",
+       "en": "Sales",
+       "zh-CN": "销售"
+      },
+      "summary": {
+       "ko": "가능성 있는 거래처를 찾고 문의를 계약까지 이어 가요. 거래처 목록과 제안서, 견적 초안과 진행 상황표를 만들어요. 견적을 보내거나 할인을 약속하기 전에는 승인을 받아요.",
+       "en": "Finds promising customers and moves inquiries all the way to a signed deal. Prepares customer lists, proposals, draft quotes and a progress board. Asks for approval before sending a quote or promising a discount.",
+       "zh-CN": "寻找有潜力的客户，把咨询一路推进到签约。准备客户名单、方案书、报价草稿和进度表。发出报价或承诺折扣前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "finance",
+      "description": "재무 — 중소 유통사(한국 · 중국) 장부 · 손익 · 현금흐름 · 매출/매입 대사, 세금계산서 · 부가세(한국) · 增值税 기본, 월 결산과 확인 필요 항목 분류. 엔진 `finance.pnl` 도구 · `monthly-pnl` 워크플로 담당. 돈은 직접 움직이지 않고 승인 카드로 올린다.",
+      "display_name": {
+       "ko": "재무",
+       "en": "Finance",
+       "zh-CN": "财务"
+      },
+      "summary": {
+       "ko": "장부와 매출, 매입을 맞춰 보고 매달 손익과 현금 흐름을 정리해요. 월 손익표와 세금계산서, 부가세 자료를 준비하고 확인이 필요한 거래를 따로 표시해요. 돈을 직접 보내지 않고, 결제나 송금은 승인 카드로 올려요.",
+       "en": "Reconciles your books, sales and purchases, and sums up profit and cash flow every month. Prepares the monthly profit and loss report, tax invoices and VAT papers, and flags any transaction that needs a closer look. It never moves money itself; payments and transfers come to you as approval cards.",
+       "zh-CN": "核对账簿、销售和采购，每月整理损益和现金流。准备月度损益表、发票和增值税资料，并单独标出需要确认的交易。它不会直接转账，付款和汇款都会以审批卡的形式交给你。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": [
+     {
+      "id": "u-demo-finance",
+      "display": "김재무 (예시 인물)",
+      "title": "재무 담당",
+      "role": "staff"
+     }
+    ]
+   },
+   {
+    "name": "brand",
+    "agents": [
+     {
+      "name": "marketer",
+      "description": "마케터 — 브랜드 voice · positioning · messaging + 콘텐츠·퍼포먼스 마케팅(유료광고·그로스·전환). content-writing skill 직접 호출. 구 marketer(+ performance-marketer) + communication 병합(결정 58).",
+      "display_name": {
+       "ko": "마케터",
+       "en": "Marketer",
+       "zh-CN": "市场营销"
+      },
+      "summary": {
+       "ko": "브랜드가 어떤 말투로 무엇을 말할지 정하고 고객을 모으는 마케팅을 맡아요. 홍보 문구와 게시물, 광고 계획과 성과 보고서를 만들어요. 게시물을 올리거나 광고비를 쓰기 전에는 승인을 받아요.",
+       "en": "Decides what your brand says and how it sounds, and runs the marketing that brings in customers. Writes copy and posts, plans ads and reports on results. Asks for approval before publishing a post or spending on ads.",
+       "zh-CN": "确定品牌说什么、用什么语气，并负责吸引客户的营销。撰写宣传文案和帖子，制定广告计划并汇报效果。发布帖子或投放广告前会请你审批。"
+      },
+      "appearance": null
+     },
+     {
+      "name": "creative",
+      "description": "비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브. design-system skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).",
+      "display_name": {
+       "ko": "크리에이티브",
+       "en": "Creative",
+       "zh-CN": "创意"
+      },
+      "summary": {
+       "ko": "브랜드의 얼굴이 되는 그림과 디자인을 만들어요. 로고와 상세 페이지 이미지, 배너와 캠페인 시안을 준비해요. 밖으로 내보낼 최종 디자인은 대표님의 승인을 받아요.",
+       "en": "Creates the images and designs that give your brand its face. Prepares logos, product page images, banners and campaign drafts. Final designs that go out to the public need your approval.",
+       "zh-CN": "制作代表品牌形象的图片和设计。准备标志、商品详情页图片、横幅和活动设计稿。对外发布的最终设计需要你审批。"
+      },
+      "appearance": null
+     }
+    ],
+    "people": [
+     {
+      "id": "u-demo-marketing",
+      "display": "이마케 (예시 인물)",
+      "title": "마케팅 담당",
+      "role": "staff"
+     }
+    ]
+   }
+  ],
+  "unassigned": []
+ },
+ "approval_policy": [
+  {
+   "category": "purchase",
+   "label": "구매",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "payment",
+   "label": "결제",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "transfer",
+   "label": "송금",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "delete",
+   "label": "삭제",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "account_change",
+   "label": "계정 변경",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "permission_change",
+   "label": "권한 변경",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "access_change",
+   "label": "접속 정책 변경",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "connection_add",
+   "label": "연결 추가",
+   "tier": "owner",
+   "recommended": "owner",
+   "deviates": false
+  },
+  {
+   "category": "review",
+   "label": "검토 · 확인",
+   "tier": "team",
+   "recommended": "team",
+   "deviates": false
+  },
+  {
+   "category": "publish",
+   "label": "게시 · 발송",
+   "tier": "team",
+   "recommended": "team",
+   "deviates": false
+  },
+  {
+   "category": "other",
+   "label": "기타",
+   "tier": "team",
+   "recommended": "team",
+   "deviates": false
+  }
+ ],
+ "screens": {
+  "dashboard": {
+   "name": "dashboard",
+   "source": "default",
+   "screen": {
+    "format_version": 1,
+    "title": null,
+    "widgets": [
+     {
+      "widget": "stats",
+      "version": 1
+     },
+     {
+      "widget": "todo",
+      "version": 1
+     },
+     {
+      "widget": "office",
+      "version": 1
+     },
+     {
+      "widget": "artifact-latest",
+      "version": 1,
+      "kind": "finance.pnl"
+     },
+     {
+      "widget": "schedule",
+      "version": 1
+     },
+     {
+      "widget": "budget",
+      "version": 1
+     }
+    ]
+   },
+   "error": null
+  },
+  "artifacts": {
+   "name": "artifacts",
+   "source": "default",
+   "screen": {
+    "format_version": 1,
+    "title": null,
+    "widgets": [
+     {
+      "widget": "artifact-latest",
+      "version": 1,
+      "kind": "finance.pnl"
+     },
+     {
+      "widget": "artifact-list",
+      "version": 1
+     }
+    ]
+   },
+   "error": null
+  }
+ },
+ "agents": [
+  {
+   "name": "backend-engineer",
+   "description": "백엔드 엔지니어 — 시스템 설계 · ADR(코드를 쓰지 않는 설계 단계) + 서버 로직 · API endpoint · DB 구현. 구 backend(backend-developer + api-developer) + system-architect 병합(결정 58).",
+   "display_name": {
+    "ko": "백엔드 엔지니어",
+    "en": "Backend Engineer",
+    "zh-CN": "后端工程师"
+   },
+   "summary": {
+    "ko": "서비스 뒤에서 돌아가는 서버와 데이터 저장 구조를 설계하고 만들어요. 설계 문서와 서버 기능, 다른 시스템과 연결하는 통로를 만들어요. 실제 운영 데이터나 서버 설정을 바꾸기 전에는 승인을 받아요.",
+    "en": "Designs and builds the servers and data storage behind your service. Delivers design documents, server features and the links to other systems. Asks for approval before changing live data or server settings.",
+    "zh-CN": "设计并搭建服务背后的服务器和数据存储。交付设计文档、服务器功能以及与其他系统的连接。修改正式数据或服务器设置前会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "business-strategy",
+   "description": "비즈니스 전략 + Go-to-market — 시장·수익화·경쟁 전략(Lean Canvas · Value Proposition · Monetization) + 채널 mix · launch plan · 초기 사용자 획득. \"Status quo is your real competitor\". 구 business-strategy + go-to-market 병합(결정 58).",
+   "display_name": {
+    "ko": "사업 전략",
+    "en": "Business Strategy",
+    "zh-CN": "业务战略"
+   },
+   "summary": {
+    "ko": "어떤 시장에서 누구에게 얼마에 팔지 전략을 세워요. 시장 분석과 가격 제안, 출시 계획과 첫 고객을 모으는 방법을 정리해 드려요. 가격을 정하거나 출시 일정을 확정할 때는 승인을 받아요.",
+    "en": "Works out which market to sell in, to whom and at what price. Delivers market analysis, pricing proposals, launch plans and ways to win your first customers. Asks for approval before setting a price or fixing a launch date.",
+    "zh-CN": "制定在哪个市场、卖给谁、卖多少钱的策略。整理市场分析、定价建议、上市计划和获取首批客户的方法。确定价格或上市时间前会请你审批。"
+   },
+   "team": "business",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "chief",
+   "description": "Org 진입점. 사용자 소통 / 과제화 / 14 에이전트 직접 조율(팀장 없음, 결정 58) / 회고. 도메인 전문가 customized (org 단위 1개).",
+   "display_name": {
+    "ko": "임원",
+    "en": "Chief",
+    "zh-CN": "高管"
+   },
+   "summary": {
+    "ko": "회사의 대표 창구예요. 대표님과 팀원이 맡긴 일을 듣고 작업으로 나눠 알맞은 에이전트에게 맡긴 뒤, 결과를 모아 보고해요. 돈이 나가거나 밖으로 보내는 일처럼 결정이 필요한 일은 반드시 승인을 받아요.",
+    "en": "The front desk of your company. Chief listens to what you and your team members ask for, splits it into pieces of work, hands each one to the right agent and reports back with the results. Anything that needs a decision, such as spending money or sending something out, comes to you for approval first.",
+    "zh-CN": "公司的统一窗口。高管听取代表和团队成员交代的事情，拆成具体工作交给合适的代理，再把结果汇总汇报。凡是需要决定的事，比如花钱或对外发送，都会先请你审批。"
+   },
+   "team": "core",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "creative",
+   "description": "비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브. design-system skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).",
+   "display_name": {
+    "ko": "크리에이티브",
+    "en": "Creative",
+    "zh-CN": "创意"
+   },
+   "summary": {
+    "ko": "브랜드의 얼굴이 되는 그림과 디자인을 만들어요. 로고와 상세 페이지 이미지, 배너와 캠페인 시안을 준비해요. 밖으로 내보낼 최종 디자인은 대표님의 승인을 받아요.",
+    "en": "Creates the images and designs that give your brand its face. Prepares logos, product page images, banners and campaign drafts. Final designs that go out to the public need your approval.",
+    "zh-CN": "制作代表品牌形象的图片和设计。准备标志、商品详情页图片、横幅和活动设计稿。对外发布的最终设计需要你审批。"
+   },
+   "team": "brand",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "data-analyst",
+   "description": "메트릭·실험·KPI 분석. Confidence Score 추적 (RO-PNA), per-contributor breakdown + shipping streak (gstack). Amplitude pattern 차용.",
+   "display_name": {
+    "ko": "데이터 분석가",
+    "en": "Data Analyst",
+    "zh-CN": "数据分析师"
+   },
+   "summary": {
+    "ko": "매출과 고객 지표를 살펴 무엇이 잘되고 무엇이 막혔는지 알려 드려요. 지표 요약과 실험 결과 보고서를 만들어요. 지표 정의를 바꾸거나 결과를 밖에 공유할 때는 승인을 받아요.",
+    "en": "Looks at sales and customer numbers to tell you what is working and what is stuck. Produces metric summaries and experiment reports. Asks for approval before changing how a metric is defined or sharing results outside the company.",
+    "zh-CN": "查看销售和客户指标，告诉你哪些做得好、哪些卡住了。制作指标摘要和实验结果报告。修改指标定义或对外分享结果前会请你审批。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "data-engineer",
+   "description": "데이터 수집 + 파이프라인 + warehouse. v1.0.x data-collector + data-engineer 병합 (데이터 lifecycle 단일).",
+   "display_name": {
+    "ko": "데이터 엔지니어",
+    "en": "Data Engineer",
+    "zh-CN": "数据工程师"
+   },
+   "summary": {
+    "ko": "흩어진 판매, 재고, 고객 데이터를 모아 한곳에서 볼 수 있게 정리해요. 데이터를 자동으로 모으고 다듬는 흐름과 분석용 표를 만들어요. 새 데이터 출처를 연결하거나 기존 기록을 지울 때는 승인을 받아요.",
+    "en": "Gathers scattered sales, stock and customer data into one place you can look at. Builds the steps that collect and clean data automatically, and the tables used for analysis. Asks for approval before connecting a new data source or deleting existing records.",
+    "zh-CN": "把分散的销售、库存和客户数据集中到一个地方，方便查看。搭建自动收集和整理数据的流程，以及用于分析的数据表。接入新的数据来源或删除已有记录前会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "finance",
+   "description": "재무 — 중소 유통사(한국 · 중국) 장부 · 손익 · 현금흐름 · 매출/매입 대사, 세금계산서 · 부가세(한국) · 增值税 기본, 월 결산과 확인 필요 항목 분류. 엔진 `finance.pnl` 도구 · `monthly-pnl` 워크플로 담당. 돈은 직접 움직이지 않고 승인 카드로 올린다.",
+   "display_name": {
+    "ko": "재무",
+    "en": "Finance",
+    "zh-CN": "财务"
+   },
+   "summary": {
+    "ko": "장부와 매출, 매입을 맞춰 보고 매달 손익과 현금 흐름을 정리해요. 월 손익표와 세금계산서, 부가세 자료를 준비하고 확인이 필요한 거래를 따로 표시해요. 돈을 직접 보내지 않고, 결제나 송금은 승인 카드로 올려요.",
+    "en": "Reconciles your books, sales and purchases, and sums up profit and cash flow every month. Prepares the monthly profit and loss report, tax invoices and VAT papers, and flags any transaction that needs a closer look. It never moves money itself; payments and transfers come to you as approval cards.",
+    "zh-CN": "核对账簿、销售和采购，每月整理损益和现金流。准备月度损益表、发票和增值税资料，并单独标出需要确认的交易。它不会直接转账，付款和汇款都会以审批卡的形式交给你。"
+   },
+   "team": "business",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "frontend-engineer",
+   "description": "프론트엔드 엔지니어 — UI 컴포넌트 / 시각화 / interaction. design system 구현. product-designer 와 1:1 협업. 구 frontend(결정 58 에서 id 변경).",
+   "display_name": {
+    "ko": "프론트엔드 엔지니어",
+    "en": "Frontend Engineer",
+    "zh-CN": "前端工程师"
+   },
+   "summary": {
+    "ko": "디자이너가 만든 화면을 실제로 동작하는 웹 화면으로 만들어요. 화면 코드와 그래프, 눌러 볼 수 있는 시안을 내놓아요. 고객이 쓰는 화면에 반영하기 전에는 승인을 받아요.",
+    "en": "Builds the designer’s screens into web pages that actually work. Delivers the screen code, charts and clickable previews. Asks for approval before a change goes live on screens your customers use.",
+    "zh-CN": "把设计师做好的页面做成真正能用的网页。交付页面代码、图表和可点击的预览。上线到客户使用的页面前会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "infra",
+   "description": "인프라 · 보안 — 클라우드 / CI/CD / monitoring / cost + threat model · 보안 audit · secrets · auth. 민감 변경(auth · crypto · secrets · PII · IAM · network) 확인 담당. 구 infra + security 병합(결정 58).",
+   "display_name": {
+    "ko": "인프라 엔지니어",
+    "en": "Infra Engineer",
+    "zh-CN": "基础设施工程师"
+   },
+   "summary": {
+    "ko": "서버와 클라우드가 멈추지 않고 안전하게 돌아가도록 관리해요. 배포 절차와 감시 설정, 비용 점검과 보안 점검 결과를 내놓아요. 접속 권한이나 비밀 키, 네트워크 설정을 바꾸는 일은 반드시 승인을 받아요.",
+    "en": "Keeps your servers and cloud running safely without interruption. Delivers release procedures, monitoring, cost checks and security reviews. Always asks for approval before changing access rights, secret keys or network settings.",
+    "zh-CN": "负责服务器和云端稳定、安全地运行。交付发布流程、监控设置、费用检查和安全检查结果。修改访问权限、密钥或网络设置前一定会请你审批。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "marketer",
+   "description": "마케터 — 브랜드 voice · positioning · messaging + 콘텐츠·퍼포먼스 마케팅(유료광고·그로스·전환). content-writing skill 직접 호출. 구 marketer(+ performance-marketer) + communication 병합(결정 58).",
+   "display_name": {
+    "ko": "마케터",
+    "en": "Marketer",
+    "zh-CN": "市场营销"
+   },
+   "summary": {
+    "ko": "브랜드가 어떤 말투로 무엇을 말할지 정하고 고객을 모으는 마케팅을 맡아요. 홍보 문구와 게시물, 광고 계획과 성과 보고서를 만들어요. 게시물을 올리거나 광고비를 쓰기 전에는 승인을 받아요.",
+    "en": "Decides what your brand says and how it sounds, and runs the marketing that brings in customers. Writes copy and posts, plans ads and reports on results. Asks for approval before publishing a post or spending on ads.",
+    "zh-CN": "确定品牌说什么、用什么语气，并负责吸引客户的营销。撰写宣传文案和帖子，制定广告计划并汇报效果。发布帖子或投放广告前会请你审批。"
+   },
+   "team": "brand",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "product-designer",
+   "description": "제품 디자인 — 컨셉 발산·수렴(scope), 기능 기획(PRD·우선순위), UI/visual·prototype 을 단일 thread 로. design-system·policy skill 활용. ≥2 approaches 강제.",
+   "display_name": {
+    "ko": "프로덕트 디자이너",
+    "en": "Product Designer",
+    "zh-CN": "产品设计师"
+   },
+   "summary": {
+    "ko": "막연한 아이디어를 실제로 만들 수 있는 기능 계획과 화면 설계로 바꿔요. 기획서와 화면 시안을 두 가지 이상 방향으로 준비해 비교해 드려요. 어떤 방향으로 갈지는 대표님이 승인해요.",
+    "en": "Turns a rough idea into a feature plan and screen designs that can actually be built. Prepares the plan and at least two design directions so you can compare them. You approve which direction to take.",
+    "zh-CN": "把模糊的想法变成可以落地的功能方案和页面设计。准备方案书，并至少提供两种设计方向供你比较。走哪个方向由你审批决定。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "product-manager",
+   "description": "Workspace-bundled autonomous Product Manager. 문제 정의 / PMF 가설·실험 / 마일스톤·WBS / 데이터 기반 판단. 사용자와 직접 대화 안 함 (Chief 경유). 구 pmf-planner 흡수.",
+   "display_name": {
+    "ko": "프로덕트 매니저",
+    "en": "Product Manager",
+    "zh-CN": "产品经理"
+   },
+   "summary": {
+    "ko": "고객이 겪는 문제를 정리하고 무엇을 먼저 만들지 정해요. 가설과 실험 계획, 일정표를 만들어 진행 상황을 숫자로 확인해요. 계획을 확정하거나 우선순위를 바꿀 때는 대표님의 승인을 받아요.",
+    "en": "Sorts out the problems your customers have and decides what to build first. Writes hypotheses, experiment plans and schedules, and tracks progress with numbers. Asks for your approval before a plan is fixed or priorities change.",
+    "zh-CN": "梳理客户遇到的问题，决定先做什么。制定假设、实验计划和时间表，并用数字跟踪进展。确定计划或调整优先级前会请你审批。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "quality-assurance",
+   "description": "Test automation / 회귀 / 품질 게이트. unit + integration + e2e. 구 qa(결정 58 에서 id 변경).",
+   "display_name": {
+    "ko": "QA 엔지니어",
+    "en": "Quality Assurance",
+    "zh-CN": "质量保证工程师"
+   },
+   "summary": {
+    "ko": "새 기능이나 수정이 기존 기능을 망가뜨리지 않는지 자동 시험으로 확인해요. 시험 결과 보고서와 발견한 문제 목록을 만들어요. 시험을 통과하지 못한 변경을 그대로 내보낼지는 대표님이 승인해요.",
+    "en": "Checks with automated tests that new features and fixes do not break what already works. Produces test reports and a list of the problems found. If a change fails its tests, you decide whether it may still go out.",
+    "zh-CN": "用自动化测试确认新功能和修改不会破坏原有功能。制作测试报告和问题清单。没有通过测试的修改是否照常发布，由你审批决定。"
+   },
+   "team": "engineering",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "researcher",
+   "description": "User research + UX. 인터뷰·persona·market signal·competitor scan + user flow·wireframe·interaction·IA. 구 user/desk-researcher + ux-designer 통합.",
+   "display_name": {
+    "ko": "리서처",
+    "en": "Researcher",
+    "zh-CN": "研究员"
+   },
+   "summary": {
+    "ko": "고객 인터뷰와 시장, 경쟁사 자료를 조사해 고객이 실제로 원하는 것을 찾아요. 조사 보고서와 고객 유형, 사용 흐름을 정리해 드려요. 고객에게 연락하거나 설문을 보내기 전에는 승인을 받아요.",
+    "en": "Studies customer interviews, the market and competitors to find out what customers really want. Delivers research reports, customer profiles and the steps customers go through. Asks for approval before contacting customers or sending out a survey.",
+    "zh-CN": "通过客户访谈、市场和竞争对手资料，找出客户真正需要什么。整理调研报告、客户类型和使用流程。联系客户或发出问卷前会先请你审批。"
+   },
+   "team": "product",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  },
+  {
+   "name": "sales",
+   "description": "세일즈 — 아웃바운드/인바운드 파이프라인, 리드 자격검증(BANT/MEDDIC), 딜 클로징, 전환 funnel. business-strategy 의 전략 · GTM 을 매출로 실행.",
+   "display_name": {
+    "ko": "세일즈",
+    "en": "Sales",
+    "zh-CN": "销售"
+   },
+   "summary": {
+    "ko": "가능성 있는 거래처를 찾고 문의를 계약까지 이어 가요. 거래처 목록과 제안서, 견적 초안과 진행 상황표를 만들어요. 견적을 보내거나 할인을 약속하기 전에는 승인을 받아요.",
+    "en": "Finds promising customers and moves inquiries all the way to a signed deal. Prepares customer lists, proposals, draft quotes and a progress board. Asks for approval before sending a quote or promising a discount.",
+    "zh-CN": "寻找有潜力的客户，把咨询一路推进到签约。准备客户名单、方案书、报价草稿和进度表。发出报价或承诺折扣前会请你审批。"
+   },
+   "team": "business",
+   "layer": "package",
+   "appearance": null,
+   "working_on": []
+  }
+ ],
+ "budget": {
+  "month_start": 1793458800.0,
+  "warn_at": 0.8,
+  "org": {
+   "spent_usd": 0.0,
+   "budget_usd": null,
+   "remaining_usd": null,
+   "warning": false,
+   "exhausted": false
+  },
+  "connections": [],
+  "suggestions": []
+ },
+ "schedules": {
+  "timezone": "Asia/Seoul",
+  "schedules": [],
+  "errors": []
+ },
+ "calendar": {
+  "labels": {
+   "labels": [
+    {
+     "id": "cl-ec310c432510",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "지원",
+     "color": "blue",
+     "archived": false,
+     "position": 0
+    },
+    {
+     "id": "cl-cf311f07acd5",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "개발",
+     "color": "teal",
+     "archived": false,
+     "position": 1
+    },
+    {
+     "id": "cl-eeaa8d6d873a",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "영업",
+     "color": "orange",
+     "archived": false,
+     "position": 2
+    },
+    {
+     "id": "cl-702c3a625309",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "인사",
+     "color": "green",
+     "archived": false,
+     "position": 3
+    },
+    {
+     "id": "cl-51a7b19fd374",
+     "type": "category",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "네트워킹",
+     "color": "gold",
+     "archived": false,
+     "position": 4
+    },
+    {
+     "id": "cl-07e9d563b4f7",
+     "type": "tag",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "서류",
+     "color": "gray",
+     "archived": false,
+     "position": 0
+    },
+    {
+     "id": "cl-a6b5b39a26bd",
+     "type": "tag",
+     "scope_kind": "org",
+     "scope": "moa",
+     "name": "인터뷰",
+     "color": "rose",
+     "archived": false,
+     "position": 1
+    },
+    {
+     "id": "cl-551994a7956e",
+     "type": "category",
+     "scope_kind": "user",
+     "scope": "u-demo-owner",
+     "name": "개인",
+     "color": "blue",
+     "archived": false,
+     "position": 0
+    },
+    {
+     "id": "cl-6a12b2a4a6c8",
+     "type": "category",
+     "scope_kind": "user",
+     "scope": "u-demo-owner",
+     "name": "건강",
+     "color": "teal",
+     "archived": false,
+     "position": 1
+    },
+    {
+     "id": "cl-d0bc86c77a59",
+     "type": "tag",
+     "scope_kind": "user",
+     "scope": "u-demo-owner",
+     "name": "중요",
+     "color": "gray",
+     "archived": false,
+     "position": 0
+    }
+   ],
+   "seeded": {
+    "user:u-demo-owner": "default"
+   },
+   "preset_errors": {}
+  },
+  "items": [
+   {
+    "id": "ci-341e458d4b01",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "2차 모두의 창업",
+    "notes": "모두의 창업 2차 프로그램 — 지원부터 멘토링까지.",
+    "start": "2026-11-07",
+    "end": "2026-12-23",
+    "all_day": true,
+    "category_id": "cl-ec310c432510",
+    "tag_ids": [],
+    "status": "active",
+    "position": 0,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.338305,
+    "updated": 1794499621.338305
+   },
+   {
+    "id": "ci-24d278ac4932",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-341e458d4b01",
+    "title": "지원",
+    "notes": "",
+    "start": "2026-11-07",
+    "end": "2026-11-11",
+    "all_day": true,
+    "category_id": "cl-ec310c432510",
+    "tag_ids": [
+     "cl-07e9d563b4f7"
+    ],
+    "status": "done",
+    "position": 0,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.338725,
+    "updated": 1794499621.338725
+   },
+   {
+    "id": "ci-cc1672dd3983",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-341e458d4b01",
+    "title": "오리엔테이션",
+    "notes": "",
+    "start": "2026-11-14T14:00",
+    "end": "2026-11-14T16:00",
+    "all_day": false,
+    "category_id": "cl-ec310c432510",
+    "tag_ids": [],
+    "status": "planned",
+    "position": 1,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.339148,
+    "updated": 1794499621.339148
+   },
+   {
+    "id": "ci-52fcaf44c35a",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "11월 정기 발주 마감",
+    "notes": "B2B 거래처 정기 발주를 마감해요. (예시)",
+    "start": "2026-11-15",
+    "end": "2026-11-15",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 3,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.341303,
+    "updated": 1794499621.341303
+   },
+   {
+    "id": "ci-44843972050c",
+    "kind": "personal",
+    "org": null,
+    "workspace": null,
+    "owner_id": "u-demo-owner",
+    "parent_id": null,
+    "title": "치과 예약",
+    "notes": "",
+    "start": "2026-11-15T18:30",
+    "end": "2026-11-15T19:30",
+    "all_day": false,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 1,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.340787,
+    "updated": 1794499621.340787
+   },
+   {
+    "id": "ci-a879310e3a29",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "부가세 예정 신고 준비",
+    "notes": "10월 손익표가 확정되면 자료를 묶어요.",
+    "start": "2026-11-17",
+    "end": "2026-11-22",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 4,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.341546,
+    "updated": 1794499621.341546
+   },
+   {
+    "id": "ci-81136a8834fc",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-341e458d4b01",
+    "title": "1라운드 제출",
+    "notes": "",
+    "start": "2026-11-18",
+    "end": "2026-11-25",
+    "all_day": true,
+    "category_id": "cl-ec310c432510",
+    "tag_ids": [
+     "cl-07e9d563b4f7"
+    ],
+    "status": "active",
+    "position": 2,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.3394408,
+    "updated": 1794499621.3394408
+   },
+   {
+    "id": "ci-a2ca47140d41",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": null,
+    "title": "겨울 텀블러 신상품 출시",
+    "notes": "SNS 게시물 · 광고가 이 날에 맞춰 나가요.",
+    "start": "2026-11-20",
+    "end": "2026-11-20",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 5,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.341781,
+    "updated": 1794499621.341781
+   },
+   {
+    "id": "ci-446223965255",
+    "kind": "personal",
+    "org": null,
+    "workspace": null,
+    "owner_id": "u-demo-owner",
+    "parent_id": null,
+    "title": "가족 여행",
+    "notes": "",
+    "start": "2026-11-27",
+    "end": "2026-11-29",
+    "all_day": true,
+    "category_id": null,
+    "tag_ids": [],
+    "status": "planned",
+    "position": 2,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.3410501,
+    "updated": 1794499621.3410501
+   },
+   {
+    "id": "ci-9c170d6b290c",
+    "kind": "work",
+    "org": "moa",
+    "workspace": null,
+    "owner_id": null,
+    "parent_id": "ci-341e458d4b01",
+    "title": "멘토링",
+    "notes": "",
+    "start": "2026-12-02T10:00",
+    "end": "2026-12-02T11:30",
+    "all_day": false,
+    "category_id": "cl-ec310c432510",
+    "tag_ids": [
+     "cl-a6b5b39a26bd"
+    ],
+    "status": "planned",
+    "position": 3,
+    "created_by": "u-demo-owner",
+    "created": 1794499621.339652,
+    "updated": 1794499621.339652
+   }
+  ],
+  "details": {
+   "ci-341e458d4b01": {
+    "item": {
+     "id": "ci-341e458d4b01",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "2차 모두의 창업",
+     "notes": "모두의 창업 2차 프로그램 — 지원부터 멘토링까지.",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [],
+     "status": "active",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.338305,
+     "updated": 1794499621.338305
+    },
+    "parent": null,
+    "children": [
+     {
+      "id": "ci-24d278ac4932",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-341e458d4b01",
+      "title": "지원",
+      "notes": "",
+      "start": "2026-11-07",
+      "end": "2026-11-11",
+      "all_day": true,
+      "category_id": "cl-ec310c432510",
+      "tag_ids": [
+       "cl-07e9d563b4f7"
+      ],
+      "status": "done",
+      "position": 0,
+      "created_by": "u-demo-owner",
+      "created": 1794499621.338725,
+      "updated": 1794499621.338725
+     },
+     {
+      "id": "ci-cc1672dd3983",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-341e458d4b01",
+      "title": "오리엔테이션",
+      "notes": "",
+      "start": "2026-11-14T14:00",
+      "end": "2026-11-14T16:00",
+      "all_day": false,
+      "category_id": "cl-ec310c432510",
+      "tag_ids": [],
+      "status": "planned",
+      "position": 1,
+      "created_by": "u-demo-owner",
+      "created": 1794499621.339148,
+      "updated": 1794499621.339148
+     },
+     {
+      "id": "ci-81136a8834fc",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-341e458d4b01",
+      "title": "1라운드 제출",
+      "notes": "",
+      "start": "2026-11-18",
+      "end": "2026-11-25",
+      "all_day": true,
+      "category_id": "cl-ec310c432510",
+      "tag_ids": [
+       "cl-07e9d563b4f7"
+      ],
+      "status": "active",
+      "position": 2,
+      "created_by": "u-demo-owner",
+      "created": 1794499621.3394408,
+      "updated": 1794499621.3394408
+     },
+     {
+      "id": "ci-9c170d6b290c",
+      "kind": "work",
+      "org": "moa",
+      "workspace": null,
+      "owner_id": null,
+      "parent_id": "ci-341e458d4b01",
+      "title": "멘토링",
+      "notes": "",
+      "start": "2026-12-02T10:00",
+      "end": "2026-12-02T11:30",
+      "all_day": false,
+      "category_id": "cl-ec310c432510",
+      "tag_ids": [
+       "cl-a6b5b39a26bd"
+      ],
+      "status": "planned",
+      "position": 3,
+      "created_by": "u-demo-owner",
+      "created": 1794499621.339652,
+      "updated": 1794499621.339652
+     }
+    ],
+    "todos": [],
+    "child_todos": [
+     {
+      "id": "ct-0416ad6256e3",
+      "item_id": "ci-81136a8834fc",
+      "title": "사업계획서 작성/제출",
+      "done": false,
+      "due": "2026-11-22",
+      "assignee_id": "u-demo-owner",
+      "position": 0,
+      "created": 1794499621.339862,
+      "updated": 1794499621.339862
+     },
+     {
+      "id": "ct-3ce5d97c3aef",
+      "item_id": "ci-24d278ac4932",
+      "title": "지원서 제출",
+      "done": true,
+      "due": "2026-11-10",
+      "assignee_id": null,
+      "position": 0,
+      "created": 1794499621.340374,
+      "updated": 1794499621.340627
+     },
+     {
+      "id": "ct-bf98cb2bc2c0",
+      "item_id": "ci-81136a8834fc",
+      "title": "창업활동보고서 작성/제출",
+      "done": false,
+      "due": "2026-11-25",
+      "assignee_id": "u-demo-owner",
+      "position": 1,
+      "created": 1794499621.3401442,
+      "updated": 1794499621.3401442
+     }
+    ]
+   },
+   "ci-24d278ac4932": {
+    "item": {
+     "id": "ci-24d278ac4932",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-341e458d4b01",
+     "title": "지원",
+     "notes": "",
+     "start": "2026-11-07",
+     "end": "2026-11-11",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [
+      "cl-07e9d563b4f7"
+     ],
+     "status": "done",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.338725,
+     "updated": 1794499621.338725
+    },
+    "parent": {
+     "id": "ci-341e458d4b01",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "2차 모두의 창업",
+     "notes": "모두의 창업 2차 프로그램 — 지원부터 멘토링까지.",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [],
+     "status": "active",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.338305,
+     "updated": 1794499621.338305
+    },
+    "children": [],
+    "todos": [
+     {
+      "id": "ct-3ce5d97c3aef",
+      "item_id": "ci-24d278ac4932",
+      "title": "지원서 제출",
+      "done": true,
+      "due": "2026-11-10",
+      "assignee_id": null,
+      "position": 0,
+      "created": 1794499621.340374,
+      "updated": 1794499621.340627
+     }
+    ],
+    "child_todos": []
+   },
+   "ci-cc1672dd3983": {
+    "item": {
+     "id": "ci-cc1672dd3983",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-341e458d4b01",
+     "title": "오리엔테이션",
+     "notes": "",
+     "start": "2026-11-14T14:00",
+     "end": "2026-11-14T16:00",
+     "all_day": false,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [],
+     "status": "planned",
+     "position": 1,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.339148,
+     "updated": 1794499621.339148
+    },
+    "parent": {
+     "id": "ci-341e458d4b01",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "2차 모두의 창업",
+     "notes": "모두의 창업 2차 프로그램 — 지원부터 멘토링까지.",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [],
+     "status": "active",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.338305,
+     "updated": 1794499621.338305
+    },
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-52fcaf44c35a": {
+    "item": {
+     "id": "ci-52fcaf44c35a",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "11월 정기 발주 마감",
+     "notes": "B2B 거래처 정기 발주를 마감해요. (예시)",
+     "start": "2026-11-15",
+     "end": "2026-11-15",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 3,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.341303,
+     "updated": 1794499621.341303
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-44843972050c": {
+    "item": {
+     "id": "ci-44843972050c",
+     "kind": "personal",
+     "org": null,
+     "workspace": null,
+     "owner_id": "u-demo-owner",
+     "parent_id": null,
+     "title": "치과 예약",
+     "notes": "",
+     "start": "2026-11-15T18:30",
+     "end": "2026-11-15T19:30",
+     "all_day": false,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 1,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.340787,
+     "updated": 1794499621.340787
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-a879310e3a29": {
+    "item": {
+     "id": "ci-a879310e3a29",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "부가세 예정 신고 준비",
+     "notes": "10월 손익표가 확정되면 자료를 묶어요.",
+     "start": "2026-11-17",
+     "end": "2026-11-22",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 4,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.341546,
+     "updated": 1794499621.341546
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-81136a8834fc": {
+    "item": {
+     "id": "ci-81136a8834fc",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-341e458d4b01",
+     "title": "1라운드 제출",
+     "notes": "",
+     "start": "2026-11-18",
+     "end": "2026-11-25",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [
+      "cl-07e9d563b4f7"
+     ],
+     "status": "active",
+     "position": 2,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.3394408,
+     "updated": 1794499621.3394408
+    },
+    "parent": {
+     "id": "ci-341e458d4b01",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "2차 모두의 창업",
+     "notes": "모두의 창업 2차 프로그램 — 지원부터 멘토링까지.",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [],
+     "status": "active",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.338305,
+     "updated": 1794499621.338305
+    },
+    "children": [],
+    "todos": [
+     {
+      "id": "ct-0416ad6256e3",
+      "item_id": "ci-81136a8834fc",
+      "title": "사업계획서 작성/제출",
+      "done": false,
+      "due": "2026-11-22",
+      "assignee_id": "u-demo-owner",
+      "position": 0,
+      "created": 1794499621.339862,
+      "updated": 1794499621.339862
+     },
+     {
+      "id": "ct-bf98cb2bc2c0",
+      "item_id": "ci-81136a8834fc",
+      "title": "창업활동보고서 작성/제출",
+      "done": false,
+      "due": "2026-11-25",
+      "assignee_id": "u-demo-owner",
+      "position": 1,
+      "created": 1794499621.3401442,
+      "updated": 1794499621.3401442
+     }
+    ],
+    "child_todos": []
+   },
+   "ci-a2ca47140d41": {
+    "item": {
+     "id": "ci-a2ca47140d41",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "겨울 텀블러 신상품 출시",
+     "notes": "SNS 게시물 · 광고가 이 날에 맞춰 나가요.",
+     "start": "2026-11-20",
+     "end": "2026-11-20",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 5,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.341781,
+     "updated": 1794499621.341781
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-446223965255": {
+    "item": {
+     "id": "ci-446223965255",
+     "kind": "personal",
+     "org": null,
+     "workspace": null,
+     "owner_id": "u-demo-owner",
+     "parent_id": null,
+     "title": "가족 여행",
+     "notes": "",
+     "start": "2026-11-27",
+     "end": "2026-11-29",
+     "all_day": true,
+     "category_id": null,
+     "tag_ids": [],
+     "status": "planned",
+     "position": 2,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.3410501,
+     "updated": 1794499621.3410501
+    },
+    "parent": null,
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   },
+   "ci-9c170d6b290c": {
+    "item": {
+     "id": "ci-9c170d6b290c",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": "ci-341e458d4b01",
+     "title": "멘토링",
+     "notes": "",
+     "start": "2026-12-02T10:00",
+     "end": "2026-12-02T11:30",
+     "all_day": false,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [
+      "cl-a6b5b39a26bd"
+     ],
+     "status": "planned",
+     "position": 3,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.339652,
+     "updated": 1794499621.339652
+    },
+    "parent": {
+     "id": "ci-341e458d4b01",
+     "kind": "work",
+     "org": "moa",
+     "workspace": null,
+     "owner_id": null,
+     "parent_id": null,
+     "title": "2차 모두의 창업",
+     "notes": "모두의 창업 2차 프로그램 — 지원부터 멘토링까지.",
+     "start": "2026-11-07",
+     "end": "2026-12-23",
+     "all_day": true,
+     "category_id": "cl-ec310c432510",
+     "tag_ids": [],
+     "status": "active",
+     "position": 0,
+     "created_by": "u-demo-owner",
+     "created": 1794499621.338305,
+     "updated": 1794499621.338305
+    },
+    "children": [],
+    "todos": [],
+    "child_todos": []
+   }
+  },
+  "agent_access": {
+   "level": "off"
+  }
+ },
+ "workflows": [
+  {
+   "name": "finance-monthly",
+   "title": "재무 관리",
+   "description": "은행 거래 내역 · 마켓 정산 → 월 손익표(팀 승인) → 거래처 대금 지급(대표 승인). 데모 — 실제 송금은 없어요.",
+   "team": "business",
+   "steps": [
+    {
+     "id": "read",
+     "title": "finance: read",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.read",
+     "prompt": "10월 은행 거래 내역과 마켓 정산 파일을 읽어줘."
+    },
+    {
+     "id": "classify",
+     "title": "finance: classify",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.classify",
+     "prompt": "거래를 항목별로 나눠줘."
+    },
+    {
+     "id": "pnl",
+     "title": "pnl",
+     "type": "tool",
+     "output": {
+      "period": "2026-10-01 ~ 2026-10-31",
+      "currency": "KRW",
+      "revenue": 107600000.0,
+      "expenses": 77252000.0,
+      "net_income": 30348000.0,
+      "by_account": [
+       {
+        "account": "B2B 납품",
+        "type": "revenue",
+        "amount": 76000000.0
+       },
+       {
+        "account": "오픈마켓 정산",
+        "type": "revenue",
+        "amount": 23200000.0
+       },
+       {
+        "account": "자사몰 정산",
+        "type": "revenue",
+        "amount": 8400000.0
+       },
+       {
+        "account": "상품 매입",
+        "type": "expense",
+        "amount": 40300000.0
+       },
+       {
+        "account": "급여",
+        "type": "expense",
+        "amount": 19600000.0
+       },
+       {
+        "account": "임차료",
+        "type": "expense",
+        "amount": 3800000.0
+       },
+       {
+        "account": "마켓 수수료",
+        "type": "expense",
+        "amount": 2552000.0
+       },
+       {
+        "account": "관세",
+        "type": "expense",
+        "amount": 2310000.0
+       },
+       {
+        "account": "광고선전비",
+        "type": "expense",
+        "amount": 2100000.0
+       },
+       {
+        "account": "감가상각비",
+        "type": "expense",
+        "amount": 1900000.0
+       },
+       {
+        "account": "물류비",
+        "type": "expense",
+        "amount": 1450000.0
+       },
+       {
+        "account": "송금 수수료",
+        "type": "expense",
+        "amount": 1240000.0
+       },
+       {
+        "account": "복리후생비",
+        "type": "expense",
+        "amount": 980000.0
+       },
+       {
+        "account": "소모품비",
+        "type": "expense",
+        "amount": 640000.0
+       },
+       {
+        "account": "통신비",
+        "type": "expense",
+        "amount": 380000.0
+       }
+      ],
+      "by_month": [
+       {
+        "month": "2026-10",
+        "revenue": 107600000.0,
+        "expenses": 77252000.0,
+        "net": 30348000.0
+       }
+      ],
+      "needs_review": [
+       {
+        "row": 26,
+        "reason": "금액을 읽을 수 없음",
+        "value": "미정"
+       }
+      ],
+      "rows": 25,
+      "summary": "기간 2026-10-01 ~ 2026-10-31 · 매출 107,600,000 · 비용 77,252,000 · 순이익 30,348,000 KRW · 확인 필요 1행"
+     },
+     "save_as": {
+      "kind": "finance.pnl",
+      "title": "10월 손익표"
+     }
+    },
+    {
+     "id": "compare",
+     "title": "data-analyst: compare",
+     "type": "agent",
+     "agent": "data-analyst",
+     "reply": "finance.compare",
+     "prompt": "지난달과 비교하고 평소와 다른 거래를 표시해줘."
+    },
+    {
+     "id": "review",
+     "title": "10월 손익표 확인",
+     "type": "approval",
+     "approval": {
+      "title": "10월 손익표 확인",
+      "summary": "{{ steps.pnl.summary }}",
+      "risk": "low",
+      "category": "review",
+      "on_decline": null
+     }
+    },
+    {
+     "id": "payables",
+     "title": "payables",
+     "type": "tool",
+     "output": {
+      "items": [
+       {
+        "vendor": "(예시) 이우 화성무역",
+        "invoice": "INV-1043",
+        "item": "보온 텀블러 1,800개",
+        "due": "2026-11-04",
+        "amount": 17930000.0
+       },
+       {
+        "vendor": "(예시) 닝보 다온가정",
+        "invoice": "INV-0388",
+        "item": "주방용품 12종",
+        "due": "2026-11-04",
+        "amount": 15620000.0
+       },
+       {
+        "vendor": "(예시) 빠른해운",
+        "invoice": "2026-10-31 #0071",
+        "item": "10월 해상 운송",
+        "due": "2026-11-04",
+        "amount": 1595000.0
+       }
+      ],
+      "total": 35145000.0,
+      "total_text": "₩35,145,000",
+      "account": "(예시) 기업은행 ***-1234",
+      "pay_on": "2026-11-04",
+      "summary": "거래처 3곳 · 합계 ₩35,145,000 · 지급 예정 11월 4일"
+     },
+     "save_as": {
+      "kind": "finance.payables",
+      "title": "11월 1주 거래처 대금 지급안"
+     }
+    },
+    {
+     "id": "pay",
+     "title": "거래처 대금 지급",
+     "type": "approval",
+     "approval": {
+      "title": "거래처 대금 지급 {{ steps.payables.total_text }}",
+      "summary": "{{ steps.payables.summary }} · 데모 — 실제로 보내지 않아요",
+      "risk": "high",
+      "category": "payment",
+      "on_decline": "hold"
+     }
+    },
+    {
+     "id": "paid",
+     "title": "finance: paid",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.paid",
+     "prompt": "지급을 처리하고 결과를 알려줘.",
+     "save_as": {
+      "kind": "brief",
+      "title": "지급 처리 결과"
+     },
+     "end": true
+    },
+    {
+     "id": "hold",
+     "title": "finance: hold",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "finance.hold",
+     "prompt": "지급을 멈추고 다시 정리해줘.",
+     "save_as": {
+      "kind": "brief",
+      "title": "지급 보류 메모"
+     }
+    }
+   ]
+  },
+  {
+   "name": "product-sourcing",
+   "title": "상품 소싱",
+   "description": "공급처 견적 3곳 → 원가 비교표(팀 승인) → 중국어 발주서 초안 → 발주 확정(대표 승인). 데모 — 실제 발주는 없어요.",
+   "team": "business",
+   "steps": [
+    {
+     "id": "quotes",
+     "title": "researcher: quotes",
+     "type": "agent",
+     "agent": "researcher",
+     "reply": "sourcing.quotes",
+     "prompt": "보온 텀블러 공급처 견적과 최소 주문량을 모아줘."
+    },
+    {
+     "id": "compare",
+     "title": "compare",
+     "type": "tool",
+     "output": {
+      "product": "보온 텀블러 500ml (겨울 시즌)",
+      "retail_price": 19900,
+      "suppliers": [
+       {
+        "supplier": "(예시) 이우 화성무역 义乌华星贸易",
+        "region": "저장 이우",
+        "unit_price_cny": 48.0,
+        "shipping": 620.0,
+        "duty_rate": 8.0,
+        "landed_krw": 10470,
+        "moq": 500,
+        "lead_days": 18,
+        "defect_rate": 0.6,
+        "note": "기존 거래처 · 각인 무료",
+        "score": 49.1,
+        "recommended": true
+       },
+       {
+        "supplier": "(예시) 닝보 다온가정 宁波达温家居",
+        "region": "저장 닝보",
+        "unit_price_cny": 44.0,
+        "shipping": 780.0,
+        "duty_rate": 8.0,
+        "landed_krw": 9809,
+        "moq": 2000,
+        "lead_days": 25,
+        "defect_rate": 1.2,
+        "note": "단가 최저 · 최소 주문 큼",
+        "score": 46.9,
+        "recommended": false
+       },
+       {
+        "supplier": "(예시) 광저우 미래주방 广州未来厨具",
+        "region": "광둥 광저우",
+        "unit_price_cny": 52.0,
+        "shipping": 540.0,
+        "duty_rate": 8.0,
+        "landed_krw": 11210,
+        "moq": 300,
+        "lead_days": 14,
+        "defect_rate": 0.4,
+        "note": "납기 최단 · 단가 높음",
+        "score": 43.2,
+        "recommended": false
+       }
+      ],
+      "recommended": "(예시) 이우 화성무역 义乌华星贸易",
+      "summary": "공급처 3곳 원가 비교 — 추천 (예시) 이우 화성무역 义乌华星贸易"
+     },
+     "save_as": {
+      "kind": "sourcing.comparison",
+      "title": "보온 텀블러 원가 비교표"
+     }
+    },
+    {
+     "id": "analyze",
+     "title": "data-analyst: analyze",
+     "type": "agent",
+     "agent": "data-analyst",
+     "reply": "sourcing.analyze",
+     "prompt": "단가에 배송비와 관세를 더해 원가를 비교해줘."
+    },
+    {
+     "id": "margin",
+     "title": "finance: margin",
+     "type": "agent",
+     "agent": "finance",
+     "reply": "sourcing.margin",
+     "prompt": "공급처별 예상 마진을 계산해줘."
+    },
+    {
+     "id": "shortlist",
+     "title": "공급처 비교표 확인",
+     "type": "approval",
+     "approval": {
+      "title": "공급처 비교표 확인",
+      "summary": "{{ steps.compare.summary }}",
+      "risk": "low",
+      "category": "review",
+      "on_decline": null
+     }
+    },
+    {
+     "id": "draft",
+     "title": "sales: draft",
+     "type": "agent",
+     "agent": "sales",
+     "reply": "sourcing.draft",
+     "prompt": "추천 공급처의 언어(중국어)로 발주서 초안을 써줘."
+    },
+    {
+     "id": "po",
+     "title": "po",
+     "type": "tool",
+     "output": {
+      "supplier": "(예시) 이우 화성무역 义乌华星贸易",
+      "language": "zh-CN",
+      "title_local": "采购订单（草稿）",
+      "po_number": "PO-2026-1107 (예시)",
+      "currency": "CNY",
+      "lines": [
+       {
+        "sku": "TB-500-IV",
+        "name": "보온 텀블러 500ml 아이보리",
+        "name_local": "保温杯 500ml 象牙白",
+        "qty": 500,
+        "unit_price": 48.0,
+        "amount": 24000.0
+       },
+       {
+        "sku": "TB-500-NV",
+        "name": "보온 텀블러 500ml 네이비",
+        "name_local": "保温杯 500ml 藏青色",
+        "qty": 400,
+        "unit_price": 48.0,
+        "amount": 19200.0
+       },
+       {
+        "sku": "TB-500-SG",
+        "name": "보온 텀블러 500ml 세이지",
+        "name_local": "保温杯 500ml 鼠尾草绿",
+        "qty": 300,
+        "unit_price": 48.0,
+        "amount": 14400.0
+       },
+       {
+        "sku": "GB-01",
+        "name": "선물 포장 박스",
+        "name_local": "礼品包装盒",
+        "qty": 1200,
+        "unit_price": 3.0,
+        "amount": 3600.0
+       }
+      ],
+      "subtotal": 61200.0,
+      "total": 61200.0,
+      "total_text": "¥61,200 (약 ₩11,628,000)",
+      "delivery": "2026-11-28 · 인천항 → 경기 광주 물류센터",
+      "terms_local": "到港后30天内付款 · 每个产品单独包装 · 杯身激光刻字「MOA」",
+      "summary": "(예시) 이우 화성무역 义乌华星贸易 · 4개 품목 · ¥61,200"
+     },
+     "save_as": {
+      "kind": "sourcing.po",
+      "title": "발주서 초안 (중국어)"
+     }
+    },
+    {
+     "id": "order",
+     "title": "발주 확정",
+     "type": "approval",
+     "approval": {
+      "title": "발주 확정 {{ steps.po.total_text }}",
+      "summary": "{{ steps.po.summary }} · 데모 — 실제로 보내지 않아요",
+      "risk": "high",
+      "category": "purchase",
+      "on_decline": "renegotiate"
+     }
+    },
+    {
+     "id": "sent",
+     "title": "sales: sent",
+     "type": "agent",
+     "agent": "sales",
+     "reply": "sourcing.sent",
+     "prompt": "발주를 확정하고 입고 일정을 알려줘.",
+     "save_as": {
+      "kind": "brief",
+      "title": "발주 처리 결과"
+     },
+     "end": true
+    },
+    {
+     "id": "renegotiate",
+     "title": "sales: renegotiate",
+     "type": "agent",
+     "agent": "sales",
+     "reply": "sourcing.renegotiate",
+     "prompt": "발주를 멈추고 조건을 다시 정리해줘.",
+     "save_as": {
+      "kind": "brief",
+      "title": "재협상 메모"
+     }
+    }
+   ]
+  },
+  {
+   "name": "sns-marketing",
+   "title": "SNS 마케팅",
+   "description": "지난주 반응 → 한 주 콘텐츠 일정 → 한국어 · 중국어 게시 초안(팀 승인) → 광고비 결제(대표 승인). 데모 — 실제 게시 · 광고는 없어요.",
+   "team": "brand",
+   "steps": [
+    {
+     "id": "reactions",
+     "title": "data-analyst: reactions",
+     "type": "agent",
+     "agent": "data-analyst",
+     "reply": "sns.reactions",
+     "prompt": "지난주 게시물 반응을 정리해줘."
+    },
+    {
+     "id": "calendar",
+     "title": "calendar",
+     "type": "tool",
+     "output": {
+      "week": "2026-11-10 ~ 11-16",
+      "entries": [
+       {
+        "date": "2026-11-10",
+        "channel": "인스타그램",
+        "language": "ko",
+        "theme": "신상품 텀블러 첫 공개",
+        "format": "릴스 15초",
+        "owner": "creative"
+       },
+       {
+        "date": "2026-11-10",
+        "channel": "샤오홍슈",
+        "language": "zh-CN",
+        "theme": "新品保温杯首发",
+        "format": "图文 6张",
+        "owner": "creative"
+       },
+       {
+        "date": "2026-11-12",
+        "channel": "인스타그램",
+        "language": "ko",
+        "theme": "홈카페 겨울 레시피",
+        "format": "캐러셀 5장",
+        "owner": "marketer"
+       },
+       {
+        "date": "2026-11-13",
+        "channel": "블로그",
+        "language": "ko",
+        "theme": "텀블러 보온 시험기",
+        "format": "글 · 사진 6장",
+        "owner": "marketer"
+       },
+       {
+        "date": "2026-11-14",
+        "channel": "샤오홍슈",
+        "language": "zh-CN",
+        "theme": "冬季居家好物清单",
+        "format": "图文 5张",
+        "owner": "marketer"
+       }
+      ],
+      "last_week": [
+       {
+        "post": "겨울 준비 체크리스트",
+        "channel": "인스타그램",
+        "reach": 8200,
+        "likes": 612,
+        "comments": 41,
+        "saves": 230
+       },
+       {
+        "post": "보온 텀블러 고르는 법",
+        "channel": "블로그",
+        "reach": 3100,
+        "likes": 98,
+        "comments": 12,
+        "saves": 45
+       },
+       {
+        "post": "홈카페 레시피 릴스",
+        "channel": "인스타그램",
+        "reach": 15400,
+        "likes": 1380,
+        "comments": 96,
+        "saves": 512
+       }
+      ],
+      "summary": "이번 주 5건 · 지난주 최고 반응 '홈카페 레시피 릴스'"
+     },
+     "save_as": {
+      "kind": "sns.calendar",
+      "title": "이번 주 콘텐츠 일정"
+     }
+    },
+    {
+     "id": "plan",
+     "title": "marketer: plan",
+     "type": "agent",
+     "agent": "marketer",
+     "reply": "sns.plan",
+     "prompt": "지난주 반응을 보고 한 주 콘텐츠 일정을 짜줘."
+    },
+    {
+     "id": "write",
+     "title": "creative: write",
+     "type": "agent",
+     "agent": "creative",
+     "reply": "sns.drafts",
+     "prompt": "게시 문구와 이미지 초안을 한국어 · 중국어로 써줘."
+    },
+    {
+     "id": "posts",
+     "title": "posts",
+     "type": "tool",
+     "output": {
+      "posts": [
+       {
+        "channel": "인스타그램",
+        "date": "2026-11-10",
+        "language": "ko",
+        "caption": "새 텀블러가 나왔어요. 아이보리 · 네이비 · 세이지, 손에 쥐면 딱 맞는 500ml.",
+        "hashtags": [
+         "#신상품",
+         "#텀블러",
+         "#겨울컬러"
+        ],
+        "image_note": "세 가지 색 나란히 · 손에 든 컷 · 15초 릴스"
+       },
+       {
+        "channel": "샤오홍슈",
+        "date": "2026-11-10",
+        "language": "zh-CN",
+        "caption": "新款保温杯上线啦！象牙白 · 藏青 · 鼠尾草绿，500ml 刚好一手握。",
+        "hashtags": [
+         "#保温杯",
+         "#冬季好物",
+         "#居家"
+        ],
+        "image_note": "三色并排 · 手持特写 · 暖色调"
+       },
+       {
+        "channel": "인스타그램",
+        "date": "2026-11-12",
+        "language": "ko",
+        "caption": "추운 날엔 따뜻한 한 잔부터. 홈카페 겨울 레시피 5가지를 넘겨 보세요.",
+        "hashtags": [
+         "#홈카페",
+         "#겨울레시피",
+         "#모아리빙"
+        ],
+        "image_note": "창가 · 텀블러 · 니트 소품 · 따뜻한 톤"
+       }
+      ],
+      "summary": "게시 초안 3건 (ko · zh-CN)"
+     },
+     "save_as": {
+      "kind": "sns.posts",
+      "title": "게시 초안 (한국어 · 중국어)"
+     }
+    },
+    {
+     "id": "publish_ok",
+     "title": "게시물 게시",
+     "type": "approval",
+     "approval": {
+      "title": "게시물 게시",
+      "summary": "{{ steps.posts.summary }} — 문구와 이미지 메모를 확인해 주세요 · 데모 — 실제로 게시하지 않아요",
+      "risk": "low",
+      "category": "publish",
+      "on_decline": null
+     }
+    },
+    {
+     "id": "ads",
+     "title": "ads",
+     "type": "tool",
+     "output": {
+      "channel": "인스타그램",
+      "budget": 300000,
+      "budget_text": "₩300,000",
+      "days": 5,
+      "start": "2026-11-10",
+      "audience": "서울 · 경기 · 25~44세 · 관심사 캠핑 · 홈카페",
+      "expected_reach": "40,000 ~ 60,000명",
+      "creative": "신상품 텀블러 릴스 · 홈카페 캐러셀",
+      "summary": "인스타그램 5일 · ₩300,000 · 예상 도달 4만~6만 명"
+     },
+     "save_as": {
+      "kind": "sns.ads",
+      "title": "인스타그램 광고 집행안"
+     }
+    },
+    {
+     "id": "ad_spend",
+     "title": "광고비 결제",
+     "type": "approval",
+     "approval": {
+      "title": "광고비 결제 {{ steps.ads.budget_text }}",
+      "summary": "{{ steps.ads.summary }} · 데모 — 실제로 결제하지 않아요",
+      "risk": "high",
+      "category": "payment",
+      "on_decline": "organic"
+     }
+    },
+    {
+     "id": "launched",
+     "title": "marketer: launched",
+     "type": "agent",
+     "agent": "marketer",
+     "reply": "sns.launched",
+     "prompt": "승인된 게시물과 광고를 예약해줘.",
+     "save_as": {
+      "kind": "brief",
+      "title": "게시 · 광고 예약 결과"
+     },
+     "end": true
+    },
+    {
+     "id": "organic",
+     "title": "marketer: organic",
+     "type": "agent",
+     "agent": "marketer",
+     "reply": "sns.organic",
+     "prompt": "광고 없이 게시물만 다시 정리해줘.",
+     "save_as": {
+      "kind": "brief",
+      "title": "광고 없이 게시"
+     }
+    }
+   ]
+  }
+ ],
+ "replies": {
+  "finance.read": "10월 은행 거래 내역 17건과 마켓 정산 8건을 읽었어요. 자사몰 PG 정산 1건은 금액이 아직 비어 있어요.",
+  "finance.classify": "거래를 매출 · 상품 매입 · 물류 · 관세 · 수수료 · 인건비로 나눴어요. 해외 송금 수수료 1건이 평소의 40배라 '확인 필요'로 표시해 둘게요.",
+  "finance.compare": "지난달과 비교하면 매출은 9% 늘었고, 상품 매입이 텀블러 선주문 때문에 크게 늘었어요. 표시한 2건만 확인해 주시면 손익표를 확정할 수 있어요.",
+  "finance.paid": "지급을 처리했어요(데모 — 실제로 보내지 않았어요). 11월 4일 오전 10시에 3건이 (예시) 기업은행 ***-1234 에서 나가는 것으로 기록했어요.",
+  "finance.hold": "알겠어요, 다시 정리할게요. 이번 주 지급은 멈추고 거래처 3곳에 보낼 '다음 주 화요일 지급 예정' 안내 초안만 만들어 뒀어요(데모 — 보내지 않아요).",
+  "sourcing.quotes": "보온 텀블러(500ml) 공급처 3곳 — 이우 · 닝보 · 광저우 — 의 견적과 최소 주문량을 모았어요.",
+  "sourcing.analyze": "단가에 개당 배송비와 관세 8%를 더해 원가를 비교했어요. 단가는 닝보가 가장 낮지만 최소 주문 2,000개와 긴 납기 때문에 총점은 이우가 앞서요.",
+  "sourcing.margin": "판매가 19,900원 기준 예상 마진은 이우 약 48% · 닝보 약 50% · 광저우 약 45%예요. 재고 부담까지 보면 이우가 안전해요.",
+  "sourcing.draft": "추천 공급처 언어(중국어)로 발주서 초안을 썼어요 — 품목 4개 · 각인 · 개별 포장 조건을 넣었어요.",
+  "sourcing.sent": "발주를 확정했어요(데모 — 실제로 보내지 않았어요). 인천항 도착 예정은 11월 28일이고, 입고 전날 샘플 확인 목록을 다시 올릴게요.",
+  "sourcing.renegotiate": "알겠어요, 다시 정리할게요. 발주는 멈추고 단가 3% 인하 또는 납기 5일 단축을 조건으로 다시 견적을 요청하는 메모를 남겼어요(데모 — 연락하지 않아요).",
+  "sns.reactions": "지난주 게시물 3건 중 홈카페 레시피 릴스가 도달 15,400으로 가장 좋았어요. 저장이 많아 레시피형 콘텐츠를 늘리는 게 좋겠어요.",
+  "sns.plan": "이번 주는 신상품 텀블러 공개를 중심으로 인스타그램 · 블로그 · 샤오홍슈에 5건을 올리는 일정을 짰어요.",
+  "sns.drafts": "게시 문구와 이미지 초안을 한국어 · 중국어로 썼어요. 브랜드 톤(따뜻하고 짧게)에 맞췄고 이미지마다 필요한 컷을 적어 뒀어요.",
+  "sns.launched": "승인된 게시물과 광고를 예약했어요(데모 — 실제로 게시하거나 결제하지 않았어요). 광고 3일 차에 반응을 정리해서 보고할게요.",
+  "sns.organic": "알겠어요, 다시 정리할게요. 광고 없이 게시물만 예약하는 것으로 바꾸고, 해시태그와 게시 시간을 조정해 자연 도달을 늘려볼게요(데모 — 게시하지 않아요)."
+ },
+ "handing": {
+  "finance": "재무 관리 단계를 담당에게 넘길게요.",
+  "sourcing": "상품 소싱 단계를 담당에게 넘길게요.",
+  "sns": "SNS 마케팅 단계를 담당에게 넘길게요."
+ },
+ "step_done": "작업을 마쳤어요.",
+ "chat": {
+  "intents": [
+   {
+    "key": "finance",
+    "words": [
+     "손익",
+     "매출",
+     "이익",
+     "재무",
+     "결산",
+     "지급",
+     "대금",
+     "부가세",
+     "정산",
+     "p&l",
+     "profit",
+     "revenue",
+     "payment",
+     "finance",
+     "利润",
+     "收入",
+     "付款",
+     "财务",
+     "损益"
+    ],
+    "chief": "재무 관리를 시작했어요 — 재무 담당이 은행 내역과 마켓 정산부터 읽을게요.",
+    "scenario": "finance-monthly",
+    "handoff": "finance",
+    "answer": "10월 손익표는 몇 초 뒤 과제에 올라와요. 표시한 거래 2건만 확인해 주시면 돼요 — 손익표 확인은 팀 승인, 거래처 대금 지급은 대표 승인이에요."
+   },
+   {
+    "key": "sourcing",
+    "words": [
+     "소싱",
+     "공급",
+     "발주",
+     "견적",
+     "텀블러",
+     "구매",
+     "원가",
+     "supplier",
+     "sourcing",
+     "order",
+     "quote",
+     "供应",
+     "采购",
+     "报价",
+     "订单"
+    ],
+    "chief": "상품 소싱을 시작했어요 — 리서처가 공급처 견적부터 모을게요.",
+    "scenario": "product-sourcing",
+    "handoff": "researcher",
+    "answer": "공급처 3곳의 원가 비교표(단가 + 배송비 + 관세)와 중국어 발주서 초안이 차례로 올라와요. 발주 확정은 대표 승인이에요."
+   },
+   {
+    "key": "sns",
+    "words": [
+     "sns",
+     "인스타",
+     "마케팅",
+     "광고",
+     "게시",
+     "블로그",
+     "콘텐츠",
+     "홍보",
+     "샤오홍슈",
+     "instagram",
+     "marketing",
+     "post",
+     "营销",
+     "广告",
+     "小红书",
+     "内容",
+     "social",
+     "content",
+     "社媒",
+     "帖子"
+    ],
+    "chief": "SNS 마케팅을 시작했어요 — 데이터 분석가가 지난주 반응부터 정리할게요.",
+    "scenario": "sns-marketing",
+    "handoff": "marketer",
+    "answer": "이번 주 콘텐츠 일정과 한국어 · 중국어 게시 초안이 올라와요. 게시는 브랜드 팀 승인, 광고비 결제는 대표 승인이에요."
+   },
+   {
+    "key": "approvals",
+    "words": [
+     "승인",
+     "누가",
+     "허락",
+     "approve",
+     "approval",
+     "审批"
+    ],
+    "chief": "승인은 두 단계예요. 손익표 확인 · 게시물 게시 같은 검토는 그 일을 낸 팀의 팀원이 하는 '팀 승인'이고, 지급 · 발주 · 광고비처럼 돈이 나가는 일은 대표만 하는 '대표 승인'이에요. 과제에서 기다리는 카드를 승인하거나 거절해 보세요.",
+    "scenario": null,
+    "handoff": null,
+    "answer": null
+   },
+   {
+    "key": "hello",
+    "words": [
+     "안녕",
+     "반가",
+     "누구",
+     "소개",
+     "hello",
+     "hi",
+     "who",
+     "你好",
+     "介绍"
+    ],
+    "chief": "안녕하세요, 모아 리빙(예시)의 임원 에이전트예요. 재무 · 소싱 · SNS 일을 팀에 나눠 맡기고 결과를 보고드려요. 아래 추천 요청을 눌러 보세요.",
+    "scenario": null,
+    "handoff": null,
+    "answer": null
+   }
+  ],
+  "fallback": "데모에서는 예시 요청만 실행해요. 아래 추천 요청을 눌러 보세요.",
+  "suggestions": [
+   "10월 손익 정리해줘",
+   "이번 달 거래처 대금 지급안 만들어줘",
+   "보온 텀블러 공급처 비교해줘",
+   "중국어 발주서 초안 써줘",
+   "이번 주 SNS 콘텐츠 짜줘",
+   "중국어 게시물도 같이 만들어줘"
+  ]
+ },
+ "past_chat": {
+  "title": "어제 B2B 납품 매출 어땠어?",
+  "request": "어제 B2B 납품 매출 어땠어? 손익 기준으로 알려줘."
+ }
+}

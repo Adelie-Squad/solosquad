@@ -23,7 +23,7 @@ import { CompanySettings } from './settings/CompanySettings';
 import { ServerSettings } from './settings/ServerSettings';
 import { SnapshotSettings } from './settings/SnapshotSettings';
 import { ThemeSettings } from './settings/ThemeSettings';
-import { DemoLock } from '../demo/demo';
+import { ViewOnlyArea } from '../shell/surface';
 
 interface Tab {
   id: string;
@@ -73,41 +73,41 @@ export function SettingsView() {
       {tab === 'language' && <LanguageSettings />}
       {tab === 'display' && <ThemeSettings />}
       {tab === 'account' && <AccountSettings />}
-      {/* a demo server shows every setting and takes none (decision 62 — 언어 · 화면 stay open) */}
+      {/* where the surface makes these view-only (the marketing demo), 언어 · 화면 stay open */}
       {tab === 'company' && (
-        <DemoLock name="settings.company">
+        <ViewOnlyArea name="settings.company">
           <CompanySettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
       {tab === 'server' && (
-        <DemoLock name="settings.server">
+        <ViewOnlyArea name="settings.server">
           <ServerSettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
       {tab === 'snapshot' && (
-        <DemoLock name="settings.snapshot">
+        <ViewOnlyArea name="settings.snapshot">
           <SnapshotSettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
       {tab === 'connections' && (
-        <DemoLock name="settings.connections">
+        <ViewOnlyArea name="settings.connections">
           <ConnectionsSettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
       {tab === 'access' && (
-        <DemoLock name="settings.access">
+        <ViewOnlyArea name="settings.access">
           <AccessSettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
       {tab === 'approvals' && (
-        <DemoLock name="settings.approvals">
+        <ViewOnlyArea name="settings.approvals">
           <TierSettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
       {tab === 'users' && (
-        <DemoLock name="settings.users">
+        <ViewOnlyArea name="settings.users">
           <UserSettings />
-        </DemoLock>
+        </ViewOnlyArea>
       )}
     </div>
   );
@@ -175,7 +175,7 @@ function AccountSettings() {
   if (me.local) return <section className="panel empty">{t('settings.localToken')}</section>;
   return (
     <>
-    <DemoLock name="settings.account">
+    <ViewOnlyArea name="settings.account">
     <section className="panel">
       <PasskeySettings />
     </section>
@@ -206,7 +206,7 @@ function AccountSettings() {
         {t('settings.changePassword')}
       </button>
     </form>
-    </DemoLock>
+    </ViewOnlyArea>
     <LogoutPanel />
     </>
   );

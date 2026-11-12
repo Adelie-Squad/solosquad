@@ -1,10 +1,10 @@
 // The marketing site's pages (decision 62, PRD §3.6): the login router (a plain form: company code
 // + ID → POST /api/login/route, no password, the code remembered), its neutral /login/help, the
-// demo login (one company registration number + ID + password form posting straight to the demo
+// demo login (one company registration number + ID + password form posted to the site’s own
 // server, ?u= prefill) and the request modal it opens (requests, source, the company registration
 // number, the demo-usage consent, validation, submission,
 // success and error states), the privacy placeholder, and the marketing build's entry.
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,7 +27,7 @@ function stubSite(opts: { inquiry?: (b: Record<string, unknown>) => Response } =
     vi.fn(async (url: string, init?: RequestInit) => {
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null;
       calls.push({ url, body });
-      if (url === '/api/config') return new Response(JSON.stringify({ demo_login_url: 'https://demo.example/api/auth/demo-login', consent_version: 'v1', turnstile: { enabled: false, site_key: '' } }));
+      if (url === '/api/config') return new Response(JSON.stringify({ consent_version: 'v1', turnstile: { enabled: false, site_key: '' } }));
       if (url === '/api/form-token') return new Response(JSON.stringify({ token: '123.abc' }));
       if (url === '/api/inquiry') return opts.inquiry?.(body!) ?? new Response(JSON.stringify({ ok: true }));
       return new Response('{}', { status: 404 });
@@ -107,12 +107,13 @@ describe('the login router (/login)', () => {
 });
 
 describe('the demo login (/demo)', () => {
-  it('one form — company registration number + ID + password — that posts straight to the demo server; the site never sees the password', async () => {
+  it('one plain form — company registration number + ID + password — posted to this site’s demo login (works without JS)', async () => {
     const calls = stubSite();
     site('/demo');
     const form = screen.getByTestId('demo-form') as HTMLFormElement;
-    await waitFor(() => expect(form.getAttribute('action')).toBe('https://demo.example/api/auth/demo-login'));
+    expect(form.getAttribute('action')).toBe('/api/demo/login');
     expect(form.method).toBe('post');
+    expect(within(form).getByRole('button', { name: '데모 시작하기' })).toHaveProperty('disabled', false);
     const number = within(form).getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement;
     expect(number.name).toBe('company_no');
     expect(number.required).toBe(true);
@@ -124,7 +125,16 @@ describe('the demo login (/demo)', () => {
     expect((within(form).getByLabelText('아이디') as HTMLInputElement).placeholder).toBe('samsungDemo');
     expect(screen.getByText('데모는 예시 데이터로 움직여요.')).toBeTruthy();
     expect(screen.queryByLabelText(/회사 코드/)).toBeNull();
-    expect(calls.map((c) => c.url)).toEqual(['/api/config']);
+    expect(screen.queryByRole('alert')).toBeNull();
+    // nothing to ask the site before the form works
+    expect(calls).toEqual([]);
+  });
+
+  it('?error=1 (every failure the same): one sentence, no hint at which field was wrong', () => {
+    stubSite();
+    site('/demo?error=1&u=samsungDemo');
+    expect(screen.getByRole('alert').textContent).toBe('법인(사업자)등록번호 · 아이디 · 비밀번호를 다시 확인해 주세요. 데모 기간이 끝났다면 담당자에게 알려 주세요.');
+    expect((screen.getByLabelText('아이디') as HTMLInputElement).value).toBe('samsungDemo');
   });
 
   it('?u= fills the demo ID (the router sends the code demo here); the number is still asked for', () => {

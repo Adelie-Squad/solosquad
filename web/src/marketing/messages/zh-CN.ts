@@ -178,6 +178,7 @@ export const zhCN: Record<MarketingKey, string> = {
   'demo.login.lead': '用收到的演示账号，看看示例公司的办公室。',
   'demo.login.note': '演示使用示例数据运行。',
   'demo.login.companyNoHint': '申请演示时填写的号码。',
+  'demo.login.failed': "请再次确认企业注册号、账号和密码。如果演示期限已结束，请联系我们。",
   'demo.login.submit': '开始演示',
   'demo.login.customer': "客户登录",
   'privacy.title': '隐私政策',
@@ -200,4 +201,14 @@ export const zhCN: Record<MarketingKey, string> = {
   'landing.apply.consent.demo': "我同意按演示账号记录我的演示使用情况（登录、浏览的页面、运行的示例、点击的审批）并用于咨询（申请演示时必选）",
   'login.router.title': "登录",
   'login.router.code.help': "不知道公司代码？请询问为你搭建办公室的部署人员。",
+  // the demo app (/demo/app — frontend only, 2026-11-13)
+  'demo.chip': '演示',
+  'demo.band': '这是演示画面 · 示例公司 · 截至 {date}',
+  'demo.notice': '只记录你查看了哪些画面、点了哪些按钮，不会记录你输入的内容。刷新后会回到初始状态。',
+  'demo.contact': '咨询',
+  'demo.locked': '演示中无法更改',
+  'demo.reset': '恢复初始状态',
+  'demo.resetConfirm': '要恢复初始状态吗？运行和审批过的内容会被清除，示例公司从头开始。',
+  'demo.loading': '正在准备演示',
+  'demo.failed': '无法打开演示，请稍后再试。',
 };

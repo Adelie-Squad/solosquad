@@ -12,7 +12,7 @@ import { keys } from '../src/api/queries';
 import type { Me } from '../src/api/types.gen';
 import { logOut, useLogout } from '../src/auth/logout';
 import { loginFor, officeHref, safeNext } from '../src/auth/next';
-import { I18nProvider } from '../src/i18n';
+import { dictionaries, I18nProvider } from '../src/i18n';
 import { legacyTarget, ScopeLayout } from '../src/shell/ScopeLayout';
 import { me, renderWith } from './helpers';
 
@@ -127,7 +127,7 @@ describe('landing · login · app addresses', () => {
     expect(((await screen.findByLabelText('Username')) as HTMLInputElement).value).toBe('minji');
   });
 
-  it('C62: nothing the customer app imports reaches the landing or the marketing pages (code or words)', () => {
+  it('C62: nothing the customer app imports reaches the landing, the marketing pages or the demo (code, fixtures or words)', () => {
     const root = join(process.cwd(), 'src');
     const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
     const resolve = (from: string, spec: string) => {
@@ -135,6 +135,8 @@ describe('landing · login · app addresses', () => {
       return [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts'), join(base, 'index.tsx')].find(isFile) ?? null;
     };
     const seen = new Set<string>();
+    const styles = new Set<string>();
+    const jsons = new Set<string>();
     const walk = (file: string) => {
       if (seen.has(file)) return;
       seen.add(file);
@@ -142,7 +144,14 @@ describe('landing · login · app addresses', () => {
       // static imports and re-exports (`import type` too — harmless, but keeps the rule simple), side-effect imports and lazy imports
       for (const m of code.matchAll(/from\s*['"](\.[^'"]+)['"]|import\s*\(\s*['"](\.[^'"]+)['"]\s*\)|^import\s+['"](\.[^'"]+)['"]/gm)) {
         const spec = m[1] ?? m[2] ?? m[3];
-        if (spec.endsWith('.css')) continue;
+        if (spec.endsWith('.css')) {
+          styles.add(spec.split('/').pop()!);
+          continue;
+        }
+        if (spec.endsWith('.json')) {
+          jsons.add(spec);
+          continue;
+        }
         const next = resolve(file, spec);
         if (next) walk(next);
       }
@@ -151,8 +160,12 @@ describe('landing · login · app addresses', () => {
     const reached = [...seen].map((f) => f.slice(root.length + 1).split('\\').join('/'));
     expect(reached.length).toBeGreaterThan(50);
     // the one allowed touch: a type-only import of the marketing keys in i18n (erased in the build)
-    const offending = reached.filter((f) => f.startsWith('landing/') || (f.startsWith('marketing/') && f !== 'marketing/messages/ko.ts'));
+    const offending = reached.filter((f) => f.startsWith('landing/') || f.startsWith('demo/') || (f.startsWith('marketing/') && f !== 'marketing/messages/ko.ts'));
     expect(offending).toEqual([]);
+    // the demo's fixtures (src/demo/data/*.json), its stylesheet and its words stay out too (2026-11-13)
+    expect([...jsons]).toEqual([]);
+    expect(styles.has('demo.css')).toBe(false);
+    for (const l of ['ko', 'en', 'zh-CN'] as const) expect(Object.keys(dictionaries[l]).filter((k) => k.startsWith('demo.'))).toEqual([]);
     expect(readFileSync(join(root, 'i18n/index.tsx'), 'utf8')).toMatch(/import type \{ MarketingKey \} from '\.\.\/marketing\/messages\/ko'/);
   });
 });

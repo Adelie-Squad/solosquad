@@ -178,6 +178,7 @@ export const en: Record<MarketingKey, string> = {
   'demo.login.lead': 'Look around a sample company’s office with the demo account you received.',
   'demo.login.note': 'The demo runs on sample data.',
   'demo.login.companyNoHint': 'The number you gave when you asked for the demo.',
+  'demo.login.failed': "Check the company registration number, ID and password. If your demo has ended, let us know.",
   'demo.login.submit': 'Start the demo',
   'demo.login.customer': "Customer login",
   'privacy.title': 'Privacy policy',
@@ -200,4 +201,14 @@ export const en: Record<MarketingKey, string> = {
   'landing.apply.consent.demo': "I agree that my demo use (logins, screens viewed, examples run, approvals clicked) is recorded per demo account and used for our conversation (required for a demo)",
   'login.router.title': "Log in",
   'login.router.code.help': "Don't know your company code? Ask the person who set up your office.",
+  // the demo app (/demo/app — frontend only, 2026-11-13)
+  'demo.chip': 'Demo',
+  'demo.band': 'This is a demo · an example company · until {date}',
+  'demo.notice': 'Only the screens you open and the buttons you press are recorded, never what you type. Reloading starts over.',
+  'demo.contact': 'Talk to us',
+  'demo.locked': 'This cannot be changed in the demo',
+  'demo.reset': 'Start over',
+  'demo.resetConfirm': 'Start over? What you ran and approved is cleared and the example company starts again from the beginning.',
+  'demo.loading': 'Getting the demo ready',
+  'demo.failed': 'The demo could not open. Please try again in a moment.',
 };
