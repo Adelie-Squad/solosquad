@@ -616,11 +616,8 @@ class AccountStore:
         require_second_factor: bool,
         ip: str = "",
         ua: str = "",
-        also: bool = True,
     ) -> tuple[str, Session]:
-        """→ (session token for the cookie, session). Raises AuthError with a generic reason.
-        `also` False (another field of the form was wrong — the demo login's company number)
-        refuses a right password the same way as a wrong one, and counts it as a failure."""
+        """→ (session token for the cookie, session). Raises AuthError with a generic reason."""
         username = username.strip().lower()
         keys = (f"user:{username}", f"ip:{ip}")
         if self._throttled(*keys):
@@ -629,7 +626,7 @@ class AccountStore:
             "SELECT id, pw_hash, disabled, totp_secret IS NOT NULL FROM users WHERE username = ?",
             (username,),
         )
-        if not rows or rows[0][2] or not check_password(password, rows[0][1]) or not also:
+        if not rows or rows[0][2] or not check_password(password, rows[0][1]):
             self._fail(*keys)
             raise AuthError(ErrorCode.LOGIN_FAILED, "wrong username or password")
         uid, has_totp = rows[0][0], bool(rows[0][3])

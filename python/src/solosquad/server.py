@@ -24,7 +24,6 @@ import uvicorn
 from solosquad.web_api.app import AppConfig, create_app, dumps
 
 if TYPE_CHECKING:
-    from solosquad.demo.store import DemoStore
     from solosquad.engine_server import EngineServer
 
 __all__ = ["ApiServer", "dumps", "load_or_create_token"]
@@ -64,10 +63,9 @@ class ApiServer:
         token: str,
         *,
         static_dir: Path | None = None,
-        demo: DemoStore | None = None,
     ) -> ApiServer:
         """The web of an engine server: every runtime it runs, one login."""
-        return cls(AppConfig.for_engine(engine, token, static_dir=static_dir, demo=demo))
+        return cls(AppConfig.for_engine(engine, token, static_dir=static_dir))
 
     async def start(self, host: str = "127.0.0.1", port: int = 0) -> int:
         sock = socket.socket(socket.AF_INET6 if ":" in host else socket.AF_INET)

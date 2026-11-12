@@ -1,4 +1,0 @@
-name: sourcing.po
-title: 발주서
-required: [supplier, lines, total]
-schema_version: 1

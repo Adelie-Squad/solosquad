@@ -1,4 +1,0 @@
-name: sourcing.po
-title: Purchase order
-required: [supplier, lines, total]
-schema_version: 1

@@ -1,4 +1,0 @@
-name: sns.calendar
-title: 内容排期
-required: [week, entries]
-schema_version: 1

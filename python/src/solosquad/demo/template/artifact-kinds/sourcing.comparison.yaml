@@ -1,4 +1,0 @@
-name: sourcing.comparison
-title: 원가 비교표
-required: [product, suppliers]
-schema_version: 1

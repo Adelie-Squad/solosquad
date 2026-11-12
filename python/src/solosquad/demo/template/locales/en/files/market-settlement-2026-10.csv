@@ -1,9 +1,0 @@
-Date,Type,Account,Amount,Memo
-2026-10-05,revenue,Open market settlement,6200000,(example) Week 1 settlement
-2026-10-05,expense,Market fees,682000,Week 1 fees
-2026-10-12,revenue,Open market settlement,7900000,(example) Week 2 settlement
-2026-10-12,expense,Market fees,869000,Week 2 fees
-2026-10-19,revenue,Online store settlement,8400000,(example) Card settlement
-2026-10-26,revenue,Open market settlement,9100000,(example) Week 4 settlement
-2026-10-26,expense,Market fees,1001000,Week 4 fees
-2026-10-31,revenue,Online store settlement,TBD,Card settlement pending — needs review

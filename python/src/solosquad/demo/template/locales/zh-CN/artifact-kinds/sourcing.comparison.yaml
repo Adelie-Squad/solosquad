@@ -1,4 +1,0 @@
-name: sourcing.comparison
-title: 成本对比表
-required: [product, suppliers]
-schema_version: 1
