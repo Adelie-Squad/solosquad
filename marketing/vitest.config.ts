@@ -22,7 +22,7 @@ export default defineConfig(async () => {
                   FORM_SECRET: 'test-form-secret',
                   IP_SALT: 'test-salt',
                   ROUTE_PAD_MS: '40',
-                  DEMO_LOGIN_URL: 'https://demo.test/api/auth/demo-login',
+                  DEMO_SECRET: 'test-demo-secret',
                 },
               },
             }),

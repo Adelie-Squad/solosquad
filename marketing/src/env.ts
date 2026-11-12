@@ -2,7 +2,6 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  DEMO_LOGIN_URL: string;
   CONSENT_VERSION: string;
   TURNSTILE_ENABLED: string;
   TURNSTILE_SITE_KEY: string;
@@ -12,11 +11,18 @@ export interface Env {
   INQUIRY_LIMIT_PER_EMAIL_DAY: string;
   ROUTE_LIMIT_PER_MIN: string;
   ROUTE_LIMIT_PER_HOUR: string;
+  /** demo login attempts per demo ID an hour, from any IP (the per-IP limits are the router's) */
+  DEMO_LOGIN_LIMIT_PER_ID_HOUR?: string;
+  /** usage events per demo account a minute and an hour */
+  DEMO_EVENT_LIMIT_PER_MIN?: string;
+  DEMO_EVENT_LIMIT_PER_HOUR?: string;
   /** the shortest a login route answers in, found or not (ms) — so timing does not tell them apart */
   ROUTE_PAD_MS?: string;
   /** optional: POSTed {id, company, requests} for each new inquiry (no contact details) — DM4 */
   NOTIFY_WEBHOOK?: string;
   FORM_SECRET?: string;
+  /** signs the demo session cookie; without it nobody can sign in to the demo */
+  DEMO_SECRET?: string;
   IP_SALT?: string;
   TURNSTILE_SECRET?: string;
 }

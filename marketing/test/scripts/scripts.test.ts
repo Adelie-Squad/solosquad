@@ -1,10 +1,11 @@
 // The agency scripts' pure parts (PRD §3.6.2 · §3.6.3 · C56 · C58): demo IDs `<slug>Demo` (slug
 // from the company or applicant, Hangul romanised, Chinese in pinyin, legal forms dropped, 3–16,
-// collisions 2, 3, …), the demo server's command, what `route add` accepts, and SQL quoting.
+// collisions 2, 3, …), demo passwords, what `route add` accepts, and SQL quoting.
 import { describe, expect, it } from 'vitest';
 import { normalizeCompanyNo as scriptCompanyNo } from '../../scripts/lib/company-no.mjs';
 import { lit, parseArgs, sql } from '../../scripts/lib/d1.mjs';
-import { demoIdFor, demoIssueArgs, nextDemoId, pinyinOf, romaniseHangul, slugFrom } from '../../scripts/lib/demo-id.mjs';
+import { demoIdFor, nextDemoId, pinyinOf, romaniseHangul, slugFrom } from '../../scripts/lib/demo-id.mjs';
+import { hashPassword, verifyPassword } from '../../scripts/lib/password.mjs';
 import { checkCode, checkServer } from '../../scripts/lib/routes.mjs';
 import { normalizeCompanyNo } from '../../src/validate';
 
@@ -42,11 +43,11 @@ describe('demo IDs', () => {
     expect(nextDemoId('samsung', ['samsungDemo', 'samsungDemo2'])).toBe('samsungDemo3');
   });
 
-  it('the demo server’s command (engine demo mode) carries the inquiry’s company number', () => {
-    expect(demoIssueArgs({ demoId: 'samsungDemo2', inquiryId: '01J', companyNo: '1234567890', days: 14, locale: 'ko' }).join(' ')).toBe(
-      'solosquad demo issue --id samsungDemo2 --inquiry 01J --company-no 1234567890 --days 14 --locale ko',
-    );
-    expect(() => demoIssueArgs({ demoId: 'samsungDemo2', inquiryId: '01J', companyNo: null })).toThrow(/company registration number/);
+  it('the CLI (Node) makes password hashes the Worker checks — one WebCrypto file for both', async () => {
+    const stored = await hashPassword('Abcdefgh23456789');
+    expect(stored).toMatch(/^pbkdf2-sha256\$100000\$/);
+    expect(await verifyPassword('Abcdefgh23456789', stored)).toBe(true);
+    expect(await verifyPassword('abcdefgh23456789', stored)).toBe(false);
   });
 
   it('the scripts normalise a company number exactly as the Worker does', () => {

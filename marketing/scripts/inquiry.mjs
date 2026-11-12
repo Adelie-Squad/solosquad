@@ -1,38 +1,43 @@
 #!/usr/bin/env node
-// Demo account requests (PRD §3.6.3): review, issue, reject, extend and revoke, through
-// `wrangler d1 execute` (D1) and `ssh` (the demo server). Nothing here is on the internet.
+// Demo account requests and demo accounts (PRD §3.6.3, 2026-11-13): review, issue, reject, and the
+// accounts' list, extend, revoke and usage — all through `wrangler d1 execute` (D1). Nothing here
+// is on the internet, and there is no demo server: the demo is the frontend-only copy this site
+// serves at /demo/app, and its accounts are D1 `demo_accounts`.
 //
 //   node scripts/inquiry.mjs list [--status new|reviewed|issued|rejected]
 //   node scripts/inquiry.mjs show <id>
 //   node scripts/inquiry.mjs review <id> [--note …]
 //   node scripts/inquiry.mjs reject <id> --note …
-//   node scripts/inquiry.mjs issue <id> [--slug samsung] [--days 14] [--company-no …] [--record]
-//   node scripts/inquiry.mjs extend <id> --days 7
-//   node scripts/inquiry.mjs revoke <id>
+//   node scripts/inquiry.mjs issue <id> [--slug samsung] [--days 14] [--company-no …]
+//   node scripts/inquiry.mjs extend <id> --days 7          (the inquiry's demo account)
+//   node scripts/inquiry.mjs revoke <id>                   (the inquiry's demo account)
+//   node scripts/inquiry.mjs demo list
+//   node scripts/inquiry.mjs demo extend <demo id> --days 7
+//   node scripts/inquiry.mjs demo revoke <demo id>
+//   node scripts/inquiry.mjs demo usage <demo id>
 //   add --remote to work on the deployed D1 (without it: the local one `wrangler dev` uses)
 //
-// The demo server: $DEMO_SSH (an ssh host, e.g. "demo") runs `solosquad demo issue|extend|revoke`
-// there. The account's password appears once, in this terminal, and is stored nowhere else. Without
-// $DEMO_SSH the command is printed for you to run; `issue … --record` then writes the result to D1.
-// The inquiry's company registration number goes to the demo server with the ID (the demo login
-// asks for it); `--company-no` stands in for it on a request from before the number was asked.
-// The agency handle is $SOLOSQUAD_HANDLE (else $USER). $MARKETING_URL is used in the mail draft.
-import { spawnSync } from 'node:child_process';
+// `issue` makes the account `<slug>Demo` with the inquiry's company registration number and company
+// name, and prints its 16-character password once — only a PBKDF2 hash is stored. `--company-no`
+// stands in for the number on a request from before it was asked. The agency handle is
+// $SOLOSQUAD_HANDLE (else $USER). $MARKETING_URL is used in the mail draft.
 import { createInterface } from 'node:readline/promises';
 import { execute, handle, iso, parseArgs, sql } from './lib/d1.mjs';
 import { normalizeCompanyNo } from './lib/company-no.mjs';
-import { demoIssueArgs, nextDemoId, SLUG, slugFrom } from './lib/demo-id.mjs';
+import { nextDemoId, SLUG, slugFrom } from './lib/demo-id.mjs';
+import { hashPassword, newPassword } from './lib/password.mjs';
 
 const { pos, opts } = parseArgs(process.argv.slice(2));
 const remote = opts.remote === true;
-const [verb, id] = pos;
+const [verb, id, third] = pos;
 const run = (statements) => execute(statements, { remote });
 
 const die = (msg) => {
   console.error(msg);
   process.exit(1);
 };
-const usage = () => die('usage: inquiry.mjs list [--status …] | show <id> | review <id> [--note] | reject <id> --note | issue <id> [--slug] [--days 14] [--company-no] [--record] | extend <id> --days N | revoke <id>   [--remote]');
+const usage = () =>
+  die('usage: inquiry.mjs list [--status …] | show <id> | review <id> [--note] | reject <id> --note | issue <id> [--slug] [--days 14] [--company-no] | extend <id> --days N | revoke <id> | demo list | demo extend <demo id> --days N | demo revoke <demo id> | demo usage <demo id>   [--remote]');
 
 const DAY = 86_400_000;
 const days = (v, fallback) => {
@@ -49,16 +54,6 @@ function load(inquiryId) {
   return row;
 }
 
-/** Run a demo-server command over ssh (the terminal sees its output — the password, once). */
-function onDemoServer(args) {
-  const host = process.env.DEMO_SSH;
-  const quoted = args.map((a) => (/^[A-Za-z0-9_./:=-]+$/.test(a) ? a : `'${a.replace(/'/g, "'\\''")}'`)).join(' ');
-  if (!host) return { ran: false, command: quoted };
-  const r = spawnSync('ssh', [host, quoted], { stdio: 'inherit' });
-  if (r.status !== 0) die(`the demo server refused (ssh ${host} ${quoted})`);
-  return { ran: true, command: quoted };
-}
-
 async function ask(question, fallback) {
   if (!process.stdin.isTTY) return fallback;
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -68,9 +63,9 @@ async function ask(question, fallback) {
 }
 
 const MAIL = {
-  ko: (d) => `제목: SoloSquad 데모 계정을 보내 드려요\n\n${d.name}님, 신청해 주셔서 고마워요.\n\n데모 로그인: ${d.url}\n법인(사업자)등록번호: ${d.companyNo}\n아이디: ${d.demoId}\n비밀번호: (데모 서버가 위에 한 번 보인 비밀번호)\n사용 기간: ${d.until}까지\n\n데모는 예시 데이터로 움직여요. 궁금한 점은 이 메일에 답장해 주세요.`,
-  en: (d) => `Subject: Your SoloSquad demo account\n\nHi ${d.name}, thank you for your request.\n\nDemo login: ${d.url}\nCompany registration number: ${d.companyNo}\nID: ${d.demoId}\nPassword: (the one the demo server showed above, once)\nAvailable until: ${d.until}\n\nThe demo runs on sample data. Reply to this email with any questions.`,
-  'zh-CN': (d) => `主题：您的 SoloSquad 演示账号\n\n${d.name}，您好，感谢您的申请。\n\n演示登录：${d.url}\n企业注册号：${d.companyNo}\n账号：${d.demoId}\n密码：（演示服务器在上方显示过一次的密码）\n使用期限：至 ${d.until}\n\n演示使用示例数据运行。如有问题，请直接回复此邮件。`,
+  ko: (d) => `제목: SoloSquad 데모 계정을 보내 드려요\n\n${d.name}님, 신청해 주셔서 고마워요.\n\n데모 로그인: ${d.url}\n법인(사업자)등록번호: ${d.companyNo}\n아이디: ${d.demoId}\n비밀번호: ${d.password}\n사용 기간: ${d.until}까지\n\n데모는 예시 데이터로 움직여요. 궁금한 점은 이 메일에 답장해 주세요.`,
+  en: (d) => `Subject: Your SoloSquad demo account\n\nHi ${d.name}, thank you for your request.\n\nDemo login: ${d.url}\nCompany registration number: ${d.companyNo}\nID: ${d.demoId}\nPassword: ${d.password}\nAvailable until: ${d.until}\n\nThe demo runs on sample data. Reply to this email with any questions.`,
+  'zh-CN': (d) => `主题：您的 SoloSquad 演示账号\n\n${d.name}，您好，感谢您的申请。\n\n演示登录：${d.url}\n企业注册号：${d.companyNo}\n账号：${d.demoId}\n密码：${d.password}\n使用期限：至 ${d.until}\n\n演示使用示例数据运行。如有问题，请直接回复此邮件。`,
 };
 
 async function issue(row) {
@@ -87,30 +82,92 @@ async function issue(row) {
   const companyNo = typeof opts['company-no'] === 'string' ? normalizeCompanyNo(opts['company-no']) : row.company_no;
   if (!companyNo) die(typeof opts['company-no'] === 'string' ? '--company-no: a 사업자등록번호 (10 digits), 법인등록번호 (13) or another country’s number (4–30 letters, digits, dashes)' : `inquiry ${row.id} has no company registration number — ask for it and pass --company-no`);
 
-  const [taken] = run([sql`SELECT demo_id FROM inquiries WHERE demo_id IS NOT NULL AND lower(demo_id) LIKE ${`${slug}demo%`}`]);
+  const [taken] = run([sql`SELECT id FROM demo_accounts WHERE id_lower LIKE ${`${slug}demo%`} UNION SELECT demo_id FROM inquiries WHERE demo_id IS NOT NULL AND lower(demo_id) LIKE ${`${slug}demo%`}`]);
   const demoId = nextDemoId(
     slug,
-    taken.map((t) => t.demo_id),
+    taken.map((t) => t.id ?? t.demo_id),
   );
   const now = Date.now();
   const expires = iso(now + length * DAY);
-
-  const demo = onDemoServer(demoIssueArgs({ demoId, inquiryId: row.id, companyNo, days: length, locale: row.locale }));
-  if (!demo.ran && opts.record !== true) {
-    const again = companyNo === row.company_no ? '' : ` --company-no ${companyNo}`;
-    console.log(`demo ID: ${demoId}  (inquiry ${row.id}, company no ${companyNo}, ${length} days)\n\nrun on the demo server:\n  ${demo.command}\n\nthen record it:\n  node scripts/inquiry.mjs issue ${row.id} --slug ${slug} --days ${length}${again} --record${remote ? ' --remote' : ''}`);
-    return;
-  }
+  const password = newPassword();
+  const locale = MAIL[row.locale] ? row.locale : 'ko';
   run([
+    sql`INSERT INTO demo_accounts (id, id_lower, inquiry_id, company_no, company_name, locale, password_hash, created_at, created_by, expires_at)
+        VALUES (${demoId}, ${demoId.toLowerCase()}, ${row.id}, ${companyNo}, ${row.company}, ${locale}, ${await hashPassword(password)}, ${iso(now)}, ${handle()}, ${expires})`,
     sql`UPDATE inquiries SET status = 'issued', demo_id = ${demoId}, demo_issued_at = ${iso(now)}, demo_expires_at = ${expires}, company_no = ${companyNo},
           reviewed_at = coalesce(reviewed_at, ${iso(now)}), reviewed_by = coalesce(reviewed_by, ${handle()}), updated_at = ${iso(now)}
         WHERE id = ${row.id} AND demo_id IS NULL AND status != 'rejected'`,
     log(row.id, 'issued', { demo_id: demoId, days: length }),
   ]);
-  const locale = MAIL[row.locale] ? row.locale : 'ko';
   const url = `${(process.env.MARKETING_URL ?? 'https://solosquad.example.com').replace(/\/+$/, '')}/demo?u=${encodeURIComponent(demoId)}`;
-  console.log(`issued ${demoId} for inquiry ${row.id}, until ${expires}\n\n--- mail draft (${locale}) to ${row.email} — send it from the agency mailbox ---\n`);
-  console.log(MAIL[locale]({ name: row.contact_name, companyNo, demoId, url, until: expires.slice(0, 10) }));
+  console.log(`issued ${demoId} for inquiry ${row.id} (${row.company}, company no ${companyNo}), until ${expires}`);
+  console.log(`password: ${password}   (shown once — only its hash is kept)`);
+  console.log(`\n--- mail draft (${locale}) to ${row.email} — send it from the agency mailbox ---\n`);
+  console.log(MAIL[locale]({ name: row.contact_name, companyNo, demoId, url, until: expires.slice(0, 10), password }));
+}
+
+function demoAccount(demoId) {
+  if (!demoId) usage();
+  const [[acct]] = run([sql`SELECT * FROM demo_accounts WHERE id_lower = ${String(demoId).toLowerCase()}`]);
+  if (!acct) die(`no demo account ${demoId}`);
+  return acct;
+}
+
+const statusOf = (a, now = Date.now()) => (a.revoked_at ? 'revoked' : Date.parse(a.expires_at) <= now ? 'expired' : 'active');
+
+function extendDemo(acct, more) {
+  if (acct.revoked_at) die(`${acct.id} was revoked — issue a new one`);
+  const until = iso(Math.max(Date.now(), Date.parse(acct.expires_at) || 0) + more * DAY);
+  run([
+    sql`UPDATE demo_accounts SET expires_at = ${until} WHERE id = ${acct.id}`,
+    sql`UPDATE inquiries SET demo_expires_at = ${until}, updated_at = ${iso()} WHERE demo_id = ${acct.id}`,
+    ...(acct.inquiry_id ? [log(acct.inquiry_id, 'extended', { days: more })] : []),
+  ]);
+  console.log(`${acct.id} until ${until}`);
+}
+
+function revokeDemo(acct) {
+  if (acct.revoked_at) die(`${acct.id} was already revoked (${acct.revoked_at})`);
+  const now = iso();
+  run([
+    sql`UPDATE demo_accounts SET revoked_at = ${now} WHERE id = ${acct.id}`,
+    sql`UPDATE inquiries SET demo_expires_at = ${now}, updated_at = ${now} WHERE demo_id = ${acct.id}`,
+    ...(acct.inquiry_id ? [log(acct.inquiry_id, 'revoked')] : []),
+  ]);
+  console.log(`${acct.id} revoked — its session ends now`);
+}
+
+function demoCommand(sub, demoId) {
+  if (sub === 'list') {
+    const [rows] = run([
+      sql`SELECT a.*, (SELECT max(at) FROM demo_events e WHERE e.demo_id = a.id AND e.kind = 'login') AS last_login,
+                 (SELECT count(*) FROM demo_events e WHERE e.demo_id = a.id AND e.kind = 'login') AS logins
+          FROM demo_accounts a ORDER BY a.created_at DESC LIMIT 200`,
+    ]);
+    for (const a of rows) {
+      console.log([a.id.padEnd(18), statusOf(a).padEnd(8), a.expires_at.slice(0, 16), (a.company_no ?? '-').padEnd(14), a.locale.padEnd(5), String(a.logins).padStart(3), (a.last_login ?? '-').slice(0, 16).padEnd(16), a.inquiry_id ?? '-', a.company_name].join('  '));
+    }
+    if (!rows.length) console.log('(none)');
+    return;
+  }
+  if (sub === 'extend') return extendDemo(demoAccount(demoId), days(opts.days, 7));
+  if (sub === 'revoke') return revokeDemo(demoAccount(demoId));
+  if (sub === 'usage') {
+    const acct = demoAccount(demoId);
+    const [events] = run([sql`SELECT kind, detail, count(*) AS n, min(at) AS first, max(at) AS last FROM demo_events WHERE demo_id = ${acct.id} GROUP BY kind, detail ORDER BY kind, n DESC`]);
+    const by = (k) => events.filter((e) => e.kind === k);
+    const total = (k) => by(k).reduce((s, e) => s + e.n, 0);
+    const logins = by('login')[0];
+    console.log(`${acct.id} · ${acct.company_name} · inquiry ${acct.inquiry_id ?? '-'} · ${statusOf(acct)} until ${acct.expires_at.slice(0, 16)}`);
+    console.log(`logins ${total('login')} (first ${logins?.first?.slice(0, 16) ?? '-'}, last ${logins?.last?.slice(0, 16) ?? '-'}) · logouts ${total('logout')} · screens ${total('view')} · actions ${total('action')}`);
+    for (const k of ['view', 'action']) {
+      if (!by(k).length) continue;
+      console.log(`\n${k === 'view' ? 'screens viewed' : 'buttons pressed'}:`);
+      for (const e of by(k)) console.log(`  ${String(e.n).padStart(4)}  ${e.detail ?? '-'}`);
+    }
+    return;
+  }
+  usage();
 }
 
 async function main() {
@@ -156,27 +213,13 @@ async function main() {
     return;
   }
   if (verb === 'issue') return issue(load(id));
-  if (verb === 'extend') {
+  if (verb === 'extend' || verb === 'revoke') {
     const row = load(id);
     if (!row.demo_id) die(`inquiry ${row.id} has no demo account`);
-    const more = days(opts.days, 7);
-    const from = Math.max(Date.now(), Date.parse(row.demo_expires_at ?? '') || 0);
-    const until = iso(from + more * DAY);
-    const demo = onDemoServer(['solosquad', 'demo', 'extend', '--id', row.demo_id, '--days', String(more)]);
-    if (!demo.ran) console.log(`run on the demo server:\n  ${demo.command}\n`);
-    run([sql`UPDATE inquiries SET demo_expires_at = ${until}, updated_at = ${iso()} WHERE id = ${row.id}`, log(row.id, 'extended', { days: more })]);
-    console.log(`${row.demo_id} until ${until}`);
-    return;
+    const acct = demoAccount(row.demo_id);
+    return verb === 'extend' ? extendDemo(acct, days(opts.days, 7)) : revokeDemo(acct);
   }
-  if (verb === 'revoke') {
-    const row = load(id);
-    if (!row.demo_id) die(`inquiry ${row.id} has no demo account`);
-    const demo = onDemoServer(['solosquad', 'demo', 'revoke', '--id', row.demo_id]);
-    if (!demo.ran) console.log(`run on the demo server:\n  ${demo.command}\n`);
-    run([sql`UPDATE inquiries SET demo_expires_at = ${iso()}, updated_at = ${iso()} WHERE id = ${row.id}`, log(row.id, 'revoked')]);
-    console.log(`${row.demo_id} revoked`);
-    return;
-  }
+  if (verb === 'demo') return demoCommand(id, third);
   usage();
 }
 

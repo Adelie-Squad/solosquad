@@ -208,9 +208,10 @@ describe('retention (the daily cron trigger)', () => {
 });
 
 describe('GET /api/config', () => {
-  it('where the demo login posts; Turnstile off by default; no secrets', async () => {
+  it('the consent version; Turnstile off by default; no secrets', async () => {
     const cfg = (await (await SELF.fetch('https://marketing.test/api/config')).json()) as Record<string, unknown>;
-    expect(cfg).toEqual({ demo_login_url: 'https://demo.test/api/auth/demo-login', consent_version: env.CONSENT_VERSION, turnstile: { enabled: false, site_key: '' } });
+    expect(cfg).toEqual({ consent_version: env.CONSENT_VERSION, turnstile: { enabled: false, site_key: '' } });
     expect(JSON.stringify(cfg)).not.toContain('test-form-secret');
+    expect(JSON.stringify(cfg)).not.toContain('test-demo-secret');
   });
 });

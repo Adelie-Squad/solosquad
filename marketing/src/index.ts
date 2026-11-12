@@ -1,7 +1,9 @@
 // The SoloSquad marketing site Worker (decision 62, PRD §3.6). Static pages come from Workers
 // Static Assets (the marketing build of web/, SPA fallback for /login · /login/help · /demo ·
-// /privacy); this answers /api/* and runs the daily retention sweep. There is no admin HTTP API —
-// the agency works through wrangler (`scripts/route.mjs` · `scripts/inquiry.mjs`).
+// /privacy · /demo/app/…); this answers /api/*, lets /demo/app/… through only with a demo session,
+// and runs the daily retention sweep. There is no admin HTTP API — the agency works through
+// wrangler (`scripts/route.mjs` · `scripts/inquiry.mjs`).
+import { demoPage, DEMO_APP, getMe, postEvent, postLogin, postLogout, sweepDemo } from './demo';
 import { turnstileOn, type Env } from './env';
 import { json } from './http';
 import { formToken, postInquiry, sweep } from './inquiry';
@@ -9,7 +11,6 @@ import { postRoute } from './route';
 
 /** What the pages need to know (no secrets). */
 export const siteConfig = (env: Env) => ({
-  demo_login_url: env.DEMO_LOGIN_URL,
   consent_version: env.CONSENT_VERSION,
   turnstile: { enabled: turnstileOn(env), site_key: turnstileOn(env) ? env.TURNSTILE_SITE_KEY : '' },
 });
@@ -18,6 +19,10 @@ async function api(req: Request, env: Env, ctx: ExecutionContext, path: string):
   if (path === '/api/config' && req.method === 'GET') return json(siteConfig(env));
   if (path === '/api/form-token' && req.method === 'GET') return json({ token: await formToken(env) });
   if (path === '/api/login/route' && req.method === 'POST') return postRoute(req, env);
+  if (path === '/api/demo/login' && req.method === 'POST') return postLogin(req, env);
+  if (path === '/api/demo/me' && req.method === 'GET') return getMe(req, env);
+  if (path === '/api/demo/event' && req.method === 'POST') return postEvent(req, env);
+  if (path === '/api/demo/logout' && req.method === 'POST') return postLogout(req, env);
   if (path === '/api/inquiry' && req.method === 'POST') {
     // the modal posts JSON from this origin; a cross-site form post never reaches the handler
     if (!(req.headers.get('content-type') ?? '').startsWith('application/json')) return json({ error: 'unsupported_media_type' }, 415);
@@ -37,9 +42,17 @@ export default {
         return json({ error: 'server_error' }, 500);
       }
     }
+    if (path === DEMO_APP || path.startsWith(`${DEMO_APP}/`)) {
+      try {
+        return await demoPage(req, env);
+      } catch (err) {
+        console.error('demo page', err instanceof Error ? err.message : 'error');
+        return json({ error: 'server_error' }, 500);
+      }
+    }
     return env.ASSETS.fetch(req);
   },
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(sweep(env).then(() => undefined));
+    ctx.waitUntil(Promise.all([sweep(env), sweepDemo(env)]).then(() => undefined));
   },
 } satisfies ExportedHandler<Env>;
