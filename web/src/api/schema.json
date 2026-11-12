@@ -31,14 +31,8 @@
     "ScopeRef": {
       "$ref": "#/$defs/ScopeRef"
     },
-    "DemoInfo": {
-      "$ref": "#/$defs/DemoInfo"
-    },
     "Me": {
       "$ref": "#/$defs/Me"
-    },
-    "DemoRestarted": {
-      "$ref": "#/$defs/DemoRestarted"
     },
     "TotpBegin": {
       "$ref": "#/$defs/TotpBegin"
@@ -222,9 +216,7 @@
     "ScopeWorkspace",
     "ScopeOrg",
     "ScopeRef",
-    "DemoInfo",
     "Me",
-    "DemoRestarted",
     "TotpBegin",
     "AccessPolicy",
     "AuditEntry",
@@ -1838,69 +1830,6 @@
       "type": "object",
       "title": "ConnectionOut"
     },
-    "DemoInfo": {
-      "additionalProperties": false,
-      "description": "The demo account signed in, and what the demo server locks (PRD §3.6.4 ③).",
-      "properties": {
-        "id": {
-          "type": "string"
-        },
-        "label": {
-          "type": "string"
-        },
-        "expires": {
-          "type": "number"
-        },
-        "locked": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "contact_url": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "suggestions": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "id",
-        "label",
-        "expires",
-        "locked",
-        "contact_url",
-        "suggestions"
-      ],
-      "type": "object",
-      "title": "DemoInfo"
-    },
-    "DemoRestarted": {
-      "additionalProperties": false,
-      "properties": {
-        "workflows": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "workflows"
-      ],
-      "type": "object",
-      "title": "DemoRestarted"
-    },
     "Digest": {
       "additionalProperties": false,
       "description": "`GET /api/me/digest` — what happened in the person's scopes between `since` (when they\nwere last here) and `until` (now). Deterministic aggregation, no model call.",
@@ -2699,9 +2628,7 @@
         "calendar_reorder_invalid",
         "calendar_agent_access_invalid",
         "digest_since_invalid",
-        "digest_until_invalid",
-        "demo_read_only",
-        "demo_expired"
+        "digest_until_invalid"
       ],
       "type": "string",
       "title": "ErrorCode"
@@ -2715,28 +2642,11 @@
         "passkeys": {
           "default": false,
           "type": "boolean"
-        },
-        "demo": {
-          "default": false,
-          "type": "boolean"
-        },
-        "demo_login_url": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
         }
       },
       "required": [
         "ok",
-        "passkeys",
-        "demo",
-        "demo_login_url"
+        "passkeys"
       ],
       "type": "object",
       "title": "Health"
@@ -2877,21 +2787,6 @@
             }
           ],
           "default": null
-        },
-        "demo": {
-          "default": false,
-          "type": "boolean"
-        },
-        "demo_info": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DemoInfo"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
         }
       },
       "required": [
@@ -2902,9 +2797,7 @@
         "locale",
         "relogin",
         "scopes",
-        "last_scope",
-        "demo",
-        "demo_info"
+        "last_scope"
       ],
       "type": "object",
       "title": "Me"
