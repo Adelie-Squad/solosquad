@@ -14,6 +14,8 @@ framing for every view:
   beforeafter-face.png / beforeafter-wing.png / beforeafter-armpit.png
                --prev <previous round's detail/ dir> | this round
   silhouette.png  front, 3/4, side: the previous round's outline (orange) and this round's (blue)
+  poses.png / raised.png  key poses (front + 3/4 rows) / the raised wing (wave peak) front | 3/4
+  clearance.txt  min wing-to-body/head distance per clip (fails the run if a wing goes inside)
 
 The previous round's detail/ is rendered by running this script with --only detail next to that
 round's penguin_v3.py (copy assets/office/scripts/ to a temp dir and put that round's
@@ -61,7 +63,7 @@ DRAFT = arg('--draft')
 # same-scale side-by-side; read off draft_1.webp (1280 x 1600)
 DRAFT_BOX = tuple(int(v) for v in arg('--draft-box', '445,1341,699').split(','))
 RIGHT = arg('--right', arg('--v2'))
-ONLY = set(arg('--only', 'turnaround,compare,seated,motion,detail').split(','))
+ONLY = set(arg('--only', 'clearance,turnaround,compare,seated,motion,poses,detail').split(','))
 PREV = arg('--prev')
 PREV_TURN = arg('--prev-turnaround')
 
@@ -384,7 +386,7 @@ def detail(cam, rig):
     for name, az, el, scale, target, pose in _detail_views():
         pv3.reset_pose(rig)
         if pose == 'raise':
-            pv3._set(rig, rest, 'wing.L', pv3._wing_raise('L', 100, pv3.WAVE_TWIST * 100 / 128))
+            pv3._set(rig, rest, 'wing.L', pv3._wing_raise('L', 100, getattr(pv3, 'WAVE_TWIST', 0)))
         bpy.context.view_layer.update()
         bpy.data.objects['floor'].hide_render = el < 0      # from below: no shadow catcher in the way
         aim_at(cam, az, el, scale, target)
@@ -464,8 +466,83 @@ def silhouette():
         _save(sheet(tiles, len(tiles), 16, BACKDROP['light']), os.path.join(OUT, 'silhouette.png'))
 
 
+def poses(cam, rig):
+    """Round 8: the pose library at one framing - raised wing front / 3/4 (raised.png pair) and a
+    sheet of key poses (poses.png): rest, wave peak, wave swing, hop up, hop air, walk, seated,
+    raise max, front and 3/4 rows."""
+    rest = pv3._bone_rest(rig)
+    theme('light')
+    sc = bpy.context.scene
+    d = os.path.join(OUT, 'poses')
+    keep = sc.render.resolution_x
+    sc.render.resolution_x = sc.render.resolution_y = 700
+
+    def raise_max(r, f, rs):
+        pv3.reset_pose(r)
+        pv3._set(r, rs, 'wing.L', pv3._wing_raise('L', pv3.WING_RAISE_MAX, 0))
+    keys = [('rest', lambda r, f, rs: pv3.reset_pose(r), 0),
+            ('wave-peak', pv3.pose_wave, 17),
+            ('wave-swing', pv3.pose_wave, 23),
+            ('hop-up', pv3.pose_hop, 5),
+            ('hop-air', pv3.pose_hop, 14),
+            ('walk', pv3.pose_walk, 8),
+            ('seated', lambda r, f, rs: pv3.pose_seated(r, 0, rs, (0.0, 0.0, 0.0)), 0),
+            ('raise-max', raise_max, 0)]
+    rows = {}
+    for view, az, el in (('front', 0, 0), ('3q', 35, 8)):
+        aim(cam, az, el, M_SCALE, M_TARGET_Z)
+        tiles = []
+        for name, fn, f in keys:
+            fn(rig, f, rest)
+            sc.frame_set(f)
+            bpy.context.view_layer.update()
+            pth = os.path.join(d, f'{name}-{view}.png')
+            shoot(pth, BACKDROP['light'])
+            tiles.append(_resize(_load(pth), 300, 300))
+        rows[view] = tiles
+    _save(sheet(rows['front'] + rows['3q'], len(keys), 8, BACKDROP['light']), os.path.join(OUT, 'poses.png'))
+    pair = [_resize(_load(os.path.join(d, f'wave-peak-{v}.png')), 700, 700) for v in ('front', '3q')]
+    _save(sheet(pair, 2, 16, BACKDROP['light']), os.path.join(OUT, 'raised.png'))
+    pv3.reset_pose(rig)
+    sc.render.resolution_x = sc.render.resolution_y = keep
+
+
+def clearance(mesh, rig):
+    """Round 8: wing-to-body/head clearance over every frame of every clip, the seated pose and
+    the raised close-up; writes clearance.txt (min per clip, mm) and fails loudly below 0."""
+    rest = pv3._bone_rest(rig)
+    rows = []
+    poses = [(name, length, fn) for name, (length, fn) in pv3.CLIPS.items()]
+    poses.append(('seated', 1, lambda r, f, rs: pv3.pose_seated(r, 0, rs, (0.0, 0.0, 0.0))))
+    poses.append(('raise-max', 1, lambda r, f, rs: (pv3.reset_pose(r), pv3._set(
+        r, rs, 'wing.L', pv3._wing_raise('L', pv3.WING_RAISE_MAX, -pv3.WING_TWIST_MAX)))))
+    sc = bpy.context.scene
+    for name, length, fn in poses:
+        worst, at = float('inf'), 0
+        for f in range(length):
+            fn(rig, f, rest)
+            sc.frame_set(f)
+            bpy.context.view_layer.update()
+            c = pv3.wing_clearance(rig, mesh)
+            if c < worst:
+                worst, at = c, f
+        rows.append((name, worst, at))
+        print(f'clearance {name}: {worst * 1000:.1f} mm (frame {at})')
+    pv3.reset_pose(rig)
+    os.makedirs(OUT, exist_ok=True)
+    with open(os.path.join(OUT, 'clearance.txt'), 'w') as fh:
+        fh.write('clip\tmin wing-body/head clearance (mm)\tframe\n')
+        for name, worst, at in rows:
+            fh.write(f'{name}\t{worst * 1000:.1f}\t{at}\n')
+    bad = [r for r in rows if r[1] <= 0]
+    if bad:
+        raise SystemExit(f'wing intersects the body/head: {bad}')
+
+
 def main():
     mesh, rig, cam = build()
+    if 'clearance' in ONLY:
+        clearance(mesh, rig)
     if 'turnaround' in ONLY:
         turnaround(cam, rig)
     if 'compare' in ONLY:
@@ -474,6 +551,8 @@ def main():
         seated(cam, rig)
     if 'motion' in ONLY:
         motion(cam, rig)
+    if 'poses' in ONLY:
+        poses(cam, rig)
     if 'detail' in ONLY:
         detail(cam, rig)
         beforeafter()

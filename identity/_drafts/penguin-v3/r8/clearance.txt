@@ -1,0 +1,6 @@
+clip	min wing-body/head clearance (mm)	frame
+hop	13.8	5
+wave	13.2	25
+walk	25.2	24
+seated	28.2	0
+raise-max	11.9	0

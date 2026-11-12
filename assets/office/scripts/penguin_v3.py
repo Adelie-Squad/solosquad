@@ -65,10 +65,10 @@ R_BOTTOM = 0.095   # bottom corner radius (front view): a soft roll into a wide 
 R_TOP = 0.21       # vertical semi-axis of the round top (~ the half width: a near-semicircle)
 
 EYE_Z = Z0 + 0.72 * HB          # eye centres at 72 % of the body height
-EYE_X = 0.206 * W               # eye centres +/- 0.206 W (round 7: 0.22 -> 0.206 W, so the gap between
-                                # the eyes' inner edges is round 5's 0.150 W with the smaller eyes)
-EYE_R = 0.131 * W               # eye diameter 0.262 W (round 6: -10 %, was 0.29 W)
-CHEEK_R = 0.75 * EYE_R          # blush diameter 0.75 x eye (follows the eye: -10 %)
+EYE_X = 0.206 * W               # eye centres +/- 0.206 W (round 7: 0.22 -> 0.206 W). Round 8 keeps the
+                                # centres; the bigger eyes bring the inner edges in: gap 0.137 W (56 mm)
+EYE_R = 0.1376 * W              # eye diameter 0.275 W (r5 0.29, r6/r7 0.262, round 8: +5 %)
+CHEEK_R = 0.75 * EYE_R          # blush diameter 0.75 x eye (follows the eye)
 CHEEK_DX, CHEEK_DZ = 0.20 * 2 * EYE_R, -0.58 * 2 * EYE_R   # low-outside of the eye, tucked under it
 BEAK_Z = EYE_Z - 0.168 * W      # beak centre (its widest line)
 
@@ -118,26 +118,28 @@ WING_YAW = math.radians(15)
 # from the pivot); with the lower shoulder the tip stays at the same height
 WING_C, WING_AU, WING_AV, WING_AW = 0.091, 0.150, 0.058, 0.024   # ellipsoid centre + semi-axes
 WING_ROOT, WING_TIP = 1.18, 0.80  # width factor at the root vs the tip (broad base)
-WING_CUT = 0.022                # the white underside starts this far out from the pivot (arc top,
-                                # at the armpit; round 6: 0.045 -> 0.012, round 7: 0.022 - at 0.012
-                                # its corner with the crease cut was a thin sliver; the white still
-                                # reaches the joint through the crease cut)
+WING_CUT = 0.012                # the white underside starts this far out from the pivot (arc top,
+                                # at the armpit; round 6: 0.045 -> 0.012, round 7: 0.022, round 8:
+                                # back to 0.012 - the white reaches the joint again)
 ARM_AU, ARM_AV = 0.200, 0.200   # ellipse of the underside panel in the wing plane (u, v); it runs
                                 # past the tip, so only the rim keeps it black there
 ARM_C = WING_CUT + ARM_AU       # its centre: the top of the arc sits at u = WING_CUT
 ARM_CREASE_ROUND = 0.030         # round 7: corner where the crease cut meets the rim cut (was WING_ROUND)
 SEAM_SMOOTH = 12                 # round 7: surface smoothing passes for the seam field's black side
 STITCH_GRAD = 0.55               # round 7: no thread where the seam field's surface slope is under this
-ARM_RIGID = 0.060               # round 7: the wing weight ramps from 0 here to 1 at 8 mm outside the white edge
-ARM_CREASE = 0.010              # round 7: the white stops this far (body field) up the wing side of the
-                                # shoulder crease (round 6: 0.002 = the valley floor, a wavy edge)
+HINGE_M = 0.010                 # round 8: rigid with the wing this far past the crease (the white edge
+                                # never stretches)
+HINGE_W = 0.045                 # ...then the body-side blend of the shoulder hinge (field units, ~m)
+HINGE_R0, HINGE_R1 = 0.03, 0.06 # ...full within R0 of the pivot, gone by R1: a compact joint
+WEIGHT_SMOOTH = 3               # surface smoothing passes for the wing weights (legs keep 14)
+ARM_CREASE = 0.008              # the white stops this far (body field) up the wing side of the shoulder
+                                # crease (round 6: 0.002, round 7: 0.010, round 8: 0.008 - with WING_CUT
+                                # 0.012 the white is back up to the joint, off the valley floor)
 WING_ROUND = 0.012             # softness of the underside panel's corners
 WING_RIM = 0.005                # ...and this far in from the rim, so the rim stays black
-WING_DOM = 0.015                # round 7: wing vs body weight blend across the crease, a continuous
-                                # ramp of the field difference (round 6: +-0.004, a per-vertex switch
-                                # blurred by surface smoothing on the irregular mesh: noisy weights that
-                                # crumple the armpit skin when the wing is raised)
-WING_K = 0.045                  # shoulder crease softness
+WING_K = 0.030                  # shoulder crease softness (round 8: 0.045 -> 0.030)
+WING_K_U = (0.0, 0.035)         # ...faded out along the wing between these u (round 8: (0.02, 0.09) - a
+                                # 9 cm web of shared skin down the wing root read as a muscle)
 
 # Legs + feet. Hip pivot inside the body bottom.
 # The foot is a wide half-dome with a flat sole on the ground; its rounded top tucks into the
@@ -360,7 +362,7 @@ def fields(P):
     for side in 'LR':
         fw = f_wing(P, side)
         u = _wing_local(P, side)[:, 0]
-        k = WING_K * (1 - _smoothstep(0.02, 0.09, u))
+        k = WING_K * (1 - _smoothstep(WING_K_U[0], WING_K_U[1], u))
         f = _smin(f, fw, k)
         out['wing.' + side] = fw
     out['upper'] = f
@@ -838,9 +840,6 @@ def body_weights(V, fl, edges):
     flf = {s: np.minimum(fl['leg.' + s], fl['foot.' + s]) for s in 'LR'}
     rest_upper = fl['body']
     for s in 'LR':
-        u = _wing_local(V, s)[:, 0]
-        dom = _smoothstep(-WING_DOM, WING_DOM, rest_upper - fw[s])
-        w['wing.' + s] = dom * _smoothstep(-0.06, 0.025, u)
         others = np.minimum(fl['body'], np.minimum(fw['L'], fw['R']))
         legdom = _smoothstep(-0.010, 0.010, others - flf[s])
         footdom = _smoothstep(-0.005, 0.005, fl['leg.' + s] - fl['foot.' + s])
@@ -849,14 +848,24 @@ def body_weights(V, fl, edges):
     keys = list(w)
     M = np.stack([w[k] for k in keys], 1)
     M = _smooth_values(M, edges, 14)
-    # Round 7: the white underside and a margin round it move rigidly with the wing, so the skin
-    # that stretches when the wing is raised is the black crease below the white edge, not the
-    # edge itself (round 6: the edge sat in the weight blend; its cells stretched 3-4x and the
-    # per-vertex colour field, interpolated over those long thin cells, came out jagged)
-    for i, k in enumerate(keys):
-        if k.startswith('wing.'):
-            rigid = _smoothstep(-ARM_RIGID, -0.008, wing_under(V, fl, k[-1]))
-            M[:, i] = np.maximum(M[:, i], rigid)
+    # Round 8: the shoulder is a compact hinge, like the ankle. Everything the wing owns moves with
+    # it rigidly (the white edge too, so it never stretches); the blend into the body lies wholly on
+    # the body side of the crease, over a width HINGE_W that shrinks to nothing between HINGE_R0
+    # and HINGE_R1 from the pivot. Round 7 instead gave body skin wing weight by its distance to the
+    # wing (ARM_RIGID 6 cm on the crease field) - the paddle hangs close to the body all along, so
+    # body skin down to 40 % of the height moved with the wing: a muscle to the waist.
+    wk = []
+    for s in 'LR':
+        piv, _ = wing_frame(s)
+        d = rest_upper - fw[s]                      # > 0 on the wing, 0 mid-crease
+        rr = np.linalg.norm(V - piv, axis=1)
+        ring = 1 - _smoothstep(HINGE_R0, HINGE_R1, rr)
+        width, margin = HINGE_W * ring + 1e-4, HINGE_M * ring
+        ww = np.where(d >= -margin, 1.0, _smoothstep(-margin - width, -margin, d))
+        wk.append(('wing.' + s, ww))
+    Ww = _smooth_values(np.stack([x for _, x in wk], 1), edges, WEIGHT_SMOOTH)
+    keys += [k for k, _ in wk]
+    M = np.concatenate([M, Ww], 1)
     rest = np.clip(1 - M.sum(1), 0, 1)
     tot = M.sum(1) + rest
     M = M / tot[:, None]
@@ -1184,6 +1193,10 @@ def build(col, name='penguin_v3'):
     attrs['seam_d'] = d + blend * (_smooth_values(d, edges, SEAM_SMOOTH) - d)
     attrs['stitch_on'] = attrs['stitch_on'] * _stitch_clean(V, attrs['seam_d'], edges)
     weights = body_weights(V, fl, edges)
+    # Round 8: no thread on the shoulder hinge ring (wing weight strictly between 0 and 1): that
+    # skin stretches when the wing moves, and a stretched dash reads as a smear
+    mix = np.maximum.reduce([4 * weights[k] * (1 - weights[k]) for k in ('wing.L', 'wing.R')])
+    attrs['stitch_on'] = attrs['stitch_on'] * (1 - _smoothstep(0.05, 0.3, mix))
     n_body = len(V)
 
     verts = [V]
@@ -1320,9 +1333,12 @@ HOP = {
 }
 
 WAVE_LEN = 48
-WAVE_RAISE = [(0, 0), (4, 20), (11, 128), (36, 128), (44, 10), (48, 0)]
-WAVE_SWING = 17      # degrees, side to side while raised
-WAVE_TWIST = -78     # degrees about the wing's own axis at full raise (shows the white underside)
+# round 8: raise 128 -> 100 (+ swing 12 = 112 = WING_RAISE_MAX), swing 17 -> 12, twist -78 -> -12;
+# the body turns 14 deg toward the waving side instead (WAVE_YAW)
+WAVE_RAISE = [(0, 0), (4, 18), (11, 100), (36, 100), (44, 10), (48, 0)]
+WAVE_SWING = 12      # degrees, up and down about the hinge while raised
+WAVE_TWIST = -12     # degrees about the wing's own axis at full raise
+WAVE_YAW = 14        # degrees the whole body turns so the raised wing faces the viewer a little
 
 
 def _bone_rest(rig_ob):
@@ -1345,11 +1361,24 @@ def reset_pose(rig_ob):
         pb.matrix_basis = Matrix.Identity(4)
 
 
+# Round 8: the shoulder is a hinge. The wing flaps up / down about its own width axis (e_v, the
+# hinge line through the shoulder, so it moves in the plane of its flat face's normal, like a
+# real flipper) and twists only a little about its length. It never swings forward; a pose that
+# wants to show the inner wing turns the whole body instead. Round 7 raised it about the world
+# front axis (Y) up to 145 deg with a -78 deg twist: the paddle came forward / inward over the
+# head.
+WING_RAISE_MAX = 112    # deg from rest (the tip then points ~37 deg off vertical, clear of the head)
+WING_LOWER_MAX = 8      # deg toward the body
+WING_TWIST_MAX = 15     # deg about the wing's own length
+
+
 def _wing_raise(side, raise_deg, twist_deg):
     s = 1 if side == 'L' else -1
     piv, ax = wing_frame(side)
+    raise_deg = max(-WING_LOWER_MAX, min(WING_RAISE_MAX, raise_deg))
+    twist_deg = max(-WING_TWIST_MAX, min(WING_TWIST_MAX, twist_deg))
     R_twist = Matrix.Rotation(math.radians(twist_deg) * s, 4, Vector(ax[0]))
-    R_raise = Matrix.Rotation(math.radians(-s * raise_deg), 4, 'Y')
+    R_raise = Matrix.Rotation(math.radians(-s * raise_deg), 4, Vector(ax[1]))
     return _about(piv, R_raise @ R_twist)
 
 
@@ -1373,20 +1402,21 @@ def pose_hop(rig_ob, f, rest=None):
         ank = _sx(ANKLE, s)
         R = Matrix.Rotation(math.radians(g['pitch']), 4, 'X') @ Matrix.Rotation(math.radians(s * g['splay']), 4, 'Z')
         _set(rig_ob, rest, f'foot.{side}', _about(ank, R))
-        piv, _ = wing_frame(side)
-        _set(rig_ob, rest, f'wing.{side}', _about(piv, Matrix.Rotation(math.radians(-s * g['wing']), 4, 'Y')))
+        _set(rig_ob, rest, f'wing.{side}', _wing_raise(side, g['wing'], 0))
 
 
 def pose_wave(rig_ob, f, rest=None):
     rest = rest or _bone_rest(rig_ob)
     reset_pose(rig_ob)
     raise_deg = _keys(WAVE_RAISE, f)
-    k = raise_deg / 128.0
+    k = raise_deg / 100.0
     hold = 1.0 if 11 <= f <= 36 else 0.0
     swing = WAVE_SWING * math.sin(2 * math.pi * 2 * (f - 11) / 25) * hold
     _set(rig_ob, rest, 'wing.L', _wing_raise('L', raise_deg + swing, WAVE_TWIST * k))
     _set(rig_ob, rest, 'wing.R', _wing_raise('R', 6 * k, 0))
-    _set(rig_ob, rest, 'body', _about((0, 0, Z0), Matrix.Rotation(math.radians(-3.5 * k), 4, 'Y')))
+    # the whole body turns its waving side a little toward the viewer (the wing itself barely twists)
+    R = Matrix.Rotation(math.radians(-3.5 * k), 4, 'Y') @ Matrix.Rotation(math.radians(-WAVE_YAW * k), 4, 'Z')
+    _set(rig_ob, rest, 'body', _about((0, 0, Z0), R))
     tilt = Matrix.Rotation(math.radians(6 * k), 4, 'Y') @ Matrix.Rotation(math.radians(3 * k), 4, 'X')
     _set(rig_ob, rest, 'head', _about((0, 0, NECK_Z), tilt))
 
@@ -1409,8 +1439,7 @@ def pose_seated(rig_ob, f=0, rest=None, offset=(0.0, 0.0, SEAT_Z)):
         s = 1 if side == 'L' else -1
         _set(rig_ob, rest, f'leg.{side}', _about(_sx(HIP, s), Matrix.Rotation(-theta, 4, 'X')))
         _set(rig_ob, rest, f'foot.{side}', _about(_sx(ANKLE, s), Matrix.Rotation(theta, 4, 'X')))
-        piv, _ = wing_frame(side)
-        _set(rig_ob, rest, f'wing.{side}', _about(piv, Matrix.Rotation(math.radians(-8), 4, 'X')))
+        _set(rig_ob, rest, f'wing.{side}', _wing_raise(side, 4, 0))     # round 8: no forward swing
 
 
 WALK_LEN = 32          # one waddle cycle = two steps, 30 fps (~1.07 s), loops
@@ -1444,12 +1473,49 @@ def pose_walk(rig_ob, f, rest=None):
         Lr = _about(hip, Matrix.Rotation(math.radians(-roll), 4, 'Y'))
         _set(rig_ob, rest, f'leg.{side}', Matrix.Translation((0, y, lift)) @ Lr)
         _set(rig_ob, rest, f'foot.{side}', _about(_sx(ANKLE, s), Matrix.Rotation(math.radians(-14 * swing), 4, 'X')))
-        piv, _ = wing_frame(side)
         out = 9 + 9 * swing                      # the wing on the lifting side swings out
-        _set(rig_ob, rest, f'wing.{side}', _about(piv, Matrix.Rotation(math.radians(-s * out), 4, 'Y')))
+        _set(rig_ob, rest, f'wing.{side}', _wing_raise(side, out, 0))
 
 
 CLIPS = {'hop': (HOP_LEN, pose_hop), 'wave': (WAVE_LEN, pose_wave), 'walk': (WALK_LEN, pose_walk)}
+
+
+_CLEAR_SEL = {}
+
+
+def wing_clearance(rig_ob, mesh_ob):
+    """Round 8: smallest distance (m) from the posed wing paddles to the posed body / head, for the
+    current pose (< 0 = the wing is inside). Wing points = skin owned by a wing more than 7 cm out
+    from its pivot (the hinge ring itself is skin shared with the body). Each point is taken back
+    into the rest pose by the inverse of the body bone and of the head bone; the body field there
+    is its distance (the smaller of the two, so it is conservative)."""
+    key = mesh_ob.name
+    if key not in _CLEAR_SEL:
+        V = np.array([v.co[:] for v in mesh_ob.data.vertices])
+        fl = fields(V)
+        sel = np.zeros(len(V), bool)
+        for sd in 'LR':
+            u = _wing_local(V, sd)[:, 0]
+            sel |= (u > 0.07) & (fl['wing.' + sd] < fl['body'] - 0.003)
+        _CLEAR_SEL[key] = np.where(sel)[0]
+    idx = _CLEAR_SEL[key]
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = mesh_ob.evaluated_get(dg)
+    me = ev.to_mesh()
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get('co', co)
+    ev.to_mesh_clear()
+    P = co.reshape(-1, 3)[idx]
+    mw = np.array(mesh_ob.matrix_world)
+    P = P @ mw[:3, :3].T + mw[:3, 3]
+    best = np.full(len(P), np.inf)
+    rw = rig_ob.matrix_world
+    for name in ('body', 'head'):
+        pb = rig_ob.pose.bones[name]
+        M = np.array((rw @ pb.matrix @ pb.bone.matrix_local.inverted() @ rw.inverted()).inverted())
+        Q = P @ M[:3, :3].T + M[:3, 3]
+        best = np.minimum(best, f_body(Q))
+    return float(best.min())
 
 
 def build_actions(rig_ob):
