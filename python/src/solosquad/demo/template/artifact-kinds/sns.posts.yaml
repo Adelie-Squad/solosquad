@@ -1,4 +1,0 @@
-name: sns.posts
-title: 게시 초안
-required: [posts]
-schema_version: 1

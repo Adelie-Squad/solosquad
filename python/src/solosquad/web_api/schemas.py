@@ -49,13 +49,6 @@ class Health(Closed):
     passkeys: bool = False
     """Passkey sign-in is possible here (the office has its `public_url`) — the login
     screen shows the passkey button only then."""
-    demo: bool = False
-    """A demo server (decision 62). Its demo accounts sign in only through the marketing
-    site's demo login (registration number + id + password, 2026-11-12), so the login
-    screen sends visitors there instead of showing a password form."""
-    demo_login_url: str | None = None
-    """The marketing site's `/demo` (from `server.yaml` `demo.marketing_url`); null when
-    not set — the screen then shows a neutral line."""
 
 
 class Version(Closed):
@@ -129,27 +122,6 @@ class ScopeRef(Closed):
     workspace: str
 
 
-class DemoInfo(Closed):
-    """The demo account signed in, and what the demo server locks (PRD §3.6.4 ③)."""
-
-    id: str
-    """e.g. `samsungDemo`."""
-    label: str
-    expires: float
-    locked: list[str]
-    """The lock table — route keys refused with `demo_read_only` (and a few own-account
-    actions); the web locks the same controls."""
-    contact_url: str | None
-    """상담 요청 — the demo band's link to the agency."""
-    suggestions: list[str]
-    """The suggested requests; each runs its scenario."""
-
-
-class DemoRestarted(Closed):
-    workflows: list[str]
-    """The scenario workflows started again."""
-
-
 class Me(Closed):
     user: PublicUser | None
     stage: Literal["full", "enroll"]
@@ -168,11 +140,6 @@ class Me(Closed):
     last_scope: ScopeRef | None = None
     """Where to open after login: the last workspace this person used, or their first one
     when that is gone or they never used one; null = nothing assigned."""
-    demo: bool = False
-    """A demo server (decision 62): settings are read-only, the web shows the 데모 chip and
-    posts screen changes (`POST /api/demo/events`). Decided by the server, never the web."""
-    demo_info: DemoInfo | None = None
-    """The demo account signed in — its id, expiry and the lock table."""
 
 
 class TotpBegin(Closed):
@@ -635,8 +602,9 @@ class BriefData(Open):
     agent: str | None = None
 
 
-# The demo's org-package kinds (decision 62) — `demo/scenario.py` writes them; the same kinds
-# serve a real commerce org package later (W11 · v2.2.0).
+# Commerce org-package kinds (payables · supplier comparison · purchase order · SNS) — first
+# shown by the marketing site's frontend demo (decision 62); a real commerce org package
+# writes them later (W11 · v2.2.0).
 
 
 class PayableItem(Closed):
@@ -1209,9 +1177,7 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     ScopeWorkspace,
     ScopeOrg,
     ScopeRef,
-    DemoInfo,
     Me,
-    DemoRestarted,
     TotpBegin,
     AccessPolicy,
     AuditEntry,

@@ -1,4 +1,0 @@
-name: finance.payables
-title: 거래처 대금 지급안
-required: [items, total]
-schema_version: 1

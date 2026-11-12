@@ -111,11 +111,6 @@ class ErrorCode(StrEnum):
     # -- the dashboard digest (자리를 비운 동안)
     DIGEST_SINCE_INVALID = "digest_since_invalid"
     DIGEST_UNTIL_INVALID = "digest_until_invalid"
-    # -- demo mode (decision 62)
-    DEMO_READ_ONLY = "demo_read_only"
-    """A settings change on a demo server — the demo shows settings but does not take them."""
-    DEMO_EXPIRED = "demo_expired"
-    """A demo account past its expiry (or revoked while signed in)."""
 
 
 BY_STATUS: dict[int, ErrorCode] = {

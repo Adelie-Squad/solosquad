@@ -1,4 +1,0 @@
-name: sns.ads
-title: 광고 집행안
-required: [channel, budget, days]
-schema_version: 1

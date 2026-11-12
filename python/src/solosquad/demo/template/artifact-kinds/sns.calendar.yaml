@@ -1,4 +1,0 @@
-name: sns.calendar
-title: 콘텐츠 일정
-required: [week, entries]
-schema_version: 1
