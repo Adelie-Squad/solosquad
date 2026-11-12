@@ -10,8 +10,10 @@ framing for every view:
                alone and with office-kit desk.set
   motion/      hop + wave + walk (front, 3/4) frames (motion/<clip>/NNN.png) and a 2 x 6 key-frame strip <clip>-strip.png
   detail/      close-ups for the before/after: face (front), wing-3q (3/4 front, the wing's inner
-               white), wing-up (wing raised to the side, the armpit and joint)
-  beforeafter-face.png / beforeafter-wing.png   --prev <previous round's detail/ dir> | this round
+               white), wing-up (wing raised to the side), armpit-3q / -under / -up (the joint)
+  beforeafter-face.png / beforeafter-wing.png / beforeafter-armpit.png
+               --prev <previous round's detail/ dir> | this round
+  silhouette.png  front, 3/4, side: the previous round's outline (orange) and this round's (blue)
 
 The previous round's detail/ is rendered by running this script with --only detail next to that
 round's penguin_v3.py (copy assets/office/scripts/ to a temp dir and put that round's
@@ -25,7 +27,8 @@ penguin_v3.py in it: git show <commit>:assets/office/scripts/penguin_v3.py).
     python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r2
 
 Options: --res 1200 (stills) · --samples 96 · --motion-res 480 · --motion-samples 24 ·
---only turnaround,compare,seated,motion,detail · --prev <dir with face/wing-3q/wing-up.png>
+--only turnaround,compare,seated,motion,detail · --prev <previous round's detail/ dir> ·
+--prev-turnaround <previous round's turnaround/ dir> (silhouette.png: outlines overlaid)
 """
 import math
 import os
@@ -60,6 +63,7 @@ DRAFT_BOX = tuple(int(v) for v in arg('--draft-box', '445,1341,699').split(','))
 RIGHT = arg('--right', arg('--v2'))
 ONLY = set(arg('--only', 'turnaround,compare,seated,motion,detail').split(','))
 PREV = arg('--prev')
+PREV_TURN = arg('--prev-turnaround')
 
 SCALE, TARGET_Z = 0.98, 0.40          # one framing for the whole turnaround
 M_SCALE, M_TARGET_Z = 1.16, 0.47       # motion framing (room for the hop and the raised wing)
@@ -348,10 +352,15 @@ def motion(cam, rig):
 
 # close-ups: (name, azim, elev, ortho scale, target (x, y, z), pose)
 def _detail_views():
+    sx, sy, sz = pv3.SHOULDER
     return [
         ('face', 0, 0, 0.50, (0.0, 0.0, pv3.EYE_Z), None),
         ('wing-3q', 45, 0, 0.50, (-0.245, -0.055, 0.29), None),
         ('wing-up', 0, -12, 0.50, (0.27, 0.0, 0.42), 'raise'),
+        # armpit close-ups (round 7), framed on the shoulder pivot
+        ('armpit-3q', 45, 5, 0.16, (-sx - 0.01, sy - 0.02, sz - 0.05), None),
+        ('armpit-under', 0, -25, 0.16, (sx + 0.02, sy, sz - 0.05), None),
+        ('armpit-up', 20, -40, 0.18, (sx + 0.03, sy, sz), 'raise'),
     ]
 
 
@@ -390,7 +399,8 @@ def beforeafter():
     if not PREV:
         return
     d = os.path.join(OUT, 'detail')
-    for out, names in (('face', ['face']), ('wing', ['wing-3q', 'wing-up'])):
+    for out, names in (('face', ['face']), ('wing', ['wing-3q', 'wing-up']),
+                       ('armpit', ['armpit-3q', 'armpit-under', 'armpit-up'])):
         tiles = []
         for n in names:
             a, b = os.path.join(PREV, f'{n}.png'), os.path.join(d, f'{n}.png')
@@ -398,6 +408,60 @@ def beforeafter():
                 tiles += [_resize(_load(a), 720, 720), _resize(_load(b), 720, 720)]
         if tiles:
             _save(sheet(tiles, 2, 16, BACKDROP['light']), os.path.join(OUT, f'beforeafter-{out}.png'))
+
+
+def _mask(px, backdrop):
+    """Penguin mask of a flattened render: everything not reachable from the image border through
+    backdrop-coloured pixels (so the white front, close to the backdrop, still counts as inside)."""
+    off = np.abs(px[..., :3] - _hex01(backdrop)).max(2) > 0.03
+    bg = np.zeros_like(off)
+    bg[0, :] = bg[-1, :] = bg[:, 0] = bg[:, -1] = True
+    bg &= ~off
+    while True:
+        grow = bg.copy()
+        grow[1:] |= bg[:-1]
+        grow[:-1] |= bg[1:]
+        grow[:, 1:] |= bg[:, :-1]
+        grow[:, :-1] |= bg[:, 1:]
+        grow &= ~off
+        if grow.sum() == bg.sum():
+            return ~bg
+        bg = grow
+
+
+def _outline(m, r=4):
+    e = m.copy()
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            e &= np.roll(np.roll(m, dy, 0), dx, 1)
+    return m & ~e
+
+
+def silhouette():
+    """--prev-turnaround (previous round's turnaround/ PNGs) vs this round: the previous outline
+    (orange) and this one (blue) over this round's render, faded, same camera."""
+    if not PREV_TURN:
+        return
+    tiles = []
+    for view in ('front', 'three-quarter-front-left', 'side-left'):
+        a = os.path.join(PREV_TURN, f'{view}-light.png')
+        b = os.path.join(OUT, 'turnaround', f'{view}-light.png')
+        if not (os.path.exists(a) and os.path.exists(b)):
+            continue
+        pa, pb = _load(a), _load(b)
+        if pa.shape != pb.shape:
+            pa = _resize(pa, pb.shape[1], pb.shape[0])
+        out = pb.copy()
+        out[..., :3] = out[..., :3] * 0.45 + _hex01(BACKDROP['light']) * 0.55
+        for px, col in ((pa, (0.93, 0.45, 0.10)), (pb, (0.16, 0.40, 0.82))):
+            o = _outline(_mask(px, BACKDROP['light']))
+            out[o, :3] = col
+        h, w = out.shape[:2]
+        cw = int(h * 0.8)
+        x0 = (w - cw) // 2
+        tiles.append(_resize(out[:, x0:x0 + cw].copy(), 640, 800))
+    if tiles:
+        _save(sheet(tiles, len(tiles), 16, BACKDROP['light']), os.path.join(OUT, 'silhouette.png'))
 
 
 def main():
@@ -413,6 +477,8 @@ def main():
     if 'detail' in ONLY:
         detail(cam, rig)
         beforeafter()
+    if 'turnaround' in ONLY:
+        silhouette()
 
 
 main()

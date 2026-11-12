@@ -53,9 +53,11 @@ BUTT_IN = (0.07, 0.03, 0.07)       # back depth -7 % at the very bottom (the but
 BUTT_UP = (0.06, 0.21, 0.10)       # back depth +6 % around 21 %: a fuller, higher, rounder butt
 # Front-view hourglass (half-width factor of W / 2)
 HG_BASE = 1.00
-HG_ARMPIT = (0.070, 0.43, 0.075)   # a local pinch where the wing meets the body, under the shoulder
-                                   # (follows the shoulder down: 0.46 -> 0.43 in round 6)
-HG_WAIST = (0.030, 0.27, 0.14)     # the belly is a touch narrower than the face (draft: 0.96)
+# Round 7: the waist is the silhouette - one smooth concave curve between the chest and the hips
+# (min 0.93 at 35-40 % of the height, 0.94 at 30 %), the hips and the face stay full (1.00). The
+# armpit pinch is folded into it (round 6: armpit (0.070, 0.43, 0.075), waist (0.030, 0.27, 0.14)).
+HG_ARMPIT = (0.030, 0.44, 0.070)   # what is left of the local pinch under the shoulder
+HG_WAIST = (0.065, 0.33, 0.115)    # the waist
 P_TOP = 2.2                        # head dome superellipse: fuller toward the crown (draft_1)
 Z0 = 0.030         # body bottom (the feet tuck under it)
 Z1 = Z0 + HB       # top of the head
@@ -63,7 +65,8 @@ R_BOTTOM = 0.095   # bottom corner radius (front view): a soft roll into a wide 
 R_TOP = 0.21       # vertical semi-axis of the round top (~ the half width: a near-semicircle)
 
 EYE_Z = Z0 + 0.72 * HB          # eye centres at 72 % of the body height
-EYE_X = 0.22 * W                # eye centres +/- 0.22 W (0.44 W apart)
+EYE_X = 0.206 * W               # eye centres +/- 0.206 W (round 7: 0.22 -> 0.206 W, so the gap between
+                                # the eyes' inner edges is round 5's 0.150 W with the smaller eyes)
 EYE_R = 0.131 * W               # eye diameter 0.262 W (round 6: -10 %, was 0.29 W)
 CHEEK_R = 0.75 * EYE_R          # blush diameter 0.75 x eye (follows the eye: -10 %)
 CHEEK_DX, CHEEK_DZ = 0.20 * 2 * EYE_R, -0.58 * 2 * EYE_R   # low-outside of the eye, tucked under it
@@ -83,9 +86,9 @@ LOBE_C, LOBE_R = (0.195, 0.054), 0.214
 SIDE_BASE = 0.400
 SIDE_FACE = (0.015, 0.00, 0.30)     # widest at eye level, broad, so the cheeks stay calm (round 6:
                                     # 0.045 -> 0.015, the face white a little narrower)
-# Round 6: the waist back to round 4 (round 5 had (-0.110, -0.72, 0.38) and (0.045, -1.10, 0.14))
-SIDE_WAIST = (-0.052, -0.60, 0.25)  # a gentle concave waist
-SIDE_FLARE = (0.028, -1.00, 0.16)   # a round flare toward the bottom
+# Round 7: the white belly back to round 5 (round 6 had round 4's (-0.052, -0.60, 0.25), (0.028, -1.00, 0.16))
+SIDE_WAIST = (-0.110, -0.72, 0.38)  # deepest at ~30 % of the height
+SIDE_FLARE = (0.045, -1.10, 0.14)   # a short round flare to the bottom
 # The temple: the brow circle is left this far above its outermost point and joined to the side
 # function at TEMPLE_B (zn) with a quintic that matches position, slope and curvature at both ends
 # (G2), so there is no straight run between the brow and the cheek (round 5 blended out of a
@@ -115,14 +118,25 @@ WING_YAW = math.radians(15)
 # from the pivot); with the lower shoulder the tip stays at the same height
 WING_C, WING_AU, WING_AV, WING_AW = 0.091, 0.150, 0.058, 0.024   # ellipsoid centre + semi-axes
 WING_ROOT, WING_TIP = 1.18, 0.80  # width factor at the root vs the tip (broad base)
-WING_CUT = 0.012                # the white underside starts this far out from the pivot (arc top,
-                                # at the armpit; round 6: 0.045 -> 0.012, the white reaches the joint,
-                                # cut off smoothly in the shoulder crease)
+WING_CUT = 0.022                # the white underside starts this far out from the pivot (arc top,
+                                # at the armpit; round 6: 0.045 -> 0.012, round 7: 0.022 - at 0.012
+                                # its corner with the crease cut was a thin sliver; the white still
+                                # reaches the joint through the crease cut)
 ARM_AU, ARM_AV = 0.200, 0.200   # ellipse of the underside panel in the wing plane (u, v); it runs
                                 # past the tip, so only the rim keeps it black there
 ARM_C = WING_CUT + ARM_AU       # its centre: the top of the arc sits at u = WING_CUT
-WING_ROUND = 0.012              # softness of the underside panel's corners
+ARM_CREASE_ROUND = 0.030         # round 7: corner where the crease cut meets the rim cut (was WING_ROUND)
+SEAM_SMOOTH = 12                 # round 7: surface smoothing passes for the seam field's black side
+STITCH_GRAD = 0.55               # round 7: no thread where the seam field's surface slope is under this
+ARM_RIGID = 0.060               # round 7: the wing weight ramps from 0 here to 1 at 8 mm outside the white edge
+ARM_CREASE = 0.010              # round 7: the white stops this far (body field) up the wing side of the
+                                # shoulder crease (round 6: 0.002 = the valley floor, a wavy edge)
+WING_ROUND = 0.012             # softness of the underside panel's corners
 WING_RIM = 0.005                # ...and this far in from the rim, so the rim stays black
+WING_DOM = 0.015                # round 7: wing vs body weight blend across the crease, a continuous
+                                # ramp of the field difference (round 6: +-0.004, a per-vertex switch
+                                # blurred by surface smoothing on the irregular mesh: noisy weights that
+                                # crumple the armpit skin when the wing is raised)
 WING_K = 0.045                  # shoulder crease softness
 
 # Legs + feet. Hip pivot inside the body bottom.
@@ -475,6 +489,17 @@ def _neighbours(nv, Fq):
     return e
 
 
+def _stitch_clean(V, d, edges):
+    """Round 7: 1 where the seam field changes fast enough along the surface for a crisp thread,
+    fading to 0 where it is flat (|grad| well under 1, e.g. where the wing edge runs into the
+    shoulder crease): there the 1.25 mm thread band would smear over whole mesh cells."""
+    i, j = edges[:, 0], edges[:, 1]
+    slope = np.abs(d[i] - d[j]) / np.maximum(np.linalg.norm(V[i] - V[j], axis=1), 1e-6)
+    g = np.zeros(len(V))
+    np.maximum.at(g, i, slope)
+    return _smoothstep(STITCH_GRAD * 0.6, STITCH_GRAD, g)
+
+
 def _relax(V, Fq, fn, iters=2):
     e = _neighbours(len(V), Fq)
     for _ in range(iters):
@@ -673,13 +698,67 @@ def _wing_rim_table(n=720):
     return th, np.concatenate([[0], np.cumsum(seg)])
 
 
+def wing_under(V, fl, side):
+    """Signed distance-like field of the white wing underside (> 0 inside), on the rest mesh."""
+    q = _wing_local(V, side)
+    # the panel's top end is an ellipse arc in the wing's own (u, v) plane
+    qe = np.stack([(q[:, 0] - ARM_C) / ARM_AU, q[:, 1] / ARM_AV], 1)
+    arc = (1 - np.linalg.norm(qe, axis=1)) * min(ARM_AU, ARM_AV)
+    und = _smin(-q[:, 2] - WING_RIM, arc, WING_ROUND)
+    # ...and only on the wing, never on the body side it hangs against: cut in the shoulder crease
+    # by the continuous wing-vs-body field (0 mid-crease), ARM_CREASE up the wing side of it
+    crease = fl['body'] - fl['wing.' + side] - ARM_CREASE
+    # round 7: a wide round where the crease cut meets the rim cut - the two run almost parallel
+    # there, so a small round left a long thin white sliver into the joint (smeared stitches)
+    return _smin(und, crease, ARM_CREASE_ROUND)
+
+
 PERIOD_BODY = 0.0125     # front-seam stitch period (m)
 PERIOD_WING = 0.0105
 PERIOD_EYE = 0.0085
 PERIOD_BEAK = 0.0068
 
 
-def body_attributes(V):
+def _zero_loop(V, Fq, f):
+    """The longest closed zero contour of a per-vertex field on the quad mesh, as a 3D polyline
+    (crossings interpolated linearly along the mesh edges), or None."""
+    key_pt = {}
+    adj = {}
+    for quad in Fq:
+        cross = []
+        for k in range(4):
+            a_, b_ = quad[k], quad[(k + 1) % 4]
+            fa, fb = f[a_], f[b_]
+            if (fa > 0) != (fb > 0):
+                key = (min(a_, b_), max(a_, b_))
+                if key not in key_pt:
+                    t = fa / (fa - fb)
+                    key_pt[key] = V[a_] + (V[b_] - V[a_]) * t
+                cross.append(key)
+        for i in range(0, len(cross) - 1, 2):
+            adj.setdefault(cross[i], []).append(cross[i + 1])
+            adj.setdefault(cross[i + 1], []).append(cross[i])
+    seen, best = set(), None
+    for start in adj:
+        if start in seen:
+            continue
+        chain, prev, cur = [start], None, start
+        seen.add(start)
+        while True:
+            nxt = [n for n in adj[cur] if n != prev and n not in seen]
+            if not nxt:
+                break
+            prev, cur = cur, nxt[0]
+            seen.add(cur)
+            chain.append(cur)
+        if best is None or len(chain) > len(best):
+            best = chain
+    if best is None or len(best) < 8:
+        return None
+    return np.array([key_pt[k] for k in best])
+
+
+def body_attributes(V, Fq=None):
     """Per-vertex seam + region attributes and bone weights for the skin."""
     fl = fields(V)
     n = len(V)
@@ -720,25 +799,21 @@ def body_attributes(V):
     nw = max(1, round(s_tab[-1] / PERIOD_WING))
     for side in 'LR':
         q = _wing_local(V, side)
-        # the panel's top end is an ellipse arc in the wing's own (u, v) plane: a clean curve at
-        # the armpit, just past the shoulder crease (so it never lands on the stretchy crease skin)
-        qe = np.stack([(q[:, 0] - ARM_C) / ARM_AU, q[:, 1] / ARM_AV], 1)
-        arc = (1 - np.linalg.norm(qe, axis=1)) * min(ARM_AU, ARM_AV)
-        und = _smin(-q[:, 2] - WING_RIM, arc, WING_ROUND)
-        # ...and only on the wing, never on the body side it hangs against. Ownership only clamps:
-        # the two surfaces meet only in the shoulder crease, where the arc is already negative,
-        # so the switch never touches the white edge
-        # Round 6: the arc top moved up into the joint, so the cut in the crease is now the edge
-        # there; a continuous field (wing vs body distance, 0 mid-crease) instead of a hard
-        # ownership switch, so that end is one smooth curve too
-        crease = fl['body'] - fl['wing.' + side] - 0.002
-        und = _smin(und, crease, WING_ROUND)
-        th = np.arctan2(q[:, 1] / WING_AV, (q[:, 0] - WING_C) / WING_AU)
-        sw = np.interp(th, th_tab, s_tab)
+        und = wing_under(V, fl, side)
         win = und > seam_d
         seam_d[win] = und[win]
-        seam_phase[win] = sw[win] / s_tab[-1]
-        seam_n[win] = nw
+        edge = _zero_loop(V, Fq, und) if Fq is not None else None
+        if edge is not None:
+            # round 7: dashes spaced by arc length along the white edge itself (the rim angle
+            # sweeps fast along the short crease-cut stretch at the joint: dashes packed ~3x there)
+            _, s_e, tot_e = _polyline_distance(V[win], edge)
+            seam_phase[win] = s_e / tot_e
+            seam_n[win] = max(1, round(tot_e / PERIOD_WING))
+        else:
+            q_ = q[win]
+            th = np.arctan2(q_[:, 1] / WING_AV, (q_[:, 0] - WING_C) / WING_AU)
+            seam_phase[win] = np.interp(th, th_tab, s_tab) / s_tab[-1]
+            seam_n[win] = nw
 
     feet = fl['upper'] - flf              # > 0 where a leg or foot owns the vertex
     # the stitch stops just short of the forehead V so the point stays sharp
@@ -764,7 +839,7 @@ def body_weights(V, fl, edges):
     rest_upper = fl['body']
     for s in 'LR':
         u = _wing_local(V, s)[:, 0]
-        dom = _smoothstep(-0.004, 0.004, rest_upper - fw[s])
+        dom = _smoothstep(-WING_DOM, WING_DOM, rest_upper - fw[s])
         w['wing.' + s] = dom * _smoothstep(-0.06, 0.025, u)
         others = np.minimum(fl['body'], np.minimum(fw['L'], fw['R']))
         legdom = _smoothstep(-0.010, 0.010, others - flf[s])
@@ -774,6 +849,14 @@ def body_weights(V, fl, edges):
     keys = list(w)
     M = np.stack([w[k] for k in keys], 1)
     M = _smooth_values(M, edges, 14)
+    # Round 7: the white underside and a margin round it move rigidly with the wing, so the skin
+    # that stretches when the wing is raised is the black crease below the white edge, not the
+    # edge itself (round 6: the edge sat in the weight blend; its cells stretched 3-4x and the
+    # per-vertex colour field, interpolated over those long thin cells, came out jagged)
+    for i, k in enumerate(keys):
+        if k.startswith('wing.'):
+            rigid = _smoothstep(-ARM_RIGID, -0.008, wing_under(V, fl, k[-1]))
+            M[:, i] = np.maximum(M[:, i], rigid)
     rest = np.clip(1 - M.sum(1), 0, 1)
     tot = M.sum(1) + rest
     M = M / tot[:, None]
@@ -1091,7 +1174,15 @@ def build(col, name='penguin_v3'):
     Fq = _orient_faces(V, Fq, f_all)
     V = _relax(V, Fq, f_all, iters=2)
     edges = _neighbours(len(V), Fq)
-    attrs, fl = body_attributes(V)
+    attrs, fl = body_attributes(V, Fq)
+    # Round 7: on the black side (d < -3 mm, where only the thread line and nothing else lives)
+    # the seam field is smoothed along the surface: where the wing's front/back edge merges into the
+    # shoulder, its -w term jumps 5-12 mm from vertex to vertex and the -5.8 mm thread line came out
+    # as scattered blobs (the "jagged" armpit). The white edge (d = 0) is untouched.
+    d = attrs['seam_d']
+    blend = _smoothstep(-0.003, -0.006, d)
+    attrs['seam_d'] = d + blend * (_smooth_values(d, edges, SEAM_SMOOTH) - d)
+    attrs['stitch_on'] = attrs['stitch_on'] * _stitch_clean(V, attrs['seam_d'], edges)
     weights = body_weights(V, fl, edges)
     n_body = len(V)
 
