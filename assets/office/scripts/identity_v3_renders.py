@@ -31,6 +31,21 @@ penguin_v3.py in it: git show <commit>:assets/office/scripts/penguin_v3.py).
 Options: --res 1200 (stills) · --samples 96 · --motion-res 480 · --motion-samples 24 ·
 --only turnaround,compare,seated,motion,detail · --prev <previous round's detail/ dir> ·
 --prev-turnaround <previous round's turnaround/ dir> (silhouette.png: outlines overlaid)
+
+QA gate (round 11; runs first and stops the render on any violation; off unless --qa-skills):
+  --qa-skills DIR     the skills' scripts: qa_render.py, render_compare.py (skills/3d-previz-edit)
+                      and clearance_check.py (skills/rig-motion-clearance, the unsigned version)
+  --qa-cameras BLEND  a baseline QA .blend whose QA_cameras are copied in (identical cameras every
+                      round); without it qa_render frames new ones and nothing is compared
+  --qa-prev DIR       the previous round's <out>/qa/ (views/*.png + regions.json) to compare with
+  --qa-edit KEYS      the regions this round is allowed to change (wing, face; default wing)
+  --qa-min-clearance  metres, default 0.008
+  --qa-max-outside    render_compare's leak limit outside the edit regions, default 0.002
+Steps: bake <out>/qa/round.blend (identity_v3_qa_blend.py), qa_render --quality final at 640 px,
+frames 0 (rest), 77 (wave peak), 168 (max raise) -> <out>/qa/views/; regions.json; render_compare
+each view against --qa-prev with the union of both rounds' edit boxes (+2 %); clearance_check
+over every clip (hop, wave, walk, seated, seated at the desk, max raise; subframes 2): wing tips
+vs head, body, face pieces, feet, the other wing and the desk set. Report: <out>/qa/gate.md.
 """
 import math
 import os
@@ -66,6 +81,12 @@ RIGHT = arg('--right', arg('--v2'))
 ONLY = set(arg('--only', 'clearance,turnaround,compare,seated,motion,poses,detail').split(','))
 PREV = arg('--prev')
 PREV_TURN = arg('--prev-turnaround')
+QA_SKILLS = arg('--qa-skills')
+QA_CAMERAS = arg('--qa-cameras')
+QA_PREV = arg('--qa-prev')
+QA_EDIT = arg('--qa-edit', 'wing').split(',')
+QA_MIN_CLEARANCE = float(arg('--qa-min-clearance', '0.008'))
+QA_MAX_OUTSIDE = float(arg('--qa-max-outside', '0.002'))
 
 SCALE, TARGET_Z = 0.98, 0.40          # one framing for the whole turnaround
 M_SCALE, M_TARGET_Z = 1.16, 0.47       # motion framing (room for the hop and the raised wing)
@@ -536,7 +557,89 @@ def clearance(mesh, rig):
         raise SystemExit(f'wing clearance under {MIN_CLEARANCE * 1000:.0f} mm: {bad}')
 
 
+def qa_gate():
+    """The skills' checks as a gate before any rendering: see the module docstring."""
+    import json
+    import subprocess
+    if not QA_SKILLS:
+        return
+    here = os.path.dirname(os.path.abspath(__file__))
+    B = bpy.app.binary_path
+    qa = os.path.join(OUT, 'qa')
+    views = os.path.join(qa, 'views')
+    os.makedirs(views, exist_ok=True)
+    blend = os.path.join(qa, 'round.blend')
+    lines = ['# QA gate', '']
+    fails = []
+
+    def run(args, what):
+        p_ = subprocess.run(args, capture_output=True, text=True)
+        if p_.returncode not in (0, 1):
+            raise SystemExit(f'qa gate: {what} crashed:\n{p_.stdout[-2000:]}\n{p_.stderr[-2000:]}')
+        return p_
+    bake = [B, '-b', '--factory-startup', '-P', os.path.join(here, 'identity_v3_qa_blend.py'), '--',
+            '--scripts', here, '--out', blend]
+    if QA_CAMERAS:
+        bake += ['--cameras-from', QA_CAMERAS]
+    p_ = run(bake, 'bake')
+    clips = next((ln.split(' ', 1)[1] for ln in p_.stdout.splitlines() if ln.startswith('CLIPS ')), '')
+    run([B, '-b', blend, '--python', os.path.join(QA_SKILLS, 'qa_render.py'), '--', '--target', 'penguin_v3',
+         '--out', views, '--quality', 'final', '--resolution', '640', '--frames', '0,77,168'], 'qa_render')
+    run([B, '-b', blend, '-P', os.path.join(here, 'identity_v3_qa_blend.py'), '--', '--scripts', here,
+         '--regions', os.path.join(qa, 'regions.json'), '--frames', '0,77,168'], 'regions')
+    # render_compare against the previous round
+    if QA_PREV and QA_CAMERAS:
+        cur = json.load(open(os.path.join(qa, 'regions.json')))
+        prev = json.load(open(os.path.join(QA_PREV, 'regions.json')))
+        lines += [f'## render_compare vs {QA_PREV} (edit: {", ".join(QA_EDIT)}; '
+                  f'max outside {QA_MAX_OUTSIDE})', '']
+        for view in sorted(cur):
+            args = [B, '-b', '--factory-startup', '--python', os.path.join(QA_SKILLS, 'render_compare.py'), '--',
+                    '--before', os.path.join(QA_PREV, 'views', view + '.png'),
+                    '--after', os.path.join(views, view + '.png'),
+                    '--tol', '0.03', '--max-outside', str(QA_MAX_OUTSIDE)]
+            for k in QA_EDIT:
+                boxes = [rg[view][k] for rg in (cur, prev) if view in rg and k in rg[view]]
+                if not boxes:
+                    continue
+                x0 = max(0.0, min(b_[0] for b_ in boxes) - 0.02)
+                y0 = max(0.0, min(b_[1] for b_ in boxes) - 0.02)
+                x1 = min(1.0, max(b_[2] for b_ in boxes) + 0.02)
+                y1 = min(1.0, max(b_[3] for b_ in boxes) + 0.02)
+                args += ['--region', f'{k}={x0:.3f},{y0:.3f},{x1:.3f},{y1:.3f}', '--edit', k]
+            p_ = run(args, 'render_compare')
+            out_ = next((ln for ln in p_.stdout.splitlines() if ln.startswith('| outside')), '')
+            ok = p_.returncode == 0
+            lines.append(f'- {view}: {"PASS" if ok else "FAIL"} {out_}')
+            if not ok:
+                fails.append(f'render_compare {view}')
+        lines.append('')
+    # clearance over every clip
+    moving = 'penguin_v3:wing_tip_L,penguin_v3:wing_tip_R'
+    against = ('penguin_v3:head,penguin_v3:body,penguin_v3:face,penguin_v3:feet,'
+               'penguin_v3:wing_tip_L,penguin_v3:wing_tip_R,prop_00_desk.set')
+    lines += [f'## clearance_check (min {QA_MIN_CLEARANCE} m, subframes 2)', '']
+    for spec in [c for c in clips.split(';') if c and not c.startswith('rest=')]:
+        name, fr = spec.split('=')
+        a_, b_ = fr.split('-')
+        p_ = run([B, '-b', blend, '--python', os.path.join(QA_SKILLS, 'clearance_check.py'), '--',
+                  '--moving', moving, '--against', against, '--frames', a_ if a_ == b_ else fr,
+                  '--min-clearance', str(QA_MIN_CLEARANCE), '--subframes', '2',
+                  '--out', os.path.join(qa, f'clearance_{name}.csv')], 'clearance_check')
+        worst = next((ln for ln in p_.stdout.splitlines() if 'worst' in ln), '')
+        ok = p_.returncode == 0
+        lines.append(f'- {name}: {"PASS" if ok else "FAIL"} {worst}')
+        if not ok:
+            fails.append(f'clearance {name}')
+    lines += ['', 'RESULT: ' + ('PASS' if not fails else 'FAIL: ' + ', '.join(fails))]
+    open(os.path.join(qa, 'gate.md'), 'w').write('\n'.join(lines) + '\n')
+    print('\n'.join(lines))
+    if fails:
+        raise SystemExit('qa gate failed: ' + ', '.join(fails))
+
+
 def main():
+    qa_gate()
     mesh, rig, cam = build()
     if 'clearance' in ONLY:
         clearance(mesh, rig)

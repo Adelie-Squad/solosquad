@@ -111,8 +111,7 @@ BEAK_STEP = 0.15                # the lower beak is set back 15 % of its height 
 
 # Wings (paddle flippers). Shoulder pivot inside the body side; at rest the paddle hangs down,
 # splayed outward and turned so its flat face looks a little forward.
-SHOULDER = (0.215, 0.005, Z0 + 0.505 * HB)   # round 6: 0.535 -> 0.505 HB (2.1 cm lower); round 10:
-                                             # x 0.202 -> 0.215, the knob centre 1.3 cm off the side
+SHOULDER = (0.202, 0.005, Z0 + 0.505 * HB)   # round 6: 0.535 -> 0.505 HB (2.1 cm lower)
 WING_SPLAY = math.radians(31)
 WING_YAW = math.radians(15)
 # round 6: the paddle 9 % shorter (centre 0.100 -> 0.091, half-length 0.165 -> 0.150: tip 0.265 -> 0.241 m
@@ -168,35 +167,24 @@ GRID = 0.006                    # surface-nets cell (m)
 # skin and the white had to stop short of the crease.
 WING_PIECE = True
 PIECE_CUT = -0.030              # the white's arc top sits 3 cm inside the body (past the pivot)
-PIECE_GRID = 0.0035             # surface-nets cell for the wing piece (round 9: 0.0045)
-# Round 10: an ankle-like joint (option (a), chosen by previz + metrics). The wing piece narrows
-# into a neck at the hinge (NECK) and ends in a round knob centred on the hinge pivot, grown in
-# through a short blend (KNOB_NECK). A sphere turning about its own centre stays where it is, so
-# the body carries a fixed rounded socket rim (SOCKET_K) that flows into the knob: body -> rim ->
-# knob -> neck -> paddle is one curve at every hinge angle, and no skin moves or stretches. The rim
-# wraps a sphere SOCKET_INSET smaller than the knob: they meet at a shallow angle (round 9: the
-# paddle went straight into the body - a cut slab, ~110 deg between the surfaces); 7 mm, not
-# less - two faceted meshes crossing almost tangentially draw a sawtooth line. The hinge sits
-# 1.3 cm off the body side so the knob, not the neck, is what meets the body.
-KNOB = True
-KNOB_R = 0.032                  # knob radius
-KNOB_NECK = 0.015               # knob -> paddle blend
-SOCKET = True
-SOCKET_K = 0.050                # body -> knob rim blend (fixed on the body)
-SOCKET_INSET = 0.007            # the rim wraps a sphere this much smaller than the knob
-NECK = True                     # the paddle narrows into a neck at the hinge, like an ankle
-NECK_MIN = 0.35                 # width factor at the hinge (root half-width ~2.4 cm)
-NECK_U = (0.04, 0.12)           # ...flaring back to the full paddle between these u (m from the pivot)
-# Round 10 option (b), previzzed and rejected (FILLET = False): the round-9 piece plus corrective
-# shape keys per hinge angle that pull the body skin onto smin(skin, wing + FILLET_TUCK, k). A
-# smooth union lowers the field by up to k / 4 (7.5 mm) - more than the tuck - so the fillet
-# pokes back out through the wing and makes a new, steeper intersection (junction 108-114 deg,
-# face flips to 172 deg); tucking deeper leaves nothing of the fillet visible.
-FILLET = False
-FILLET_K = 0.030
-FILLET_R0, FILLET_R1 = 0.030, 0.065
-FILLET_TUCK = 0.002
-FILLET_ANGLES = tuple(range(-8, 121, 8))   # deg of raise (the clamp is -8 .. 112)
+PIECE_GRID = 0.0045             # finer surface-nets cell for the wing piece
+# Round 11: the wing meets the body the way the feet do - the wing keeps its own cross-section to
+# the root, and the two surfaces join through a narrow concave band (a welt) that runs round that
+# cross-section, like the strip where the foot meets the body. The welt is its own small mesh per
+# side: round the line where the wing enters the body (WELT_N points round the wing's
+# cross-section), the narrow fillet of smin(body, wing, WELT_K) tangent to the body on one side and
+# to the wing on the other (WELT_M points across, plus a WELT_SKIRT tuck under each surface). The
+# line moves with the hinge, so the welt carries shape keys over raise (WELT_RAISE) x twist
+# (WELT_TWIST), driven by the wing bone (update_welt); it rides on the body bone, so no skin is
+# stretched. Coloured like the wing it belongs to (white on the inner face, black outside).
+WELT = True
+WELT_K = 0.004                  # smooth-union radius of the band (m): band ~4-5 mm wide
+WELT_N, WELT_M = 160, 7
+WELT_SKIRT = 0.0                # no tuck: a folded skirt shaded the band edges into a lip
+WELT_TRIM = 0.0001              # the band ends where it is this close to the body / the wing
+WELT_STATS = {}
+WELT_RAISE = tuple(range(-8, 121, 8))
+WELT_TWIST = (-15, 0, 15)
 
 COLORS = {
     'body': '#1E1D1A', 'white': '#F3F0EA', 'feet': '#151410', 'eye': '#151410',
@@ -362,10 +350,6 @@ def f_wing(P, side):
     taper = WING_ROOT + (WING_TIP - WING_ROOT) * _smoothstep(-WING_AU, WING_AU, q[:, 0])
     # width tapers root -> tip; thickness stays slim at the root so the paddle clears the body side
     thick = 1.0 - 0.2 * _smoothstep(-WING_AU, WING_AU, q[:, 0])
-    if WING_PIECE and NECK:
-        # round 10: narrow at the hinge (u = distance from the pivot), full width from NECK_U[1]
-        u = q[:, 0] + WING_C
-        taper = taper * (NECK_MIN + (1 - NECK_MIN) * _smoothstep(NECK_U[0], NECK_U[1], u))
     q = q / np.stack([np.ones_like(taper), taper, thick], 1)
     return _ellipsoid(q, np.array([WING_AU, WING_AV, WING_AW])) * 0.95
 
@@ -406,8 +390,6 @@ def fields(P):
         fw = f_wing(P, side)
         out['wing.' + side] = fw
         if WING_PIECE:
-            if KNOB and SOCKET:
-                f = _smin(f, f_knob(P, side, KNOB_R - SOCKET_INSET), SOCKET_K)
             continue
         u = _wing_local(P, side)[:, 0]
         k = WING_K * (1 - _smoothstep(WING_K_U[0], WING_K_U[1], u))
@@ -1238,21 +1220,10 @@ def wing_under_piece(V, side):
     return _smin(-q[:, 2] - WING_RIM, arc, WING_ROUND)
 
 
-def f_knob(P, side, r=None):
-    piv, _ = wing_frame(side)
-    return np.linalg.norm(P - piv, axis=1) - (KNOB_R if r is None else r)
-
-
-def f_wing_piece(P, side):
-    """The wing piece's field: the paddle, plus (round 10) the knob joint grown in by a neck."""
-    fw = f_wing(P, side)
-    return _smin(fw, f_knob(P, side), KNOB_NECK) if KNOB else fw
-
-
 def build_wing_piece(side):
     """The closed wing piece of one side: (V, Fq, attrs)."""
     piv, ax = wing_frame(side)
-    fn = lambda P: f_wing_piece(P, side)    # noqa: E731
+    fn = lambda P: f_wing(P, side)          # noqa: E731
     reach = WING_C + WING_AU + 0.03
     lo = piv - reach
     hi = piv + reach
@@ -1285,67 +1256,246 @@ def build_wing_piece(side):
     return V, Fq, attrs
 
 
-def _raise_matrix(side, deg):
-    """numpy 4x4 of _wing_raise(side, deg, 0) (the hinge pose relative to the body)."""
-    return np.array(_wing_raise(side, deg, 0))
+def _bisect(fn, lo, hi, it=30):
+    """Root of fn on [lo, hi] (fn(lo) < 0 < fn(hi)), vectorised over arrays lo / hi."""
+    for _ in range(it):
+        mid = 0.5 * (lo + hi)
+        neg = fn(mid) < 0
+        lo = np.where(neg, mid, lo)
+        hi = np.where(neg, hi, mid)
+    return 0.5 * (lo + hi)
 
 
-def fillet_field(P, side, deg):
-    """The skin with the ankle fillet onto the wing raised by deg (rest space of the body)."""
-    M = np.linalg.inv(_raise_matrix(side, deg))
-    Pw = P @ M[:3, :3].T + M[:3, 3]
-    fw = f_wing(Pw, side) + FILLET_TUCK
-    piv, _ = wing_frame(side)
-    k = FILLET_K * (1 - _smoothstep(FILLET_R0, FILLET_R1, np.linalg.norm(P - piv, axis=1)))
-    return _smin(f_all(P), fw, k)
+def wing_root_loop(side, raise_deg, twist_deg, n=None):
+    """The line where the posed wing (raise, twist about the hinge) enters the body: n points round
+    the wing's own cross-section. Returns (J, n_body, n_wing, phi) in the body's rest space."""
+    n = n or WELT_N
+    piv, ax = wing_frame(side)
+    M = np.array(_wing_raise(side, raise_deg, twist_deg))
+    R, t = M[:3, :3], M[:3, 3]
+    phi = np.linspace(0, 2 * math.pi, n, endpoint=False)
+    dirs = np.stack([np.zeros(n), np.cos(phi), np.sin(phi)], 1)        # wing-local (u, v, w)
+
+    def surf(u):
+        """wing surface point (rest) at height u along each direction (cross-section boundary)."""
+        base = np.stack([u, np.zeros(n), np.zeros(n)], 1)
+
+        def fr(rr):
+            return f_wing(piv + (base + dirs * rr[:, None]) @ ax, side)
+        rr = _bisect(fr, np.zeros(n), np.full(n, 0.15))
+        return piv + (base + dirs * rr[:, None]) @ ax
+
+    def posed(P):
+        return P @ R.T + t
+
+    def fb_at(u):
+        return f_body(posed(surf(u)))
+    # walk out from inside the body to where the wing surface leaves it
+    us = np.linspace(-0.05, 0.24, 59)
+    vals = np.stack([fb_at(np.full(n, u)) for u in us], 1)
+    exits = (vals > 0).any(1)                 # this side of the cross-section does come out
+    WELT_STATS['buried'] = int((~exits).sum())
+    k = np.argmax(vals > 0, axis=1)
+    k = np.clip(k, 1, len(us) - 1)
+    lo, hi = us[k - 1], us[k]
+    u_star = _bisect(lambda u: fb_at(u), lo.copy(), hi.copy(), it=24)
+    Jr = surf(u_star)
+    J = posed(Jr)
+    nb = _grad(f_body, J)
+    nb /= np.linalg.norm(nb, axis=1, keepdims=True)
+    nw = _grad(lambda X: f_wing(X, side), Jr) @ R.T
+    nw /= np.linalg.norm(nw, axis=1, keepdims=True)
+    J[~exits] = posed(surf(np.full(n, -0.02)))[~exits]      # inside the body: never seen
+    nb[~exits] = nw[~exits]
+    WELT_STATS['exits'] = exits
+    return J, nb, nw, phi
 
 
-def fillet_keys(V):
-    """{(side, deg): new positions of the skin vertices V} for every fillet angle."""
-    out = {}
-    for side in 'LR':
-        piv, _ = wing_frame(side)
-        near = np.nonzero(np.linalg.norm(V - piv, axis=1) < FILLET_R1 + 0.02)[0]
-        P0 = V[near]
-        for deg in FILLET_ANGLES:
-            M = np.linalg.inv(_raise_matrix(side, deg))
-            inside_wing = f_wing(P0 @ M[:3, :3].T + M[:3, 3], side) < -0.004
-            fn = lambda X, s_=side, d_=deg: fillet_field(X, s_, d_)   # noqa: E731
-            P = _project(fn, P0.copy(), iters=8, max_step=0.004)
-            move = np.linalg.norm(P - P0, axis=1)
-            keep = inside_wing | (move > 0.02)           # deep under the wing: leave it there
-            P[keep] = P0[keep]
-            NV = V.copy()
-            NV[near] = P
-            out[(side, deg)] = NV
+def welt_profile(J, nb, nw, side, raise_deg, twist_deg, k=None):
+    """The narrow fillet across the crease at each J: (n, WELT_M + 2, 3) points, body -> wing.
+    Points across the crease are projected onto smin(body, posed wing, k) - tangent to both
+    surfaces by construction and bridging only where they are closer than k - then trimmed where
+    they are within 0.1 mm of either surface and given a WELT_SKIRT tuck under each."""
+    k = WELT_K if k is None else k
+    M = np.array(_wing_raise(side, raise_deg, twist_deg))
+    Mi = np.linalg.inv(M)
+
+    def fw(X):
+        return f_wing(X @ Mi[:3, :3].T + Mi[:3, 3], side)
+
+    def F(X):
+        return _smin(f_body(X), fw(X), k)
+    # rays fanned from a point in the crease (outside both surfaces, like a rolling ball's centre)
+    # from the body normal round to the wing normal, each bisected onto the smooth union: one hit
+    # per ray, in order, so the profile cannot fold
+    c = np.clip((nb * nw).sum(1), -0.95, 0.999)
+    bis = nb + nw
+    bis /= np.maximum(np.linalg.norm(bis, axis=1, keepdims=True), 1e-9)
+    # walk out along the crease bisector to just past the fillet surface (F > 0), then 0.5 k more
+    lo_d, hi_d = np.zeros(len(J)), 3 * k * np.sqrt(2 / (1 + c))
+    for _ in range(26):
+        mid = 0.5 * (lo_d + hi_d)
+        inside = F(J + bis * mid[:, None]) < 0
+        lo_d = np.where(inside, mid, lo_d)
+        hi_d = np.where(inside, hi_d, mid)
+    C0 = J + bis * (hi_d + 0.5 * k)[:, None]
+    ang = np.arccos(c)
+    S = 61
+    n = len(J)
+    ts = np.linspace(-0.35, 1.35, S)
+    P = np.zeros((n, S, 3))
+    reach = hi_d + 0.5 * k + 6 * k
+    ok = np.ones((n, S), bool)
+    start_out = F(C0) > 0
+    for si, t in enumerate(ts):
+        sa = np.maximum(np.sin(ang), 1e-6)
+        d = (np.sin((1 - t) * ang) / sa)[:, None] * nb + (np.sin(t * ang) / sa)[:, None] * nw
+        d = -d / np.linalg.norm(d, axis=1, keepdims=True)
+        lo, hi = np.zeros(n), reach.copy()
+        ok[:, si] = start_out & (F(C0 + d * hi[:, None]) < 0)     # the ray does hit the surface
+        for _ in range(28):
+            mid = 0.5 * (lo + hi)
+            inside = F(C0 + d * mid[:, None]) < 0
+            hi = np.where(inside, mid, hi)
+            lo = np.where(inside, lo, mid)
+        P[:, si] = C0 + d * (0.5 * (lo + hi))[:, None]
+    h = np.minimum(f_body(P.reshape(-1, 3)), fw(P.reshape(-1, 3))).reshape(n, S)
+    out = np.zeros((n, WELT_M + 2, 3))
+    good = np.zeros(n, bool)
+    exits = WELT_STATS.get('exits', np.ones(n, bool))
+    for i in range(n):
+        if not exits[i]:                      # buried: a collapsed band inside the body
+            out[i] = J[i]
+            good[i] = True
+            continue
+        keep = ok[i] & (h[i] > WELT_TRIM)
+        if keep.sum() < 3:
+            # the surfaces meet almost flush here (the fillet is under 0.1 mm): a near-zero band
+            # lying on them round the crease line
+            keep = ok[i] & (np.linalg.norm(P[i] - J[i], axis=1) < 0.002)
+        idx = np.nonzero(keep)[0]
+        if len(idx) < 3:
+            continue
+        # the contiguous run round the middle of the fan
+        mid = idx[np.argmin(np.abs(idx - S // 2))]
+        lo_, hi_ = mid, mid
+        while lo_ - 1 >= 0 and keep[lo_ - 1]:
+            lo_ -= 1
+        while hi_ + 1 < S and keep[hi_ + 1]:
+            hi_ += 1
+        if hi_ - lo_ < 2:
+            continue
+        lo_, hi_ = max(lo_ - 1, 0), min(hi_ + 1, S - 1)
+        seg = P[i, lo_:hi_ + 1]
+        dd = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(seg, axis=0), axis=1))])
+        tt = np.linspace(0, dd[-1], WELT_M)
+        res = np.stack([np.interp(tt, dd, seg[:, j]) for j in range(3)], 1)
+        out[i, 1:-1] = res
+        out[i, 0] = res[0] - nb[i] * WELT_SKIRT
+        out[i, -1] = res[-1] - nw[i] * WELT_SKIRT
+        good[i] = True
+    # a profile the fan could not resolve: blend its nearest good neighbours round the loop
+    gi = np.nonzero(good)[0]
+    for i in np.nonzero(~good)[0]:
+        if not len(gi):
+            break
+        dist = (gi - i) % n
+        a_ = gi[np.argmin(dist)]
+        b_ = gi[np.argmin((i - gi) % n)]
+        da, db = (a_ - i) % n, (i - b_) % n
+        w = db / max(da + db, 1)
+        out[i] = w * out[a_] + (1 - w) * out[b_]
+    WELT_STATS['fallback'] = int((~good).sum())
     return out
 
 
-def update_fillet(rig_ob, side=None):
-    """Set the fillet shape-key weights from the wing bones' current raise angles."""
-    mesh = next((c for c in rig_ob.children if c.type == 'MESH' and c.data.shape_keys), None)
-    if mesh is None:
-        return
-    kb = mesh.data.shape_keys.key_blocks
-    for sd in ('LR' if side is None else side):
+def build_welt(col, side, mat, name):
+    """The welt mesh of one side with its raise x twist shape keys."""
+    keys = {}
+    for tw in WELT_TWIST:
+        for rd in WELT_RAISE:
+            J, nb, nw, phi = wing_root_loop(side, rd, tw)
+            keys[(rd, tw)] = welt_profile(J, nb, nw, side, rd, tw)
+    if WELT_SKIRT <= 0:                       # no tuck: the band ends 0.1 mm above each surface
+        keys = {k_: v_[:, 1:-1] for k_, v_ in keys.items()}
+    base = keys[(0, 0)]
+    n, m = base.shape[:2]
+    V = base.reshape(-1, 3)
+    F = []
+    for i in range(n):
+        i2 = (i + 1) % n
+        for j in range(m - 1):
+            F.append((i * m + j, i2 * m + j, i2 * m + j + 1, i * m + j + 1))
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(V.tolist(), [], F)
+    me.update()
+    # orient outward (the fillet faces away from the crease corner): flip if needed
+    J0, nb0, nw0, phi = wing_root_loop(side, 0, 0)
+    fn = np.array([p.normal[:] for p in me.polygons[:m - 1]])
+    if (fn.mean(0) @ (nb0[0] + nw0[0])) < 0:
+        me.flip_normals()
+    me.materials.append(mat)
+    # colour: like the wing at that point of its cross-section (inner face white, rim black)
+    _, ax = wing_frame(side)
+    piv, _ = wing_frame(side)
+    Wr = J0                               # rest-pose wing contact points
+    und = wing_under_piece(Wr, side)
+    sd = np.repeat(und, m)
+    attrs = {'seam_d': sd, 'line_d': np.ones(len(V)), 'stitch_on': np.zeros(len(V)),
+             'seam_c': np.ones(len(V)), 'seam_sn': np.zeros(len(V)), 'seam_n': np.ones(len(V)),
+             'feet': np.full(len(V), -1.0)}
+    for k_, v_ in attrs.items():
+        a = me.attributes.new(k_, 'FLOAT', 'POINT')
+        a.data.foreach_set('value', v_.astype(np.float32))
+    ra = me.attributes.new('rest', 'FLOAT_VECTOR', 'POINT')
+    ra.data.foreach_set('vector', V.astype(np.float32).ravel())
+    me.shade_smooth()
+    ob = bpy.data.objects.new(name, me)
+    col.objects.link(ob)
+    ob.shape_key_add(name='Basis', from_mix=False)
+    for (rd, tw), P in keys.items():
+        kb = ob.shape_key_add(name=f'welt.{rd:+04d}.{tw:+03d}', from_mix=False)
+        kb.data.foreach_set('co', P.reshape(-1).astype(np.float32))
+        kb.value = 1.0 if (rd, tw) == (0, 0) else 0.0
+    vg = ob.vertex_groups.new(name='body')
+    vg.add(list(range(len(V))), 1.0, 'REPLACE')
+    ob['welt_side'] = side
+    return ob
+
+
+def update_welt(rig_ob, side=None):
+    """Set the welt shape-key weights from the wing bones' raise and twist (bilinear)."""
+    for ob in rig_ob.children:
+        if 'welt_side' not in ob or ob.data.shape_keys is None:
+            continue
+        sd = ob['welt_side']
+        if side is not None and sd != side:
+            continue
         s = 1 if sd == 'L' else -1
         pb = rig_ob.pose.bones['wing.' + sd]
         B = pb.bone.matrix_local
-        L = B @ pb.matrix_basis @ B.inverted()            # the delta _set was given
+        L = (B @ pb.matrix_basis @ B.inverted()).to_3x3()
         _, ax = wing_frame(sd)
         e0 = Vector(ax[0])
-        e1 = L.to_3x3() @ e0
-        a0 = math.atan2(s * e0.x, -e0.z)
-        a1 = math.atan2(s * e1.x, -e1.z)
-        deg = max(FILLET_ANGLES[0], min(FILLET_ANGLES[-1], math.degrees(a1 - a0)))
-        for d in FILLET_ANGLES:
-            kb[f'fillet.{sd}.{d:+04d}'].value = 0.0
-        i = max(i for i, d in enumerate(FILLET_ANGLES) if d <= deg)
-        j = min(i + 1, len(FILLET_ANGLES) - 1)
-        t = 0.0 if j == i else (deg - FILLET_ANGLES[i]) / (FILLET_ANGLES[j] - FILLET_ANGLES[i])
-        kb[f'fillet.{sd}.{FILLET_ANGLES[i]:+04d}'].value += 1 - t
-        if j != i:
-            kb[f'fillet.{sd}.{FILLET_ANGLES[j]:+04d}'].value += t
+        e1 = L @ e0
+        rd = math.degrees(math.atan2(s * e1.x, -e1.z) - math.atan2(s * e0.x, -e0.z))
+        Rr = Matrix.Rotation(math.radians(-s * rd), 3, 'Y')
+        q = (Rr.inverted() @ L).to_quaternion()
+        tw = math.degrees(2 * math.atan2(Vector((q.x, q.y, q.z)).dot(e0), q.w)) * s
+        rd = max(WELT_RAISE[0], min(WELT_RAISE[-1], rd))
+        tw = max(WELT_TWIST[0], min(WELT_TWIST[-1], tw))
+        kb = ob.data.shape_keys.key_blocks
+        for k in kb[1:]:
+            k.value = 0.0
+
+        def bracket(vals, x):
+            i = max(i for i, v in enumerate(vals) if v <= x)
+            j = min(i + 1, len(vals) - 1)
+            t_ = 0.0 if i == j else (x - vals[i]) / (vals[j] - vals[i])
+            return (vals[i], 1 - t_), (vals[j], t_)
+        for (rv, rw) in bracket(WELT_RAISE, rd):
+            for (tv, tw_w) in bracket(WELT_TWIST, tw):
+                kb[f'welt.{rv:+04d}.{tv:+03d}'].value += rw * tw_w
 
 
 def build(col, name='penguin_v3'):
@@ -1431,14 +1581,11 @@ def build(col, name='penguin_v3'):
             vg.add([int(i)], float(wv[i]), 'REPLACE')
     ob['tri_count'] = int(sum(len(f) - 2 for f in Fall))
     ob['tri_body'] = int(2 * len(Fq) + sum(2 * nf for _, _, _, nf in wing_parts))
-    if WING_PIECE and FILLET:
-        ob.shape_key_add(name='Basis', from_mix=False)
-        for (side, deg), NV in fillet_keys(V).items():
-            kb = ob.shape_key_add(name=f'fillet.{side}.{deg:+04d}', from_mix=False)
-            co = Vall.copy()
-            co[:n_body] = NV
-            kb.data.foreach_set('co', co.astype(np.float32).ravel())
-            kb.value = 1.0 if deg == 0 else 0.0
+    if WING_PIECE and WELT:
+        for side in 'LR':
+            w = build_welt(col, side, me.materials[0], f'{name}_welt.{side}')
+            w['welt_of'] = ob.name
+            ob['tri_count'] = int(ob['tri_count']) + 2 * len(w.data.polygons)
     return ob
 
 
@@ -1485,6 +1632,10 @@ def rig(col, mesh, name='penguin_v3_rig'):
     mesh.parent = ob
     mod = mesh.modifiers.new('rig', 'ARMATURE')
     mod.object = ob
+    for w in [o for o in bpy.data.objects if o.get('welt_of') == mesh.name]:
+        w.parent = ob
+        wm = w.modifiers.new('rig', 'ARMATURE')
+        wm.object = ob
     for pb in ob.pose.bones:
         pb.rotation_mode = 'QUATERNION'
     return ob
@@ -1548,15 +1699,15 @@ def _set(rig_ob, rest, name, L):
     B = rest[name]
     pb = rig_ob.pose.bones[name]
     pb.matrix_basis = B.inverted() @ L @ B
-    if name.startswith('wing.') and WING_PIECE and FILLET:
-        update_fillet(rig_ob, name[-1])
+    if name.startswith('wing.') and WING_PIECE and WELT:
+        update_welt(rig_ob, name[-1])
 
 
 def reset_pose(rig_ob):
     for pb in rig_ob.pose.bones:
         pb.matrix_basis = Matrix.Identity(4)
-    if WING_PIECE and FILLET:
-        update_fillet(rig_ob)
+    if WING_PIECE and WELT:
+        update_welt(rig_ob)
 
 
 # Round 8: the shoulder is a hinge. The wing flaps up / down about its own width axis (e_v, the

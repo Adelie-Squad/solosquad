@@ -69,17 +69,114 @@
 <body>
 <div class="page">
 <header>
-  <span class="badge">시안 · 승인 대기 · 10차</span>
+  <span class="badge">시안 · 승인 대기 · 11차</span>
   <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
   <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
   <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
   <nav>
-    <a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#r11">11차 수정</a><a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
     <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
   </nav>
 </header>
 
-<section id="r10">
+<section id="r11">
+  <span class="badge">11차 수정 · 2026-11-14</span>
+  <h2>11차 수정 — 날개는 9차로, 몸과는 발처럼 단면을 따라 좁은 띠로</h2>
+  <p class="lead">"펭귄 날개는 지금 어이가 없는 상태임. 니가 봐도 이상한데 왜 만들고 보고하는거지? 만들기 전에 스케치같은 거라도 해서 이렇게 하는게 맞는지 판단하고 고쳐야하는거 아니야? 일단 날개는 9차로 되돌려서 다시 시작하는데, 접합 부분이 몸통이랑 발이 붙은 부분처럼 아주 좁게 띠처럼 붙는데, 날개의 단면을 따라서." · "렌더 스크립트에 붙여둬"</p>
+
+  <div class="card">
+    <p>10차의 공 · 목 · 테는 모두 지웠다. 날개 조각, 관절 위치, 격자는 9차 그대로다. 이번에는 바로 만들지 않고 순서대로 했다: 발이 몸에 붙은 곳을 먼저 같은 축척으로 보고, 띠 방식 몇 가지를 저해상도로 그려 비교하고, 각각을 스스로 검토한 뒤 하나를 골랐다.</p>
+  </div>
+
+  <h3 style="margin-top:24px">스케치 — 발 접합부와 날개 띠 후보 (같은 카메라 · 같은 축척 10 cm)</h3>
+  <p class="lead">위부터 발이 몸에 붙은 곳(기준) · 아래에서 본 날개 접합부(쉬는 자세) · 날개 100° 들기. 왼쪽부터 9차 · (A) 굴리는 공 모양 띠 · (B) 부드럽게 합친 띠 + 밑단 · (C) 부드럽게 합친 띠, 밑단 없음(채택).</p>
+  <div class="card">
+    <figure><img src="r11/sketch-sheet.webp" alt="스케치: 발 접합부와 날개 띠 후보" width="1260" height="948"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(4,1fr)"><span>9차</span><span>(A) 공 모양</span><span>(B) 띠 + 밑단</span><span>(C) 띠 · 채택</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/sketch-wave.webp" alt="스케치: 손 흔들기 최고점" width="948" height="324"></figure>
+    <div class="cmp-labels"><span>9차</span><span>(B) 띠 + 밑단</span><span>(C) 띠 · 채택</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/sketch-width.webp" alt="스케치: 띠 폭 3 · 4 · 5 mm" width="1260" height="636"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(4,1fr)"><span>9차</span><span>k 3 mm</span><span>k 4 mm</span><span>k 5 mm</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>스스로 검토</h3>
+    <ul>
+      <li><b>(A) 굴리는 공 모양 띠 — 탈락.</b> 단면은 지키고 띠도 좁다. 하지만 날개를 들면 위쪽에 검은 혹이 생기고, 쉬는 자세에서는 어깨 위에 흰 조각이 솟는다. 날개 가장자리처럼 곡률이 큰 곳에서는 평면 공 가정이 맞지 않아, 닿는 점이 실제 면을 벗어난다. 발 접합부처럼 보이지 않는다.</li>
+      <li><b>(B) 부드럽게 합친 띠 + 밑단 — 탈락.</b> 혹은 사라졌고 단면도 따른다(폭 4–5 mm). 그러나 면 밑으로 0.8 mm 접어 넣은 밑단이 띠 가장자리 음영을 바꿔, 띠가 날개 뿌리에 끼운 테두리(입술)처럼 따로 보인다. 발처럼 이어지지 않는다.</li>
+      <li><b>(C) 부드럽게 합친 띠, 밑단 없음 — 채택.</b> 날개 단면 그대로 몸에 닿고, 그 둘레에 4–5 mm 의 좁은 오목한 띠가 생겨 몸에서 날개로 넘어간다. 안쪽은 흰색, 바깥은 검정으로 날개 색을 따른다. 혹, 목, 잘린 면이 없다. 발보다는 조금 또렷한 선이다(아래 "발 기준 수치").</li>
+      <li><b>폭:</b> 3 mm 는 9차와 거의 같아 보이고, 5 mm 부터는 띠가 굵은 테로 읽혀 4 mm 를 골랐다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">최종 접합부 (9차 | 11차, 같은 카메라)</h3>
+  <p class="lead">위부터 발이 몸에 붙은 곳(기준) · 아래에서(쉬는 자세) · 3/4 앞(쉬는 자세) · 날개 100° 들기 · 손 흔들기 최고점.</p>
+  <div class="card">
+    <figure><img src="r11/junction-r9-r11.webp" alt="최종 접합부 9차와 11차, 발 접합부 기준" width="1076" height="2672"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>9차</span><span>11차</span></div>
+  </div>
+  <p class="src" style="margin-top:8px">남은 작은 흠: 쉬는 자세 아래에서 볼 때 띠가 날개 위쪽 가장자리로 돌아가는 곳에 짧은 흰 조각이 보이고, 들었을 때 흰 띠 아래 끝이 가늘게 뾰족하다.</p>
+
+  <h3 style="margin-top:24px">전 / 후 — 겨드랑이 (9차 | 11차)</h3>
+  <div class="card">
+    <figure><img src="r11/beforeafter-armpit.webp" alt="겨드랑이 9차와 11차" width="1488" height="2960"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>9차</span><span>11차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">합격 기준 (9차 / 11차)</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>기준</th><th>9차</th><th>11차</th></tr></thead>
+    <tbody>
+      <tr><td><b>새</b> 접합 띠 폭 (중앙, 6 자세: 쉬는 · 40° · 80°+비틀기 · 100° · 112°+비틀기 · −8°; 목표 2–6 mm)</td><td class="n">0 (잘린 면)</td><td class="n"><b>4.1–4.7 mm</b> (최소 2.7, 최대 5.4)</td></tr>
+      <tr><td><b>새</b> 띠가 몸 · 날개에 붙는 각도 (가장자리, 최대)</td><td class="n">면끼리 110° (잘림)</td><td class="n"><b>몸 14–17° · 날개 20–33°</b></td></tr>
+      <tr><td><b>새</b> 볼록 튀어나옴 (띠가 두 면 바깥으로 선 최대, 목표 ≤ 2 mm)</td><td class="n">—</td><td class="n"><b>1.0 mm</b></td></tr>
+      <tr><td><b>새</b> 날개 뿌리 단면 유지 (뿌리 / 중간, 목표 ≥ 90 %)</td><td class="n">폭 107 % · 두께 99.5 %</td><td class="n"><b>폭 107 % · 두께 99.5 %</b> (9차와 같음)</td></tr>
+      <tr><td>회귀 없음: 면 각도 상위 1 % / 최대 (쉬는 · 손 흔들기 · 들기)</td><td class="n">21.6/37.9 · 20.4/35.8 · 20.4/30.7°</td><td class="n">같음</td></tr>
+      <tr><td>회귀 없음: 흰 경계 흔들림 · 흰색 ~ 접합부 검정 띠 · 날개 따라 움직이는 몸 피부</td><td class="n">0.53 mm · 0 · 없음</td><td class="n">같음 (띠는 날개 색을 따름)</td></tr>
+      <tr><td>회귀 없음: 최소 간격 (clearance_check, 모든 동작 · 반 프레임, 책상 포함)</td><td class="n">14.3 mm</td><td class="n"><b>14.4 mm</b>, 교차 0</td></tr>
+      <tr><td>회귀 없음: 비틀기 / 앞으로 간 거리</td><td class="n">10.1° / 0</td><td class="n">10.1° / 0</td></tr>
+      <tr><td>회귀 없음: 날개 · 어깨 영역 밖 변경 (render_compare 9 → 11)</td><td class="n">—</td><td class="n"><b>15 / 15 통과, 0.0 %</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="src" style="margin-top:8px">발 기준 수치: 이 모델의 발은 3 cm 블렌드로 몸에 합쳐져 있어(보이는 부분 평균 폭 29 mm, 최대 7.5 mm 튀어나옴), 그 모양을 그대로 따르면 7차의 "근육"이 다시 생긴다. 발이 "좁은 띠"로 보이는 것은 색 경계가 발의 윤곽을 따라 또렷하게 지나가기 때문이라, 날개는 4–5 mm 의 좁은 형상 띠에 색 경계를 날개 단면에 맞췄다.</p>
+
+  <h3 style="margin-top:24px">렌더 스크립트에 붙인 검사</h3>
+  <div class="card">
+    <p><code>identity_v3_renders.py</code> 가 렌더 전에 먼저 돈다(<code>--qa-skills</code> 를 주면): 라운드를 QA <code>.blend</code> 로 굽고(기준 카메라 복사), 고정 QA 카메라 5 개 × 3 자세를 렌더하고, 이전 라운드와 같은 카메라로 비교(<code>render_compare</code>, 바꿔도 되는 영역은 <code>--qa-edit</code>), 모든 동작에 간격 검사(<code>clearance_check</code>, 8 mm, 책상 포함)를 한다. 하나라도 걸리면 <code>qa/gate.md</code> 를 남기고 렌더하지 않는다. 이번 라운드의 기록은 <code>r11/qa/gate.md</code>.</p>
+  </div>
+
+  <h3 style="margin-top:24px">날개를 든 모습 · 동작 모음</h3>
+  <div class="card">
+    <figure><img src="r11/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/poses.webp" alt="11차 동작 모음" width="2472" height="624"></figure>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/compare.webp" alt="초안 1, 11차 정면, 9차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>11차</span><span>9차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 · 앉은 자세 · 동작</h3>
+  <div class="grid g4">
+    <figure><img src="r11/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r11/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r11/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r11/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r11/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r11/seated/seated-desk-iso.webp" alt="책상 세트" loading="lazy"><figcaption><b>책상 세트</b></figcaption></figure>
+    <figure><img src="r11/motion/wave-strip.webp" alt="손 흔들기 키 프레임" loading="lazy"><figcaption><b>손 흔들기</b></figcaption></figure>
+    <figure><img src="r11/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"><figcaption><b>뛰기</b></figcaption></figure>
+  </div>
+</section>
+
+<section id="r10" style="margin-top:56px">
   <span class="badge">10차 수정 · 2026-11-14</span>
   <h2>10차 수정 — 발목처럼: 목 → 둥근 관절 → 몸으로 이어지는 곡선</h2>
   <p class="lead">"펭귄 날개는 날개랑 몸통 접합 부분에서 발목 부분처럼 자연스러운 곡선으로."</p>

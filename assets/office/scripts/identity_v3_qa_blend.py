@@ -19,6 +19,15 @@ Mesh object `penguin_v3`, vertex groups for the checkers (weight 1):
   feet                     legs + feet
 --cameras-from appends the QA_cameras collection of a baseline .blend, so every round renders
 from the identical cameras (qa_render.py never moves existing ones).
+Welt meshes (round 11, `penguin_v3_welt.L/R`): their shape-key values are keyed every frame too.
+
+Edit-region boxes for render_compare, from a saved QA .blend:
+
+    $B -b rounds/r11.blend -P assets/office/scripts/identity_v3_qa_blend.py -- \
+        --regions renders/r11/regions.json --frames 0,77,168
+
+writes, per QA camera and frame, image-fraction boxes (top-left origin) of `wing` (the wings,
+their welts and the skin within 9 cm of each shoulder pivot) and `face` (eyes, cheeks, beak).
 """
 import math
 import os
@@ -29,6 +38,57 @@ import numpy as np
 
 argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 a = lambda k, d=None: argv[argv.index(k) + 1] if k in argv else d  # noqa: E731
+
+
+def regions(out, frames):
+    import json
+    from bpy_extras.object_utils import world_to_camera_view
+    sc = bpy.context.scene
+    mesh = bpy.data.objects['penguin_v3']
+    rig = bpy.data.objects['penguin_v3_rig']
+
+    def gw(name):
+        vg = mesh.vertex_groups[name]
+        return np.array([max([g.weight for g in v.groups if g.group == vg.index] or [0])
+                         for v in mesh.data.vertices])
+    wing = (gw('wing.L') > 0.01) | (gw('wing.R') > 0.01)
+    R = np.array([v.co[:] for v in mesh.data.vertices])
+    near = np.zeros(len(R), bool)
+    for s_ in 'LR':
+        near |= np.linalg.norm(R - np.array(rig.data.bones['wing.' + s_].head_local), axis=1) < 0.09
+    face = gw('face') > 0.5
+    welts = [o for o in bpy.data.objects if 'welt_side' in o]
+    res = {}
+    for f in frames:
+        sc.frame_set(f)
+        dg = bpy.context.evaluated_depsgraph_get()
+        pts = {}
+        ev = mesh.evaluated_get(dg)
+        me = ev.to_mesh()
+        P = [ev.matrix_world @ v.co for v in me.vertices]
+        pts['wing'] = [P[i] for i in np.nonzero(wing | near)[0][::2]]
+        pts['face'] = [P[i] for i in np.nonzero(face)[0][::2]]
+        ev.to_mesh_clear()
+        for w in welts:
+            ew = w.evaluated_get(dg)
+            mw = ew.to_mesh()
+            pts['wing'] += [ew.matrix_world @ v.co for v in mw.vertices][::4]
+            ew.to_mesh_clear()
+        for cam in [o for o in bpy.data.objects if o.name.startswith('QA_') and o.type == 'CAMERA']:
+            for key, ps in pts.items():
+                vs = [world_to_camera_view(sc, cam, p_) for p_ in ps]
+                xs = [v.x for v in vs if v.z > 0]
+                ys = [1 - v.y for v in vs if v.z > 0]
+                if xs:
+                    res.setdefault(f'{cam.name}_f{f:04d}', {})[key] = [min(xs), min(ys), max(xs), max(ys)]
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    json.dump(res, open(out, 'w'), indent=1)
+    print('wrote', out)
+
+
+if '--regions' in argv:
+    regions(a('--regions'), [int(x) for x in a('--frames', '0,77,168').split(',')])
+    sys.exit(0)
 SD = os.path.abspath(a('--scripts', os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.abspath(a('--out', 'qa.blend'))
 CAMS = a('--cameras-from')
@@ -119,6 +179,7 @@ for pb in rig.pose.bones:
     pb.rotation_mode = 'QUATERNION'
 start = 0
 ranges = []
+welts = [o for o in bpy.data.objects if 'welt_side' in o and o.data.shape_keys]
 for name, length, fn in clips:
     for f in range(length):
         fn(rig, f, rest)
@@ -127,6 +188,9 @@ for name, length, fn in clips:
                 continue
             for path in ('location', 'rotation_quaternion', 'scale'):
                 pb.keyframe_insert(path, frame=start + f)
+        for w in welts:                       # the welt's hinge-driven shape keys
+            for kb in w.data.shape_keys.key_blocks[1:]:
+                kb.keyframe_insert('value', frame=start + f)
     ranges.append((name, start, start + length - 1))
     start += length + 10          # 10 frame gap between clips (never checked)
 sc = bpy.context.scene
