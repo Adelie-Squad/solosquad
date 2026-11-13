@@ -14,8 +14,8 @@ export type SectionId = 'hero' | 'problem' | 'org' | 'workflows' | 'pricing' | '
  * the price cards both get the pointing): `wave` = behind the card's upper right, waving ·
  * `unroll` = peeking over the paper, unrolling it · `stamp` = outside the card's lower-left corner,
  * stamping the owner's approval · `point` = beside the content's right edge, pointing at one spot ·
- * `type` = over a prompt box, typing (no section uses it since the 맡기기 section went into the
- * workflows, 2026-11-14 — the staging stays for a prompt box to come back).
+ * `type` = over a prompt box, typing — the workflow card since 2026-11-14 ② (its prompt box is the
+ * card's top row; the stamp on the owner's approval is then a UI animation, one act per section).
  */
 export type ActId = 'wave' | 'type' | 'unroll' | 'stamp' | 'point';
 
@@ -34,7 +34,7 @@ export const SECTIONS: Section[] = [
   { id: 'hero', label: 'landing.section.hero', act: 'wave' },
   { id: 'problem', label: 'landing.section.problem', act: 'point' },
   { id: 'org', label: 'landing.section.org', act: 'unroll' },
-  { id: 'workflows', label: 'landing.section.workflows', act: 'stamp', stops: WORKFLOWS },
+  { id: 'workflows', label: 'landing.section.workflows', act: 'type', stops: WORKFLOWS },
   { id: 'pricing', label: 'landing.section.pricing', act: 'point' },
   { id: 'contact', label: 'landing.section.contact', act: 'wave' },
 ];

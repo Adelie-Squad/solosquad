@@ -60,6 +60,7 @@ import { InquiryProvider } from '../src/marketing/Inquiry';
 import { Landing } from '../src/landing/Landing';
 import { firstStop, MOVED_ANCHORS, SECTIONS, stepAt, STOPS, type ActId } from '../src/landing/sections';
 import { DOMAINS, TIER, WORKFLOW_EXAMPLES } from '../src/landing/workflows';
+import { APPROVED_AFTER_MS, ASSIGN_FIRST_MS, ASSIGN_STEP_MS, charMs, flowAt, flowLength, flowStill, HOLD_TYPED_MS, STAMP_MS, TEAM_MS, TYPE_MAX_MS, TYPE_MS } from '../src/landing/flow';
 
 /** Every staging (sections.ts `ActId`). */
 const ACTS: ActId[] = ['wave', 'type', 'unroll', 'stamp', 'point'];
@@ -586,7 +587,7 @@ describe('the scene: the content centred, the penguin around it', () => {
     expect(rule('.landing-canvas')).toMatch(/z-index: 3;[\s\S]*pointer-events: none;/);
     // the request line keeps two lines' room in every workflow, so the card (and the button the stamp
     // lands on) stays the same size from stop to stop
-    expect(rule('.landing-workflow-ask > span:last-child')).toMatch(/height: calc\(2 \* 1\.45em\);[\s\S]*overflow: hidden;/);
+    expect(rule('.landing-workflow-typed')).toMatch(/height: calc\(2 \* 1\.45em\);[\s\S]*overflow: hidden;/);
   });
 
   it('a centred block is centred within a pixel; an off-centre one is not', () => {
@@ -603,7 +604,7 @@ describe('the scene: the content centred, the penguin around it', () => {
     landing();
     for (const s of SECTIONS) expect(screen.getByTestId(`landing-scene-${s.id}`).querySelector('[data-front]'), s.id).toBeTruthy();
     // the penguin stands behind the company card and the last card: nothing of it shows under them either
-    for (const id of ['hero', 'contact']) expect(screen.getByTestId(`landing-scene-${id}`).querySelector('[data-front="ground"]'), id).toBeTruthy();
+    for (const id of ['hero', 'workflows', 'contact']) expect(screen.getByTestId(`landing-scene-${id}`).querySelector('[data-front="ground"]'), id).toBeTruthy();
     // the price: a wing goes out to card 1, the build price (which wing comes from the geometry — arms.ts)
     const pricing = screen.getByTestId('landing-scene-pricing');
     expect(pricing.querySelector('li')!.querySelector('[data-hand]')).toBeTruthy();
@@ -616,12 +617,11 @@ describe('the scene: the content centred, the penguin around it', () => {
     expect(org.querySelector('[data-rod]')).toBeTruthy();
     expect(org.querySelectorAll('[data-front]')).toHaveLength(2); // the paper shown so far + the roll
     const workflows = screen.getByTestId('landing-scene-workflows');
-    expect(workflows.querySelector('[data-stamp-target]')!.textContent).toContain('Approve');
+    expect(workflows.querySelector('.landing-approve')!.textContent).toContain('Approve');
     expect(workflows.querySelector('[data-hand]')).toBeNull();
     // each section's staging (sections.ts — one act per section, the two cards share the wave)
-    // no section types any more: the 맡기기 section went into the workflows (2026-11-14)
-    expect(SECTIONS.some((x) => x.act === 'type')).toBe(false);
-    expect(Object.fromEntries(SECTIONS.map((x) => [x.id, x.act]))).toEqual({ hero: 'wave', problem: 'point', org: 'unroll', workflows: 'stamp', pricing: 'point', contact: 'wave' });
+    // the workflows type (2026-11-14 ②): the prompt box is the card's top row; the stamp is the card's own animation
+    expect(Object.fromEntries(SECTIONS.map((x) => [x.id, x.act]))).toEqual({ hero: 'wave', problem: 'point', org: 'unroll', workflows: 'type', pricing: 'point', contact: 'wave' });
   });
 
   it('phone: the scene first with the content centred in what is left, the message under it; the canvas covers the stage', () => {
@@ -644,7 +644,7 @@ describe('where the penguin stands (staging)', () => {
     expect(penguinHeight({ width: 390, height: 560 }, true)).toBeLessThan(h);
   });
 
-  it('type (맡기기): centred over the prompt box, shoulders just above its top edge, the feet hidden behind it', () => {
+  it('type (워크플로우 — the prompt box on top of the card): centred over it, shoulders just above its top edge, the feet hidden behind it', () => {
     const s = spotFor('type', box, h, false);
     expect(s.x).toBe(box.left + box.width / 2);
     const shoulder = s.y - (1 - BODY.shoulder) * h;
@@ -753,7 +753,7 @@ describe('the acting', () => {
   });
 
   it('the content never shakes: no animation or transform on the gap chart or the approval card', () => {
-    for (const sel of ['.landing-act.is-gap', '.landing-gap-plot', '.landing-approval', '.landing-preview', '.landing-act.is-stamp', '.landing-workflow-ask', '.landing-workflow-pieces']) {
+    for (const sel of ['.landing-act.is-gap', '.landing-gap-plot', '.landing-approval', '.landing-preview', '.landing-act.is-flow', '.landing-workflow-ask', '.landing-workflow-pieces', '.landing-task-chip']) {
       for (const m of css.matchAll(new RegExp(`(^|\\n)([^\\n{}]*${sel.replace(/[.[\]]/g, '\\$&')}[^\\n{},]*)\\{([^}]*)\\}`, 'g'))) {
         if (/\.landing-approve\b|\.landing-stamp-mark|\.landing-decline|\.btn/.test(m[2])) continue; // the button and its ink, not the card
         expect(m[3], m[2]).not.toMatch(/animation|transform|translate|rotate/);
@@ -784,56 +784,91 @@ describe('the acting', () => {
     expect(stampState(STAMP_APPROVED_MS)).toBe('approved');
   });
 
-  it('the stamp sequence on the workflow card: waiting → pressed at the hit (mark) → approved; the card stays still; again at every workflow', () => {
+  it('the workflow card (2026-11-14 ②): the request types in (the penguin patters), Chief hands each agent its piece one after another, the team approval lights, the stamp lands — again at every stop', () => {
+    // the timeline itself
+    const chars = 30;
+    expect(charMs(chars)).toBe(TYPE_MS);
+    expect(charMs(200) * 200).toBeLessThanOrEqual(TYPE_MAX_MS); // a long request still types in ≤ 2.4 s
+    expect(flowAt(-1, chars, 3)).toMatchObject({ typed: 0, typing: false, pieces: ['waiting', 'waiting', 'waiting'], team: false, stamp: 'waiting' });
+    expect(flowAt(TYPE_MS * 10, chars, 3)).toMatchObject({ typed: 10, typing: true, pieces: ['waiting', 'waiting', 'waiting'] });
+    const typed = chars * TYPE_MS;
+    const first = typed + HOLD_TYPED_MS + ASSIGN_FIRST_MS;
+    expect(flowAt(first - 1, chars, 3)).toMatchObject({ typed: chars, typing: false, pieces: ['waiting', 'waiting', 'waiting'] });
+    expect(flowAt(first, chars, 3).pieces).toEqual(['on', 'waiting', 'waiting']);
+    expect(flowAt(first + ASSIGN_STEP_MS, chars, 3).pieces).toEqual(['done', 'on', 'waiting']);
+    const all = first + 3 * ASSIGN_STEP_MS;
+    expect(flowAt(all, chars, 3)).toMatchObject({ pieces: ['done', 'done', 'done'], team: false });
+    expect(flowAt(all + TEAM_MS, chars, 3)).toMatchObject({ team: true, stamp: 'waiting' });
+    expect(flowAt(all + TEAM_MS + STAMP_MS, chars, 3).stamp).toBe('pressed');
+    expect(flowAt(all + TEAM_MS + STAMP_MS + APPROVED_AFTER_MS, chars, 3)).toMatchObject({ stamp: 'approved', done: true });
+    expect(flowLength(chars, 3)).toBe(all + TEAM_MS + STAMP_MS + APPROVED_AFTER_MS);
+    expect(flowStill(chars, 3)).toMatchObject({ typed: chars, pieces: ['done', 'done', 'done'], stamp: 'waiting' });
+
+    // on the card
     vi.useFakeTimers();
     const { rerender } = render(
       <I18nProvider locale="en">
         <WorkflowAct on acting at={0} stacked={false} />
       </I18nProvider>,
     );
-    const card = screen.getByTestId('landing-workflow');
-    const approve = card.querySelector<HTMLElement>('[data-stamp-target]')!;
-    expect(card.getAttribute('data-state')).toBe('waiting');
-    expect(within(card).getByText('Waiting for approval')).toBeTruthy();
-    expect(cues.stampAt).toBeGreaterThan(-Infinity);
-    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + STAMP_IMPACT_MS - 10));
-    expect(card.getAttribute('data-state')).toBe('waiting');
-    act(() => void vi.advanceTimersByTime(20));
-    expect(card.getAttribute('data-state')).toBe('pressed');
-    act(() => void vi.advanceTimersByTime(STAMP_APPROVED_MS - STAMP_IMPACT_MS));
-    expect(card.getAttribute('data-state')).toBe('approved');
-    expect(within(card).getByText('Approved')).toBeTruthy();
-    expect(approve.textContent).toBe('Approve');
-    expect(approve.parentElement!.querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
-    // the buttons come last in the card — the bottom-left corner the penguin reaches from
-    expect(card.lastElementChild!.className).toBe('landing-approval-actions');
+    const card = () => screen.getByTestId('landing-workflow');
+    const shown = () => card().querySelector('.landing-workflow-typed')!.textContent;
+    const pieces = () => [...card().querySelectorAll('.landing-workflow-pieces li')].map((li) => li.getAttribute('data-state'));
+    const ask = 'Sort out this month’s profit and loss, and see to the supplier payments';
+    const per = charMs(Array.from(ask).length);
+    expect(shown()).toBe('');
+    expect(card().getAttribute('data-state')).toBe('waiting');
+    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + per * 10 + 60));
+    expect(shown()!.length).toBeGreaterThan(5);
+    expect(shown()!.length).toBeLessThan(ask.length);
+    expect(card().querySelector('.landing-caret')).toBeTruthy();
+    expect(cues.typing).toBe(true); // the penguin patters while it types
+    // not yet handed out: no words in the empty chips
+    expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
+    act(() => void vi.advanceTimersByTime(TYPE_MAX_MS + HOLD_TYPED_MS + ASSIGN_FIRST_MS + 50));
+    expect(shown()).toBe(ask);
+    expect(cues.typing).toBe(false);
+    expect(pieces()).toEqual(['on', 'waiting', 'waiting']);
+    act(() => void vi.advanceTimersByTime(ASSIGN_STEP_MS));
+    expect(pieces()).toEqual(['done', 'on', 'waiting']);
+    act(() => void vi.advanceTimersByTime(2 * ASSIGN_STEP_MS + TEAM_MS));
+    expect(pieces()).toEqual(['done', 'done', 'done']);
+    expect(card().querySelectorAll('.landing-workflow-gate.is-up')).toHaveLength(2);
+    act(() => void vi.advanceTimersByTime(STAMP_MS + APPROVED_AFTER_MS + 100));
+    expect(card().getAttribute('data-state')).toBe('approved');
+    expect(within(card()).getByText('Approved')).toBeTruthy();
+    expect(card().querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
+    // the buttons come last in the card
+    expect(card().lastElementChild!.className).toBe('landing-approval-actions');
     expect(css).toMatch(/\.landing-approval\.is-pressed \.landing-approve \{[^}]*translate: 0 1px;/);
-    expect(css).toMatch(/\.landing-approval\.is-approved \.landing-approve \{[^}]*border-color: var\(--ok\);[^}]*color: var\(--ok\);/);
     expect(css).toMatch(/\.landing-approval:not\(\.is-waiting\) \.landing-stamp-mark \{[^}]*opacity: 0\.9;/);
-    // the next stop: the same card, the next workflow, waiting again and stamped again
-    const first = cues.stampAt;
-    act(() => void vi.advanceTimersByTime(50));
+    // the hand-out reads in the app's colours: going out = accent ring, set down = ok check
+    expect(css).toMatch(/\.landing-workflow-pieces li\.is-on \.landing-task-chip \{[^}]*outline-color: var\(--accent\);/);
+    expect(css).toMatch(/\.landing-task-chip > \.icon \{[^}]*color: var\(--ok\);/);
+    // the next stop: the next workflow types in from the start
     rerender(
       <I18nProvider locale="en">
         <WorkflowAct on acting at={1} stacked={false} />
       </I18nProvider>,
     );
-    const next = screen.getByTestId('landing-workflow');
-    expect(next.getAttribute('data-workflow')).toBe('sourcing');
-    expect(next.getAttribute('data-state')).toBe('waiting');
-    expect(cues.stampAt).toBeGreaterThan(first);
-    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + STAMP_APPROVED_MS + 10));
-    expect(screen.getByTestId('landing-workflow').getAttribute('data-state')).toBe('approved');
+    act(() => void vi.advanceTimersByTime(50));
+    expect(card().getAttribute('data-workflow')).toBe('sourcing');
+    expect(shown()).toBe('');
+    expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
     cleanup();
     resetCues();
+    // not acting: the finished picture — typed, handed out, waiting for the owner; no patter
     render(
       <I18nProvider locale="en">
         <WorkflowAct on acting={false} at={0} stacked={false} />
       </I18nProvider>,
     );
-    act(() => void vi.advanceTimersByTime(5000));
-    expect(screen.getByTestId('landing-workflow').getAttribute('data-state')).toBe('waiting');
-    expect(cues.stampAt).toBe(-Infinity);
+    act(() => void vi.advanceTimersByTime(10_000));
+    expect(shown()).toBe(ask);
+    expect(card().querySelector('.landing-caret')).toBeNull();
+    expect(pieces()).toEqual(['done', 'done', 'done']);
+    expect(card().getAttribute('data-state')).toBe('waiting');
+    expect(cues.typing).toBe(false);
   });
 
   it('the pointing: the wing goes out to price card 1, which lights up while it is there, then back — once', () => {
@@ -1387,7 +1422,7 @@ describe('section 3: the AI team (the org chart — agents and team members) and
     expect(copy.querySelector('h2')!.textContent).toBe('회사에 맞춘 AI 팀이 팀원 옆에서 일해요');
     expect(copy.textContent).toContain('에이전트(일을 맡아 하는 AI)');
     expect(copy.textContent).toContain('임원(AI 팀을 이끄는 AI)');
-    expect([...copy.querySelectorAll('.landing-points b')].map((b) => b.textContent)).toEqual(['회사에 맞춘 팀', '결정은 사람이 해요', '모든 일이 남아요']);
+    expect([...copy.querySelectorAll('.landing-points:not(.landing-domain-lines) b')].map((b) => b.textContent)).toEqual(['결정은 사람이 해요', '모든 일이 남아요']);
   });
 
   it('a team opens the modal at that team: the agent cards side by side, scrolling sideways', async () => {
@@ -1470,16 +1505,30 @@ describe('section 2: 왜 지금 — the problem and the stakes (2026-11-14)', ()
     expect(chart.querySelector('figure')!.getAttribute('aria-label')).toMatch(/^같은 곳에서 출발한 두 회사/);
   });
 
-  it('who it is for: the three domains in the first section and, one line each, in the workflows', () => {
+  it('who it is for: the three domains in the first section and, one line each, in the AI team (what that business hands over) — the workflows are shared examples', () => {
     landing('ko');
     expect(DOMAINS).toEqual(['logistics', 'commerce', 'it']);
     expect(screen.getByText('물류 · 커머스 · IT 서비스 소규모 비즈니스를 위해').closest('[data-slide="hero"]')).toBeTruthy();
     expect([...screen.getByTestId('landing-domains').querySelectorAll('li')].map((li) => li.textContent)).toEqual(['물류', '커머스', 'IT 서비스']);
+    // "업종은 AI 팀 섹션에서 다뤄" (2026-11-14): the lines sit in the AI team's message, not the workflows'
     const lines = [...screen.getByTestId('landing-domain-lines').querySelectorAll('li')];
-    expect(lines.map((li) => li.querySelector('b')!.textContent)).toEqual(['물류', '커머스', 'IT 서비스']);
-    // each line names the workflow it leads to, by the tab's name
-    lines.forEach((li, i) => expect(li.textContent).toContain(['재무 관리', '상품 소싱', 'SNS 마케팅'][i]));
-    expect(WORKFLOW_EXAMPLES.map((w) => w.domain)).toEqual(DOMAINS);
+    expect(screen.getByTestId('landing-domain-lines').closest('[data-slide="org"]')).toBeTruthy();
+    expect(lines.map((li) => [li.querySelector('b')!.textContent, !!li.querySelector('svg')])).toEqual([
+      ['물류', true],
+      ['커머스', true],
+      ['IT 서비스', true],
+    ]);
+    expect(lines.map((li) => li.textContent!.slice(li.querySelector('b')!.textContent!.length))).toEqual([
+      '운송 · 정산 내역 정리와 거래처 대금 준비',
+      '공급처 견적 비교 · 발주서 초안과 상품 게시물',
+      '매달 손익 · 비용 정리와 새 소식 게시물',
+    ]);
+    const workflows = document.querySelector('[data-slide="workflows"] .landing-copy')!;
+    expect(workflows.querySelector('.landing-domain-lines')).toBeNull();
+    expect(workflows.textContent).toContain('아래 세 가지는 업종과 관계없이 쓰는 예시예요.');
+    // the domain lines stay on a phone (the other lines of the message do not)
+    const phone = css.slice(css.indexOf('@media (max-width: 860px)'));
+    expect(phone).toMatch(/\.landing-pin \.landing-slide \.landing-points:not\(\.landing-domain-lines\)/);
   });
 
   it('the old 맡기기 anchor opens the workflows (that is where the request went)', () => {
@@ -1514,7 +1563,7 @@ describe('section 4: three workflows — what runs on its own, where it stops fo
     ]);
   });
 
-  it('each card is the flow (the old 맡기기 folded in): the request to Chief → Chief hands out three pieces → the team approval → the owner approval with the button the stamp lands on', () => {
+  it('each card is the flow (the old 맡기기 folded in): the prompt box to Chief → Chief hands each agent its piece → the team approval → the owner approval with the button the stamp lands on', () => {
     stubMotion(true);
     landing('ko');
     const cards = screen.getAllByTestId('landing-workflow');
@@ -1523,11 +1572,19 @@ describe('section 4: three workflows — what runs on its own, where it stops fo
     cards.forEach((card, i) => {
       expect(within(card).getByRole('heading', { level: 3 }).classList.contains('sr-only')).toBe(true);
       expect(within(card).getByText('예시 화면')).toBeTruthy();
-      expect(within(card).getByTestId('landing-workflow-ask').textContent).toBe(`요청: ${asks[i]}`);
+      // the prompt box to Chief (the typing is for the eye; screen readers get the whole flow in one line)
+      expect(within(card).getByTestId('landing-workflow-ask').textContent).toBe(`임원에게${asks[i]}`);
+      expect(within(card).getByTestId('landing-workflow-ask').getAttribute('aria-hidden')).toBe('true');
+      expect(card.querySelector('p.sr-only')!.textContent).toMatch(new RegExp(`^요청: ${asks[i]} — `));
       expect(card.querySelector('.landing-workflow-chief')!.textContent).toBe('임원');
-      const pieces = card.querySelectorAll('.landing-workflow-pieces li');
+      // each agent with its piece of work (a short chip), set down
+      const pieces = [...card.querySelectorAll('.landing-workflow-pieces li')];
       expect(pieces).toHaveLength(3);
-      for (const li of pieces) expect(li.querySelector('svg.penguin')).toBeTruthy();
+      for (const li of pieces) {
+        expect(li.querySelector('svg.penguin')).toBeTruthy();
+        expect(li.getAttribute('data-state')).toBe('done');
+        expect(li.querySelector('.landing-task-chip')!.textContent!.length).toBeLessThan(20);
+      }
       // few words: no step sentences, no "에이전트가 해요 · 사람이 해요" rows, no reasons
       expect(within(card).queryByText('에이전트가 해요')).toBeNull();
       expect(within(card).queryByText('사람이 해요')).toBeNull();
@@ -1537,13 +1594,13 @@ describe('section 4: three workflows — what runs on its own, where it stops fo
       expect(gates[1].querySelector('.chip')!.textContent).toBe('대표 승인');
       expect(gates[1].textContent).not.toContain('돈이 나가는 일이라');
       // the button is the card's last row, after the owner's approval
-      expect(card.lastElementChild!.querySelector('[data-stamp-target]')!.textContent).toBe('승인');
+      expect(card.lastElementChild!.querySelector('.landing-approve')!.textContent).toBe('승인');
     });
     expect(cards[2].querySelector('.landing-workflow-gate[data-tier="team"] .chip')!.textContent).toBe('팀 승인 · 브랜드');
     // why it stops is in the message: before money goes out, the owner approves
     expect(document.querySelector('[data-slide="workflows"] .landing-lead')!.textContent).toContain('돈이 나가는 일 앞에서는 멈추고 대표님 승인을 기다려요.');
     // the note says only finance works today (PRD §3.5.4 — no present-tense promise for sourcing · SNS)
-    expect(screen.getByText('재무 관리는 지금 바로 써요. 상품 소싱 · SNS 마케팅은 구축할 때 회사가 쓰는 서비스에 맞춰 연결해요.')).toBeTruthy();
+    expect(document.querySelector('[data-slide="workflows"] .landing-aside')!.textContent).toContain('재무 관리는 지금 바로 써요. 상품 소싱 · SNS 마케팅은 구축할 때 회사가 쓰는 서비스에 맞춰 연결해요.');
   });
 
   it('live: one card, its tabs are the three workflows, the one up is selected', () => {

@@ -6,14 +6,15 @@
 // where the stamp lands, `data-gaze` = what the penguin looks at. Without acting (no 3D yet, the
 // stacked page) every act is its plain, finished composition. The content itself never moves with
 // the penguin — no nudge, no shake (user, 2026-11-09).
-import { useLayoutEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON, type IconName } from '../icons';
 import { agentName } from '../lib/agentNames';
 import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
-import { ACT_DELAY_MS, cues, now, RELAY, STAMP_APPROVED_MS, STAMP_IMPACT_MS, type StampState } from './acting';
+import { ACT_DELAY_MS, cues, now, RELAY } from './acting';
+import { flowAt, flowLength, flowStill, type FlowFrame } from './flow';
 import { AGENT_COUNT, byId, TEAMS } from './catalog';
 import { LandingOrgChart } from './LandingOrgChart';
 import { PEOPLE, PersonFace } from './people';
@@ -175,26 +176,27 @@ export function ScrollAct({ on, acting, onOpen }: ActProps & { onOpen: (at: stri
 }
 
 /**
- * One example workflow on a card, drawn as a flow (2026-11-14 — the old 맡기기 section folded in):
- * its tabs (the live page — one card, three stops), the one-line request to Chief, Chief handing it
- * out to three agents (a short piece of work each), and the two approvals — the team's, then the
- * owner's with the approve button at the card's lower left, where the penguin's stamp lands. Few
- * words: no step sentences, no reasons (the message beside the card says why it stops). Every card
- * has the same rows, so the button sits at the same place in all three.
+ * One example workflow on a card (2026-11-14 ②): its tabs (the live page — one card, three stops),
+ * the prompt box where the request to Chief types itself in, Chief handing each agent its piece of
+ * work (a line drawn out to the agent, a short task chip set down beside it — one after another),
+ * then the two approvals — the team's, then the owner's, whose approve button takes the stamp's mark
+ * (a UI animation; the penguin's act here is the typing). Every row's room is kept from the start,
+ * so the card never changes size (the penguin's spot is read from it). `f` = where the timeline is.
  */
-function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampState; tabs?: ReactNode }) {
+function WorkflowCard({ w, f, tabs }: { w: WorkflowExample; f: FlowFrame; tabs?: ReactNode }) {
   const { t, locale } = useI18n();
-  const approved = state === 'approved';
+  const approved = f.stamp === 'approved';
   const team = TIER[w.team.category];
   const owner = TIER[w.owner.category];
   const chief = byId('chief');
+  const ask = Array.from(t(w.ask));
+  const typed = ask.slice(0, f.typed).join('');
   return (
     <figure
-      className={`landing-preview landing-approval landing-workflow is-${state}`}
-      data-front
+      className={`landing-preview landing-approval landing-workflow is-${f.stamp}`}
       data-testid="landing-workflow"
       data-workflow={w.id}
-      data-state={state}
+      data-state={f.stamp}
       aria-labelledby={`landing-workflow-${w.id}`}
     >
       <div className="landing-workflow-head">
@@ -204,33 +206,46 @@ function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampStat
       <h3 id={`landing-workflow-${w.id}`} className="sr-only">
         {t(w.name)} · {t(w.title)}
       </h3>
-      <p className="landing-workflow-ask" data-testid="landing-workflow-ask">
-        <ICON.ask />
-        <span className="sr-only">{t('landing.workflows.ask')}: </span>
-        <span>{t(w.ask)}</span>
+      {/* screen readers get the whole flow at once; the typing and the hand-out are for the eye */}
+      <p className="sr-only">
+        {t('landing.workflows.ask')}: {t(w.ask)} — {w.split.map((s) => `${agentName(s.agent, locale, byId(s.agent))} · ${t(s.text)}`).join(', ')}
       </p>
-      <div className="landing-workflow-split">
+      <div className="landing-workflow-ask" data-testid="landing-workflow-ask" aria-hidden="true">
+        <p className="landing-mono landing-workflow-to">
+          <ICON.ask />
+          {t('landing.workflows.to')}
+        </p>
+        <p className="landing-workflow-typed">
+          {typed}
+          {f.typing && <span className="landing-caret" />}
+        </p>
+      </div>
+      <div className="landing-workflow-split" aria-hidden="true" data-testid="landing-workflow-split">
         <span className="landing-workflow-chief">
           <AgentIcon agent="chief" team="core" size={28} label="" />
           <b>{agentName('chief', locale, chief)}</b>
         </span>
         <ol className="landing-workflow-pieces">
-          {w.split.map((s) => (
-            <li key={s.text}>
-              <AgentIcon agent={s.agent} size={20} label={agentName(s.agent, locale, byId(s.agent))} />
-              <span>{t(s.text)}</span>
+          {w.split.map((s, i) => (
+            <li key={s.text} className={`is-${f.pieces[i]}`} data-state={f.pieces[i]}>
+              <AgentIcon agent={s.agent} size={20} label="" />
+              <b>{agentName(s.agent, locale, byId(s.agent))}</b>
+              <span className="landing-task-chip">
+                <span>{t(s.text)}</span>
+                {f.pieces[i] === 'done' && <ICON.check size={14} />}
+              </span>
             </li>
           ))}
         </ol>
       </div>
-      <div className="landing-workflow-gate" data-tier={team} data-category={w.team.category}>
+      <div className={`landing-workflow-gate ${f.team ? 'is-up' : ''}`} data-tier={team} data-category={w.team.category}>
         <span className={`chip ${team === 'owner' ? 'is-warn' : 'is-accent'}`}>
           {team === 'team' && <ICON.person size={14} />}
           {t(TIER_LABEL[team])} · {teamName(w.team.team, t)}
         </span>
         <b className="landing-workflow-gate-words">{t(w.team.text)}</b>
       </div>
-      <div className="landing-workflow-gate" data-tier={owner} data-category={w.owner.category}>
+      <div className={`landing-workflow-gate ${f.team ? 'is-up' : ''}`} data-tier={owner} data-category={w.owner.category}>
         <span className={`chip ${owner === 'owner' ? 'is-warn' : 'is-accent'}`}>
           <ICON.owner size={14} />
           {t(TIER_LABEL[owner])}
@@ -238,13 +253,10 @@ function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampStat
         <b className="landing-workflow-gate-words">{t(w.owner.text)}</b>
         <span className={`chip ${approved ? STATUS_CHIP.done : STATUS_CHIP.waiting}`}>{t(approved ? 'landing.workflows.approved' : STATUS_LABEL.waiting)}</span>
       </div>
-      {/* the buttons at the bottom left — where the penguin's stamp reaches from the corner */}
       <div className="landing-approval-actions" aria-hidden="true">
         {/* the mark sits outside the button (a button clips what overflows it) */}
         <span className="landing-approve-wrap">
-          <span className="btn is-primary landing-approve" data-stamp-target>
-            {t('approvals.approve')}
-          </span>
+          <span className="btn is-primary landing-approve">{t('approvals.approve')}</span>
           <span className="landing-stamp-mark" data-testid="landing-stamp-mark" />
         </span>
         <span className="btn landing-decline">{t('approvals.decline')}</span>
@@ -253,33 +265,61 @@ function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampStat
   );
 }
 
+/** How often the card's timeline re-renders while it plays (ms). */
+const FLOW_TICK_MS = 40;
+
+/**
+ * The card's timeline for one stop: starts once the penguin has arrived (`ACT_DELAY_MS`), again at
+ * every stop; tells the canvas whether the box is typing (`cues.typing` — the penguin's patter).
+ * Not acting: the finished picture.
+ */
+function useFlow(live: boolean, w: WorkflowExample): FlowFrame {
+  const { t } = useI18n();
+  const chars = Array.from(t(w.ask)).length;
+  const pieces = w.split.length;
+  const [ms, setMs] = useState(-1);
+  useEffect(() => {
+    if (!live) return;
+    setMs(-1);
+    // the wall clock (Date — the timers' clock too), not performance: the card only needs the
+    // timeline's step, and the tests drive it with fake timers
+    const start = Date.now() + ACT_DELAY_MS;
+    const end = flowLength(chars, pieces);
+    const id = window.setInterval(() => {
+      const at = Date.now() - start;
+      setMs(at);
+      if (at > end) window.clearInterval(id);
+    }, FLOW_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [live, w.id, chars, pieces]);
+  const f = live ? flowAt(ms, chars, pieces) : flowStill(chars, pieces);
+  useLayoutEffect(() => {
+    cues.typing = live && f.typing;
+  }, [live, f.typing]);
+  useEffect(() => () => void (cues.typing = false), []);
+  return f;
+}
+
 /**
  * 워크플로우: the workflow card, centred — three stops, one workflow each (`at`), the card the same
- * size and in the same place for all three, so only its content fades and the penguin stays put. From
- * just outside the card's lower-left corner the penguin raises a stamp and brings it down on the
- * owner's approve button — again at every stop. The stacked page shows the three cards one under
- * another (no tabs). `onPick` = a tab was pressed (the live page moves to that stop).
+ * size for all three. The penguin stands behind the card's top edge, over the prompt box, and
+ * pretends to type while the request types itself in (the `type` act); then Chief hands out the work
+ * and the approvals follow on the card. The stacked page shows the three cards one under another
+ * (no tabs), finished. `onPick` = a tab was pressed (the live page moves to that stop).
  */
 export function WorkflowAct({ on, acting, at, stacked, onPick }: ActProps & { at: number; stacked: boolean; onPick?: (i: number) => void }) {
   const { t } = useI18n();
-  const [state, setState] = useState<StampState>('waiting');
-  useLayoutEffect(() => {
-    if (!on || !acting) return;
-    setState('waiting');
-    cues.stampAt = now() + ACT_DELAY_MS;
-    const timers = [window.setTimeout(() => setState('pressed'), ACT_DELAY_MS + STAMP_IMPACT_MS), window.setTimeout(() => setState('approved'), ACT_DELAY_MS + STAMP_APPROVED_MS)];
-    return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [on, acting, at]);
+  const w = WORKFLOW_EXAMPLES[at] ?? WORKFLOW_EXAMPLES[0];
+  const f = useFlow(on && acting && !stacked, w);
   if (stacked) {
     return (
-      <div className="landing-act is-stamp is-stacked" data-content>
-        {WORKFLOW_EXAMPLES.map((w) => (
-          <WorkflowCard key={w.id} w={w} state="waiting" />
+      <div className="landing-act is-flow is-stacked" data-content data-front>
+        {WORKFLOW_EXAMPLES.map((x) => (
+          <WorkflowCard key={x.id} w={x} f={flowStill(1e6, x.split.length)} />
         ))}
       </div>
     );
   }
-  const w = WORKFLOW_EXAMPLES[at] ?? WORKFLOW_EXAMPLES[0];
   const tabs = (
     <span className="landing-workflow-tabs" role="tablist" aria-label={t('landing.workflows.tabs')}>
       {WORKFLOW_EXAMPLES.map((x, i) => (
@@ -298,8 +338,8 @@ export function WorkflowAct({ on, acting, at, stacked, onPick }: ActProps & { at
     </span>
   );
   return (
-    <div className="landing-act is-stamp" data-content>
-      <WorkflowCard key={w.id} w={w} state={state} tabs={tabs} />
+    <div className="landing-act is-flow" data-content data-front="ground">
+      <WorkflowCard key={w.id} w={w} f={f} tabs={tabs} />
     </div>
   );
 }
