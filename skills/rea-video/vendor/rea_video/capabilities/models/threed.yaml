@@ -1,0 +1,52 @@
+# 3D 生成（商品多角度一致 / 转台 / 白模参考）
+
+models:
+  - id: hunyuan-3d
+    name: Hunyuan 3D（3.x）
+    vendor: Tencent
+    category: threed
+    status: ga
+    access: [api, open-weights]
+    primitives: [threed.image_to_3d]
+    strengths:
+      - 三者中最稳定，很少出现破面
+      - 支持指定视角输入；可选 PBR 材质，4K PBR 纹理需额外付费
+      - 最适合高保真商品展示
+    license: {commercial: true, note: 托管版可商用；开源权重许可需单独核对}
+    sources:
+      - https://www.3daistudio.com/blog/rodin-2-5-vs-tripo-vs-hunyuan-3d-comparison
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: rodin-gen-2.5
+    name: Rodin Gen-2.5
+    vendor: Hyper3D / Deemos
+    category: threed
+    status: ga
+    access: [api, app]
+    primitives: [threed.image_to_3d]
+    strengths:
+      - 5 档质量；接受 2–5 张视角图
+      - 可去除原图的烘焙光照；有对称开关，适合车辆等对称物体
+    license: {commercial: true}
+    sources:
+      - https://www.3daistudio.com/blog/rodin-2-5-vs-tripo-vs-hunyuan-3d-comparison
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: tripo-p1
+    name: Tripo P1
+    vendor: Tripo
+    category: threed
+    status: ga
+    access: [api, app]
+    primitives: [threed.image_to_3d]
+    strengths:
+      - 网格干净（约 2 万面以内），带 PBR 纹理；适合游戏用的低模
+    weaknesses:
+      - 不适合高保真商品展示
+    license: {commercial: true}
+    sources:
+      - https://www.3daistudio.com/blog/rodin-2-5-vs-tripo-vs-hunyuan-3d-comparison
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium

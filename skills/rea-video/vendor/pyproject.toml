@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rea-video"
+version = "0.1.0"
+description = "Reverse engineer any video: shot-level production-method forensics (live action / AI video / code render / mixed) and remake planning."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "numpy>=1.24,<3",
+  "opencv-python-headless>=4.8,<5",
+  "Pillow>=9.0",
+  "PyYAML>=6.0",
+  "videomd>=1.1",        # VIDEO.md 拆片包的校验和读取（https://github.com/videomd/videomd）
+  "onnxruntime>=1.16",   # 人声/配乐/音效分离（UVR MDX-Net 约 67 MB + BandIt v2 约 149 MB，首次运行自动下载）
+]
+
+[project.optional-dependencies]
+# Python ≤ 3.12 用 rapidocr-onnxruntime；它没有 3.13 及以上的版本，那里改用 rapidocr 3（同一个作者的新包）。
+# rapidocr-onnxruntime 会顺带装 opencv-python（带 GUI 的那套），和上面的 headless 抢同一个 cv2 目录；
+# scripts/install_skill.sh 装完会删掉它、重装 headless。手动安装见 setup.md。rapidocr 3 本身就用 headless。
+ocr = [
+  "rapidocr-onnxruntime>=1.3,<2; python_version < '3.13'",
+  "rapidocr>=3.4,<4; python_version >= '3.13'",
+]
+# 本地语音识别（SenseVoice，中英日韩粤）：没有字幕、没开 VLM 时也能拿到带时间的台词；首次使用下载约 160 MB 模型
+# 同一个包也用来分说话人（pyannote 分段 + 3D-Speaker 音色向量，另下约 35 MB）
+asr = ["sherpa-onnx>=1.12"]
+dev = ["pytest>=7", "jsonschema>=4"]
+
+[project.scripts]
+rea-video = "rea_video.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rea_video*"]
+
+[tool.setuptools.package-data]
+rea_video = ["capabilities/*.yaml", "capabilities/*.json", "capabilities/*.md", "capabilities/models/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

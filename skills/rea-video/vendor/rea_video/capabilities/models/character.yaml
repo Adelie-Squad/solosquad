@@ -1,0 +1,484 @@
+# 人物驱动：动作迁移 / 数字人 / 口型重配 / 虚拟试穿
+
+models:
+  - id: kling-motion-control
+    name: Kling Motion Control（2.6 / 3.0）
+    vendor: Kuaishou
+    category: character
+    release: 2025-12
+    status: ga
+    access: [app, api, api-aggregator]
+    primitives: [motion.transfer]
+    strengths:
+      - 把参考视频里的动作迁移到角色图上；第三方视其为动作控制的质量标杆
+      - 有技术报告（arXiv 2603.03160）
+      - 3.0 版可以绑定主体，保持脸部一致（只用脸，不管衣服发型；只在跟随视频朝向模式下可用）
+    weaknesses:
+      - 用他人视频驱动时要注意肖像权与版权
+    license: {commercial: true, note: 以平台条款为准}
+    sources:
+      - https://arxiv.org/html/2603.03160v1
+      - https://templix.app/blogs/best-ai-motion-control-and-animation-models-in-2026
+      - https://kling.ai/quickstart/motion-control-user-guide
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+    notes: 3.0 版 2026-03-04 上 API；参考视频 3–30 秒、一镜到底、全身和头部可见；动作太快时输出可能比参考短
+
+  - id: wan-2.2-animate
+    name: Wan 2.2 Animate（含 animate-mix 换人）
+    vendor: Alibaba
+    category: character
+    release: 2025-09
+    status: ga
+    access: [open-weights, api]
+    primitives: [motion.transfer, video.edit_v2v]
+    strengths:
+      - 开源；可做动作迁移，也可在原视频中换人
+      - video-replicate-studio 用 wan2.2-animate-mix 做换人
+    weaknesses:
+      - 需要本地显卡或付费 API
+    license: {commercial: true, note: Apache 2.0（开源权重）}
+    sources:
+      - https://wanvideogenerator.com/blog/ai-motion-control-kling26-vs-wan22-animate
+      - https://github.com/derek-zhuolin/video-replicate-studio
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+    notes: 后续版本 Wan-Animate-2（2026-08，开源）单独成条
+
+  - id: wan-animate-2
+    name: Wan-Animate-2
+    vendor: Alibaba
+    category: character
+    release: 2026-08
+    status: ga
+    access: [open-weights]
+    primitives: [motion.transfer]
+    limits:
+      resolutions: [480p, 720p]
+    strengths:
+      - 直接用驱动视频，不用先提骨骼；可以用文字改视角
+      - Apache 2.0 开源
+    weaknesses:
+      - 硬件要求高（720p 参考配置是 8 张 A800）；没有托管 API
+      - ComfyUI 支持还没正式发布
+    license: {commercial: true, note: Apache 2.0}
+    sources:
+      - https://github.com/Wan-Video/Wan-Animate-2
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: omnihuman-2.0
+    name: OmniHuman 2.0
+    vendor: ByteDance
+    category: character
+    release: 2026-10
+    status: ga
+    access: [app, api]
+    primitives: [avatar.audio_driven]
+    limits:
+      audio_s: {min: 4, max: 300}
+      resolutions: [720p]
+    strengths:
+      - 一张图加一段音频，就能生成单镜长表演
+      - 动作随语义和节奏变化；支持多人、非人角色和唱歌
+      - 可以用提示词控制姿态、镜头和互动
+    weaknesses:
+      - 表演好坏主要取决于音频的表现力
+    cost: {usd_per_s: 0.07, note: "BytePlus 0.07 美元/秒（原 0.12），fal 0.105"}
+    license: {commercial: true, note: BytePlus 条款}
+    sources:
+      - https://www.eachlabs.ai/blog/best-ai-lip-sync-models-2026
+      - https://docs.byteplus.com/en/docs/byteplus-vision/omnihuman-2-0-video-generation
+      - https://fal.ai/models/fal-ai/bytedance/omnihuman/v2/llms.txt
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+    notes: BytePlus 2026-10-15 上线；图片边长 300–6000 px、宽高比 0.4–2.5；人、动物、动漫、3D 角色都能驱动；即梦数字人是否已经用 2.0 没有确认
+
+  - id: kling-avatar-v2
+    name: Kling Avatar v2
+    vendor: Kuaishou
+    category: character
+    release: 2025-12
+    status: ga
+    access: [app, api, api-aggregator]
+    primitives: [avatar.audio_driven]
+    strengths:
+      - 设置简单；Standard 档用于迭代，Pro 档用于成片
+    weaknesses:
+      - 时长资料未明示
+    license: {commercial: true, note: 以平台条款为准}
+    sources:
+      - https://www.eachlabs.ai/blog/best-ai-lip-sync-models-2026
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+    notes: 2025-12-04 全量开放，最长 5 分钟；目前没有更新的版本
+
+  - id: ltx-2.3-lipsync
+    name: LTX 2.3 Lipsync
+    vendor: Lightricks
+    category: character
+    release: 2026-03
+    status: ga
+    access: [api, open-weights]
+    primitives: [avatar.audio_driven]
+    limits:
+      audio_s: {min: 5, max: 20}
+      resolutions: [480p, 1080p]
+    strengths:
+      - 可固定 seed：用 480p 出草稿，再用同一 seed 出 1080p 成片
+    weaknesses:
+      - 只适合短片段
+    license: {commercial: conditional, note: LTX Community License}
+    sources:
+      - https://www.eachlabs.ai/blog/best-ai-lip-sync-models-2026
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+    notes: 发布月份为估计值
+
+  - id: sync-3
+    name: Sync 3（Sync Labs）
+    vendor: Sync Labs
+    category: character
+    release: 2026-04
+    status: ga
+    access: [api, api-aggregator]
+    primitives: [lipsync.redub, avatar.audio_driven, audio.tts]
+    limits:
+      resolutions: [4K]
+    strengths:
+      - 先分析整个场景再对口型，能处理转头、阴影、手持镜头和双人镜头
+      - 保留原表演；最高 4K 60fps
+    weaknesses:
+      - 不能指定遮罩或人脸框；没有画面提示词
+      - 旧版 Lipsync v2 Pro 有 sync_mode（时长不匹配时的处理方式），v3 没有
+    cost: {usd_per_s: 0.133, note: 0.107–0.133 美元/秒}
+    license: {commercial: true}
+    sources:
+      - https://www.eachlabs.ai/blog/best-ai-lip-sync-models-2026
+      - https://sync.so/docs/models/sync-3
+      - https://sync.so/changelog/
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+    notes: 2026-04-06 发布，05-05 对所有用户开放，07-14 加入静态图加音频，8 月加入 92 种语言配音；也可以直接给 TTS 文本
+
+  - id: sync-react-1
+    name: sync react-1
+    vendor: Sync Labs
+    category: character
+    release: 2025-12
+    status: ga
+    access: [app, api]
+    primitives: [lipsync.redub]
+    limits:
+      audio_s: {max: 15}
+    strengths:
+      - 不只对口型，还能重演表情和头部动作；可以指定一个情绪词
+    weaknesses:
+      - 最长 15 秒；画面里只能有一个清楚可见的说话人，没有说话人检测和遮挡检测
+    cost: {usd_per_s: 0.167, note: 0.133–0.167 美元/秒}
+    license: {commercial: true}
+    sources:
+      - https://sync.so/docs/models/react
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: fashn-v1.6
+    name: FASHN Virtual Try-On v1.6
+    vendor: FASHN
+    category: character
+    release: 2026-03
+    status: ga
+    access: [api, api-aggregator]
+    primitives: [image.tryon]
+    limits:
+      resolutions: [864x1296]
+    strengths:
+      - 服装上的印花和文字保持清晰
+      - 支持模特图或平铺图作为输入，自动识别服装品类
+    weaknesses:
+      - 只做图像试穿，视频需要再经过图生视频或动作迁移
+    license: {commercial: true}
+    sources:
+      - https://fal.ai/learn/tools/best-virtual-try-on-apis-2026
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+    notes: 发布月份未核实；FASHN 自己的 API 已有 tryon-max（单独成条）
+
+  - id: fashn-tryon-max
+    name: FASHN Try-On Max
+    vendor: FASHN
+    category: character
+    release: 2026-01
+    status: ga
+    access: [app, api]
+    primitives: [image.tryon]
+    limits:
+      resolutions: [1K, 2K, 4K]
+    strengths:
+      - 最高 4K（2026-03 加入分辨率档位）
+    weaknesses:
+      - 积分价各来源说法不一
+    license: {commercial: true}
+    sources:
+      - https://fashn.ai/changelog/api-try-on-max-endpoint-now-available
+      - https://fashn.ai/changelog/new-resolution-tiers-and-generation-mode-controls
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+    notes: "API 里写 model_name: tryon-max"
+
+  - id: kling-kolors-tryon
+    name: Kling Kolors Virtual Try-On v1.5
+    vendor: Kuaishou
+    category: character
+    release: 2025-06
+    status: ga
+    access: [app, api, api-aggregator]
+    primitives: [image.tryon]
+    strengths:
+      - 保留模特的姿势、肤色和体型；带商用许可
+    weaknesses:
+      - 正面模特图配干净的平铺服装图时效果最好
+    license: {commercial: true}
+    sources:
+      - https://fal.ai/learn/tools/best-virtual-try-on-apis-2026
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+    notes: 发布月份为估计值；2026-09-15 发布试穿 3.0（kling-virtual-tryon-3），旧参数沿用
+
+  - id: kling-virtual-tryon-3
+    name: Kling Virtual Try-On 3.0
+    vendor: Kuaishou
+    category: character
+    release: 2026-09
+    status: ga
+    access: [app, api]
+    primitives: [image.tryon]
+    strengths:
+      - 脸部一致性和画质比旧版好；平铺、人台、上身图都能当服装输入
+      - 可以锁姿势、保脸、保留或去掉原背景
+    weaknesses:
+      - 价格和分辨率官方没公布
+    license: {commercial: true, note: 以平台条款为准}
+    sources:
+      - https://kling.ai/document-api/updates/api.md
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+    notes: 同一批还有服装复刻（按爆款视频给自己的衣服出模特视频，2026-08-18）和带货口播视频（2026-09-07）两个接口
+
+  - id: heygen-avatar-v
+    name: HeyGen Avatar V
+    vendor: HeyGen
+    category: character
+    release: 2026-04
+    status: ga
+    access: [app, api]
+    primitives: [avatar.audio_driven, lipsync.redub, audio.tts, audio.voice_clone]
+    limits:
+      audio_s: {max: 600}
+      resolutions: [720p]
+    strengths:
+      - 用一段参考视频建数字人，换场景、换衣服时长相保持；单个场景最长 30 分钟
+      - 可以用白话指导动作（Custom Motion / motion_prompt）；平台支持 177 种以上语言
+    weaknesses:
+      - 输出分辨率官方没写清（API 默认 720p）
+      - 用户反馈失败任务也扣积分
+    cost: {usd_per_s: 0.05, note: Avatar V 的 API 价}
+    license: {commercial: true, note: 自定义数字人需要本人授权验证}
+    sources:
+      - https://www.heygen.com/research/avatar-v-model
+      - https://developers.heygen.com/changelog
+      - https://developers.heygen.com/docs/usage-limits.md
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: synthesia-express-3
+    name: Synthesia Express-3
+    vendor: Synthesia
+    category: character
+    release: 2026-07
+    status: ga
+    access: [app]
+    primitives: [avatar.audio_driven, audio.tts]
+    strengths:
+      - 手势跟着脚本走；渲染快约 2 倍；平台支持 140 多种语言
+    weaknesses:
+      - 情绪按脚本自动判断，不能手动指定
+      - 先只开放新的库存数字人；API 是否可用没有说明
+    license: {commercial: true, note: 以平台条款为准}
+    sources:
+      - https://www.synthesia.io/post/synthesia-launches-new-ai-assistant-for-faster-video-creation-and-express-3-avatar-model
+      - https://www.synthesia.io/updates/express-3
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: mirage-avatar-x
+    name: Mirage Avatar X（原 Captions）
+    vendor: Mirage
+    category: character
+    release: 2026-07
+    status: ga
+    access: [app, api-aggregator]
+    primitives: [avatar.audio_driven, audio.tts, audio.voice_clone]
+    limits:
+      audio_s: {min: 3, max: 180}
+    strengths:
+      - 厂商称表情细节和眼神交流好；声音、表情、动作一次生成
+      - 横屏竖屏都可以
+    weaknesses:
+      - fal 上 0.30 美元/秒，同类里最贵
+      - 没有动作提示词；语言列表没公布
+    cost: {usd_per_s: 0.3, note: fal 列价}
+    license: {commercial: conditional, note: 未找到官方商用条款，以平台条款为准}
+    sources:
+      - https://captions.ai/blog/mirage-avatar-x
+      - https://fal.ai/mirage-avatar-x
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: longcat-video-avatar-1.5
+    name: LongCat-Video-Avatar-1.5
+    vendor: Meituan LongCat（美团）
+    category: character
+    release: 2026-05
+    status: ga
+    access: [open-weights]
+    primitives: [avatar.audio_driven]
+    limits:
+      resolutions: [480p, 720p]
+    strengths:
+      - MIT 开源；多人对话（多路音频）；动漫和动物也能驱动
+      - InfiniteTalk / MultiTalk 的后续版本
+    weaknesses:
+      - 长视频里动作会重复；不同语言效果不一
+      - 没有官方托管 API
+    license: {commercial: true, note: MIT}
+    sources:
+      - https://huggingface.co/meituan-longcat/LongCat-Video-Avatar-1.5
+      - https://github.com/MeiGen-AI/InfiniteTalk
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: creatify-aurora
+    name: Creatify Aurora
+    vendor: Creatify
+    category: character
+    status: ga
+    access: [app, api-aggregator]
+    primitives: [avatar.audio_driven]
+    limits:
+      resolutions: [480p, 720p]
+    strengths:
+      - 一张图加音频出口播；提示词能控制取景、背景、光线、眼神和身体是否保持不动
+    weaknesses:
+      - 最高 720p
+    cost: {usd_per_s: 0.07, note: fal 480p 0.07、720p 0.14 美元/秒}
+    license: {commercial: conditional, note: 未找到官方商用条款，以平台条款为准}
+    sources:
+      - https://fal.ai/models/fal-ai/creatify/aurora/llms.txt
+    verified: {date: 2026-11-12, basis: third-party}
+    confidence: low
+
+  - id: veed-fabric-1.0
+    name: VEED Fabric 1.0（含 Fast）
+    vendor: VEED
+    category: character
+    release: 2025-09
+    status: ga
+    access: [app, api-aggregator]
+    primitives: [avatar.audio_driven]
+    limits:
+      audio_s: {max: 300}
+      resolutions: [480p, 720p]
+    strengths:
+      - 一张图加音频，最长 5 分钟
+    weaknesses:
+      - 最高 720p；2026 年没有新版本
+    cost: {usd_per_s: 0.08, note: fal 0.08–0.15 美元/秒}
+    license: {commercial: conditional, note: 未找到官方商用条款，以平台条款为准}
+    sources:
+      - https://fal.ai/veed-fabric-1.0
+    verified: {date: 2026-11-12, basis: third-party}
+    confidence: low
+
+  - id: hedra-omnia
+    name: Hedra Omnia（Alpha）
+    vendor: Hedra
+    category: character
+    release: 2026-02
+    status: preview
+    access: [app]
+    primitives: [avatar.audio_driven]
+    limits:
+      duration_s: {max: 8}
+      resolutions: [540p, 720p, 1080p]
+    strengths:
+      - 首帧加音频出表演，提示词里可以写运镜
+    weaknesses:
+      - 目前最长 8 秒，一次约 6 分钟
+    license: {commercial: conditional, note: 未找到官方商用条款，以平台条款为准}
+    sources:
+      - https://www.hedra.com/blog/hedra-omnia-frontier-ai-video-model
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: low
+    notes: Hedra 的长口播仍是 Character-3（2025-03）
+
+  - id: viggle-animate
+    name: Viggle-Animate
+    vendor: Viggle
+    category: character
+    release: 2026-09
+    status: ga
+    access: [app, open-weights]
+    primitives: [motion.transfer, video.edit_v2v]
+    limits:
+      resolutions: [480x832]
+    strengths:
+      - 把驱动视频里的一帧重画成新角色，整段就换成这个角色
+    weaknesses:
+      - 特写口型弱；多人、近距离互动、切镜时质量下降
+      - 约 5 秒（124 帧）
+    license: {commercial: conditional, note: 权重为 MiniMax H3 Community License，代码 Apache 2.0}
+    sources:
+      - https://viggle.ai/blog/viggle-animate-character-replacement-from-a-repainted-frame
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: viggle-v4
+    name: Viggle V4
+    vendor: Viggle
+    category: character
+    release: 2026-02
+    status: ga
+    access: [app]
+    primitives: [motion.transfer]
+    strengths:
+      - 多人场景可以分轨换人，最长 1 分钟
+      - Character Refine 从一张图出 5 个角度
+    weaknesses:
+      - 分辨率和价格没公布
+    license: {commercial: conditional, note: 未找到官方商用条款，以平台条款为准}
+    sources:
+      - https://viggle.ai/blog/everything-you-need-is-in-viggle-v4
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: medium
+
+  - id: dreamactor-m2.0
+    name: DreamActor M2.0
+    vendor: ByteDance
+    category: character
+    release: 2026-01
+    status: ga
+    access: [api, api-aggregator]
+    primitives: [motion.transfer]
+    strengths:
+      - 一张图加驱动视频，迁移动作、表情和嘴型
+    weaknesses:
+      - API 上线时间和输入要求没有找到
+    cost: {usd_per_s: 0.05, note: BytePlus 列价}
+    license: {commercial: true, note: BytePlus 条款}
+    sources:
+      - https://www.byteplus.com/en/product/DreamActor/M20
+      - https://docs.budgetpixel.com/api-reference/motion-control/motion-control-with-dreamactor-m20
+    verified: {date: 2026-11-12, basis: vendor}
+    confidence: low
+    notes: 发布月份按论文（arXiv 2601.21716）

@@ -1,6 +1,6 @@
 ---
 name: reference-video-analysis
-description: 레퍼런스 영상을 프레임 단위로 분해해 샷 목록·키 포즈·timing/spacing 차트·arc·hold 를 뽑고, 만들기 전에 샷/포즈 목록과 모션 스펙으로 바꾼다. ffmpeg 프레임 추출·장면 전환 감지·contact sheet 와 애니메이터의 timing chart 관행, rea-video 의 샷 단위 역설계 방식 기반. 사용 시점 — "이 영상처럼 만들어줘", 레퍼런스 영상·GIF·광고를 보고 모션이나 영상을 만들 때(광의), 동작 타이밍을 맞출 때, 샷 구성·컷 리듬을 따라 할 때, 만든 결과를 레퍼런스와 프레임 단위로 대조할 때(구체). (제외 — 애니메이션 제작·관통 검사는 rig-motion-clearance, 영상 조립·렌더는 previz-assembly)
+description: 레퍼런스 영상을 프레임 단위로 분해해 샷 목록·키 포즈·timing/spacing 차트·arc·hold 를 뽑고, 만들기 전에 샷/포즈 목록과 모션 스펙으로 바꾼다. ffmpeg 프레임 추출·장면 전환 감지·contact sheet 와 애니메이터의 timing chart 관행, rea-video 의 샷 단위 역설계 방식 기반. 사용 시점 — "이 영상처럼 만들어줘", 레퍼런스 영상·GIF·광고를 보고 모션이나 영상을 만들 때(광의), 동작 타이밍을 맞출 때, 샷 구성·컷 리듬을 따라 할 때, 만든 결과를 레퍼런스와 프레임 단위로 대조할 때(구체). (제외 — 영상 전체의 제작 방식·소재 유형·편집 레이어·사운드 역설계는 rea-video, 애니메이션 제작·관통 검사는 rig-motion-clearance, 영상 조립·렌더는 previz-assembly)
 schema_version: 2
 tier: member
 team: _skill
@@ -8,7 +8,7 @@ category: design
 used_by: ["creative", "marketer"]
 dev_capability: false
 triggers:
-  keyword: ["레퍼런스 영상", "reference video", "프레임 분석", "frame by frame", "rea-video", "rea 비디오", "샷 분석", "shot breakdown", "이 영상처럼", "타이밍 차트", "timing chart"]
+  keyword: ["레퍼런스 영상", "reference video", "프레임 분석", "frame by frame", "동작 분석", "샷 분석", "shot breakdown", "이 영상처럼", "타이밍 차트", "timing chart"]
 pm_conventions:
   anti_sycophancy: true
   hard_gate: true
@@ -103,7 +103,7 @@ K1(48) ─ . . .  .   .    .     .    .   .  . . ─ K2(60) H(60–66) ─ K3(72
 - `-ss` 를 `-i` 앞에 두면 빠르지만 키프레임 단위로 시작이 어긋날 수 있다 — 프레임 번호가 중요하면 번호를 박은 프레임(§3)으로 확인.
 - 장면 전환 감지는 빠른 카메라 이동·플래시를 컷으로 오인한다 — 격자에서 눈으로 확정.
 - 레퍼런스를 그대로 베끼는 것이 목표가 아니다 — 무엇을 가져올지(입력 1줄)만 가져온다. 저작권 있는 영상의 프레임은 내부 분석용으로만 쓰고 결과물에 넣지 않는다.
-- 외부 분석 도구(rea-video 등)는 원격 코드를 설치·실행한다 — 사용자 확인 없이 설치하지 않는다. 이 skill 은 ffmpeg 만으로 같은 절차를 수행한다.
+- 영상 전체가 "어떻게 만들어졌나"(샷별 소재 유형·편집 레이어·사운드)는 `rea-video` 가 한다 — 여러 샷짜리 레퍼런스는 rea-video 로 샷 목록을 먼저 받고, 동작이 중요한 구간만 이 skill 로 프레임 단위 분석한다. 같은 영상을 두 skill 로 처음부터 중복 분석하지 않는다.
 
 ## 출처
 - FFmpeg filters(`fps`·`select`·`showinfo`·`tile`·`drawtext`): https://ffmpeg.org/ffmpeg-filters.html

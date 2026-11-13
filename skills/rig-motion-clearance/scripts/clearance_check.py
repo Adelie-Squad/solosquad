@@ -11,9 +11,13 @@ A part is `Object` or `Object:VertexGroup` (faces whose vertices all weigh > 0.5
 group), so one skinned mesh can be split into wing / head / body regions. Positions come
 from the evaluated depsgraph, so armature skinning, shape keys and constraints count.
 
-Clearance is signed: > 0 is the gap in scene units, <= 0 means the surfaces cross or a
-vertex sits inside the other part (closed meshes). The script exits 1 when any frame is
-under --min-clearance or any surfaces cross, so a render step can refuse to start. Parts
+Clearance is the unsigned shortest vertex-to-surface distance in scene units, both ways.
+Penetration comes only from the BVH overlap test (`crossing`): when the surfaces cross the
+clearance is reported as 0. Face normals are never used for a sign: a part cut out of one
+mesh by vertex group is an open shell whose normals say nothing about inside and outside
+(an earlier signed version reported -0.49 m on a standing pose). The script exits 1 when
+any frame is under --min-clearance or any surfaces cross, so a render step can refuse to
+start. Not detected: one part wholly inside another with no surface crossing. Parts
 that are meant to touch (a wing root sewn onto the body) are not a pair: list the regions
 that must stay apart (wing tip vs head), not the seam.
 """
@@ -23,10 +27,15 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any
 
-import bpy
-from mathutils import Vector
-from mathutils.bvhtree import BVHTree
+try:  # Blender; the pure helpers below also import without it (tests)
+    import bpy
+    from mathutils.bvhtree import BVHTree
+except ImportError:
+    bpy = None
+    BVHTree = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -65,8 +74,8 @@ def label(part: tuple[str, str | None]) -> str:
 
 
 def world_geometry(
-    part: tuple[str, str | None], depsgraph: bpy.types.Depsgraph
-) -> tuple[list[Vector], list[tuple[int, ...]]]:
+    part: tuple[str, str | None], depsgraph: Any
+) -> tuple[list[Any], list[tuple[int, ...]]]:
     obj = bpy.data.objects.get(part[0])
     if obj is None or obj.type != "MESH":
         raise SystemExit(f"clearance_check: no mesh object named {part[0]!r}")
@@ -100,17 +109,33 @@ def world_geometry(
         ev.to_mesh_clear()
 
 
-def signed_gap(verts: list[Vector], tree: BVHTree) -> tuple[float, Vector | None]:
-    """Smallest vertex-to-surface distance; negative when the vertex is behind the face."""
+Nearest = Callable[[Any], tuple[Any, Any, Any, float | None]]
+
+
+def nearest_gap(verts: Iterable[Any], find_nearest: Nearest) -> tuple[float, Any]:
+    """Smallest unsigned vertex-to-surface distance (BVHTree.find_nearest shape)."""
     best, where = float("inf"), None
     for v in verts:
-        loc, normal, _, dist = tree.find_nearest(v)
-        if loc is None:
+        loc, _normal, _index, dist = find_nearest(v)
+        if loc is None or dist is None:
             continue
-        d = -dist if normal is not None and (v - loc).dot(normal) < 0 else dist
-        if d < best:
-            best, where = d, v
+        if dist < best:
+            best, where = dist, v
     return best, where
+
+
+def pair_clearance(
+    verts_a: Sequence[Any],
+    nearest_a: Nearest,
+    verts_b: Sequence[Any],
+    nearest_b: Nearest,
+    crossing: bool,
+) -> tuple[float, Any]:
+    """Clearance between two parts: 0 when the surfaces cross, else the unsigned minimum."""
+    g1, p1 = nearest_gap(verts_a, nearest_b)
+    g2, p2 = nearest_gap(verts_b, nearest_a)
+    gap, at = (g1, p1) if g1 <= g2 else (g2, p2)
+    return (0.0 if crossing else gap), at
 
 
 def main() -> None:
@@ -143,11 +168,9 @@ def main() -> None:
                 if ak == mk:
                     continue
                 crossing = bool(trees[mk].overlap(trees[ak]))
-                g1, p1 = signed_gap(geo[mk][0], trees[ak])
-                g2, p2 = signed_gap(geo[ak][0], trees[mk])
-                gap, at = (g1, p1) if g1 <= g2 else (g2, p2)
-                if crossing:
-                    gap = min(gap, 0.0)
+                gap, at = pair_clearance(
+                    geo[mk][0], trees[mk].find_nearest, geo[ak][0], trees[ak].find_nearest, crossing
+                )
                 row: dict[str, object] = {
                     "frame": frame,
                     "moving": mk,
@@ -183,4 +206,5 @@ def main() -> None:
     sys.exit(1 if fails else 0)
 
 
-main()
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,297 @@
+# rea-video 路由规则：镜头特征（signals）→ 原语链（route）→ 候选模型（prefer，按优先级）
+# 规则只引用原语和模型 id；校验脚本会检查引用完整性和"模型确实支持该原语"。
+# 选模型时：跳过 status=shutdown；对 regions_excluded 和 license 做过滤；同等条件按成本排序。
+
+version: 0.1.0
+updated: 2026-10-29
+
+modes:
+  fidelity: 高保真复刻。结构、节奏、运镜、文字、动效逐项对齐，用 scorecard 衡量
+  adapt: 创意改编。保留原片"为什么有效"的关系（钩子、揭示、节奏），内容按新主题重写
+  # 两种模式可以按层混用，例如 {rhythm: fidelity, camera: fidelity, people: adapt, copy: adapt}
+
+# ---------------------------------------------------------------- 信号
+# 拉片阶段要检测的镜头特征，以及由哪些分析原语提供证据
+signals:
+  text_or_ui_dominant: {detected_by: [analyze.ocr_text_track, analyze.video_understanding], desc: "文字/UI/图表/MG 是画面主体；字边锐利、像素对齐、轨迹规整"}
+  screen_ui:           {detected_by: [analyze.video_understanding, analyze.ocr_text_track], desc: 软件或网页界面的操作演示}
+  talking_head_frontal: {detected_by: [analyze.video_understanding, analyze.asr_word_align, analyze.camera_motion], desc: 正面口播，机位基本固定}
+  dialogue_coupled:    {detected_by: [analyze.asr_word_align, analyze.video_understanding], desc: 对白与画面强耦合的非正面镜头（多人对话、边做边说）}
+  precise_motion:      {detected_by: [analyze.video_understanding, analyze.segmentation, analyze.beat_tempo], desc: 舞蹈、变装、卡点手势等动作本身就是看点}
+  garment_change:      {detected_by: [analyze.video_understanding], desc: 服装电商的换装或展示}
+  physical_text_zh:    {detected_by: [analyze.ocr_text_track], desc: 画面中的实物文字（招牌、包装、屏幕），尤其中文}
+  product_hero:        {detected_by: [analyze.video_understanding, analyze.segmentation], desc: 商品外观或构图必须准确}
+  product_multiview:   {detected_by: [analyze.video_understanding, analyze.camera_motion], desc: 商品旋转、多角度展示}
+  complex_camera:      {detected_by: [analyze.camera_motion, analyze.shot_boundary], desc: 复杂运镜、遮挡转场、瞬间变换}
+  lens_look:           {detected_by: [analyze.video_understanding], desc: 鲜明的焦段、景深、畸变等镜头感}
+  recurring_character: {detected_by: [analyze.video_understanding, analyze.segmentation], desc: 同一角色或商品出现在多个镜头}
+  owned_footage_edit:  {detected_by: [], desc: 用户有权使用的已有素材，只需要换人、换物、换背景}
+  redub_only:          {detected_by: [analyze.asr_word_align], desc: 表演保留，只换台词或语言}
+  ambient_broll:       {detected_by: [analyze.video_understanding], desc: 氛围空镜，没有特定主体}
+  reusable_footage:    {detected_by: [], desc: 用户自有素材可直接复用}
+  still_image_motion:  {detected_by: [analyze.camera_motion], desc: 整帧是一张静态图做推拉摇移（Ken Burns），可测出缩放/平移参数}
+  static_hold:         {detected_by: [analyze.shot_boundary], desc: 静帧定格（图片或卡片停留）}
+  anim_2d:             {detected_by: [analyze.video_understanding], desc: 2D 动画（手绘逐帧、Live2D、AE/Spine 角色动画），工具测不出，靠看图}
+  stop_motion:         {detected_by: [analyze.video_understanding], desc: 定格动画（实物/黏土/纸偶逐帧拍摄），工具测不出，靠看图}
+  film_footage:        {detected_by: [analyze.video_understanding], desc: 剪进来的电影/电视剧/短剧画面（影视解说、混剪、名场面），像素上和实拍、AI 分不开，工具只给线索（黑边版式、24/25fps 源），靠看图}
+  ai_edited_footage:   {detected_by: [analyze.video_understanding], desc: 实拍画面被 AI 二次加工（换脸、对口型、风格化、换装、换背景）}
+
+# ---------------------------------------------------------------- 拆分
+segmentation:
+  levels:
+    edit_shot: 剪辑镜头，由切镜检测得到，是客观事实
+    generation_unit: 生成单元，即一次模型调用的产物，与剪辑镜头不一一对应
+    layer: 同一画面内的纵向分层（代码层 / 生成层 / 素材层 / 字幕层）
+  defaults:
+    generation_unit_s: {min: 4, max: 15}
+    multishot_hardcut_s: {prefer: 8, max: 10}   # S06：单个生成单元内连续硬切的时长
+    same_scene_distance: 0.5                    # 相邻镜头首尾帧颜色分布距离（Bhattacharyya）低于它算同一场景
+  rules:
+    - id: S01-merge-multishot
+      do: 同角色、同场景的连续镜头，若总时长不超过候选模型上限，就合并为一个生成单元，用 video.multi_shot 一次生成
+      why: 一致性和自然转场由模型内部解决
+    - id: S02-split-duration
+      do: 镜头超过候选模型的单次上限时，在动作停顿处切开，后一段以前一段的尾帧作首帧（video.i2v_first_frame 或 i2v_first_last）
+    - id: S03-split-transition
+      do: 遮挡转场、变装瞬间、强动作变化点单独切开，用首尾帧或关键帧精确控制
+      why: 例如风扇叶遮挡时换装，时机错一点就会穿帮
+    - id: S04-vertical-layers
+      do: 文字、UI、图形、字幕抽成代码层；底下的画面走生成或素材层；最后合成
+      why: 生成模型重绘文字必然出错，代码层 100% 准确且方便修改
+    - id: S05-end-state
+      do: 每个生成单元的提示词写清"动作过程 + 结束状态"，结束状态作为下一单元的衔接条件
+    - id: S06-hardcut-guard
+      do: 单个生成单元内连续硬切画面不超过约 8 秒（实践经验，超过约 10 秒常出问题）
+    - id: S07-long-video
+      do: 长视频先按叙事段落切成多段分别处理，再拼接；拼接处检查商品外观一致、字幕与卖点对应、动作衔接
+
+# ---------------------------------------------------------------- 画面路由
+rules:
+  - id: R01-code-graphics
+    layer: overlay
+    when: [text_or_ui_dominant]
+    route: [render.code_graphics]
+    prefer: [remotion, html-gsap-playwright, motion-canvas]
+    verify: [ocr_text_match, layout_iou, timing_curve_error, pixel_similarity]
+    why: 文字和动效要求像素级准确且可改；生成模型做不到
+
+  - id: R02-screen-demo
+    layer: base
+    when: [screen_ui]
+    route: [render.web_capture, render.code_graphics]
+    prefer: [html-gsap-playwright, remotion]
+    verify: [ocr_text_match, layout_iou]
+    why: 用真实或重建的界面驱动录屏，比生成更准确
+
+  - id: R03-talking-head
+    layer: base
+    when: [talking_head_frontal]
+    route: [audio.voice_clone, avatar.audio_driven]
+    prefer: [minimax-speech-2.8, omnihuman-2.0, kling-avatar-v2, heygen-avatar-v, ltx-2.3-lipsync]
+    alternatives: 短镜头可改用音画同出模型加声音参考（R16）
+    verify: [lip_sync, identity_consistency, speech_wer]
+
+  - id: R04-precise-motion
+    layer: base
+    when: [precise_motion]
+    route: [motion.transfer, video.reference_video, video.edit_v2v]
+    prefer: [kling-motion-control, wan-2.2-animate, wan-animate-2, seedance-2.5, kling-o3, runway-gen-4.5]
+    verify: [motion_trajectory_error, identity_consistency, beat_alignment]
+    why: 动作的时间行为无法用文字和静帧描述
+    guard: 参考视频先当证据；只有当时间行为本身就是看点时，才把片段作为模型输入。驱动视频必须有权使用
+
+  - id: R05-garment
+    layer: base
+    when: [garment_change]
+    route: [image.tryon, video.i2v_first_frame, motion.transfer]
+    prefer: [fashn-tryon-max, kling-virtual-tryon-3, fashn-v1.6, seedance-2.5, kling-3.0, kling-motion-control]
+    verify: [identity_consistency, perceptual_similarity]
+    why: 先出试穿图并确认，再动起来，比直接让视频模型换装稳定
+
+  - id: R06-physical-text-zh
+    layer: base
+    when: [physical_text_zh]
+    route: [image.text_render, video.i2v_first_frame]
+    prefer: [gpt-image-2.5, gpt-image-2.6, qwen-image-3.0-pro, seedream-5.5, seedream-5.0, seedance-2.5, kling-3.0]
+    verify: [text_render_accuracy, ocr_text_match]
+    guard: 文字需要长时间清晰稳定、或镜头运动大时，改走 R01 代码叠加（运动中视频模型会扭曲文字）
+
+  - id: R07-product-hero
+    layer: base
+    when: [product_hero]
+    route: [image.edit_multi_ref, video.i2v_first_frame, video.i2v_first_last]
+    prefer: [gpt-image-2.5, gpt-image-2.6, nano-banana-2.1, seedream-5.5, seedream-5.0, seedance-2.5, kling-3.0, veo-3.1]
+    verify: [identity_consistency, perceptual_similarity]
+    why: 先用商品图合成首帧并确认，锁定外观后再生成运动
+
+  - id: R08-product-multiview
+    layer: base
+    when: [product_multiview]
+    route: [threed.image_to_3d, render.3d_scene, video.reference_video]
+    prefer: [hunyuan-3d, rodin-gen-2.5, blender, seedance-2.5]
+    verify: [identity_consistency, camera_path_error]
+    why: 3D 模型保证多角度一致；可以直接渲染，也可以把白模渲染作为 Seedance 2.5 的参考
+
+  - id: R09-complex-camera
+    layer: base
+    when: [complex_camera]
+    route: [video.keyframes, video.i2v_first_last]
+    prefer: [kling-4.0, kling-3.0, veo-3.1, runway-gen-4.5, minimax-h3]
+    verify: [camera_path_error, cut_alignment]
+    guard: 仍不可控时，在遮挡点切开（见 S03）
+
+  - id: R10-lens-look
+    layer: base
+    when: [lens_look]
+    route: [video.camera_control]
+    prefer: [pixverse-v6, kling-4.0, runway-gen-4.5, gemini-omni-flash]
+    verify: [perceptual_similarity]
+
+  - id: R11-recurring-character
+    layer: base
+    when: [recurring_character]
+    route: [video.multi_reference, video.multi_shot]
+    prefer: [seedance-2.5, kling-3.0, kling-o3, vidu-q3, kling-4.0]
+    verify: [identity_consistency, cut_alignment]
+
+  - id: R12-owned-footage-edit
+    layer: base
+    when: [owned_footage_edit]
+    route: [video.edit_v2v]
+    prefer: [kling-o3, kling-4.0, runway-aleph-2, luma-ray3.2, wan-2.2-animate, seedance-2.5]
+    verify: [motion_trajectory_error, identity_consistency]
+
+  - id: R13-redub
+    layer: base
+    when: [redub_only]
+    route: [lipsync.redub]
+    prefer: [sync-3, sync-react-1]
+    verify: [lip_sync, speech_wer]
+
+  - id: R14-ambient-broll
+    layer: base
+    when: [ambient_broll]
+    route: [video.t2v]
+    prefer: [minimax-h3, hailuo-2.3, seedance-2.0, wan-2.2, seedance-2.5]
+    verify: [perceptual_similarity]
+    why: 最便宜的路线，按成本排序
+
+  - id: R15-reuse-footage
+    layer: base
+    when: [reusable_footage]
+    route: [render.compose]
+    prefer: [ffmpeg]
+    verify: [cut_alignment]
+
+  - id: R17-still-motion
+    layer: base
+    when: [still_image_motion]
+    route: [image.edit_multi_ref, render.compose]
+    prefer: [gpt-image-2.5, seedream-5.0, ffmpeg]
+    verify: [camera_path_error, perceptual_similarity]
+    why: 拆解阶段已测出缩放/平移曲线，用一张图 + 本地 ffmpeg 就能精确复刻运动，不需要视频模型
+
+  - id: R18-static-hold
+    layer: base
+    when: [static_hold]
+    route: [image.edit_multi_ref, render.compose]
+    prefer: [gpt-image-2.5, seedream-5.0, ffmpeg]
+    verify: [perceptual_similarity]
+
+  - id: R19-2d-animation
+    layer: base
+    when: [anim_2d]
+    route: [image.t2i, video.i2v_first_last, video.multi_reference]
+    prefer: [kling-3.0, seedance-2.5, vidu-q3]
+    verify: [identity_consistency, perceptual_similarity]
+    why: 先用图像模型定角色和画风（一张设定图），再首尾帧生成；要逐帧精确的口型和动作时，改走 AE / Live2D / Spine 工程
+
+  - id: R20-stop-motion
+    layer: base
+    when: [stop_motion]
+    route: [video.i2v_first_frame]
+    prefer: [kling-3.0, seedance-2.5, vidu-q3]
+    verify: [perceptual_similarity]
+    why: 首选真的拍：手机固定 + 定格 App 每秒 12 张；AI 生成只能近似定格的顿挫感，提示词写明 stop-motion、12fps
+
+  - id: R21-film-footage
+    layer: base
+    when: [film_footage]
+    route: [render.compose]
+    prefer: [ffmpeg]
+    verify: [perceptual_similarity]
+    why: 画面来自已有影视作品，复刻是找到原片对应片段再剪（版权属于片方，商用要授权）；不用原片时按同样景别、机位、打光自己拍，或用 AI 近似（R07）
+
+  - id: R16-dialogue-coupled
+    layer: base
+    when: [dialogue_coupled]
+    route: [video.native_audio, video.multi_reference]
+    prefer: [seedance-2.5, kling-3.0, veo-3.1, gemini-omni-flash, kling-4.0]
+    verify: [lip_sync, speech_wer, identity_consistency]
+
+# ---------------------------------------------------------------- 音频路由
+audio_rules:
+  - id: A01-narration
+    when: 有旁白或口播
+    route: [analyze.asr_word_align, audio.voice_clone, audio.tts]
+    prefer: [funasr-sensevoice, whisperx, minimax-speech-2.8, cosyvoice-3, qwen3-tts, elevenlabs-v3]
+    verify: [speech_wer]
+    note: 中文优先用 MiniMax 克隆；英文情感优先用 ElevenLabs
+  - id: A02-fit-time-window
+    when: 新配音必须塞进原片时间窗（对口型、对画面）
+    route: [audio.tts_duration_control]
+    prefer: [indextts-2]
+    verify: [audio_duration_match, speech_wer]
+  - id: A03-music
+    when: 有背景音乐
+    route: [analyze.audio_separation, analyze.beat_tempo, audio.music_gen]
+    prefer: [demucs, librosa-madmom, lyria-3-pro, minimax-music-2.5]
+    verify: [beat_alignment]
+    note: 不直接搬运原曲；生成 BPM 和情绪相近的新曲，或使用授权曲库。Suno 没有 API，只适合手动
+  - id: A04-sfx
+    when: 有动作音效或环境声
+    route: [audio.v2a_foley, audio.sfx_gen]
+    prefer: [hunyuanvideo-foley, elevenlabs-sfx]
+    verify: [beat_alignment]
+    note: HunyuanVideo-Foley 的许可排除欧盟、英国、韩国；MMAudio 权重不能商用
+  - id: A05-lip-mismatch
+    when: 生成画面的口型和新音频不同步
+    route: [lipsync.redub]
+    prefer: [sync-3, sync-react-1]
+    verify: [lip_sync]
+
+# ---------------------------------------------------------------- 后期
+post_rules:
+  - id: P01-upscale
+    when: 草稿分辨率低于交付分辨率
+    route: [post.upscale]
+    prefer: [seedvr2, flashvsr, topaz-video]
+    note: 不推荐 Real-ESRGAN 处理生成视频（有方块伪影）
+  - id: P02-interp
+    when: 帧率不足或需要慢动作
+    route: [post.frame_interp]
+    prefer: [rife, topaz-video]
+
+# ---------------------------------------------------------------- 成本与确认
+cost_policy:
+  - 每个生成单元先估算成本（时长 × usd_per_s），汇总后在 G1 由用户确认预算
+  - 先出关键帧图或试穿图（便宜），确认后再生成视频（贵）
+  - 先以 480p 或 720p 出草稿，确认后超分到交付分辨率（实测可以明显降本）
+  - 同一角色的多个镜头优先合并成一次多镜头生成（S01）
+  - 已产出的生成单元按（输入哈希 + 模型 + 参数）缓存，改写时只重跑受影响的单元
+
+confirm_gates:
+  G1: 需求、模式（fidelity/adapt）、预算与账号
+  G2: 分镜表 + 关键帧图 / 试穿图 / 首帧
+  G3: 低清草稿成片
+  G4: 超分成片与 scorecard
+
+# ---------------------------------------------------------------- 提示词纪律
+# 通用规则；各模型的具体写法在 prompting.yaml，两边不一致时以那边为准
+prompting_rules:
+  - 只写想要的内容；不写否定句（写 "no phone" 反而会画出手机）
+  - 写清"动作过程 + 结束状态"
+  - 每个输入标注职责：身份参考、商品事实、动作或运镜参考、声音参考、台词
+  - 避免比喻性措辞，模型会把比喻画成字面上的物体或事件
+  - 精确数量（手指比数字等）交给字幕或 MG，不要让模型表演
+  - 给表演一个可执行的态度，而不是罗列动作

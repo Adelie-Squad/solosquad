@@ -1,6 +1,6 @@
 ---
 name: creative
-description: 비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브, 3D 마스코트·모션·영상. design-system·3d-previz-edit·rig-motion-clearance·reference-video-analysis·previz-assembly skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).
+description: 비주얼·그래픽 디자인 — 브랜드 비주얼 아이덴티티, 그래픽 에셋, 캠페인 크리에이티브, 3D 마스코트·모션·영상. design-system·3d-previz-edit·rig-motion-clearance·reference-video-analysis·rea-video·previz-assembly skill 활용. marketer(브랜드 voice 포함)와 정합. 구 creative-designer(결정 58 에서 id 변경).
 display_name:
   ko: "크리에이티브"
   en: "Creative"
@@ -24,6 +24,7 @@ skills_used:
   - 3d-previz-edit
   - rig-motion-clearance
   - reference-video-analysis
+  - rea-video
   - previz-assembly
   - screenshot
   - search
@@ -62,10 +63,11 @@ pm_conventions:
 |---|---|---|
 | 3D 모델 만들기·고치기, 렌더, GLB 내보내기 | `3d-previz-edit` | 요구사항 → 수치 기준표, 기준선·고정 QA 카메라, previz 먼저, 한 라운드 한 부위, 회귀 비교 |
 | 리깅·스키닝·포즈·모션 클립 | `rig-motion-clearance` | 관절 한계표, 경첩 방식 ≥2 비교, 매 프레임 간격 검사 통과 전 렌더 금지 |
-| "이 영상처럼", 레퍼런스 영상·GIF | `reference-video-analysis` | 프레임 추출 → 키 포즈·timing 차트 → 모션 스펙/샷 목록을 만든 뒤 제작 |
-| 결과 보여 주기, 애니매틱, 비교 영상, 최종 인코딩 | `previz-assembly` | 이전·이번·레퍼런스 나란히, 라벨·프레임 번호 |
+| 레퍼런스 영상 전체 역설계: "이거 어떻게 만들었어", AI·3D·실사 판별, 편집 레이어·사운드·컷 리듬 | `rea-video` | 고정 사본 설치, 샷별 소재 유형·근거·확률, 리메이크 레시피 |
+| 우리 캐릭터가 따라 할 동작: "이 동작처럼", 레퍼런스 영상·GIF | `reference-video-analysis` | 프레임 추출 → 키 포즈·timing 차트 → 모션 스펙/샷 목록을 만든 뒤 제작 |
+| 결과 보여 주기, 애니매틱, 비교 영상, 모션 그래픽·자막·홍보 영상 제작 | `previz-assembly` | 이전·이번·레퍼런스 나란히(ffmpeg), 영상 제작은 HyperFrames 하나 |
 
-순서(모션이 있는 3D 요청): reference-video-analysis → 3d-previz-edit(모양) → rig-motion-clearance(모션)
+순서(모션이 있는 3D 요청): (여러 샷 레퍼런스면 rea-video 로 샷 목록) → reference-video-analysis(동작 구간) → 3d-previz-edit(모양) → rig-motion-clearance(모션)
 → previz-assembly(확인 영상) → 승인 → 최종 렌더 1회.
 
 ## HARD GATE

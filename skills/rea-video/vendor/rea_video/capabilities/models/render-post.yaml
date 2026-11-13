@@ -1,0 +1,160 @@
+# 代码渲染 / 合成 / 后期
+
+models:
+  - id: remotion
+    name: Remotion
+    vendor: Remotion（开源，商用需许可）
+    category: render
+    status: ga
+    access: [open-weights]
+    primitives: [render.code_graphics, render.compose]
+    strengths:
+      - 用 React 写视频：文字、UI、图表、MG 都能 100% 准确并参数化
+      - 官方提供 Agent Skills，可直接配合 Claude Code、Codex 使用
+      - 渲染结果确定，可以逐帧和原片做像素级差分
+    weaknesses:
+      - 照片级画面需要和生成层叠加
+    license: {commercial: conditional, note: "个人和小团队免费，公司需购买 Remotion 许可"}
+    sources:
+      - https://www.tella.com/blog/how-to-use-remotion-agent-skills-with-claude-code
+      - https://www.remotion.dev/
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: motion-canvas
+    name: Motion Canvas
+    vendor: 开源
+    category: render
+    status: ga
+    access: [open-weights]
+    primitives: [render.code_graphics]
+    strengths:
+      - 用 TypeScript 生成器描述动画，适合讲解类动效；MIT 许可
+    license: {commercial: true, note: MIT}
+    sources:
+      - https://motioncanvas.io/
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: html-gsap-playwright
+    name: HTML + GSAP + Playwright 录制
+    vendor: 开源组合
+    category: render
+    status: ga
+    access: [open-weights]
+    primitives: [render.code_graphics, render.web_capture]
+    strengths:
+      - 适合 UI 演示：直接驱动真实产品页面或重建的界面
+      - Hypit 走的也是 HTML 加无头 Chromium 的路线
+    license: {commercial: true, note: "GSAP 现已免费（含商用）；Playwright 为 Apache 2.0"}
+    sources:
+      - https://playwright.dev/
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: medium
+
+  - id: blender
+    name: Blender
+    vendor: 开源
+    category: render
+    status: ga
+    access: [open-weights]
+    primitives: [render.3d_scene]
+    strengths:
+      - 可导入 3D 生成的商品模型，按反解出的相机轨迹渲染转台或白模参考
+    license: {commercial: true, note: GPL（输出内容不受限）}
+    sources:
+      - https://www.blender.org/
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: ffmpeg
+    name: FFmpeg
+    vendor: 开源
+    category: render
+    status: ga
+    access: [open-weights]
+    primitives: [render.compose]
+    strengths:
+      - 剪切、拼接、叠加、混音、编码，是一切的底座
+    license: {commercial: true, note: "LGPL/GPL，取决于编译选项"}
+    sources:
+      - https://ffmpeg.org/
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: seedvr2
+    name: SeedVR2
+    vendor: ByteDance Seed（开源）
+    category: post
+    status: ga
+    access: [open-weights, api-aggregator]
+    primitives: [post.upscale]
+    strengths:
+      - 一步扩散视频超分，适合把 480p 草稿放大到 1080p
+    license: {commercial: conditional, note: 以仓库许可为准}
+    sources:
+      - https://upsampler.com/blog/seedvr-vs-flashvsr-ai-video-super-resolution-2026
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: flashvsr
+    name: FlashVSR
+    vendor: 学术开源
+    category: post
+    status: ga
+    access: [open-weights, api-aggregator]
+    primitives: [post.upscale]
+    strengths:
+      - 面向实时的流式视频超分，速度快
+    license: {commercial: conditional, note: 以仓库许可为准}
+    sources:
+      - https://upsampler.com/blog/seedvr-vs-flashvsr-ai-video-super-resolution-2026
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: topaz-video
+    name: Topaz Video（含 Starlight 系列）
+    vendor: Topaz Labs
+    category: post
+    status: ga
+    access: [app, api, api-aggregator]
+    primitives: [post.upscale, post.frame_interp]
+    strengths:
+      - 商业超分标杆，可放大到 4K
+    license: {commercial: true}
+    sources:
+      - https://help.scenario.com/articles/2511466273-upscale-your-videos-up-to-4k-with-topaz
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: real-esrgan
+    name: Real-ESRGAN
+    vendor: 开源
+    category: post
+    status: ga
+    access: [open-weights]
+    primitives: [post.upscale]
+    strengths:
+      - 轻量
+    weaknesses:
+      - video-replicate-studio 实测 x4plus 有方块伪影，没有采用；不推荐用于生成视频超分
+    license: {commercial: true, note: BSD-3-Clause}
+    sources:
+      - https://github.com/derek-zhuolin/video-replicate-studio
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: rife
+    name: RIFE
+    vendor: 开源
+    category: post
+    status: ga
+    access: [open-weights]
+    primitives: [post.frame_interp]
+    strengths:
+      - 实时补帧；video-replicate-studio 在用
+    license: {commercial: true, note: MIT}
+    sources:
+      - https://github.com/hzwer/ECCV2022-RIFE
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high

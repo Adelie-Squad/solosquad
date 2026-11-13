@@ -212,6 +212,10 @@
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
+    "skills/rea-video/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
     "skills/reference-video-analysis/SKILL.md": {
       "errors": [],
       "warnings": []

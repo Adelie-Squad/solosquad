@@ -1,0 +1,332 @@
+# rea-video 原语（primitives）
+# 原语 = 一种与厂商无关的能力。模型条目通过 primitives 字段声明自己支持哪些原语；
+# 路由规则（routing.yaml）只引用原语，再由原语找到候选模型。
+# 每个原语声明：输入、输出、何时使用、用哪些指标验证（metrics）、探针测什么（probe）。
+
+version: 0.1.0
+updated: 2026-10-29
+
+# ---------------------------------------------------------------- 验证指标
+metrics:
+  cut_alignment:        {name: 切点对齐, desc: "重建片段的切点与原片切点的帧误差 / F1（容差 ±1 帧）"}
+  shot_count_match:     {name: 镜头数一致, desc: "镜头数量与时长分布的一致性"}
+  ocr_text_match:       {name: 文字一致, desc: "OCR 识别文本与目标文案的字符级一致率（CER）"}
+  layout_iou:           {name: 布局 IoU, desc: "文字/元素包围框与目标布局的 IoU（逐帧）"}
+  timing_curve_error:   {name: 动效曲线误差, desc: "元素位置/缩放/透明度随时间曲线与参考的误差"}
+  pixel_similarity:     {name: 像素相似度, desc: "SSIM / LPIPS，仅适用于代码层等可精确还原的画面"}
+  perceptual_similarity: {name: 感知相似度, desc: "DreamSim / CLIP 相似度，用于生成层"}
+  identity_consistency: {name: 主体一致性, desc: "人脸/商品/角色嵌入在镜头内与跨镜头的一致性"}
+  motion_trajectory_error: {name: 运动轨迹误差, desc: "关键点/姿态轨迹与参考动作的误差"}
+  camera_path_error:    {name: 运镜误差, desc: "估计的相机轨迹与参考运镜的差异"}
+  beat_alignment:       {name: 节拍对齐, desc: "切点/动效事件与音乐节拍的对齐误差"}
+  lip_sync:             {name: 口型同步, desc: "SyncNet 类 LSE 分数"}
+  audio_duration_match: {name: 音频时长匹配, desc: "生成语音与目标时间窗的时长误差"}
+  speech_wer:           {name: 语音可懂度, desc: "对生成语音做 ASR 后与脚本的字错率"}
+  text_render_accuracy: {name: 画内文字准确率, desc: "生成图像/视频里文字（尤其中文）的正确率"}
+  human_ab:             {name: 人工盲测, desc: "像不像 / 好不好 / 能否投放 的盲测偏好"}
+
+# ---------------------------------------------------------------- 原语
+primitives:
+  # ===== 分析（拉片）=====
+  - id: analyze.video_understanding
+    group: analyze
+    name: 视频语义理解
+    inputs: [video, audio, text]
+    output: structured_text
+    use_when: 理解镜头意图、表演、风格、叙事结构；生成镜头描述与提示词草稿
+    probe: 给定带人工标注的镜头集，测镜头描述准确率、时间定位误差、计数类问题正确率
+  - id: analyze.shot_boundary
+    group: analyze
+    name: 切镜检测
+    inputs: [video]
+    output: timestamps
+    use_when: 所有视频的第一步
+    metrics: [cut_alignment]
+    probe: 硬切/溶解/遮挡转场混合样本的切点 F1
+  - id: analyze.asr_word_align
+    group: analyze
+    name: 语音识别 + 字级对齐
+    inputs: [audio]
+    output: transcript_with_word_times
+    use_when: 有人声的视频；给字幕、口播、卡点提供词锚点
+    probe: 中英混说、方言样本的 CER 与词边界误差
+  - id: analyze.ocr_text_track
+    group: analyze
+    name: 画面文字识别与轨迹
+    inputs: [video]
+    output: text_tracks
+    use_when: 识别字幕、标题、UI 文字及其出现/消失/移动，供代码层重建
+    probe: 运动文字、描边文字、复杂背景中文文字的识别率与框精度
+  - id: analyze.segmentation
+    group: analyze
+    name: 分割与跟踪
+    inputs: [video, text]
+    output: masks
+    use_when: 分离主体/商品/背景，测量元素轨迹
+  - id: analyze.matting
+    group: analyze
+    name: 视频抠像（alpha）
+    inputs: [video]
+    output: video_with_alpha
+    use_when: 需要透明前景（人物叠加到新背景、字幕穿插人物后方）
+  - id: analyze.camera_motion
+    group: analyze
+    name: 相机运动反解
+    inputs: [video]
+    output: camera_trajectory
+    use_when: 判断推拉摇移、手持感、3D 运镜，作为生成运镜或 3D 渲染的依据
+  - id: analyze.audio_separation
+    group: analyze
+    name: 音频分轨
+    inputs: [audio]
+    output: stems
+    use_when: 分离人声 / BGM / 音效，分别分析与替换
+  - id: analyze.beat_tempo
+    group: analyze
+    name: 节拍与段落分析
+    inputs: [audio]
+    output: beat_grid
+    use_when: 音乐卡点视频；给剪辑节奏提供节拍锚点
+  - id: analyze.image_layer_decompose
+    group: analyze
+    name: 单帧图层分解
+    inputs: [image]
+    output: layered_images
+    use_when: 把一帧拆成背景 + 透明元素层，用于理解或替换版式
+
+  # ===== 图像 =====
+  - id: image.t2i
+    group: image
+    name: 文生图
+    inputs: [text]
+    output: image
+    use_when: 生成关键帧、角色设定、B-roll 静帧
+    metrics: [perceptual_similarity]
+  - id: image.edit_multi_ref
+    group: image
+    name: 多参考图像编辑/合成
+    inputs: [image, text]
+    output: image
+    use_when: 把商品/人物/场景参考合成为首帧；换装换物；保持身份一致
+    metrics: [identity_consistency, perceptual_similarity]
+    probe: 同一商品在 5 个场景中的外观一致性
+  - id: image.text_render
+    group: image
+    name: 画内文字渲染
+    inputs: [text, image]
+    output: image
+    use_when: 画面中有招牌、包装、海报等实物文字（尤其中文）
+    metrics: [text_render_accuracy]
+    probe: 20 条中文短语（含生僻字、竖排、混排）渲染正确率
+  - id: image.storyboard_series
+    group: image
+    name: 分镜组图
+    inputs: [text, image]
+    output: images
+    use_when: 一次产出风格一致的多张分镜关键帧供确认
+  - id: image.tryon
+    group: image
+    name: 虚拟试穿
+    inputs: [image]
+    output: image
+    use_when: 服装电商换装：人物图 + 服装图 → 上身图，再进入图生视频
+    metrics: [identity_consistency]
+
+  # ===== 视频生成 / 编辑 =====
+  - id: video.t2v
+    group: video
+    name: 文生视频
+    inputs: [text]
+    output: video
+    use_when: 氛围空镜、无特定主体的 B-roll
+    metrics: [perceptual_similarity]
+  - id: video.i2v_first_frame
+    group: video
+    name: 图生视频（首帧）
+    inputs: [image, text]
+    output: video
+    use_when: 构图/商品/人物必须准确时，先定首帧再动起来
+    metrics: [perceptual_similarity, identity_consistency]
+  - id: video.i2v_first_last
+    group: video
+    name: 首尾帧生成
+    inputs: [image, image, text]
+    output: video
+    use_when: 起止状态都确定的镜头；变装/转场；与上一段尾帧衔接
+    metrics: [perceptual_similarity, identity_consistency]
+  - id: video.keyframes
+    group: video
+    name: 多关键帧控制
+    inputs: [images, text]
+    output: video
+    use_when: 复杂运镜或多个中间状态必须命中
+    metrics: [perceptual_similarity, camera_path_error]
+  - id: video.multi_reference
+    group: video
+    name: 多参考生视频（主体一致）
+    inputs: [images, text]
+    output: video
+    use_when: 同一角色/商品跨多个镜头一致；多主体同框
+    metrics: [identity_consistency]
+    probe: 3 个角色参考 × 4 个镜头的身份保持率
+  - id: video.reference_video
+    group: video
+    name: 参考视频生成（动作/运镜/特效迁移）
+    inputs: [video, images, text]
+    output: video
+    use_when: 原片的时间行为（动作节奏、运镜、特效演化）无法用文字和静帧描述时
+    metrics: [motion_trajectory_error, camera_path_error]
+  - id: video.reference_audio
+    group: video
+    name: 参考音频生成
+    inputs: [audio, images, text]
+    output: video
+    use_when: 让画面跟随给定音频（音乐节奏、指定声音）
+    metrics: [beat_alignment]
+  - id: video.multi_shot
+    group: video
+    name: 单次多镜头
+    inputs: [text, images]
+    output: video
+    use_when: 同角色同场景的连续多个镜头，一次生成以获得一致性与自然转场
+    metrics: [cut_alignment, identity_consistency]
+  - id: video.extend
+    group: video
+    name: 续写延长
+    inputs: [video, text]
+    output: video
+    use_when: 超过单次时长上限的连续镜头
+  - id: video.edit_v2v
+    group: video
+    name: 视频编辑（保留运动）
+    inputs: [video, images, text]
+    output: video
+    use_when: 在已有画面上换人/换物/换风格/换背景/重打光，保留原动作与时序
+    metrics: [motion_trajectory_error, identity_consistency]
+  - id: video.camera_control
+    group: video
+    name: 运镜与镜头参数控制
+    inputs: [text, image, video]
+    output: video
+    use_when: 需要指定推拉摇移、焦段、景深或改变已有镜头机位
+    metrics: [camera_path_error]
+  - id: video.native_audio
+    group: video
+    name: 音画同出
+    inputs: [text, images, audio]
+    output: video_with_audio
+    use_when: 对白/环境声与画面强耦合的镜头
+    metrics: [lip_sync, speech_wer]
+
+  # ===== 人物驱动 =====
+  - id: motion.transfer
+    group: character
+    name: 动作迁移
+    inputs: [video, image]
+    output: video
+    use_when: 舞蹈、变装、特定手势、卡点动作需要精确复刻到新角色
+    metrics: [motion_trajectory_error, identity_consistency]
+  - id: avatar.audio_driven
+    group: character
+    name: 音频驱动数字人
+    inputs: [image, audio, text]
+    output: video
+    use_when: 正面口播、长时间讲解
+    metrics: [lip_sync, identity_consistency]
+  - id: lipsync.redub
+    group: character
+    name: 口型重配
+    inputs: [video, audio]
+    output: video
+    use_when: 已有表演换台词/换语言，只改嘴型
+    metrics: [lip_sync]
+
+  # ===== 3D =====
+  - id: threed.image_to_3d
+    group: threed
+    name: 图生 3D
+    inputs: [images]
+    output: mesh
+    use_when: 商品需要多角度一致、转台展示，或给视频模型提供白模参考
+    metrics: [identity_consistency]
+
+  # ===== 音频 =====
+  - id: audio.tts
+    group: audio
+    name: 语音合成
+    inputs: [text]
+    output: audio
+    metrics: [speech_wer]
+  - id: audio.voice_clone
+    group: audio
+    name: 音色克隆
+    inputs: [audio, text]
+    output: audio
+    use_when: 使用自己的/授权的音色做旁白或口播
+    metrics: [speech_wer]
+  - id: audio.tts_duration_control
+    group: audio
+    name: 时长可控配音
+    inputs: [text, audio]
+    output: audio
+    use_when: 新配音必须塞进原片时间窗（对口型、对画面）
+    metrics: [audio_duration_match, speech_wer]
+  - id: audio.music_gen
+    group: audio
+    name: 音乐生成
+    inputs: [text, audio]
+    output: audio
+    use_when: 需要与原片 BPM/情绪/结构相近、但可商用的新配乐
+    metrics: [beat_alignment]
+  - id: audio.sfx_gen
+    group: audio
+    name: 文生音效
+    inputs: [text]
+    output: audio
+  - id: audio.v2a_foley
+    group: audio
+    name: 视频生音效（Foley）
+    inputs: [video, text]
+    output: audio
+    use_when: 给生成画面自动配与动作同步的音效
+
+  # ===== 代码渲染 =====
+  - id: render.code_graphics
+    group: render
+    name: 代码渲染动效
+    inputs: [code, data]
+    output: video_with_alpha
+    use_when: 文字、UI、图表、MG、字幕——需要 100% 准确且可改
+    metrics: [ocr_text_match, layout_iou, timing_curve_error, pixel_similarity]
+  - id: render.web_capture
+    group: render
+    name: 网页/界面录制
+    inputs: [url, script]
+    output: video
+    use_when: 产品界面演示：直接驱动真实或重建的 UI 录屏
+  - id: render.3d_scene
+    group: render
+    name: 3D 场景渲染
+    inputs: [mesh, camera_trajectory]
+    output: video
+    use_when: 商品转台、精确运镜、白模参考
+  - id: render.compose
+    group: render
+    name: 合成与编码
+    inputs: [video, audio, video_with_alpha]
+    output: video
+    use_when: 多层叠加、转场、混音、最终编码
+
+  # ===== 后期 =====
+  - id: post.upscale
+    group: post
+    name: 视频超分
+    inputs: [video]
+    output: video
+    use_when: 低分辨率草稿（如 480p）确认后放大到 1080p/4K
+  - id: post.frame_interp
+    group: post
+    name: 补帧
+    inputs: [video]
+    output: video
+    use_when: 帧率不足、慢动作

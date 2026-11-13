@@ -1,0 +1,286 @@
+# 分析侧（拉片）：VLM 负责语义，确定性工具负责精确的时间与位置
+# 原则：VLM 不擅长逐帧精度和计数（video-replicate-studio 实测让 VLM 数手指，14 张只对 7 张），
+#       精确量一律交给确定性工具，VLM 只做解释和提示词草稿。
+
+models:
+  # ---------- VLM ----------
+  - id: gemini-3.1-pro
+    name: Gemini 3.1 Pro
+    vendor: Google
+    category: analysis
+    status: ga
+    access: [api, app]
+    primitives: [analyze.video_understanding]
+    limits:
+      duration_s: {max: 10800}
+    strengths:
+      - 视频理解综合第一；最长 3 小时；音画联合理解
+    weaknesses:
+      - 闭源；时间戳精度未公开，需要用确定性工具校准
+    license: {commercial: true}
+    sources:
+      - https://usefulai.com/models/video-understanding
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: gemini-3.5-flash
+    name: Gemini 3.5 Flash
+    vendor: Google
+    category: analysis
+    status: ga
+    access: [api, app]
+    primitives: [analyze.video_understanding]
+    limits:
+      duration_s: {max: 10800}
+    strengths:
+      - 更快更便宜，适合批量的初筛拉片
+    weaknesses:
+      - 困难的时序推理不如 3.1 Pro
+    license: {commercial: true}
+    sources:
+      - https://usefulai.com/models/video-understanding
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: doubao-seed-2.0-pro
+    name: Doubao Seed 2.0 Pro（豆包）
+    vendor: ByteDance
+    category: analysis
+    status: ga
+    access: [api]
+    primitives: [analyze.video_understanding]
+    strengths:
+      - 音画分析；综合分接近 Gemini，价格更低
+      - 国内可直接调用，适合中文内容
+    weaknesses:
+      - 最大时长未公开
+    license: {commercial: true}
+    sources:
+      - https://usefulai.com/models/video-understanding
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: pegasus-1.5
+    name: Twelve Labs Pegasus 1.5
+    vendor: Twelve Labs
+    category: analysis
+    status: ga
+    access: [api]
+    primitives: [analyze.video_understanding]
+    limits:
+      duration_s: {max: 7200}
+    strengths:
+      - 直接输出带时间戳的摘要、章节和结构化 JSON
+    weaknesses:
+      - 开放式内容问答较弱
+    license: {commercial: true}
+    sources:
+      - https://usefulai.com/models/video-understanding
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: qwen3.5-397b-a17b
+    name: Qwen3.5 397B-A17B（开源）
+    vendor: Alibaba
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.video_understanding]
+    strengths:
+      - 开源权重中视频理解分最高，可私有化部署
+    weaknesses:
+      - 需要服务器级算力；音频需要单独处理
+    license: {commercial: conditional, note: 以模型许可为准}
+    sources:
+      - https://usefulai.com/models/video-understanding
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  # ---------- 确定性工具 ----------
+  - id: pyscenedetect
+    name: PySceneDetect
+    vendor: 开源
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.shot_boundary]
+    strengths:
+      - 轻量；内容检测或阈值检测都能快速给出硬切
+    weaknesses:
+      - 溶解和遮挡转场容易漏检，漏检的切点用 SSIM 二分定位到帧
+    license: {commercial: true, note: BSD-3-Clause}
+    sources:
+      - https://github.com/Breakthrough/PySceneDetect
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: transnetv2
+    name: TransNetV2
+    vendor: 开源
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.shot_boundary]
+    strengths:
+      - 学习式切镜检测，对渐变转场比阈值法更稳
+    license: {commercial: true, note: MIT}
+    sources:
+      - https://github.com/soCzech/TransNetV2
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: whisperx
+    name: WhisperX
+    vendor: 开源
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.asr_word_align]
+    strengths:
+      - 字级时间对齐；Hypit 用它作为语义时间的基础
+    weaknesses:
+      - 生造词和陌生专名容易识别错
+      - 中文需要单独准备对齐资源
+    license: {commercial: true, note: BSD-2-Clause}
+    sources:
+      - https://github.com/m-bain/whisperX
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: funasr-sensevoice
+    name: FunASR / SenseVoice
+    vendor: Alibaba（开源）
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.asr_word_align]
+    strengths:
+      - 中文识别与时间戳强；SenseVoice 同时输出情感和音频事件标签
+    license: {commercial: conditional, note: 以模型许可为准}
+    sources:
+      - https://github.com/modelscope/FunASR
+      - https://github.com/FunAudioLLM/SenseVoice
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: medium
+
+  - id: paddleocr
+    name: PaddleOCR
+    vendor: Baidu（开源）
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.ocr_text_track]
+    strengths:
+      - 中文 OCR 强，同时给出文字框
+      - 逐帧识别后按 IoU 关联，就得到文字轨迹（出现、移动、消失）
+    license: {commercial: true, note: Apache 2.0}
+    sources:
+      - https://github.com/PaddlePaddle/PaddleOCR
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: sam-video
+    name: SAM 系列（SAM 2 / SAM 3）
+    vendor: Meta（开源）
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.segmentation]
+    strengths:
+      - 视频目标分割与跟踪；SAM 3 支持文本提示
+    license: {commercial: conditional, note: 以各版本许可为准}
+    sources:
+      - https://github.com/facebookresearch/sam2
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: medium
+
+  - id: matanyone-2
+    name: MatAnyone 2
+    vendor: 学术开源
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.matting]
+    strengths:
+      - 基于记忆传播的稳定视频抠像，发丝边缘好；ComfyUI 有节点
+    license: {commercial: conditional, note: 以仓库许可为准}
+    sources:
+      - https://studio.aifilms.ai/blog/matanyone-2-video-matting
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: robust-video-matting
+    name: RobustVideoMatting（RVM）
+    vendor: 开源
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.matting]
+    strengths:
+      - 轻量实时人像抠像；video-replicate-studio 在用
+    license: {commercial: conditional, note: "GPL-3.0，与闭源产品集成要注意"}
+    sources:
+      - https://github.com/PeterL1n/RobustVideoMatting
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: medium
+
+  - id: volcengine-matting
+    name: 火山引擎人像视频抠像
+    vendor: ByteDance
+    category: analysis
+    status: ga
+    access: [api, api-aggregator]
+    primitives: [analyze.matting]
+    strengths:
+      - 托管 API，输出带透明通道的 WEBM/MOV；Hypit 已接入
+    license: {commercial: true}
+    sources:
+      - https://github.com/hypit-ai/hypit/blob/main/packages/provider-hypihub/README.md
+    verified: {date: 2026-10-29, basis: third-party}
+    confidence: medium
+
+  - id: megasam
+    name: MegaSaM
+    vendor: 学术开源（CVPR 2025）
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.camera_motion]
+    strengths:
+      - 从随手拍的动态视频中反解相机位姿与深度，对动态场景鲁棒
+    license: {commercial: conditional, note: 以仓库许可为准}
+    sources:
+      - https://arxiv.org/abs/2412.04463
+    verified: {date: 2026-10-29, basis: vendor}
+    confidence: medium
+
+  - id: demucs
+    name: Demucs（htdemucs）
+    vendor: Meta（开源）
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.audio_separation]
+    strengths:
+      - 人声、鼓、贝斯、其他四轨分离，效果是业界基线
+    license: {commercial: true, note: MIT}
+    sources:
+      - https://github.com/facebookresearch/demucs
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: high
+
+  - id: librosa-madmom
+    name: librosa / madmom
+    vendor: 开源
+    category: analysis
+    status: ga
+    access: [open-weights]
+    primitives: [analyze.beat_tempo]
+    strengths:
+      - 检测节拍、BPM 和 onset，建立剪辑节奏的节拍锚点
+    license: {commercial: true, note: "librosa 为 ISC；madmom 代码 BSD，模型 CC-BY-NC-SA"}
+    sources:
+      - https://github.com/librosa/librosa
+      - https://github.com/CPJKU/madmom
+    verified: {date: 2026-10-29, basis: knowledge}
+    confidence: medium

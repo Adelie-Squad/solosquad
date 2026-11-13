@@ -19,8 +19,8 @@
 2. **"rea 비디오" = `JuneYaooo/rea-video`** (확신 높음, 아래 §4). Apache-2.0 Claude Code skill · 플러그인.
    레퍼런스 영상을 샷 단위로 역설계한다. 우리는 설치하지 않고 방법(샷 분해 · contact sheet · 소재 분류 ·
    리메이크 레시피)만 각색해 ffmpeg 기반 `reference-video-analysis` 에 넣었다.
-3. 영상 제작은 **Remotion 공식 Agent Skills(`remotion-dev/skills`)** 가 가장 성숙하지만 Remotion 은
-   OSI 오픈소스가 아니다(직원 3명 초과 영리 회사는 유료). MIT 대안은 Motion Canvas · Revideo.
+3. 영상 제작 도구는 **HyperFrames 하나**(2026-11-14 사용자 결정 "무료 도구로, 가장 좋은 거 하나만"; §3.1).
+   Remotion 은 직원 3명 초과 영리 회사 유료, Motion Canvas · Revideo 는 2026-07 이후 정체, MoviePy 는 편집용.
 4. 웹 3D 파이프라인 정석: Blender glTF exporter → **glTF-Transform**(meshopt · KTX2) → **Khronos
    glTF-Validator** → three.js `AnimationMixer` / R3F `useAnimations`.
 
@@ -122,6 +122,16 @@ Survival Kit*(arc · spacing · follow-through)를 인용하고, 측정 가능�
 | LTX-Video · LTX-2 | 오픈 영상 생성 | 11,376 · 10,219 / 코드 Apache-2.0, 가중치 라이선스 별도(미확인) | 참고 |
 | Veo · Sora · Runway · Kling | 호스팅 | — | 참고 — 캐릭터 일관성 샷은 3D 렌더 우선 |
 
+### 3.1 영상 제작 도구 — HyperFrames (2026-11-14 결정)
+
+[heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) — "Write HTML. Render video. Built for agents."
+83,756 / 2026-11-13 / Apache-2.0, 고정 `hyperframes@0.9.41`(태그 v0.9.41, 커밋 `20084cbe67f3`). HTML + 일시정지한
+타임라인을 헤드리스 Chromium 으로 프레임 단위 탐색 → ffmpeg 로 결정적 MP4. Node ≥ 22. 공식 Claude Code skill ·
+플러그인이 있다. 주의: CLI 사용 통계(PostHog)가 기본 켜짐 → `HYPERFRAMES_NO_TELEMETRY=1`; 공식 skill 의 "usage
+beacon" · `feedback` 는 통계 전송이라 쓰지 않음; `/reverse-any-video` · `/style-sampling` 과 cloud 렌더 · HeyGen 미디어는
+유료. 제품 의존성으로 넣지 않고 `npx` 로 작업 폴더에서 실행(`previz-assembly` §5). ffmpeg 는 프레임 추출 · 인코딩 ·
+비교 스트립 기본 도구로 유지.
+
 **프리비즈 정의**: Previsualization Society(2009) — "3D 가상 환경에서 샷 · 시퀀스의 예비 버전을 만드는
 협업 과정"(2차 인용: [Post Magazine 2009](https://postmagazine.com/Press-Center/Daily-News/2009/NEW-ORGANIZATION-DEDICATED-TO-PREVIS-LAUNCHES.aspx)).
 세부 유형 pitchvis · techvis · postvis([Unreal 설명](https://www.unrealengine.com/en-US/explainers/virtual-production/what-is-virtual-production)).
@@ -142,8 +152,12 @@ video, shot by shot: filmed, AI-generated or coded, and how to remake it." 확�
 - **주의**: Quick start 가 에이전트에게 원격 저장소를 설치 · 실행하게 한다. 0스타 유사 이름 저장소
   (`georrrgess-jpg/REAVIDEO`, `youram470-art/reavideo-*`, 2026-11-09~12 생성)는 사칭 의심 — 피한다.
 
-**결정**: 설치하지 않는다(원격 코드 실행 · 생성 2주 차). 방법론만 각색해 `reference-video-analysis` 에
-반영하고 출처를 표기했다. 실제 도입은 사용자 결정 사항(§6).
+**결정(2026-11-14 사용자 "rea video 설치")**: 커밋 `6b6b3df9f6592d51040e0faf74b666332bb7c404` 로 고정해
+`skills/rea-video/vendor/` 에 넣었다. 전체 코드 · skill 문서를 읽고 검토한 결과와 뺀 것 · 고친 것은
+`skills/rea-video/UPSTREAM.md`: capsule-cinema 연동(외부 인터프리터 실행 · 유료 생성) 제거, `.env` 가 실행 파일
+(`REA_CHROME` · `CAPSULE_CINEMA_*`)을 정하지 못하게, 보고서가 원격 이미지를 자동으로 불러오지 않게, 스폰서
+추천 링크 안내 · 원격 설치 안내 · 자유 텍스트 메모 제거. 텔레메트리는 없고 모델 다운로드는 SHA-256 고정.
+`rea-video` 는 영상 전체 역설계, `reference-video-analysis` 는 캐릭터 동작의 프레임 단위 분석으로 나눴다.
 
 ## 5. 무엇을 만들었나 — 문제 ↔ 장치
 
@@ -161,11 +175,10 @@ video, shot by shot: filmed, AI-generated or coded, and how to remake it." 확�
 카메라 고정 · 턴테이블 · 누수 감지 · pop/kink). CI 에는 Blender 가 없어 `python/tests/test_creative_skills.py`
 는 구문 · 배선 · 섹션만 검사한다.
 
-## 6. 사용자 결정이 필요한 것
+## 6. 사용자 결정
 
-1. **rea-video 실제 설치 여부** — Apache-2.0 이라 써도 되지만, 생성 2주 차 · 원격 코드 실행. 원하면 특정 커밋을
-   고정해 검토 후 도입.
-2. **Remotion 사용 여부** — 회사 규모에 따라 유료. 무료 조건 밖이면 Motion Canvas/Revideo(MIT) 또는 ffmpeg.
+1. ~~rea-video 설치 여부~~ — 2026-11-14 설치 결정 → 고정 커밋 사본(§4).
+2. ~~Remotion 사용 여부~~ — 2026-11-14 "무료 도구, 하나만" → HyperFrames(§3.1).
 3. **펭귄 원본 파이프라인(`assets/office/scripts/`)에 게이트 적용** — `identity_renders.py` 앞단에
    clearance_check · render_compare 를 넣을지(이번 변경 범위 밖).
 4. AI 3D 생성 도입 시 Hunyuan3D 는 한국 사용 제한 라이선스 — TRELLIS(MIT) 쪽.
