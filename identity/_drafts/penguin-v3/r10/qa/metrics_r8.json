@@ -1,0 +1,93 @@
+{
+ "tris": 97868,
+ "poses": {
+  "rest": {
+   "normal_max_deg": 112.05437751659419,
+   "normal_p99_deg": 44.446532666608256,
+   "edge_dev_mm": 1.2535839411391194,
+   "band_median_mm": 12.657839339226484,
+   "band_max_mm": 42.446523904800415,
+   "n": 36,
+   "junction_kind": "skin blend band (max face angle)",
+   "junction_p95_deg": 30.230908850103532,
+   "junction_max_deg": 82.59639332662383
+  },
+  "wave-peak": {
+   "normal_max_deg": 175.27162710665323,
+   "normal_p99_deg": 106.96417160192574,
+   "edge_dev_mm": 1.253589770218835,
+   "band_median_mm": 45.20771466195583,
+   "band_max_mm": 54.87855523824692,
+   "n": 30,
+   "junction_kind": "skin blend band (max face angle)",
+   "junction_p95_deg": 84.38684842931198,
+   "junction_max_deg": 151.49916898556913
+  },
+  "raise-100": {
+   "normal_max_deg": 177.18788170340616,
+   "normal_p99_deg": 112.42965742547118,
+   "edge_dev_mm": 1.2535885753346279,
+   "band_median_mm": 53.24834585189819,
+   "band_max_mm": 55.154602974653244,
+   "n": 30,
+   "junction_kind": "skin blend band (max face angle)",
+   "junction_p95_deg": 84.1888289964884,
+   "junction_max_deg": 149.33783611612532
+  }
+ },
+ "hinge": {
+  "w>0.05": {
+   "verts": 157,
+   "reach_cm": 6.743527180018511,
+   "lowest_pct": 42.98890752995268
+  },
+  "w>0.5": {
+   "verts": 63,
+   "reach_cm": 5.381618572453994,
+   "lowest_pct": 43.836189669074734
+  },
+  "pivot_pct": 50.499999999999986
+ },
+ "clearance": [
+  {
+   "clip": "hop",
+   "min_mm": 13.750807238849587,
+   "frame": 5,
+   "nearest": "body",
+   "twist_max_deg": 2.1138034074818014e-06,
+   "forward_max_mm": 27.524232864379883
+  },
+  {
+   "clip": "wave",
+   "min_mm": 13.246877766770664,
+   "frame": 25,
+   "nearest": "body",
+   "twist_max_deg": 12.645160440641988,
+   "forward_max_mm": 30.120640993118286
+  },
+  {
+   "clip": "walk",
+   "min_mm": 25.24940160015332,
+   "frame": 24,
+   "nearest": "head",
+   "twist_max_deg": 2.7662804875349967e-06,
+   "forward_max_mm": 14.949634671211243
+  },
+  {
+   "clip": "seated",
+   "min_mm": 28.205204362256325,
+   "frame": 0,
+   "nearest": "body",
+   "twist_max_deg": 2.0296637874561703e-06,
+   "forward_max_mm": 3.6513730883598328
+  },
+  {
+   "clip": "raise-max",
+   "min_mm": 11.891220172016412,
+   "frame": 0,
+   "nearest": "head",
+   "twist_max_deg": 15.000002075823152,
+   "forward_max_mm": 5.412887781858444
+  }
+ ]
+}

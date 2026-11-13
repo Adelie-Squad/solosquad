@@ -300,6 +300,79 @@ def smooth_metrics(model, P, s='L'):
             'edge_dev_mm': dev * 1000}
 
 
+def skin_field(P):
+    """The skin's own field (the body, plus the socket rim of a knob joint where there is one)."""
+    return pv3.fields(P)['upper']
+
+
+def piece_field(P, s):
+    fn = getattr(pv3, 'f_wing_piece', None)
+    return fn(P, s) if fn is not None else pv3.f_wing(P, s)
+
+
+def _grad(fn, P, eps=2e-4):
+    g = np.zeros_like(P)
+    for k in range(3):
+        d = np.zeros(3)
+        d[k] = eps
+        g[:, k] = (fn(P + d) - fn(P - d)) / (2 * eps)
+    return g / np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-12)
+
+
+def junction_metrics(model, P, s='L'):
+    """How hard the wing meets the body. Piece rounds: along the line where the wing piece goes
+    into the skin, the angle between the piece's surface normal and the skin's (0 = the surfaces
+    flow into each other, 90 = a slab stuck in square). Skin rounds (no such line): the largest
+    angle between adjacent face normals in the blend band (wing weight 0.05-0.95)."""
+    rig = model.rig
+    if not model.piece[s].any():
+        band = (model.w[s] > 0.05) & (model.w[s] < 0.95) & model.skin
+        ang = dihedral(P, model.F, band)
+        return {'junction_kind': 'skin blend band (max face angle)',
+                'junction_p95_deg': float(np.percentile(ang, 95)), 'junction_max_deg': float(ang.max())}
+    # measured on the posed meshes themselves (so corrective shapes count): the wing piece's
+    # vertices against the posed skin surface (closed, so the normal sign holds)
+    skin_idx = np.nonzero(model.skin)[0]
+    remap = -np.ones(model.n, int)
+    remap[skin_idx] = np.arange(len(skin_idx))
+    sf = [tuple(int(remap[i]) for i in poly) for poly in model.F if model.skin[poly[0]]]
+    tree = BVHTree.FromPolygons([Vector(p_) for p_ in P[skin_idx]], sf)
+    piece = model.piece[s]
+    sd = np.zeros(model.n)
+    for i in np.nonzero(piece)[0]:
+        loc, nrm, _, dist = tree.find_nearest(Vector(P[i]))
+        if loc is None:
+            sd[i] = 1.0
+            continue
+        sd[i] = dist if (Vector(P[i]) - loc).dot(nrm) >= 0 else -dist
+    segs = []
+    seg_n = []
+    for poly in model.F:
+        if not piece[poly[0]]:
+            continue
+        m = len(poly)
+        pts = []
+        for k in range(m):
+            a_, b_ = poly[k], poly[(k + 1) % m]
+            if (sd[a_] > 0) != (sd[b_] > 0):
+                t = sd[a_] / (sd[a_] - sd[b_])
+                pts.append(P[a_] + (P[b_] - P[a_]) * t)
+        if len(pts) >= 2:
+            n_ = np.cross(P[poly[2]] - P[poly[0]], P[poly[3 % m]] - P[poly[1]])
+            segs.append(0.5 * (pts[0] + pts[1]))
+            seg_n.append(n_ / max(np.linalg.norm(n_), 1e-12))
+    if not segs:
+        return {'junction_kind': 'piece/skin line', 'junction_p95_deg': None, 'junction_max_deg': None}
+    ang = []
+    for c, nw in zip(segs, seg_n):
+        loc, nrm, _, _ = tree.find_nearest(Vector(c))
+        ang.append(math.degrees(math.acos(float(np.clip(np.dot(nw, np.array(nrm)), -1, 1)))))
+    ang = np.array(ang)
+    return {'junction_kind': 'piece/skin line (normal angle, posed meshes)',
+            'junction_median_deg': float(np.median(ang)),
+            'junction_p95_deg': float(np.percentile(ang, 95)), 'junction_max_deg': float(ang.max())}
+
+
 def band_metrics(model, P, s='L'):
     """Black band between the white and the wing/body crease on the inner face."""
     rig = model.rig
@@ -307,7 +380,10 @@ def band_metrics(model, P, s='L'):
     Dw = to_np(bone_delta(rig, 'wing.' + s).inverted())
     Pb = P @ Db[:3, :3].T + Db[:3, 3]
     Pw = P @ Dw[:3, :3].T + Dw[:3, 3]
-    d = pv3.f_body(Pb) - pv3.f_wing(Pw, s)
+    if model.piece[s].any():
+        d = skin_field(Pb)                    # where the wing piece goes into the skin
+    else:
+        d = pv3.f_body(Pb) - pv3.f_wing(Pw, s)
     surf = model.wing_surface(s) & (np.linalg.norm(model.R - model.piv[s], axis=1) < 0.16)
     crease = chains(contour_segments(P, model.F, d, mask=surf))
     white = chains(contour_segments(P, model.F, model.seam, mask=surf))
@@ -494,7 +570,8 @@ def run(out_path, with_props):
     for name, fn in pose_fns():
         set_pose(model, fn)
         P = posed_verts(model.mesh)
-        res['poses'][name] = {**smooth_metrics(model, P), **band_metrics(model, P)}
+        res['poses'][name] = {**smooth_metrics(model, P), **band_metrics(model, P),
+                              **junction_metrics(model, P)}
         print(name, res['poses'][name])
     pv3.reset_pose(model.rig)
     res['hinge'] = hinge_metrics(model)
@@ -509,4 +586,7 @@ if __name__ == '__main__':
     argv = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     a = lambda k, d=None: argv[argv.index(k) + 1] if k in argv else d  # noqa: E731
     setup(os.path.abspath(a('--scripts', os.path.dirname(os.path.abspath(__file__)))))
+    for kv in [x[4:] for x in argv if x.startswith('set:')]:       # parameter overrides (previz)
+        k, v = kv.split('=', 1)
+        setattr(pv3, k, eval(v))
     run(a('--out', 'metrics.json'), '--props' in argv)

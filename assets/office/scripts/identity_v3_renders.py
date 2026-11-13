@@ -354,7 +354,7 @@ def motion(cam, rig):
 
 # close-ups: (name, azim, elev, ortho scale, target (x, y, z), pose)
 def _detail_views():
-    sx, sy, sz = pv3.SHOULDER
+    sx, sy, sz = 0.202, 0.005, pv3.Z0 + 0.505 * pv3.HB   # fixed QA framing (the r6-r9 pivot), never moves
     return [
         ('face', 0, 0, 0.50, (0.0, 0.0, pv3.EYE_Z), None),
         ('wing-3q', 45, 0, 0.50, (-0.245, -0.055, 0.29), None),
@@ -363,6 +363,8 @@ def _detail_views():
         ('armpit-3q', 45, 5, 0.16, (-sx - 0.01, sy - 0.02, sz - 0.05), None),
         ('armpit-under', 0, -25, 0.16, (sx + 0.02, sy, sz - 0.05), None),
         ('armpit-up', 20, -40, 0.18, (sx + 0.03, sy, sz), 'raise'),
+        # round 10: the joint at the wave peak, front
+        ('armpit-wave', 0, 0, 0.22, (sx + 0.04, sy, sz + 0.02), 'wave'),
     ]
 
 
@@ -387,6 +389,8 @@ def detail(cam, rig):
         pv3.reset_pose(rig)
         if pose == 'raise':
             pv3._set(rig, rest, 'wing.L', pv3._wing_raise('L', 100, getattr(pv3, 'WAVE_TWIST', 0)))
+        elif pose == 'wave':
+            pv3.pose_wave(rig, 20, rest)
         bpy.context.view_layer.update()
         bpy.data.objects['floor'].hide_render = el < 0      # from below: no shadow catcher in the way
         aim_at(cam, az, el, scale, target)
@@ -404,7 +408,7 @@ def beforeafter():
     prevs = PREV.split(',')
     d = os.path.join(OUT, 'detail')
     for out, names in (('face', ['face']), ('wing', ['wing-3q', 'wing-up']),
-                       ('armpit', ['armpit-3q', 'armpit-under', 'armpit-up'])):
+                       ('armpit', ['armpit-3q', 'armpit-under', 'armpit-up', 'armpit-wave'])):
         cols = prevs if out == 'armpit' else prevs[-1:]
         tiles = []
         for n in names:

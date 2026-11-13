@@ -1,0 +1,20 @@
+{
+ "QA_front_f0000_L": 16.6,
+ "QA_front_f0000_R": 15.0,
+ "QA_back_f0000_L": 14.1,
+ "QA_back_f0000_R": 12.4,
+ "QA_3q_f0000_L": 10.0,
+ "QA_3q_f0000_R": 7.3,
+ "QA_front_f0077_L": 4.5,
+ "QA_front_f0077_R": 11.9,
+ "QA_back_f0077_L": 4.7,
+ "QA_back_f0077_R": 14.0,
+ "QA_3q_f0077_L": 7.7,
+ "QA_3q_f0077_R": 4.6,
+ "QA_front_f0168_L": 4.0,
+ "QA_front_f0168_R": 4.5,
+ "QA_back_f0168_L": 4.0,
+ "QA_back_f0168_R": 4.4,
+ "QA_3q_f0168_L": 10.0,
+ "QA_3q_f0168_R": 3.8
+}
