@@ -10,6 +10,7 @@
 // the main window also posts a `refetch` nudge on DATA_CHANNEL so the pop-out does not wait for
 // the server's event.
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useHref } from 'react-router-dom';
 import { openChannel } from '../lib/channels';
 import { routes } from '../scope';
 
@@ -88,6 +89,8 @@ export function usePopout(org: string, ws: string): Popout {
   const seen = useRef(0);
   const chan = useRef<BroadcastChannel | null>(null);
   const name = channelName(org, ws);
+  // with the router's base: the demo runs under /demo/app
+  const href = useHref(displayPath(org, ws));
 
   useEffect(() => {
     const ch = openChannel(name);
@@ -138,7 +141,7 @@ export function usePopout(org: string, ws: string): Popout {
       h = window.open('', windowName(org, ws), features());
       if (h) {
         try {
-          if (h.location.href === 'about:blank') h.location.replace(displayPath(org, ws));
+          if (h.location.href === 'about:blank') h.location.replace(href);
         } catch {
           // not readable — leave it
         }
@@ -147,14 +150,14 @@ export function usePopout(org: string, ws: string): Popout {
     }
     h?.focus();
     chan.current?.postMessage({ type: 'focus' } satisfies PopoutMessage);
-  }, [org, ws]);
+  }, [org, ws, href]);
 
   const launch = useCallback(() => {
     if (open || (handle.current && !handle.current.closed)) {
       focus();
       return;
     }
-    const w = window.open(displayPath(org, ws), windowName(org, ws), features());
+    const w = window.open(href, windowName(org, ws), features());
     if (!w) {
       setBlocked(true);
       return;
@@ -165,7 +168,7 @@ export function usePopout(org: string, ws: string): Popout {
     seen.current = Date.now();
     setOpen(true);
     void moveToOtherScreen(w);
-  }, [open, focus, org, ws]);
+  }, [open, focus, org, ws, href]);
 
   const restore = useCallback(() => {
     chan.current?.postMessage({ type: 'close' } satisfies PopoutMessage);

@@ -5,8 +5,9 @@
 //
 // The marketing Worker lets /demo/app through only with a demo session; this asks it once more
 // (`/api/demo/me`) and goes back to the demo login without one. Settings take nothing (언어 · 화면
-// stay open), the office does not pop out (a second window would be a second, separate demo), and
-// every screen viewed and button pressed is one usage event.
+// stay open), and every screen viewed and button pressed is one usage event. The office pops out
+// (2026-11-14) into a window that borrows this window's engine (link.ts) — one demo in two windows,
+// never a second, separate one.
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
@@ -22,6 +23,7 @@ import { SessionContext, sessionFrom } from '../session';
 import { SurfaceContext, type Surface } from '../shell/surface';
 import { DemoEngine, type DemoData } from './engine';
 import { demoEvent, demoLogout, demoSession, viewDetail, DEMO_LOGIN, type DemoSessionInfo } from './session';
+import { hostDemo, isPopoutPath, joinDemo, type DemoLink } from './link';
 import { demoTransport } from './transport';
 import '../styles/HomeView.css';
 import '../styles/screens.css';
@@ -51,19 +53,28 @@ const storedLocale = (): Locale | null => {
 
 const leave = () => window.location.replace(DEMO_LOGIN);
 
+const newQueryClient = () =>
+  new QueryClient({
+    defaultOptions: { queries: { staleTime: 15_000, refetchOnWindowFocus: false, retry: (count, err) => !(err instanceof ApiError && err.status < 500) && count < 1 } },
+  });
+
+/** The main window runs the engine; the office pop-out borrows it (link.ts). */
 export default function DemoApp() {
+  const { pathname } = useLocation();
+  const [popout] = useState(() => isPopoutPath(pathname));
+  return popout ? <DemoPopout /> : <DemoHost />;
+}
+
+function DemoHost() {
   const { t, locale, setLocale } = useI18n();
   const [session, setSession] = useState<DemoSessionInfo | null>(null);
   const [failed, setFailed] = useState(false);
   const [engine, setEngine] = useState<DemoEngine | null>(null);
   const current = useRef<DemoEngine | null>(null);
-  const queryClient = useMemo(
-    () =>
-      new QueryClient({
-        defaultOptions: { queries: { staleTime: 15_000, refetchOnWindowFocus: false, retry: (count, err) => !(err instanceof ApiError && err.status < 500) && count < 1 } },
-      }),
-    [],
-  );
+  const queryClient = useMemo(newQueryClient, []);
+  const link = useRef<ReturnType<typeof hostDemo> | null>(null);
+  const localeNow = useRef(locale);
+  localeNow.current = locale;
 
   useEffect(() => {
     let live = true;
@@ -102,8 +113,18 @@ export default function DemoApp() {
     };
   }, [session, locale, queryClient]);
 
+  // the office pop-out asks this window's engine; a new engine (처음 상태로 · another language) is
+  // the same demo starting over, and the pop-out follows it
+  useEffect(() => {
+    if (!session || !engine) return;
+    if (!link.current) link.current = hostDemo(session.demo_id, () => current.current!, () => localeNow.current);
+    else link.current.swap();
+  }, [session, engine]);
+
   useEffect(
     () => () => {
+      link.current?.stop();
+      link.current = null;
       current.current?.stop();
       setTransport(null);
     },
@@ -115,9 +136,85 @@ export default function DemoApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <InquiryProvider>
-        <DemoShell key={engine.data.locale + String(engineId(engine))} engine={engine} session={session} onReset={() => setEngine(restart(engine, current, session, queryClient))} />
+        <DemoShell
+          key={engine.data.locale + String(engineId(engine))}
+          suggestions={engine.data.chat.suggestions}
+          session={session}
+          onReset={() => setEngine(restart(engine, current, session, queryClient))}
+        />
       </InquiryProvider>
     </QueryClientProvider>
+  );
+}
+
+/** The office pop-out: the same demo as the window that opened it, or a line saying it is gone. */
+function DemoPopout() {
+  const { t, setLocale } = useI18n();
+  const [state, setState] = useState<'wait' | 'on' | 'gone' | 'failed'>('wait');
+  const [session, setSession] = useState<DemoSessionInfo | null>(null);
+  const [round, setRound] = useState(0);
+  const queryClient = useMemo(newQueryClient, []);
+
+  useEffect(() => {
+    let live = true;
+    let joined: DemoLink | null = null;
+    demoSession()
+      .then(async (s) => {
+        if (!live) return;
+        if (!s) return leave();
+        const l = await joinDemo(s.demo_id);
+        if (!live) return l?.close();
+        if (!l) return setState('gone');
+        joined = l;
+        setTransport(l.transport);
+        if (isLocale(l.locale)) setLocale(l.locale);
+        l.onReset(() => {
+          if (isLocale(l.locale)) setLocale(l.locale);
+          queryClient.clear();
+          setRound((r) => r + 1);
+        });
+        l.onGone(() => {
+          queryClient.clear();
+          setState('gone');
+        });
+        setSession(s);
+        setState('on');
+      })
+      .catch(() => live && setState('failed'));
+    return () => {
+      live = false;
+      joined?.close();
+      setTransport(null);
+    };
+  }, [queryClient, setLocale]);
+
+  if (state === 'failed') return <div className="splash">{t('demo.failed')}</div>;
+  if (state === 'gone') return <PopoutGone />;
+  if (state === 'wait' || !session) return <div className="splash">{t('demo.loading')}</div>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <InquiryProvider>
+        <DemoShell key={round} suggestions={[]} session={session} />
+      </InquiryProvider>
+    </QueryClientProvider>
+  );
+}
+
+/** The opener closed or reloaded: this window does not become a demo of its own. */
+function PopoutGone() {
+  const { t } = useI18n();
+  return (
+    <div className="splash demo-popout-gone" role="status" data-testid="demo-popout-gone">
+      <p>{t('demo.popoutGone')}</p>
+      <div className="demo-popout-actions">
+        <button type="button" className="btn is-primary" onClick={() => window.location.assign('/demo/app')}>
+          {t('demo.popoutBack')}
+        </button>
+        <button type="button" className="btn" onClick={() => window.close()}>
+          {t('demo.popoutClose')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -139,22 +236,21 @@ function restart(old: DemoEngine, ref: { current: DemoEngine | null }, session: 
   return next;
 }
 
-function DemoShell({ engine, session, onReset }: { engine: DemoEngine; session: DemoSessionInfo; onReset: () => void }) {
+function DemoShell({ suggestions, session, onReset }: { suggestions: string[]; session: DemoSessionInfo; onReset?: () => void }) {
   const { t } = useI18n();
   const surface = useMemo<Surface>(
     () => ({
       banner: <DemoBand expires={session.expires} />,
-      sidebarFooter: (rail) => <ResetButton rail={rail} onReset={onReset} />,
+      ...(onReset ? { sidebarFooter: (rail: boolean) => <ResetButton rail={rail} onReset={onReset} /> } : {}),
       roleTag: t('demo.chip'),
       viewOnly: {
         note: t('demo.locked'),
         locked: (key) => !OPEN.has(key),
         onBlocked: (key) => demoEvent('action', `locked:${key}`),
       },
-      suggestions: engine.data.chat.suggestions,
-      popout: false,
+      suggestions,
     }),
-    [engine, session.expires, onReset, t],
+    [suggestions, session.expires, onReset, t],
   );
   return (
     <SurfaceContext.Provider value={surface}>

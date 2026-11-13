@@ -73,3 +73,25 @@
   align-items: stretch;
   gap: 0;
 }
+
+/* the office pop-out whose opener is gone (link.ts): one quiet line and the two ways out */
+.splash.demo-popout-gone {
+  place-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.demo-popout-gone p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.demo-popout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+}

@@ -231,4 +231,7 @@ export const en: Record<MarketingKey, string> = {
   'landing.apply.done.consult': "We'll get in touch about the call.",
   'demo.login.idHint': "The email you gave when you asked for the demo.",
   'demo.bandOpen': "This is a demo · an example company",
+  'demo.popoutGone': "The window this demo was opened from was closed or reloaded. This window only shows that window’s demo, so it does not carry on by itself.",
+  'demo.popoutBack': "Back to the demo",
+  'demo.popoutClose': "Close this window",
 };

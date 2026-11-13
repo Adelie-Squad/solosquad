@@ -231,4 +231,7 @@ export const zhCN: Record<MarketingKey, string> = {
   'landing.apply.done.consult': "关于咨询，我们确认后会联系你。",
   'demo.login.idHint': "申请演示时填写的邮箱。",
   'demo.bandOpen': "这是演示画面 · 示例公司",
+  'demo.popoutGone': "打开此演示的窗口已关闭或刷新。此窗口只是同步显示那个窗口的演示，不会单独继续。",
+  'demo.popoutBack': "返回演示",
+  'demo.popoutClose': "关闭此窗口",
 };

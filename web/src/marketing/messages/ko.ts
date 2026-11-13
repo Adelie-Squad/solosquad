@@ -229,6 +229,9 @@ export const ko = {
   'landing.apply.done.consult': "상담은 확인하고 연락드릴게요.",
   'demo.login.idHint': "신청할 때 적은 이메일이에요.",
   'demo.bandOpen': "데모 화면이에요 · 예시 회사",
+  'demo.popoutGone': "데모를 연 창이 닫혔거나 새로 고쳐졌어요. 이 창은 그 창의 데모를 함께 보여 주는 창이라 여기서 따로 이어 가지 않아요.",
+  'demo.popoutBack': "데모로 돌아가기",
+  'demo.popoutClose': "이 창 닫기",
 } as const;
 
 export type MarketingKey = keyof typeof ko;
