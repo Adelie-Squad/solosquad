@@ -326,11 +326,9 @@ html:has(.landing[data-mode="live"]) {
   width: min(84%, 520px);
 }
 
-/* the card sits right of the middle so the penguin at its lower-left corner — far enough out for its
-   near shoulder to clear the card's edge (staging.ts besideEdge) — and the card are centred together */
-.landing-pin .landing-act.is-stamp {
-  width: min(60%, 420px);
-  margin-left: min(30%, 220px);
+/* the workflow card, centred; the penguin stands behind its top edge, over the prompt box (type) */
+.landing-pin .landing-act.is-flow {
+  width: min(100%, 460px);
 }
 
 .landing-pin .landing-act.is-sign {
@@ -1296,11 +1294,11 @@ html:has(.landing[data-mode="live"]) {
   white-space: nowrap;
 }
 
-/* ① the request, one line to Chief — two lines' room in every card, so the button stays put */
+/* ① the prompt box: the request to Chief types itself in — two lines' room in every card */
 .landing-workflow-ask {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: var(--space-2);
   margin: 0;
   padding: var(--space-3);
@@ -1313,15 +1311,35 @@ html:has(.landing[data-mode="live"]) {
   line-height: 1.45;
 }
 
-.landing-workflow-ask > .icon {
-  flex-shrink: 0;
-  margin-top: 2px;
+.landing-workflow-to {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
   color: var(--accent);
 }
 
-.landing-workflow-ask > span:last-child {
+/* a fixed height: the box never grows as it types (the penguin's spot is read from the card) */
+.landing-workflow-typed {
   height: calc(2 * 1.45em);
+  margin: 0;
   overflow: hidden;
+}
+
+.landing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--accent);
+  animation: landing-blink 1s steps(1) infinite;
+}
+
+@keyframes landing-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 /* the line from the request down to Chief */
@@ -1384,31 +1402,100 @@ html:has(.landing[data-mode="live"]) {
   content: "";
 }
 
+/* ②·③ one agent and the piece of work Chief hands it: the line out to the agent is drawn, then the
+   task chip is set down beside it (accent ring = going out now, ok check = set down — the app's
+   colours). Not handed out yet: no line, an empty bar keeps the chip's room. */
 .landing-workflow-pieces li {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-2);
-  min-height: 28px;
+  column-gap: var(--space-2);
+  min-height: 30px;
   color: var(--ink);
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.landing-workflow-pieces li > b {
+  color: var(--ink-2);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .landing-workflow-pieces li::before {
   position: absolute;
   top: 50%;
   left: calc(-1 * var(--space-4));
-  width: calc(var(--space-4) - 4px);
-  border-top: 1px solid var(--line-strong);
+  width: 0;
+  border-top: 1.5px solid var(--accent);
   content: "";
+  transition:
+    width 0.35s ease,
+    border-color 0.3s ease;
 }
 
-.landing-workflow-pieces li > span {
+.landing-workflow-pieces li:not(.is-waiting)::before {
+  width: calc(var(--space-4) - 4px);
+}
+
+.landing-workflow-pieces li.is-done::before {
+  border-top-color: var(--line-strong);
+}
+
+.landing-task-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: 8px;
+  background: var(--surface-2);
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  font-size: 13px;
+  font-weight: 650;
+  transition:
+    opacity 0.3s ease,
+    outline-color 0.3s ease;
+}
+
+.landing-task-chip > span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.landing-task-chip > .icon {
+  flex-shrink: 0;
+  color: var(--ok);
+}
+
+/* not handed out yet: an empty bar (what it will say is not shown before Chief hands it out) */
+.landing-workflow-pieces li.is-waiting .landing-task-chip {
+  width: 9em;
+  opacity: 0.6;
+}
+
+.landing-workflow-pieces li.is-waiting .landing-task-chip > * {
+  visibility: hidden;
+}
+
+.landing-workflow-pieces li.is-on .landing-task-chip {
+  outline-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+/* ④ the approvals wait, faint, until the work is handed out */
+.landing-pin.is-acting .landing-slide.is-on .landing-workflow-gate:not(.is-up) {
+  opacity: 0.45;
+}
+
+.landing-workflow-gate {
+  transition: opacity 0.3s ease;
 }
 
 .landing-workflow .landing-approval-actions {
@@ -1417,7 +1504,7 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* the stacked page: the three cards one under another */
-.landing-act.is-stamp.is-stacked {
+.landing-act.is-flow.is-stacked {
   display: flex;
   flex-direction: column;
   gap: var(--card-gap);
@@ -1655,11 +1742,8 @@ html:has(.landing[data-mode="live"]) {
     width: calc(100% - 40px);
   }
 
-  /* the card right of the middle: the penguin needs the room at its lower-left corner */
-  .landing-pin .landing-act.is-stamp {
-    justify-self: end;
-    width: calc(100% - 100px);
-    margin-left: 0;
+  .landing-pin .landing-act.is-flow {
+    width: calc(100% - 24px);
   }
 
   .landing-pin .landing-act.is-sign {
@@ -1668,7 +1752,7 @@ html:has(.landing[data-mode="live"]) {
 
   /* a phone screen has room for the title and the lead only: the rest of the message stays on the
      stacked page and the larger screens */
-  .landing-pin .landing-slide .landing-points,
+  .landing-pin .landing-slide .landing-points:not(.landing-domain-lines),
   .landing-pin .landing-slide .landing-aside,
   .landing-pin .landing-slide.is-org .landing-legend {
     display: none;
@@ -1843,5 +1927,9 @@ html:has(.landing[data-mode="live"]) {
   .landing-workflow-tabs button,
   .landing-top {
     transition: none;
+  }
+
+  .landing-caret {
+    animation: none;
   }
 }

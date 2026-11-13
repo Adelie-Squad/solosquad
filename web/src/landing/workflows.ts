@@ -1,8 +1,8 @@
 // The landing's three example workflows (PRD v2.1.0 §3.5.2 ④ — 재무 관리 · 상품 소싱 · SNS 마케팅),
 // drawn as a flow since 2026-11-14 (the old 맡기기 section folded in): the one-line request to Chief,
 // the three pieces Chief hands out (each with the agent who does it), and the two approvals that
-// stop the run — one a team approves, one only the owner does. Each one leads with the domain it
-// fits best (물류 · 커머스 · IT 서비스 — the message beside the card names them). The approval tiers come
+// stop the run — one a team approves, one only the owner does. The three are examples any kind of
+// business uses (the domains — 물류 · 커머스 · IT 서비스 — are in the AI 팀 section, 2026-11-14). The approval tiers come
 // from the category, the same table the engine recommends (`python/src/solosquad/approvals.py`
 // `RECOMMENDED`, decision 51 — the landing test compares them). Examples only: no real company,
 // amounts or usage numbers.
@@ -21,8 +21,6 @@ export interface WorkflowExample {
   id: WorkflowId;
   name: MessageKey;
   title: MessageKey;
-  /** The domain it fits best (the line beside the card). */
-  domain: Domain;
   /** The one-line request to Chief. */
   ask: MessageKey;
   /** What Chief hands out: three pieces of work, each with its agent. */
@@ -38,7 +36,6 @@ export const WORKFLOW_EXAMPLES: WorkflowExample[] = [
     id: 'finance',
     name: 'landing.workflows.finance.name',
     title: 'landing.workflows.finance.title',
-    domain: 'logistics',
     ask: 'landing.workflows.finance.ask',
     split: [
       { text: 'landing.workflows.finance.out.1', agent: 'finance' },
@@ -52,7 +49,6 @@ export const WORKFLOW_EXAMPLES: WorkflowExample[] = [
     id: 'sourcing',
     name: 'landing.workflows.sourcing.name',
     title: 'landing.workflows.sourcing.title',
-    domain: 'commerce',
     ask: 'landing.workflows.sourcing.ask',
     split: [
       { text: 'landing.workflows.sourcing.out.1', agent: 'researcher' },
@@ -66,7 +62,6 @@ export const WORKFLOW_EXAMPLES: WorkflowExample[] = [
     id: 'sns',
     name: 'landing.workflows.sns.name',
     title: 'landing.workflows.sns.title',
-    domain: 'it',
     ask: 'landing.workflows.sns.ask',
     split: [
       { text: 'landing.workflows.sns.out.1', agent: 'marketer' },

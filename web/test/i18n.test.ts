@@ -56,7 +56,7 @@ describe('no unused keys', () => {
     };
     walk(src);
     const all = code.join('\n');
-    const built = ['category.', 'connections.kind.', 'artifact.kind.', 'messenger.channel.', 'calendar.view.', 'calendar.kind.', 'calendar.color.', 'company.name.', 'landing.contact.business.', 'landing.contact.country.', 'landing.contact.wants.', 'landing.contact.dial.', 'landing.domain.', 'landing.workflows.domain.', 'landing.apply.requests.', 'landing.contact.companyNoKind.', 'landing.contact.companyNoHint.', 'landing.contact.companyNoLength.']; // `category.${c}` · `connections.kind.${k}` · `artifact.kind.${k}` · `messenger.channel.${c}`
+    const built = ['category.', 'connections.kind.', 'artifact.kind.', 'messenger.channel.', 'calendar.view.', 'calendar.kind.', 'calendar.color.', 'company.name.', 'landing.contact.business.', 'landing.contact.country.', 'landing.contact.wants.', 'landing.contact.dial.', 'landing.domain.', 'landing.org.domain.', 'landing.apply.requests.', 'landing.contact.companyNoKind.', 'landing.contact.companyNoHint.', 'landing.contact.companyNoLength.']; // `category.${c}` · `connections.kind.${k}` · `artifact.kind.${k}` · `messenger.channel.${c}`
     const unused = [...Object.keys(ko), ...Object.keys(marketingKo)].filter((k) => !all.includes(`'${k}'`) && !built.some((p) => k.startsWith(p)));
     expect(unused).toEqual([]);
   });

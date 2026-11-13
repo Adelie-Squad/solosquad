@@ -17,7 +17,7 @@ import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
 import { PersonFace } from './people';
 import { firstStop, MOVED_ANCHORS, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
-import { WORKFLOW_EXAMPLES } from './workflows';
+import { DOMAINS, WORKFLOW_EXAMPLES } from './workflows';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
@@ -156,9 +156,8 @@ const PROBLEM_POINTS: Point[] = [
   { icon: 'forward', title: 'landing.problem.point3.title', body: 'landing.problem.point3.body' },
 ];
 
-/** AI 팀: what the company gets — a team shaped to it, people deciding, everything on record. */
+/** AI 팀: what the company gets — people deciding, everything on record (the team shaped to the business is the domain lines above them). */
 const ORG_POINTS: Point[] = [
-  { icon: 'team', title: 'landing.org.point1.title', body: 'landing.org.point1.body' },
   { icon: 'person', title: 'landing.org.point2.title', body: 'landing.org.point2.body' },
   { icon: 'artifacts', title: 'landing.org.point3.title', body: 'landing.org.point3.body' },
 ];
@@ -377,6 +376,21 @@ export function Landing() {
           {t('landing.org.title')}
         </h2>
         <p className="landing-lead">{t('landing.org.lead')}</p>
+        {/* the team shaped to the business (2026-11-14 — "업종은 AI 팀 섹션에서 다뤄"): what each kind hands over */}
+        <ul className="landing-points landing-domain-lines" data-testid="landing-domain-lines">
+          {DOMAINS.map((d) => {
+            const Icon = ICON[DOMAIN_ICON[d]];
+            return (
+              <li key={d} data-domain={d}>
+                <Icon />
+                <span>
+                  <b>{t(`landing.domain.${d}`)}</b>
+                  {t(`landing.org.domain.${d}`)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
         <Points points={ORG_POINTS} />
         <ul className="landing-legend">
           <li>
@@ -402,21 +416,9 @@ export function Landing() {
           {t('landing.workflows.title')}
         </h2>
         <p className="landing-lead">{t('landing.workflows.lead')}</p>
-        <ul className="landing-points landing-domain-lines" data-testid="landing-domain-lines">
-          {WORKFLOW_EXAMPLES.map((w) => {
-            const Icon = ICON[DOMAIN_ICON[w.domain]];
-            return (
-              <li key={w.id} data-domain={w.domain}>
-                <Icon />
-                <span>
-                  <b>{t(`landing.domain.${w.domain}`)}</b>
-                  {t(`landing.workflows.domain.${w.domain}`)}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="landing-aside">{t('landing.workflows.note')}</p>
+        <p className="landing-aside">
+          {t('landing.workflows.examples')} {t('landing.workflows.note')}
+        </p>
       </>,
       <WorkflowAct on={isOn('workflows')} acting={acting} at={active === 'workflows' ? stop.sub : 0} stacked={!live} onPick={(i) => goTo(workflowsAt + i)} />,
     ),
