@@ -1244,33 +1244,92 @@ h3.with-icon {
   font-size: 15px;
 }
 
-.company-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
+/* 회사 = the legal entities (여러 법인, 2026-11-14): rows like the connection list, no table */
+.entity-list {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   padding: 0;
-  border: 0;
+  list-style: none;
+}
+
+.entity-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--line);
+}
+
+.entity-main {
+  display: flex;
+  flex: 1 1 280px;
+  flex-direction: column;
+  gap: var(--space-1);
   min-width: 0;
 }
 
-.company-grid > legend {
-  margin-bottom: var(--space-3);
-  padding: 0;
+.entity-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.company-grid .field.is-wide {
-  grid-column: 1 / -1;
+.entity-name {
+  min-width: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
-.company-grid input[aria-invalid='true'],
-.company-grid select[aria-invalid='true'] {
+.entity-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.entity-number {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.entity-main .dash-hint {
+  margin: 0;
+}
+
+.entity-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  max-width: 100%;
+}
+
+.entity-kind-fixed {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  margin: 0;
+}
+
+.entity-modal textarea[aria-invalid='true'],
+.entity-modal select[aria-invalid='true'] {
   border-color: var(--danger);
 }
 
+.business-entity .field {
+  max-width: 420px;
+}
+
 @media (max-width: 860px) {
-  .company-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .entity-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -1789,6 +1848,10 @@ h3.with-icon {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
+}
+
+.member-grid .field.is-wide {
+  grid-column: 1 / -1;
 }
 
 .member-grid input[aria-invalid='true'] {

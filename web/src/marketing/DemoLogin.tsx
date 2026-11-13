@@ -17,7 +17,7 @@ import { Mascot } from '../characters/PenguinIcon';
 import { LocalePicker } from '../components/LocalePicker';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
-import { DigitsInput } from './DigitsInput';
+import { DigitsInput } from '../components/DigitsInput';
 import { SiteFooter } from './SiteFooter';
 import { companyNoLabel, DEMO_PREFILL_KEY, useInquiry, type DemoPrefill } from './Inquiry';
 
