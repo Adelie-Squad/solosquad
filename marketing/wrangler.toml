@@ -9,15 +9,17 @@ compatibility_date = "2026-10-01"
 [assets]
 directory = "./public"
 binding = "ASSETS"
-# /login · /login/help · /demo · /privacy · /demo/app/… are client routes of one page; the Worker
-# sees /demo/app first and lets it through only with a demo session
+# /login · /login/help · /demo · /policy · /demo/app/… are client routes of one page; the Worker
+# sees /demo/app first and lets it through only with a demo session, and /privacy (the policy's old
+# address) first to send it on to /policy with a 301
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/demo/app", "/demo/app/*"]
+run_worker_first = ["/api/*", "/demo/app", "/demo/app/*", "/privacy", "/privacy/"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "solosquad-marketing"
-# `wrangler d1 create solosquad-marketing` prints the id — paste it here before the first deploy
+# `wrangler d1 create solosquad-marketing --location apac` prints the id — paste it here before the
+# first deploy. The privacy policy (/policy §6) states the APAC location hint: keep them in step
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
@@ -27,8 +29,9 @@ migrations_dir = "migrations"
 crons = ["17 3 * * *"]
 
 [vars]
-# the consent text the request modal shows; bump it when the text changes (C52 · DM6)
-CONSENT_VERSION = "2026-11-11.draft"
+# the consent text the request modal shows; bump it when the text changes (C52 · DM6) — and the
+# privacy policy with it (web/src/marketing/messages/site.ts policyEffective · policy.ts)
+CONSENT_VERSION = "2026-11-14.draft"
 # days an inquiry is kept (L9 — recommended one year; legal review pending)
 RETAIN_DAYS = "365"
 # Cloudflare Turnstile is off by default: it does not load from mainland China (L5)

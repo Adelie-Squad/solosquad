@@ -16,6 +16,7 @@ import { LocalePicker } from '../components/LocalePicker';
 import { useI18n } from '../i18n';
 import { ICON } from '../icons';
 import { DigitsInput } from './DigitsInput';
+import { SiteFooter } from './SiteFooter';
 import { DEMO_PREFILL_KEY, useInquiry, type DemoPrefill } from './Inquiry';
 
 export const DEMO_LOGIN_ACTION = '/api/demo/login';
@@ -104,6 +105,7 @@ export function DemoLogin() {
   return (
     <div className="auth-page site-auth">
       <DemoLoginForm key={location.key} prefill={prefill} />
+      <SiteFooter compact />
     </div>
   );
 }

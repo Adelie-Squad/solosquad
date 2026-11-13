@@ -23,6 +23,7 @@ import { Modal } from '../components/Modal';
 import { useI18n, type Locale, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { DigitsInput } from './DigitsInput';
+import { SITE } from './messages/site';
 import { formToken, sendInquiry, siteConfig, type FieldError, type IssuedDemo } from './siteApi';
 
 const KINDS = ['retail', 'online', 'maker', 'service', 'partner', 'other'] as const;
@@ -534,7 +535,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
           <details>
             <summary>{t('landing.contact.consentMore')}</summary>
             <p>{t('landing.contact.consentText')}</p>
-            <Link to="/privacy" target="_blank" rel="noopener">
+            <Link to={SITE.policyPath} target="_blank" rel="noopener">
               {t('landing.contact.privacyLink')}
             </Link>
           </details>

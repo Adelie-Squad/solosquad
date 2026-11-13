@@ -120,3 +120,17 @@ describe('company codes and the decision', () => {
     expect(await env.DB.prepare("SELECT kind, server_url, status FROM login_routes WHERE code = 'demo'").first()).toEqual({ kind: 'demo', server_url: '/demo', status: 'active' });
   });
 });
+
+describe('the privacy policy’s old address (2026-11-14)', () => {
+  it('/privacy → 301 /policy, the query kept', async () => {
+    for (const [from, to] of [
+      ['/privacy', '/policy'],
+      ['/privacy/', '/policy'],
+      ['/privacy?lang=en', '/policy?lang=en'],
+    ]) {
+      const r = await SELF.fetch(`https://marketing.test${from}`, { redirect: 'manual' });
+      expect(r.status).toBe(301);
+      expect(r.headers.get('location')).toBe(`https://marketing.test${to}`);
+    }
+  });
+});

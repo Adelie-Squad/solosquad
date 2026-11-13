@@ -88,7 +88,7 @@ function agentCatalog(): Plugin {
 
 /**
  * `vite build --mode marketing` (decision 62): the same index.html with the marketing entry — the
- * landing, the login router, the demo login and the privacy page, no app shell — written to
+ * landing, the login router, the demo login and the privacy policy, no app shell — written to
  * `../marketing/public` for the site Worker's static assets. Customer servers never serve the landing.
  */
 function marketingEntry(): Plugin {

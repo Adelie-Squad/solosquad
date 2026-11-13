@@ -1,8 +1,90 @@
 /* The marketing site's own pages (decision 62): the login router, the demo login, the privacy
-   page and the inquiry modal. Tokens only; no tinted bands, no shadows beyond the modal's own,
-   nothing under 12px. */
+   policy, the site footer and the inquiry modal. Tokens only; no tinted bands, no shadows beyond
+   the modal's own, nothing under 12px. */
+
+/* ── the site footer (2026-11-14) ──────────────────────────── */
+/* 대표 · email (mailto) · 개인정보처리방침 · © — one row that wraps; compact under the small pages */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-6);
+  padding: var(--space-6) 0 var(--space-8);
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.site-footer-brand {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.site-footer-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer-items li {
+  white-space: nowrap;
+}
+
+.site-footer a {
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.site-footer a:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+.site-footer-copy {
+  color: var(--ink-2);
+}
+
+.site-footer.is-compact {
+  justify-content: center;
+  padding: var(--space-4) 0 var(--space-6);
+  border-top: 0;
+}
+
+.site-footer.is-compact .site-footer-brand {
+  display: none;
+}
+
+.site-footer.is-compact .site-footer-items {
+  justify-content: center;
+}
+
+@media (max-width: 860px) {
+  .site-footer:not(.is-compact) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-5) 0 var(--space-6);
+  }
+
+  .site-footer-items {
+    gap: var(--space-1) var(--space-4);
+  }
+}
 
 /* ── login router · demo login ─────────────────────────────── */
+/* the card in the middle, the compact footer at the bottom */
+.auth-page.site-auth {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
 .site-auth .auth-card {
   gap: var(--space-4);
 }
@@ -44,62 +126,210 @@
   white-space: nowrap;
 }
 
-/* ── privacy ───────────────────────────────────────────────── */
-.site-privacy {
+/* ── the privacy policy (/policy) ──────────────────────────── */
+.site-policy-page {
   min-height: 100%;
-  padding: var(--space-12) var(--space-4);
+  padding: 0 var(--space-4);
   background: var(--bg);
 }
 
-.site-privacy .panel {
+.site-policy-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: min(760px, 100%);
+  height: 64px;
+  margin: 0 auto;
+}
+
+.site-policy-brand {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.site-policy {
+  padding: var(--space-2) 0 var(--space-10);
+}
+
+.site-policy .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  width: min(720px, 100%);
+  gap: var(--space-5);
+  width: min(760px, 100%);
   margin: 0 auto;
-  padding: var(--space-8);
+  padding: var(--space-10) var(--space-8);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
 }
 
-.site-privacy .chip {
-  align-self: flex-start;
-  margin: 0;
-}
-
-.site-privacy h1 {
+.site-policy h1 {
   margin: 0;
   font-size: 26px;
   letter-spacing: -0.02em;
 }
 
-.site-privacy h2 {
-  margin: 0 0 var(--space-1);
-  font-size: 15px;
+.site-policy-meta {
+  margin: calc(-1 * var(--space-3)) 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
-.site-privacy section p {
+.site-policy-prevails,
+.site-policy-intro,
+.site-policy section p,
+.site-policy section li {
   max-width: var(--measure, 46em);
   margin: 0;
   color: var(--ink-2);
   font-size: 14.5px;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+.site-policy-prevails {
+  padding: var(--space-3) 0;
+  border-block: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.site-policy-toc {
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.site-policy-toc ol {
+  columns: 2;
+  column-gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.site-policy-toc a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.site-policy-toc a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.site-policy section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: var(--space-6);
+}
+
+.site-policy h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.site-policy section ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.site-policy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
   line-height: 1.6;
 }
 
-.site-privacy-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+.site-policy-table th,
+.site-policy-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.site-policy-table th {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.site-policy-table td {
+  color: var(--ink);
+}
+
+.site-policy-table td:first-child {
+  font-weight: 600;
+}
+
+.site-policy-foot {
   padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
 
-.site-privacy-foot a {
+.site-policy-foot a {
   color: var(--accent);
   font-size: 14px;
+}
+
+.site-policy-page .site-footer {
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+/* phone: one cell under another, each with its column's name */
+@media (max-width: 640px) {
+  .site-policy .panel {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .site-policy-toc ol {
+    columns: 1;
+  }
+
+  .site-policy-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .site-policy-table tr {
+    display: block;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .site-policy-table td {
+    display: block;
+    padding: var(--space-1) 0;
+    border: 0;
+  }
+
+  .site-policy-table td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--ink-2);
+    font-size: 12px;
+    font-weight: 600;
+  }
 }
 
 /* ── the inquiry modal ─────────────────────────────────────── */

@@ -215,7 +215,7 @@ describe('the request modal', () => {
     const messenger = within(dialog).getByLabelText('메신저') as HTMLSelectElement;
     expect(messenger.value).toBe('kakao');
     expect([...messenger.options].map((o) => o.value)).toEqual(['kakao', 'wechat']);
-    expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/privacy');
+    expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/policy');
     const trap = dialog.querySelector('input[name="website"]') as HTMLInputElement;
     expect(trap.tabIndex).toBe(-1);
     expect(trap.closest('[aria-hidden="true"]')).toBeTruthy();
@@ -451,11 +451,14 @@ describe('the request modal', () => {
 });
 
 describe('the other pages and the build', () => {
-  it('/privacy is a placeholder marked for legal review', () => {
+  it.each(['/login', '/login/help', '/demo'])('%s has the compact site footer: 대표, the mailto link and the policy link', (path) => {
     stubSite();
-    site('/privacy');
-    expect(screen.getByRole('heading', { level: 1, name: '개인정보처리방침' })).toBeTruthy();
-    expect(screen.getByText('법률 검토 필요 — 초안이에요')).toBeTruthy();
+    site(path);
+    const footer = screen.getByTestId('site-footer');
+    expect(footer.className).toContain('is-compact');
+    expect(within(footer).getByText('대표 정승원')).toBeTruthy();
+    expect(within(footer).getByRole('link', { name: 'contact@toronchul.app' }).getAttribute('href')).toBe('mailto:contact@toronchul.app');
+    expect(within(footer).getByRole('link', { name: '개인정보처리방침' }).getAttribute('href')).toBe('/policy');
   });
 
   it('the marketing build swaps the entry and writes to marketing/public; the customer build is unchanged', () => {

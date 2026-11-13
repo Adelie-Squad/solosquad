@@ -7,7 +7,8 @@ or example data (C62).
 
 - **Static pages**: the marketing build of `web/` (`npm --prefix ../web run build:marketing` →
   `marketing/public/`), served by Workers Static Assets. `/login`, `/login/help`, `/demo`,
-  `/privacy` and `/demo/app/…` are client routes (SPA fallback).
+  `/policy` (the privacy policy) and `/demo/app/…` are client routes (SPA fallback). `/privacy`, the
+  policy's old address, gets a **301 to `/policy`** from the Worker (it runs first for that path).
 - **The demo** (`/demo/app/…`, 2026-11-13): the customer web's own screens running in the
   browser against an in-memory engine (`web/src/demo/`) — the example company 모아 리빙 and its
   three scripted workflows (재무 · 소싱 · SNS) with their approval points, in ko · en · zh-CN.
@@ -204,13 +205,31 @@ list). Requests never touch an internal account.
 `--remote` works on the deployed D1 the same way. `extend` and `revoke` keep the request's
 `demo_expires_at` and log in step with the account.
 
+## Privacy policy (`/policy`, 2026-11-14)
+
+**법률 검토 전 초안** — the text is written from what this code does, not reviewed by a lawyer yet.
+The page itself does not say so; this note does. The Korean text is authoritative, en and zh-CN
+are translations (the page says the Korean version prevails).
+
+- Text: `web/src/marketing/messages/policy.ts` (12 sections: purpose, items, retention, deletion,
+  third parties, processors and transfer abroad, rights, safety, cookies, officer, remedies,
+  changes). Who and when: `web/src/marketing/messages/site.ts` (representative, contact email,
+  effective date). The site footer (landing, `/policy`, `/login`, `/login/help`, `/demo`) reads
+  the same file.
+- Keep in step: when what is collected, how long it is kept (`RETAIN_DAYS`, `DEMO_DAYS`, the
+  cron), the cookie, the D1 location or the processors change, change the policy text,
+  `policyEffective` and `CONSENT_VERSION` (and the request modal's consent text) together.
+  `web/test/policy.test.tsx` checks the policy's numbers against this `wrangler.toml`.
+- Not chosen yet: a mail provider (`src/mail.ts` sends nothing). When one is added, it goes into
+  §6 as a processor.
+
 ## Deploy (you run these; this repo never deploys)
 
 1. `cd marketing && npm ci`
 2. `npx wrangler login`
 3. Run `npx wrangler d1 create solosquad-marketing --location apac` and paste the printed
-   `database_id` into `wrangler.toml`. The storage location also goes in the privacy text
-   (`[검토 필요]`, DM6).
+   `database_id` into `wrangler.toml`. The privacy policy (`/policy` §6) states this APAC location
+   hint — if you pick another, change `web/src/marketing/messages/policy.ts` too (DM6).
 4. `npm run migrate:remote`
 5. Set the secrets with `npx wrangler secret put FORM_SECRET`, `IP_SALT` and `DEMO_SECRET` (long
    random strings — without `DEMO_SECRET` nobody can sign in to the demo; changing it signs

@@ -10,6 +10,7 @@ import { useTheme } from '../theme';
 import { CompanyAct, PricingAct, PromptAct, ScrollAct, SignAct, WorkflowAct } from './Acts';
 import { keyStep, ownsKeys, SETTLE_MS, Stepper, wheelPixels } from './dwell';
 import { useInquiry } from '../marketing/Inquiry';
+import { SiteFooter } from '../marketing/SiteFooter';
 import '../marketing/messages';
 import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
@@ -168,7 +169,9 @@ const POINTS: { icon: keyof typeof ICON; title: MessageKey; body: MessageKey }[]
  * and native scroll. The landing is the marketing site's only (decision 62 — customer servers open
  * on their login): 데모 체험하기 (primary, `/demo`) and 로그인 (`/login`, the login router) in the top
  * bar (beside the language select, no label), the first section and the last; the price section's
- * button and the line under the last card open the request modal. No arrows.
+ * button and the line under the last card open the request modal. No arrows. The site footer
+ * (대표 · email · 개인정보처리방침, 2026-11-14) follows the last section — after the scroll track,
+ * where the browser scrolls on its own (dwell.ts `tail`).
  */
 export function Landing() {
   const { t } = useI18n();
@@ -485,9 +488,9 @@ export function Landing() {
       ) : (
         <div className="landing-stack">
           {slides}
-          <footer className="landing-foot landing-mono">SoloSquad</footer>
         </div>
       )}
+      <SiteFooter className="landing-footer" />
       {team.modal}
     </main>
   );

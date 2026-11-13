@@ -430,6 +430,37 @@ describe('one gesture, one section (dwell)', () => {
     expect(page.y()).toBe(900);
   });
 
+  it('past the last stop is the footer: down from the last stop scrolls natively, up from below glides back to it, no settling there', () => {
+    const page = fakePage(2700);
+    const s = new Stepper(page.env);
+    // arriving at the last stop: the same gesture's tail is still held (glide + dwell)
+    expect(s.wheel(120)).toBe(true);
+    page.advance(GLIDE_MS + 50);
+    expect(page.y()).toBe(3600);
+    expect(s.wheel(120)).toBe(true);
+    page.advance(DWELL_MS + GESTURE_GAP_MS);
+    // resting on the last stop: down is the browser's own scroll (to the footer)
+    expect(s.wheel(120)).toBe(false);
+    s.touchStart(500);
+    expect(s.touchMove(420)).toBe(false);
+    s.touchEnd();
+    // below the last stop (the footer in view): down stays native, nothing settles it back
+    const below = fakePage(3720);
+    const b = new Stepper(below.env);
+    expect(b.wheel(80)).toBe(false);
+    b.settle();
+    below.advance(1500);
+    expect(below.y()).toBe(3720);
+    // up glides back to the last stop — the last section, whole
+    expect(b.wheel(-80)).toBe(true);
+    below.advance(GLIDE_MS + 50);
+    expect(below.y()).toBe(3600);
+    // a swipe up from below does the same
+    const swipe = new Stepper(fakePage(3700).env);
+    swipe.touchStart(300);
+    expect(swipe.touchMove(360)).toBe(true);
+  });
+
   it('while a modal holds the page, the wheel is the modal’s — the controller lets it be', () => {
     const page = fakePage();
     const s = new Stepper(page.env);
@@ -1210,6 +1241,36 @@ describe('the entrance: a clay ball that becomes the penguin', () => {
     expect(a.radius).toBeCloseTo(Math.cbrt(0.3 * 0.4 * 0.3), 2);
     expect(b.radius).toBeGreaterThan(a.radius);
     expect(a.core.length()).toBeLessThan(1e-6);
+  });
+});
+
+describe('the site footer (2026-11-14)', () => {
+  const check = (footer: HTMLElement, owner: string, policy: string) => {
+    expect(within(footer).getByText(owner)).toBeTruthy();
+    expect(within(footer).getByRole('link', { name: 'contact@toronchul.app' }).getAttribute('href')).toBe('mailto:contact@toronchul.app');
+    expect(within(footer).getByRole('link', { name: policy }).getAttribute('href')).toBe('/policy');
+    expect(footer.textContent).toContain(`© ${new Date().getFullYear()} SoloSquad`);
+  };
+
+  it('live: after the scroll track — outside the stage, every stop and anchor where it was', () => {
+    live();
+    const { container } = landing('ko');
+    const footer = screen.getByTestId('site-footer');
+    check(footer, '대표 정승원', '개인정보처리방침');
+    expect(footer.className).not.toContain('is-compact');
+    expect(footer.previousElementSibling!.classList.contains('landing-track')).toBe(true);
+    expect(footer.closest('.landing-pin')).toBeNull();
+    expect(container.querySelectorAll('.landing-stop')).toHaveLength(STOPS.length);
+    expect(document.getElementById('landing-contact')!.classList.contains('landing-stop')).toBe(true);
+  });
+
+  it('stacked: after the last section; en names the representative in Latin letters', () => {
+    stubMotion(true);
+    const { container } = landing('en');
+    const footer = screen.getByTestId('site-footer');
+    check(footer, 'Representative Seungwon Jeong', 'Privacy policy');
+    expect(footer.previousElementSibling!.classList.contains('landing-stack')).toBe(true);
+    expect(container.querySelector('.landing-stack')!.lastElementChild!.getAttribute('data-slide')).toBe('contact');
   });
 });
 

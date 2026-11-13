@@ -110,9 +110,30 @@ export class Stepper {
     return this.gliding() || this.env.now() < this.busyUntil;
   }
 
+  /**
+   * The page goes on past the last stop (the site footer, 2026-11-14): a gesture down while resting
+   * on the last stop, or any gesture down below it, is the browser's own scroll (`native`); a
+   * gesture up from below the last stop glides back to it (`back`). Null = an ordinary step.
+   */
+  private tail(dy: number): 'native' | 'back' | null {
+    const stops = this.env.stops();
+    if (!stops.length || dy === 0) return null;
+    const last = stops[stops.length - 1];
+    const y = this.env.scrollY();
+    if (y > last + 2) return dy > 0 ? 'native' : 'back';
+    if (dy > 0 && !this.busy() && Math.abs(y - last) <= 2) return 'native';
+    return null;
+  }
+
   /** A wheel event (pixels, + = down). Returns whether the page should not scroll natively. */
   wheel(dy: number): boolean {
     if (this.env.locked()) return false;
+    const tail = this.tail(dy);
+    if (tail === 'native') return false;
+    if (tail === 'back') {
+      if (!this.busy()) this.go(this.env.stops().length - 1, 'wheel');
+      return true;
+    }
     const d = this.wheelGesture.feed(dy, this.env.now(), this.busy());
     if (d) this.step(d, 'wheel');
     return true;
@@ -127,9 +148,14 @@ export class Stepper {
   touchMove(y: number): boolean {
     if (this.env.locked() || this.touchFrom === null) return false;
     const dy = this.touchFrom - y;
+    const tail = this.tail(dy);
+    if (tail === 'native') return false;
     if (!this.touchSpent && Math.abs(dy) >= SWIPE_PX) {
       this.touchSpent = true;
-      if (!this.busy()) this.step(dy > 0 ? 1 : -1, 'touch');
+      if (!this.busy()) {
+        if (tail === 'back') this.go(this.env.stops().length - 1, 'touch');
+        else this.step(dy > 0 ? 1 : -1, 'touch');
+      }
     }
     return true;
   }
@@ -181,8 +207,10 @@ export class Stepper {
     if (this.gliding() || this.env.locked()) return;
     const stops = this.env.stops();
     const y = this.env.scrollY();
+    // below the last stop is the footer — the page rests there as the browser left it
+    if (!stops.length || y > stops[stops.length - 1] + 2) return;
     const near = stepAt(y, stops);
-    if (stops.length && Math.abs(stops[near] - y) > 2) this.go(near, 'settle');
+    if (Math.abs(stops[near] - y) > 2) this.go(near, 'settle');
   }
 
   stop() {

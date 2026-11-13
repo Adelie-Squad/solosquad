@@ -1086,12 +1086,14 @@ html:has(.landing[data-mode="live"]) {
   text-decoration: underline;
 }
 
-.landing-foot {
+/* the site footer under the last section (2026-11-14, site.css .site-footer): after the scroll
+   track on the live page — below the last stop, the browser's own scroll (dwell.ts tail) — and
+   after the stacked sections on the static one; the message column's width */
+.landing-footer.site-footer {
+  position: relative;
+  z-index: 1;
   width: var(--landing-w);
   margin: 0 auto;
-  padding: var(--space-6) 0 var(--space-8);
-  border-top: 1px solid var(--line);
-  color: var(--ink-3);
 }
 
 /* ── the six sections' own parts (PRD v2.1.0 §3.5 — decision 61) ─────── */

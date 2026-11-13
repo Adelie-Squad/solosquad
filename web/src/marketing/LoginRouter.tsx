@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Mascot } from '../characters/PenguinIcon';
 import { LocalePicker } from '../components/LocalePicker';
 import { useI18n } from '../i18n';
+import { SiteFooter } from './SiteFooter';
 
 const REMEMBER = 'solosquad.companyCode';
 
@@ -67,6 +68,7 @@ export function LoginRouter() {
         </p>
         <LocalePicker />
       </form>
+      <SiteFooter compact />
     </div>
   );
 }
@@ -92,6 +94,7 @@ export function LoginHelp() {
           {t('login.router.demo')} <Link to="/demo">{t('login.router.demoLink')}</Link>
         </p>
       </div>
+      <SiteFooter compact />
     </div>
   );
 }
