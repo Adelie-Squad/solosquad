@@ -42,8 +42,10 @@ class Connection(BaseModel):
     monthly_budget_usd: float | None = None
     network: str = "external"
     """external · internal · local — matched against the workspace execution policy."""
-    # The account holder is the customer company (회사, 2026-11-11) — one for every
-    # connection. An old file's per-connection `entity` is ignored on read, dropped on save.
+    entity_id: int | None = None
+    """보유 법인 — the customer's legal entity (core.db `entities`) that holds this account
+    (2026-11-14, 여러 법인); unset = the 대표 법인. The rev7 per-connection `entity` (name ·
+    country) is ignored on read and dropped on save — the entities live in core.db."""
 
 
 class ConnectionsFile(BaseModel):

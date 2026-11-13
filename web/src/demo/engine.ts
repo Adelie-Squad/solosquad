@@ -19,6 +19,7 @@ import type {
   CalendarTodo,
   ChatMessage,
   Company,
+  LegalEntity,
   Digest,
   DigestDecision,
   DigestWork,
@@ -715,6 +716,17 @@ export class DemoEngine {
     return { ...this.data.company, name: this.account.companyName };
   }
 
+  /** 여러 법인 (2026-11-14): the demo company is its one entity, the 대표 법인. */
+  private entity(): LegalEntity {
+    const c = this.company();
+    const kind = c.country && c.country !== 'KR' ? 'foreign' : c.kind;
+    return {
+      id: 1, kind, name: c.name, registration_no: '', registration_kind: null, representative: c.representative,
+      country: c.country, address: c.address, controlled_by: c.controlled_by, is_primary: true, complete: c.complete,
+      created: 0, updated: 0, businesses: [], connections: [], removable: false, blocked_by: 'primary',
+    };
+  }
+
   private agents(): Agent[] {
     return this.data.agents.map((a) => ({ ...a, working_on: this.working.get(a.name) ?? [] }));
   }
@@ -923,6 +935,7 @@ export class DemoEngine {
     if (path === '/health' && GET) return ok({ ok: true, passkeys: false });
     if (path === '/server' && GET) return ok(this.data.server);
     if (path === '/company' && GET) return ok(this.company());
+    if (path === '/entities' && GET) return ok({ entities: [this.entity()] });
     if (path === '/snapshot' && GET) return ok(this.data.snapshot);
     if (path === '/users' && GET) return ok(this.users());
     if (path === '/access' && GET) return ok(this.data.access);
@@ -966,6 +979,7 @@ export class DemoEngine {
     if (path === `${O}/people` && GET) return ok(this.people());
     if (path === `${O}/approval-policy` && GET) return ok(this.data.approval_policy);
     if (path === `${O}/connections` && GET) return ok([]);
+    if (path === `${O}/entity` && GET) return ok({ entity_id: 1, explicit: false });
     if (path === `${O}/workflows` && GET) return ok(this.workflows());
     if ((hit = m(new RegExp(`^${O}/screens/([a-z-]+)$`))) && GET) return ok(this.data.screens[hit[1] === 'home' ? 'dashboard' : hit[1]] ?? this.data.screens.dashboard);
 

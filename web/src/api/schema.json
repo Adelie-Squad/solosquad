@@ -163,6 +163,15 @@
     "Company": {
       "$ref": "#/$defs/Company"
     },
+    "LegalEntity": {
+      "$ref": "#/$defs/LegalEntity"
+    },
+    "EntityList": {
+      "$ref": "#/$defs/EntityList"
+    },
+    "BusinessEntity": {
+      "$ref": "#/$defs/BusinessEntity"
+    },
     "SnapshotSettings": {
       "$ref": "#/$defs/SnapshotSettings"
     },
@@ -260,6 +269,9 @@
     "PasskeyAdded",
     "ServerFacts",
     "Company",
+    "LegalEntity",
+    "EntityList",
+    "BusinessEntity",
     "SnapshotSettings",
     "SnapshotRunResult",
     "CalendarItem",
@@ -1037,6 +1049,31 @@
       "type": "object",
       "title": "BudgetSuggestion"
     },
+    "BusinessEntity": {
+      "additionalProperties": false,
+      "description": "A 사업's 소속 법인 (`org.yaml entity_id`).",
+      "properties": {
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "explicit": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "entity_id",
+        "explicit"
+      ],
+      "type": "object",
+      "title": "BusinessEntity"
+    },
     "CalendarAgentAccess": {
       "additionalProperties": false,
       "description": "How much agents may read of this person's personal entries (decision 60 rev):\n`off` (default) nothing · `busy` time blocks only · `full` titles, times and notes.",
@@ -1802,6 +1839,65 @@
             }
           ]
         },
+        "eligibility_by": {
+          "anyOf": [
+            {
+              "enum": [
+                "entity",
+                "server"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "eligibility_provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "eligibility_country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "eligibility_entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "source": {
           "default": "core",
           "enum": [
@@ -1825,6 +1921,11 @@
         "eligible",
         "eligibility_reason",
         "eligibility_source",
+        "eligibility_by",
+        "eligibility_provider",
+        "eligibility_country",
+        "eligibility_entity",
+        "entity_id",
         "source"
       ],
       "type": "object",
@@ -2515,6 +2616,39 @@
       "type": "object",
       "title": "EngineEvent"
     },
+    "EntityBusiness": {
+      "additionalProperties": false,
+      "properties": {
+        "org": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "org",
+        "name"
+      ],
+      "type": "object",
+      "title": "EntityBusiness"
+    },
+    "EntityList": {
+      "additionalProperties": false,
+      "properties": {
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/LegalEntity"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "entities"
+      ],
+      "type": "object",
+      "title": "EntityList"
+    },
     "ErrorBody": {
       "additionalProperties": false,
       "description": "Every error answer (`web_api/errors.py`). The web shows `code` in the person's language\n(`error.<code>`, `params` in its placeholders) — never `error`, which is for logs.",
@@ -2597,6 +2731,11 @@
         "company_field_too_long",
         "company_country_invalid",
         "company_control_corporation_only",
+        "entity_name_required",
+        "entity_registration_invalid",
+        "entity_unknown",
+        "entity_primary_locked",
+        "entity_in_use",
         "snapshot_invalid",
         "snapshot_keys_required",
         "snapshot_unavailable",
@@ -2723,6 +2862,140 @@
       },
       "type": "object",
       "title": "LedgerTotals"
+    },
+    "LegalEntity": {
+      "additionalProperties": false,
+      "description": "One of the customer's legal entities (법인, 2026-11-14) — `core.db` `entities`.",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "corporation",
+                "sole_proprietor",
+                "foreign"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "registration_no": {
+          "type": "string"
+        },
+        "registration_kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "business",
+                "corporate",
+                "uscc",
+                "foreign"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "representative": {
+          "type": "string"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "address": {
+          "type": "string"
+        },
+        "controlled_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "is_primary": {
+          "type": "boolean"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "created": {
+          "type": "number"
+        },
+        "updated": {
+          "type": "number"
+        },
+        "businesses": {
+          "items": {
+            "$ref": "#/$defs/EntityBusiness"
+          },
+          "type": "array"
+        },
+        "connections": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "removable": {
+          "type": "boolean"
+        },
+        "blocked_by": {
+          "anyOf": [
+            {
+              "enum": [
+                "primary",
+                "in_use"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "registration_no",
+        "registration_kind",
+        "representative",
+        "country",
+        "address",
+        "controlled_by",
+        "is_primary",
+        "complete",
+        "created",
+        "updated",
+        "businesses",
+        "connections",
+        "removable",
+        "blocked_by"
+      ],
+      "type": "object",
+      "title": "LegalEntity"
     },
     "Me": {
       "additionalProperties": false,

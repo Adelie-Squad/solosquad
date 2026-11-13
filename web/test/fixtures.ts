@@ -20,6 +20,7 @@ import type {
   OrgPerson,
   PnlData,
   Company,
+  LegalEntity,
   ServerFacts,
   PublicUser,
   ScheduleList,
@@ -68,6 +69,11 @@ export const connection = (over: Partial<ConnectionOut> = {}): ConnectionOut => 
   eligible: true,
   eligibility_reason: null,
   eligibility_source: null,
+  eligibility_by: null,
+  eligibility_provider: null,
+  eligibility_country: null,
+  eligibility_entity: null,
+  entity_id: 1,
   source: 'org',
   ...over,
 });
@@ -252,6 +258,44 @@ export const COMPANY: Company = {
   complete: true,
 };
 
+/** 여러 법인 (2026-11-14): the 대표 — the rev7 company — and, where a test wants it, a CN one. */
+export const entity = (over: Partial<LegalEntity> = {}): LegalEntity => ({
+  id: 1,
+  kind: 'corporation',
+  name: COMPANY.name,
+  registration_no: '1101111234569',
+  registration_kind: 'corporate',
+  representative: COMPANY.representative,
+  country: 'KR',
+  address: COMPANY.address,
+  controlled_by: null,
+  is_primary: true,
+  complete: true,
+  created: 1_700_000_000,
+  updated: 1_700_000_000,
+  businesses: [{ org: 'tesla', name: 'Tesla' }],
+  connections: ['tesla/claude-max'],
+  removable: false,
+  blocked_by: 'primary',
+  ...over,
+});
+
+export const CN_ENTITY = entity({
+  id: 2,
+  kind: 'foreign',
+  name: '青岛摩阿贸易有限公司',
+  registration_no: '91370200MA3C5XL01G',
+  registration_kind: 'uscc',
+  representative: '李明',
+  country: 'CN',
+  address: '山东省青岛市',
+  is_primary: false,
+  businesses: [],
+  connections: [],
+  removable: true,
+  blocked_by: null,
+});
+
 const SNAPSHOT: SnapshotSettings = { type: 'dir', endpoint: null, region: 'auto', bucket: null, prefix: 'solosquad', path: '/backups', keep_days: 30, has_secret: false };
 
 /** Every API a screen reads, keyed by the path after its scope. */
@@ -264,6 +308,8 @@ export function engineData(over: Record<string, unknown> = {}, who: 'owner' | 's
     '/access': ACCESS,
     '/server': SERVER_LOCAL,
     '/company': COMPANY,
+    '/entities': { entities: [entity()] },
+    '/entity': { entity_id: 1, explicit: false },
     '/snapshot': SNAPSHOT,
     '/users': USERS,
     '/teams': [],

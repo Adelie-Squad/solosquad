@@ -162,12 +162,16 @@ def test_entities_become_the_company_and_leave_the_connections(tmp_path: Path) -
     assert (company.kind, company.name, company.country, company.controlled_by) == (
         "corporation", "Moa Korea Co.", "KR", "CN",
     )  # fmt: skip
-    assert "entity" not in sol.connections_path.read_text(encoding="utf-8")
+    # 2026-11-14: every retired entity is kept; the connection holds the one it named
+    kept = [(e.id, e.name, e.country, e.is_primary) for e in core.entities()]
+    assert kept == [(1, "Moa Korea Co.", "KR", True), (2, "Moa Qingdao 3PL", "CN", False)]
+    text = sol.connections_path.read_text(encoding="utf-8")
+    assert "entity:" not in text and "entity_id: 1" in text
     assert not (sol.root / "core" / "profile.yaml").exists()
     server = Solution(sol.root).server_config()
     assert (server.cloud, server.region, server.agency_access) == ("ncp", "KR-2", "VPN")
     moved = [e for e in core.audit_log() if e["action"] == "profile.retire"]
-    assert moved and "Moa Qingdao 3PL" in moved[0]["detail"]  # the dropped one is on record
+    assert moved and "Moa Qingdao 3PL" in moved[0]["detail"]  # the added one is on record
     # a second start finds nothing to move and keeps what the owner entered since
     core.set_company(Company(kind="sole_proprietor", name="Moa", country="KR"))
     assert open_accounts(Solution(sol.root)).company().name == "Moa"

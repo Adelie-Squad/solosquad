@@ -23,7 +23,7 @@ from solosquad.harness.base import SpawnRequest
 from solosquad.harness.events import End, Start, TextDelta, ToolResult
 from solosquad.harness.guard_hook import MARKER
 from solosquad.layout import ExecutionPolicy
-from solosquad.routing.eligibility import Entity, judge
+from solosquad.routing.eligibility import Entity, Holders, judge
 from solosquad.runtime import RunManager, RunStatus
 from solosquad.runtime.store import RunStore
 from solosquad.web_api import totp
@@ -116,7 +116,7 @@ def test_eligibility_rules() -> None:
 
 def test_router_skips_an_ineligible_connection(tmp_path: Path) -> None:
     c = Company(tmp_path)
-    c.router.holder = Entity.model_validate(CN_CONTROLLED)  # the 회사, set by the engine
+    c.router.holders = Holders.single(Entity.model_validate(CN_CONTROLLED))  # set by the engine
     c.connections[0].provider = "anthropic"
     names = [conn.id for conn, _ in c.router.candidates("chief")]
     assert "max" not in names and "router" in names
@@ -223,14 +223,15 @@ async def test_connections_are_judged_on_the_company_and_the_server(office: Offi
         assert r.json()["code"] == "connection_ineligible_company"
         assert r.json()["params"] == {
             "provider": "anthropic", "country": "CN", "source": r.json()["params"]["source"],
+            "entity": "Moa Seoul",
         }  # fmt: skip
         # a per-connection entity is no longer read: sending one changes nothing
         r = await web.post("/api/connections", json={**conn, "entity": KR}, headers=h)
         assert r.json()["code"] == "connection_ineligible_company"
         kr = {**cn, "controlled_by": None}
         assert (await web.put("/api/company", json=kr, headers=h)).status_code == 200
-        assert office.company.router.holder is not None  # the routers follow the company
-        assert office.company.router.holder.control_country == "KR"
+        held = office.company.router.holders.entity(None)  # the routers follow the company
+        assert held is not None and held.control_country == "KR"
         good = {**conn, "secret": "sk-ant-1234567890abcd", "secret_env": "ANTHROPIC_API_KEY"}
         r = await web.post("/api/connections", json=good, headers=h)
         assert r.status_code == 201, r.text

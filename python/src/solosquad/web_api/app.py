@@ -81,6 +81,9 @@ from solosquad.calendars import (
 from solosquad.company_info import validate_company
 from solosquad.context.ledger import Ledger, month_start
 from solosquad.context.resolve import Resolver
+from solosquad.entities import LegalEntity, pin_unset, set_entities, validate_entity
+from solosquad.entities import holders as entity_holders
+from solosquad.entities import references as entity_references
 from solosquad.layout import LayoutError, ServerConfig, Solution, Workspace
 from solosquad.messages import Message as ChatMessage
 from solosquad.routing import budget_advice as advice
@@ -90,7 +93,7 @@ from solosquad.routing.connections import (
     load_connections,
     save_connections,
 )
-from solosquad.routing.eligibility import Entity, Verdict, judge, providers_reached
+from solosquad.routing.eligibility import Holders, Verdict, holder_missing, judge_use
 from solosquad.routing.router import Router as LlmRouter
 from solosquad.routing.router import allowed_by_workspace
 from solosquad.routing.router import eligible as route_eligible
@@ -173,6 +176,11 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "server.get": EVERYONE,
     "company.get": EVERYONE,
     "company.update": OWNER,
+    "entities.list": EVERYONE,
+    "entities.create": OWNER,
+    "entities.update": OWNER,
+    "entities.delete": OWNER,
+    "entities.primary": OWNER,
     "snapshot.get": EVERYONE,
     "snapshot.update": OWNER,
     "snapshot.run": OWNER,
@@ -187,6 +195,8 @@ ROUTE_ROLES: dict[str, frozenset[Role]] = {
     "connections.create": OWNER,
     "connections.update": OWNER,
     "connections.delete": OWNER,
+    "org_entity.get": EVERYONE,
+    "org_entity.update": OWNER,
     "workflows.list": EVERYONE,
     "workflows.update": OWNER,
     "approval_policy.get": EVERYONE,
@@ -1212,11 +1222,23 @@ def create_app(cfg: AppConfig) -> Starlette:
         need(request, "server.get")
         return respond(S.ServerFacts, server_cfg().facts().public())
 
-    def holder() -> Entity | None:
-        """The account holder every connection is judged on — the customer company."""
-        return accounts().company().holder()
+    def book() -> Holders:
+        """The customer's legal entities as the provider rules see them (2026-11-14)."""
+        return entity_holders(accounts().entities())
+
+    def org_entity(org: str) -> int | None:
+        try:
+            return cfg.solution.org(org).config().entity_id
+        except LayoutError:
+            return None
+
+    def refresh_entities() -> None:
+        """The routers follow every change of the entities and their assignment at once."""
+        routers = [rt.router for rt in cfg.runtimes.values()]
+        set_entities(routers, book(), cfg.solution)
 
     async def company(request: Request) -> Response:
+        """The rev7 single company — the 대표 법인 (`/api/entities` is the list)."""
         if request.method == "PUT":
             who = need(request, "company.update")
             data = await body(request)
@@ -1227,12 +1249,100 @@ def create_app(cfg: AppConfig) -> Starlette:
                 if getattr(updated, k) != getattr(before, k)
             )  # fmt: skip
             accounts().audit(who.user_id, "company.update", f"fields={changed}")
-            for rt in cfg.runtimes.values():
-                if rt.router is not None:
-                    rt.router.holder = updated.holder()
+            refresh_entities()
             return respond(S.Company, updated.public())
         need(request, "company.get")
         return respond(S.Company, accounts().company().public())
+
+    def entity_rows(request: Request) -> dict[str, Any]:
+        found = accounts().entities()
+        holders_now = entity_holders(found)
+        refs = entity_references(cfg.solution)
+        owner = principal(request).role == Role.OWNER
+        rows = []
+        for e in found:
+            orgs, conns = refs.using(holders_now, e.id)
+            blocked = "primary" if e.is_primary else ("in_use" if orgs or conns else None)
+            rows.append({
+                **e.public(),
+                # 팀원 see the entities, not which 사업 and connections use each one
+                "businesses": [{"org": o, "name": org_display(o)} for o in orgs] if owner else [],
+                "connections": conns if owner else [],
+                "removable": blocked is None,
+                "blocked_by": blocked,
+            })  # fmt: skip
+        return {"entities": rows}
+
+    def entity_or_404(eid: str) -> LegalEntity:
+        try:
+            return accounts().entity(int(eid))
+        except ValueError as e:
+            raise KeyError(f"no entity {eid}") from e
+
+    async def entities(request: Request) -> Response:
+        """설정, 회사 — the legal entities (법인). Everyone reads; the owner adds."""
+        if request.method == "POST":
+            who = need(request, "entities.create")
+            fields = validate_entity(await body(request))
+            created = accounts().add_entity(fields, who.user_id)
+            accounts().audit(
+                who.user_id, "entity.create", f"id={created.id} country={created.country}"
+            )
+            refresh_entities()
+            row = next(r for r in entity_rows(request)["entities"] if r["id"] == created.id)
+            return respond(S.LegalEntity, row, 201)
+        need(request, "entities.list")
+        return respond(S.EntityList, entity_rows(request))
+
+    async def entity_update(request: Request) -> Response:
+        who = need(request, "entities.delete" if request.method == "DELETE" else "entities.update")
+        current = entity_or_404(request.path_params["eid"])
+        if request.method == "DELETE":
+            if current.is_primary:
+                raise ApiError(
+                    409, E.ENTITY_PRIMARY_LOCKED, "make another entity 대표 before removing it"
+                )
+            orgs, conns = entity_references(cfg.solution).using(book(), current.id)
+            if orgs or conns:
+                raise ApiError(
+                    409,
+                    E.ENTITY_IN_USE,
+                    f"still used by businesses {orgs} and connections {conns}",
+                    businesses=", ".join(org_display(o) for o in orgs),
+                    connections=", ".join(conns),
+                    business_count=len(orgs),
+                    connection_count=len(conns),
+                )
+            accounts().remove_entity(current.id)
+            accounts().audit(who.user_id, "entity.delete", f"id={current.id}")
+            refresh_entities()
+            return respond(S.Ok, {"ok": True})
+        data = await body(request)
+        fields = validate_entity(data, base=current)
+        changed = sorted(k for k, v in fields.items() if getattr(current, k) != v)
+        accounts().edit_entity(current.id, fields, who.user_id)
+        accounts().audit(who.user_id, "entity.update", f"id={current.id} fields={changed}")
+        refresh_entities()
+        row = next(r for r in entity_rows(request)["entities"] if r["id"] == current.id)
+        return respond(S.LegalEntity, row)
+
+    async def entity_primary(request: Request) -> Response:
+        """Make an entity the 대표 법인. What followed the old 대표 is pinned to it first."""
+        who = need(request, "entities.primary")
+        target = entity_or_404(request.path_params["eid"])
+        old = accounts().primary_entity()
+        if old is not None and old.id != target.id:
+            pinned = pin_unset(cfg.solution, entity_references(cfg.solution), old.id)
+            accounts().make_primary(target.id)
+            accounts().audit(
+                who.user_id,
+                "entity.primary",
+                f"id={target.id} was={old.id} pinned={pinned}",
+            )
+            for org in cfg.solution.orgs():
+                refresh_routers(org.name)
+            refresh_entities()
+        return respond(S.EntityList, entity_rows(request))
 
     def snapshot_payload() -> dict[str, Any]:
         target = server_cfg().snapshot
@@ -1555,9 +1665,17 @@ def create_app(cfg: AppConfig) -> Starlette:
                 return rt.secrets.get(ref)
         return None
 
-    def conn_public(c: Connection, source: str, org: str) -> dict[str, Any]:
+    def conn_verdict(c: Connection, org: str, holders_now: Holders | None = None) -> Verdict:
+        """Decision 45 for this 사업: the connection's 보유 법인, the 사업's 소속 법인, the
+        server — the router's fourth filter, the same function."""
+        return route_eligible(c, server_country(), holders_now or book(), org_entity(org))
+
+    def conn_public(
+        c: Connection, source: str, org: str, holders_now: Holders | None = None
+    ) -> dict[str, Any]:
         secret = org_secret(org, c.secret_ref) if c.secret_ref else None
-        verdict = judge(c.provider, c.harness, c.models, holder(), server_country())
+        found = holders_now or book()
+        verdict = conn_verdict(c, org, found)
         return {
             "id": c.id,
             "kind": c.kind.value,
@@ -1572,6 +1690,11 @@ def create_app(cfg: AppConfig) -> Starlette:
             "eligible": verdict.ok,
             "eligibility_reason": verdict.reason or None,
             "eligibility_source": verdict.source or None,
+            "eligibility_by": verdict.by or None,
+            "eligibility_provider": verdict.provider or None,
+            "eligibility_country": verdict.country or None,
+            "eligibility_entity": verdict.entity or None,
+            "entity_id": found.resolve(c.entity_id),
             "source": source,
         }
 
@@ -1590,7 +1713,27 @@ def create_app(cfg: AppConfig) -> Starlette:
             provider=verdict.provider,
             country=verdict.country,
             source=verdict.source,
+            **({"entity": verdict.entity} if verdict.entity else {}),
         )
+
+    def entity_param(data: dict[str, Any]) -> int | None:
+        """The 보유 법인 / 소속 법인 a body names (null = the 대표 법인), checked."""
+        raw = data.get("entity_id")
+        if raw is None:
+            return None
+        if isinstance(raw, bool) or not isinstance(raw, int) or raw not in book().by_id:
+            raise ApiError(400, E.ENTITY_UNKNOWN, f"no entity {raw!r}", field="entity_id")
+        return raw
+
+    def check_use(c: Connection, org: str) -> None:
+        """C18 and decision 45 before a connection is saved active for this 사업."""
+        found = book()
+        owner, user = found.entity(c.entity_id), found.entity(org_entity(org))
+        if holder_missing(c.provider, c.harness, c.models, owner, user):
+            raise company_required()  # C18 — eligibility is judged on the entities
+        verdict = judge_use(c.provider, c.harness, c.models, owner, user, server_country())
+        if not verdict.ok:
+            raise ineligible(verdict)
 
     async def connections(request: Request) -> Response:
         sc = in_scope(request)
@@ -1613,13 +1756,9 @@ def create_app(cfg: AppConfig) -> Starlette:
                 base_url=data.get("base_url"),
                 secret_env=data.get("secret_env"),
                 monthly_budget_usd=data.get("monthly_budget_usd"),
+                entity_id=entity_param(data),
             )
-            company = holder()
-            if company is None and providers_reached(conn.provider, conn.harness, conn.models):
-                raise company_required()  # C18 — eligibility is judged on the company
-            verdict = judge(conn.provider, conn.harness, conn.models, company, server_country())
-            if not verdict.ok:
-                raise ineligible(verdict)
+            check_use(conn, sc.org)
             if data.get("secret"):
                 stores = [rt.secrets for rt in org_runtimes(sc.org) if rt.secrets is not None]
                 if not stores:
@@ -1634,8 +1773,28 @@ def create_app(cfg: AppConfig) -> Starlette:
             org_audit(sc, "connection.create", cid)
             return respond(S.ConnectionOut, conn_public(conn, "org", sc.org), 201)
         need(request, "connections.list")
+        found = book()
         return respond(
-            list[S.ConnectionOut], [conn_public(c, src, sc.org) for c, src in visible(request)]
+            list[S.ConnectionOut],
+            [conn_public(c, src, sc.org, found) for c, src in visible(request)],
+        )
+
+    async def business_entity(request: Request) -> Response:
+        """The 사업's 소속 법인 (`org.yaml entity_id`) — every workspace of it runs under it."""
+        sc = in_scope(request)
+        if request.method == "PUT":
+            need(request, "org_entity.update")
+            data = await body(request)
+            eid = entity_param(data)
+            before = org_entity(sc.org)
+            cfg.solution.org(sc.org).set_entity(eid)
+            org_audit(sc, "org.entity", f"{before} -> {eid}")
+            refresh_entities()
+        else:
+            need(request, "org_entity.get")
+        mine = org_entity(sc.org)
+        return respond(
+            S.BusinessEntity, {"entity_id": book().resolve(mine), "explicit": mine is not None}
         )
 
     async def connection_update(request: Request) -> Response:
@@ -1665,12 +1824,11 @@ def create_app(cfg: AppConfig) -> Starlette:
             update["active"] = bool(data["active"])
         if "monthly_budget_usd" in data:
             update["monthly_budget_usd"] = data["monthly_budget_usd"]
+        if "entity_id" in data:
+            update["entity_id"] = entity_param(data)
         changed = found.model_copy(update=update)
-        verdict = judge(
-            changed.provider, changed.harness, changed.models, holder(), server_country()
-        )
-        if changed.active and not verdict.ok:
-            raise ineligible(verdict)
+        if changed.active:
+            check_use(changed, sc.org)
         save_connections(path, [changed if c.id == cid else c for c in existing])
         refresh_routers(sc.org)
         org_audit(sc, "connection.update", f"{cid} {sorted(update)}")
@@ -1936,7 +2094,9 @@ def create_app(cfg: AppConfig) -> Starlette:
                 router is None
                 or (
                     allowed_by_workspace(c, router.workspace_policy)
-                    and route_eligible(c, router.server_country, router.holder).ok
+                    and route_eligible(
+                        c, router.server_country, router.holders, router.org_entity
+                    ).ok
                 )
             )
             lines.append(advice.Line(c.id, spent, cap, warning, usable))
@@ -2900,6 +3060,9 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/audit", audit, ["GET"]),
         ("/server", server_facts, ["GET"]),
         ("/company", company, ["GET", "PUT"]),
+        ("/entities", entities, ["GET", "POST"]),
+        ("/entities/{eid}", entity_update, ["PATCH", "DELETE"]),
+        ("/entities/{eid}/primary", entity_primary, ["POST"]),
         ("/snapshot", snapshot, ["GET", "PUT"]),
         ("/snapshot/run", snapshot_run, ["POST"]),
         ("/calendar/items", calendar_items, ["GET", "POST"]),
@@ -2926,6 +3089,7 @@ def create_app(cfg: AppConfig) -> Starlette:
         ("/screens/{name}", screen, ["GET"]),
         ("/connections", connections, ["GET", "POST"]),
         ("/connections/{cid}", connection_update, ["PATCH", "DELETE"]),
+        ("/entity", business_entity, ["GET", "PUT"]),
     ]
     workspace: Table = [
         ("/threads", threads, ["GET", "POST"]),

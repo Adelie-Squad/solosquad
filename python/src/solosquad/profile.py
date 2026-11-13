@@ -7,10 +7,11 @@ The profile's parts went to where they belong:
   `server.cloud` · `server.region` → `core/server.yaml` `cloud` · `region` (the builder's
   overrides of the detected facts, `server_facts`); `server.access` (how the agency reaches
   the cloud — a builder note, never shown to customers) → `core/server.yaml` `agency_access`.
-- `entities` (the account-holding legal entities) → the one **회사** in `core.db`
-  (`solosquad.company_info`): the entity the connections named, else the profile's first one,
-  becomes the company (법인) if no company was entered yet. The per-connection `entity`
-  is removed from the connection files — every connection is held by the company.
+- `entities` (the account-holding legal entities) → the legal entities in `core.db`
+  (`solosquad.entities`, 2026-11-14 — several are kept now) if none was entered yet: the
+  one the connections named first, else the profile's first, becomes the 대표 법인, every
+  other distinct name a further entity. A connection's `entity` becomes its `entity_id`
+  (보유 법인) — the entity's name and country leave the connection files.
 - `languages` and `privacy` are dropped: all three UI languages are always on, and the
   privacy regimes / reviewer were never read by the engine.
 
@@ -26,7 +27,7 @@ from typing import Any
 import yaml
 
 from solosquad.assets.text import load_yaml
-from solosquad.company_info import from_entity
+from solosquad.company_info import Company, from_entity
 from solosquad.layout import Solution
 
 
@@ -63,19 +64,45 @@ def legacy_entities(sol: Solution) -> list[dict[str, Any]]:
     return found
 
 
+def legacy_fields(company: Company) -> dict[str, Any]:
+    """A retired entity as the columns of a new core.db entity (no registration number)."""
+    foreign = bool(company.country) and company.country != "KR"
+    return {
+        "kind": "foreign" if foreign else company.kind, "name": company.name,
+        "registration_no": "", "registration_kind": None, "representative": "",
+        "country": company.country, "address": "", "controlled_by": company.controlled_by,
+    }  # fmt: skip
+
+
+def _lift_entity(conn: dict[str, Any], ids: dict[str, int]) -> dict[str, Any]:
+    """A connection without its retired `entity`, holding the core.db entity it named."""
+    out = {k: v for k, v in conn.items() if k != "entity"}
+    named = conn.get("entity")
+    name = str(named.get("name") or "").strip() if isinstance(named, dict) else ""
+    if name in ids and "entity_id" not in out:
+        out["entity_id"] = ids[name]
+    return out
+
+
 def lift_customer_profile(sol: Solution, store: Any) -> dict[str, Any]:
     """Move the profile and the connections' entities out (see the module doc). `store` =
     the `AccountStore` of `core.db`. → what was moved, for the audit."""
     done: dict[str, Any] = {}
+    ids: dict[str, int] = {}
+    """legacy entity name → the core.db entity it became (2026-11-14: every one is kept)."""
     if not store.has_company():
-        entities = legacy_entities(sol)
-        if entities:
-            company = from_entity(entities[0])
-            store.set_company(company)
-            done["company"] = company.name
-            names = {str(e.get("name") or "") for e in entities}
-            if len(names) > 1:
-                done["entities_dropped"] = sorted(names - {company.name})
+        for i, ent in enumerate(legacy_entities(sol)):
+            company = from_entity(ent)
+            if company.name in ids:
+                continue
+            if i == 0:
+                store.set_company(company)  # the first becomes the 대표 법인
+                primary = store.primary_entity()
+                ids[company.name] = primary.id
+                done["company"] = company.name
+            else:
+                ids[company.name] = store.add_entity(legacy_fields(company)).id
+                done.setdefault("entities", []).append(company.name)
     profile = profile_path(sol.root)
     raw = _raw(profile)
     found = raw.get("server")
@@ -95,10 +122,7 @@ def lift_customer_profile(sol: Solution, store: Any) -> dict[str, Any]:
         doc = _raw(path)
         conns = doc.get("connections") or []
         if any(isinstance(c, dict) and "entity" in c for c in conns):
-            doc["connections"] = [
-                {k: v for k, v in c.items() if k != "entity"} if isinstance(c, dict) else c
-                for c in conns
-            ]
+            doc["connections"] = [_lift_entity(c, ids) if isinstance(c, dict) else c for c in conns]
             _dump(path, doc)
             done.setdefault("connections", []).append(str(path.relative_to(sol.root)))
     if profile.is_file():

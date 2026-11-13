@@ -27,7 +27,7 @@ import { checkDialPhone, dialForCountry, dialMax, DIAL_CODES, DIAL_OTHER, format
 import { Modal } from '../components/Modal';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
-import { DigitsInput } from './DigitsInput';
+import { DigitsInput } from '../components/DigitsInput';
 import { SITE } from './messages/site';
 import { formToken, sendInquiry, siteConfig, type FieldError, type IssuedDemo } from './siteApi';
 

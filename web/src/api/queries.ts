@@ -26,7 +26,9 @@ import type {
   Upload,
   Health,
   Passkey,
+  BusinessEntity,
   Company,
+  EntityList,
   ServerFacts,
   SnapshotSettings,
   WorkflowList,
@@ -53,6 +55,8 @@ export const keys = {
   passkeys: ['passkeys'] as const,
   server: ['server'] as const,
   company: ['company'] as const,
+  /** 설정 · 회사 — the legal entities (여러 법인, 2026-11-14). */
+  entities: ['entities'] as const,
   snapshot: ['snapshot'] as const,
   /** 자리를 비운 동안 — the account's digest (`GET /api/me/digest`). */
   digest: ['digest'] as const,
@@ -72,6 +76,8 @@ export function scopedKeys(s: Pick<Scope, 'org' | 'ws'>) {
     people: [...o, 'people'] as const,
     approvalPolicy: [...o, 'approval-policy'] as const,
     connections: [...o, 'connections'] as const,
+    /** this 사업's 소속 법인 */
+    orgEntity: [...o, 'entity'] as const,
     orgWorkflows: [...o, 'workflows'] as const,
     screen: (name: string) => [...o, 'screen', name] as const,
     threads: [...w, 'threads'] as const,
@@ -224,6 +230,10 @@ export const useConnections = () => {
   const { k, a } = useOrg();
   return useQuery({ queryKey: k.connections, queryFn: () => a.get<ConnectionOut[]>('/connections') });
 };
+export const useBusinessEntity = () => {
+  const { k, a } = useOrg();
+  return useQuery({ queryKey: k.orgEntity, queryFn: () => a.get<BusinessEntity>('/entity') });
+};
 export const useScreen = (name: string) => {
   const { k, a } = useOrg();
   return useQuery({ queryKey: k.screen(name), queryFn: () => a.get<ScreenResponse>(`/screens/${name}`) });
@@ -243,6 +253,8 @@ export const useServerFacts = () =>
   useQuery({ queryKey: keys.server, queryFn: () => api.get<ServerFacts>('/server') });
 export const useCompany = () =>
   useQuery({ queryKey: keys.company, queryFn: () => api.get<Company>('/company') });
+export const useEntities = () =>
+  useQuery({ queryKey: keys.entities, queryFn: () => api.get<EntityList>('/entities') });
 export const useSnapshot = () =>
   useQuery({ queryKey: keys.snapshot, queryFn: () => api.get<SnapshotSettings>('/snapshot') });
 /** A mutation that refreshes the given queries when it succeeds. */

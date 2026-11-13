@@ -244,7 +244,8 @@ describe('the demo app', () => {
     app('/o/moa/settings/company');
     const area = await screen.findByTestId('view-only', {}, { timeout: 4000 });
     expect(within(area).getByText(t('demo.locked'))).toBeTruthy();
-    await waitFor(() => expect((within(area).getByDisplayValue('삼성전자') as HTMLInputElement).closest('fieldset.view-only-body')?.hasAttribute('disabled')).toBe(true));
+    // 여러 법인 (2026-11-14): the 회사 tab is the list of entities — the account's company is its one row
+    await waitFor(() => expect(within(area).getByText('삼성전자').closest('fieldset.view-only-body')?.hasAttribute('disabled')).toBe(true));
     expect(screen.getByTestId('demo-band').textContent).toContain(t('demo.chip'));
     expect(screen.getByTestId('role-tag').textContent).toBe(t('demo.chip'));
     expect(screen.getByTestId('demo-reset')).toBeTruthy();
@@ -277,7 +278,7 @@ describe('the demo app', () => {
   it('English: the account’s language when this device has not chosen one', async () => {
     stubSite({ demo_id: 'acmeDemo', company_name: 'Acme Ltd', locale: 'en', expires: '2026-11-27T00:00:00.000Z' });
     app('/o/moa/settings/company', 'en');
-    expect(await screen.findByDisplayValue('Acme Ltd', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Acme Ltd', {}, { timeout: 4000 })).toBeTruthy();
     expect(screen.getByTestId('demo-band').textContent).toContain(t('demo.chip', undefined, 'en'));
   });
 });
