@@ -179,8 +179,10 @@ PIECE_GRID = 0.0045             # finer surface-nets cell for the wing piece
 # stretched. Coloured like the wing it belongs to (white on the inner face, black outside).
 WELT = True
 WELT_K = 0.004                  # smooth-union radius of the band (m): band ~4-5 mm wide
-WELT_N, WELT_M = 160, 7
+WELT_N, WELT_M = 160, 11
 WELT_SKIRT = 0.0                # no tuck: a folded skirt shaded the band edges into a lip
+WELT_SMOOTH = 6                 # round 11b: smoothing passes of the band along the loop
+WELT_EDGE_MIN = 0.25            # round 11b: band width factor where it crosses the wing's white edge
 WELT_TRIM = 0.0001              # the band ends where it is this close to the body / the wing
 WELT_STATS = {}
 WELT_RAISE = tuple(range(-8, 121, 8))
@@ -1323,8 +1325,17 @@ def welt_profile(J, nb, nw, side, raise_deg, twist_deg, k=None):
     def fw(X):
         return f_wing(X @ Mi[:3, :3].T + Mi[:3, 3], side)
 
+    # round 11b: the band is thinner where the crease crosses the wing's own white edge (a full
+    # band there stood up into a white flap against the tightly curved rim)
+    Jr = J @ Mi[:3, :3].T + Mi[:3, 3]
+    und_J = np.abs(wing_under_piece(Jr, side))
+    kk = k * (WELT_EDGE_MIN + (1 - WELT_EDGE_MIN) * _smoothstep(0.002, 0.008, und_J))
+    n_ = len(J)
+
     def F(X):
-        return _smin(f_body(X), fw(X), k)
+        kx = kk if len(X) == n_ else np.repeat(kk, len(X) // n_)
+        return _smin(f_body(X), fw(X), kx)
+    k = kk
     # rays fanned from a point in the crease (outside both surfaces, like a rolling ball's centre)
     # from the body normal round to the wing normal, each bisected onto the smooth union: one hit
     # per ray, in order, so the profile cannot fold
@@ -1406,6 +1417,22 @@ def welt_profile(J, nb, nw, side, raise_deg, twist_deg, k=None):
         w = db / max(da + db, 1)
         out[i] = w * out[a_] + (1 - w) * out[b_]
     WELT_STATS['fallback'] = int((~good).sum())
+    # round 11b: smooth every row along the loop (an irregular profile where the paddle's rim
+    # curves tightly tore a notch into the band), then put the rows back on their surfaces: the
+    # edges on the body / the wing, the inside on the smooth union
+    exits = WELT_STATS.get('exits', np.ones(n, bool))
+    core = out[:, 1:-1].copy()
+    for _ in range(WELT_SMOOTH):
+        core[exits] = (0.5 * core + 0.25 * (np.roll(core, 1, 0) + np.roll(core, -1, 0)))[exits]
+    m_ = core.shape[1]
+    core[:, 0] = _project(f_body, core[:, 0], iters=6, max_step=0.002)
+    core[:, -1] = _project(fw, core[:, -1], iters=6, max_step=0.002)
+    if m_ > 2:
+        mid = core[:, 1:-1].reshape(-1, 3)
+        core[:, 1:-1] = _project(F, mid, iters=6, max_step=0.002).reshape(n, m_ - 2, 3)
+    out[:, 1:-1] = core
+    out[:, 0] = core[:, 0] - nb * WELT_SKIRT
+    out[:, -1] = core[:, -1] - nw * WELT_SKIRT
     return out
 
 
@@ -1435,12 +1462,19 @@ def build_welt(col, side, mat, name):
     if (fn.mean(0) @ (nb0[0] + nw0[0])) < 0:
         me.flip_normals()
     me.materials.append(mat)
-    # colour: like the wing at that point of its cross-section (inner face white, rim black)
-    _, ax = wing_frame(side)
-    piv, _ = wing_frame(side)
-    Wr = J0                               # rest-pose wing contact points
-    und = wing_under_piece(Wr, side)
-    sd = np.repeat(und, m)
+    # colour, per vertex (round 11b): the half of the band on the wing side of the crease takes the
+    # wing's own white field at that very point (so the white stops where the wing's white face
+    # stops, rim included); the half on the body side is body colour - no white beyond the crease
+    # (r11 coloured whole profiles by the wing at the crease: a white washer on the body when
+    # raised, a white sliver at the rim at rest)
+    # one smooth field: the wing's white field, capped by the signed distance from the crease
+    # (f_body - f_wing: > 0 on the wing side, 0 on the crease) - white ends on a clean line exactly
+    # at the crease, without a per-vertex step
+    # The wing's field is read at each band vertex's closest point ON the wing surface: off the
+    # surface the field is a little larger, which let white flakes show past the wing's own white
+    # edge at the rim.
+    Vw = _project(lambda X: f_wing(X, side), V.copy(), iters=8, max_step=0.004)
+    sd = np.minimum(wing_under_piece(Vw, side), f_body(V) - f_wing(V, side))
     attrs = {'seam_d': sd, 'line_d': np.ones(len(V)), 'stitch_on': np.zeros(len(V)),
              'seam_c': np.ones(len(V)), 'seam_sn': np.zeros(len(V)), 'seam_n': np.ones(len(V)),
              'feet': np.full(len(V), -1.0)}

@@ -41,9 +41,11 @@ QA gate (round 11; runs first and stops the render on any violation; off unless 
   --qa-edit KEYS      the regions this round is allowed to change (wing, face; default wing)
   --qa-min-clearance  metres, default 0.008
   --qa-max-outside    render_compare's leak limit outside the edit regions, default 0.002
+  --qa-max-white      white pixels allowed outside the wing's white face per junction box, default 4
 Steps: bake <out>/qa/round.blend (identity_v3_qa_blend.py), qa_render --quality final at 640 px,
 frames 0 (rest), 77 (wave peak), 168 (max raise) -> <out>/qa/views/; regions.json; render_compare
-each view against --qa-prev with the union of both rounds' edit boxes (+2 %); clearance_check
+each view against --qa-prev with the union of both rounds' edit boxes (+2 %); white check
+(identity_v3_qa_blend.py --white-check: welt on / off in the junction boxes); clearance_check
 over every clip (hop, wave, walk, seated, seated at the desk, max raise; subframes 2): wing tips
 vs head, body, face pieces, feet, the other wing and the desk set. Report: <out>/qa/gate.md.
 """
@@ -87,6 +89,7 @@ QA_PREV = arg('--qa-prev')
 QA_EDIT = arg('--qa-edit', 'wing').split(',')
 QA_MIN_CLEARANCE = float(arg('--qa-min-clearance', '0.008'))
 QA_MAX_OUTSIDE = float(arg('--qa-max-outside', '0.002'))
+QA_MAX_WHITE = int(arg('--qa-max-white', '4'))
 
 SCALE, TARGET_Z = 0.98, 0.40          # one framing for the whole turnaround
 M_SCALE, M_TARGET_Z = 1.16, 0.47       # motion framing (room for the hop and the raised wing)
@@ -614,6 +617,15 @@ def qa_gate():
             if not ok:
                 fails.append(f'render_compare {view}')
         lines.append('')
+    # round 11b: no white outside the wing's white face in the junction boxes (welt on / off)
+    p_ = run([B, '-b', blend, '-P', os.path.join(here, 'identity_v3_qa_blend.py'), '--', '--scripts', here,
+              '--white-check', os.path.join(qa, 'white.json'), '--frames', '0,77,168'], 'white check')
+    wmax = next((int(ln.split()[1]) for ln in p_.stdout.splitlines() if ln.startswith('WHITE_MAX')), -1)
+    ok = 0 <= wmax <= QA_MAX_WHITE
+    lines += ['## white outside the wing\'s white face (junction box, welt on vs off, '
+              f'max {QA_MAX_WHITE} px)', '', f'- worst view: {wmax} px - {"PASS" if ok else "FAIL"}', '']
+    if not ok:
+        fails.append('white outside the wing')
     # clearance over every clip
     moving = 'penguin_v3:wing_tip_L,penguin_v3:wing_tip_R'
     against = ('penguin_v3:head,penguin_v3:body,penguin_v3:face,penguin_v3:feet,'

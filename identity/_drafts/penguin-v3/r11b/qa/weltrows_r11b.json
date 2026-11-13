@@ -1,0 +1,86 @@
+{
+ "root (u 0.02)": {
+  "width_mm": 113.9156242104946,
+  "thickness_mm": 40.832015686100945
+ },
+ "mid (u 0.12)": {
+  "width_mm": 106.4804504712811,
+  "thickness_mm": 41.03623004739348
+ },
+ "root/mid width": 1.0698266555626457,
+ "root/mid thickness": 0.995023559399665,
+ "welt": {
+  "raise 0 twist 0": {
+   "corner_fill_mm": 1.1640727761837995,
+   "edge_gap_body_mm": 6.158268339717665e-14,
+   "edge_gap_wing_mm": 1.755814244993278e-14,
+   "band_median_mm": 3.953730425712261,
+   "band_min_mm": 0.6501643382269247,
+   "band_max_mm": 4.4572859372676845,
+   "standoff_max_mm": 0.9981090313355293,
+   "edge_angle_body_max_deg": 85.3422952992397,
+   "edge_angle_wing_max_deg": 78.79290960600467,
+   "turn_across_max_deg": 154.64296342847797
+  },
+  "raise 40 twist 0": {
+   "corner_fill_mm": 1.0787777102691192,
+   "edge_gap_body_mm": 6.513344551206668e-14,
+   "edge_gap_wing_mm": 7.804632431388557e-14,
+   "band_median_mm": 4.211025383667616,
+   "band_min_mm": 0.7214844893817383,
+   "band_max_mm": 4.714605485962697,
+   "standoff_max_mm": 0.996833552289723,
+   "edge_angle_body_max_deg": 86.46733207698563,
+   "edge_angle_wing_max_deg": 81.82971340312274,
+   "turn_across_max_deg": 67.35490680796985
+  },
+  "raise 80 twist -12": {
+   "corner_fill_mm": 1.0894020302562657,
+   "edge_gap_body_mm": 5.482674860987635e-14,
+   "edge_gap_wing_mm": 4.851632897558536e-14,
+   "band_median_mm": 4.058416169908414,
+   "band_min_mm": 0.8570476044988476,
+   "band_max_mm": 4.984704826552137,
+   "standoff_max_mm": 0.9988315056612157,
+   "edge_angle_body_max_deg": 87.4721251073611,
+   "edge_angle_wing_max_deg": 85.7386626936251,
+   "turn_across_max_deg": 61.795480560723774
+  },
+  "raise 100 twist 0": {
+   "corner_fill_mm": 1.0759341492438337,
+   "edge_gap_body_mm": 5.735429492448318e-14,
+   "edge_gap_wing_mm": 8.391422539933396e-14,
+   "band_median_mm": 3.629984100874221,
+   "band_min_mm": 0.9018998561156412,
+   "band_max_mm": 4.337788779476107,
+   "standoff_max_mm": 0.9983141704960063,
+   "edge_angle_body_max_deg": 89.11408832608011,
+   "edge_angle_wing_max_deg": 84.57921164251913,
+   "turn_across_max_deg": 65.00056045162141
+  },
+  "raise 112 twist -15": {
+   "corner_fill_mm": 1.1194266856444905,
+   "edge_gap_body_mm": 4.198572912950116e-14,
+   "edge_gap_wing_mm": 6.50577846222127e-14,
+   "band_median_mm": 3.188860709720763,
+   "band_min_mm": 0.8992342234620612,
+   "band_max_mm": 4.6260270041566205,
+   "standoff_max_mm": 0.9982218195522009,
+   "edge_angle_body_max_deg": 89.48858372394373,
+   "edge_angle_wing_max_deg": 84.72954590174248,
+   "turn_across_max_deg": 67.55070494242945
+  },
+  "raise -8 twist 0": {
+   "corner_fill_mm": 1.2013332112469302,
+   "edge_gap_body_mm": 5.510457541657576e-14,
+   "edge_gap_wing_mm": 3.76692639083379e-14,
+   "band_median_mm": 3.7480386157584475,
+   "band_min_mm": 0.6566471212340657,
+   "band_max_mm": 4.975128733246386,
+   "standoff_max_mm": 0.9996153252666967,
+   "edge_angle_body_max_deg": 86.77314201010178,
+   "edge_angle_wing_max_deg": 85.0694728553437,
+   "turn_across_max_deg": 175.5936465787156
+  }
+ }
+}

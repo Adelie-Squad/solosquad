@@ -28,6 +28,12 @@ Edit-region boxes for render_compare, from a saved QA .blend:
 
 writes, per QA camera and frame, image-fraction boxes (top-left origin) of `wing` (the wings,
 their welts and the skin within 9 cm of each shoulder pivot) and `face` (eyes, cheeks, beak).
+
+No white outside the wing's white face (round 11b), from a saved QA .blend with regions.json
+beside the output:
+
+    $B -b rounds/r11.blend -P assets/office/scripts/identity_v3_qa_blend.py -- \
+        --white-check renders/r11/white.json --frames 0,77,168
 """
 import math
 import os
@@ -86,8 +92,72 @@ def regions(out, frames):
     print('wrote', out)
 
 
+def white_check(out, frames, cams=('QA_front', 'QA_3q', 'QA_back'), res=2560, dil=3):
+    """Round 11b: no white outside the wing's own white face. Each view's junction box (the 'wing'
+    region of regions.json) is rendered at `res` (border crop, ~0.5 mm per pixel on the body) with
+    and without the welts; a pixel fails when it is white with them and nothing within `dil` px was
+    white without them. White = luminance > 0.72 on the penguin (alpha > 0.5: transparent film, so
+    the light backdrop never counts). Writes {view: failing pixels}; prints WHITE_MAX."""
+    import json
+    sc = bpy.context.scene
+    sc.render.resolution_x = sc.render.resolution_y = res
+    sc.render.resolution_percentage = 100
+    sc.render.film_transparent = True
+    sc.render.image_settings.color_mode = 'RGBA'
+    sc.render.use_border = True
+    sc.render.use_crop_to_border = True
+    sc.cycles.samples = 16
+    welts = [o for o in bpy.data.objects if 'welt_side' in o]
+    boxes = json.load(open(os.path.join(os.path.dirname(os.path.abspath(out)), 'regions.json')))
+    tmp = os.path.join(os.path.dirname(os.path.abspath(out)), 'white_tmp.png')
+
+    def shot():
+        sc.render.filepath = tmp
+        bpy.ops.render.render(write_still=True)
+        im = bpy.data.images.load(tmp, check_existing=False)
+        w, h = im.size
+        px = np.empty(w * h * 4, np.float32)
+        im.pixels.foreach_get(px)
+        bpy.data.images.remove(im)
+        img = px.reshape(h, w, 4)
+        lum = img[..., :3] @ np.array([0.2126, 0.7152, 0.0722])
+        return (lum > 0.72) & (img[..., 3] > 0.5)
+    result = {}
+    for f in frames:
+        sc.frame_set(f)
+        for cname in cams:
+            key = f'{cname}_f{f:04d}'
+            if key not in boxes or 'wing' not in boxes[key]:
+                continue
+            x0, y0, x1, y1 = boxes[key]['wing']
+            sc.render.border_min_x, sc.render.border_max_x = max(x0 - 0.01, 0), min(x1 + 0.01, 1)
+            sc.render.border_min_y, sc.render.border_max_y = max(1 - y1 - 0.01, 0), min(1 - y0 + 0.01, 1)
+            sc.camera = bpy.data.objects[cname]
+            for w in welts:
+                w.hide_render = True
+            base = shot()
+            for w in welts:
+                w.hide_render = False
+            withw = shot()
+            grow = base.copy()
+            for _ in range(dil):
+                g = grow.copy()
+                g[1:] |= grow[:-1]
+                g[:-1] |= grow[1:]
+                g[:, 1:] |= grow[:, :-1]
+                g[:, :-1] |= grow[:, 1:]
+                grow = g
+            result[key] = int((withw & ~grow).sum())
+    json.dump(result, open(out, 'w'), indent=1)
+    print('WHITE_MAX', max(result.values()) if result else 0)
+    return result
+
+
 if '--regions' in argv:
     regions(a('--regions'), [int(x) for x in a('--frames', '0,77,168').split(',')])
+    sys.exit(0)
+if '--white-check' in argv:
+    white_check(a('--white-check'), [int(x) for x in a('--frames', '0,77,168').split(',')])
     sys.exit(0)
 SD = os.path.abspath(a('--scripts', os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.abspath(a('--out', 'qa.blend'))

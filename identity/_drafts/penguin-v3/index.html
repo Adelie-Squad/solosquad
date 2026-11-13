@@ -74,12 +74,48 @@
   <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
   <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
   <nav>
-    <a href="#r11">11차 수정</a><a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#r11b">11차 보완</a><a href="#r11">11차 수정</a><a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
     <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
   </nav>
 </header>
 
-<section id="r11">
+<section id="r11b">
+  <span class="badge">11차 보완 · 2026-11-14</span>
+  <h2>11차 보완 — 띠가 따로 보이지 않게: 색은 날개의 흰 면 그대로, 가장자리는 면 위에</h2>
+  <div class="card">
+    <ul>
+      <li><b>흰 와셔(들기 · 손 흔들기):</b> 띠 색을 단면 둘레마다 하나로(크리스 위치의 날개 색) 칠해서, 몸 쪽 절반도 흰색이었다. 이제 꼭짓점마다 칠한다. 날개 쪽은 날개 면 위 가장 가까운 점의 흰 영역 값, 몸 쪽은 몸 색이다. 흰색은 날개와 몸이 만나는 선에서 정확히 끝난다.</li>
+      <li><b>흰 조각(쉬는 자세 아래에서):</b> 날개 색을 띠 위의 점(면에서 0.1–1 mm 떨어짐)에서 읽어 흰 영역이 테두리 밖으로 조금 넓었다. 날개 면 위 점에서 읽도록 고쳤다. 또 띠가 날개의 흰 가장자리를 지나는 곳은 띠를 가늘게(25 %) 했고, 단면 둘레를 따라 고르게 다듬었다(뒤틀린 단면이 흰 날개 끝에 홈을 냈다).</li>
+      <li><b>띠 가장자리:</b> 몸 · 날개 면 위에 정확히 놓인다(11차는 0.1–0.65 mm 떠서 입술처럼 보였다).</li>
+    </ul>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11b/junction-r11-r11b.webp" alt="접합부 11차와 11차 보완" width="1076" height="2672"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>11차</span><span>11차 보완</span></div>
+    <figcaption>위부터 발 접합부(기준) · 쉬는 자세 아래에서 · 3/4 · 100° 들기 · 손 흔들기 최고점.</figcaption>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11b/junction-zoom-r11-r11b.webp" alt="접합부 확대 11차와 11차 보완" width="996" height="1488"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>11차</span><span>11차 보완</span></div>
+    <figcaption>확대(4.5 cm): 들기 · 손 흔들기 · 쉬는 자세 아래에서.</figcaption>
+  </div>
+  <div class="card" style="margin-top:16px">
+  <table>
+    <thead><tr><th>기준</th><th>11차</th><th>11차 보완</th></tr></thead>
+    <tbody>
+      <tr><td><b>새</b> 날개 흰 면 밖의 흰 픽셀 (접합부 상자, 띠 있음 / 없음 비교, 정면 · 3/4 · 뒤 × 3 자세, 기준 ≤ 4 px)</td><td class="n">최대 541 px</td><td class="n"><b>0 px</b> (모든 뷰)</td></tr>
+      <tr><td><b>새</b> 띠가 뿌리 윤곽 밖으로 떠 있음 (가장자리 단차, 기준 ≤ 0.5 mm)</td><td class="n">최대 0.65 mm</td><td class="n"><b>0.00 mm</b></td></tr>
+      <tr><td>띠 폭 (6 자세 중앙)</td><td class="n">4.1–4.7 mm</td><td class="n">3.2–4.2 mm (흰 가장자리를 지나는 곳 0.7 mm 까지 가늘게)</td></tr>
+      <tr><td>render_compare 11 → 11차 보완 (바꾼 영역: 날개 + 접합부)</td><td class="n">—</td><td class="n"><b>15 / 15 통과, 밖 0.0 %</b></td></tr>
+      <tr><td>clearance_check (모든 동작 · 반 프레임 · 책상)</td><td class="n">14.4 mm</td><td class="n"><b>14.4 mm</b>, 교차 0</td></tr>
+      <tr><td>그 밖의 기준 (면 각도 · 흰 경계 · 피부 · 비틀기)</td><td class="n">—</td><td class="n">11차와 같음</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="src" style="margin-top:8px">흰 픽셀 검사는 이번에 렌더 게이트에 넣었다(<code>--qa-max-white</code>). 처음 640 px 전신 뷰로 재었을 때는 11차의 와셔(약 2 px)도 통과해서, 접합부 상자만 4 배 해상도로 렌더하고 배경은 투명도로 가르도록 바꿨다. 이 검사로 11차를 다시 재면 541 px 로 걸린다.</p>
+</section>
+
+<section id="r11" style="margin-top:56px">
   <span class="badge">11차 수정 · 2026-11-14</span>
   <h2>11차 수정 — 날개는 9차로, 몸과는 발처럼 단면을 따라 좁은 띠로</h2>
   <p class="lead">"펭귄 날개는 지금 어이가 없는 상태임. 니가 봐도 이상한데 왜 만들고 보고하는거지? 만들기 전에 스케치같은 거라도 해서 이렇게 하는게 맞는지 판단하고 고쳐야하는거 아니야? 일단 날개는 9차로 되돌려서 다시 시작하는데, 접합 부분이 몸통이랑 발이 붙은 부분처럼 아주 좁게 띠처럼 붙는데, 날개의 단면을 따라서." · "렌더 스크립트에 붙여둬"</p>
