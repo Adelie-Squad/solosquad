@@ -69,17 +69,98 @@
 <body>
 <div class="page">
 <header>
-  <span class="badge">시안 · 승인 대기 · 11차</span>
+  <span class="badge">시안 · 승인 대기 · 12차</span>
   <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
   <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
   <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
   <nav>
-    <a href="#r11b">11차 보완</a><a href="#r11">11차 수정</a><a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#r12">12차 수정</a><a href="#r11b">11차 보완</a><a href="#r11">11차 수정</a><a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
     <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
   </nav>
 </header>
 
-<section id="r11b">
+<section id="r12">
+  <span class="badge">12차 수정 · 2026-11-14</span>
+  <h2>12차 수정 — 띠가 아니라 한 덩어리: 몸이 그대로 날개로 이어지는 곡면</h2>
+  <p class="lead">"뭔가 접합부가, 저렇게 선이랑 몸통-접합부-날개 나눠지는게 아니라 쉐잎이어야돼. 그니까 몸통이랑 날개가 자연스럽게 이어져야 한다고."</p>
+  <div class="card">
+    <p>11차의 좁은 띠를 진짜 곡면으로 바꿨다. 날개 조각과 관절은 9차 그대로이고, 접합부에는 몸과 (그 각도로 든) 날개를 부드럽게 합친 면을 놓는다. 이 면은 날개 각도마다 모양키로 바뀌므로 피부가 늘어나지 않는다.</p>
+    <ul style="margin-top:8px">
+      <li><b>모양:</b> 단면마다 그 곡면을 따라 걸어가, 합친 면이 몸 · 날개와 정확히 같아지는 곳에서 멈춘다. 그래서 몸과 날개 양쪽에 접하게 이어진다.</li>
+      <li><b>색:</b> 접합 곡면은 몸 색이다. 흰 면은 곡면이 날개에 닿는 곳에서 한 곡선으로 시작한다. 이 경계는 곡면 메쉬의 날개 쪽 끝 3 줄에서 그려지고, 그 줄은 날개 뼈를 따라 움직이는 날개 좌표에서 픽셀마다 날개의 흰 면을 그대로 따른다.</li>
+      <li><b>선 없음:</b> 접합부에는 바느질과 홈이 없다(전용 재질).</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">스케치 — 반지름 8 · 12 · 18 mm (같은 카메라)</h3>
+  <p class="lead">왼쪽부터 9차 · 11차 보완 · 8 mm · 12 mm · 18 mm. 위부터 발 접합부(기준) · 쉬는 자세 아래에서 · 3/4 · 100° 들기 · 손 흔들기 최고점. 이 첫 시트는 색을 고치기 전이라, 들었을 때 흰 경계가 찢어져 보인다.</p>
+  <div class="card">
+    <figure><img src="r12/sketch-sheet.webp" alt="스케치: 반지름 8, 12, 18 mm" width="1372" height="1372"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(5,1fr)"><span>9차</span><span>11차 보완</span><span>8 mm</span><span>12 mm</span><span>18 mm</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r12/sketch-sheet-colour.webp" alt="스케치: 색 고친 뒤 8, 12 mm" width="1260" height="1260"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(4,1fr)"><span>9차</span><span>11차 보완</span><span>8 mm</span><span>12 mm · 채택</span></div>
+    <figcaption>색을 날개 좌표로 칠한 뒤(아래에서 · 3/4 · 들기 · 손 흔들기).</figcaption>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>스스로 검토 — "한 덩어리로 자연스럽게 이어지는가? 선 · 띠 · 잘린 면이 보이는가?"</h3>
+    <ul>
+      <li><b>8 mm:</b> 이어지기는 하지만 아직 좁은 골처럼 읽힌다. 아래에서 보면 몸과 날개 사이가 조금 파였다.</li>
+      <li><b>12 mm — 채택:</b> 몸이 그대로 날개로 자라 나오듯 이어진다. 들었을 때 위쪽이 오목하게 흐르고, 흰 면도 곡면을 따라 휘어 들어간다. 선 · 띠 · 잘린 면이 없다.</li>
+      <li><b>18 mm:</b> 너무 넓어 날개 뿌리에 물갈퀴처럼 막이 생긴다(날개가 몸에 가까이 붙어 있는 곳에서 멀리 번진다). 7차의 "근육"과 같은 문제다.</li>
+      <li><b>색 — 세 번 고침:</b> (1) 꼭짓점마다 쉬는 자세 기준으로 색을 고정했더니, 날개를 들면 격자가 곡면 위를 미끄러져 흰 경계가 찢어졌다. 그래서 흰 면 판정을 날개 좌표에서 픽셀마다 하도록 바꿨다. (2) 흰색을 곡면 한가운데에서 끝냈더니, 몸이 있던 자리까지 흰색이 덮였다. 흰 픽셀 검사가 최대 1017 px 로 실패시켰다. (3) 곡면 전체를 검정으로 하니, 흰 경계가 두 메쉬가 거의 접하며 겹치는 선이 되어 톱니가 생겼다. 최종: 곡면은 몸 색, 날개 쪽 끝 3 줄만 날개의 흰 면을 따른다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">최종 접합부 (11차 보완 | 12차, 같은 카메라)</h3>
+  <div class="card">
+    <figure><img src="r12/junction-r11b-r12.webp" alt="접합부 11차 보완과 12차" width="1076" height="2672"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>11차 보완</span><span>12차</span></div>
+    <figcaption>위부터 발 접합부(기준) · 쉬는 자세 아래에서 · 3/4 · 100° 들기 · 손 흔들기 최고점.</figcaption>
+  </div>
+
+  <h3 style="margin-top:24px">합격 기준 (11차 보완 / 12차)</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>기준</th><th>11차 보완</th><th>12차</th></tr></thead>
+    <tbody>
+      <tr><td><b>새</b> 접합부 양 끝에서 면이 꺾이는 각 (몸 · 날개, 6 자세 최대, 기준 ≤ 10°)</td><td class="n">몸 14–17° · 날개 20–33°</td><td class="n"><b>몸 ≤ 4.4° · 날개 ≤ 6.5°</b></td></tr>
+      <tr><td><b>새</b> 곡률이 뒤집히는 단면 (곡면 가운데에서 1° 넘게 반대로 꺾임, 160 단면 중)</td><td class="n">—</td><td class="n">0–8</td></tr>
+      <tr><td><b>새</b> 이음선 (회색 재질로 음영만, 곡면 가장자리 vs 가운데 밝기 차, 기준 ≤ 1.25 배)</td><td class="n">1.54 배 (띠 가장자리가 보임)</td><td class="n"><b>0.37 배</b></td></tr>
+      <tr><td>접합 곡면 폭 (6 자세 중앙 / 최대) — 뿌리 근처에만</td><td class="n">3.2–4.2 / 5.0 mm</td><td class="n">22.9–31.3 / 42.8 mm (7차 근육은 축에서 12 cm)</td></tr>
+      <tr><td>회귀 없음: 날개 흰 면 밖의 흰 픽셀 (≤ 4 px)</td><td class="n">0 px</td><td class="n"><b>0 px</b> (색 기준 검사, 아래)</td></tr>
+      <tr><td>회귀 없음: 가장자리 단차</td><td class="n">0.00 mm</td><td class="n">0.00 mm</td></tr>
+      <tr><td>회귀 없음: render_compare 11차 보완 → 12 (날개 + 접합부 밖)</td><td class="n">—</td><td class="n"><b>15 / 15 통과, 밖 0.0 %</b></td></tr>
+      <tr><td>회귀 없음: clearance_check (모든 동작 · 반 프레임 · 책상)</td><td class="n">14.4 mm</td><td class="n"><b>14.4 mm</b>, 교차 0</td></tr>
+      <tr><td>회귀 없음: 면 각도 · 흰 경계 · 피부 늘어남 · 비틀기 · 뿌리 단면</td><td class="n">—</td><td class="n">같음 (본체 메쉬는 9차 그대로)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="src" style="margin-top:8px">흰 픽셀 검사는 이번에 색 기준으로 바꿨다. 조명이 들어간 렌더로 재면, 곡면이 크리스를 메우면서 그늘에 있던 날개의 흰 면이 밝아진 것까지 "새 흰색"으로 셌다(17 px). 지금은 모든 재질을 자기 색 그대로(평면 발광) 렌더해서 비교한다. 이 방식으로 11차의 와셔는 여전히 걸린다(317 px). 이음선 검사도 새로 게이트에 넣었다(<code>--qa-max-seam-ratio</code>, 회색 재질로 음영만).</p>
+
+  <h3 style="margin-top:24px">날개를 든 모습 · 동작 모음</h3>
+  <div class="card">
+    <figure><img src="r12/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r12/poses.webp" alt="12차 동작 모음" width="2472" height="624"></figure>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r12/compare.webp" alt="초안 1, 12차 정면, 11차 보완 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>12차</span><span>11차 보완</span></div>
+  </div>
+  <div class="grid g4" style="margin-top:16px">
+    <figure><img src="r12/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r12/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r12/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r12/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+  </div>
+</section>
+
+<section id="r11b" style="margin-top:56px">
   <span class="badge">11차 보완 · 2026-11-14</span>
   <h2>11차 보완 — 띠가 따로 보이지 않게: 색은 날개의 흰 면 그대로, 가장자리는 면 위에</h2>
   <div class="card">

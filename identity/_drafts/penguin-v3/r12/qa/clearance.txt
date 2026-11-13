@@ -1,0 +1,7 @@
+clip	min clearance (mm)	frame	nearest	max twist (deg)	max forward travel (mm)
+hop	13.4	6	body	5.9	0.0
+wave	13.2	24	head	10.1	0.0
+walk	24.9	8	head	2.4	0.0
+seated	27.8	0	body	0.5	0.0
+seated-desk	27.8	0	body	0.5	0.0
+raise-max	22.0	0	body	7.4	0.0

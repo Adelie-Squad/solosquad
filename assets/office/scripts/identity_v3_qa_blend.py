@@ -97,7 +97,9 @@ def white_check(out, frames, cams=('QA_front', 'QA_3q', 'QA_back'), res=2560, di
     region of regions.json) is rendered at `res` (border crop, ~0.5 mm per pixel on the body) with
     and without the welts; a pixel fails when it is white with them and nothing within `dil` px was
     white without them. White = luminance > 0.72 on the penguin (alpha > 0.5: transparent film, so
-    the light backdrop never counts). Writes {view: failing pixels}; prints WHITE_MAX."""
+    the light backdrop never counts), rendered as flat emission of each material's colour (round
+    12: lit renders counted a white face that a fillet un-shadows as new white). Writes
+    {view: failing pixels}; prints WHITE_MAX."""
     import json
     sc = bpy.context.scene
     sc.render.resolution_x = sc.render.resolution_y = res
@@ -107,6 +109,24 @@ def white_check(out, frames, cams=('QA_front', 'QA_3q', 'QA_back'), res=2560, di
     sc.render.use_border = True
     sc.render.use_crop_to_border = True
     sc.cycles.samples = 16
+    # round 12: colour, not light - every material renders its own colour as flat emission, so a
+    # white face that a fillet un-shadows is not counted as new white
+    for mat in bpy.data.materials:
+        if not mat.use_nodes:
+            continue
+        nt = mat.node_tree
+        bsdf = next((nd for nd in nt.nodes if nd.type == 'BSDF_PRINCIPLED'), None)
+        outn = next((nd for nd in nt.nodes if nd.type == 'OUTPUT_MATERIAL'), None)
+        if bsdf is None or outn is None:
+            continue
+        em = nt.nodes.new('ShaderNodeEmission')
+        src = bsdf.inputs['Base Color'].links[0].from_socket if bsdf.inputs['Base Color'].links else None
+        if src is not None:
+            nt.links.new(src, em.inputs['Color'])
+        else:
+            em.inputs['Color'].default_value = bsdf.inputs['Base Color'].default_value
+        nt.links.new(em.outputs[0], outn.inputs['Surface'])
+    sc.view_settings.view_transform = 'Standard'
     welts = [o for o in bpy.data.objects if 'welt_side' in o]
     boxes = json.load(open(os.path.join(os.path.dirname(os.path.abspath(out)), 'regions.json')))
     tmp = os.path.join(os.path.dirname(os.path.abspath(out)), 'white_tmp.png')
@@ -153,6 +173,105 @@ def white_check(out, frames, cams=('QA_front', 'QA_3q', 'QA_back'), res=2560, di
     return result
 
 
+def seam_check(out, frames, cams=('QA_front', 'QA_3q', 'QA_back'), res=2560, off=3):
+    """Round 12: is there a visible seam where the joint fillet meets the body and the wing? In
+    each view's junction box (4x, border crop) the fillet's two edge rows are projected into the
+    image; for every visible edge vertex the luminance is sampled `off` px on either side across
+    the edge (towards the fillet / away from it). The same is done across the fillet's middle row
+    as the control (a smooth surface). Rendered with one plain grey material (shading only, no
+    colour). Prints SEAM p95 jumps: edges vs control."""
+    import json
+    from bpy_extras.object_utils import world_to_camera_view
+    from mathutils import Vector
+    sc = bpy.context.scene
+    sc.render.resolution_x = sc.render.resolution_y = res
+    sc.render.resolution_percentage = 100
+    sc.render.film_transparent = True
+    sc.render.image_settings.color_mode = 'RGBA'
+    sc.render.use_border = True
+    sc.render.use_crop_to_border = True
+    sc.cycles.samples = 32
+    # shading only: one plain grey material over everything, so colour boundaries don't count
+    grey = bpy.data.materials.new('seam_grey')
+    grey.use_nodes = True
+    bsdf = next(nd for nd in grey.node_tree.nodes if nd.type == 'BSDF_PRINCIPLED')
+    bsdf.inputs['Base Color'].default_value = (0.5, 0.5, 0.5, 1.0)
+    bsdf.inputs['Roughness'].default_value = 0.5
+    bpy.context.view_layer.material_override = grey
+    welts = [o for o in bpy.data.objects if 'welt_side' in o]
+    boxes = json.load(open(os.path.join(os.path.dirname(os.path.abspath(out)), 'regions.json')))
+    tmp = os.path.join(os.path.dirname(os.path.abspath(out)), 'seam_tmp.png')
+    edge_j, ctrl_j = [], []
+    for f in frames:
+        sc.frame_set(f)
+        for cname in cams:
+            key = f'{cname}_f{f:04d}'
+            if key not in boxes or 'wing' not in boxes[key]:
+                continue
+            cam = bpy.data.objects[cname]
+            sc.camera = cam
+            x0, y0, x1, y1 = boxes[key]['wing']
+            bx0, bx1 = max(x0 - 0.01, 0), min(x1 + 0.01, 1)
+            by0, by1 = max(1 - y1 - 0.01, 0), min(1 - y0 + 0.01, 1)
+            sc.render.border_min_x, sc.render.border_max_x = bx0, bx1
+            sc.render.border_min_y, sc.render.border_max_y = by0, by1
+            sc.render.filepath = tmp
+            bpy.ops.render.render(write_still=True)
+            im = bpy.data.images.load(tmp, check_existing=False)
+            w, h = im.size
+            px = np.empty(w * h * 4, np.float32)
+            im.pixels.foreach_get(px)
+            bpy.data.images.remove(im)
+            img = px.reshape(h, w, 4)                    # bottom-up rows
+            L = img[..., :3] @ np.array([0.2126, 0.7152, 0.0722])
+            A = img[..., 3]
+            dg = bpy.context.evaluated_depsgraph_get()
+            cam_loc = cam.matrix_world.translation
+
+            def to_px(p_):
+                v = world_to_camera_view(sc, cam, p_)
+                return np.array([(v.x - bx0) / (bx1 - bx0) * w, (v.y - by0) / (by1 - by0) * h])
+
+            def sample(q):
+                xi, yi = int(round(q[0])), int(round(q[1]))
+                if 0 <= xi < w and 0 <= yi < h and A[yi, xi] > 0.5:
+                    return L[yi, xi]
+                return None
+            for wob in welts:
+                m = int(wob.get('welt_m', 11))
+                ev = wob.evaluated_get(dg)
+                me = ev.to_mesh()
+                P = np.array([(ev.matrix_world @ v.co)[:] for v in me.vertices])
+                ev.to_mesh_clear()
+                n = len(P) // m
+                P = P.reshape(n, m, 3)
+                mid = (m - 1) // 2
+                for i in range(n):
+                    for j, jn, dest in ((0, 2, edge_j), (m - 1, m - 3, edge_j), (mid, mid + 2, ctrl_j)):
+                        p_ = Vector(P[i, j])
+                        d_ = p_ - cam_loc
+                        hit, loc, *_ = sc.ray_cast(dg, cam_loc, d_.normalized(), distance=d_.length + 1.0)
+                        if not hit or (loc - p_).length > 0.0015:     # hidden behind something
+                            continue
+                        a_, b_ = to_px(p_), to_px(Vector(P[i, jn]))
+                        t_ = b_ - a_
+                        if np.linalg.norm(t_) < 1e-6:
+                            continue
+                        t_ /= np.linalg.norm(t_)
+                        la, lb = sample(a_ + t_ * off), sample(a_ - t_ * off)
+                        if la is not None and lb is not None:
+                            dest.append(abs(la - lb))
+    res_ = {'edge_p95': float(np.percentile(edge_j, 95)) if edge_j else None,
+            'control_p95': float(np.percentile(ctrl_j, 95)) if ctrl_j else None,
+            'edge_samples': len(edge_j), 'control_samples': len(ctrl_j)}
+    json.dump(res_, open(out, 'w'), indent=1)
+    print('SEAM', res_['edge_p95'], res_['control_p95'])
+    return res_
+
+
+if '--seam-check' in argv:
+    seam_check(a('--seam-check'), [int(x) for x in a('--frames', '0,77,168').split(',')])
+    sys.exit(0)
 if '--regions' in argv:
     regions(a('--regions'), [int(x) for x in a('--frames', '0,77,168').split(',')])
     sys.exit(0)

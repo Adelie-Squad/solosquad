@@ -178,12 +178,17 @@ PIECE_GRID = 0.0045             # finer surface-nets cell for the wing piece
 # (WELT_TWIST), driven by the wing bone (update_welt); it rides on the body bone, so no skin is
 # stretched. Coloured like the wing it belongs to (white on the inner face, black outside).
 WELT = True
-WELT_K = 0.004                  # smooth-union radius of the band (m): band ~4-5 mm wide
-WELT_N, WELT_M = 160, 11
+# Round 12: not a band but the shape itself - a true smooth-union fillet (radius WELT_K) from the
+# body into the wing, tangent at both edges (WELT_M points across, packed towards the edges,
+# trimmed WELT_TRIM from the surfaces), no groove or stitch (its own material, v3.leather.joint)
+WELT_K = 0.012                  # smooth-union radius of the joint fillet (m); sketched 8 / 12 / 18, 12 chosen
+WELT_N, WELT_M = 160, 21
 WELT_SKIRT = 0.0                # no tuck: a folded skirt shaded the band edges into a lip
 WELT_SMOOTH = 6                 # round 11b: smoothing passes of the band along the loop
-WELT_EDGE_MIN = 0.25            # round 11b: band width factor where it crosses the wing's white edge
-WELT_TRIM = 0.0001              # the band ends where it is this close to the body / the wing
+WELT_EDGE_MIN = 1.0             # round 11b thinned the band at the wing's white edge (0.25); a
+                                # full fillet must not pinch there (round 12)
+WELT_WHITE_ROWS = 3             # round 12: fillet rows next to the wing that carry its white face
+WELT_TRIM = 0.00005             # the fillet ends where it is this close to the body / the wing
 WELT_STATS = {}
 WELT_RAISE = tuple(range(-8, 121, 8))
 WELT_TWIST = (-15, 0, 15)
@@ -1109,7 +1114,7 @@ class _NT:
 
 
 def leather_material(name, base_key, inset, region=False, piping=0.0, thread=None,
-                     rough=0.46, groove=1.0, spec=0.32, thread_gloss=0.30):
+                     rough=0.46, groove=1.0, spec=0.32, thread_gloss=0.30, frame_obj=None):
     """region=True: the body skin (black, with the white front / wing underside where seam_d > 0
     and black feet where feet > 0). Otherwise a flat applique colour."""
     mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
@@ -1161,6 +1166,17 @@ def leather_material(name, base_key, inset, region=False, piping=0.0, thread=Non
 
     if region:
         white = T.math('GREATER_THAN', d, 0.0)
+        if frame_obj is not None:
+            # round 12, the joint fillet: white only on its wing half (seam_d > 0) AND inside the
+            # wing's white face, tested per pixel in the posed wing's own frame (an empty that
+            # rides on the wing bone): -w - WING_RIM > 0, the same plane as the wing's white edge
+            tc = T.node('ShaderNodeTexCoord')
+            tc.object = frame_obj
+            sep = T.node('ShaderNodeSeparateXYZ')
+            T.link(tc.outputs['Object'], sep.inputs[0])
+            face = T.math('GREATER_THAN', T.math('SUBTRACT', T.math('MULTIPLY', sep.outputs['Z'], -1.0),
+                                                 WING_RIM), 0.0)
+            white = T.math('MULTIPLY', white, face)
         feet = T.math('GREATER_THAN', T.attr('feet'), 0.0)
         rgb = T.node('ShaderNodeRGB')
         rgb.name = 'body_color'          # identity_v3_renders swaps it for the evening body tone
@@ -1336,86 +1352,86 @@ def welt_profile(J, nb, nw, side, raise_deg, twist_deg, k=None):
         kx = kk if len(X) == n_ else np.repeat(kk, len(X) // n_)
         return _smin(f_body(X), fw(X), kx)
     k = kk
-    # rays fanned from a point in the crease (outside both surfaces, like a rolling ball's centre)
-    # from the body normal round to the wing normal, each bisected onto the smooth union: one hit
-    # per ray, in order, so the profile cannot fold
+    # round 12: walk the smooth-union curve in the cross-section plane at each crease point, from
+    # the bisector out to both sides, and stop exactly where the blend ends (f_wing - f_body >= k on
+    # the body side, f_body - f_wing >= k on the wing side): beyond that the smooth union IS the
+    # body / the wing, so the fillet leaves each surface tangentially (curvature-continuous smin)
     c = np.clip((nb * nw).sum(1), -0.95, 0.999)
+    n = len(J)
     bis = nb + nw
     bis /= np.maximum(np.linalg.norm(bis, axis=1, keepdims=True), 1e-9)
-    # walk out along the crease bisector to just past the fillet surface (F > 0), then 0.5 k more
-    lo_d, hi_d = np.zeros(len(J)), 3 * k * np.sqrt(2 / (1 + c))
-    for _ in range(26):
+    lo_d, hi_d = np.zeros(n), 3 * kk * np.sqrt(2 / (1 + c)) + 0.01
+    for _ in range(30):
         mid = 0.5 * (lo_d + hi_d)
         inside = F(J + bis * mid[:, None]) < 0
         lo_d = np.where(inside, mid, lo_d)
         hi_d = np.where(inside, hi_d, mid)
-    C0 = J + bis * (hi_d + 0.5 * k)[:, None]
-    ang = np.arccos(c)
-    S = 61
-    n = len(J)
-    ts = np.linspace(-0.35, 1.35, S)
-    P = np.zeros((n, S, 3))
-    reach = hi_d + 0.5 * k + 6 * k
-    ok = np.ones((n, S), bool)
-    start_out = F(C0) > 0
-    for si, t in enumerate(ts):
-        sa = np.maximum(np.sin(ang), 1e-6)
-        d = (np.sin((1 - t) * ang) / sa)[:, None] * nb + (np.sin(t * ang) / sa)[:, None] * nw
-        d = -d / np.linalg.norm(d, axis=1, keepdims=True)
-        lo, hi = np.zeros(n), reach.copy()
-        ok[:, si] = start_out & (F(C0 + d * hi[:, None]) < 0)     # the ray does hit the surface
-        for _ in range(28):
-            mid = 0.5 * (lo + hi)
-            inside = F(C0 + d * mid[:, None]) < 0
-            hi = np.where(inside, mid, hi)
-            lo = np.where(inside, lo, mid)
-        P[:, si] = C0 + d * (0.5 * (lo + hi))[:, None]
-    h = np.minimum(f_body(P.reshape(-1, 3)), fw(P.reshape(-1, 3))).reshape(n, S)
+    p0 = J + bis * (0.5 * (lo_d + hi_d))[:, None]
+    e = np.cross(nb, nw)
+    e /= np.maximum(np.linalg.norm(e, axis=1, keepdims=True), 1e-9)
+    tb = nw - c[:, None] * nb                 # along the body, away from the wing
+    tb /= np.maximum(np.linalg.norm(tb, axis=1, keepdims=True), 1e-9)
+    tw = nb - c[:, None] * nw                 # along the wing, away from the body
+    tw /= np.maximum(np.linalg.norm(tw, axis=1, keepdims=True), 1e-9)
+
+    def gplane(X):
+        g = _grad(F, X)
+        g -= (g * e).sum(1, keepdims=True) * e
+        return g
+
+    def correct(X):
+        for _ in range(3):
+            g = gplane(X)
+            X = X - (F(X) / np.maximum((g * g).sum(1), 1e-12))[:, None] * g
+        return X
+    h = kk / 12
+    sides = []
+    for start_dir, done_fn in ((tb, lambda X: fw(X) - f_body(X) >= kk),
+                               (tw, lambda X: f_body(X) - fw(X) >= kk)):
+        X = p0.copy()
+        pts = [X.copy()]
+        active = np.ones(n, bool)
+        prev = start_dir.copy()
+        for _ in range(160):
+            g = gplane(X)
+            t = np.cross(e, g)
+            t /= np.maximum(np.linalg.norm(t, axis=1, keepdims=True), 1e-12)
+            t *= np.where((t * prev).sum(1) < 0, -1.0, 1.0)[:, None]      # keep walking the same way
+            prev = t
+            Xn = correct(X + h[:, None] * t)
+            X = np.where(active[:, None], Xn, X)
+            pts.append(X.copy())
+            active &= ~done_fn(X)
+            if not active.any():
+                break
+        sides.append(np.stack(pts, 1))           # (n, steps, 3) from p0 outwards
+    body_side, wing_side = sides
     out = np.zeros((n, WELT_M + 2, 3))
-    good = np.zeros(n, bool)
+    good = np.ones(n, bool)
     exits = WELT_STATS.get('exits', np.ones(n, bool))
     for i in range(n):
-        if not exits[i]:                      # buried: a collapsed band inside the body
+        if not exits[i]:
             out[i] = J[i]
-            good[i] = True
             continue
-        keep = ok[i] & (h[i] > WELT_TRIM)
-        if keep.sum() < 3:
-            # the surfaces meet almost flush here (the fillet is under 0.1 mm): a near-zero band
-            # lying on them round the crease line
-            keep = ok[i] & (np.linalg.norm(P[i] - J[i], axis=1) < 0.002)
-        idx = np.nonzero(keep)[0]
-        if len(idx) < 3:
-            continue
-        # the contiguous run round the middle of the fan
-        mid = idx[np.argmin(np.abs(idx - S // 2))]
-        lo_, hi_ = mid, mid
-        while lo_ - 1 >= 0 and keep[lo_ - 1]:
-            lo_ -= 1
-        while hi_ + 1 < S and keep[hi_ + 1]:
-            hi_ += 1
-        if hi_ - lo_ < 2:
-            continue
-        lo_, hi_ = max(lo_ - 1, 0), min(hi_ + 1, S - 1)
-        seg = P[i, lo_:hi_ + 1]
-        dd = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(seg, axis=0), axis=1))])
-        tt = np.linspace(0, dd[-1], WELT_M)
-        res = np.stack([np.interp(tt, dd, seg[:, j]) for j in range(3)], 1)
+
+        def cut(arr, done):
+            # keep up to the first point where the blend has ended
+            k_ = np.nonzero(done)[0]
+            return arr[:k_[0] + 1] if len(k_) else arr
+        bs = cut(body_side[i], fw(body_side[i]) - f_body(body_side[i]) >= kk[i])
+        ws = cut(wing_side[i], f_body(wing_side[i]) - fw(wing_side[i]) >= kk[i])
+        # each half resampled on its own, so the fillet's midline (the walk's start, on the
+        # crease bisector) is the same row in every profile and every pose - the colour line
+        def resample(seg_, m_):
+            dd = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(seg_, axis=0), axis=1))])
+            lin = np.linspace(0, 1, m_)
+            tt = dd[-1] * (0.6 * lin + 0.4 * lin * lin)          # a little denser near the midline
+            return np.stack([np.interp(tt, dd, seg_[:, j]) for j in range(3)], 1)
+        half = (WELT_M + 1) // 2
+        res = np.concatenate([resample(bs, half)[::-1], resample(ws, half)[1:]])
         out[i, 1:-1] = res
         out[i, 0] = res[0] - nb[i] * WELT_SKIRT
         out[i, -1] = res[-1] - nw[i] * WELT_SKIRT
-        good[i] = True
-    # a profile the fan could not resolve: blend its nearest good neighbours round the loop
-    gi = np.nonzero(good)[0]
-    for i in np.nonzero(~good)[0]:
-        if not len(gi):
-            break
-        dist = (gi - i) % n
-        a_ = gi[np.argmin(dist)]
-        b_ = gi[np.argmin((i - gi) % n)]
-        da, db = (a_ - i) % n, (i - b_) % n
-        w = db / max(da + db, 1)
-        out[i] = w * out[a_] + (1 - w) * out[b_]
     WELT_STATS['fallback'] = int((~good).sum())
     # round 11b: smooth every row along the loop (an irregular profile where the paddle's rim
     # curves tightly tore a notch into the band), then put the rows back on their surfaces: the
@@ -1467,14 +1483,13 @@ def build_welt(col, side, mat, name):
     # stops, rim included); the half on the body side is body colour - no white beyond the crease
     # (r11 coloured whole profiles by the wing at the crease: a white washer on the body when
     # raised, a white sliver at the rim at rest)
-    # one smooth field: the wing's white field, capped by the signed distance from the crease
-    # (f_body - f_wing: > 0 on the wing side, 0 on the crease) - white ends on a clean line exactly
-    # at the crease, without a per-vertex step
-    # The wing's field is read at each band vertex's closest point ON the wing surface: off the
-    # surface the field is a little larger, which let white flakes show past the wing's own white
-    # edge at the rim.
-    Vw = _project(lambda X: f_wing(X, side), V.copy(), iters=8, max_step=0.004)
-    sd = np.minimum(wing_under_piece(Vw, side), f_body(V) - f_wing(V, side))
+    # the fillet is body colour, except its last WELT_WHITE_ROWS rows next to the wing, which take
+    # the wing's white face (the shader tests it in the posed wing's own frame): the white edge is a
+    # clean row line of the fillet itself. (White ending in the fillet's middle put white where the
+    # body had been - white check up to 1017 px; an all-black fillet left the edge to the
+    # near-tangent overlap of two meshes - a sawtooth.)
+    rows = np.arange(m)
+    sd = np.repeat(np.where(rows >= m - WELT_WHITE_ROWS, 0.02, -0.02)[None, :], n, 0).ravel()
     attrs = {'seam_d': sd, 'line_d': np.ones(len(V)), 'stitch_on': np.zeros(len(V)),
              'seam_c': np.ones(len(V)), 'seam_sn': np.zeros(len(V)), 'seam_n': np.ones(len(V)),
              'feet': np.full(len(V), -1.0)}
@@ -1494,6 +1509,7 @@ def build_welt(col, side, mat, name):
     vg = ob.vertex_groups.new(name='body')
     vg.add(list(range(len(V))), 1.0, 'REPLACE')
     ob['welt_side'] = side
+    ob['welt_m'] = m
     return ob
 
 
@@ -1616,8 +1632,19 @@ def build(col, name='penguin_v3'):
     ob['tri_count'] = int(sum(len(f) - 2 for f in Fall))
     ob['tri_body'] = int(2 * len(Fq) + sum(2 * nf for _, _, _, nf in wing_parts))
     if WING_PIECE and WELT:
+        # the joint: body leather without the seam groove / stitch (no line across the joint)
         for side in 'LR':
-            w = build_welt(col, side, me.materials[0], f'{name}_welt.{side}')
+            piv, ax = wing_frame(side)
+            fr = bpy.data.objects.new(f'{name}_wingframe.{side}', None)
+            col.objects.link(fr)
+            Mf = np.eye(4)
+            Mf[:3, 0], Mf[:3, 1], Mf[:3, 2], Mf[:3, 3] = ax[0], ax[1], ax[2], piv
+            fr.matrix_world = Matrix(Mf.tolist())
+            fr['wing_frame_side'] = side
+            fr['frame_of'] = ob.name
+            joint_mat = leather_material(f'v3.leather.joint.{side}', 'body', inset=-1.0, region=True,
+                                         rough=0.50, spec=0.22, groove=0.0, frame_obj=fr)
+            w = build_welt(col, side, joint_mat, f'{name}_welt.{side}')
             w['welt_of'] = ob.name
             ob['tri_count'] = int(ob['tri_count']) + 2 * len(w.data.polygons)
     return ob
@@ -1670,6 +1697,13 @@ def rig(col, mesh, name='penguin_v3_rig'):
         w.parent = ob
         wm = w.modifiers.new('rig', 'ARMATURE')
         wm.object = ob
+    for fr in [o for o in bpy.data.objects if o.get('frame_of') == mesh.name]:
+        Mw = fr.matrix_world.copy()
+        fr.parent = ob
+        fr.parent_type = 'BONE'
+        fr.parent_bone = 'wing.' + fr['wing_frame_side']
+        bpy.context.view_layer.update()
+        fr.matrix_world = Mw
     for pb in ob.pose.bones:
         pb.rotation_mode = 'QUATERNION'
     return ob

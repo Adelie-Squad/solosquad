@@ -42,6 +42,8 @@ QA gate (round 11; runs first and stops the render on any violation; off unless 
   --qa-min-clearance  metres, default 0.008
   --qa-max-outside    render_compare's leak limit outside the edit regions, default 0.002
   --qa-max-white      white pixels allowed outside the wing's white face per junction box, default 4
+  --qa-max-seam-ratio luminance jump across the joint fillet's edges / across its middle (p95,
+                      shading only, junction box at 4x), default 1.25
 Steps: bake <out>/qa/round.blend (identity_v3_qa_blend.py), qa_render --quality final at 640 px,
 frames 0 (rest), 77 (wave peak), 168 (max raise) -> <out>/qa/views/; regions.json; render_compare
 each view against --qa-prev with the union of both rounds' edit boxes (+2 %); white check
@@ -90,6 +92,7 @@ QA_EDIT = arg('--qa-edit', 'wing').split(',')
 QA_MIN_CLEARANCE = float(arg('--qa-min-clearance', '0.008'))
 QA_MAX_OUTSIDE = float(arg('--qa-max-outside', '0.002'))
 QA_MAX_WHITE = int(arg('--qa-max-white', '4'))
+QA_MAX_SEAM_RATIO = float(arg('--qa-max-seam-ratio', '1.25'))
 
 SCALE, TARGET_Z = 0.98, 0.40          # one framing for the whole turnaround
 M_SCALE, M_TARGET_Z = 1.16, 0.47       # motion framing (room for the hop and the raised wing)
@@ -149,7 +152,10 @@ def theme(name):
         fill.location = (0, -0.8, 0.6)
     fill.rotation_euler = (Vector((0, 0, 0.4)) - fill.location).to_track_quat('-Z', 'Y').to_euler()
     body = lib.EVENING['penguin.body'] if name == 'evening' else lib.PALETTE['penguin.body']
-    bpy.data.materials['v3.leather'].node_tree.nodes['body_color'].outputs[0].default_value = lib.hex_rgba(body)
+    for mn in ('v3.leather', 'v3.leather.joint.L', 'v3.leather.joint.R'):
+        m_ = bpy.data.materials.get(mn)
+        if m_ is not None:
+            m_.node_tree.nodes['body_color'].outputs[0].default_value = lib.hex_rgba(body)
 
 
 def aim(cam, azim, elev, scale, target_z):
@@ -626,6 +632,19 @@ def qa_gate():
               f'max {QA_MAX_WHITE} px)', '', f'- worst view: {wmax} px - {"PASS" if ok else "FAIL"}', '']
     if not ok:
         fails.append('white outside the wing')
+    # round 12: no visible seam where the joint fillet meets the body / the wing (shading only)
+    p_ = run([B, '-b', blend, '-P', os.path.join(here, 'identity_v3_qa_blend.py'), '--', '--scripts', here,
+              '--seam-check', os.path.join(qa, 'seam.json'), '--frames', '0,77,168'], 'seam check')
+    sv = next((ln.split()[1:3] for ln in p_.stdout.splitlines() if ln.startswith('SEAM')), None)
+    if sv and sv[0] != 'None' and sv[1] != 'None':
+        ratio = float(sv[0]) / max(float(sv[1]), 1e-6)
+        ok = ratio <= QA_MAX_SEAM_RATIO
+        lines += ['## seam at the joint (shading only: luminance jump across the fillet edges vs '
+                  f'across its middle, p95; max ratio {QA_MAX_SEAM_RATIO})', '',
+                  f'- edges {float(sv[0]):.3f} / middle {float(sv[1]):.3f} = {ratio:.2f} - '
+                  f'{"PASS" if ok else "FAIL"}', '']
+        if not ok:
+            fails.append('seam at the joint')
     # clearance over every clip
     moving = 'penguin_v3:wing_tip_L,penguin_v3:wing_tip_R'
     against = ('penguin_v3:head,penguin_v3:body,penguin_v3:face,penguin_v3:feet,'
