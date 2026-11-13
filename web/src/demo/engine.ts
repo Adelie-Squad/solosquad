@@ -137,7 +137,21 @@ interface WfThread {
   status: string;
   interrupts: Interrupt[];
   agents: string[];
+  /** started by the visitor (not the history seeded before they came) — its end is a usage event */
+  live?: boolean;
+  /** an approval in this run was declined */
+  declined?: boolean;
+  /** its `workflow_done` went out (once per run) */
+  reported?: boolean;
 }
+
+/** The workflow's short name in the usage events (`workflow_started:<id>` · `workflow_done:<id>:<outcome>`)
+ * — the marketing Worker allows only these (marketing/src/demo.ts `workflowDetailOk`). */
+export const WORKFLOW_EVENT_ID: Record<string, 'finance' | 'sourcing' | 'sns'> = {
+  'finance-monthly': 'finance',
+  'product-sourcing': 'sourcing',
+  'sns-marketing': 'sns',
+};
 
 interface ChatThread extends Thread {
   messages: ChatMessage[];
@@ -457,6 +471,9 @@ export class DemoEngine {
     if (!wf) return null;
     const at = this.now();
     const th = this.newWfThread(wf, at);
+    th.live = true;
+    const id = WORKFLOW_EVENT_ID[wf.name];
+    if (id) this.onAction(`workflow_started:${id}`);
     const run = this.newWfRun(th, 'input', { workflow: wf.name, inputs: {} }, at, 'web');
     run.status = 'pending';
     run.started = null;
@@ -530,6 +547,12 @@ export class DemoEngine {
   }
 
   private finish(th: WfThread, run: Run): void {
+    // the KPI's "ran a workflow to the end" (2026-11-14): once per run the visitor started
+    const id = WORKFLOW_EVENT_ID[th.workflow];
+    if (th.live && !th.reported && id) {
+      th.reported = true;
+      this.onAction(`workflow_done:${id}:${th.declined ? 'declined' : 'approved'}`);
+    }
     th.status = 'done';
     th.interrupts = [];
     th.updated = this.now();
@@ -547,6 +570,7 @@ export class DemoEngine {
     if (!th || !wf || !waiting || waiting.status !== 'interrupted') return null;
     const st = wf.steps[th.step];
     const decision = value === 'declined' ? 'declined' : 'approved';
+    if (decision === 'declined') th.declined = true;
     const run = this.newWfRun(th, 'resume', decision, this.now(), 'web');
     waiting.status = 'superseded';
     waiting.superseded_by = run.id;

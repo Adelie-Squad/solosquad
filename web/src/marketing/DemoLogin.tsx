@@ -3,21 +3,23 @@
 // number says which company), the ID (the request's email — or an internal ID) and the password —
 // posted to this site's Worker (`POST /api/demo/login`, marketing/src/demo.ts), so it works without
 // JavaScript. Success → the demo itself at /demo/app; any failure comes back as `?error=1`, one
-// sentence for every kind. The number field takes digits only and shows hyphens by length (10 →
-// 3-2-5, 13 → 6-7); the Worker compares digits. `?u=` fills the ID (the login router sends the
-// code `demo` here); the request modal's completion screen fills the number and the ID (router
+// sentence for every kind. A country select comes first (2026-11-14 — 한국 by default): for 한국 the
+// number field takes digits only and shows hyphens by length (10 → 3-2-5, 13 → 6-7); for 중국 it
+// takes the 统一社会信用代码's letters too (upper-cased), for 기타 letters and digits. The Worker
+// compares the normalised codes. `?u=` fills the ID (the login router sends the
+// code `demo` here); the request modal's completion screen fills the country, the number and the ID (router
 // state, else sessionStorage — never the password, never in the address). The request line opens
 // the request modal (source demo_login, 데모 계정 pre-checked).
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { formatByLength, MAX_DIGITS } from '../../../marketing/scripts/lib/company-no.mjs';
+import { codeOf, digitsOf, formatByLength, formatCompanyNo, kindForCountry, MAX_DIGITS, maxDigits } from '../../../marketing/scripts/lib/company-no.mjs';
 import { Mascot } from '../characters/PenguinIcon';
 import { LocalePicker } from '../components/LocalePicker';
-import { useI18n } from '../i18n';
+import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { DigitsInput } from './DigitsInput';
 import { SiteFooter } from './SiteFooter';
-import { DEMO_PREFILL_KEY, useInquiry, type DemoPrefill } from './Inquiry';
+import { companyNoLabel, DEMO_PREFILL_KEY, useInquiry, type DemoPrefill } from './Inquiry';
 
 export const DEMO_LOGIN_ACTION = '/api/demo/login';
 const MAX_ID = 254;
@@ -32,19 +34,34 @@ function takePrefill(state: unknown): Partial<DemoPrefill> {
     saved = null;
   }
   const from = (state && typeof state === 'object' ? state : saved) as Partial<DemoPrefill> | null;
+  const country = isCountry(from?.country) ? from.country : undefined;
   return {
     id: typeof from?.id === 'string' ? from.id.slice(0, MAX_ID) : undefined,
-    company_no: typeof from?.company_no === 'string' ? from.company_no.replace(/\D/g, '').slice(0, MAX_DIGITS) : undefined,
+    company_no: typeof from?.company_no === 'string' ? (country && country !== 'kr' ? codeOf(from.company_no) : digitsOf(from.company_no)).slice(0, MAX_DIGITS) : undefined,
+    country,
   };
 }
+
+const COUNTRIES = ['kr', 'cn', 'other'] as const;
+type Country = (typeof COUNTRIES)[number];
+const isCountry = (c: unknown): c is Country => typeof c === 'string' && (COUNTRIES as readonly string[]).includes(c);
+const COUNTRY_NAME: Record<Country, MessageKey> = { kr: 'landing.contact.country.kr', cn: 'landing.contact.country.cn', other: 'landing.contact.country.other' };
+const LOGIN_HINT: Record<Country, MessageKey> = { kr: 'demo.login.companyNoHint', cn: 'demo.login.companyNoHint.cn', other: 'demo.login.companyNoHint.other' };
 
 function DemoLoginForm({ prefill }: { prefill: Partial<DemoPrefill> }) {
   const { t } = useI18n();
   const openInquiry = useInquiry();
   const [params] = useSearchParams();
   const failed = params.get('error') === '1';
+  const [country, setCountry] = useState<Country>(isCountry(prefill.country) ? prefill.country : 'kr');
   const [number, setNumber] = useState(prefill.company_no ?? '');
   const id = prefill.id ?? (params.get('u') ?? '').slice(0, MAX_ID);
+  // a Korean field keeps the digits only
+  const pickCountry = (c: string) => {
+    const next = isCountry(c) ? c : 'kr';
+    setCountry(next);
+    setNumber((n) => (next === 'kr' ? digitsOf(n).slice(0, MAX_DIGITS) : n.slice(0, maxDigits(kindForCountry(next)))));
+  };
 
   return (
     <form className="auth-card" method="post" action={DEMO_LOGIN_ACTION} data-testid="demo-form">
@@ -64,10 +81,32 @@ function DemoLoginForm({ prefill }: { prefill: Partial<DemoPrefill> }) {
           {t('demo.login.failed')}
         </p>
       )}
+      {/* the country only shapes the number field (China's code has letters); the Worker compares
+          the normalised codes, so it is not sent */}
       <label className="field">
-        <span>{t('landing.contact.companyNo')}</span>
-        <small>{t('demo.login.companyNoHint')}</small>
-        <DigitsInput name="company_no" placeholder="123-45-67890" value={number} onDigits={setNumber} format={formatByLength} max={MAX_DIGITS} required autoFocus={!prefill.company_no} />
+        <span>{t('landing.contact.country')}</span>
+        <select value={country} onChange={(e) => pickCountry(e.target.value)} data-testid="demo-country">
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>
+              {t(COUNTRY_NAME[c])}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>{t(companyNoLabel(country))}</span>
+        <small>{t(LOGIN_HINT[country])}</small>
+        <DigitsInput
+          name="company_no"
+          placeholder={country === 'kr' ? '123-45-67890' : country === 'cn' ? '91350100M000100Y43' : ''}
+          value={number}
+          onDigits={setNumber}
+          format={country === 'kr' ? formatByLength : (d) => formatCompanyNo(d, kindForCountry(country))}
+          max={country === 'kr' ? MAX_DIGITS : maxDigits(kindForCountry(country))}
+          letters={country !== 'kr'}
+          required
+          autoFocus={!prefill.company_no}
+        />
       </label>
       <label className="field">
         <span>{t('auth.username')}</span>

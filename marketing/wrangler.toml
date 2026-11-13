@@ -9,17 +9,17 @@ compatibility_date = "2026-10-01"
 [assets]
 directory = "./public"
 binding = "ASSETS"
-# /login · /login/help · /demo · /policy · /demo/app/… are client routes of one page; the Worker
-# sees /demo/app first and lets it through only with a demo session, and /privacy (the policy's old
-# address) first to send it on to /policy with a 301
+# /login · /login/help · /demo · /privacy · /demo/app/… are client routes of one page; the Worker
+# sees /demo/app first and lets it through only with a demo session, and /policy first to send it
+# on to /privacy with a 301
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/demo/app", "/demo/app/*", "/privacy", "/privacy/"]
+run_worker_first = ["/api/*", "/demo/app", "/demo/app/*", "/policy", "/policy/"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "solosquad-marketing"
 # `wrangler d1 create solosquad-marketing --location apac` prints the id — paste it here before the
-# first deploy. The privacy policy (/policy §6) states the APAC location hint: keep them in step
+# first deploy. The privacy policy (/privacy §6) states the APAC location hint: keep them in step
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 

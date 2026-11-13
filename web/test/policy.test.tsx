@@ -1,4 +1,4 @@
-// The privacy policy (`/policy`, 2026-11-14): the old `/privacy` lands on it, it renders in all
+// The privacy policy (`/privacy`, 2026-11-14): `/policy` lands on it, it renders in all
 // three languages with the same twelve sections (the Korean one authoritative, the others say so),
 // it names the representative and the contact address, and what it states matches the Worker's
 // own settings (retention days, demo length, the daily sweep, the cookie, the consent version, the
@@ -42,10 +42,10 @@ afterEach(() => {
 
 const text = (locale: Locale) => JSON.stringify(policyFor(locale));
 
-describe('/policy', () => {
-  it('/privacy (the old address) redirects to /policy', () => {
-    site('/privacy');
-    expect(screen.getByTestId('where').textContent).toBe('/policy');
+describe('/privacy', () => {
+  it('/policy redirects to /privacy (the address the user keeps)', () => {
+    site('/policy');
+    expect(screen.getByTestId('where').textContent).toBe('/privacy');
     expect(screen.getByRole('heading', { level: 1, name: '개인정보처리방침' })).toBeTruthy();
   });
 
@@ -54,7 +54,7 @@ describe('/policy', () => {
     ['en', 'Privacy policy', '1. Why we process personal information', true],
     ['zh-CN', '隐私政策', '1. 个人信息的处理目的', true],
   ] as const)('renders in %s: the title, the twelve sections with a table of contents, the effective date', (locale, title, first, prevails) => {
-    const { container } = site('/policy', locale);
+    const { container } = site('/privacy', locale);
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeTruthy();
     const h2 = screen.getAllByRole('heading', { level: 2 });
     expect(h2).toHaveLength(12);
@@ -74,7 +74,7 @@ describe('/policy', () => {
   });
 
   it('tables stack on a phone: every cell carries its column name', () => {
-    const { container } = site('/policy');
+    const { container } = site('/privacy');
     const cells = [...container.querySelectorAll('.site-policy-table td')];
     expect(cells.length).toBeGreaterThan(20);
     for (const td of cells) expect(td.getAttribute('data-label')).toBeTruthy();

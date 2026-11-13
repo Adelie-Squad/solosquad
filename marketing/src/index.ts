@@ -1,6 +1,6 @@
 // The SoloSquad marketing site Worker (decision 62, PRD §3.6). Static pages come from Workers
 // Static Assets (the marketing build of web/, SPA fallback for /login · /login/help · /demo ·
-// /policy · /demo/app/…); this answers /api/*, sends the old /privacy on to /policy (301), lets
+// /privacy · /demo/app/…); this answers /api/*, sends /policy on to /privacy (301), lets
 // /demo/app/… through only with a demo session, and runs the daily retention sweep. There is no admin HTTP API — the agency works through
 // wrangler (`scripts/route.mjs` · `scripts/inquiry.mjs`).
 import { demoPage, DEMO_APP, getMe, postEvent, postLogin, postLogout, sweepDemo } from './demo';
@@ -9,8 +9,9 @@ import { json } from './http';
 import { formToken, postInquiry, sweep } from './inquiry';
 import { postRoute } from './route';
 
-const POLICY = '/policy';
-const OLD_POLICY = '/privacy';
+/** the privacy policy's page — the user keeps /privacy (2026-11-14); /policy is sent there */
+const POLICY = '/privacy';
+const OTHER_POLICY = '/policy';
 
 /** What the pages need to know (no secrets). */
 export const siteConfig = (env: Env) => ({
@@ -38,8 +39,8 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
-    // the privacy policy moved to /policy (2026-11-14) — old links and bookmarks keep working
-    if (path === OLD_POLICY || path === `${OLD_POLICY}/`) return Response.redirect(new URL(`${POLICY}${url.search}`, url).toString(), 301);
+    // /policy (a link that was out for a day, 2026-11-14) lands on the privacy policy
+    if (path === OTHER_POLICY || path === `${OTHER_POLICY}/`) return Response.redirect(new URL(`${POLICY}${url.search}`, url).toString(), 301);
     if (path.startsWith('/api/')) {
       try {
         return await api(req, env, ctx, path);

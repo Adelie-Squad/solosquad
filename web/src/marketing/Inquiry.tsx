@@ -8,8 +8,10 @@
 //
 // Since 2026-11-13 the number and the phone are digits-only fields that put their hyphens in as
 // they are typed (DigitsInput): a Korean company picks 개인사업자 (사업자등록번호, 10 digits,
-// NNN-NN-NNNNN) or 법인 (법인등록번호, 13, NNNNNN-NNNNNNN) and the check digit is checked; another
-// country's number is 4–20 digits. The rules are marketing/scripts/lib (company-no · phone) — the
+// NNN-NN-NNNNN) or 법인 (법인등록번호, 13, NNNNNN-NNNNNNN) and the check digit is checked. The country
+// comes first and picks the formats (2026-11-14 — 한국 by default): a Chinese company gives its
+// 统一社会信用代码 (18 letters and digits, the check character checked) and a mobile (11 digits from
+// 1, +86 taken off); another country's number is 4–20 letters and digits. The rules are marketing/scripts/lib (company-no · phone) — the
 // Worker and the CLI use the same files. A demo account comes back with the answer, and the
 // completion screen shows it at once (number · ID · password · end) with a button to the demo login.
 //
@@ -17,7 +19,7 @@
 // only when the site turns it on.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useHref, useNavigate } from 'react-router-dom';
-import { checkCompanyNo, displayCompanyNo, formatCompanyNo, maxDigits, type CompanyNoKind } from '../../../marketing/scripts/lib/company-no.mjs';
+import { checkCompanyNo, digitsOf, displayCompanyNo, formatCompanyNo, kindForCountry, maxDigits, takesLetters, type CompanyNoKind } from '../../../marketing/scripts/lib/company-no.mjs';
 import { checkPhone, formatPhone, phoneMax } from '../../../marketing/scripts/lib/phone.mjs';
 import { Modal } from '../components/Modal';
 import { useI18n, type Locale, type MessageKey } from '../i18n';
@@ -43,7 +45,7 @@ export type Source = 'landing_hero' | 'landing_start' | 'pricing' | 'demo_login'
 
 export interface Form {
   company: string;
-  /** digits */
+  /** digits — upper-case letters too for China and other countries */
   company_no: string;
   /** 개인사업자 · 법인 — used when the country is kr */
   company_no_kind: KoreanKind;
@@ -69,7 +71,8 @@ const blank = (locale: Locale, requests: Request[]): Form => ({
   company_no: '',
   company_no_kind: 'business',
   business_type: '',
-  country: locale === 'zh-CN' ? 'cn' : locale === 'ko' ? 'kr' : '',
+  // 한국 by default whatever the language (user, 2026-11-14)
+  country: 'kr',
   contact_name: '',
   email: '',
   phone: '',
@@ -84,8 +87,8 @@ const blank = (locale: Locale, requests: Request[]): Form => ({
   website: '',
 });
 
-/** The number's kind: a Korean company's pick, else another country's number. */
-export const companyNoKind = (f: Pick<Form, 'country' | 'company_no_kind'>): CompanyNoKind => (f.country === 'kr' ? f.company_no_kind : 'foreign');
+/** The number's kind: a Korean company's pick, China's 统一社会信用代码, else another country's number. */
+export const companyNoKind = (f: Pick<Form, 'country' | 'company_no_kind'>): CompanyNoKind => kindForCountry(f.country, f.company_no_kind);
 
 /** The same rules as the marketing Worker (marketing/src/validate.ts), for the marks before sending. */
 export function checkInquiry(f: Form): Record<string, FieldError> {
@@ -139,8 +142,20 @@ function companyNoMessage(f: Form, e: FieldError): MessageKey {
   return `landing.contact.companyNoLength.${kind}`;
 }
 
-const PLACEHOLDER: Record<CompanyNoKind, string> = { business: '123-45-67890', corporate: '123456-1234567', foreign: '' };
-const PHONE_PLACEHOLDER = (country: string) => (country === 'kr' ? '010-1234-5678' : '');
+const PLACEHOLDER: Record<CompanyNoKind, string> = { business: '123-45-67890', corporate: '123456-1234567', uscc: '91350100M000100Y43', foreign: '' };
+const PHONE_PLACEHOLDER: Record<string, string> = { kr: '010-1234-5678', cn: '138-0013-8000' };
+
+/** The number field's label: China's code has its own name. */
+export const companyNoLabel = (country: string): MessageKey => (country === 'cn' ? 'landing.contact.companyNo.cn' : 'landing.contact.companyNo');
+/** The phone field's label: a mobile for China. */
+const phoneLabel = (country: string): MessageKey => (country === 'cn' ? 'landing.contact.phoneNumber.cn' : 'landing.contact.phoneNumber');
+
+const HINT: Record<CompanyNoKind, MessageKey> = {
+  business: 'landing.contact.companyNoHint.business',
+  corporate: 'landing.contact.companyNoHint.corporate',
+  uscc: 'landing.contact.companyNoHint.uscc',
+  foreign: 'landing.contact.companyNoHint.foreign',
+};
 
 const PROBLEM: Record<string, MessageKey> = {
   too_fast: 'landing.contact.stale',
@@ -177,6 +192,8 @@ function Turnstile({ siteKey, onToken }: { siteKey: string; onToken: (t: string)
 export interface DemoPrefill {
   id: string;
   company_no: string;
+  /** kr · cn · other — the demo login's number field follows it (2026-11-14) */
+  country?: string;
 }
 export const DEMO_PREFILL_KEY = 'solosquad.demoPrefill';
 
@@ -192,7 +209,7 @@ function Issued({ demo, form, onClose }: { demo: IssuedDemo; form: Form; onClose
   const navigate = useNavigate();
   const root = useHref('/');
   const start = () => {
-    const prefill: DemoPrefill = { id: demo.id, company_no: demo.company_no };
+    const prefill: DemoPrefill = { id: demo.id, company_no: demo.company_no, country: form.country };
     try {
       sessionStorage.setItem(DEMO_PREFILL_KEY, JSON.stringify(prefill));
     } catch {
@@ -209,7 +226,7 @@ function Issued({ demo, form, onClose }: { demo: IssuedDemo; form: Form; onClose
       <h2>{t('landing.apply.done.demoTitle')}</h2>
       <p>{t(demo.reused ? 'landing.apply.done.demoAgain' : 'landing.apply.done.demoBody')}</p>
       <dl className="inquiry-summary inquiry-account" data-testid="inquiry-account">
-        <dt>{t('landing.contact.companyNo')}</dt>
+        <dt>{t(companyNoLabel(form.country))}</dt>
         <dd className="inquiry-mono">{displayCompanyNo(demo.company_no, demo.company_no_kind)}</dd>
         <dt>{t('auth.username')}</dt>
         <dd className="inquiry-mono">{demo.id}</dd>
@@ -265,11 +282,14 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
     const list = form[k] as string[];
     set(k, (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]) as Form[K]);
   };
-  // a new country or kind keeps the digits, cut to what the new kind takes
+  // a new country or kind keeps what it can — the digits (letters only where the new kind takes
+  // them), cut to what the new kind takes
   const setNumberKind = (patch: Partial<Pick<Form, 'country' | 'company_no_kind'>>) => {
     setForm((f) => {
       const next = { ...f, ...patch };
-      return { ...next, company_no: next.company_no.slice(0, maxDigits(companyNoKind(next))), phone: next.phone.slice(0, phoneMax(next.country)) };
+      const kind = companyNoKind(next);
+      const no = takesLetters(kind) ? next.company_no : digitsOf(next.company_no);
+      return { ...next, company_no: no.slice(0, maxDigits(kind)), phone: next.phone.slice(0, phoneMax(next.country)) };
     });
     unmark('company_no', 'country', 'phone');
   };
@@ -344,7 +364,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             <dl className="inquiry-summary">
               <dt>{t('landing.contact.company')}</dt>
               <dd>{done.form.company.trim()}</dd>
-              <dt>{t('landing.contact.companyNo')}</dt>
+              <dt>{t(companyNoLabel(done.form.country))}</dt>
               <dd>{formatCompanyNo(done.form.company_no, companyNoKind(done.form))}</dd>
               <dt>{t('landing.apply.requests')}</dt>
               <dd>{done.form.requests.map((r) => t(`landing.apply.requests.${r}`)).join(' · ')}</dd>
@@ -390,17 +410,10 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
         </header>
         {chips('requests', REQUESTS, (r) => `landing.apply.requests.${r}`, 'landing.apply.requests')}
         <div className="inquiry-grid">
-          <label className="field">
-            <span>{t('landing.contact.company')}</span>
-            <input name="company" autoComplete="organization" maxLength={MAX.company} value={form.company} onChange={(e) => set('company', e.target.value)} {...invalid('company')} />
-            {err('company')}
-          </label>
+          {/* the country first: it picks the number's and the phone's formats (2026-11-14) */}
           <label className="field">
             <span>{t('landing.contact.country')}</span>
-            <select name="country" value={form.country} onChange={(e) => setNumberKind({ country: e.target.value })} {...invalid('country')}>
-              <option value="" disabled>
-                —
-              </option>
+            <select name="country" value={form.country} onChange={(e) => setNumberKind({ country: e.target.value })} {...invalid('country')} data-testid="inquiry-country">
               {COUNTRIES.map((c) => (
                 <option key={c} value={c}>
                   {t(`landing.contact.country.${c}`)}
@@ -409,8 +422,13 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             </select>
             {err('country')}
           </label>
+          <label className="field">
+            <span>{t('landing.contact.company')}</span>
+            <input name="company" autoComplete="organization" maxLength={MAX.company} value={form.company} onChange={(e) => set('company', e.target.value)} {...invalid('company')} />
+            {err('company')}
+          </label>
           <div className="field inquiry-company-no">
-            <label htmlFor="inquiry-company-no">{t('landing.contact.companyNo')}</label>
+            <label htmlFor="inquiry-company-no">{t(companyNoLabel(form.country))}</label>
             {form.country === 'kr' && (
               <div className="segmented" role="radiogroup" aria-label={t('landing.contact.companyNoKind')} data-testid="company-no-kind">
                 {KOREAN_KINDS.map((k) => (
@@ -427,7 +445,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
                 ))}
               </div>
             )}
-            <small id="inquiry-company-no-hint">{t(`landing.contact.companyNoHint.${kind}`)}</small>
+            <small id="inquiry-company-no-hint">{t(HINT[kind])}</small>
             <DigitsInput
               id="inquiry-company-no"
               name="company_no"
@@ -435,6 +453,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
               onDigits={(d) => set('company_no', d)}
               format={(d) => formatCompanyNo(d, kind)}
               max={maxDigits(kind)}
+              letters={takesLetters(kind)}
               placeholder={PLACEHOLDER[kind]}
               aria-describedby={marks.company_no ? 'inquiry-company_no-error' : 'inquiry-company-no-hint'}
               {...(marks.company_no ? { 'aria-invalid': true as const } : {})}
@@ -468,7 +487,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
           </label>
           <div className="field">
             <label htmlFor="inquiry-phone">
-              {t('landing.contact.phoneNumber')}
+              {t(phoneLabel(form.country))}
               {!wantsDemo && (
                 <>
                   {' '}
@@ -485,7 +504,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
               onDigits={(d) => set('phone', d)}
               format={(d) => formatPhone(d, form.country)}
               max={phoneMax(form.country)}
-              placeholder={PHONE_PLACEHOLDER(form.country)}
+              placeholder={PHONE_PLACEHOLDER[form.country] ?? ''}
               aria-describedby={marks.phone ? 'inquiry-phone-error' : wantsDemo ? 'inquiry-phone-hint' : undefined}
               {...(marks.phone ? { 'aria-invalid': true as const } : {})}
             />

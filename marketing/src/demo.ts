@@ -2,7 +2,8 @@
 // served by this site at /demo/app — no demo server — so the accounts are D1 `demo_accounts` (made
 // on the request itself — `issueDemo` below — or by `scripts/inquiry.mjs issue · demo create`) and
 // this Worker signs people in. The ID is the request's email or an internal id like `solosquad`;
-// the number is compared by its digits only:
+// the number is compared as its normalised code (letters and digits, upper case — China's 统一社会信用代码
+// has letters; a row from before 2026-11-13 by its digits):
 //
 //   POST /api/demo/login   a plain form {company_no, username, password} from /demo → 303 /demo/app
 //                          with the session cookie, or 303 /demo?error=1 for every kind of failure
@@ -16,7 +17,7 @@
 import { num, type Env } from './env';
 import { hmac, ipHash, iso, json, sameSecret, sleep, withinLimit } from './http';
 import type { Inquiry } from './validate';
-import { digitsOf, FOREIGN_MIN } from '../scripts/lib/company-no.mjs';
+import { codeOf, digitsOf, FOREIGN_MIN } from '../scripts/lib/company-no.mjs';
 import { demoPassword } from '../scripts/lib/demo-password.mjs';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '../scripts/lib/password.mjs';
 
@@ -31,10 +32,27 @@ const MAX_ID = 254;
 const DAY = 86_400_000;
 export const EVENT_KINDS = ['view', 'action'] as const;
 const DETAIL = /^[A-Za-z0-9_.:/-]{1,80}$/;
+/**
+ * The workflow events the KPI counts (2026-11-14 — "logged-in demo accounts that ran a workflow to
+ * the end"): the demo app sends `workflow_started:<id>` when a run starts and, once per run,
+ * `workflow_done:<id>:<approved|declined>` when it ends (web/src/demo/engine.ts). Only these are
+ * taken under the `workflow_` prefix, as `action`s, so the count cannot be padded with made-up names.
+ */
+export const WORKFLOW_IDS = ['finance', 'sourcing', 'sns'] as const;
+const WORKFLOW_EVENT = new RegExp(`^workflow_(?:started:(?:${WORKFLOW_IDS.join('|')})|done:(?:${WORKFLOW_IDS.join('|')}):(?:approved|declined))$`);
+
+/** Whether a usage event's detail may be stored: the shape for all, the allow-list for `workflow_…`. */
+export function eventDetailOk(kind: string, detail: string): boolean {
+  if (!DETAIL.test(detail)) return false;
+  if (!detail.startsWith('workflow_')) return true;
+  return kind === 'action' && WORKFLOW_EVENT.test(detail);
+}
 
 interface AccountRow {
   id: string;
   company_no: string;
+  /** business · corporate · uscc · foreign; NULL on rows from before 2026-11-13 */
+  company_no_kind: string | null;
   company_name: string;
   locale: string;
   password_hash: string;
@@ -88,7 +106,7 @@ const setCookie = (value: string, maxAge: number) => `${COOKIE}=${value}; Path=/
 const usable = (row: AccountRow | null, now: number): row is AccountRow => !!row && !row.revoked_at && (row.expires_at === null || Date.parse(row.expires_at) > now);
 
 const account = (env: Env, id: string) =>
-  env.DB.prepare('SELECT id, company_no, company_name, locale, password_hash, expires_at, revoked_at FROM demo_accounts WHERE id_lower = ?1').bind(id.toLowerCase()).first<AccountRow>();
+  env.DB.prepare('SELECT id, company_no, company_no_kind, company_name, locale, password_hash, expires_at, revoked_at FROM demo_accounts WHERE id_lower = ?1').bind(id.toLowerCase()).first<AccountRow>();
 
 /** The signed-in demo account, checked against D1 (revoked or expired → null). */
 export async function currentDemo(req: Request, env: Env, now = Date.now()): Promise<DemoSession | null> {
@@ -135,9 +153,12 @@ export async function postLogin(req: Request, env: Env): Promise<Response> {
   const row = id ? await account(env, id) : null;
   // the hash is checked whatever came in, so every answer costs the same
   const passwordOk = await verifyPassword(fields?.password ?? '', row?.password_hash ?? DUMMY_HASH);
-  // digits against digits: the field shows hyphens, an old row may hold letters
-  const typedNo = digitsOf(fields?.company_no ?? '');
-  const numberOk = !!row && typedNo.length >= FOREIGN_MIN && (await sameSecret(typedNo, digitsOf(row.company_no)));
+  // the normalised codes (letters and digits, upper case — the field shows hyphens; China's code has
+  // letters); a row from before 2026-11-13 (no kind) is matched by its digits, as it always was
+  const legacy = !!row && row.company_no_kind === null;
+  const typedNo = legacy ? digitsOf(fields?.company_no ?? '') : codeOf(fields?.company_no ?? '');
+  const storedNo = row ? (legacy ? digitsOf(row.company_no) : codeOf(row.company_no)) : '';
+  const numberOk = !!row && typedNo.length >= FOREIGN_MIN && (await sameSecret(typedNo, storedNo));
   const now = Date.now();
   const ok = perMin && perHour && perId && !!secret(env) && passwordOk && numberOk && usable(row, now);
   let res: Response;
@@ -175,7 +196,7 @@ export async function postEvent(req: Request, env: Env): Promise<Response> {
     return json({ error: 'bad_request' }, 400);
   }
   const kind = (EVENT_KINDS as readonly unknown[]).includes(body.kind) ? (body.kind as (typeof EVENT_KINDS)[number]) : null;
-  const detail = typeof body.detail === 'string' && DETAIL.test(body.detail) ? body.detail : null;
+  const detail = kind && typeof body.detail === 'string' && eventDetailOk(kind, body.detail) ? body.detail : null;
   if (!kind || !detail) return json({ error: 'bad_request' }, 400);
   const id = me.demo_id.toLowerCase();
   const [perMin, perHour] = await Promise.all([

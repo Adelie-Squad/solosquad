@@ -161,6 +161,30 @@ describe('the demo login (/demo)', () => {
     expect((screen.getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement).value).toBe('');
   });
 
+  it('a country select (한국 by default): 중국 takes the 统一社会信用代码 with letters, upper-cased; 기타 letters and digits; not sent', () => {
+    stubSite();
+    site('/demo');
+    const country = screen.getByTestId('demo-country') as HTMLSelectElement;
+    expect(country.value).toBe('kr');
+    expect(country.name).toBe('');
+    fireEvent.change(country, { target: { value: 'cn' } });
+    const no = screen.getByLabelText(/^통일사회신용코드/) as HTMLInputElement;
+    expect(no.name).toBe('company_no');
+    expect(screen.getByText('데모를 신청할 때 적은 통일사회신용코드 18자리예요. 영문은 대문자로 바뀌어요.')).toBeTruthy();
+    fireEvent.change(no, { target: { value: '913501 00m000100y43xx' } });
+    expect(no.value).toBe('91350100M000100Y43');
+    fireEvent.change(country, { target: { value: 'kr' } });
+    expect((screen.getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement).value).toBe('9135010000010043');
+    fireEvent.change(country, { target: { value: 'other' } });
+    const other = screen.getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement;
+    fireEvent.change(other, { target: { value: 'hrb-12345' } });
+    expect(other.value).toBe('HRB12345');
+    cleanup();
+    site('/demo', 'zh-CN');
+    fireEvent.change(screen.getByTestId('demo-country'), { target: { value: 'cn' } });
+    expect(screen.getByLabelText(/^统一社会信用代码/)).toHaveProperty('name', 'company_no');
+  });
+
   it('the three fields in English and Chinese', () => {
     stubSite();
     site('/demo', 'en');
@@ -215,7 +239,7 @@ describe('the request modal', () => {
     const messenger = within(dialog).getByLabelText('메신저') as HTMLSelectElement;
     expect(messenger.value).toBe('kakao');
     expect([...messenger.options].map((o) => o.value)).toEqual(['kakao', 'wechat']);
-    expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/policy');
+    expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/privacy');
     const trap = dialog.querySelector('input[name="website"]') as HTMLInputElement;
     expect(trap.tabIndex).toBe(-1);
     expect(trap.closest('[aria-hidden="true"]')).toBeTruthy();
@@ -290,19 +314,69 @@ describe('the request modal', () => {
     expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ company_no: '1101111234569', company_no_kind: 'corporate' });
   });
 
-  it('another country: no toggle, 4–20 digits, no hyphens; the phone without hyphens either', async () => {
+  it('the country comes first and is 한국 by default — in every language (2026-11-14)', async () => {
+    for (const locale of ['ko', 'zh-CN', 'en'] as const) {
+      stubSite();
+      site('/demo', locale);
+      fireEvent.click(screen.getByTestId('demo-apply'));
+      const dialog = await screen.findByRole('dialog');
+      const country = within(dialog).getByTestId('inquiry-country') as HTMLSelectElement;
+      expect(country.value).toBe('kr');
+      expect([...country.options].map((o) => o.value)).toEqual(['kr', 'cn', 'other']);
+      // the first field of the company block
+      expect(dialog.querySelector('.inquiry-grid .field select, .inquiry-grid .field input')).toBe(country);
+      cleanup();
+    }
+  });
+
+  it('China: 统一社会信用代码 (18, letters upper-cased as typed, the check character) and a mobile (+86 taken off)', async () => {
     const calls = stubSite();
     const dialog = await open();
     fill(dialog);
     fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'cn' } });
     expect(within(dialog).queryByRole('radiogroup')).toBeNull();
-    fireEvent.change(number(dialog), { target: { value: '9131-0000-MA1FL' } });
-    expect(number(dialog).value).toBe('913100001');
-    fireEvent.change(phone(dialog), { target: { value: '+86 138 0013 8000' } });
-    expect(phone(dialog).value).toBe('8613800138000');
+    const no = within(dialog).getByLabelText(/^통일사회신용코드/) as HTMLInputElement;
+    expect(within(dialog).getByText(/^통일사회신용코드\(统一社会信用代码\) 18자리/)).toBeTruthy();
+    expect(no.inputMode).toBe('text');
+    expect(no.placeholder).toBe('91350100M000100Y43');
+    fireEvent.change(no, { target: { value: '9135-0100 m000100y4' } });
+    expect(no.value).toBe('91350100M000100Y4');
     await send(dialog);
-    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ country: 'cn', company_no: '913100001', phone: '8613800138000' });
-    expect(calls.find((c) => c.url === '/api/inquiry')!.body!.company_no_kind).toBeUndefined();
+    expect(within(dialog).getByText('통일사회신용코드는 18자리예요.')).toBeTruthy();
+    fireEvent.change(no, { target: { value: '91350100M000100Y44' } });
+    await send(dialog);
+    expect(within(dialog).getByText('번호가 맞지 않아요. 숫자를 다시 확인해 주세요.')).toBeTruthy();
+    expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
+    fireEvent.change(no, { target: { value: '91350100m000100y43zz' } });
+    expect(no.value).toBe('91350100M000100Y43');
+    const p = within(dialog).getByLabelText(/^휴대전화 번호/) as HTMLInputElement;
+    expect(p.placeholder).toBe('138-0013-8000');
+    fireEvent.change(p, { target: { value: '13800138000' } });
+    expect(p.value).toBe('138-0013-8000');
+    fireEvent.change(p, { target: { value: '+86 138 0013 8000' } });
+    expect(p.value).toBe('+86 138-0013-8000');
+    await send(dialog);
+    const body = calls.find((c) => c.url === '/api/inquiry')!.body!;
+    expect(body).toMatchObject({ country: 'cn', company_no: '91350100M000100Y43', phone: '8613800138000' });
+    expect(body.company_no_kind).toBeUndefined();
+  });
+
+  it('another country: letters and digits (4–20), no hyphens; the phone digits only; back to 한국 keeps the digits', async () => {
+    const calls = stubSite();
+    const dialog = await open();
+    fill(dialog);
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'other' } });
+    fireEvent.change(number(dialog), { target: { value: 'hrb-12345' } });
+    expect(number(dialog).value).toBe('HRB12345');
+    fireEvent.change(phone(dialog), { target: { value: '+49 151 1234 5678' } });
+    expect(phone(dialog).value).toBe('4915112345678');
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'kr' } });
+    expect(number(dialog).value).toBe('123-45');
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'other' } });
+    fireEvent.change(number(dialog), { target: { value: 'hrb-12345' } });
+    fireEvent.change(phone(dialog), { target: { value: '+49 151 1234 5678' } });
+    await send(dialog);
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ country: 'other', company_no: 'HRB12345', phone: '4915112345678' });
   });
 
   it('the phone: digits only, Korean hyphens as typed, checked', async () => {
@@ -387,6 +461,26 @@ describe('the request modal', () => {
     expect(sessionStorage.getItem('solosquad.demoPrefill')).toBeNull();
   });
 
+  it('China: the completion screen names the 统一社会信用代码 and the demo login opens on 중국 with it filled in', async () => {
+    stubSite({ inquiry: () => new Response(JSON.stringify({ ok: true, demo: { ...issued, id: 'li@example.cn', company_no: '91350100M000100Y43', company_no_kind: 'uscc' } })) });
+    const dialog = await open();
+    fill(dialog);
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'cn' } });
+    fireEvent.change(within(dialog).getByLabelText(/^통일사회신용코드/), { target: { value: '91350100M000100Y43' } });
+    fireEvent.change(within(dialog).getByLabelText(/^휴대전화 번호/), { target: { value: '13800138000' } });
+    await send(dialog);
+    const done = await screen.findByRole('dialog', { name: '데모 계정이 나왔어요' });
+    const account = within(done).getByTestId('inquiry-account');
+    expect([...account.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling!.textContent])[0]).toEqual(['통일사회신용코드', '91350100M000100Y43']);
+    await act(async () => {
+      fireEvent.click(within(done).getByTestId('inquiry-start-demo'));
+    });
+    const form = screen.getByTestId('demo-form');
+    expect((within(form).getByTestId('demo-country') as HTMLSelectElement).value).toBe('cn');
+    expect((within(form).getByLabelText(/^통일사회신용코드/) as HTMLInputElement).value).toBe('91350100M000100Y43');
+    expect((within(form).getByLabelText(/^아이디/) as HTMLInputElement).value).toBe('li@example.cn');
+  });
+
   it('a repeat request for the same email says the account was renewed; a call too adds one line', async () => {
     stubSite({ inquiry: () => new Response(JSON.stringify({ ok: true, demo: { ...issued, reused: true } })) });
     const dialog = await open();
@@ -458,7 +552,7 @@ describe('the other pages and the build', () => {
     expect(footer.className).toContain('is-compact');
     expect(within(footer).getByText('대표 정승원')).toBeTruthy();
     expect(within(footer).getByRole('link', { name: 'contact@toronchul.app' }).getAttribute('href')).toBe('mailto:contact@toronchul.app');
-    expect(within(footer).getByRole('link', { name: '개인정보처리방침' }).getAttribute('href')).toBe('/policy');
+    expect(within(footer).getByRole('link', { name: '개인정보처리방침' }).getAttribute('href')).toBe('/privacy');
   });
 
   it('the marketing build swaps the entry and writes to marketing/public; the customer build is unchanged', () => {

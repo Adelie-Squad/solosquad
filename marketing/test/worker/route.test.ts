@@ -121,12 +121,12 @@ describe('company codes and the decision', () => {
   });
 });
 
-describe('the privacy policy’s old address (2026-11-14)', () => {
-  it('/privacy → 301 /policy, the query kept', async () => {
+describe('the privacy policy’s other address (2026-11-14)', () => {
+  it('/policy → 301 /privacy, the query kept', async () => {
     for (const [from, to] of [
-      ['/privacy', '/policy'],
-      ['/privacy/', '/policy'],
-      ['/privacy?lang=en', '/policy?lang=en'],
+      ['/policy', '/privacy'],
+      ['/policy/', '/privacy'],
+      ['/policy?lang=en', '/privacy?lang=en'],
     ]) {
       const r = await SELF.fetch(`https://marketing.test${from}`, { redirect: 'manual' });
       expect(r.status).toBe(301);

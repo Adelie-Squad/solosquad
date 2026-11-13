@@ -1,5 +1,5 @@
 // The marketing site's footer (2026-11-14): 대표 · the contact email (mailto) · 개인정보처리방침
-// (/policy) · © year. Under the landing's last section, and compact under /policy · /login ·
+// (/privacy) · © year. Under the landing's last section, and compact under /privacy · /login ·
 // /login/help · /demo. Who and which address: messages/site.ts.
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';

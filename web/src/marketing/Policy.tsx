@@ -1,5 +1,5 @@
-// `/policy` on the marketing site — the privacy policy (개인정보처리방침, 2026-11-14). `/privacy`, the
-// old address, redirects here (MarketingApp, and the Worker answers it with a 301). The text is
+// `/privacy` on the marketing site — the privacy policy (개인정보처리방침, 2026-11-14). `/policy`
+// redirects here (MarketingApp, and the Worker answers it with a 301). The text is
 // messages/policy.ts: Korean is authoritative, en · zh-CN say so at the top. Draft pending legal
 // review — tracked in marketing/README.md, never shown on the page.
 import { Link } from 'react-router-dom';

@@ -11,6 +11,6 @@ export const SITE = {
   email: 'contact@toronchul.app',
   /** the privacy policy's 시행일 — move it (and CONSENT_VERSION in marketing/wrangler.toml) when the text changes */
   policyEffective: '2026-11-14',
-  /** the policy page (`/privacy` redirects here — old links keep working) */
-  policyPath: '/policy',
+  /** the policy page — the user keeps /privacy (2026-11-14); `/policy` redirects here */
+  policyPath: '/privacy',
 } as const;

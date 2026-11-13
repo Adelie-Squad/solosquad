@@ -7,8 +7,8 @@ or example data (C62).
 
 - **Static pages**: the marketing build of `web/` (`npm --prefix ../web run build:marketing` →
   `marketing/public/`), served by Workers Static Assets. `/login`, `/login/help`, `/demo`,
-  `/policy` (the privacy policy) and `/demo/app/…` are client routes (SPA fallback). `/privacy`, the
-  policy's old address, gets a **301 to `/policy`** from the Worker (it runs first for that path).
+  `/privacy` (the privacy policy) and `/demo/app/…` are client routes (SPA fallback). `/policy`
+  gets a **301 to `/privacy`** from the Worker (it runs first for that path).
 - **The demo** (`/demo/app/…`, 2026-11-13): the customer web's own screens running in the
   browser against an in-memory engine (`web/src/demo/`) — the example company 모아 리빙 and its
   three scripted workflows (재무 · 소싱 · SNS) with their approval points, in ko · en · zh-CN.
@@ -21,9 +21,9 @@ or example data (C62).
 |---|---|
 | `POST /api/login/route` | A **plain form post** `{code, id}`, so it works without JS, always answered with a **303**. A known active company code → `https://<company server>/login?u=<id>` (the ID is passed through as typed: no code prefix, never stored or checked beyond length and characters). The reserved code `demo` → `/demo?u=<id>`. Unknown, suspended, malformed or over the limit → `/login/help`. Every answer runs the same D1 lookup and is padded to the same time (`ROUTE_PAD_MS`, 250 ms). Limit per hashed IP: 10 a minute and 60 an hour. No password ever reaches this route |
 | `POST /api/inquiry` | A demo account request (JSON from the modal) → D1 `inquiries` (status `new`) plus one `inquiry_log` row (`created`). One required `company_no` with its kind (below) and, when a demo account is asked for, a required `phone`. **A request that asks for a demo account gets it at once** (2026-11-13 — no review step; below): the answer is `{ok, demo: {id, password, company_no, company_no_kind, company_name, expires, reused}}`, the request becomes `issued` and logs `issued`. Spam protection: a honeypot field (`website`, answered as received and dropped), the 3-second rule (a signed token from `GET /api/form-token`), a per-IP limit (5 an hour), 3 per email a day, and **3 new demo accounts per IP a day** (`DEMO_ISSUE_LIMIT_PER_IP_DAY` — past it the request is kept as `new` without an account, for the agency). Turnstile only runs if `TURNSTILE_ENABLED = "true"`; it is off by default because it is blocked in mainland China. Neither the IP nor the user-agent is stored |
-| `POST /api/demo/login` | The demo login: a **plain form post** `{company_no, username, password}` from `/demo` (works without JS), same-origin only. The ID is the request's email (or an internal ID like `solosquad`), any case. The number is compared **by its digits only** (the field shows hyphens; an older row's letters are ignored), the password is checked against its PBKDF2 hash, the account must be neither expired nor revoked (an internal account may have no end). Success → **303 `/demo/app`** with the session cookie. Every failure (wrong number, ID or password, expired, revoked, cross-site, over a limit) is the same **303 `/demo?error=1`**, padded to the same time. Limits: the router's per hashed IP (10 a minute, 60 an hour) plus 20 an hour per demo ID |
+| `POST /api/demo/login` | The demo login: a **plain form post** `{company_no, username, password}` from `/demo` (works without JS), same-origin only. The ID is the request's email (or an internal ID like `solosquad`), any case. The number is compared as its **normalised code** — letters and digits, upper case (the field shows hyphens; China's 统一社会信用代码 has letters, 2026-11-14); a row from before 2026-11-13 (no kind) by its digits only, as before, the password is checked against its PBKDF2 hash, the account must be neither expired nor revoked (an internal account may have no end). Success → **303 `/demo/app`** with the session cookie. Every failure (wrong number, ID or password, expired, revoked, cross-site, over a limit) is the same **303 `/demo?error=1`**, padded to the same time. Limits: the router's per hashed IP (10 a minute, 60 an hour) plus 20 an hour per demo ID |
 | `GET /api/demo/me` | `{demo_id, company_name, locale, expires}` for the signed-in demo account (`expires` null = no end), or 401 |
-| `POST /api/demo/event` | One usage event `{kind: view \| action, detail}` (JSON, same-origin, signed in; detail = 1–80 of `A-Z a-z 0-9 _ . : / -`, e.g. `/o/moa/w/hq/office`, `run:finance-monthly`, `approve:pay`). 30 a minute and 300 an hour per account |
+| `POST /api/demo/event` | One usage event `{kind: view \| action, detail}` (JSON, same-origin, signed in; detail = 1–80 of `A-Z a-z 0-9 _ . : / -`, e.g. `/o/moa/w/hq/office`, `run:finance-monthly`, `approve:pay`). Under the `workflow_` prefix only the KPI's names are taken, as `action`s: `workflow_started:<finance\|sourcing\|sns>` and `workflow_done:<finance\|sourcing\|sns>:<approved\|declined>` (once per run — below). 30 a minute and 300 an hour per account |
 | `POST /api/demo/logout` | Forgets the cookie, records `logout` |
 | `/demo/app`, `/demo/app/*` | Let through only with a demo session (the Worker runs first for these paths); without one → 303 `/demo` |
 | `GET /api/config` · `GET /api/form-token` | What the pages need (the consent version, Turnstile on/off) and the form-opened token |
@@ -33,8 +33,10 @@ There is **no admin HTTP API**. The agency works through `wrangler d1 execute` (
 on the internet needs guarding.
 
 The demo login (`/demo`) is a plain form posted to this Worker (`POST /api/demo/login`) with three
-fields: `company_no` (법인(사업자)등록번호 — the number given in the request, digits only, hyphens
-shown by length: 10 → 3-2-5, 13 → 6-7), `username` (the request's email, or an internal ID) and
+fields: `company_no` (the number given in the request — a country select above it, 한국 by default:
+한국 = 법인(사업자)등록번호, digits only, hyphens shown by length: 10 → 3-2-5, 13 → 6-7; 중국 =
+统一社会信用代码, 18 letters and digits, upper-cased; 기타 = 4–20 letters and digits; the select is not
+sent), `username` (the request's email, or an internal ID) and
 `password`. The session is an **HMAC-signed cookie** (`ss_demo`, secret `DEMO_SECRET`;
 HttpOnly, Secure, SameSite=Lax, Path=/) carrying the demo ID, the company name, the locale and the
 session's end (12 hours, or the account's end when sooner). It is checked against D1 on every use,
@@ -179,7 +181,7 @@ node scripts/inquiry.mjs demo create --id <id> --company-no <digits> [--kind bus
 node scripts/inquiry.mjs demo extend <demo id> --days 7  # from its end, or from now when it has ended
 node scripts/inquiry.mjs demo revoke <demo id>         # its session ends at once
 node scripts/inquiry.mjs demo delete <demo id>         # the account and its usage (test data)
-node scripts/inquiry.mjs demo usage <demo id>          # logins, screens viewed, buttons pressed
+node scripts/inquiry.mjs demo usage <demo id>          # workflow runs started/finished, logins, screens viewed, buttons pressed
 ```
 
 Demo accounts are issued by the Worker when the request comes in, so `issue` is for the rest —
@@ -205,7 +207,43 @@ list). Requests never touch an internal account.
 `--remote` works on the deployed D1 the same way. `extend` and `revoke` keep the request's
 `demo_expires_at` and log in step with the account.
 
-## Privacy policy (`/policy`, 2026-11-14)
+## The registration number and the phone by country (2026-11-14)
+
+The request modal starts with the country (한국 by default, in every language); it picks the
+formats — `scripts/lib/company-no.mjs` and `phone.mjs`, shared by the Worker, the CLI and the web:
+
+| Country | Number (`company_no_kind`) | Phone |
+|---|---|---|
+| 한국 `kr` | 사업자등록번호 10 digits (`business`) or 법인등록번호 13 (`corporate`), check digit | Korean rules, hyphens as typed |
+| 중국 `cn` | 统一社会信用代码, 18 of `0-9 A-H J-N P-R T U W-Y`, upper-cased, GB 32100-2015 check character (`uscc`) | mobile, 11 digits from 1, `1XX-XXXX-XXXX`; `+86` / `0086` taken off |
+| 기타 `other` | 4–20 letters and digits, upper-cased (`foreign`) | 6–15 digits |
+
+Stored normalised (no separators). The demo password rule is unchanged (word + the phone's last
+four digits). No migration: `company_no` is TEXT and the kind is a new value in the same column.
+
+## Demo KPI — accounts that ran a workflow to the end (2026-11-14)
+
+The demo app sends `workflow_started:<id>` when a run starts and, once per run, `workflow_done:<id>:<approved|declined>`
+when it reaches its end (`web/src/demo/engine.ts`; the seeded history sends none). The share of
+logged-in demo accounts with at least one finished run in a period:
+
+```sql
+-- npx wrangler d1 execute solosquad-marketing --remote --command "…" (dates in ISO, UTC)
+SELECT count(DISTINCT l.demo_id)                                               AS logged_in,
+       count(DISTINCT d.demo_id)                                               AS finished_one,
+       round(100.0 * count(DISTINCT d.demo_id) / max(count(DISTINCT l.demo_id), 1), 1) AS pct
+FROM demo_events l
+LEFT JOIN demo_events d
+  ON d.demo_id = l.demo_id AND d.kind = 'action' AND d.detail LIKE 'workflow_done:%'
+ AND d.at >= '2026-11-01' AND d.at < '2026-12-01'
+WHERE l.kind = 'login' AND l.at >= '2026-11-01' AND l.at < '2026-12-01';
+```
+
+Add `AND l.demo_id IN (SELECT id FROM demo_accounts WHERE internal = 0)` to leave the agency's own
+accounts out. Per account, `node scripts/inquiry.mjs demo usage <demo id>` prints a line like
+`workflow runs: started 3 · finished 2 (approved 1 · declined 1) · finance 2/1 · sourcing 0/0 · sns 1/1`.
+
+## Privacy policy (`/privacy`, 2026-11-14)
 
 **법률 검토 전 초안** — the text is written from what this code does, not reviewed by a lawyer yet.
 The page itself does not say so; this note does. The Korean text is authoritative, en and zh-CN
@@ -214,7 +252,7 @@ are translations (the page says the Korean version prevails).
 - Text: `web/src/marketing/messages/policy.ts` (12 sections: purpose, items, retention, deletion,
   third parties, processors and transfer abroad, rights, safety, cookies, officer, remedies,
   changes). Who and when: `web/src/marketing/messages/site.ts` (representative, contact email,
-  effective date). The site footer (landing, `/policy`, `/login`, `/login/help`, `/demo`) reads
+  effective date). The site footer (landing, `/privacy`, `/login`, `/login/help`, `/demo`) reads
   the same file.
 - Keep in step: when what is collected, how long it is kept (`RETAIN_DAYS`, `DEMO_DAYS`, the
   cron), the cookie, the D1 location or the processors change, change the policy text,
@@ -228,7 +266,7 @@ are translations (the page says the Korean version prevails).
 1. `cd marketing && npm ci`
 2. `npx wrangler login`
 3. Run `npx wrangler d1 create solosquad-marketing --location apac` and paste the printed
-   `database_id` into `wrangler.toml`. The privacy policy (`/policy` §6) states this APAC location
+   `database_id` into `wrangler.toml`. The privacy policy (`/privacy` §6) states this APAC location
    hint — if you pick another, change `web/src/marketing/messages/policy.ts` too (DM6).
 4. `npm run migrate:remote`
 5. Set the secrets with `npx wrangler secret put FORM_SECRET`, `IP_SALT` and `DEMO_SECRET` (long

@@ -1,7 +1,7 @@
 // The demo account request (PRD §3.5.2 ⑥ + §3.6.3, decision 62). The modal checks the same rules
 // for convenience; this is the one that counts. The registration number and the phone follow
 // scripts/lib/company-no.mjs and phone.mjs — the modal imports the same files.
-import { checkCompanyNo, digitsOf, kindByLength, type CompanyNoKind } from '../scripts/lib/company-no.mjs';
+import { checkCompanyNo, digitsOf, kindByLength, kindForCountry, type CompanyNoKind } from '../scripts/lib/company-no.mjs';
 import { checkPhone } from '../scripts/lib/phone.mjs';
 
 export const BUSINESS_TYPES = ['retail', 'online', 'maker', 'service', 'partner', 'other'] as const;
@@ -21,12 +21,13 @@ export type FieldError = 'required' | 'too_long' | 'invalid';
 /**
  * The company's registration number (2026-11-12; digits only since 2026-11-13): a Korean company
  * (country kr) gives a 사업자등록번호 (`business`, 10 digits) or a 법인등록번호 (`corporate`, 13),
- * with its check digit; another country's is 4–20 digits (`foreign`). Hyphens and spaces may come
- * with the digits; only the digits are stored, with the kind. A Korean request without a kind (an
- * older page) is read by its length.
+ * with its check digit; a Chinese one (country cn, 2026-11-14) its 统一社会信用代码 (`uscc`, 18
+ * letters and digits with a check character); another country's is 4–20 letters and digits
+ * (`foreign`). Hyphens and spaces may come with it; the normalised code is stored, with the kind.
+ * A Korean request without a kind (an older page) is read by its length.
  */
 export function companyNoOf(raw: unknown, country: string | null, kind: unknown) {
-  if (country !== 'kr') return checkCompanyNo(raw, 'foreign');
+  if (country !== 'kr') return checkCompanyNo(raw, kindForCountry(country));
   const picked = typeof kind === 'string' && kind ? kind : kindByLength(digitsOf(raw));
   return checkCompanyNo(raw, picked);
 }

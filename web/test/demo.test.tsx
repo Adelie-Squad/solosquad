@@ -100,13 +100,16 @@ describe('the engine', () => {
     await until(() => state().status === 'done');
     expect(Object.keys(state().outputs)).toContain('paid');
     expect(Object.keys(state().outputs)).not.toContain('hold');
-    expect(actions).toEqual(['run:finance-monthly', 'approve:review', 'approve:pay']);
+    // the KPI events (2026-11-14): started, then done once with its outcome
+    expect(actions).toEqual(['workflow_started:finance', 'run:finance-monthly', 'approve:review', 'approve:pay', 'workflow_done:finance:approved']);
     e.stop();
   });
 
   it('decline takes the scenario’s branch (소싱 → 재협상 메모); a team review declined ends the run', async () => {
     vi.useFakeTimers();
     const e = new DemoEngine(DATA.ko, ACCOUNT, { pace: FAST });
+    const actions: string[] = [];
+    e.onAction = (d) => actions.push(d);
     const tid = (post(e, `${W}/workflows/product-sourcing/run`, {}).body as { thread_id: string }).thread_id;
     const card = () => get<ApprovalItem[]>(e, `${W}/approvals`)[0]?.card.step;
     const state = () => get<WorkflowThreadState>(e, `${W}/workflow-threads/${tid}/state`).values;
@@ -124,6 +127,9 @@ describe('the engine', () => {
     post(e, `${W}/workflow-threads/${sns}/resume`, { value: 'declined' });
     await until(() => get<WorkflowThreadState>(e, `${W}/workflow-threads/${sns}/state`).values.status === 'done');
     expect(get<ApprovalItem[]>(e, `${W}/approvals`)).toEqual([]);
+    // each run the visitor started ends with one workflow_done, declined when an approval was declined;
+    // the history seeded before they came sends none
+    expect(actions.filter((a) => a.startsWith('workflow_'))).toEqual(['workflow_started:sourcing', 'workflow_done:sourcing:declined', 'workflow_started:sns', 'workflow_done:sns:declined']);
     e.stop();
   });
 

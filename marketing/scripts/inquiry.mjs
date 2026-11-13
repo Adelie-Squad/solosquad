@@ -15,7 +15,7 @@
 //   node scripts/inquiry.mjs show <id>
 //   node scripts/inquiry.mjs review <id> [--note …]
 //   node scripts/inquiry.mjs reject <id> --note …
-//   node scripts/inquiry.mjs issue <id> [--days 14] [--company-no <digits> --kind business|corporate|foreign] [--phone <digits>]
+//   node scripts/inquiry.mjs issue <id> [--days 14] [--company-no <number> --kind business|corporate|uscc|foreign] [--phone <digits>]
 //   node scripts/inquiry.mjs extend <id> --days 7          (the request's demo account)
 //   node scripts/inquiry.mjs revoke <id>                   (the request's demo account)
 //   node scripts/inquiry.mjs demo list
@@ -32,10 +32,11 @@
 import { createInterface } from 'node:readline/promises';
 import { Writable } from 'node:stream';
 import { execute, handle, iso, parseArgs, sql } from './lib/d1.mjs';
-import { checkCompanyNo, displayCompanyNo } from './lib/company-no.mjs';
+import { checkCompanyNo, displayCompanyNo, kindForCountry } from './lib/company-no.mjs';
 import { demoPassword } from './lib/demo-password.mjs';
 import { hashPassword, newPassword } from './lib/password.mjs';
 import { phoneDigits } from './lib/phone.mjs';
+import { workflowRunsLine } from './lib/usage.mjs';
 
 const { pos, opts } = parseArgs(process.argv.slice(2));
 const remote = opts.remote === true;
@@ -89,10 +90,10 @@ async function issue(row) {
   let companyNo = row.company_no;
   let kind = row.company_no_kind ?? null;
   if (typeof opts['company-no'] === 'string') {
-    kind = typeof opts.kind === 'string' ? opts.kind : row.country === 'kr' ? (row.company_no_kind ?? null) : 'foreign';
-    if (!kind) die('--kind business|corporate|foreign goes with --company-no');
+    kind = typeof opts.kind === 'string' ? opts.kind : row.country === 'kr' ? (row.company_no_kind ?? null) : kindForCountry(row.country);
+    if (!kind) die('--kind business|corporate|uscc|foreign goes with --company-no');
     const checked = checkCompanyNo(opts['company-no'], kind);
-    if (!checked.ok) die(`--company-no: ${checked.error === 'check' ? 'the check digit is wrong' : 'a 사업자등록번호 is 10 digits, a 법인등록번호 13, another country’s 4–20'}`);
+    if (!checked.ok) die(`--company-no: ${checked.error === 'check' ? 'the check digit is wrong' : 'a 사업자등록번호 is 10 digits, a 법인등록번호 13, a 统一社会信用代码 18 letters and digits, another country’s 4–20'}`);
     companyNo = checked.digits;
   }
   if (!companyNo) die(`inquiry ${row.id} has no company registration number — ask for it and pass --company-no --kind`);
@@ -264,6 +265,7 @@ function demoCommand(sub, demoId) {
     const total = (k) => by(k).reduce((s, e) => s + e.n, 0);
     const logins = by('login')[0];
     console.log(`${acct.id} · ${acct.company_name} · inquiry ${acct.inquiry_id ?? '-'} · ${statusOf(acct)} ${acct.expires_at ? `until ${acct.expires_at.slice(0, 16)}` : '(no end)'}${acct.internal ? ' · internal' : ''}`);
+    console.log(workflowRunsLine(events));
     console.log(`logins ${total('login')} (first ${logins?.first?.slice(0, 16) ?? '-'}, last ${logins?.last?.slice(0, 16) ?? '-'}) · logouts ${total('logout')} · screens ${total('view')} · actions ${total('action')}`);
     for (const k of ['view', 'action']) {
       if (!by(k).length) continue;

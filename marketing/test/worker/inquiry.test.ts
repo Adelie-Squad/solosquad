@@ -69,18 +69,18 @@ describe('validation (the modal checks the same)', () => {
   });
 
   it('asking for a demo account needs the demo-usage consent and a phone too (DM6 ⓑ · the password); a call alone does not', () => {
-    const base = { company: 'Acme', company_no: '91310000123456', business_type: 'online', country: 'cn', contact_name: 'Li', email: 'LI@ACME.CN', wants: ['sourcing'], consent_required: true, locale: 'zh-CN', source: 'pricing' };
+    const base = { company: 'Acme', company_no: '91350100M000100Y43', business_type: 'online', country: 'cn', contact_name: 'Li', email: 'LI@ACME.CN', wants: ['sourcing'], consent_required: true, locale: 'zh-CN', source: 'pricing' };
     expect(validateInquiry({ ...base, requests: ['demo'] })).toEqual({ ok: false, fields: { consent_demo: 'required', phone: 'required' } });
     const call = validateInquiry({ ...base, requests: ['consult'] });
-    expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', company_no: '91310000123456', company_no_kind: 'foreign', phone: null, requests: ['consult'], consent_demo: false });
+    expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', company_no: '91350100M000100Y43', company_no_kind: 'uscc', phone: null, requests: ['consult'], consent_demo: false });
     const demo = validateInquiry({ ...base, requests: ['demo'], consent_demo: true, phone: '+86 138 0013 8000' });
-    expect(demo.ok && demo.value).toMatchObject({ phone: '8613800138000' });
+    expect(demo.ok && demo.value).toMatchObject({ phone: '13800138000' }); // +86 taken off (2026-11-14)
   });
 
   it('the phone: digits stored; a Korean one by the Korean rules; anything but digits and separators refused', () => {
     const base = { company: 'Acme', company_no: '1234567891', company_no_kind: 'business', business_type: 'online', country: 'kr', contact_name: 'Li', email: 'li@acme.kr', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing' };
     const stored = (phone: unknown, country = 'kr') => {
-      const r = validateInquiry({ ...base, phone, country });
+      const r = validateInquiry({ ...base, phone, country, ...(country === 'cn' ? { company_no: '91350100M000100Y43' } : {}) });
       return r.ok ? r.value.phone : r.fields.phone;
     };
     expect(stored('010-1234-5678')).toBe('01012345678');
@@ -89,6 +89,10 @@ describe('validation (the modal checks the same)', () => {
     expect(stored('010-abcd-5678')).toBe('invalid');
     expect(stored('')).toBeNull();
     expect(stored('4915112345678', 'other')).toBe('4915112345678');
+    // China: an 11-digit mobile from 1, +86 / 0086 taken off
+    expect(stored('+86 138-0013-8000', 'cn')).toBe('13800138000');
+    expect(stored('138 0013 8000', 'cn')).toBe('13800138000');
+    expect(stored('0571-8888-8888', 'cn')).toBe('invalid');
   });
 
   it('the company registration number: digits only, with its kind; a Korean one by its check digit; another country’s 4–20 digits', () => {
@@ -106,9 +110,14 @@ describe('validation (the modal checks the same)', () => {
     expect(stored('110111-1234569', 'kr', 'business')).toBe('invalid'); // 13 digits for a 사업자등록번호
     expect(stored('123-45-6789', 'kr', 'business')).toBe('invalid');
     expect(stored('1234567891', 'kr', 'sole')).toBe('invalid');
-    expect(stored('HRB-12345', 'other')).toBe('invalid'); // digits only now
+    expect(stored('HRB-12345', 'other')).toBe('HRB12345/foreign'); // letters and digits (2026-11-14)
+    expect(stored('HRB/12345', 'other')).toBe('invalid');
     expect(stored('12345', 'other')).toBe('12345/foreign');
-    expect(stored('123-45-67890', 'cn', 'business')).toBe('1234567890/foreign'); // no check digit abroad
+    expect(stored('123-45-67890', 'other', 'business')).toBe('1234567890/foreign'); // no check digit for another country
+    // China (2026-11-14): the 统一社会信用代码, 18 with its check character, upper-cased
+    expect(stored('91350100m000100y43', 'cn', 'business')).toBe('91350100M000100Y43/uscc');
+    expect(stored('91350100M000100Y44', 'cn')).toBe('invalid');
+    expect(stored('1234567891', 'cn')).toBe('invalid');
     expect(stored('123', 'other')).toBe('invalid');
     expect(stored('1'.repeat(21), 'other')).toBe('invalid');
     expect(stored('   ', 'kr', 'business')).toBe('required');
@@ -245,6 +254,17 @@ describe('the demo account, issued on the request (2026-11-13 — no review)', (
     // the demo login: the number with or without hyphens, the email in any case
     const login = await signIn('123-45-67891', 'ABC123@example.COM', 'apple5432');
     expect(login.headers.get('location')).toBe('https://marketing.test/demo/app');
+  });
+
+  it('a Chinese company (2026-11-14): its 统一社会信用代码 and mobile; the account signs in with the code, letters in any case', async () => {
+    const r = await post(await request({ country: 'cn', company_no: '91350100m000100y43', company_no_kind: undefined, phone: '+86 138 0013 8000', email: 'Li.Wei@example.cn', locale: 'zh-CN', reach_kind: 'wechat' }));
+    const out = (await r.json()) as Answer;
+    expect(out.demo).toMatchObject({ id: 'li.wei@example.cn', password: 'lemon8000', company_no: '91350100M000100Y43', company_no_kind: 'uscc' });
+    expect(await account('li.wei@example.cn')).toMatchObject({ company_no: '91350100M000100Y43', company_no_kind: 'uscc', locale: 'zh-CN' });
+    const row = await env.DB.prepare('SELECT country, phone, company_no, company_no_kind FROM inquiries WHERE email = ?1').bind('li.wei@example.cn').first();
+    expect(row).toEqual({ country: 'cn', phone: '13800138000', company_no: '91350100M000100Y43', company_no_kind: 'uscc' });
+    expect((await signIn('91350100m000100y43', 'li.wei@example.cn', 'lemon8000')).headers.get('location')).toBe('https://marketing.test/demo/app');
+    expect((await signIn('913501000001004', 'li.wei@example.cn', 'lemon8000')).headers.get('location')).toBe('https://marketing.test/demo?error=1');
   });
 
   it('the same email again: the same account — a fresh password from the new phone, the new number, a later end — linked to the new request', async () => {

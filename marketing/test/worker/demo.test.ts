@@ -14,12 +14,12 @@ const freshIp = () => `192.0.2.${++n}`;
 const PASSWORD = 'Abcdefgh23456789';
 const DAY = 86_400_000;
 
-async function addAccount(id: string, over: { expires?: number; revoked?: boolean; companyNo?: string; name?: string } = {}) {
+async function addAccount(id: string, over: { expires?: number; revoked?: boolean; companyNo?: string; kind?: string; name?: string } = {}) {
   await env.DB.prepare(
-    `INSERT INTO demo_accounts (id, id_lower, inquiry_id, company_no, company_name, locale, password_hash, created_at, created_by, expires_at, revoked_at)
-     VALUES (?1, ?2, 'INQ1', ?3, ?4, 'ko', ?5, ?6, 'test', ?7, ?8)`,
+    `INSERT INTO demo_accounts (id, id_lower, inquiry_id, company_no, company_name, locale, password_hash, created_at, created_by, expires_at, revoked_at, company_no_kind)
+     VALUES (?1, ?2, 'INQ1', ?3, ?4, 'ko', ?5, ?6, 'test', ?7, ?8, ?9)`,
   )
-    .bind(id, id.toLowerCase(), over.companyNo ?? '1234567890', over.name ?? '삼성전자', await hashPassword(PASSWORD, { iterations: 1000 }), new Date().toISOString(), new Date(over.expires ?? Date.now() + 14 * DAY).toISOString(), over.revoked ? new Date().toISOString() : null)
+    .bind(id, id.toLowerCase(), over.companyNo ?? '1234567890', over.name ?? '삼성전자', await hashPassword(PASSWORD, { iterations: 1000 }), new Date().toISOString(), new Date(over.expires ?? Date.now() + 14 * DAY).toISOString(), over.revoked ? new Date().toISOString() : null, over.kind ?? null)
     .run();
 }
 
@@ -104,6 +104,19 @@ describe('POST /api/demo/login', () => {
     }
   });
 
+  it('a Chinese company (2026-11-14): its 统一社会信用代码 with letters, any case, spaces or hyphens — its digits alone do not do', async () => {
+    await addAccount('li@example.cn', { companyNo: '91350100M000100Y43', kind: 'uscc', name: '福州示例有限公司' });
+    for (const company_no of ['91350100M000100Y43', '91350100m000100y43', '913501 00M000 100Y43', '９１３５０１００Ｍ０００１００Ｙ４３']) {
+      expect((await login({ company_no, username: 'li@example.cn', password: PASSWORD })).headers.get('location'), company_no).toBe(`${ORIGIN}/demo/app`);
+    }
+    for (const company_no of ['913501000001004', '91350100M000100Y44', '91350100M000100Y4']) {
+      expect((await login({ company_no, username: 'li@example.cn', password: PASSWORD })).headers.get('location'), company_no).toBe(`${ORIGIN}/demo?error=1`);
+    }
+    // a Korean account with its kind: compared the same way (digits — the hyphens drop out)
+    await addAccount('kim@example.kr', { companyNo: '1234567891', kind: 'business' });
+    expect((await login({ company_no: '123-45-67891', username: 'kim@example.kr', password: PASSWORD })).headers.get('location')).toBe(`${ORIGIN}/demo/app`);
+  });
+
   it('the number is compared by its digits: hyphens, spaces or none', async () => {
     for (const company_no of ['1234567890', '123 45 67890', '１２３-４５-６７８９０']) {
       expect((await login({ company_no, username: 'samsungDemo', password: PASSWORD })).headers.get('location')).toBe(`${ORIGIN}/demo/app`);
@@ -186,6 +199,39 @@ describe('the session', () => {
       ['action', 'run:finance-monthly'],
     ]);
     expect(Object.keys(rows.results[0]).sort()).toEqual(['at', 'demo_id', 'detail', 'kind']);
+  });
+
+  it('the KPI’s workflow events (2026-11-14): only the allow-listed workflow_started · workflow_done names, as actions', async () => {
+    await addAccount('kpiDemo');
+    const cookie = await signedIn('kpiDemo');
+    const send = (body: unknown) => SELF.fetch(`${ORIGIN}/api/demo/event`, { method: 'POST', headers: { 'content-type': 'application/json', origin: ORIGIN, cookie }, body: JSON.stringify(body) });
+    const good = ['workflow_started:finance', 'workflow_done:finance:approved', 'workflow_started:sourcing', 'workflow_done:sourcing:declined', 'workflow_started:sns', 'workflow_done:sns:approved'];
+    for (const detail of good) expect((await send({ kind: 'action', detail })).status, detail).toBe(200);
+    const bad: [string, string][] = [
+      ['action', 'workflow_done:finance'],
+      ['action', 'workflow_done:finance:maybe'],
+      ['action', 'workflow_done:payroll:approved'],
+      ['action', 'workflow_started:finance:approved'],
+      ['action', 'workflow_started:'],
+      ['action', 'workflow_finished:finance'],
+      ['view', 'workflow_started:finance'],
+    ];
+    for (const [kind, detail] of bad) expect((await send({ kind, detail })).status, `${kind} ${detail}`).toBe(400);
+    const rows = await env.DB.prepare("SELECT detail FROM demo_events WHERE demo_id = 'kpiDemo' AND kind = 'action' ORDER BY rowid").all<{ detail: string }>();
+    expect(rows.results.map((r) => r.detail)).toEqual(good);
+    // the README's KPI query: logged-in accounts with at least one finished run
+    const kpi = await env.DB.prepare(
+      `SELECT count(DISTINCT l.demo_id) AS logged_in,
+              count(DISTINCT d.demo_id) AS finished_one,
+              round(100.0 * count(DISTINCT d.demo_id) / max(count(DISTINCT l.demo_id), 1), 1) AS pct
+       FROM demo_events l
+       LEFT JOIN demo_events d ON d.demo_id = l.demo_id AND d.kind = 'action' AND d.detail LIKE 'workflow_done:%' AND d.at >= ?1 AND d.at < ?2
+       WHERE l.kind = 'login' AND l.at >= ?1 AND l.at < ?2`,
+    )
+      .bind(new Date(Date.now() - DAY).toISOString(), new Date(Date.now() + DAY).toISOString())
+      .first<{ logged_in: number; finished_one: number; pct: number }>();
+    expect(kpi!.finished_one).toBe(1);
+    expect(kpi!.logged_in).toBeGreaterThan(1);
   });
 
   it('events are limited per account (30 a minute)', async () => {

@@ -1,4 +1,4 @@
-// The privacy policy of the marketing site (`/policy`, 2026-11-14). Korean is the authoritative text;
+// The privacy policy of the marketing site (`/privacy`, 2026-11-14). Korean is the authoritative text;
 // en and zh-CN are translations (the page says the Korean version prevails). It lives here, under
 // messages/, as structured content rather than flat i18n keys — it is long prose, read only by
 // Policy.tsx.
@@ -81,12 +81,12 @@ function ko(): PolicyDoc {
           table: {
             head: ['언제', '항목', '필수 · 선택'],
             rows: [
-              ['데모 계정 · 상담 신청', '회사 이름, 나라, 법인(사업자)등록번호와 그 구분(개인사업자 · 법인 · 다른 나라), 업종, 담당자 이름, 이메일, 맡기고 싶은 일, 원하는 것(데모 계정 · 상담), 동의 여부와 동의 문구의 버전', '필수'],
-              ['데모 계정을 원할 때', '전화번호(뒤 4자리가 데모 비밀번호에 들어가요)', '필수'],
+              ['데모 계정 · 상담 신청', '회사 이름, 나라, 회사의 등록번호와 그 구분(한국 개인사업자의 사업자등록번호 · 한국 법인의 법인등록번호 · 중국 회사의 통일사회신용코드 · 다른 나라의 등록번호), 업종, 담당자 이름, 이메일, 맡기고 싶은 일, 원하는 것(데모 계정 · 상담), 동의 여부와 동의 문구의 버전', '필수'],
+              ['데모 계정을 원할 때', '전화번호 — 중국은 휴대전화 번호(뒤 4자리가 데모 비밀번호에 들어가요)', '필수'],
               ['신청할 때 고를 수 있는 것', '전화번호(상담만 원할 때), 메신저 종류(카카오톡 · WeChat)와 메신저 ID, 더 알려 주실 것(직접 쓰는 글), 새 소식 받기 동의', '선택'],
               ['신청과 함께 저절로', '화면 언어, 신청한 자리(첫 화면 · 가격 · 데모 로그인 등), 양식을 연 시각과 보낸 시각, 신청의 처리 기록(접수 · 발급 시각)', '—'],
               ['데모 계정', '아이디(신청한 이메일), 법인(사업자)등록번호와 그 구분, 회사 이름, 화면 언어, 비밀번호의 해시값(원래 비밀번호는 저장하지 않아요), 만든 · 바뀐 · 끝나는 시각', '—'],
-              ['데모를 쓸 때(데모 계정 신청 시 동의)', '로그인 · 로그아웃 · 본 화면 · 누른 버튼(예: 예시 워크플로우 실행, 승인)과 그 시각. IP 주소 · 브라우저 정보 · 직접 쓴 글은 기록하지 않아요.', '데모 계정 신청 시 필수'],
+              ['데모를 쓸 때(데모 계정 신청 시 동의)', '로그인 · 로그아웃 · 본 화면 · 누른 버튼(예: 예시 워크플로우 실행, 승인), 예시 워크플로우를 시작하고 끝까지 마쳤는지(승인 · 거절)와 그 시각. IP 주소 · 브라우저 정보 · 직접 쓴 글은 기록하지 않아요.', '데모 계정 신청 시 필수'],
               ['신청 · 로그인을 보낼 때', '접속 IP 주소를 비밀값과 섞어 바꾼 해시값(원래 IP 는 저장하지 않아요), 로그인을 시도한 아이디 — 시도 횟수를 세는 데만 써요.', '—'],
             ],
           },
@@ -246,12 +246,12 @@ function en(): PolicyDoc {
           table: {
             head: ['When', 'What', 'Required or optional'],
             rows: [
-              ['Demo account or consultation request', 'Company name, country, company registration number and its kind (sole proprietor, corporation, another country), industry, contact name, email, what you want to hand over, what you ask for (demo account, consultation), your consents and the version of the consent text', 'Required'],
-              ['When you ask for a demo account', 'Phone number (its last four digits go into the demo password)', 'Required'],
+              ['Demo account or consultation request', 'Company name, country, the company’s registration number and its kind (a Korean sole proprietor’s business registration number, a Korean corporation’s corporate registration number, a Chinese company’s unified social credit code, another country’s registration number), industry, contact name, email, what you want to hand over, what you ask for (demo account, consultation), your consents and the version of the consent text', 'Required'],
+              ['When you ask for a demo account', 'Phone number — a mobile number in China (its last four digits go into the demo password)', 'Required'],
               ['Optional in the request', 'Phone number (consultation only), messenger (KakaoTalk, WeChat) and messenger ID, anything else you write, consent to news', 'Optional'],
               ['Recorded with the request', 'Screen language, where you sent it from (home page, pricing, demo login, …), when the form was opened and sent, the handling record (received, issued)', '—'],
               ['Demo account', 'ID (your request email), company registration number and its kind, company name, screen language, a hash of the password (never the password itself), when it was made, changed and ends', '—'],
-              ['Using the demo (agreed when requesting a demo account)', 'Login, logout, screens viewed and buttons pressed (e.g. running an example workflow, approving) with their times. No IP address, browser details or anything you type.', 'Required for a demo account'],
+              ['Using the demo (agreed when requesting a demo account)', 'Login, logout, screens viewed and buttons pressed (e.g. running an example workflow, approving), whether an example workflow was started and run to its end (approved or declined), with their times. No IP address, browser details or anything you type.', 'Required for a demo account'],
               ['Sending a request or a login', 'A hash of your IP address mixed with a secret value (the IP itself is not stored) and the ID tried at login — used only to count attempts.', '—'],
             ],
           },
@@ -411,12 +411,12 @@ function zhCN(): PolicyDoc {
           table: {
             head: ['场景', '项目', '必填或选填'],
             rows: [
-              ['申请演示账号或咨询', '公司名称、国家、企业注册号及其类型（个人经营者、法人、其他国家）、行业、联系人姓名、邮箱、想交给我们的工作、申请内容（演示账号、咨询）、同意情况及同意文本的版本', '必填'],
-              ['申请演示账号时', '电话号码（后 4 位用于演示密码）', '必填'],
+              ['申请演示账号或咨询', '公司名称、国家、企业注册号及其类型（韩国个人经营者的营业执照号、韩国法人的法人登记号、中国企业的统一社会信用代码、其他国家的注册号）、行业、联系人姓名、邮箱、想交给我们的工作、申请内容（演示账号、咨询）、同意情况及同意文本的版本', '必填'],
+              ['申请演示账号时', '电话号码——中国为手机号（后 4 位用于演示密码）', '必填'],
               ['申请时可选', '电话号码（仅申请咨询时）、通讯软件（KakaoTalk、WeChat）及其 ID、补充说明（自行填写的内容）、接收新消息的同意', '选填'],
               ['随申请自动记录', '界面语言、申请入口（首页、价格、演示登录等）、打开和提交表单的时间、申请的处理记录（受理、发放时间）', '—'],
               ['演示账号', 'ID（申请邮箱）、企业注册号及其类型、公司名称、界面语言、密码的哈希值（不保存密码原文）、创建、修改和到期时间', '—'],
-              ['使用演示时（申请演示账号时同意）', '登录、退出、查看的页面、点击的按钮（如运行示例工作流、审批）及其时间。不记录 IP 地址、浏览器信息或您输入的文字。', '申请演示账号时必填'],
+              ['使用演示时（申请演示账号时同意）', '登录、退出、查看的页面、点击的按钮（如运行示例工作流、审批）、示例工作流是否开始并运行到结束（批准或拒绝）及其时间。不记录 IP 地址、浏览器信息或您输入的文字。', '申请演示账号时必填'],
               ['提交申请或登录时', '将访问 IP 地址与密钥混合后的哈希值（不保存 IP 原文），以及登录时尝试的 ID——仅用于统计尝试次数。', '—'],
             ],
           },

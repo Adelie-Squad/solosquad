@@ -2,7 +2,8 @@
 // the hyphens while typing), the phone, the demo password rule — one file each, used by the
 // Worker, the agency CLI and the web — plus password hashes, what `route add` accepts, and SQL quoting.
 import { describe, expect, it } from 'vitest';
-import { businessNoOk, checkCompanyNo, corporateNoOk, digitsOf, displayCompanyNo, formatByLength, formatCompanyNo, maxDigits } from '../../scripts/lib/company-no.mjs';
+import { businessNoOk, checkCompanyNo, codeOf, corporateNoOk, digitsOf, displayCompanyNo, formatByLength, formatCompanyNo, kindForCountry, maxDigits, takesLetters, USCC_ALPHABET, usccCheckChar, usccOk } from '../../scripts/lib/company-no.mjs';
+import { workflowRuns, workflowRunsLine } from '../../scripts/lib/usage.mjs';
 import { lit, parseArgs, sql } from '../../scripts/lib/d1.mjs';
 import { demoPassword, FALLBACK_WORD, wordFor, WORDS } from '../../scripts/lib/demo-password.mjs';
 import { hashPassword, verifyPassword } from '../../scripts/lib/password.mjs';
@@ -33,7 +34,10 @@ describe('the registration number (scripts/lib/company-no.mjs)', () => {
     expect(checkCompanyNo('123-45-67890', 'business')).toEqual({ ok: false, error: 'check' });
     expect(checkCompanyNo('110111-1234569', 'business')).toEqual({ ok: false, error: 'length' });
     expect(checkCompanyNo('1234567891', 'corporate')).toEqual({ ok: false, error: 'length' });
-    expect(checkCompanyNo('HRB-12345', 'foreign')).toEqual({ ok: false, error: 'invalid' });
+    // another country's number takes letters too (2026-11-14), upper-cased, without separators
+    expect(checkCompanyNo('hrb-12345', 'foreign')).toEqual({ ok: true, digits: 'HRB12345', kind: 'foreign' });
+    expect(checkCompanyNo('HRB/12345', 'foreign')).toEqual({ ok: false, error: 'invalid' });
+    expect(checkCompanyNo('12a-45-67891', 'business')).toEqual({ ok: false, error: 'invalid' });
     expect(checkCompanyNo('  ', 'business')).toEqual({ ok: false, error: 'required' });
     expect(checkCompanyNo(12345, 'foreign')).toEqual({ ok: false, error: 'required' });
     expect(checkCompanyNo('91310000', 'foreign')).toEqual({ ok: true, digits: '91310000', kind: 'foreign' });
@@ -47,7 +51,7 @@ describe('the registration number (scripts/lib/company-no.mjs)', () => {
   it('the hyphens while typing: 사업자 NNN-NN-NNNNN, 법인 NNNNNN-NNNNNNN, foreign none; capped', () => {
     expect(['1', '123', '1234', '12345', '123456', '1234567891', '123456789123'].map((d) => formatCompanyNo(d, 'business'))).toEqual(['1', '123', '123-4', '123-45', '123-45-6', '123-45-67891', '123-45-67891']);
     expect(['110111', '1101111', '1101111234569', '11011112345699'].map((d) => formatCompanyNo(d, 'corporate'))).toEqual(['110111', '110111-1', '110111-1234569', '110111-1234569']);
-    expect(formatCompanyNo('12a-34', 'foreign')).toBe('1234');
+    expect(formatCompanyNo('12a-34', 'foreign')).toBe('12A34');
     expect(formatCompanyNo('1'.repeat(25), 'foreign')).toBe('1'.repeat(20));
     expect([maxDigits('business'), maxDigits('corporate'), maxDigits('foreign')]).toEqual([10, 13, 20]);
   });
@@ -62,7 +66,9 @@ describe('the registration number (scripts/lib/company-no.mjs)', () => {
   it('the Worker reads a Korean number by its kind (or its length from an older page); other countries are foreign', () => {
     expect(companyNoOf('123-45-67891', 'kr', 'business')).toMatchObject({ ok: true, kind: 'business' });
     expect(companyNoOf('1101111234569', 'kr', undefined)).toMatchObject({ ok: true, kind: 'corporate' });
-    expect(companyNoOf('1234567891', 'cn', 'business')).toMatchObject({ ok: true, kind: 'foreign' });
+    expect(companyNoOf('91350100M000100Y43', 'cn', 'business')).toMatchObject({ ok: true, kind: 'uscc', digits: '91350100M000100Y43' });
+    expect(companyNoOf('1234567891', 'cn', undefined)).toEqual({ ok: false, error: 'length' });
+    expect(companyNoOf('HRB 12345', 'other', 'business')).toMatchObject({ ok: true, kind: 'foreign', digits: 'HRB12345' });
     expect(companyNoOf('1234567890', 'kr', 'business')).toEqual({ ok: false, error: 'check' });
   });
 
@@ -100,7 +106,7 @@ describe('the phone (scripts/lib/phone.mjs)', () => {
   });
 
   it('other countries: digits only, up to 15', () => {
-    expect(formatPhone('+86 138-0013-8000', 'cn')).toBe('8613800138000');
+    expect(formatPhone('+44 20 7946 0958', 'other')).toBe('442079460958');
     expect(formatPhone('1'.repeat(20), 'other')).toBe('1'.repeat(15));
   });
 
@@ -109,9 +115,80 @@ describe('the phone (scripts/lib/phone.mjs)', () => {
     expect(checkPhone('02-123-4567', 'kr')).toEqual({ ok: true, digits: '021234567' });
     expect(checkPhone('1588-1234', 'kr')).toEqual({ ok: true, digits: '15881234' });
     for (const bad of ['010-123', '12345678901', '020-1234-5678', '010-1234-56789', '010-abcd-5678']) expect(checkPhone(bad, 'kr').ok).toBe(false);
-    expect(checkPhone('+86 138 0013 8000', 'cn')).toEqual({ ok: true, digits: '8613800138000' });
+    expect(checkPhone('+44 20 7946 0958', 'other')).toEqual({ ok: true, digits: '442079460958' });
     expect(checkPhone('12345', 'other')).toEqual({ ok: false, error: 'invalid' });
     expect(checkPhone('', 'kr')).toEqual({ ok: false, error: 'required' });
+  });
+
+  it('China (2026-11-14): a mobile, 11 digits from 1, shown 1XX-XXXX-XXXX; +86 / 0086 taken off', () => {
+    expect(['138', '1380', '1380013', '13800138', '13800138000', '138001380001'].map((d) => formatPhone(d, 'cn'))).toEqual([
+      '138',
+      '138-0',
+      '138-0013',
+      '138-0013-8',
+      '138-0013-8000',
+      '138-0013-8000',
+    ]);
+    expect(formatPhone('+86 138 0013 8000', 'cn')).toBe('+86 138-0013-8000');
+    expect(formatPhone('0086 13800138000', 'cn')).toBe('+86 138-0013-8000');
+    expect(checkPhone('138-0013-8000', 'cn')).toEqual({ ok: true, digits: '13800138000' });
+    expect(checkPhone('+86 138 0013 8000', 'cn')).toEqual({ ok: true, digits: '13800138000' });
+    expect(checkPhone('008613800138000', 'cn')).toEqual({ ok: true, digits: '13800138000' });
+    for (const bad of ['23800138000', '1380013800', '138001380001', '010-1234-5678', '+86 0571 8888 8888']) expect(checkPhone(bad, 'cn').ok, bad).toBe(false);
+    // the password's last four digits are the same with or without the country code
+    expect(demoPassword('li@x.cn', '13800138000')).toBe(`${wordFor('li@x.cn')}8000`);
+  });
+});
+
+describe('China’s 统一社会信用代码 (scripts/lib/company-no.mjs, GB 32100-2015)', () => {
+  it('the check character: weights 1,3,9,…,28 over the 31-character alphabet, (31 − sum mod 31) mod 31', () => {
+    expect(USCC_ALPHABET).toBe('0123456789ABCDEFGHJKLMNPQRTUWXY');
+    // published codes
+    for (const ok of ['91350100M000100Y43', '91110000600037341L']) expect(usccOk(ok), ok).toBe(true);
+    expect(usccCheckChar('91350100M000100Y4')).toBe('3');
+    // one character off, the wrong check, a letter outside the alphabet (I · O · Z · S · V), the wrong length
+    for (const bad of ['91350100M000100Y44', '91350100M000100Y4X', '91110000600037341K', '9135010OM000100Y43', '91350100M000100S43', '91350100M000100Y4', '91350100M000100Y431']) expect(usccOk(bad), bad).toBe(false);
+    // every check value in the alphabet comes out of some code (the mod-31 wrap included)
+    const seen = new Set<string>();
+    for (let i = 0; i < 2000 && seen.size < 31; i++) seen.add(usccCheckChar(`9111000060${String(i).padStart(7, '0')}`)!);
+    expect(seen.size).toBe(31);
+  });
+
+  it('checkCompanyNo(uscc): upper-cases, drops spaces and hyphens, 18 characters, the check character', () => {
+    expect(checkCompanyNo('91350100m000100y43', 'uscc')).toEqual({ ok: true, digits: '91350100M000100Y43', kind: 'uscc' });
+    expect(checkCompanyNo('913501 00M000 100Y43', 'uscc')).toEqual({ ok: true, digits: '91350100M000100Y43', kind: 'uscc' });
+    expect(checkCompanyNo('９１３５０１００Ｍ０００１００Ｙ４３', 'uscc')).toEqual({ ok: true, digits: '91350100M000100Y43', kind: 'uscc' });
+    expect(checkCompanyNo('91350100M000100Y44', 'uscc')).toEqual({ ok: false, error: 'check' });
+    expect(checkCompanyNo('91350100M000100Y4', 'uscc')).toEqual({ ok: false, error: 'length' });
+    expect(checkCompanyNo('91350100M000100Y4/3', 'uscc')).toEqual({ ok: false, error: 'invalid' });
+    expect(checkCompanyNo('', 'uscc')).toEqual({ ok: false, error: 'required' });
+    expect(formatCompanyNo('9135-0100 m000100y43zz', 'uscc')).toBe('91350100M000100Y43');
+    expect(maxDigits('uscc')).toBe(18);
+    expect(displayCompanyNo('91350100M000100Y43', 'uscc')).toBe('91350100M000100Y43');
+  });
+
+  it('the country picks the kind; letters only where the kind takes them', () => {
+    expect([kindForCountry('kr'), kindForCountry('kr', 'corporate'), kindForCountry('cn', 'corporate'), kindForCountry('other'), kindForCountry('')]).toEqual(['business', 'corporate', 'uscc', 'foreign', 'foreign']);
+    expect(['business', 'corporate', 'uscc', 'foreign'].map(takesLetters)).toEqual([false, false, true, true]);
+    expect(codeOf(' 913-501 ｍ ')).toBe('913501M');
+  });
+});
+
+describe('workflow runs in a demo account’s usage (scripts/lib/usage.mjs)', () => {
+  it('counts workflow_started and workflow_done (with the outcome) per workflow; ignores anything else', () => {
+    const events = [
+      { kind: 'action', detail: 'workflow_started:finance', n: 2 },
+      { kind: 'action', detail: 'workflow_done:finance:approved', n: 1 },
+      { kind: 'action', detail: 'workflow_started:sns', n: 1 },
+      { kind: 'action', detail: 'workflow_done:sns:declined', n: 1 },
+      { kind: 'action', detail: 'run:finance-monthly', n: 2 },
+      { kind: 'view', detail: 'workflow_done:finance:approved', n: 9 },
+      { kind: 'action', detail: 'workflow_done:payroll:approved', n: 9 },
+    ];
+    const r = workflowRuns(events);
+    expect(r).toEqual({ started: 3, finished: 2, approved: 1, declined: 1, per: { finance: { started: 2, finished: 1 }, sourcing: { started: 0, finished: 0 }, sns: { started: 1, finished: 1 } } });
+    expect(workflowRunsLine(events)).toBe('workflow runs: started 3 · finished 2 (approved 1 · declined 1) · finance 2/1 · sourcing 0/0 · sns 1/1 (started/finished)');
+    expect(workflowRunsLine([])).toContain('started 0 · finished 0');
   });
 });
 

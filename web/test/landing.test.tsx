@@ -1248,7 +1248,7 @@ describe('the site footer (2026-11-14)', () => {
   const check = (footer: HTMLElement, owner: string, policy: string) => {
     expect(within(footer).getByText(owner)).toBeTruthy();
     expect(within(footer).getByRole('link', { name: 'contact@toronchul.app' }).getAttribute('href')).toBe('mailto:contact@toronchul.app');
-    expect(within(footer).getByRole('link', { name: policy }).getAttribute('href')).toBe('/policy');
+    expect(within(footer).getByRole('link', { name: policy }).getAttribute('href')).toBe('/privacy');
     expect(footer.textContent).toContain(`© ${new Date().getFullYear()} SoloSquad`);
   };
 
