@@ -54,6 +54,11 @@ export type ErrorCode =
   | 'company_field_too_long'
   | 'company_country_invalid'
   | 'company_control_corporation_only'
+  | 'entity_name_required'
+  | 'entity_registration_invalid'
+  | 'entity_unknown'
+  | 'entity_primary_locked'
+  | 'entity_in_use'
   | 'snapshot_invalid'
   | 'snapshot_keys_required'
   | 'snapshot_unavailable'
@@ -144,6 +149,9 @@ export interface SoloSquadWebApi {
   PasskeyAdded: PasskeyAdded;
   ServerFacts: ServerFacts;
   Company: Company;
+  LegalEntity: LegalEntity;
+  EntityList: EntityList;
+  BusinessEntity: BusinessEntity;
   SnapshotSettings: SnapshotSettings;
   SnapshotRunResult: SnapshotRunResult;
   CalendarItem: CalendarItem;
@@ -590,6 +598,11 @@ export interface ConnectionOut {
   eligible: boolean;
   eligibility_reason: string | null;
   eligibility_source: string | null;
+  eligibility_by: ('entity' | 'server') | null;
+  eligibility_provider: string | null;
+  eligibility_country: string | null;
+  eligibility_entity: string | null;
+  entity_id: number | null;
   source: 'core' | 'org';
 }
 /**
@@ -1161,6 +1174,56 @@ export interface Company {
   address: string;
   controlled_by: string | null;
   complete: boolean;
+}
+/**
+ * One of the customer's legal entities (법인, 2026-11-14) — `core.db` `entities`.
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "LegalEntity".
+ */
+export interface LegalEntity {
+  id: number;
+  kind: ('corporation' | 'sole_proprietor' | 'foreign') | null;
+  name: string;
+  registration_no: string;
+  registration_kind: ('business' | 'corporate' | 'uscc' | 'foreign') | null;
+  representative: string;
+  country: string | null;
+  address: string;
+  controlled_by: string | null;
+  is_primary: boolean;
+  complete: boolean;
+  created: number;
+  updated: number;
+  businesses: EntityBusiness[];
+  connections: string[];
+  removable: boolean;
+  blocked_by: ('primary' | 'in_use') | null;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "EntityBusiness".
+ */
+export interface EntityBusiness {
+  org: string;
+  name: string;
+}
+/**
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "EntityList".
+ */
+export interface EntityList {
+  entities: LegalEntity[];
+}
+/**
+ * A 사업's 소속 법인 (`org.yaml entity_id`).
+ *
+ * This interface was referenced by `SoloSquadWebApi`'s JSON-Schema
+ * via the `definition` "BusinessEntity".
+ */
+export interface BusinessEntity {
+  entity_id: number | null;
+  explicit: boolean;
 }
 /**
  * `workspace.yaml snapshot` — the keys themselves are never sent, only whether

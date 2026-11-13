@@ -65,6 +65,11 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "server.get": ("GET", f"{CUST}/server", None),
     "company.get": ("GET", f"{CUST}/company", None),
     "company.update": ("PUT", f"{CUST}/company", {"name": "x"}),
+    "entities.list": ("GET", f"{CUST}/entities", None),
+    "entities.create": ("POST", f"{CUST}/entities", {"name": "x", "country": "JP"}),
+    "entities.update": ("PATCH", f"{CUST}/entities/{{eid}}", {"name": "y"}),
+    "entities.delete": ("DELETE", f"{CUST}/entities/{{eid}}", None),
+    "entities.primary": ("POST", f"{CUST}/entities/{{eid}}/primary", None),
     "snapshot.get": ("GET", f"{CUST}/snapshot", None),
     "snapshot.update": ("PUT", f"{CUST}/snapshot", {"type": None}),
     "snapshot.run": ("POST", f"{CUST}/snapshot/run", None),
@@ -97,6 +102,8 @@ KEYS: dict[str, tuple[str, str, dict[str, Any] | None]] = {
     "connections.create": ("POST", f"{ORG}/connections", {"id": "mine", "kind": "local_llm"}),
     "connections.update": ("PATCH", f"{ORG}/connections/{{cid}}", {"monthly_budget_usd": 9999}),
     "connections.delete": ("DELETE", f"{ORG}/connections/{{cid}}", None),
+    "org_entity.get": ("GET", f"{ORG}/entity", None),
+    "org_entity.update": ("PUT", f"{ORG}/entity", {"entity_id": None}),
     "workflows.list": ("GET", f"{ORG}/workflows", None),
     "workflows.update": ("PATCH", f"{ORG}/workflows/{{name}}", {"enabled": False}),
     "approval_policy.get": ("GET", f"{ORG}/approval-policy", None),
@@ -336,7 +343,7 @@ async def test_c15_staff_is_refused_every_owner_only_key(office: Office) -> None
         assert (
             await boss.post("/api/o/tesla/connections", json=conn, headers=hb)
         ).status_code == 201
-        ids = {"uid": kim_id, "cid": "local", "name": "home"}
+        ids = {"uid": kim_id, "cid": "local", "name": "home", "eid": "1"}
         before = office.conn_file.read_text(encoding="utf-8")
 
         owner_only = sorted(k for k, roles in ROUTE_ROLES.items() if roles == OWNER)

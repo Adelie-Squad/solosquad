@@ -91,6 +91,9 @@ class OrgConfig(_Doc):
     name: str
     display_name: str | None = None
     """The name people read (e.g. "SpaceX"); the web falls back to the id made readable."""
+    entity_id: int | None = None
+    """소속 법인 (2026-11-14) — the customer's legal entity (core.db `entities`) this 사업
+    runs under; every workspace of it follows. Unset = the 대표 법인."""
 
 
 class AccessPolicy(BaseModel):
@@ -476,6 +479,16 @@ class Org:
 
     def config(self) -> OrgConfig:
         return _read(self.root / "org.yaml", OrgConfig)
+
+    def set_entity(self, entity_id: int | None) -> None:
+        """Write the 소속 법인 into `org.yaml`, keeping every other key as it is."""
+        path = self.root / "org.yaml"
+        doc = _raw(path)
+        if entity_id is None:
+            doc.pop("entity_id", None)
+        else:
+            doc["entity_id"] = entity_id
+        _dump(path, doc)
 
     def workspaces(self) -> list[Workspace]:
         if not self.workspaces_dir.is_dir():

@@ -358,21 +358,36 @@ def conn_add(
     org: Annotated[
         str | None, typer.Option("--org", help="Add to one org only (separate billing).")
     ] = None,
+    entity: Annotated[
+        int | None, typer.Option("--entity", help="보유 법인 id (default: the 대표 법인)")
+    ] = None,
 ) -> None:
     """Add a subscription login or an API key (decision 22). Keys go in with `set-secret`.
-    The account holder is the customer company (회사) — `solosquad company set`."""
-    from solosquad.routing.eligibility import judge, providers_reached
+    The account holder is a legal entity (법인) — `--entity`, else the 대표 법인."""
+    from solosquad.entities import holders as entity_holders
+    from solosquad.routing.eligibility import holder_missing, judge_use
 
-    holder = _accounts(solution).company().holder()
+    store = _accounts(solution)
+    book = entity_holders(store.entities())
+    if entity is not None and entity not in book.by_id:
+        raise _fail(f"no entity {entity} — the 회사 tab of the web settings lists them")
+    sol = Solution(solution)
+    # an org's own connection is judged for that 사업; a shared one for its holder (each
+    # 사업 then skips it where its own entity is refused — the router's fourth filter)
+    users = [sol.org(org).config().entity_id] if org else [entity]
     model_list = [m for m in models.split(",") if m]
-    if holder is None and providers_reached(provider, harness, model_list):
-        raise _fail(
-            "enter the company's country first: solosquad company set --country <ISO> (회사 소재지)"
-        )
-    country = Solution(solution).server_config(strict=False).facts().country
-    verdict = judge(provider, harness, model_list, holder, country)
-    if not verdict.ok:
-        raise _fail(f"{verdict.reason} — see {verdict.source}")
+    owner = book.entity(entity)
+    country = sol.server_config(strict=False).facts().country
+    for user_id in users:
+        user = book.entity(user_id)
+        if holder_missing(provider, harness, model_list, owner, user):
+            raise _fail(
+                "enter the entity's country first: solosquad company set --country <ISO>"
+                " (법인 소재지)"
+            )
+        verdict = judge_use(provider, harness, model_list, owner, user, country)
+        if not verdict.ok:
+            raise _fail(f"{verdict.reason} — see {verdict.source}")
     path = _conn_path(solution, org)
     conns = [c for c in load_connections(path) if c.id != id]
     conns.append(
@@ -388,6 +403,7 @@ def conn_add(
             slots=slots,
             monthly_budget_usd=budget,
             network=network,
+            entity_id=entity,
         )
     )
     save_connections(path, conns)

@@ -73,6 +73,16 @@ class ErrorCode(StrEnum):
     COMPANY_FIELD_TOO_LONG = "company_field_too_long"
     COMPANY_COUNTRY_INVALID = "company_country_invalid"
     COMPANY_CONTROL_CORPORATION_ONLY = "company_control_corporation_only"
+    # -- legal entities (여러 법인, 2026-11-14)
+    ENTITY_NAME_REQUIRED = "entity_name_required"
+    ENTITY_REGISTRATION_INVALID = "entity_registration_invalid"
+    """`params.reason` = invalid · length · check, `params.kind` = the number's kind."""
+    ENTITY_UNKNOWN = "entity_unknown"
+    ENTITY_PRIMARY_LOCKED = "entity_primary_locked"
+    """The 대표 법인 cannot be removed — make another one 대표 first."""
+    ENTITY_IN_USE = "entity_in_use"
+    """What still names it: `params.businesses` (사업 names) · `params.connections` (`org/id`
+    or `core/id`), comma-joined, with `business_count` · `connection_count`."""
     SNAPSHOT_INVALID = "snapshot_invalid"
     SNAPSHOT_KEYS_REQUIRED = "snapshot_keys_required"
     SNAPSHOT_UNAVAILABLE = "snapshot_unavailable"

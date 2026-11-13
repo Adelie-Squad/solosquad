@@ -29,7 +29,10 @@ from pathlib import Path
 from typing import Any
 
 from solosquad.company_info import SCHEMA as COMPANY_SCHEMA
-from solosquad.company_info import Company, read_company, write_company
+from solosquad.company_info import Company
+from solosquad.entities import LegalEntity, insert_entity, read_entities, update_entity
+from solosquad.entities import migrate as migrate_entities
+from solosquad.entities import set_primary as store_primary
 from solosquad.storage import Migration, columns, connect, migrate
 from solosquad.web_api import totp
 from solosquad.web_api.errors import CodedError, ErrorCode
@@ -258,6 +261,7 @@ def migrations(fill_locale: str = DEFAULT_LOCALE) -> tuple[Migration, ...]:
         Migration(5, _add_presence),  # 2026-11-10 — last seen, for the dashboard digest
         Migration(6, _settle_locales(fill_locale)),  # 2026-11-11 — a language per person
         Migration(7, COMPANY_SCHEMA),  # 2026-11-11 — the customer company (회사)
+        Migration(8, migrate_entities),  # 2026-11-14 — several legal entities (법인)
     )
 
 
@@ -526,21 +530,76 @@ class AccountStore:
             raise CodedError(ErrorCode.LOCALE_INVALID, f"locale must be one of {list(LOCALES)}")
         self._q("UPDATE users SET locale = ? WHERE id = ?", (locale, uid))
 
+    # ------------------------------------------------------------------ entities (법인)
+
+    def entities(self) -> list[LegalEntity]:
+        """Every legal entity, the 대표 법인 first (2026-11-14)."""
+        with self._lock:
+            return read_entities(self._db) or []
+
+    def entity(self, eid: int) -> LegalEntity:
+        found = next((e for e in self.entities() if e.id == eid), None)
+        if found is None:
+            raise KeyError(f"no entity {eid}")
+        return found
+
+    def primary_entity(self) -> LegalEntity | None:
+        return next((e for e in self.entities() if e.is_primary), None)
+
+    def add_entity(self, fields: dict[str, Any], by: str | None = None) -> LegalEntity:
+        """A new entity (`entities.validate_entity` fields); the first one becomes 대표."""
+        with self._lock:
+            eid = insert_entity(self._db, fields, by, time.time())
+        return self.entity(eid)
+
+    def edit_entity(self, eid: int, fields: dict[str, Any], by: str | None = None) -> LegalEntity:
+        self.entity(eid)
+        with self._lock:
+            update_entity(self._db, eid, fields, by, time.time())
+        return self.entity(eid)
+
+    def remove_entity(self, eid: int) -> None:
+        with self._lock:
+            self._db.execute("DELETE FROM entities WHERE id = ? AND is_primary = 0", (eid,))
+
+    def make_primary(self, eid: int) -> None:
+        self.entity(eid)
+        with self._lock:
+            self._db.execute("BEGIN IMMEDIATE")
+            try:
+                store_primary(self._db, eid)
+                self._db.execute("COMMIT")
+            except Exception:
+                self._db.execute("ROLLBACK")
+                raise
+
     # ------------------------------------------------------------------ company (회사)
 
     def company(self) -> Company:
-        """The customer company — empty until the owner fills it in."""
-        with self._lock:
-            return read_company(self._db) or Company()
+        """The rev7 single company = the 대표 법인; empty until the owner fills it in."""
+        primary = self.primary_entity()
+        return primary.company() if primary else Company()
 
     def set_company(self, company: Company, by: str | None = None) -> Company:
-        with self._lock:
-            write_company(self._db, company, by, time.time())
+        """Write the rev7 shape into the 대표 법인 (`/api/company`, `solosquad company set`) —
+        creating it when there is none. The registration number is left as it is."""
+        kind = company.kind
+        if company.country and company.country != "KR":
+            kind = "foreign"  # type: ignore[assignment]
+        fields = {
+            "kind": kind, "name": company.name, "representative": company.representative,
+            "country": company.country, "address": company.address,
+            "controlled_by": None if kind == "sole_proprietor" else company.controlled_by,
+        }  # fmt: skip
+        primary = self.primary_entity()
+        if primary is None:
+            self.add_entity({**fields, "registration_no": "", "registration_kind": None}, by)
+        else:
+            self.edit_entity(primary.id, fields, by)
         return self.company()
 
     def has_company(self) -> bool:
-        with self._lock:
-            return read_company(self._db) is not None
+        return self.primary_entity() is not None
 
     def settle_locales(self, fill: str) -> int:
         """`settle_locales` for accounts moved in after the migration (rev6 org.db)."""

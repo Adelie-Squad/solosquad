@@ -388,6 +388,16 @@ class ConnectionOut(Closed):
     eligible: bool
     eligibility_reason: str | None
     eligibility_source: str | None
+    eligibility_by: Literal["entity", "server"] | None = None
+    """Why it is refused: an entity is controlled from `eligibility_country`, or the server
+    is there — the web words it with the codes `connection_ineligible_company` · `_server`."""
+    eligibility_provider: str | None = None
+    eligibility_country: str | None = None
+    eligibility_entity: str | None = None
+    """The refused entity's name (the 보유 법인 or this 사업's 소속 법인)."""
+    entity_id: int | None = None
+    """보유 법인 — the entity holding the account (unset in the file = the 대표 법인, given
+    here as its id); null while no entity exists."""
     source: Literal["core", "org"] = "core"
     """`core` = the customer's shared connection (read-only here); `org` = this org's own,
     editable at org scope."""
@@ -810,6 +820,58 @@ class Company(Closed):
     complete: bool
 
 
+class EntityBusiness(Closed):
+    org: str
+    name: str
+    """The 사업's display name."""
+
+
+class LegalEntity(Closed):
+    """One of the customer's legal entities (법인, 2026-11-14) — `core.db` `entities`."""
+
+    id: int
+    kind: Literal["corporation", "sole_proprietor", "foreign"] | None
+    """법인 · 개인 사업자 · 해외 (any country but KR)."""
+    name: str
+    """법인명 or 상호."""
+    registration_no: str
+    """Normalised: digits (KR) or upper-case letters and digits; '' = not entered."""
+    registration_kind: Literal["business", "corporate", "uscc", "foreign"] | None
+    """사업자등록번호 (10) · 법인등록번호 (13) · 统一社会信用代码 (18) · another country's."""
+    representative: str
+    country: str | None
+    """소재지 country, ISO 3166-1 alpha-2."""
+    address: str
+    controlled_by: str | None
+    """지배 회사 나라 (법인 · 해외 only)."""
+    is_primary: bool
+    """대표 법인 — what an unset 사업 or connection follows. Exactly one while any exist."""
+    complete: bool
+    created: float
+    updated: float
+    businesses: list[EntityBusiness]
+    """사업 that run under it (the owner's view; empty for a 팀원)."""
+    connections: list[str]
+    """Connections it holds, `core/<id>` or `<org>/<id>` (the owner's view)."""
+    removable: bool
+    blocked_by: Literal["primary", "in_use"] | None
+    """Why it cannot be removed: it is the 대표, or a 사업 · connection still names it."""
+
+
+class EntityList(Closed):
+    entities: list[LegalEntity]
+    """The 대표 first."""
+
+
+class BusinessEntity(Closed):
+    """A 사업's 소속 법인 (`org.yaml entity_id`)."""
+
+    entity_id: int | None
+    """The entity it runs under — the 대표's id when none is written; null with no entity."""
+    explicit: bool
+    """False = not written down: it follows the 대표 법인."""
+
+
 class SnapshotSettings(Closed):
     """`workspace.yaml snapshot` — the keys themselves are never sent, only whether
     they are stored."""
@@ -1221,6 +1283,9 @@ EXPORTED: tuple[type[BaseModel], ...] = (
     PasskeyAdded,
     ServerFacts,
     Company,
+    LegalEntity,
+    EntityList,
+    BusinessEntity,
     SnapshotSettings,
     SnapshotRunResult,
     CalendarItem,

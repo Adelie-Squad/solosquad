@@ -24,12 +24,14 @@ from solosquad.assets.renames import RENAMED_AGENTS, renamed_hint
 from solosquad.assets.skill import SkillParseError, parse_skill_md
 from solosquad.assets.text import load_yaml, match_frontmatter, normalize_line
 from solosquad.assets.validate import Report, validate_skill
-from solosquad.company_info import Company, read_company_at
+from solosquad.company_info import Company
 from solosquad.context.execution import ExecutionContext, build_context
 from solosquad.context.resolve import Kind, Resolver
+from solosquad.entities import LegalEntity, read_entities_at
+from solosquad.entities import holders as entity_holders
 from solosquad.layout import AccessPolicy, LayoutError, ServerConfig, Solution
 from solosquad.routing.connections import load_connections
-from solosquad.routing.eligibility import Entity, judge, providers_reached
+from solosquad.routing.eligibility import Holders, holder_missing, judge_use, providers_reached
 from solosquad.routing.policy import load_policy
 from solosquad.routing.vault import SecretStore
 from solosquad.screens import parse_screen, screen_issues, screen_path
@@ -74,7 +76,11 @@ def _check_access(r: Report, access: AccessPolicy, where: str) -> None:
 
 
 def validate_definitions(
-    ctx: ExecutionContext, report: Report | None = None, *, holder: Entity | None = None
+    ctx: ExecutionContext,
+    report: Report | None = None,
+    *,
+    holders: Holders | None = None,
+    org_entity: int | None = None,
 ) -> Report:
     """Every agent/skill a workspace can see, its teams, crons, policy and connections."""
     r = report or Report()
@@ -275,6 +281,8 @@ def validate_definitions(
 
     known_conn: set[str] = set()
     server = ctx.server.facts().country
+    book = holders or Holders()
+    user = book.entity(org_entity)
     for path in (ctx.solution.connections_path, ctx.org_root / "connections.yaml"):
         try:
             conns = load_connections(path)
@@ -284,7 +292,17 @@ def validate_definitions(
         known_conn |= {c.id for c in conns}
         for c in conns:
             reached = providers_reached(c.provider, c.harness, c.models)
-            verdict = judge(c.provider, c.harness, c.models, holder, server)
+            owner = book.entity(c.entity_id)
+            verdict = judge_use(c.provider, c.harness, c.models, owner, user, server)
+            if c.entity_id is not None and book.by_id and c.entity_id not in book.by_id:
+                r.add(
+                    "CONNECTION_ENTITY_UNKNOWN",
+                    f"{c.id}: entity_id {c.entity_id} is not a registered entity (법인) —"
+                    " the 대표 법인 is used",
+                    "entity_id",
+                    "warn",
+                    str(path),
+                )
             if not verdict.ok:
                 r.add(
                     "CONNECTION_INELIGIBLE",
@@ -292,11 +310,11 @@ def validate_definitions(
                     "company",
                     path=str(path),
                 )
-            elif reached and holder is None:
+            elif holder_missing(c.provider, c.harness, c.models, owner, user):
                 r.add(
                     "CONNECTION_COMPANY_UNKNOWN",
-                    f"{c.id} reaches {', '.join(sorted(reached))} but the company's country"
-                    " (회사 소재지) is not entered yet (decision 45)",
+                    f"{c.id} reaches {', '.join(sorted(reached))} but its entity's country"
+                    " (법인 소재지) is not entered yet (decision 45)",
                     "company",
                     "warn",
                     str(path),
@@ -338,14 +356,20 @@ def company_missing(company: Company) -> list[str]:
     return [label for label, ok in fields if not ok]
 
 
-def read_company(solution: Path) -> Company:
-    """The customer company from the data folder's `core.db`, read-only — empty if unknown."""
+def read_entities(solution: Path) -> list[LegalEntity]:
+    """The legal entities from the data folder's `core.db`, read-only — none if unknown."""
     from solosquad.web_api.org_store import core_path
 
     try:
-        return read_company_at(core_path(Solution(solution))) or Company()
-    except Exception:  # no data folder yet, a locked file — the company is just unknown
-        return Company()
+        return read_entities_at(core_path(Solution(solution)))
+    except Exception:  # no data folder yet, a locked file — the entities are just unknown
+        return []
+
+
+def read_company(solution: Path) -> Company:
+    """The 대표 법인 in the rev7 company shape — empty if unknown."""
+    primary = next((e for e in read_entities(solution) if e.is_primary), None)
+    return primary.company() if primary else Company()
 
 
 def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
@@ -382,14 +406,26 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
         base.add("SERVER_CONFIG_INVALID", str(e).splitlines()[0], path=server_path)
         server = ServerConfig()
     _check_access(base, server.access, server_path)
-    company = read_company(solution)
+    entities = read_entities(solution)
+    book = entity_holders(entities)
+    primary = next((e for e in entities if e.is_primary), None)
+    company = primary.company() if primary else Company()
     for org in sol.orgs():
         try:
             org.lock()
-            org.config()
+            org_entity = org.config().entity_id
         except LayoutError as e:
             base.add("LAYOUT", str(e))
             continue
+        if org_entity is not None and book.by_id and org_entity not in book.by_id:
+            base.add(
+                "ORG_ENTITY_UNKNOWN",
+                f"{org.name}: entity_id {org_entity} is not a registered entity (법인) —"
+                " the 대표 법인 is used",
+                "entity_id",
+                "warn",
+                str(org.root / "org.yaml"),
+            )
         for ws in org.workspaces():
             key = f"{org.name}/{ws.name}"
             try:
@@ -399,7 +435,7 @@ def validate_solution(solution: Path, bundle: Path) -> dict[str, Report]:
                 rep.add("LAYOUT", str(e).splitlines()[0])
                 out[key] = rep
                 continue
-            out[key] = validate_definitions(ctx, holder=company.holder())
+            out[key] = validate_definitions(ctx, holders=book, org_entity=org_entity)
     if not company.complete:
         base.add(
             "COMPANY_INCOMPLETE",

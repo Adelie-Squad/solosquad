@@ -26,7 +26,7 @@ from solosquad.harness.lite import LiteHarness
 from solosquad.harness.opencode import OpenCodeHarness
 from solosquad.layout import ExecutionPolicy
 from solosquad.routing.connections import Connection, ConnectionKind
-from solosquad.routing.eligibility import Entity, Verdict, judge
+from solosquad.routing.eligibility import Holders, Verdict, judge_use
 from solosquad.routing.policy import ChiefPolicy
 from solosquad.routing.vault import SecretStore
 
@@ -72,9 +72,17 @@ def default_harness(conn: Connection, secrets: SecretStore) -> Harness:
     raise ValueError(f"unknown harness {conn.harness!r} for connection {conn.id}")
 
 
-def eligible(conn: Connection, server_country: str | None, holder: Entity | None = None) -> Verdict:
-    """Fourth filter (decision 45): the account holder (the 회사) and the server location."""
-    return judge(conn.provider, conn.harness, conn.models, holder, server_country)
+def eligible(
+    conn: Connection,
+    server_country: str | None,
+    holders: Holders | None = None,
+    org_entity: int | None = None,
+) -> Verdict:
+    """Fourth filter (decision 45): the connection's 보유 법인, the 사업's 소속 법인 (both the
+    대표 법인 when unset) and the server location."""
+    book = holders or Holders()
+    owner, user = book.entity(conn.entity_id), book.entity(org_entity)
+    return judge_use(conn.provider, conn.harness, conn.models, owner, user, server_country)
 
 
 def allowed_by_workspace(conn: Connection, policy: ExecutionPolicy) -> bool:
@@ -112,8 +120,10 @@ class Router:
         self.on_escalation = on_escalation
         self.clock = clock
         self.server_country = server_country
-        self.holder: Entity | None = None
-        """The account holder — the customer company (회사), set by the engine server."""
+        self.holders: Holders = Holders()
+        """The customer's legal entities (core.db), set by the engine server."""
+        self.org_entity: int | None = None
+        """This 사업's 소속 법인 (`org.yaml entity_id`); None = the 대표 법인."""
         self.limited_until: dict[str, float] = {}
         self._slots: dict[str, asyncio.Semaphore] = {}
         self._warned: set[tuple[str, str]] = set()
@@ -135,7 +145,7 @@ class Router:
             for c in self.connections
             if c.active
             and allowed_by_workspace(c, self.workspace_policy)
-            and eligible(c, self.server_country, self.holder).ok
+            and eligible(c, self.server_country, self.holders, self.org_entity).ok
         ]
         if pref.connections:
             order = {cid: i for i, cid in enumerate(pref.connections)}
