@@ -45,6 +45,11 @@ ROUTE_LIMIT_PER_HOUR = "60"
 DEMO_LOGIN_LIMIT_PER_ID_HOUR = "20"
 DEMO_EVENT_LIMIT_PER_MIN = "30"
 DEMO_EVENT_LIMIT_PER_HOUR = "300"
+# a request that asks for a demo account gets one at once (2026-11-13): it lasts DEMO_DAYS; one hashed
+# IP gets at most DEMO_ISSUE_LIMIT_PER_IP_DAY new accounts a day (on top of the request limits above —
+# past it the request is kept for the agency, without an account)
+DEMO_DAYS = "14"
+DEMO_ISSUE_LIMIT_PER_IP_DAY = "3"
 
 # Secrets — `wrangler secret put <NAME>` (locally: .dev.vars, see .dev.vars.example):
 #   FORM_SECRET       signs the form-opened token (minimum fill time)

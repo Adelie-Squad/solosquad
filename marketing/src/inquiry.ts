@@ -4,8 +4,15 @@
 // token from GET /api/form-token), a per-IP hourly limit, three per email a day, and Turnstile only
 // when TURNSTILE_ENABLED (off by default — it does not load from mainland China; review is the real
 // gate). Neither the IP nor the user-agent is stored with the inquiry.
+//
+// A request that asks for a demo account gets it at once (2026-11-13 — no review step): the answer
+// is {ok, demo: {id, password, company_no, company_no_kind, company_name, expires, reused}} and the
+// modal shows it on its completion screen. Only the PBKDF2 hash is stored. See demo.ts `issueDemo`
+// for reuse and the per-IP cap on new accounts.
+import { issueDemo } from './demo';
 import { num, turnstileOn, type Env } from './env';
 import { hmac, ipHash, iso, json, readJson, sameSecret, ulid, withinLimit } from './http';
+import { sendDemoMail } from './mail';
 import { validateInquiry } from './validate';
 
 const TOKEN_MAX_AGE_MS = 24 * 3600 * 1000;
@@ -78,8 +85,8 @@ export async function postInquiry(req: Request, env: Env, ctx?: ExecutionContext
     env.DB.prepare(
       `INSERT INTO inquiries (id, created_at, updated_at, company, business_type, country, contact_name, email, reach_kind, reach_value,
          wants, requests, message, consent_required, consent_demo, consent_version, consent_news, locale, source, opened_at, status, retain_until,
-         company_no)
-       VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?15, ?16, ?17, ?18, 'new', ?19, ?20)`,
+         company_no, company_no_kind, phone)
+       VALUES (?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, ?13, ?14, ?15, ?16, ?17, ?18, 'new', ?19, ?20, ?21, ?22)`,
     ).bind(
       id,
       at,
@@ -101,17 +108,23 @@ export async function postInquiry(req: Request, env: Env, ctx?: ExecutionContext
       iso(token.opened),
       retain,
       v.company_no,
+      v.company_no_kind,
+      v.phone,
     ),
     env.DB.prepare("INSERT INTO inquiry_log (inquiry_id, ts, actor, action, detail) VALUES (?1, ?2, 'system', 'created', ?3)").bind(id, at, JSON.stringify({ source: v.source, requests: v.requests })),
   ]);
 
+  const demo = v.requests.includes('demo') ? await issueDemo(env, v, id, ip, now) : null;
+
+  const later = (work: Promise<unknown>) => (ctx ? ctx.waitUntil(work) : work);
   // the agency is told there is a new one — company, requests and number only, no contact details
   if (env.NOTIFY_WEBHOOK) {
-    const send = fetch(env.NOTIFY_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, company: v.company, requests: v.requests }) }).catch(() => undefined);
-    if (ctx) ctx.waitUntil(send);
-    else await send;
+    await later(
+      fetch(env.NOTIFY_WEBHOOK, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, company: v.company, requests: v.requests, demo_issued: !!demo }) }).catch(() => undefined),
+    );
   }
-  return json(RECEIVED);
+  if (demo) await later(sendDemoMail(env, { to: v.email, name: v.contact_name, locale: v.locale, account: demo }).catch(() => undefined));
+  return json(demo ? { ...RECEIVED, demo } : RECEIVED);
 }
 
 /** The daily cron: inquiries past retain_until go, with their log; counters older than a day go. */

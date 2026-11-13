@@ -88,7 +88,7 @@ export default function DemoApp() {
     DATA[locale]()
       .then((data) => {
         if (!live) return;
-        const next = new DemoEngine(data, { demoId: session.demo_id, companyName: session.company_name, expires: Date.parse(session.expires) / 1000 });
+        const next = new DemoEngine(data, { demoId: session.demo_id, companyName: session.company_name, expires: endOf(session) });
         next.onAction = (detail) => demoEvent('action', detail);
         current.current?.stop();
         current.current = next;
@@ -131,7 +131,7 @@ const engineId = (e: DemoEngine) => {
 /** 처음 상태로 — the same example company, made again in memory. */
 function restart(old: DemoEngine, ref: { current: DemoEngine | null }, session: DemoSessionInfo, qc: QueryClient): DemoEngine {
   old.stop();
-  const next = new DemoEngine(old.data, { demoId: session.demo_id, companyName: session.company_name, expires: Date.parse(session.expires) / 1000 });
+  const next = new DemoEngine(old.data, { demoId: session.demo_id, companyName: session.company_name, expires: endOf(session) });
   next.onAction = (detail) => demoEvent('action', detail);
   ref.current = next;
   qc.clear();
@@ -202,13 +202,16 @@ function Usage() {
 }
 
 /** The band at the top of the content card: what this is, until when, and the way to us. */
-function DemoBand({ expires }: { expires: string }) {
+/** The account's end in epoch seconds, or null when it has none. */
+const endOf = (s: DemoSessionInfo) => (s.expires ? Date.parse(s.expires) / 1000 : null);
+
+function DemoBand({ expires }: { expires: string | null }) {
   const { t, fmt } = useI18n();
   const openInquiry = useInquiry();
   return (
     <div className="demo-band" role="note" data-testid="demo-band">
       <span className="chip is-accent">{t('demo.chip')}</span>
-      <span className="demo-band-text">{t('demo.band', { date: fmt.date(Date.parse(expires) / 1000) })}</span>
+      <span className="demo-band-text">{expires ? t('demo.band', { date: fmt.date(Date.parse(expires) / 1000) }) : t('demo.bandOpen')}</span>
       <span className="demo-band-hint">{t('demo.notice')}</span>
       <button
         type="button"

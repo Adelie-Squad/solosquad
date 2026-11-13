@@ -104,6 +104,33 @@ describe('POST /api/demo/login', () => {
     }
   });
 
+  it('the number is compared by its digits: hyphens, spaces or none', async () => {
+    for (const company_no of ['1234567890', '123 45 67890', '１２３-４５-６７８９０']) {
+      expect((await login({ company_no, username: 'samsungDemo', password: PASSWORD })).headers.get('location')).toBe(`${ORIGIN}/demo/app`);
+    }
+  });
+
+  it('an email as the ID (accounts issued on a request), any case', async () => {
+    await addAccount('minji@example.com');
+    const r = await login({ company_no: '123-45-67890', username: 'MinJi@Example.com', password: PASSWORD });
+    expect(r.headers.get('location')).toBe(`${ORIGIN}/demo/app`);
+    expect((await readSession(env, cookieFrom(r).slice('ss_demo='.length)))?.demo_id).toBe('minji@example.com');
+  });
+
+  it('an internal account with no end: signs in, a 12-hour session, /me says expires null', async () => {
+    await env.DB.prepare(
+      `INSERT INTO demo_accounts (id, id_lower, company_no, company_no_kind, company_name, locale, password_hash, created_at, created_by, expires_at, internal)
+       VALUES ('solosquad', 'solosquad', '0000000000', 'foreign', 'SoloSquad', 'ko', ?1, ?2, 'agency', NULL, 1)`,
+    )
+      .bind(await hashPassword(PASSWORD, { iterations: 1000 }), new Date().toISOString())
+      .run();
+    const r = await login({ company_no: '0000000000', username: 'SoloSquad', password: PASSWORD });
+    expect(r.headers.get('location')).toBe(`${ORIGIN}/demo/app`);
+    expect(Number(/Max-Age=(\d+)/.exec(r.headers.get('set-cookie') ?? '')?.[1])).toBe(12 * 3600);
+    const me = (await (await SELF.fetch(`${ORIGIN}/api/demo/me`, { headers: { cookie: cookieFrom(r) } })).json()) as Record<string, unknown>;
+    expect(me).toEqual({ demo_id: 'solosquad', company_name: 'SoloSquad', locale: 'ko', expires: null });
+  });
+
   it('10 a minute per IP (the router’s limit), counted whether they succeed or not', async () => {
     const ip = freshIp();
     for (let i = 0; i < 10; i++) await login({ company_no: '1', username: 'x', password: 'y' }, { ip });

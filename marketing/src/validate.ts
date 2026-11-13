@@ -1,5 +1,8 @@
 // The demo account request (PRD §3.5.2 ⑥ + §3.6.3, decision 62). The modal checks the same rules
-// for convenience; this is the one that counts.
+// for convenience; this is the one that counts. The registration number and the phone follow
+// scripts/lib/company-no.mjs and phone.mjs — the modal imports the same files.
+import { checkCompanyNo, digitsOf, kindByLength, type CompanyNoKind } from '../scripts/lib/company-no.mjs';
+import { checkPhone } from '../scripts/lib/phone.mjs';
 
 export const BUSINESS_TYPES = ['retail', 'online', 'maker', 'service', 'partner', 'other'] as const;
 export const COUNTRIES = ['kr', 'cn', 'other'] as const;
@@ -8,35 +11,37 @@ export const REQUESTS = ['demo', 'consult'] as const;
 export const REACH_KINDS = ['phone', 'kakao', 'wechat'] as const;
 export const LOCALES = ['ko', 'en', 'zh-CN'] as const;
 export const SOURCES = ['landing_hero', 'landing_start', 'pricing', 'demo_login', 'demo_app'] as const;
+/** the kinds a Korean company picks between (another country's number is `foreign`) */
+export const KOREAN_KINDS = ['business', 'corporate'] as const;
 
-export const MAX = { company: 80, contact_name: 40, email: 254, reach_value: 60, message: 1000 } as const;
+export const MAX = { company: 80, contact_name: 40, email: 254, reach_value: 60, message: 1000, phone: 30 } as const;
 
 export type FieldError = 'required' | 'too_long' | 'invalid';
 
 /**
- * The company's registration number (2026-11-12 — one representative number; the demo login asks
- * for it with the ID and password). A Korean 사업자등록번호 `NNN-NN-NNNNN` or 법인등록번호
- * `NNNNNN-NNNNNNN` → its 10 or 13 digits; another country's → 4–30 letters, digits and dashes,
- * upper-cased. A Korean company (country kr) must give one of the Korean two. The engine's
- * `solosquad.demo.normalize_company_no` keeps the same rule. → the stored form, or null.
+ * The company's registration number (2026-11-12; digits only since 2026-11-13): a Korean company
+ * (country kr) gives a 사업자등록번호 (`business`, 10 digits) or a 법인등록번호 (`corporate`, 13),
+ * with its check digit; another country's is 4–20 digits (`foreign`). Hyphens and spaces may come
+ * with the digits; only the digits are stored, with the kind. A Korean request without a kind (an
+ * older page) is read by its length.
  */
-export function normalizeCompanyNo(raw: unknown, country?: string | null): string | null {
-  if (typeof raw !== 'string') return null;
-  const text = raw.normalize('NFKC').trim();
-  const digits = text.replace(/[\s-]/g, '');
-  if (/^(?:\d{10}|\d{13})$/.test(digits)) return digits;
-  if (country === 'kr') return null;
-  const other = text.toUpperCase();
-  return /^[A-Z0-9-]{4,30}$/.test(other) ? other : null;
+export function companyNoOf(raw: unknown, country: string | null, kind: unknown) {
+  if (country !== 'kr') return checkCompanyNo(raw, 'foreign');
+  const picked = typeof kind === 'string' && kind ? kind : kindByLength(digitsOf(raw));
+  return checkCompanyNo(raw, picked);
 }
 
 export interface Inquiry {
   company: string;
+  /** digits only */
   company_no: string;
+  company_no_kind: CompanyNoKind;
   business_type: (typeof BUSINESS_TYPES)[number];
   country: (typeof COUNTRIES)[number];
   contact_name: string;
   email: string;
+  /** digits only; required with a demo account (its last four digits are in the password) */
+  phone: string | null;
   reach_kind: (typeof REACH_KINDS)[number] | null;
   reach_value: string | null;
   wants: (typeof WANTS)[number][];
@@ -82,19 +87,25 @@ export function validateInquiry(body: Record<string, unknown>): { ok: true; valu
   if (email && !fields.email && !EMAIL.test(email)) fields.email = 'invalid';
   const reachValue = need('reach_value', false);
   const message = need('message', false);
+  const phoneText = need('phone', false);
 
   const businessType = oneOf(BUSINESS_TYPES, body.business_type);
   if (!businessType) fields.business_type = body.business_type ? 'invalid' : 'required';
   const country = oneOf(COUNTRIES, body.country);
   if (!country) fields.country = body.country ? 'invalid' : 'required';
-  const companyNo = text(body.company_no) ? normalizeCompanyNo(body.company_no, country) : null;
-  if (!text(body.company_no)) fields.company_no = 'required';
-  else if (!companyNo) fields.company_no = 'invalid';
+  if (country === 'kr' && body.company_no_kind != null && !oneOf(KOREAN_KINDS, body.company_no_kind)) fields.company_no_kind = 'invalid';
+  const companyNo = companyNoOf(body.company_no, country, body.company_no_kind);
+  if (!companyNo.ok) fields.company_no = companyNo.error === 'required' ? 'required' : 'invalid';
   const reachKind = reachValue ? oneOf(REACH_KINDS, body.reach_kind ?? 'phone') : null;
   if (reachValue && !reachKind) fields.reach_kind = 'invalid';
 
   const wants = many(WANTS, body.wants, 'wants', fields);
   const requests = many(REQUESTS, body.requests, 'requests', fields);
+
+  // the phone: required with a demo account
+  const phone = phoneText && !fields.phone ? checkPhone(phoneText, country) : null;
+  if (phone && !phone.ok) fields.phone = 'invalid';
+  else if (!phoneText && requests.includes('demo')) fields.phone = 'required';
 
   if (body.consent_required !== true) fields.consent_required = 'required';
   // DM6 ⓑ: asking for a demo account also needs the demo-usage consent
@@ -105,16 +116,18 @@ export function validateInquiry(body: Record<string, unknown>): { ok: true; valu
   const source = oneOf(SOURCES, body.source);
   if (!source) fields.source = 'invalid';
 
-  if (Object.keys(fields).length) return { ok: false, fields };
+  if (Object.keys(fields).length || !companyNo.ok) return { ok: false, fields };
   return {
     ok: true,
     value: {
       company,
-      company_no: companyNo!,
+      company_no: companyNo.digits,
+      company_no_kind: companyNo.kind,
       business_type: businessType!,
       country: country!,
       contact_name: contactName,
       email: email.toLowerCase(),
+      phone: phone?.ok ? phone.digits : null,
       reach_kind: reachKind,
       reach_value: reachValue || null,
       wants,

@@ -7,8 +7,8 @@ export interface DemoSessionInfo {
   demo_id: string;
   company_name: string;
   locale: string;
-  /** the account's end (ISO) */
-  expires: string;
+  /** the account's end (ISO); null = no end (an internal account) */
+  expires: string | null;
 }
 
 export const DEMO_LOGIN = '/demo';

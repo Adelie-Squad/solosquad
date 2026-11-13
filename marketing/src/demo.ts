@@ -1,6 +1,8 @@
 // The demo login and its session (2026-11-13). The demo is a frontend-only copy of the customer web
 // served by this site at /demo/app — no demo server — so the accounts are D1 `demo_accounts` (made
-// by `scripts/inquiry.mjs issue`) and this Worker signs people in:
+// on the request itself — `issueDemo` below — or by `scripts/inquiry.mjs issue · demo create`) and
+// this Worker signs people in. The ID is the request's email or an internal id like `solosquad`;
+// the number is compared by its digits only:
 //
 //   POST /api/demo/login   a plain form {company_no, username, password} from /demo → 303 /demo/app
 //                          with the session cookie, or 303 /demo?error=1 for every kind of failure
@@ -13,8 +15,10 @@
 // so a revoke or an expiry ends a session at once. Usage events carry no IP, user-agent or text.
 import { num, type Env } from './env';
 import { hmac, ipHash, iso, json, sameSecret, sleep, withinLimit } from './http';
-import { normalizeCompanyNo } from './validate';
-import { DUMMY_HASH, verifyPassword } from '../scripts/lib/password.mjs';
+import type { Inquiry } from './validate';
+import { digitsOf, FOREIGN_MIN } from '../scripts/lib/company-no.mjs';
+import { demoPassword } from '../scripts/lib/demo-password.mjs';
+import { DUMMY_HASH, hashPassword, verifyPassword } from '../scripts/lib/password.mjs';
 
 export const COOKIE = 'ss_demo';
 export const DEMO_LOGIN = '/demo';
@@ -22,7 +26,9 @@ export const DEMO_APP = '/demo/app';
 const FAILED = `${DEMO_LOGIN}?error=1`;
 /** The longest one sign-in lasts — the account's own end comes first when it is sooner. */
 const SESSION_SECONDS = 12 * 3600;
-const MAX_ID = 40;
+/** an email is the longest ID */
+const MAX_ID = 254;
+const DAY = 86_400_000;
 export const EVENT_KINDS = ['view', 'action'] as const;
 const DETAIL = /^[A-Za-z0-9_.:/-]{1,80}$/;
 
@@ -32,7 +38,8 @@ interface AccountRow {
   company_name: string;
   locale: string;
   password_hash: string;
-  expires_at: string;
+  /** null = no end (internal accounts) */
+  expires_at: string | null;
   revoked_at: string | null;
 }
 
@@ -40,8 +47,8 @@ export interface DemoSession {
   demo_id: string;
   company_name: string;
   locale: string;
-  /** the account's end (ISO) — the demo band shows it */
-  expires: string;
+  /** the account's end (ISO) — the demo band shows it; null = no end */
+  expires: string | null;
 }
 
 const secret = (env: Env) => env.DEMO_SECRET ?? '';
@@ -78,7 +85,7 @@ const cookieOf = (req: Request, name: string) => {
 
 const setCookie = (value: string, maxAge: number) => `${COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 
-const usable = (row: AccountRow | null, now: number): row is AccountRow => !!row && !row.revoked_at && Date.parse(row.expires_at) > now;
+const usable = (row: AccountRow | null, now: number): row is AccountRow => !!row && !row.revoked_at && (row.expires_at === null || Date.parse(row.expires_at) > now);
 
 const account = (env: Env, id: string) =>
   env.DB.prepare('SELECT id, company_no, company_name, locale, password_hash, expires_at, revoked_at FROM demo_accounts WHERE id_lower = ?1').bind(id.toLowerCase()).first<AccountRow>();
@@ -128,13 +135,15 @@ export async function postLogin(req: Request, env: Env): Promise<Response> {
   const row = id ? await account(env, id) : null;
   // the hash is checked whatever came in, so every answer costs the same
   const passwordOk = await verifyPassword(fields?.password ?? '', row?.password_hash ?? DUMMY_HASH);
-  const typedNo = normalizeCompanyNo(fields?.company_no ?? '');
-  const numberOk = !!row && !!typedNo && (await sameSecret(typedNo.replace(/-/g, ''), row.company_no.replace(/-/g, '')));
+  // digits against digits: the field shows hyphens, an old row may hold letters
+  const typedNo = digitsOf(fields?.company_no ?? '');
+  const numberOk = !!row && typedNo.length >= FOREIGN_MIN && (await sameSecret(typedNo, digitsOf(row.company_no)));
   const now = Date.now();
   const ok = perMin && perHour && perId && !!secret(env) && passwordOk && numberOk && usable(row, now);
   let res: Response;
   if (ok && row) {
-    const exp = Math.min(Math.floor(now / 1000) + SESSION_SECONDS, Math.floor(Date.parse(row.expires_at) / 1000));
+    const longest = Math.floor(now / 1000) + SESSION_SECONDS;
+    const exp = row.expires_at === null ? longest : Math.min(longest, Math.floor(Date.parse(row.expires_at) / 1000));
     const token = await signSession(env, { demo_id: row.id, company_name: row.company_name, locale: row.locale, exp });
     await record(env, row.id, 'login').run();
     res = seeOther(DEMO_APP, url, setCookie(token, exp - Math.floor(now / 1000)));
@@ -192,6 +201,58 @@ export async function demoPage(req: Request, env: Env): Promise<Response> {
   const out = new Response(res.body, res);
   out.headers.set('cache-control', 'no-store');
   return out;
+}
+
+/** What the request's sender sees once, on the completion screen — the only place the password is plain. */
+export interface IssuedDemo {
+  id: string;
+  password: string;
+  company_no: string;
+  company_no_kind: Inquiry['company_no_kind'];
+  company_name: string;
+  expires: string;
+  /** a later request from the same email: the same account, a fresh password and end */
+  reused: boolean;
+}
+
+/**
+ * The demo account for a request that asks for one (2026-11-13 — issued at once, no review): the
+ * ID is the email, the password `demoPassword(email, phone)`, the end DEMO_DAYS (14) from now. The
+ * same email again keeps its account — the password follows the new phone, the number, company and
+ * language follow the new request, and the end moves out (never in). Nothing is issued (null) for
+ * an account the agency revoked or made itself (`internal`), or when this IP has already had
+ * DEMO_ISSUE_LIMIT_PER_IP_DAY (3) new accounts today — the request is still kept for the agency.
+ */
+export async function issueDemo(env: Env, v: Inquiry, inquiryId: string, ip: string, now = Date.now()): Promise<IssuedDemo | null> {
+  const id = v.email.toLowerCase();
+  const password = v.phone ? demoPassword(id, v.phone) : null;
+  if (!password || id.length > MAX_ID) return null;
+  const known = await env.DB.prepare('SELECT revoked_at, internal FROM demo_accounts WHERE id_lower = ?1').bind(id).first<{ revoked_at: string | null; internal: number }>();
+  if (known && (known.revoked_at || known.internal)) return null;
+  if (!known && !(await withinLimit(env.DB, `demo-issue:${ip}`, 86_400, num(env.DEMO_ISSUE_LIMIT_PER_IP_DAY, 3), now))) return null;
+
+  const at = iso(now);
+  const days = num(env.DEMO_DAYS, 14);
+  const hash = await hashPassword(password);
+  const [account] = await env.DB.batch<{ expires_at: string }>([
+    env.DB.prepare(
+      `INSERT INTO demo_accounts (id, id_lower, inquiry_id, company_no, company_no_kind, company_name, locale, password_hash, created_at, created_by, updated_at, expires_at, internal)
+       VALUES (?1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'system', ?8, ?9, 0)
+       ON CONFLICT (id_lower) DO UPDATE SET inquiry_id = excluded.inquiry_id, company_no = excluded.company_no, company_no_kind = excluded.company_no_kind,
+         company_name = excluded.company_name, locale = excluded.locale, password_hash = excluded.password_hash, updated_at = excluded.updated_at,
+         expires_at = max(coalesce(demo_accounts.expires_at, ''), excluded.expires_at)
+       WHERE demo_accounts.revoked_at IS NULL AND demo_accounts.internal = 0
+       RETURNING expires_at`,
+    ).bind(id, inquiryId, v.company_no, v.company_no_kind, v.company, v.locale, hash, at, iso(now + days * DAY)),
+  ]);
+  const expires = account.results[0]?.expires_at;
+  if (!expires) return null;
+  await env.DB.batch([
+    env.DB.prepare("UPDATE inquiries SET status = 'issued', demo_account = ?1, demo_issued_at = ?2, demo_expires_at = ?3, updated_at = ?2 WHERE id = ?4").bind(id, at, expires, inquiryId),
+    // no personal data in the log — the ID is the email, so it is not written here
+    env.DB.prepare("INSERT INTO inquiry_log (inquiry_id, ts, actor, action, detail) VALUES (?1, ?2, 'system', 'issued', ?3)").bind(inquiryId, at, JSON.stringify({ auto: true, reused: !!known, days })),
+  ]);
+  return { id, password, company_no: v.company_no, company_no_kind: v.company_no_kind, company_name: v.company, expires, reused: !!known };
 }
 
 /** The daily sweep's demo part: events past the retention, and accounts that ended that long ago (with their events). */

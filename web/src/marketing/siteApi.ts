@@ -8,8 +8,22 @@ export interface SiteConfig {
 
 export type FieldError = 'required' | 'too_long' | 'invalid';
 
+/** The demo account issued with the request (2026-11-13) — shown once on the completion screen. */
+export interface IssuedDemo {
+  /** the login ID: the request's email, lower case */
+  id: string;
+  password: string;
+  /** digits */
+  company_no: string;
+  company_no_kind: 'business' | 'corporate' | 'foreign';
+  company_name: string;
+  /** ISO */
+  expires: string;
+  reused: boolean;
+}
+
 export type InquiryResult =
-  | { ok: true }
+  | { ok: true; demo: IssuedDemo | null }
   | { ok: false; error: 'invalid'; fields: Record<string, FieldError> }
   | { ok: false; error: 'too_fast' | 'expired' | 'rate_limited' | 'bot_check' | 'failed' };
 
@@ -44,8 +58,8 @@ const postJson = (path: string, body: unknown) => fetch(path, { method: 'POST', 
 export async function sendInquiry(body: Record<string, unknown>): Promise<InquiryResult> {
   try {
     const r = await postJson('/api/inquiry', body);
-    const out = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; fields?: Record<string, FieldError> };
-    if (r.ok && out.ok) return { ok: true };
+    const out = (await r.json().catch(() => ({}))) as { ok?: boolean; error?: string; fields?: Record<string, FieldError>; demo?: IssuedDemo };
+    if (r.ok && out.ok) return { ok: true, demo: out.demo && typeof out.demo.id === 'string' && typeof out.demo.password === 'string' ? out.demo : null };
     if (out.error === 'invalid' && out.fields) return { ok: false, error: 'invalid', fields: out.fields };
     if (out.error === 'too_fast' || out.error === 'expired' || out.error === 'rate_limited' || out.error === 'bot_check') return { ok: false, error: out.error };
     return { ok: false, error: 'failed' };

@@ -109,6 +109,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), officeAssets(), agentCatalog(), ...(marketing ? [marketingEntry()] : [])],
     server: {
       port: 5180,
+      // the request modal and the demo login share the registration-number, phone and password
+      // rules with the marketing Worker and CLI (marketing/scripts/lib — one source of truth)
+      fs: { allow: [here, join(here, '..', 'marketing', 'scripts', 'lib')] },
       // SOLOSQUAD_API points the proxy at another engine (a second local demo on its own port);
       // in marketing mode /api is the marketing Worker (`wrangler dev`, 8787)
       proxy: { '/api': { target: process.env.SOLOSQUAD_API ?? (marketing ? 'http://127.0.0.1:8787' : 'http://127.0.0.1:7420'), changeOrigin: false } },

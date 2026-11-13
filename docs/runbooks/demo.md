@@ -2,7 +2,7 @@
 
 > **대상:** 에이전시 담당자 · **근거:** 결정 62 · 사용자 결정 2026-11-13 ("데모는 하나의 형태도 버전 관리 · 프론트 단에서 사무실 확대해 보고 정해진 기능 눌러 보는 것 · 데모 계정은 문의로 이어지게 · 설정에서 고객사 이름만 표시")
 > **한 줄:** 데모는 **마케팅 사이트의 `/demo/app`** 에서 도는 고객 웹 화면 그대로의 사본이다. 데모 서버 · 엔진 · VM 없음. 화면은 브라우저 안 엔진(`web/src/demo/`)에 묻고, **아무것도 저장하지 않는다**(새로 고치면 처음 상태).
-> **원칙:** 데모 계정 · 사용 기록은 마케팅 사이트 D1 에만. 비밀번호는 발급 때 터미널에 한 번만 출력되고 해시만 남는다.
+> **원칙:** 데모 계정 · 사용 기록은 마케팅 사이트 D1 에만. 비밀번호는 해시만 남는다 — 평문은 신청한 브라우저의 완료 화면(또는 `issue` 를 돌린 터미널)에 한 번만 나온다.
 
 ## 0. 세 가지는 각각 따로다
 
@@ -26,36 +26,59 @@
 
 예시 데이터 · 대본을 바꾸려면 `web/src/demo/data/{ko,en,zh-CN}.json`(회사 · 사람 · 일정 · 워크플로우 단계 · 에이전트 답 · 산출물 · 추천 요청)을 고치고 마케팅 사이트를 다시 배포한다(`marketing/` `npm run deploy`). 세 언어 파일은 같은 키를 가진다(`web/test/demo.test.tsx`).
 
-## 2. 문의에서 발급하기
+## 2. 신청하면 바로 발급된다 (2026-11-13)
+
+검토 단계가 없다. 신청 모달에서 **데모 계정**을 고르고 보내면 마케팅 Worker 가 그 자리에서 계정을 만들고, 완료 화면에 바로 보여 준다(법인(사업자)등록번호 · 아이디 · 비밀번호 · 사용 기간 + **데모 시작하기** — 로그인 칸에 번호와 아이디가 채워진다, 비밀번호는 채우지 않는다).
+
+- **아이디** = 신청한 이메일(소문자).
+- **비밀번호** = 이메일 첫 알파벳의 영단어 + 신청 때 적은 **전화번호 뒤 4자리**. 예) `abc123@gmail.com` · `010-1234-5678` → `apple5678`. 첫 글자가 알파벳이 아니면 이메일에서 처음 나오는 알파벳, 알파벳이 하나도 없으면 `squad`.
+  a apple · b banana · c cat · d dog · e egg · f fish · g grape · h house · i ice · j juice · k kite · l lemon · m moon · n nest · o orange · p penguin · q queen · r river · s squad · t tiger · u umbrella · v violin · w water · x xray · y yellow · z zebra (`marketing/scripts/lib/demo-password.mjs`)
+- **사용 기간** = 14일(`DEMO_DAYS`).
+- **같은 이메일로 다시 신청**하면 계정은 그대로 — 비밀번호는 새 전화번호로, 번호 · 회사 이름 · 언어는 새 신청으로 바뀌고, 기간은 지금부터 14일(더 길게 남아 있으면 그대로).
+- **발급하지 않는 경우**(신청은 `new` 로 남는다): 회수한 계정, 내부 계정과 같은 아이디, 한 IP 가 오늘 새 계정 3개를 이미 받음(`DEMO_ISSUE_LIMIT_PER_IP_DAY`). 이때 완료 화면은 "확인하고 데모 계정을 메일로 보내 드려요" 이고, 에이전시가 `issue` 로 발급한다.
+- 메일로도 보내는 것은 나중 일 — Worker 의 `sendDemoMail`(`marketing/src/mail.ts`)이 그 자리이고 지금은 아무것도 보내지 않는다. 그래서 완료 화면은 메일을 약속하지 않는다.
+
+번호는 숫자만 받는다: 한국 회사는 **개인사업자**(사업자등록번호 10자리, `123-45-67890`) / **법인**(법인등록번호 13자리, `123456-1234567`)을 골라 검증 숫자까지 맞아야 하고, 다른 나라는 숫자 4–20자리. 전화번호도 숫자만(한국 번호는 `010-1234-5678` 처럼 하이픈이 저절로).
+
+### 다시 발급 (`issue`)
 
 ```bash
 cd marketing
 node scripts/inquiry.mjs list --status new --remote
 node scripts/inquiry.mjs show <문의 번호> --remote
-node scripts/inquiry.mjs issue <문의 번호> --slug samsung --days 14 --remote
+node scripts/inquiry.mjs issue <문의 번호> [--days 14] [--company-no <숫자> --kind business|corporate|foreign] [--phone <숫자>] --remote
 ```
 
-- 아이디 = `<slug>Demo`(겹치면 `samsungDemo2`, 대소문자 무시로 유일). slug 를 안 주면 회사 이름에서 제안한다(한글은 로마자, 중국어는 병음).
-- 문의의 **법인(사업자)등록번호**와 **회사 이름**이 계정에 붙는다. 번호가 없는 옛 문의는 `--company-no …` 로 준다.
-- 비밀번호 16자가 **이 터미널에 한 번만** 나오고, 그 언어의 메일 초안(로그인 주소 · 번호 · 아이디 · 비밀번호 · 기간)이 뒤따른다. 에이전시 메일함에서 보낸다. 비밀번호는 어디에도 따로 적지 않는다.
+- 비밀번호를 잊었을 때 · 번호를 고칠 때 · 계정 없이 남은 신청에. 아이디 = 신청 이메일, 비밀번호 = 같은 규칙(전화번호가 없는 옛 신청은 `--phone`, 그것도 없으면 16자 무작위).
+- 비밀번호가 **이 터미널에 한 번만** 나오고, 그 언어의 메일 초안(로그인 주소 · 번호 · 아이디 · 비밀번호 · 기간)이 뒤따른다. 에이전시 메일함에서 보낸다.
 
-방문자는 `https://<마케팅 사이트>/demo` 에서 번호 · 아이디 · 비밀번호를 넣는다 → `/demo/app`. 무엇이 틀렸든(번호 · 아이디 · 비밀번호 · 만료 · 회수) 같은 한 문장으로 돌아온다. 로그인 시도는 IP 마다(분 10 · 시간 60), 아이디마다(시간 20) 제한된다.
+방문자는 `https://<마케팅 사이트>/demo` 에서 번호 · 아이디(이메일) · 비밀번호를 넣는다 → `/demo/app`. 번호는 숫자끼리 비교한다(하이픈 상관없음). 무엇이 틀렸든(번호 · 아이디 · 비밀번호 · 만료 · 회수) 같은 한 문장으로 돌아온다. 로그인 시도는 IP 마다(분 10 · 시간 60), 아이디마다(시간 20) 제한된다. 비밀번호 규칙이 쉬운 만큼(이메일과 전화번호를 알면 짐작할 수 있다) 번호 · 시도 제한 · 예시 데이터뿐인 데모가 지키는 선이다.
 
 ## 3. 운영 명령
 
 ```bash
-node scripts/inquiry.mjs demo list --remote                       # 아이디 · 상태 · 만료 · 번호 · 언어 · 로그인 수 · 마지막 로그인 · 문의 · 회사
-node scripts/inquiry.mjs demo extend samsungDemo --days 7 --remote  # 만료일(지났으면 지금)부터 7일 더
-node scripts/inquiry.mjs demo revoke samsungDemo --remote          # 즉시 끝 — 열려 있던 세션도 바로 끊긴다
-node scripts/inquiry.mjs demo usage samsungDemo --remote           # 로그인 · 본 화면 · 누른 버튼 요약
+node scripts/inquiry.mjs demo list --remote                       # 아이디(이메일) · 상태 · 만료(없으면 no end) · internal/customer · 번호 · 언어 · 로그인 수 · 마지막 로그인 · 문의 · 회사
+node scripts/inquiry.mjs demo extend <아이디> --days 7 --remote      # 만료일(지났으면 지금)부터 7일 더
+node scripts/inquiry.mjs demo revoke <아이디> --remote               # 즉시 끝 — 열려 있던 세션도 바로 끊긴다
+node scripts/inquiry.mjs demo delete <아이디> --remote               # 계정과 사용 기록을 지운다(테스트 데이터용)
+node scripts/inquiry.mjs demo usage <아이디> --remote                # 로그인 · 본 화면 · 누른 버튼 요약
 ```
 
 문의 번호로도 된다: `inquiry.mjs extend <문의 번호> --days 7` · `inquiry.mjs revoke <문의 번호>`. 연장 · 회수는 문의의 `demo_expires_at` 과 기록에도 남는다.
 
+### 내부 계정 (대표 · 에이전시용)
+
+```bash
+node scripts/inquiry.mjs demo create --id solosquad --company-no 1234567890 --kind business --company-name SoloSquad --no-expiry --remote
+```
+
+- 만료 없음(`--no-expiry`, 또는 `--days N`) · 검증 숫자 검사 없음(숫자 4–20자리, `--kind business` 면 10자리로 `123-45-67890` 처럼 보임) · `internal` 표시. 신청은 내부 계정을 건드리지 못한다.
+- **비밀번호는 표준 입력으로만** — 터미널이면 두 번 물어 보고(화면에 안 보임), 파이프로 줄 수도 있다. 명령줄 인자로 주지 않는다(셸 기록 · 프로세스 목록에 남는다). 리포 · 파일에 적지 않는다.
+
 ## 4. 준비 · 점검
 
 - 비밀 값 `DEMO_SECRET`(`npx wrangler secret put DEMO_SECRET`) — 없으면 아무도 데모에 로그인하지 못한다. 바꾸면 모두 로그아웃된다.
-- 마이그레이션 `0003_demo_accounts.sql` 적용(`npm run migrate:remote`).
+- 마이그레이션 `0003_demo_accounts.sql` · `0004_demo_auto_issue.sql` 적용(`npm run migrate:remote`).
 - 로컬에서 해 보기: `marketing/README.md` "Run it locally".
 - 점검: `/demo/app` 을 세션 없이 열면 `/demo` 로 간다. `node scripts/inquiry.mjs demo list --remote` 로 활성 계정.
 

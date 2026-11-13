@@ -2,35 +2,56 @@
 // frame, opened from the landing's last section and the demo login (and the pricing section once it
 // exists), each with its `source`. Fields = §3.5.2 ⑥ + 요청 (demo · consult) + the company's
 // registration number (one representative number — the demo login asks for it again, 2026-11-12)
-// + the demo-usage consent when a demo account is asked for (DM6 ⓑ); the page checks them for convenience, the
-// marketing Worker decides (POST /api/inquiry). Spam: a hidden honeypot field, a
-// "form opened" token for the minimum fill time, and Turnstile only when the site turns it on.
+// + the phone (required with a demo account — its last four digits are in the password) + the
+// demo-usage consent when a demo account is asked for (DM6 ⓑ). The page checks them for
+// convenience, the marketing Worker decides (POST /api/inquiry).
+//
+// Since 2026-11-13 the number and the phone are digits-only fields that put their hyphens in as
+// they are typed (DigitsInput): a Korean company picks 개인사업자 (사업자등록번호, 10 digits,
+// NNN-NN-NNNNN) or 법인 (법인등록번호, 13, NNNNNN-NNNNNNN) and the check digit is checked; another
+// country's number is 4–20 digits. The rules are marketing/scripts/lib (company-no · phone) — the
+// Worker and the CLI use the same files. A demo account comes back with the answer, and the
+// completion screen shows it at once (number · ID · password · end) with a button to the demo login.
+//
+// Spam: a hidden honeypot field, a "form opened" token for the minimum fill time, and Turnstile
+// only when the site turns it on.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHref, useNavigate } from 'react-router-dom';
+import { checkCompanyNo, displayCompanyNo, formatCompanyNo, maxDigits, type CompanyNoKind } from '../../../marketing/scripts/lib/company-no.mjs';
+import { checkPhone, formatPhone, phoneMax } from '../../../marketing/scripts/lib/phone.mjs';
 import { Modal } from '../components/Modal';
 import { useI18n, type Locale, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
-import { formToken, sendInquiry, siteConfig, type FieldError } from './siteApi';
+import { DigitsInput } from './DigitsInput';
+import { formToken, sendInquiry, siteConfig, type FieldError, type IssuedDemo } from './siteApi';
 
 const KINDS = ['retail', 'online', 'maker', 'service', 'partner', 'other'] as const;
 const COUNTRIES = ['kr', 'cn', 'other'] as const;
 const REQUESTS = ['demo', 'consult'] as const;
 const WANTS = ['finance', 'sourcing', 'sns', 'other'] as const;
-const PHONE_KINDS = ['phone', 'kakao', 'wechat'] as const;
+/** the messenger next to the phone (the phone itself is its own field since 2026-11-13) */
+const MESSENGERS = ['kakao', 'wechat'] as const;
+const KOREAN_KINDS = ['business', 'corporate'] as const;
 const MAX = { company: 80, contact_name: 40, email: 254, reach_value: 60, message: 1000 };
 const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 type Want = (typeof WANTS)[number];
+type KoreanKind = (typeof KOREAN_KINDS)[number];
 export type Request = (typeof REQUESTS)[number];
 export type Source = 'landing_hero' | 'landing_start' | 'pricing' | 'demo_login' | 'demo_app';
 
-interface Form {
+export interface Form {
   company: string;
+  /** digits */
   company_no: string;
+  /** 개인사업자 · 법인 — used when the country is kr */
+  company_no_kind: KoreanKind;
   business_type: string;
   country: string;
   contact_name: string;
   email: string;
+  /** digits */
+  phone: string;
   reach_kind: string;
   reach_value: string;
   wants: Want[];
@@ -45,11 +66,13 @@ interface Form {
 const blank = (locale: Locale, requests: Request[]): Form => ({
   company: '',
   company_no: '',
+  company_no_kind: 'business',
   business_type: '',
   country: locale === 'zh-CN' ? 'cn' : locale === 'ko' ? 'kr' : '',
   contact_name: '',
   email: '',
-  reach_kind: locale === 'zh-CN' ? 'wechat' : locale === 'ko' ? 'kakao' : 'phone',
+  phone: '',
+  reach_kind: locale === 'zh-CN' ? 'wechat' : 'kakao',
   reach_value: '',
   wants: [],
   requests,
@@ -60,17 +83,8 @@ const blank = (locale: Locale, requests: Request[]): Form => ({
   website: '',
 });
 
-/** The company's registration number as the Worker stores it (marketing/src/validate.ts
- * `normalizeCompanyNo`): a Korean 사업자 · 법인등록번호 → its 10 or 13 digits (a Korean company must
- * give one of those), another country's → 4–30 letters, digits and dashes, upper-cased; else null. */
-export function normalizeCompanyNo(raw: string, country?: string): string | null {
-  const text = raw.normalize('NFKC').trim();
-  const digits = text.replace(/[\s-]/g, '');
-  if (/^(?:\d{10}|\d{13})$/.test(digits)) return digits;
-  if (country === 'kr') return null;
-  const other = text.toUpperCase();
-  return /^[A-Z0-9-]{4,30}$/.test(other) ? other : null;
-}
+/** The number's kind: a Korean company's pick, else another country's number. */
+export const companyNoKind = (f: Pick<Form, 'country' | 'company_no_kind'>): CompanyNoKind => (f.country === 'kr' ? f.company_no_kind : 'foreign');
 
 /** The same rules as the marketing Worker (marketing/src/validate.ts), for the marks before sending. */
 export function checkInquiry(f: Form): Record<string, FieldError> {
@@ -81,11 +95,14 @@ export function checkInquiry(f: Form): Record<string, FieldError> {
     else if (v.length > MAX[k]) out[k] = 'too_long';
   };
   text('company', true);
-  if (!f.company_no.trim()) out.company_no = 'required';
-  else if (!normalizeCompanyNo(f.company_no, f.country)) out.company_no = 'invalid';
+  const no = checkCompanyNo(f.company_no, companyNoKind(f));
+  if (!no.ok) out.company_no = no.error === 'required' ? 'required' : 'invalid';
   text('contact_name', true);
   text('email', true);
   if (f.email.trim() && !out.email && !EMAIL.test(f.email.trim())) out.email = 'invalid';
+  if (f.phone) {
+    if (!checkPhone(f.phone, f.country).ok) out.phone = 'invalid';
+  } else if (f.requests.includes('demo')) out.phone = 'required';
   text('reach_value', false);
   text('message', false);
   if (!f.business_type) out.business_type = 'required';
@@ -99,7 +116,7 @@ export function checkInquiry(f: Form): Record<string, FieldError> {
 
 const FIELD_MESSAGE: Record<string, Partial<Record<FieldError, MessageKey>>> = {
   email: { invalid: 'landing.contact.invalidEmail' },
-  company_no: { invalid: 'landing.contact.invalidCompanyNo' },
+  phone: { invalid: 'landing.contact.invalidPhone' },
   wants: { required: 'landing.contact.pickOne', invalid: 'landing.contact.pickOne' },
   requests: { required: 'landing.contact.pickOne', invalid: 'landing.contact.pickOne' },
   consent_required: { required: 'landing.contact.needConsent' },
@@ -110,6 +127,19 @@ const FIELD_MESSAGE: Record<string, Partial<Record<FieldError, MessageKey>>> = {
 };
 const fieldMessage = (name: string, e: FieldError): MessageKey =>
   FIELD_MESSAGE[name]?.[e] ?? (e === 'too_long' ? 'landing.contact.tooLong' : e === 'invalid' ? 'landing.contact.invalid' : 'landing.contact.required');
+
+/** What is wrong with the number as typed: its length for the kind, or its check digit. */
+function companyNoMessage(f: Form, e: FieldError): MessageKey {
+  if (e === 'required') return 'landing.contact.required';
+  const kind = companyNoKind(f);
+  const r = checkCompanyNo(f.company_no, kind);
+  if (r.ok) return 'landing.contact.invalidCompanyNo';
+  if (r.error === 'check') return 'landing.contact.companyNoCheck';
+  return `landing.contact.companyNoLength.${kind}`;
+}
+
+const PLACEHOLDER: Record<CompanyNoKind, string> = { business: '123-45-67890', corporate: '123456-1234567', foreign: '' };
+const PHONE_PLACEHOLDER = (country: string) => (country === 'kr' ? '010-1234-5678' : '');
 
 const PROBLEM: Record<string, MessageKey> = {
   too_fast: 'landing.contact.stale',
@@ -142,11 +172,62 @@ function Turnstile({ siteKey, onToken }: { siteKey: string; onToken: (t: string)
   return <div ref={box} className="inquiry-turnstile" />;
 }
 
+/** What the demo login fills in when the completion screen sends someone there — never the password. */
+export interface DemoPrefill {
+  id: string;
+  company_no: string;
+}
+export const DEMO_PREFILL_KEY = 'solosquad.demoPrefill';
 
 export interface OpenRequest {
   source: Source;
   /** pre-checked 요청 — the demo login and the last section: a demo account; pricing: + a call */
   requests?: Request[];
+}
+
+/** The completion screen with the account just issued: shown once, the password only here. */
+function Issued({ demo, form, onClose }: { demo: IssuedDemo; form: Form; onClose: () => void }) {
+  const { t, fmt } = useI18n();
+  const navigate = useNavigate();
+  const root = useHref('/');
+  const start = () => {
+    const prefill: DemoPrefill = { id: demo.id, company_no: demo.company_no };
+    try {
+      sessionStorage.setItem(DEMO_PREFILL_KEY, JSON.stringify(prefill));
+    } catch {
+      // private mode: the login just starts empty
+    }
+    onClose();
+    // the marketing pages share one router; the demo app (/demo/app) has its own
+    if (root === '/') navigate('/demo', { state: prefill });
+    else window.location.assign('/demo');
+  };
+  return (
+    <div className="inquiry-done" role="status">
+      <ICON.done size={28} className="inquiry-done-icon" />
+      <h2>{t('landing.apply.done.demoTitle')}</h2>
+      <p>{t(demo.reused ? 'landing.apply.done.demoAgain' : 'landing.apply.done.demoBody')}</p>
+      <dl className="inquiry-summary inquiry-account" data-testid="inquiry-account">
+        <dt>{t('landing.contact.companyNo')}</dt>
+        <dd className="inquiry-mono">{displayCompanyNo(demo.company_no, demo.company_no_kind)}</dd>
+        <dt>{t('auth.username')}</dt>
+        <dd className="inquiry-mono">{demo.id}</dd>
+        <dt>{t('auth.password')}</dt>
+        <dd className="inquiry-mono">{demo.password}</dd>
+        <dt>{t('landing.apply.done.until')}</dt>
+        <dd>{t('landing.apply.done.untilValue', { date: fmt.date(Date.parse(demo.expires) / 1000) })}</dd>
+      </dl>
+      {form.requests.includes('consult') && <p>{t('landing.apply.done.consult')}</p>}
+      <div className="inquiry-done-actions">
+        <button type="button" className="btn is-primary" onClick={start} data-testid="inquiry-start-demo">
+          {t('demo.login.submit')}
+        </button>
+        <button type="button" className="btn" onClick={onClose}>
+          {t('common.close')}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function InquiryModal({ onClose, source, requests }: { onClose: () => void; source: Source; requests: Request[] }) {
@@ -155,10 +236,12 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
   const [marks, setMarks] = useState<Record<string, FieldError>>({});
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<Form | null>(null);
+  const [done, setDone] = useState<{ form: Form; demo: IssuedDemo | null } | null>(null);
   const [turnstile, setTurnstile] = useState<{ siteKey: string } | null>(null);
   const [botToken, setBotToken] = useState('');
-  const token = useRef<Promise<string | null>>(formToken());
+  // asked once when the form opens (not on every render — a keystroke re-renders)
+  const token = useRef<Promise<string | null> | null>(null);
+  token.current ??= formToken();
 
   useEffect(() => {
     siteConfig()
@@ -166,18 +249,28 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
       .catch(() => undefined);
   }, []);
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
-    setForm((f) => ({ ...f, [k]: v }));
+  const unmark = (...names: string[]) =>
     setMarks((m) => {
-      if (!(k in m)) return m;
+      if (!names.some((n) => n in m)) return m;
       const next = { ...m };
-      delete next[k];
+      for (const n of names) delete next[n];
       return next;
     });
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    unmark(k);
   };
   const toggle = <K extends 'wants' | 'requests'>(k: K, v: Form[K][number]) => {
     const list = form[k] as string[];
     set(k, (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]) as Form[K]);
+  };
+  // a new country or kind keeps the digits, cut to what the new kind takes
+  const setNumberKind = (patch: Partial<Pick<Form, 'country' | 'company_no_kind'>>) => {
+    setForm((f) => {
+      const next = { ...f, ...patch };
+      return { ...next, company_no: next.company_no.slice(0, maxDigits(companyNoKind(next))), phone: next.phone.slice(0, phoneMax(next.country)) };
+    });
+    unmark('company_no', 'country', 'phone');
   };
 
   const submit = async (e: FormEvent) => {
@@ -193,11 +286,13 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
     const reach = form.reach_value.trim();
     const res = await sendInquiry({
       company: form.company.trim(),
-      company_no: form.company_no.trim(),
+      company_no: form.company_no,
+      company_no_kind: form.country === 'kr' ? form.company_no_kind : undefined,
       business_type: form.business_type,
       country: form.country,
       contact_name: form.contact_name.trim(),
       email: form.email.trim(),
+      phone: form.phone || undefined,
       reach_kind: reach ? form.reach_kind : undefined,
       reach_value: reach || undefined,
       wants: form.wants,
@@ -214,7 +309,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
     });
     setBusy(false);
     if (res.ok) {
-      setDone(form);
+      setDone({ form, demo: res.demo });
       return;
     }
     if (res.error === 'invalid') {
@@ -227,35 +322,39 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
     setProblem(PROBLEM[res.error]);
   };
 
-  const err = (name: string) =>
+  const err = (name: string, message?: MessageKey) =>
     marks[name] ? (
       <small className="inquiry-error" id={`inquiry-${name}-error`}>
-        {t(fieldMessage(name, marks[name]))}
+        {t(message ?? fieldMessage(name, marks[name]))}
       </small>
     ) : null;
   const invalid = (name: string) => (marks[name] ? { 'aria-invalid': true as const, 'aria-describedby': `inquiry-${name}-error` } : {});
 
   if (done) {
     return (
-      <Modal label={t('landing.apply.done.title')} onClose={onClose} className="inquiry-modal">
-        <div className="inquiry-done" role="status">
-          <ICON.done size={28} className="inquiry-done-icon" />
-          <h2>{t('landing.apply.done.title')}</h2>
-          <p>{t('landing.apply.done.body')}</p>
-          <dl className="inquiry-summary">
-            <dt>{t('landing.contact.company')}</dt>
-            <dd>{done.company.trim()}</dd>
-            <dt>{t('landing.contact.companyNo')}</dt>
-            <dd>{done.company_no.trim()}</dd>
-            <dt>{t('landing.apply.requests')}</dt>
-            <dd>{done.requests.map((r) => t(`landing.apply.requests.${r}`)).join(' · ')}</dd>
-            <dt>{t('landing.contact.wants')}</dt>
-            <dd>{done.wants.map((w) => t(`landing.contact.wants.${w}`)).join(' · ')}</dd>
-          </dl>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.close')}
-          </button>
-        </div>
+      <Modal label={t(done.demo ? 'landing.apply.done.demoTitle' : 'landing.apply.done.title')} onClose={onClose} className="inquiry-modal">
+        {done.demo ? (
+          <Issued demo={done.demo} form={done.form} onClose={onClose} />
+        ) : (
+          <div className="inquiry-done" role="status">
+            <ICON.done size={28} className="inquiry-done-icon" />
+            <h2>{t('landing.apply.done.title')}</h2>
+            <p>{t('landing.apply.done.body')}</p>
+            <dl className="inquiry-summary">
+              <dt>{t('landing.contact.company')}</dt>
+              <dd>{done.form.company.trim()}</dd>
+              <dt>{t('landing.contact.companyNo')}</dt>
+              <dd>{formatCompanyNo(done.form.company_no, companyNoKind(done.form))}</dd>
+              <dt>{t('landing.apply.requests')}</dt>
+              <dd>{done.form.requests.map((r) => t(`landing.apply.requests.${r}`)).join(' · ')}</dd>
+              <dt>{t('landing.contact.wants')}</dt>
+              <dd>{done.form.wants.map((w) => t(`landing.contact.wants.${w}`)).join(' · ')}</dd>
+            </dl>
+            <button type="button" className="btn" onClick={onClose}>
+              {t('common.close')}
+            </button>
+          </div>
+        )}
       </Modal>
     );
   }
@@ -278,6 +377,9 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
     </fieldset>
   );
 
+  const kind = companyNoKind(form);
+  const wantsDemo = form.requests.includes('demo');
+
   return (
     <Modal label={t('landing.apply.title')} onClose={onClose} className="inquiry-modal">
       <form className="inquiry-form" onSubmit={(e) => void submit(e)} noValidate>
@@ -293,21 +395,51 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             {err('company')}
           </label>
           <label className="field">
-            <span>{t('landing.contact.companyNo')}</span>
-            <small>{t('landing.contact.companyNoHint')}</small>
-            <input
-              name="company_no"
-              inputMode="text"
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={40}
-              placeholder="123-45-67890"
-              value={form.company_no}
-              onChange={(e) => set('company_no', e.target.value)}
-              {...invalid('company_no')}
-            />
-            {err('company_no')}
+            <span>{t('landing.contact.country')}</span>
+            <select name="country" value={form.country} onChange={(e) => setNumberKind({ country: e.target.value })} {...invalid('country')}>
+              <option value="" disabled>
+                —
+              </option>
+              {COUNTRIES.map((c) => (
+                <option key={c} value={c}>
+                  {t(`landing.contact.country.${c}`)}
+                </option>
+              ))}
+            </select>
+            {err('country')}
           </label>
+          <div className="field inquiry-company-no">
+            <label htmlFor="inquiry-company-no">{t('landing.contact.companyNo')}</label>
+            {form.country === 'kr' && (
+              <div className="segmented" role="radiogroup" aria-label={t('landing.contact.companyNoKind')} data-testid="company-no-kind">
+                {KOREAN_KINDS.map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="radio"
+                    aria-checked={form.company_no_kind === k}
+                    className={form.company_no_kind === k ? 'is-active' : ''}
+                    onClick={() => setNumberKind({ company_no_kind: k })}
+                  >
+                    {t(`landing.contact.companyNoKind.${k}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+            <small id="inquiry-company-no-hint">{t(`landing.contact.companyNoHint.${kind}`)}</small>
+            <DigitsInput
+              id="inquiry-company-no"
+              name="company_no"
+              value={form.company_no}
+              onDigits={(d) => set('company_no', d)}
+              format={(d) => formatCompanyNo(d, kind)}
+              max={maxDigits(kind)}
+              placeholder={PLACEHOLDER[kind]}
+              aria-describedby={marks.company_no ? 'inquiry-company_no-error' : 'inquiry-company-no-hint'}
+              {...(marks.company_no ? { 'aria-invalid': true as const } : {})}
+            />
+            {marks.company_no && err('company_no', companyNoMessage(form, marks.company_no))}
+          </div>
           <label className="field">
             <span>{t('landing.contact.kind')}</span>
             <select name="business_type" value={form.business_type} onChange={(e) => set('business_type', e.target.value)} {...invalid('business_type')}>
@@ -328,31 +460,43 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             {err('contact_name')}
           </label>
           <label className="field">
-            <span>{t('landing.contact.country')}</span>
-            <select name="country" value={form.country} onChange={(e) => set('country', e.target.value)} {...invalid('country')}>
-              <option value="" disabled>
-                —
-              </option>
-              {COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {t(`landing.contact.country.${c}`)}
-                </option>
-              ))}
-            </select>
-            {err('country')}
-          </label>
-          <label className="field">
             <span>{t('landing.contact.email')}</span>
+            {wantsDemo && <small>{t('landing.contact.emailHint')}</small>}
             <input name="email" type="email" autoComplete="email" maxLength={MAX.email} value={form.email} onChange={(e) => set('email', e.target.value)} {...invalid('email')} />
             {err('email')}
           </label>
           <div className="field">
+            <label htmlFor="inquiry-phone">
+              {t('landing.contact.phoneNumber')}
+              {!wantsDemo && (
+                <>
+                  {' '}
+                  <em className="inquiry-optional">{t('landing.contact.optional')}</em>
+                </>
+              )}
+            </label>
+            {wantsDemo && <small id="inquiry-phone-hint">{t('landing.contact.phoneHint')}</small>}
+            <DigitsInput
+              id="inquiry-phone"
+              name="phone"
+              autoComplete="tel"
+              value={form.phone}
+              onDigits={(d) => set('phone', d)}
+              format={(d) => formatPhone(d, form.country)}
+              max={phoneMax(form.country)}
+              placeholder={PHONE_PLACEHOLDER(form.country)}
+              aria-describedby={marks.phone ? 'inquiry-phone-error' : wantsDemo ? 'inquiry-phone-hint' : undefined}
+              {...(marks.phone ? { 'aria-invalid': true as const } : {})}
+            />
+            {err('phone')}
+          </div>
+          <div className="field">
             <span id="inquiry-reach-label">
-              {t('landing.contact.phone')} <em className="inquiry-optional">{t('landing.contact.optional')}</em>
+              {t('landing.contact.messenger')} <em className="inquiry-optional">{t('landing.contact.optional')}</em>
             </span>
             <div className="inquiry-phone">
               <select aria-label={t('landing.contact.phoneKind')} value={form.reach_kind} onChange={(e) => set('reach_kind', e.target.value)}>
-                {PHONE_KINDS.map((k) => (
+                {MESSENGERS.map((k) => (
                   <option key={k} value={k}>
                     {t(`landing.contact.phoneKind.${k}`)}
                   </option>
@@ -395,7 +539,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             </Link>
           </details>
           {err('consent_required')}
-          {form.requests.includes('demo') && (
+          {wantsDemo && (
             <>
               <label className="inquiry-check">
                 <input type="checkbox" checked={form.consent_demo} onChange={(e) => set('consent_demo', e.target.checked)} {...invalid('consent_demo')} />

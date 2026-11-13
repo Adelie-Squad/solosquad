@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import worker from '../../src/index';
 import { checkFormToken, formToken, sweep } from '../../src/inquiry';
 import { validateInquiry } from '../../src/validate';
+import { verifyPassword } from '../../scripts/lib/password.mjs';
 
 let n = 0;
 const freshIp = () => `203.0.113.${++n}`;
@@ -24,11 +25,13 @@ const opened = (msAgo = 5000) => formToken(env, Date.now() - msAgo);
 async function request(over: Record<string, unknown> = {}) {
   return {
     company: '에이스상사',
-    company_no: '123-45-67890',
+    company_no: '123-45-67891',
+    company_no_kind: 'business',
     business_type: 'retail',
     country: 'kr',
     contact_name: '김민지',
     email: freshEmail(),
+    phone: '010-1234-5678',
     reach_kind: 'kakao',
     reach_value: 'minji-kakao',
     wants: ['finance', 'sns'],
@@ -65,31 +68,50 @@ describe('validation (the modal checks the same)', () => {
     });
   });
 
-  it('asking for a demo account needs the demo-usage consent too (DM6 ⓑ); a call alone does not', () => {
-    const base = { company: 'Acme', company_no: '91310000-ma1fl', business_type: 'online', country: 'cn', contact_name: 'Li', email: 'LI@ACME.CN', wants: ['sourcing'], consent_required: true, locale: 'zh-CN', source: 'pricing' };
-    expect(validateInquiry({ ...base, requests: ['demo'] })).toEqual({ ok: false, fields: { consent_demo: 'required' } });
+  it('asking for a demo account needs the demo-usage consent and a phone too (DM6 ⓑ · the password); a call alone does not', () => {
+    const base = { company: 'Acme', company_no: '91310000123456', business_type: 'online', country: 'cn', contact_name: 'Li', email: 'LI@ACME.CN', wants: ['sourcing'], consent_required: true, locale: 'zh-CN', source: 'pricing' };
+    expect(validateInquiry({ ...base, requests: ['demo'] })).toEqual({ ok: false, fields: { consent_demo: 'required', phone: 'required' } });
     const call = validateInquiry({ ...base, requests: ['consult'] });
-    expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', company_no: '91310000-MA1FL', requests: ['consult'], consent_demo: false });
+    expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', company_no: '91310000123456', company_no_kind: 'foreign', phone: null, requests: ['consult'], consent_demo: false });
+    const demo = validateInquiry({ ...base, requests: ['demo'], consent_demo: true, phone: '+86 138 0013 8000' });
+    expect(demo.ok && demo.value).toMatchObject({ phone: '8613800138000' });
   });
 
-  it('the company registration number: a Korean one (10 or 13 digits) stored as digits, another country’s 4–30 letters, digits and dashes', () => {
-    const base = { company: 'Acme', business_type: 'online', contact_name: 'Li', email: 'li@acme.cn', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing' };
-    const stored = (company_no: unknown, country: string) => {
-      const r = validateInquiry({ ...base, company_no, country });
-      return r.ok ? r.value.company_no : r.fields.company_no;
+  it('the phone: digits stored; a Korean one by the Korean rules; anything but digits and separators refused', () => {
+    const base = { company: 'Acme', company_no: '1234567891', company_no_kind: 'business', business_type: 'online', country: 'kr', contact_name: 'Li', email: 'li@acme.kr', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing' };
+    const stored = (phone: unknown, country = 'kr') => {
+      const r = validateInquiry({ ...base, phone, country });
+      return r.ok ? r.value.phone : r.fields.phone;
     };
-    expect(stored('123-45-67890', 'kr')).toBe('1234567890'); // 사업자등록번호
-    expect(stored(' 123 45 67890 ', 'kr')).toBe('1234567890');
-    expect(stored('110111-1234567', 'kr')).toBe('1101111234567'); // 법인등록번호
-    expect(stored('１２３４５６７８９０', 'kr')).toBe('1234567890'); // full-width digits
-    expect(stored('123-45-6789', 'kr')).toBe('invalid'); // a Korean company gives one of the Korean two
-    expect(stored('HRB-12345', 'kr')).toBe('invalid');
-    expect(stored('hrb-12345', 'other')).toBe('HRB-12345');
-    expect(stored('123-45-67890', 'cn')).toBe('1234567890');
-    expect(stored('abc', 'other')).toBe('invalid');
-    expect(stored('x'.repeat(31), 'other')).toBe('invalid');
-    expect(stored('12_34', 'other')).toBe('invalid');
-    expect(stored('   ', 'kr')).toBe('required');
+    expect(stored('010-1234-5678')).toBe('01012345678');
+    expect(stored('02 123 4567')).toBe('021234567');
+    expect(stored('010-12')).toBe('invalid');
+    expect(stored('010-abcd-5678')).toBe('invalid');
+    expect(stored('')).toBeNull();
+    expect(stored('4915112345678', 'other')).toBe('4915112345678');
+  });
+
+  it('the company registration number: digits only, with its kind; a Korean one by its check digit; another country’s 4–20 digits', () => {
+    const base = { company: 'Acme', business_type: 'online', contact_name: 'Li', email: 'li@acme.cn', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing' };
+    const stored = (company_no: unknown, country: string, company_no_kind?: string) => {
+      const r = validateInquiry({ ...base, company_no, country, company_no_kind });
+      return r.ok ? `${r.value.company_no}/${r.value.company_no_kind}` : (r.fields.company_no ?? r.fields.company_no_kind);
+    };
+    expect(stored('123-45-67891', 'kr', 'business')).toBe('1234567891/business'); // 사업자등록번호
+    expect(stored(' 123 45 67891 ', 'kr', 'business')).toBe('1234567891/business');
+    expect(stored('110111-1234569', 'kr', 'corporate')).toBe('1101111234569/corporate'); // 법인등록번호
+    expect(stored('１２３４５６７８９１', 'kr', 'business')).toBe('1234567891/business'); // full-width digits
+    expect(stored('1101111234569', 'kr')).toBe('1101111234569/corporate'); // an older page: no kind → by length
+    expect(stored('123-45-67890', 'kr', 'business')).toBe('invalid'); // the check digit
+    expect(stored('110111-1234569', 'kr', 'business')).toBe('invalid'); // 13 digits for a 사업자등록번호
+    expect(stored('123-45-6789', 'kr', 'business')).toBe('invalid');
+    expect(stored('1234567891', 'kr', 'sole')).toBe('invalid');
+    expect(stored('HRB-12345', 'other')).toBe('invalid'); // digits only now
+    expect(stored('12345', 'other')).toBe('12345/foreign');
+    expect(stored('123-45-67890', 'cn', 'business')).toBe('1234567890/foreign'); // no check digit abroad
+    expect(stored('123', 'other')).toBe('invalid');
+    expect(stored('1'.repeat(21), 'other')).toBe('invalid');
+    expect(stored('   ', 'kr', 'business')).toBe('required');
     expect(stored(12345678, 'other')).toBe('required');
   });
 });
@@ -97,7 +119,7 @@ describe('validation (the modal checks the same)', () => {
 describe('POST /api/inquiry', () => {
   it('stores one row (status new, consent, version, locale, source, requests, opened_at, retain_until) and one created log', async () => {
     const [before, logs] = [await count(), await count('inquiry_log')];
-    const body = await request();
+    const body = await request({ requests: ['consult'] });
     const r = await post(body, freshIp(), { 'user-agent': 'secret-agent/1.0' });
     expect(r.status).toBe(200);
     expect(await r.json()).toEqual({ ok: true });
@@ -106,22 +128,25 @@ describe('POST /api/inquiry', () => {
     const row = await env.DB.prepare('SELECT * FROM inquiries WHERE email = ?1').bind(body.email).first<Record<string, unknown>>();
     expect(row).toMatchObject({
       company: '에이스상사',
-      company_no: '1234567890',
+      company_no: '1234567891',
+      company_no_kind: 'business',
+      phone: '01012345678',
       business_type: 'retail',
       country: 'kr',
       contact_name: '김민지',
       reach_kind: 'kakao',
       reach_value: 'minji-kakao',
       wants: '["finance","sns"]',
-      requests: '["demo"]',
+      requests: '["consult"]',
       consent_required: 1,
-      consent_demo: 1,
+      consent_demo: 0,
       consent_version: env.CONSENT_VERSION,
       consent_news: 0,
       locale: 'ko',
       source: 'demo_login',
       status: 'new',
       demo_id: null,
+      demo_account: null,
     });
     expect(String(row!.id)).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
     expect(Date.parse(String(row!.retain_until)) - Date.parse(String(row!.created_at))).toBe(365 * 86_400_000);
@@ -129,7 +154,7 @@ describe('POST /api/inquiry', () => {
     // neither the IP nor the user-agent is kept with it
     expect(JSON.stringify(row)).not.toMatch(/203\.0\.113|secret-agent/);
     const log = await env.DB.prepare('SELECT actor, action, detail FROM inquiry_log WHERE inquiry_id = ?1').bind(row!.id).all();
-    expect(log.results).toEqual([{ actor: 'system', action: 'created', detail: '{"source":"demo_login","requests":["demo"]}' }]);
+    expect(log.results).toEqual([{ actor: 'system', action: 'created', detail: '{"source":"demo_login","requests":["consult"]}' }]);
   });
 
   it('refuses an invalid request with the fields, and stores nothing', async () => {
@@ -185,6 +210,107 @@ describe('POST /api/inquiry', () => {
     for (const path of ['/api/admin/inquiries', '/api/inquiries', '/api/login/lookup']) {
       expect((await SELF.fetch(`https://marketing.test${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status).toBe(404);
     }
+  });
+});
+
+describe('the demo account, issued on the request (2026-11-13 — no review)', () => {
+  type Answer = { ok: true; demo?: { id: string; password: string; company_no: string; company_no_kind: string; company_name: string; expires: string; reused: boolean } };
+  const account = (id: string) => env.DB.prepare('SELECT * FROM demo_accounts WHERE id_lower = ?1').bind(id.toLowerCase()).first<Record<string, unknown>>();
+  const signIn = (company_no: string, username: string, password: string) =>
+    SELF.fetch('https://marketing.test/api/demo/login', {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://marketing.test', 'cf-connecting-ip': freshIp() },
+      body: new URLSearchParams({ company_no, username, password }).toString(),
+    });
+
+  it('ID = the email, password = word + the phone’s last four, 14 days; only the hash is stored; the account signs in', async () => {
+    const r = await post(await request({ email: 'Abc123@Example.com', phone: '010-9876-5432' }));
+    const out = (await r.json()) as Answer;
+    expect(out.ok).toBe(true);
+    expect(out.demo).toMatchObject({ id: 'abc123@example.com', password: 'apple5432', company_no: '1234567891', company_no_kind: 'business', company_name: '에이스상사', reused: false });
+    const days = (Date.parse(out.demo!.expires) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(13.9);
+    expect(days).toBeLessThanOrEqual(14);
+    const row = await account('abc123@example.com');
+    expect(row).toMatchObject({ id: 'abc123@example.com', company_no: '1234567891', company_no_kind: 'business', created_by: 'system', internal: 0, revoked_at: null, expires_at: out.demo!.expires });
+    expect(await verifyPassword('apple5432', String(row!.password_hash))).toBe(true);
+    expect(JSON.stringify(row)).not.toContain('apple5432');
+    const inquiry = await env.DB.prepare('SELECT * FROM inquiries WHERE email = ?1').bind('abc123@example.com').first<Record<string, unknown>>();
+    expect(inquiry).toMatchObject({ status: 'issued', demo_account: 'abc123@example.com', demo_expires_at: out.demo!.expires, demo_id: null });
+    expect(JSON.stringify(inquiry)).not.toContain('apple5432');
+    const log = await env.DB.prepare('SELECT action, detail FROM inquiry_log WHERE inquiry_id = ?1 ORDER BY ts, action').bind(inquiry!.id).all<{ action: string; detail: string }>();
+    expect(log.results.map((l) => l.action)).toEqual(['created', 'issued']);
+    expect(log.results[1].detail).not.toContain('abc123');
+    // the demo login: the number with or without hyphens, the email in any case
+    const login = await signIn('123-45-67891', 'ABC123@example.COM', 'apple5432');
+    expect(login.headers.get('location')).toBe('https://marketing.test/demo/app');
+  });
+
+  it('the same email again: the same account — a fresh password from the new phone, the new number, a later end — linked to the new request', async () => {
+    const email = 'penguin.fan@example.com';
+    const first = ((await (await post(await request({ email, phone: '010-1111-2222' }))).json()) as Answer).demo!;
+    await env.DB.prepare('UPDATE demo_accounts SET expires_at = ?1 WHERE id = ?2').bind(new Date(Date.now() + 86_400_000).toISOString(), email).run();
+    const again = await post(await request({ email: email.toUpperCase(), phone: '010-3333-4444', company_no: '110111-1234569', company_no_kind: 'corporate' }));
+    const second = ((await again.json()) as Answer).demo!;
+    expect(first.password).toBe('penguin2222');
+    expect(second).toMatchObject({ id: email, password: 'penguin4444', company_no: '1101111234569', company_no_kind: 'corporate', reused: true });
+    expect(Date.parse(second.expires)).toBeGreaterThan(Date.now() + 13 * 86_400_000);
+    expect((await env.DB.prepare('SELECT count(*) AS n FROM demo_accounts WHERE id_lower = ?1').bind(email).first<{ n: number }>())!.n).toBe(1);
+    const linked = await env.DB.prepare('SELECT id, status, demo_account FROM inquiries WHERE email = ?1 ORDER BY created_at').bind(email).all<Record<string, unknown>>();
+    expect(linked.results.map((q) => [q.status, q.demo_account])).toEqual([
+      ['issued', email],
+      ['issued', email],
+    ]);
+    expect((await account(email))!.inquiry_id).toBe(linked.results[1].id);
+    expect((await signIn('1101111234569', email, 'penguin2222')).headers.get('location')).toBe('https://marketing.test/demo?error=1');
+    expect((await signIn('110111-1234569', email, 'penguin4444')).headers.get('location')).toBe('https://marketing.test/demo/app');
+  });
+
+  it('a later request never shortens the end', async () => {
+    const email = 'long@example.com';
+    await post(await request({ email }));
+    const far = new Date(Date.now() + 60 * 86_400_000).toISOString();
+    await env.DB.prepare('UPDATE demo_accounts SET expires_at = ?1 WHERE id = ?2').bind(far, email).run();
+    const again = ((await (await post(await request({ email }))).json()) as Answer).demo!;
+    expect(again.expires).toBe(far);
+  });
+
+  it('a call only: no account', async () => {
+    const body = await request({ requests: ['consult'], consent_demo: false });
+    expect(await (await post(body)).json()).toEqual({ ok: true });
+    expect(await account(body.email as string)).toBeNull();
+  });
+
+  it('a revoked account or an internal one is never issued again from a request — the request is kept for the agency', async () => {
+    const email = 'gone@example.com';
+    await post(await request({ email }));
+    await env.DB.prepare('UPDATE demo_accounts SET revoked_at = ?1 WHERE id = ?2').bind(new Date().toISOString(), email).run();
+    expect(await (await post(await request({ email, phone: '010-5555-6666' }))).json()).toEqual({ ok: true });
+    expect((await account(email))!.revoked_at).not.toBeNull();
+    expect(await verifyPassword('grape6666', String((await account(email))!.password_hash))).toBe(false);
+    const last = await env.DB.prepare("SELECT status, demo_account FROM inquiries WHERE email = ?1 ORDER BY created_at DESC LIMIT 1").bind(email).first();
+    expect(last).toEqual({ status: 'new', demo_account: null });
+
+    await env.DB.prepare(
+      "INSERT INTO demo_accounts (id, id_lower, company_no, company_name, password_hash, created_at, created_by, expires_at, internal) VALUES ('owner@example.com', 'owner@example.com', '0000000000', 'SoloSquad', 'x', ?1, 'agency', NULL, 1)",
+    ).bind(new Date().toISOString()).run();
+    expect(await (await post(await request({ email: 'owner@example.com' }))).json()).toEqual({ ok: true });
+    expect(await account('owner@example.com')).toMatchObject({ password_hash: 'x', internal: 1, expires_at: null });
+  });
+
+  it('one IP gets at most 3 new accounts a day (a repeat for the same email does not count); past that the request is kept without one', async () => {
+    const ip = freshIp();
+    const emails = ['one@cap.example', 'two@cap.example', 'three@cap.example'];
+    for (const email of emails) expect(((await (await post(await request({ email }), ip)).json()) as Answer).demo?.id).toBe(email);
+    expect(((await (await post(await request({ email: emails[0] }), ip)).json()) as Answer).demo?.reused).toBe(true);
+    const fourth = await post(await request({ email: 'four@cap.example' }), ip);
+    expect(fourth.status).toBe(200);
+    expect(await fourth.json()).toEqual({ ok: true });
+    expect(await account('four@cap.example')).toBeNull();
+    expect(await env.DB.prepare('SELECT status FROM inquiries WHERE email = ?1').bind('four@cap.example').first()).toEqual({ status: 'new' });
+    // and the hourly request limit still stops the sixth request of the hour from that IP
+    expect((await post(await request(), ip)).status).toBe(429);
   });
 });
 

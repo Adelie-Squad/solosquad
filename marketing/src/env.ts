@@ -11,6 +11,10 @@ export interface Env {
   INQUIRY_LIMIT_PER_EMAIL_DAY: string;
   ROUTE_LIMIT_PER_MIN: string;
   ROUTE_LIMIT_PER_HOUR: string;
+  /** days a demo account issued on a request lasts (default 14) */
+  DEMO_DAYS?: string;
+  /** new demo accounts one hashed IP may get a day (default 3; a repeat request for the same email does not count) */
+  DEMO_ISSUE_LIMIT_PER_IP_DAY?: string;
   /** demo login attempts per demo ID an hour, from any IP (the per-IP limits are the router's) */
   DEMO_LOGIN_LIMIT_PER_ID_HOUR?: string;
   /** usage events per demo account a minute and an hour */

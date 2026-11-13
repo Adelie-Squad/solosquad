@@ -10,7 +10,6 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider, type Locale } from '../src/i18n';
-import { normalizeCompanyNo } from '../src/marketing/Inquiry';
 import { MarketingApp } from '../src/marketing/MarketingApp';
 import { resetSiteConfig } from '../src/marketing/siteApi';
 
@@ -117,12 +116,14 @@ describe('the demo login (/demo)', () => {
     const number = within(form).getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement;
     expect(number.name).toBe('company_no');
     expect(number.required).toBe(true);
-    expect(within(form).getByText('데모를 신청할 때 적은 번호예요.')).toBeTruthy();
+    expect(within(form).getByText('데모를 신청할 때 적은 번호예요. 숫자만 치면 돼요.')).toBeTruthy();
+    expect(within(form).getByText('신청할 때 적은 이메일이에요.')).toBeTruthy();
+    expect(number.inputMode).toBe('numeric');
     expect([...form.querySelectorAll('input')].map((i) => i.name)).toEqual(['company_no', 'username', 'password']);
     expect(within(form).queryByLabelText(/법인명|회사 이름/)).toBeNull();
-    expect(within(form).getByLabelText('아이디')).toHaveProperty('name', 'username');
+    expect(within(form).getByLabelText(/^아이디/)).toHaveProperty('name', 'username');
     expect(within(form).getByLabelText('비밀번호')).toHaveProperty('name', 'password');
-    expect((within(form).getByLabelText('아이디') as HTMLInputElement).placeholder).toBe('samsungDemo');
+    expect((within(form).getByLabelText(/^아이디/) as HTMLInputElement).placeholder).toBe('name@company.com');
     expect(screen.getByText('데모는 예시 데이터로 움직여요.')).toBeTruthy();
     expect(screen.queryByLabelText(/회사 코드/)).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -130,17 +131,33 @@ describe('the demo login (/demo)', () => {
     expect(calls).toEqual([]);
   });
 
+  it('the number takes digits only and shows hyphens by length: 10 → 3-2-5, 13 → 6-7, else none', () => {
+    stubSite();
+    site('/demo');
+    const number = screen.getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement;
+    const type = (v: string) => {
+      fireEvent.change(number, { target: { value: v } });
+      return number.value;
+    };
+    expect(type('12345')).toBe('12345');
+    expect(type('1234567891')).toBe('123-45-67891');
+    expect(type('123-45-678912')).toBe('12345678912');
+    expect(type('1101111234569')).toBe('110111-1234569');
+    expect(type('abc１２３4')).toBe('1234');
+    expect(type('1'.repeat(30))).toBe('1'.repeat(20));
+  });
+
   it('?error=1 (every failure the same): one sentence, no hint at which field was wrong', () => {
     stubSite();
     site('/demo?error=1&u=samsungDemo');
     expect(screen.getByRole('alert').textContent).toBe('법인(사업자)등록번호 · 아이디 · 비밀번호를 다시 확인해 주세요. 데모 기간이 끝났다면 담당자에게 알려 주세요.');
-    expect((screen.getByLabelText('아이디') as HTMLInputElement).value).toBe('samsungDemo');
+    expect((screen.getByLabelText(/^아이디/) as HTMLInputElement).value).toBe('samsungDemo');
   });
 
   it('?u= fills the demo ID (the router sends the code demo here); the number is still asked for', () => {
     stubSite();
     site('/demo?u=samsungDemo');
-    expect((screen.getByLabelText('아이디') as HTMLInputElement).value).toBe('samsungDemo');
+    expect((screen.getByLabelText(/^아이디/) as HTMLInputElement).value).toBe('samsungDemo');
     expect((screen.getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement).value).toBe('');
   });
 
@@ -160,12 +177,15 @@ describe('the request modal', () => {
     fireEvent.click(screen.getByTestId('demo-apply'));
     return screen.findByRole('dialog', { name: '데모 계정 신청하기' });
   };
+  const number = (dialog: HTMLElement) => within(dialog).getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement;
+  const phone = (dialog: HTMLElement) => within(dialog).getByLabelText(/^전화번호/) as HTMLInputElement;
   const fill = (dialog: HTMLElement) => {
     fireEvent.change(within(dialog).getByLabelText(/^회사 이름/), { target: { value: '에이스상사' } });
-    fireEvent.change(within(dialog).getByLabelText(/^법인\(사업자\)등록번호/), { target: { value: '123-45-67890' } });
+    fireEvent.change(number(dialog), { target: { value: '123-45-67891' } });
     fireEvent.change(within(dialog).getByLabelText(/^업종/), { target: { value: 'retail' } });
     fireEvent.change(within(dialog).getByLabelText(/^담당자 이름/), { target: { value: '김민지' } });
     fireEvent.change(within(dialog).getByLabelText(/^이메일/), { target: { value: 'minji@example.com' } });
+    fireEvent.change(phone(dialog), { target: { value: '01012345678' } });
     fireEvent.click(within(dialog).getByLabelText('재무 관리'));
     fireEvent.click(within(dialog).getByLabelText('개인정보 수집 · 이용에 동의해요(필수)'));
     fireEvent.click(within(dialog).getByLabelText(/^데모 사용 기록/));
@@ -175,27 +195,41 @@ describe('the request modal', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: '신청 보내기' }));
     });
   };
+  const issued = {
+    id: 'minji@example.com',
+    password: 'moon5678',
+    company_no: '1234567891',
+    company_no_kind: 'business',
+    company_name: '에이스상사',
+    expires: '2026-11-28T00:00:00.000Z',
+    reused: false,
+  };
 
   it('opens from the demo login with 데모 계정 pre-checked, the fields, and a link to the privacy page', async () => {
     stubSite();
     const dialog = await open();
     expect((within(dialog).getByLabelText('데모 계정') as HTMLInputElement).checked).toBe(true);
     expect((within(dialog).getByLabelText('상담') as HTMLInputElement).checked).toBe(false);
-    for (const label of [/^회사 이름/, /^법인\(사업자\)등록번호/, /^업종/, /^나라/, /^담당자 이름/, /^이메일/, '연락 방법', '재무 관리', '상품 소싱', 'SNS 마케팅', '새 소식 받기(선택)']) expect(within(dialog).getByLabelText(label)).toBeTruthy();
+    for (const label of [/^회사 이름/, /^법인\(사업자\)등록번호/, /^업종/, /^나라/, /^담당자 이름/, /^이메일/, /^전화번호/, '메신저', '재무 관리', '상품 소싱', 'SNS 마케팅', '새 소식 받기(선택)']) expect(within(dialog).getByLabelText(label)).toBeTruthy();
     expect((within(dialog).getByLabelText(/^나라/) as HTMLSelectElement).value).toBe('kr');
-    expect((within(dialog).getByLabelText('연락 방법') as HTMLSelectElement).value).toBe('kakao');
+    const messenger = within(dialog).getByLabelText('메신저') as HTMLSelectElement;
+    expect(messenger.value).toBe('kakao');
+    expect([...messenger.options].map((o) => o.value)).toEqual(['kakao', 'wechat']);
     expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/privacy');
     const trap = dialog.querySelector('input[name="website"]') as HTMLInputElement;
     expect(trap.tabIndex).toBe(-1);
     expect(trap.closest('[aria-hidden="true"]')).toBeTruthy();
   });
 
-  it('the demo-usage consent line shows only while 데모 계정 is asked for (DM6 ⓑ)', async () => {
+  it('the demo-usage consent line and the phone’s password hint show only while 데모 계정 is asked for (DM6 ⓑ)', async () => {
     stubSite();
     const dialog = await open();
     expect(within(dialog).getByLabelText(/^데모 사용 기록/)).toBeTruthy();
+    expect(within(dialog).getByText('뒤 4자리가 데모 비밀번호에 들어가요. 숫자만 치면 돼요.')).toBeTruthy();
     fireEvent.click(within(dialog).getByLabelText('데모 계정'));
     expect(within(dialog).queryByLabelText(/^데모 사용 기록/)).toBeNull();
+    expect(within(dialog).queryByText('뒤 4자리가 데모 비밀번호에 들어가요. 숫자만 치면 돼요.')).toBeNull();
+    expect(phone(dialog).parentElement!.textContent).toContain('선택');
   });
 
   it('validation: marks every missing field and sends nothing', async () => {
@@ -208,36 +242,92 @@ describe('the request modal', () => {
     expect(within(dialog).getByText('하나 이상 골라 주세요.')).toBeTruthy();
     expect(within(dialog).getAllByText('동의해야 신청할 수 있어요.')).toHaveLength(2);
     expect(within(dialog).getByLabelText(/^회사 이름/).getAttribute('aria-invalid')).toBe('true');
-    expect(within(dialog).getByLabelText(/^법인\(사업자\)등록번호/).getAttribute('aria-invalid')).toBe('true');
+    expect(number(dialog).getAttribute('aria-invalid')).toBe('true');
+    // the phone is required with a demo account
+    expect(phone(dialog).getAttribute('aria-invalid')).toBe('true');
     expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
   });
 
-  it('the company registration number: one representative number, a Korean one checked by its digits', async () => {
+  it('the number: 개인사업자 / 법인 toggle, digits only, hyphens as typed, capped, the check digit', async () => {
     const calls = stubSite();
     const dialog = await open();
-    expect(within(dialog).getByText('대표 번호 하나면 돼요. 데모 로그인할 때 이 번호를 다시 적어요.')).toBeTruthy();
+    const toggle = within(dialog).getByRole('radiogroup', { name: '사업자 구분' });
+    const [sole, corp] = within(toggle).getAllByRole('radio');
+    expect([sole.textContent, corp.textContent]).toEqual(['개인사업자', '법인']);
+    expect(sole.getAttribute('aria-checked')).toBe('true');
+    expect(within(dialog).getByText('사업자등록번호 10자리 — 숫자만 치면 돼요. 데모 로그인할 때 이 번호를 다시 적어요.')).toBeTruthy();
+    const no = number(dialog);
+    expect(no.inputMode).toBe('numeric');
+    expect(no.placeholder).toBe('123-45-67890');
+    const type = (v: string) => {
+      fireEvent.change(no, { target: { value: v } });
+      return no.value;
+    };
+    expect(type('123')).toBe('123');
+    expect(type('1234')).toBe('123-4');
+    expect(type('12345a6')).toBe('123-45-6');
+    expect(type('１２３４５６７８９１')).toBe('123-45-67891');
+    expect(type('123456789123')).toBe('123-45-67891'); // 10 at most
+    // 법인: 13 digits, NNNNNN-NNNNNNN — the digits typed so far stay
+    fireEvent.click(corp);
+    expect(corp.getAttribute('aria-checked')).toBe('true');
+    expect(no.value).toBe('123456-7891');
+    expect(no.placeholder).toBe('123456-1234567');
+    expect(type('11011112345699')).toBe('110111-1234569');
+
     fill(dialog);
-    const number = within(dialog).getByLabelText(/^법인\(사업자\)등록번호/);
-    fireEvent.change(number, { target: { value: '123-45-6789' } });
+    fireEvent.click(sole);
+    type('123-45-6789');
     await send(dialog);
-    expect(within(dialog).getByText('번호를 확인해 주세요. 한국 회사는 사업자등록번호(10자리)나 법인등록번호(13자리)를 적어요.')).toBeTruthy();
+    expect(within(dialog).getByText('사업자등록번호는 10자리예요.')).toBeTruthy();
+    type('1234567890');
+    await send(dialog);
+    expect(within(dialog).getByText('번호가 맞지 않아요. 숫자를 다시 확인해 주세요.')).toBeTruthy();
     expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
-    fireEvent.change(number, { target: { value: '110111-1234567' } });
+    fireEvent.click(corp);
+    type('1101111234569');
     await send(dialog);
-    expect(calls.find((c) => c.url === '/api/inquiry')!.body!.company_no).toBe('110111-1234567');
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ company_no: '1101111234569', company_no_kind: 'corporate' });
   });
 
-  it.each([
-    ['123-45-67890', 'kr', '1234567890'],
-    ['110111 1234567', 'kr', '1101111234567'],
-    ['HRB-12345', 'kr', null],
-    ['hrb-12345', 'other', 'HRB-12345'],
-    ['ab', 'cn', null],
-  ])('normalizeCompanyNo(%s, %s) → %s (the Worker’s rule)', (raw, country, out) => {
-    expect(normalizeCompanyNo(raw, country)).toBe(out);
+  it('another country: no toggle, 4–20 digits, no hyphens; the phone without hyphens either', async () => {
+    const calls = stubSite();
+    const dialog = await open();
+    fill(dialog);
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'cn' } });
+    expect(within(dialog).queryByRole('radiogroup')).toBeNull();
+    fireEvent.change(number(dialog), { target: { value: '9131-0000-MA1FL' } });
+    expect(number(dialog).value).toBe('913100001');
+    fireEvent.change(phone(dialog), { target: { value: '+86 138 0013 8000' } });
+    expect(phone(dialog).value).toBe('8613800138000');
+    await send(dialog);
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ country: 'cn', company_no: '913100001', phone: '8613800138000' });
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body!.company_no_kind).toBeUndefined();
   });
 
-  it('submits to /api/inquiry with source, requests and the form token, then the success state', async () => {
+  it('the phone: digits only, Korean hyphens as typed, checked', async () => {
+    const calls = stubSite();
+    const dialog = await open();
+    const p = phone(dialog);
+    expect(p.inputMode).toBe('numeric');
+    expect(p.placeholder).toBe('010-1234-5678');
+    const type = (v: string) => {
+      fireEvent.change(p, { target: { value: v } });
+      return p.value;
+    };
+    expect(type('0101234')).toBe('010-123-4');
+    expect(type('010-1234-5678')).toBe('010-1234-5678');
+    expect(type('021234567')).toBe('02-123-4567');
+    expect(type('0212345678')).toBe('02-1234-5678');
+    expect(type('010123456789')).toBe('010-1234-5678');
+    fill(dialog);
+    type('010123');
+    await send(dialog);
+    expect(within(dialog).getByText('전화번호를 확인해 주세요.')).toBeTruthy();
+    expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
+  });
+
+  it('submits to /api/inquiry with source, requests, digits and the form token; no account back → the received state', async () => {
     const calls = stubSite();
     const dialog = await open();
     fill(dialog);
@@ -245,14 +335,17 @@ describe('the request modal', () => {
     const done = await screen.findByRole('dialog', { name: '신청을 받았어요' });
     expect(within(done).getByText('확인하고 데모 계정을 메일로 보내 드려요.')).toBeTruthy();
     expect(within(done).getByText('에이스상사')).toBeTruthy();
+    expect(within(done).getByText('123-45-67891')).toBeTruthy();
     const sent = calls.find((c) => c.url === '/api/inquiry')!.body!;
     expect(sent).toMatchObject({
       company: '에이스상사',
-      company_no: '123-45-67890',
+      company_no: '1234567891',
+      company_no_kind: 'business',
       business_type: 'retail',
       country: 'kr',
       contact_name: '김민지',
       email: 'minji@example.com',
+      phone: '01012345678',
       wants: ['finance'],
       requests: ['demo'],
       consent_required: true,
@@ -264,6 +357,74 @@ describe('the request modal', () => {
       form_token: '123.abc',
     });
     expect(sent.reach_value).toBeUndefined();
+  });
+
+  it('the account comes back → the completion screen shows number, ID, password and end, and starts the demo login filled in (no password)', async () => {
+    stubSite({ inquiry: () => new Response(JSON.stringify({ ok: true, demo: issued })) });
+    const dialog = await open();
+    fill(dialog);
+    await send(dialog);
+    const done = await screen.findByRole('dialog', { name: '데모 계정이 나왔어요' });
+    expect(within(done).getByText('아래 정보로 바로 데모에 로그인할 수 있어요. 이 화면을 닫기 전에 적어 두세요.')).toBeTruthy();
+    const account = within(done).getByTestId('inquiry-account');
+    const pairs = [...account.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling!.textContent]);
+    expect(pairs).toEqual([
+      ['법인(사업자)등록번호', '123-45-67891'],
+      ['아이디', 'minji@example.com'],
+      ['비밀번호', 'moon5678'],
+      ['사용 기간', `${new Date('2026-11-28T00:00:00.000Z').toLocaleDateString('ko')}까지`],
+    ]);
+    // no mail promised yet — the mail hook sends nothing
+    expect(done.textContent).not.toMatch(/메일/);
+    await act(async () => {
+      fireEvent.click(within(done).getByTestId('inquiry-start-demo'));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const form = screen.getByTestId('demo-form');
+    expect((within(form).getByLabelText(/^법인\(사업자\)등록번호/) as HTMLInputElement).value).toBe('123-45-67891');
+    expect((within(form).getByLabelText(/^아이디/) as HTMLInputElement).value).toBe('minji@example.com');
+    expect((within(form).getByLabelText('비밀번호') as HTMLInputElement).value).toBe('');
+    expect(sessionStorage.getItem('solosquad.demoPrefill')).toBeNull();
+  });
+
+  it('a repeat request for the same email says the account was renewed; a call too adds one line', async () => {
+    stubSite({ inquiry: () => new Response(JSON.stringify({ ok: true, demo: { ...issued, reused: true } })) });
+    const dialog = await open();
+    fill(dialog);
+    fireEvent.click(within(dialog).getByLabelText('상담'));
+    await send(dialog);
+    const done = await screen.findByRole('dialog', { name: '데모 계정이 나왔어요' });
+    expect(within(done).getByText('이미 있던 데모 계정이에요. 비밀번호와 사용 기간을 새로 맞췄어요. 이 화면을 닫기 전에 적어 두세요.')).toBeTruthy();
+    expect(within(done).getByText('상담은 확인하고 연락드릴게요.')).toBeTruthy();
+  });
+
+  it.each([
+    ['en', 'Apply for a demo account', ['Company name', 'Company registration number', 'Industry', 'Your name', 'Email', 'Phone number'], 'Finance', 'Send request', 'Your demo account is ready', 'Password'],
+    ['zh-CN', '申请演示账号', ['公司名称', '企业注册号', '行业', '联系人姓名', '邮箱', '电话号码'], '财务管理', '提交申请', '演示账号已开通', '密码'],
+  ] as const)('%s: the fields and the completion screen', async (locale, title, labels, finance, submit, doneTitle, passwordLabel) => {
+    stubSite({ inquiry: () => new Response(JSON.stringify({ ok: true, demo: issued })) });
+    site('/demo', locale);
+    fireEvent.click(screen.getByTestId('demo-apply'));
+    const dialog = await screen.findByRole('dialog', { name: title });
+    const [company, no, kind, name, email, tel] = labels.map((l) => within(dialog).getByLabelText(new RegExp(`^${l}`)));
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(`^${locale === 'en' ? 'Country' : '国家'}`)), { target: { value: 'kr' } });
+    fireEvent.change(company, { target: { value: 'Ace' } });
+    fireEvent.change(no, { target: { value: '1234567891' } });
+    fireEvent.change(kind, { target: { value: 'retail' } });
+    fireEvent.change(name, { target: { value: 'Kim' } });
+    fireEvent.change(email, { target: { value: 'kim@example.com' } });
+    fireEvent.change(tel, { target: { value: '01012345678' } });
+    fireEvent.click(within(dialog).getByLabelText(finance));
+    const boxes = dialog.querySelectorAll<HTMLInputElement>('.inquiry-consent input[type="checkbox"]');
+    fireEvent.click(boxes[0]);
+    fireEvent.click(boxes[1]);
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: submit }));
+    });
+    const done = await screen.findByRole('dialog', { name: doneTitle });
+    expect(within(done).getByText(passwordLabel)).toBeTruthy();
+    expect(within(done).getByText('moon5678')).toBeTruthy();
+    expect(done.textContent).not.toMatch(/[가-힣]/);
   });
 
   it('a refusal from the server keeps what was typed and says why', async () => {

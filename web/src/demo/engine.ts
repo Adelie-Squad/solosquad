@@ -103,8 +103,8 @@ export interface DemoData {
 export interface DemoAccount {
   demoId: string;
   companyName: string;
-  /** the account's end, epoch seconds */
-  expires: number;
+  /** the account's end, epoch seconds; null = no end (an internal account) */
+  expires: number | null;
 }
 
 export interface Pace {
@@ -1028,8 +1028,9 @@ export class DemoEngine {
     return err(404, 'not_found');
   }
 
-  /** The days the demo account has left — for the band. */
-  daysLeft(): number {
+  /** The days the demo account has left — for the band; null when it has no end. */
+  daysLeft(): number | null {
+    if (this.account.expires === null) return null;
     return Math.max(0, Math.ceil((this.account.expires - this.now()) / DAY));
   }
 }
