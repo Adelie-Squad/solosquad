@@ -31,6 +31,8 @@ skills_used:
   - verify
   - screenshot
   - design-system
+  - 3d-previz-edit
+  - rig-motion-clearance
 triggers:
   keyword: ["frontend", "ui", "component", "css", "react", "vue", "animation", "interaction"]
   explicit: true

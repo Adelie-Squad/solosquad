@@ -90,6 +90,10 @@
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
+    "skills/3d-previz-edit/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
     "skills/agent-manager/SKILL.md": {
       "errors": [],
       "warnings": []
@@ -192,6 +196,10 @@
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
+    "skills/previz-assembly/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
     "skills/primitive-review/SKILL.md": {
       "errors": [],
       "warnings": [
@@ -204,11 +212,19 @@
         "DESCRIPTION_NO_TRIGGER"
       ]
     },
+    "skills/reference-video-analysis/SKILL.md": {
+      "errors": [],
+      "warnings": []
+    },
     "skills/retrospective/SKILL.md": {
       "errors": [],
       "warnings": [
         "DESCRIPTION_NO_TRIGGER"
       ]
+    },
+    "skills/rig-motion-clearance/SKILL.md": {
+      "errors": [],
+      "warnings": []
     },
     "skills/skill-manager/SKILL.md": {
       "errors": [],
