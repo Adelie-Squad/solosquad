@@ -397,19 +397,22 @@ def detail(cam, rig):
 
 
 def beforeafter():
-    """previous round | this round, the same close-ups side by side."""
+    """earlier round(s) | this round, the same close-ups side by side. --prev takes one detail/ dir
+    or several, comma-separated, oldest first (round 9: r7,r8 for the armpit)."""
     if not PREV:
         return
+    prevs = PREV.split(',')
     d = os.path.join(OUT, 'detail')
     for out, names in (('face', ['face']), ('wing', ['wing-3q', 'wing-up']),
                        ('armpit', ['armpit-3q', 'armpit-under', 'armpit-up'])):
+        cols = prevs if out == 'armpit' else prevs[-1:]
         tiles = []
         for n in names:
-            a, b = os.path.join(PREV, f'{n}.png'), os.path.join(d, f'{n}.png')
-            if os.path.exists(a) and os.path.exists(b):
-                tiles += [_resize(_load(a), 720, 720), _resize(_load(b), 720, 720)]
+            paths = [os.path.join(p_, f'{n}.png') for p_ in cols] + [os.path.join(d, f'{n}.png')]
+            if all(os.path.exists(p_) for p_ in paths):
+                tiles += [_resize(_load(p_), 720, 720) for p_ in paths]
         if tiles:
-            _save(sheet(tiles, 2, 16, BACKDROP['light']), os.path.join(OUT, f'beforeafter-{out}.png'))
+            _save(sheet(tiles, len(cols) + 1, 16, BACKDROP['light']), os.path.join(OUT, f'beforeafter-{out}.png'))
 
 
 def _mask(px, backdrop):
@@ -507,36 +510,26 @@ def poses(cam, rig):
     sc.render.resolution_x = sc.render.resolution_y = keep
 
 
+MIN_CLEARANCE = 0.008     # round 9: wing to body / head / face pieces / feet / desk props, metres
+
+
 def clearance(mesh, rig):
-    """Round 8: wing-to-body/head clearance over every frame of every clip, the seated pose and
-    the raised close-up; writes clearance.txt (min per clip, mm) and fails loudly below 0."""
-    rest = pv3._bone_rest(rig)
-    rows = []
-    poses = [(name, length, fn) for name, (length, fn) in pv3.CLIPS.items()]
-    poses.append(('seated', 1, lambda r, f, rs: pv3.pose_seated(r, 0, rs, (0.0, 0.0, 0.0))))
-    poses.append(('raise-max', 1, lambda r, f, rs: (pv3.reset_pose(r), pv3._set(
-        r, rs, 'wing.L', pv3._wing_raise('L', pv3.WING_RAISE_MAX, -pv3.WING_TWIST_MAX)))))
-    sc = bpy.context.scene
-    for name, length, fn in poses:
-        worst, at = float('inf'), 0
-        for f in range(length):
-            fn(rig, f, rest)
-            sc.frame_set(f)
-            bpy.context.view_layer.update()
-            c = pv3.wing_clearance(rig, mesh)
-            if c < worst:
-                worst, at = c, f
-        rows.append((name, worst, at))
-        print(f'clearance {name}: {worst * 1000:.1f} mm (frame {at})')
-    pv3.reset_pose(rig)
+    """Round 9: acceptance check over every frame of every clip, seated alone and at the desk,
+    and the max raise (identity_v3_metrics.clearance_report): min clearance of the wing paddles to
+    the body, head, eyes / cheeks / beak, feet and desk props, plus the wing twist and forward
+    travel. Writes clearance.txt; the run fails below MIN_CLEARANCE."""
+    import identity_v3_metrics as M
+    M.pv3 = pv3
+    rows = M.clearance_report(M.Model(mesh, rig), with_props=True)
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, 'clearance.txt'), 'w') as fh:
-        fh.write('clip\tmin wing-body/head clearance (mm)\tframe\n')
-        for name, worst, at in rows:
-            fh.write(f'{name}\t{worst * 1000:.1f}\t{at}\n')
-    bad = [r for r in rows if r[1] <= 0]
+        fh.write('clip\tmin clearance (mm)\tframe\tnearest\tmax twist (deg)\tmax forward travel (mm)\n')
+        for r_ in rows:
+            fh.write(f"{r_['clip']}\t{r_['min_mm']:.1f}\t{r_['frame']}\t{r_['nearest']}\t"
+                     f"{r_['twist_max_deg']:.1f}\t{r_['forward_max_mm']:.1f}\n")
+    bad = [r_ for r_ in rows if r_['min_mm'] < MIN_CLEARANCE * 1000]
     if bad:
-        raise SystemExit(f'wing intersects the body/head: {bad}')
+        raise SystemExit(f'wing clearance under {MIN_CLEARANCE * 1000:.0f} mm: {bad}')
 
 
 def main():

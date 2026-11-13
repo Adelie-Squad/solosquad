@@ -159,6 +159,16 @@ CHEST_Z = Z0 + 0.50 * HB
 
 GRID = 0.006                    # surface-nets cell (m)
 
+# Round 9: the wing is its own sewn-on leather piece (like the keychain), not grown out of the body
+# skin. Its root is tucked into the body side round the shoulder pivot; the wing turns rigidly on
+# the hinge, so nothing stretches, the armpit is just the body surface meeting the wing, and the
+# white underside runs all the way to the root (it ends inside the body). Rounds 1-8 grew the wing
+# out of the body with a smooth union and skinned the joint: every raise stretched / creased that
+# skin and the white had to stop short of the crease.
+WING_PIECE = True
+PIECE_CUT = -0.030              # the white's arc top sits 3 cm inside the body (past the pivot)
+PIECE_GRID = 0.0045             # finer surface-nets cell for the wing piece
+
 COLORS = {
     'body': '#1E1D1A', 'white': '#F3F0EA', 'feet': '#151410', 'eye': '#151410',
     'cheek': '#E01FAE', 'beak': '#FBF9F4', 'thread': '#151410',
@@ -361,10 +371,12 @@ def fields(P):
     f = fb
     for side in 'LR':
         fw = f_wing(P, side)
+        out['wing.' + side] = fw
+        if WING_PIECE:
+            continue
         u = _wing_local(P, side)[:, 0]
         k = WING_K * (1 - _smoothstep(WING_K_U[0], WING_K_U[1], u))
         f = _smin(f, fw, k)
-        out['wing.' + side] = fw
     out['upper'] = f
     for side in 'LR':
         fl = f_leg(P, side)
@@ -763,6 +775,9 @@ def _zero_loop(V, Fq, f):
 def body_attributes(V, Fq=None):
     """Per-vertex seam + region attributes and bone weights for the skin."""
     fl = fields(V)
+    if WING_PIECE:              # the wings are separate pieces: none of the skin is wing
+        fl['wing.L'] = np.ones(len(V))
+        fl['wing.R'] = np.ones(len(V))
     n = len(V)
     seam_d = np.full(n, -0.2)
     seam_phase = np.zeros(n)
@@ -1177,6 +1192,53 @@ HI = (0.36, 0.20, Z1 + 0.02)
 PIECE_MAT = {'eye': 1, 'cheek': 2, 'beak': 3}
 
 
+def wing_under_piece(V, side):
+    """White underside of the sewn-on wing piece (> 0 inside): the inner face, 5 mm in from the
+    rim, from an arc top that sits inside the body (PIECE_CUT) - so on the visible wing it reaches
+    the root. No crease cut: the piece meets the body as a separate surface."""
+    q = _wing_local(V, side)
+    c = PIECE_CUT + ARM_AU
+    qe = np.stack([(q[:, 0] - c) / ARM_AU, q[:, 1] / ARM_AV], 1)
+    arc = (1 - np.linalg.norm(qe, axis=1)) * min(ARM_AU, ARM_AV)
+    return _smin(-q[:, 2] - WING_RIM, arc, WING_ROUND)
+
+
+def build_wing_piece(side):
+    """The closed wing piece of one side: (V, Fq, attrs)."""
+    piv, ax = wing_frame(side)
+    fn = lambda P: f_wing(P, side)          # noqa: E731
+    reach = WING_C + WING_AU + 0.03
+    lo = piv - reach
+    hi = piv + reach
+    V, Fq = surface_nets(fn, tuple(lo), tuple(hi), PIECE_GRID)
+    V = _project(fn, V, iters=5)
+    Fq = _orient_faces(V, Fq, fn)
+    V = _relax(V, Fq, fn, iters=2)
+    edges = _neighbours(len(V), Fq)
+    d = wing_under_piece(V, side)
+    blend = _smoothstep(-0.003, -0.006, d)
+    d = d + blend * (_smooth_values(d, edges, SEAM_SMOOTH) - d)
+    th_tab, s_tab = _wing_rim_table()
+    edge = _zero_loop(V, Fq, d)
+    if edge is not None:
+        _, s_e, tot = _polyline_distance(V, edge)
+        phase, nseam = s_e / tot, max(1, round(tot / PERIOD_WING))
+    else:
+        q = _wing_local(V, side)
+        th = np.arctan2(q[:, 1] / WING_AV, (q[:, 0] - WING_C) / WING_AU)
+        phase, nseam = np.interp(th, th_tab, s_tab) / s_tab[-1], max(1, round(s_tab[-1] / PERIOD_WING))
+    attrs = {
+        'line_d': np.ones(len(V)),
+        'stitch_on': _stitch_clean(V, d, edges),
+        'seam_d': d,
+        'seam_c': np.cos(2 * math.pi * phase),
+        'seam_sn': np.sin(2 * math.pi * phase),
+        'seam_n': np.full(len(V), float(nseam)),
+        'feet': np.full(len(V), -1.0),
+    }
+    return V, Fq, attrs
+
+
 def build(col, name='penguin_v3'):
     V, Fq = surface_nets(f_all, LO, HI, GRID)
     V = _project(f_all, V, iters=5)
@@ -1205,6 +1267,17 @@ def build(col, name='penguin_v3'):
     all_attrs = {k: [v] for k, v in attrs.items()}
     piece_weights = []
     off = n_body
+    wing_parts = []
+    if WING_PIECE:
+        for side in 'LR':
+            wv, wf, wa = build_wing_piece(side)
+            verts.append(wv)
+            faces.append([tuple(int(i) + off for i in f) for f in wf])
+            mat_idx.append(np.zeros(len(wf), int))
+            for k in all_attrs:
+                all_attrs[k].append(wa[k])
+            wing_parts.append((side, off, len(wv), len(wf)))
+            off += len(wv)
     for key, pv, pf, pa in build_appliques():
         verts.append(pv)
         faces.append([tuple(i + off for i in f) for f in pf])
@@ -1233,18 +1306,22 @@ def build(col, name='penguin_v3'):
     # vertex groups: skin from the fields; appliques split body/head by height
     PV = np.concatenate(piece_weights) if piece_weights else np.zeros((0, 3))
     hp = _smoothstep(NECK_Z - 0.06, NECK_Z + 0.06, PV[:, 2])
+    n_wing = sum(n for _, _, n, _ in wing_parts)
     groups = dict(weights)
     for k in groups:
-        groups[k] = np.concatenate([groups[k], np.zeros(len(PV))])
-    groups['head'][n_body:] = hp
-    groups['body'][n_body:] = 1 - hp
+        groups[k] = np.concatenate([groups[k], np.zeros(n_wing + len(PV))])
+    for side, o, n, _ in wing_parts:             # the wing pieces: rigid on their bone
+        groups['wing.' + side][o:o + n] = 1.0
+    a0 = n_body + n_wing
+    groups['head'][a0:] = hp
+    groups['body'][a0:] = 1 - hp
     for gname, wv in groups.items():
         vg = ob.vertex_groups.new(name=gname)
         idx = np.nonzero(wv > 1e-3)[0]
         for i in idx:
             vg.add([int(i)], float(wv[i]), 'REPLACE')
     ob['tri_count'] = int(sum(len(f) - 2 for f in Fall))
-    ob['tri_body'] = int(2 * len(Fq))
+    ob['tri_body'] = int(2 * len(Fq) + sum(2 * nf for _, _, _, nf in wing_parts))
     return ob
 
 
@@ -1378,7 +1455,9 @@ def _wing_raise(side, raise_deg, twist_deg):
     raise_deg = max(-WING_LOWER_MAX, min(WING_RAISE_MAX, raise_deg))
     twist_deg = max(-WING_TWIST_MAX, min(WING_TWIST_MAX, twist_deg))
     R_twist = Matrix.Rotation(math.radians(twist_deg) * s, 4, Vector(ax[0]))
-    R_raise = Matrix.Rotation(math.radians(-s * raise_deg), 4, Vector(ax[1]))
+    # round 9: about the body's front-back axis (Y) - straight out to the side, in the frontal plane.
+    # Round 8 used the wing's own width axis, which is yawed 15 deg: the tip came ~6 cm forward.
+    R_raise = Matrix.Rotation(math.radians(-s * raise_deg), 4, 'Y')
     return _about(piv, R_raise @ R_twist)
 
 
@@ -1478,44 +1557,6 @@ def pose_walk(rig_ob, f, rest=None):
 
 
 CLIPS = {'hop': (HOP_LEN, pose_hop), 'wave': (WAVE_LEN, pose_wave), 'walk': (WALK_LEN, pose_walk)}
-
-
-_CLEAR_SEL = {}
-
-
-def wing_clearance(rig_ob, mesh_ob):
-    """Round 8: smallest distance (m) from the posed wing paddles to the posed body / head, for the
-    current pose (< 0 = the wing is inside). Wing points = skin owned by a wing more than 7 cm out
-    from its pivot (the hinge ring itself is skin shared with the body). Each point is taken back
-    into the rest pose by the inverse of the body bone and of the head bone; the body field there
-    is its distance (the smaller of the two, so it is conservative)."""
-    key = mesh_ob.name
-    if key not in _CLEAR_SEL:
-        V = np.array([v.co[:] for v in mesh_ob.data.vertices])
-        fl = fields(V)
-        sel = np.zeros(len(V), bool)
-        for sd in 'LR':
-            u = _wing_local(V, sd)[:, 0]
-            sel |= (u > 0.07) & (fl['wing.' + sd] < fl['body'] - 0.003)
-        _CLEAR_SEL[key] = np.where(sel)[0]
-    idx = _CLEAR_SEL[key]
-    dg = bpy.context.evaluated_depsgraph_get()
-    ev = mesh_ob.evaluated_get(dg)
-    me = ev.to_mesh()
-    co = np.empty(len(me.vertices) * 3)
-    me.vertices.foreach_get('co', co)
-    ev.to_mesh_clear()
-    P = co.reshape(-1, 3)[idx]
-    mw = np.array(mesh_ob.matrix_world)
-    P = P @ mw[:3, :3].T + mw[:3, 3]
-    best = np.full(len(P), np.inf)
-    rw = rig_ob.matrix_world
-    for name in ('body', 'head'):
-        pb = rig_ob.pose.bones[name]
-        M = np.array((rw @ pb.matrix @ pb.bone.matrix_local.inverted() @ rw.inverted()).inverted())
-        Q = P @ M[:3, :3].T + M[:3, 3]
-        best = np.minimum(best, f_body(Q))
-    return float(best.min())
 
 
 def build_actions(rig_ob):
