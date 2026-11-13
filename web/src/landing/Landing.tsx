@@ -7,7 +7,7 @@ import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { hasWebGL, isMobile, prefersReducedMotion, webglForcedOff } from '../office/OfficeStage';
 import { useTheme } from '../theme';
-import { CompanyAct, PricingAct, PromptAct, ScrollAct, SignAct, WorkflowAct } from './Acts';
+import { CompanyAct, DOMAIN_ICON, GapAct, PricingAct, ScrollAct, SignAct, WorkflowAct } from './Acts';
 import { keyStep, ownsKeys, SETTLE_MS, Stepper, wheelPixels } from './dwell';
 import { useInquiry } from '../marketing/Inquiry';
 import { SiteFooter } from '../marketing/SiteFooter';
@@ -16,7 +16,7 @@ import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
 import { PersonFace } from './people';
-import { firstStop, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
+import { firstStop, MOVED_ANCHORS, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
 import { WORKFLOW_EXAMPLES } from './workflows';
 import '../styles/landing.css';
 
@@ -147,23 +147,67 @@ function useStepper(enabled: boolean) {
   return stepper;
 }
 
-const POINTS: { icon: keyof typeof ICON; title: MessageKey; body: MessageKey }[] = [
-  { icon: 'artifacts', title: 'landing.control.point1.title', body: 'landing.control.point1.body' },
-  { icon: 'person', title: 'landing.control.point2.title', body: 'landing.control.point2.body' },
-  { icon: 'back', title: 'landing.control.point3.title', body: 'landing.control.point3.body' },
+type Point = { icon: keyof typeof ICON; title: MessageKey; body: MessageKey };
+
+/** 왜 지금: what is at stake — competitors who started, a gap that keeps growing, the chance now. No numbers. */
+const PROBLEM_POINTS: Point[] = [
+  { icon: 'growth', title: 'landing.problem.point1.title', body: 'landing.problem.point1.body' },
+  { icon: 'schedule', title: 'landing.problem.point2.title', body: 'landing.problem.point2.body' },
+  { icon: 'forward', title: 'landing.problem.point3.title', body: 'landing.problem.point3.body' },
 ];
+
+/** AI 팀: what the company gets — a team shaped to it, people deciding, everything on record. */
+const ORG_POINTS: Point[] = [
+  { icon: 'team', title: 'landing.org.point1.title', body: 'landing.org.point1.body' },
+  { icon: 'person', title: 'landing.org.point2.title', body: 'landing.org.point2.body' },
+  { icon: 'artifacts', title: 'landing.org.point3.title', body: 'landing.org.point3.body' },
+];
+
+function Points({ points }: { points: Point[] }) {
+  const { t } = useI18n();
+  return (
+    <ul className="landing-points">
+      {points.map((p) => {
+        const Icon = ICON[p.icon];
+        return (
+          <li key={p.title}>
+            <Icon />
+            <span>
+              <b>{t(p.title)}</b>
+              {t(p.body)}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** An old section's anchor (`#landing-delegate`) opens where that content lives now. */
+function movedAnchor() {
+  const hash = window.location.hash.slice(1);
+  const to = MOVED_ANCHORS[hash];
+  if (!to) return;
+  window.history.replaceState(null, '', `#${to}`);
+  // the stops are in the page by now (this runs after the first render)
+  const el = document.getElementById(to);
+  if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY, left: 0, behavior: 'instant' });
+}
 
 /**
  * The landing (`/`, outside the shell — DESIGN.md `## 랜딩`, PRD v2.1.0 §3.5): a pinned stage, one
- * screen high, the section names at the left edge. Six sections (decision 61): 시작 (the company
- * card — what is sold: a team of agents built on the company's server) · 맡기기 (a request to Chief,
- * split among the agents) · 조직도 (agents and team members on one chart) · 워크플로우 (three example
- * workflows, one stop each — what runs on its own and where it stops for approval) · 가격 (from
- * ₩6,000,000 for a 3-month build, the call free, an exact quote on request) · 문의 (the last card).
- * Each section is the message on one side and, on the other, the section's content centred in its
- * scene; the 3D penguin walks to a spot by the content and acts on it (waves from behind the company
- * card, pretends to type over the prompt, peeks over the scroll, stamps each workflow's owner
- * approval from the card's corner, points at the build price, waves from behind the last card). One
+ * screen high, the section names at the left edge. Six sections (decision 61, the story re-cut
+ * 2026-11-14): 시작 (who it is for — small businesses in logistics, commerce and IT services — and the
+ * promise: an AI team built for the company, the owner approving) · 왜 지금 (paying for AI without
+ * putting it to work, and the gap to the competitors who do — a picture, no numbers) · AI 팀 (the
+ * solution: a team shaped to the company, beside its people, who decide) · 워크플로우 (the old
+ * 맡기기 folded in: one line to Chief → split → the agents → stops for approval; three examples, one
+ * stop each, each tied to a domain) · 가격 (from ₩6,000,000 for a 3-month build, the call free, an
+ * exact quote on request) · 문의 (the last card). Each section is the message on one side and, on
+ * the other, one picture that carries its point with a few words; the 3D penguin walks to a spot by
+ * it and acts on it (waves from behind the company card, points at the gap, peeks over the scroll,
+ * stamps each workflow's owner approval from the card's corner, points at the build price, waves
+ * from behind the last card). One
  * wheel or swipe moves one stop and the page holds there a moment. Reduced motion, no WebGL and short
  * screens get the same sections stacked (the three workflows one under another) with the 2D penguin
  * and native scroll. The landing is the marketing site's only (decision 62 — customer servers open
@@ -178,7 +222,6 @@ export function Landing() {
   const openInquiry = useInquiry();
   const { theme } = useTheme();
   const [mode, setMode] = useState<LandingMode>(landingMode);
-  const [reduced, setReduced] = useState(prefersReducedMotion);
   const [mobile, setMobile] = useState(isMobile);
   const [ready, setReady] = useState(false);
   const [touch] = useState(() => !!window.matchMedia?.('(hover: none)').matches);
@@ -191,11 +234,11 @@ export function Landing() {
   const onReady = useCallback(() => setReady(true), []);
   const stepper = useStepper(live);
   const team = useTeamModal();
+  useEffect(movedAnchor, []);
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const on = () => {
-      setReduced(!!mq?.matches);
       if (mq?.matches) setMode('static');
     };
     mq?.addEventListener?.('change', on);
@@ -317,18 +360,15 @@ export function Landing() {
       </>,
     ),
     slide(
-      'delegate',
+      'problem',
       <>
-        <h2 id="landing-delegate-title" className="landing-title">
-          {t('landing.delegate.title')}
+        <h2 id="landing-problem-title" className="landing-title">
+          {t('landing.problem.title')}
         </h2>
-        <p className="landing-lead">{t('landing.delegate.lead')}</p>
-        <p className="landing-aside">
-          <ICON.messenger />
-          {t('landing.delegate.where')}
-        </p>
+        <p className="landing-lead">{t('landing.problem.lead')}</p>
+        <Points points={PROBLEM_POINTS} />
       </>,
-      <PromptAct on={isOn('delegate')} acting={acting} still={reduced || !acting} />,
+      <GapAct on={isOn('problem')} acting={acting} />,
     ),
     slide(
       'org',
@@ -337,6 +377,7 @@ export function Landing() {
           {t('landing.org.title')}
         </h2>
         <p className="landing-lead">{t('landing.org.lead')}</p>
+        <Points points={ORG_POINTS} />
         <ul className="landing-legend">
           <li>
             <Mascot size={20} />
@@ -347,7 +388,6 @@ export function Landing() {
             {t('landing.org.legend.person')}
           </li>
         </ul>
-        <p className="landing-aside">{t('landing.org.note')}</p>
         <button type="button" className="btn landing-org-all" onClick={() => team.open(null)}>
           <ICON.team />
           {t('landing.team.all')}
@@ -362,15 +402,15 @@ export function Landing() {
           {t('landing.workflows.title')}
         </h2>
         <p className="landing-lead">{t('landing.workflows.lead')}</p>
-        <ul className="landing-points">
-          {POINTS.map((p) => {
-            const Icon = ICON[p.icon];
+        <ul className="landing-points landing-domain-lines" data-testid="landing-domain-lines">
+          {WORKFLOW_EXAMPLES.map((w) => {
+            const Icon = ICON[DOMAIN_ICON[w.domain]];
             return (
-              <li key={p.title}>
+              <li key={w.id} data-domain={w.domain}>
                 <Icon />
                 <span>
-                  <b>{t(p.title)}</b>
-                  {t(p.body)}
+                  <b>{t(`landing.domain.${w.domain}`)}</b>
+                  {t(`landing.workflows.domain.${w.domain}`)}
                 </span>
               </li>
             );

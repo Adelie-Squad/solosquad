@@ -11,7 +11,10 @@
 // NNN-NN-NNNNN) or 법인 (법인등록번호, 13, NNNNNN-NNNNNNN) and the check digit is checked. The country
 // comes first and picks the formats (2026-11-14 — 한국 by default): a Chinese company gives its
 // 统一社会信用代码 (18 letters and digits, the check character checked) and a mobile (11 digits from
-// 1, +86 taken off); another country's number is 4–20 letters and digits. The rules are marketing/scripts/lib (company-no · phone) — the
+// 1, +86 taken off); another country's number is 4–20 letters and digits. The phone (2026-11-14)
+// has a country-code select beside it (+82 by default, following the company's country until it is
+// picked by hand; 기타 = the whole number) and goes to the Worker as typed with its code — the Worker
+// stores E.164. No messenger field any more: the agency calls. The rules are marketing/scripts/lib (company-no · phone) — the
 // Worker and the CLI use the same files. A demo account comes back with the answer, and the
 // completion screen shows it at once (number · ID · password · end) with a button to the demo login.
 //
@@ -20,9 +23,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useHref, useNavigate } from 'react-router-dom';
 import { checkCompanyNo, digitsOf, displayCompanyNo, formatCompanyNo, kindForCountry, maxDigits, takesLetters, type CompanyNoKind } from '../../../marketing/scripts/lib/company-no.mjs';
-import { checkPhone, formatPhone, phoneMax } from '../../../marketing/scripts/lib/phone.mjs';
+import { checkDialPhone, dialForCountry, dialMax, DIAL_CODES, DIAL_OTHER, formatDialPhone } from '../../../marketing/scripts/lib/phone.mjs';
 import { Modal } from '../components/Modal';
-import { useI18n, type Locale, type MessageKey } from '../i18n';
+import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { DigitsInput } from './DigitsInput';
 import { SITE } from './messages/site';
@@ -32,10 +35,10 @@ const KINDS = ['retail', 'online', 'maker', 'service', 'partner', 'other'] as co
 const COUNTRIES = ['kr', 'cn', 'other'] as const;
 const REQUESTS = ['demo', 'consult'] as const;
 const WANTS = ['finance', 'sourcing', 'sns', 'other'] as const;
-/** the messenger next to the phone (the phone itself is its own field since 2026-11-13) */
-const MESSENGERS = ['kakao', 'wechat'] as const;
+/** the phone's country codes: the listed ones, then 기타 (the whole number) */
+const DIALS = [...DIAL_CODES, DIAL_OTHER];
 const KOREAN_KINDS = ['business', 'corporate'] as const;
-const MAX = { company: 80, contact_name: 40, email: 254, reach_value: 60, message: 1000 };
+const MAX = { company: 80, contact_name: 40, email: 254, message: 1000 };
 const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 type Want = (typeof WANTS)[number];
@@ -55,8 +58,10 @@ export interface Form {
   email: string;
   /** digits */
   phone: string;
-  reach_kind: string;
-  reach_value: string;
+  /** the phone's country code — 82 · 86 · … or `other` */
+  phone_dial: string;
+  /** the code was picked by hand (it no longer follows the company's country) */
+  phone_dial_set: boolean;
   wants: Want[];
   requests: Request[];
   message: string;
@@ -66,7 +71,7 @@ export interface Form {
   website: string;
 }
 
-const blank = (locale: Locale, requests: Request[]): Form => ({
+const blank = (requests: Request[]): Form => ({
   company: '',
   company_no: '',
   company_no_kind: 'business',
@@ -76,8 +81,8 @@ const blank = (locale: Locale, requests: Request[]): Form => ({
   contact_name: '',
   email: '',
   phone: '',
-  reach_kind: locale === 'zh-CN' ? 'wechat' : 'kakao',
-  reach_value: '',
+  phone_dial: '82',
+  phone_dial_set: false,
   wants: [],
   requests,
   message: '',
@@ -105,9 +110,8 @@ export function checkInquiry(f: Form): Record<string, FieldError> {
   text('email', true);
   if (f.email.trim() && !out.email && !EMAIL.test(f.email.trim())) out.email = 'invalid';
   if (f.phone) {
-    if (!checkPhone(f.phone, f.country).ok) out.phone = 'invalid';
+    if (!checkDialPhone(f.phone, f.phone_dial).ok) out.phone = 'invalid';
   } else if (f.requests.includes('demo')) out.phone = 'required';
-  text('reach_value', false);
   text('message', false);
   if (!f.business_type) out.business_type = 'required';
   if (!f.country) out.country = 'required';
@@ -127,7 +131,7 @@ const FIELD_MESSAGE: Record<string, Partial<Record<FieldError, MessageKey>>> = {
   consent_demo: { required: 'landing.contact.needConsent' },
   business_type: { required: 'landing.contact.choose', invalid: 'landing.contact.invalid' },
   country: { required: 'landing.contact.choose', invalid: 'landing.contact.invalid' },
-  reach_kind: { invalid: 'landing.contact.invalid' },
+  phone_dial: { invalid: 'landing.contact.invalid' },
 };
 const fieldMessage = (name: string, e: FieldError): MessageKey =>
   FIELD_MESSAGE[name]?.[e] ?? (e === 'too_long' ? 'landing.contact.tooLong' : e === 'invalid' ? 'landing.contact.invalid' : 'landing.contact.required');
@@ -143,12 +147,14 @@ function companyNoMessage(f: Form, e: FieldError): MessageKey {
 }
 
 const PLACEHOLDER: Record<CompanyNoKind, string> = { business: '123-45-67890', corporate: '123456-1234567', uscc: '91350100M000100Y43', foreign: '' };
-const PHONE_PLACEHOLDER: Record<string, string> = { kr: '010-1234-5678', cn: '138-0013-8000' };
+const PHONE_PLACEHOLDER: Record<string, string> = { 82: '010-1234-5678', 86: '138-0013-8000', other: '44 20 7946 0958' };
 
 /** The number field's label: China's code has its own name. */
 export const companyNoLabel = (country: string): MessageKey => (country === 'cn' ? 'landing.contact.companyNo.cn' : 'landing.contact.companyNo');
 /** The phone field's label: a mobile for China. */
-const phoneLabel = (country: string): MessageKey => (country === 'cn' ? 'landing.contact.phoneNumber.cn' : 'landing.contact.phoneNumber');
+const phoneLabel = (dial: string): MessageKey => (dial === '86' ? 'landing.contact.phoneNumber.cn' : 'landing.contact.phoneNumber');
+/** A code as the select shows it: "+82 한국", or 기타. */
+const dialLabel = (dial: string, t: (k: MessageKey) => string) => (dial === DIAL_OTHER ? t('landing.contact.dial.other') : `+${dial} ${t(`landing.contact.dial.${dial}` as MessageKey)}`);
 
 const HINT: Record<CompanyNoKind, MessageKey> = {
   business: 'landing.contact.companyNoHint.business',
@@ -250,7 +256,7 @@ function Issued({ demo, form, onClose }: { demo: IssuedDemo; form: Form; onClose
 
 function InquiryModal({ onClose, source, requests }: { onClose: () => void; source: Source; requests: Request[] }) {
   const { t, locale } = useI18n();
-  const [form, setForm] = useState<Form>(() => blank(locale, requests));
+  const [form, setForm] = useState<Form>(() => blank(requests));
   const [marks, setMarks] = useState<Record<string, FieldError>>({});
   const [problem, setProblem] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
@@ -289,9 +295,15 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
       const next = { ...f, ...patch };
       const kind = companyNoKind(next);
       const no = takesLetters(kind) ? next.company_no : digitsOf(next.company_no);
-      return { ...next, company_no: no.slice(0, maxDigits(kind)), phone: next.phone.slice(0, phoneMax(next.country)) };
+      // the phone's code follows the company's country until it is picked by hand
+      const dial = next.phone_dial_set ? next.phone_dial : (dialForCountry(next.country) ?? DIAL_OTHER);
+      return { ...next, company_no: no.slice(0, maxDigits(kind)), phone_dial: dial, phone: next.phone.slice(0, dialMax(dial)) };
     });
     unmark('company_no', 'country', 'phone');
+  };
+  const setDial = (dial: string) => {
+    setForm((f) => ({ ...f, phone_dial: dial, phone_dial_set: true, phone: f.phone.slice(0, dialMax(dial)) }));
+    unmark('phone', 'phone_dial');
   };
 
   const submit = async (e: FormEvent) => {
@@ -304,7 +316,6 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
       return;
     }
     setBusy(true);
-    const reach = form.reach_value.trim();
     const res = await sendInquiry({
       company: form.company.trim(),
       company_no: form.company_no,
@@ -314,8 +325,7 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
       contact_name: form.contact_name.trim(),
       email: form.email.trim(),
       phone: form.phone || undefined,
-      reach_kind: reach ? form.reach_kind : undefined,
-      reach_value: reach || undefined,
+      phone_dial: form.phone ? form.phone_dial : undefined,
       wants: form.wants,
       requests: form.requests,
       message: form.message.trim() || undefined,
@@ -485,9 +495,9 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
             <input name="email" type="email" autoComplete="email" maxLength={MAX.email} value={form.email} onChange={(e) => set('email', e.target.value)} {...invalid('email')} />
             {err('email')}
           </label>
-          <div className="field">
+          <div className="field inquiry-phone-field">
             <label htmlFor="inquiry-phone">
-              {t(phoneLabel(form.country))}
+              {t(phoneLabel(form.phone_dial))}
               {!wantsDemo && (
                 <>
                   {' '}
@@ -495,36 +505,32 @@ function InquiryModal({ onClose, source, requests }: { onClose: () => void; sour
                 </>
               )}
             </label>
-            {wantsDemo && <small id="inquiry-phone-hint">{t('landing.contact.phoneHint')}</small>}
-            <DigitsInput
-              id="inquiry-phone"
-              name="phone"
-              autoComplete="tel"
-              value={form.phone}
-              onDigits={(d) => set('phone', d)}
-              format={(d) => formatPhone(d, form.country)}
-              max={phoneMax(form.country)}
-              placeholder={PHONE_PLACEHOLDER[form.country] ?? ''}
-              aria-describedby={marks.phone ? 'inquiry-phone-error' : wantsDemo ? 'inquiry-phone-hint' : undefined}
-              {...(marks.phone ? { 'aria-invalid': true as const } : {})}
-            />
-            {err('phone')}
-          </div>
-          <div className="field">
-            <span id="inquiry-reach-label">
-              {t('landing.contact.messenger')} <em className="inquiry-optional">{t('landing.contact.optional')}</em>
-            </span>
+            {(wantsDemo || form.phone_dial === DIAL_OTHER) && (
+              <small id="inquiry-phone-hint">{t(form.phone_dial === DIAL_OTHER ? 'landing.contact.phoneHint.other' : 'landing.contact.phoneHint')}</small>
+            )}
             <div className="inquiry-phone">
-              <select aria-label={t('landing.contact.phoneKind')} value={form.reach_kind} onChange={(e) => set('reach_kind', e.target.value)}>
-                {MESSENGERS.map((k) => (
-                  <option key={k} value={k}>
-                    {t(`landing.contact.phoneKind.${k}`)}
+              <select aria-label={t('landing.contact.dial')} name="phone_dial" value={form.phone_dial} onChange={(e) => setDial(e.target.value)} data-testid="inquiry-dial">
+                {DIALS.map((d) => (
+                  <option key={d} value={d}>
+                    {dialLabel(d, t)}
                   </option>
                 ))}
               </select>
-              <input name="reach_value" aria-labelledby="inquiry-reach-label" maxLength={MAX.reach_value} value={form.reach_value} onChange={(e) => set('reach_value', e.target.value)} {...invalid('reach_value')} />
+              <DigitsInput
+                id="inquiry-phone"
+                name="phone"
+                autoComplete="tel-national"
+                value={form.phone}
+                onDigits={(d) => set('phone', d)}
+                format={(d) => formatDialPhone(d, form.phone_dial)}
+                max={dialMax(form.phone_dial)}
+                placeholder={PHONE_PLACEHOLDER[form.phone_dial] ?? ''}
+                aria-describedby={marks.phone ? 'inquiry-phone-error' : wantsDemo || form.phone_dial === DIAL_OTHER ? 'inquiry-phone-hint' : undefined}
+                {...(marks.phone ? { 'aria-invalid': true as const } : {})}
+              />
             </div>
-            {err('reach_value')}
+            {err('phone')}
+            {err('phone_dial')}
           </div>
         </div>
 

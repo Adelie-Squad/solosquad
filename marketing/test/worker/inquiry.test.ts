@@ -32,8 +32,7 @@ async function request(over: Record<string, unknown> = {}) {
     contact_name: '김민지',
     email: freshEmail(),
     phone: '010-1234-5678',
-    reach_kind: 'kakao',
-    reach_value: 'minji-kakao',
+    phone_dial: '82',
     wants: ['finance', 'sns'],
     requests: ['demo'],
     message: '엑셀로 손익을 정리하고 있어요.',
@@ -74,25 +73,41 @@ describe('validation (the modal checks the same)', () => {
     const call = validateInquiry({ ...base, requests: ['consult'] });
     expect(call.ok && call.value).toMatchObject({ email: 'li@acme.cn', company_no: '91350100M000100Y43', company_no_kind: 'uscc', phone: null, requests: ['consult'], consent_demo: false });
     const demo = validateInquiry({ ...base, requests: ['demo'], consent_demo: true, phone: '+86 138 0013 8000' });
-    expect(demo.ok && demo.value).toMatchObject({ phone: '13800138000' }); // +86 taken off (2026-11-14)
+    expect(demo.ok && demo.value).toMatchObject({ phone: '+8613800138000' }); // E.164 (2026-11-14) — the country code from the company's country when the page sent none
   });
 
-  it('the phone: digits stored; a Korean one by the Korean rules; anything but digits and separators refused', () => {
+  it('the phone: E.164 stored with the picked country code; Korean and Chinese by their rules; anything but digits and separators refused', () => {
     const base = { company: 'Acme', company_no: '1234567891', company_no_kind: 'business', business_type: 'online', country: 'kr', contact_name: 'Li', email: 'li@acme.kr', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing' };
-    const stored = (phone: unknown, country = 'kr') => {
-      const r = validateInquiry({ ...base, phone, country, ...(country === 'cn' ? { company_no: '91350100M000100Y43' } : {}) });
-      return r.ok ? r.value.phone : r.fields.phone;
+    const stored = (phone: unknown, phone_dial?: unknown, country = 'kr') => {
+      const r = validateInquiry({ ...base, phone, phone_dial, country, ...(country === 'cn' ? { company_no: '91350100M000100Y43' } : {}) });
+      return r.ok ? r.value.phone : (r.fields.phone ?? r.fields.phone_dial);
     };
-    expect(stored('010-1234-5678')).toBe('01012345678');
-    expect(stored('02 123 4567')).toBe('021234567');
-    expect(stored('010-12')).toBe('invalid');
-    expect(stored('010-abcd-5678')).toBe('invalid');
-    expect(stored('')).toBeNull();
-    expect(stored('4915112345678', 'other')).toBe('4915112345678');
-    // China: an 11-digit mobile from 1, +86 / 0086 taken off
-    expect(stored('+86 138-0013-8000', 'cn')).toBe('13800138000');
-    expect(stored('138 0013 8000', 'cn')).toBe('13800138000');
-    expect(stored('0571-8888-8888', 'cn')).toBe('invalid');
+    // Korea: the leading 0 taken or not, dropped in storage
+    expect(stored('010-1234-5678', '82')).toBe('+821012345678');
+    expect(stored('10-1234-5678', '82')).toBe('+821012345678');
+    expect(stored('02 123 4567', '82')).toBe('+8221234567');
+    expect(stored('1588-1234', '82')).toBe('+8215881234');
+    expect(stored('010-12', '82')).toBe('invalid');
+    expect(stored('010-abcd-5678', '82')).toBe('invalid');
+    expect(stored('', '82')).toBeNull();
+    // the code beside the number, whatever the company's country
+    expect(stored('138-0013-8000', '86')).toBe('+8613800138000');
+    expect(stored('0571-8888-8888', '86')).toBe('invalid');
+    expect(stored('090-1234-5678', '81')).toBe('+819012345678');
+    expect(stored('(202) 555-0123', '1')).toBe('+12025550123');
+    expect(stored('9123 4567', '65')).toBe('+6591234567');
+    expect(stored('+49 151 12345678', 'other')).toBe('+4915112345678');
+    expect(stored('010-1234-5678', '999')).toBe('invalid');
+    // an older page (no code): the company's country stands in
+    expect(stored('010-1234-5678')).toBe('+821012345678');
+    expect(stored('+86 138-0013-8000', undefined, 'cn')).toBe('+8613800138000');
+    expect(stored('4915112345678', undefined, 'other')).toBe('+4915112345678');
+  });
+
+  it('the messenger field is gone (2026-11-14): one sent by an older page is not kept', () => {
+    const r = validateInquiry({ company: 'Acme', company_no: '1234567891', company_no_kind: 'business', business_type: 'online', country: 'kr', contact_name: 'Li', email: 'li@acme.kr', wants: ['sourcing'], requests: ['consult'], consent_required: true, locale: 'ko', source: 'pricing', reach_kind: 'kakao', reach_value: 'li-kakao' });
+    expect(r.ok).toBe(true);
+    expect(JSON.stringify(r.ok && r.value)).not.toContain('kakao');
   });
 
   it('the company registration number: digits only, with its kind; a Korean one by its check digit; another country’s 4–20 digits', () => {
@@ -139,12 +154,12 @@ describe('POST /api/inquiry', () => {
       company: '에이스상사',
       company_no: '1234567891',
       company_no_kind: 'business',
-      phone: '01012345678',
+      phone: '+821012345678',
       business_type: 'retail',
       country: 'kr',
       contact_name: '김민지',
-      reach_kind: 'kakao',
-      reach_value: 'minji-kakao',
+      reach_kind: null,
+      reach_value: null,
       wants: '["finance","sns"]',
       requests: '["consult"]',
       consent_required: 1,
@@ -257,12 +272,12 @@ describe('the demo account, issued on the request (2026-11-13 — no review)', (
   });
 
   it('a Chinese company (2026-11-14): its 统一社会信用代码 and mobile; the account signs in with the code, letters in any case', async () => {
-    const r = await post(await request({ country: 'cn', company_no: '91350100m000100y43', company_no_kind: undefined, phone: '+86 138 0013 8000', email: 'Li.Wei@example.cn', locale: 'zh-CN', reach_kind: 'wechat' }));
+    const r = await post(await request({ country: 'cn', company_no: '91350100m000100y43', company_no_kind: undefined, phone: '138 0013 8000', phone_dial: '86', email: 'Li.Wei@example.cn', locale: 'zh-CN' }));
     const out = (await r.json()) as Answer;
     expect(out.demo).toMatchObject({ id: 'li.wei@example.cn', password: 'lemon8000', company_no: '91350100M000100Y43', company_no_kind: 'uscc' });
     expect(await account('li.wei@example.cn')).toMatchObject({ company_no: '91350100M000100Y43', company_no_kind: 'uscc', locale: 'zh-CN' });
     const row = await env.DB.prepare('SELECT country, phone, company_no, company_no_kind FROM inquiries WHERE email = ?1').bind('li.wei@example.cn').first();
-    expect(row).toEqual({ country: 'cn', phone: '13800138000', company_no: '91350100M000100Y43', company_no_kind: 'uscc' });
+    expect(row).toEqual({ country: 'cn', phone: '+8613800138000', company_no: '91350100M000100Y43', company_no_kind: 'uscc' });
     expect((await signIn('91350100m000100y43', 'li.wei@example.cn', 'lemon8000')).headers.get('location')).toBe('https://marketing.test/demo/app');
     expect((await signIn('913501000001004', 'li.wei@example.cn', 'lemon8000')).headers.get('location')).toBe('https://marketing.test/demo?error=1');
   });

@@ -6,10 +6,10 @@
 // where the stamp lands, `data-gaze` = what the penguin looks at. Without acting (no 3D yet, the
 // stacked page) every act is its plain, finished composition. The content itself never moves with
 // the penguin — no nudge, no shake (user, 2026-11-09).
-import { useCallback, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n, type MessageKey } from '../i18n';
-import { ICON } from '../icons';
+import { ICON, type IconName } from '../icons';
 import { agentName } from '../lib/agentNames';
 import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
@@ -17,8 +17,7 @@ import { ACT_DELAY_MS, cues, now, RELAY, STAMP_APPROVED_MS, STAMP_IMPACT_MS, typ
 import { AGENT_COUNT, byId, TEAMS } from './catalog';
 import { LandingOrgChart } from './LandingOrgChart';
 import { PEOPLE, PersonFace } from './people';
-import { PromptTyper } from './PromptTyper';
-import { TIER, TIER_LABEL, TIER_REASON, WORKFLOW_EXAMPLES, type WorkflowExample } from './workflows';
+import { DOMAINS, TIER, TIER_LABEL, WORKFLOW_EXAMPLES, type Domain, type WorkflowExample } from './workflows';
 
 export interface ActProps {
   /** The section is on stage. */
@@ -27,7 +26,8 @@ export interface ActProps {
   acting: boolean;
 }
 
-const CHIPS: MessageKey[] = ['landing.hero.chip.server', 'landing.hero.chip.region', 'landing.hero.chip.lang', 'landing.hero.chip.setup'];
+/** The three kinds of small business the landing speaks to, as the icons the page draws them with. */
+export const DOMAIN_ICON: Record<Domain, IconName> = { logistics: 'logistics', commerce: 'commerce', it: 'itService' };
 
 /** Starts the wave on the card each time the section comes in (the canvas plays it from `waveAt`). */
 function useWave(on: boolean, acting: boolean) {
@@ -37,8 +37,9 @@ function useWave(on: boolean, acting: boolean) {
 }
 
 /**
- * 시작: the company card — "your company", the fifteen agents and two team members in one row, and
- * what the build promises; the penguin's first entrance lands on its top edge and it waves from
+ * 시작: the company card — "your company", the three domains it can be (물류 · 커머스 · IT 서비스, an
+ * icon and a word each — 2026-11-14, in place of the four promise chips), and the AI team in one
+ * row with two team members; the penguin's first entrance lands on its top edge and it waves from
  * behind its upper right.
  */
 export function CompanyAct({ on, acting }: ActProps) {
@@ -48,6 +49,17 @@ export function CompanyAct({ on, acting }: ActProps) {
   return (
     <div className="landing-act is-sign is-company" data-content data-front="ground" data-testid="landing-company">
       <p className="landing-mono landing-company-name">{t('landing.hero.card')}</p>
+      <ul className="landing-domains" data-testid="landing-domains">
+        {DOMAINS.map((d) => {
+          const Icon = ICON[DOMAIN_ICON[d]];
+          return (
+            <li key={d} data-domain={d}>
+              <Icon size={22} />
+              <span>{t(`landing.domain.${d}`)}</span>
+            </li>
+          );
+        })}
+      </ul>
       <div className="landing-faces" aria-hidden="true">
         <span className="landing-faces-row">
           {agents.map((a) => (
@@ -59,32 +71,82 @@ export function CompanyAct({ on, acting }: ActProps) {
         </span>
         <span className="landing-faces-label">{t('landing.hero.faces', { n: AGENT_COUNT })}</span>
       </div>
-      <ul className="landing-chips">
-        {CHIPS.map((k) => (
-          <li key={k} className="chip">
-            {t(k)}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
-/** 맡기기: the prompt box and the split under it, centred; the penguin patters over its top edge while it types. */
-export function PromptAct({ on, acting, still }: ActProps & { still: boolean }) {
-  const live = on && acting;
-  const onTyping = useCallback(
-    (typing: boolean) => {
-      cues.typing = live && typing;
-    },
-    [live],
-  );
+/**
+ * The pointing (the gap chart and the price cards): `cues.relayAt` starts the far wing out to the
+ * mark (`data-hand`), and `pointing` is on while the wing is there — the spot it points at lights up
+ * and the penguin looks at it (`data-gaze`). Once each time the section comes in.
+ */
+function usePointing(on: boolean, acting: boolean) {
+  const [pointing, setPointing] = useState(false);
   useLayoutEffect(() => {
-    if (!live) cues.typing = false;
-  }, [live]);
+    if (!on || !acting) {
+      setPointing(false);
+      return;
+    }
+    cues.relayAt = now() + ACT_DELAY_MS;
+    const timers = [window.setTimeout(() => setPointing(true), ACT_DELAY_MS + RELAY.reach), window.setTimeout(() => setPointing(false), ACT_DELAY_MS + RELAY.reach + RELAY.step + RELAY.release)];
+    return () => timers.forEach((id) => window.clearTimeout(id));
+  }, [on, acting]);
+  return pointing;
+}
+
+/** The gap chart's lines (viewBox 400 × 240): one start, the AI team climbing, the subscription staying flat. */
+export const GAP = {
+  start: { x: 40, y: 176 },
+  team: { x: 316, y: 52 },
+  sub: { x: 316, y: 164 },
+  bracket: 334,
+} as const;
+
+/**
+ * 왜 지금: two companies from the same point — the one that hands its work to an AI team climbs, the
+ * one that only pays for a subscription stays flat — and the gap between them, which the penguin
+ * points at from beside the chart's right edge. A picture, not data: no axis, no numbers (the copy
+ * makes no statistical claim). Four words on it: AI 팀 · 구독만 · 격차 · 지금.
+ */
+export function GapAct({ on, acting }: ActProps) {
+  const { t } = useI18n();
+  const pointing = usePointing(on, acting);
+  const { start, team, sub, bracket } = GAP;
+  const pct = (x: number, y: number) => ({ left: `${(x / 400) * 100}%`, top: `${(y / 240) * 100}%` });
   return (
-    <div className="landing-act is-prompt" data-content data-front="ground">
-      <PromptTyper still={still} onTyping={onTyping} />
+    <div className="landing-act is-relay is-gap" data-content data-front data-testid="landing-gap">
+      <figure className={`landing-gap ${pointing ? 'is-on' : ''}`} aria-label={t('landing.problem.chart')}>
+        <div className="landing-gap-plot">
+        <svg className="landing-gap-lines" viewBox="0 0 400 240" aria-hidden="true">
+          <line className="landing-gap-axis" x1={start.x} y1={208} x2={372} y2={208} />
+          <path className="landing-gap-sub" d={`M${start.x} ${start.y} C 140 174, 230 168, ${sub.x} ${sub.y}`} />
+          <path className="landing-gap-team" d={`M${start.x} ${start.y} C 150 172, 240 128, ${team.x} ${team.y}`} />
+          <path className="landing-gap-bracket" d={`M${bracket - 8} ${team.y + 4} H${bracket} V${sub.y - 4} H${bracket - 8}`} data-gaze={pointing ? '' : undefined} />
+          <circle className="landing-gap-start" cx={start.x} cy={start.y} r={5} />
+          <circle className="landing-gap-end is-team" cx={team.x} cy={team.y} r={5} />
+          <circle className="landing-gap-end is-sub" cx={sub.x} cy={sub.y} r={5} />
+        </svg>
+        <span className="landing-gap-label is-team" style={pct(team.x, team.y)}>
+          <span className="landing-gap-faces" aria-hidden="true">
+            {['finance', 'marketer', 'researcher'].map((id) => (
+              <AgentIcon key={id} agent={id} size={20} label="" />
+            ))}
+          </span>
+          {t('landing.problem.chart.team')}
+        </span>
+        <span className="landing-gap-label is-sub" style={pct(sub.x, sub.y)}>
+          <ICON.subscription size={18} />
+          {t('landing.problem.chart.sub')}
+        </span>
+        <span className="landing-gap-label is-gap" style={pct(bracket, (team.y + sub.y) / 2)}>
+          {t('landing.problem.chart.gap')}
+        </span>
+        <span className="landing-gap-label is-now" style={pct(start.x, 208)}>
+          {t('landing.problem.chart.now')}
+        </span>
+        <span className="landing-hand is-gap" style={pct(bracket, (team.y + sub.y) / 2)} data-hand="R" aria-hidden="true" />
+        </div>
+      </figure>
     </div>
   );
 }
@@ -113,16 +175,19 @@ export function ScrollAct({ on, acting, onOpen }: ActProps & { onOpen: (at: stri
 }
 
 /**
- * One example workflow on a card: its tabs (the live page — one card, three stops), the four steps
- * the agents do (each with its agent), what people do, and the two approvals at the bottom — the
- * team's, then the owner's with the approve button at the card's lower left, where the penguin's
- * stamp lands. Every card has the same rows, so the button sits at the same place in all three.
+ * One example workflow on a card, drawn as a flow (2026-11-14 — the old 맡기기 section folded in):
+ * its tabs (the live page — one card, three stops), the one-line request to Chief, Chief handing it
+ * out to three agents (a short piece of work each), and the two approvals — the team's, then the
+ * owner's with the approve button at the card's lower left, where the penguin's stamp lands. Few
+ * words: no step sentences, no reasons (the message beside the card says why it stops). Every card
+ * has the same rows, so the button sits at the same place in all three.
  */
 function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampState; tabs?: ReactNode }) {
   const { t, locale } = useI18n();
   const approved = state === 'approved';
   const team = TIER[w.team.category];
   const owner = TIER[w.owner.category];
+  const chief = byId('chief');
   return (
     <figure
       className={`landing-preview landing-approval landing-workflow is-${state}`}
@@ -136,13 +201,21 @@ function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampStat
         {tabs ?? <span className="landing-workflow-name">{t(w.name)}</span>}
         <span className="landing-mono landing-preview-tag">{t('landing.preview.example')}</span>
       </div>
-      <h3 id={`landing-workflow-${w.id}`} className="landing-workflow-title">
-        {t(w.title)}
+      <h3 id={`landing-workflow-${w.id}`} className="sr-only">
+        {t(w.name)} · {t(w.title)}
       </h3>
-      <div className="landing-workflow-part">
-        <p className="landing-mono landing-workflow-label">{t('landing.workflows.agents')}</p>
-        <ol className="landing-workflow-steps">
-          {w.steps.map((s) => (
+      <p className="landing-workflow-ask" data-testid="landing-workflow-ask">
+        <ICON.ask />
+        <span className="sr-only">{t('landing.workflows.ask')}: </span>
+        <span>{t(w.ask)}</span>
+      </p>
+      <div className="landing-workflow-split">
+        <span className="landing-workflow-chief">
+          <AgentIcon agent="chief" team="core" size={28} label="" />
+          <b>{agentName('chief', locale, chief)}</b>
+        </span>
+        <ol className="landing-workflow-pieces">
+          {w.split.map((s) => (
             <li key={s.text}>
               <AgentIcon agent={s.agent} size={20} label={agentName(s.agent, locale, byId(s.agent))} />
               <span>{t(s.text)}</span>
@@ -150,26 +223,19 @@ function WorkflowCard({ w, state, tabs }: { w: WorkflowExample; state: StampStat
           ))}
         </ol>
       </div>
-      <p className="landing-workflow-people">
-        <ICON.person />
-        <b>{t('landing.workflows.people')}</b>
-        <span>{t(w.people)}</span>
-      </p>
       <div className="landing-workflow-gate" data-tier={team} data-category={w.team.category}>
         <span className={`chip ${team === 'owner' ? 'is-warn' : 'is-accent'}`}>
+          {team === 'team' && <ICON.person size={14} />}
           {t(TIER_LABEL[team])} · {teamName(w.team.team, t)}
         </span>
-        <span className="landing-workflow-gate-words">
-          <b>{t(w.team.text)}</b>
-          <span>{t(TIER_REASON[team])}</span>
-        </span>
+        <b className="landing-workflow-gate-words">{t(w.team.text)}</b>
       </div>
       <div className="landing-workflow-gate" data-tier={owner} data-category={w.owner.category}>
-        <span className={`chip ${owner === 'owner' ? 'is-warn' : 'is-accent'}`}>{t(TIER_LABEL[owner])}</span>
-        <span className="landing-workflow-gate-words">
-          <b>{t(w.owner.text)}</b>
-          <span>{t(TIER_REASON[owner])}</span>
+        <span className={`chip ${owner === 'owner' ? 'is-warn' : 'is-accent'}`}>
+          <ICON.owner size={14} />
+          {t(TIER_LABEL[owner])}
         </span>
+        <b className="landing-workflow-gate-words">{t(w.owner.text)}</b>
         <span className={`chip ${approved ? STATUS_CHIP.done : STATUS_CHIP.waiting}`}>{t(approved ? 'landing.workflows.approved' : STATUS_LABEL.waiting)}</span>
       </div>
       {/* the buttons at the bottom left — where the penguin's stamp reaches from the corner */}
@@ -241,7 +307,7 @@ export function WorkflowAct({ on, acting, at, stacked, onPick }: ActProps & { at
 const PRICES: { name: MessageKey; body: MessageKey; price: MessageKey; note?: MessageKey }[] = [
   { name: 'landing.pricing.setup.name', body: 'landing.pricing.setup.body', price: 'landing.pricing.setup.price', note: 'landing.pricing.vat' },
   { name: 'landing.pricing.call.name', body: 'landing.pricing.call.body', price: 'landing.pricing.call.price' },
-  { name: 'landing.pricing.usage.name', body: 'landing.pricing.usage.body', price: 'landing.pricing.usage.price' },
+  { name: 'landing.pricing.usage.name', body: 'landing.pricing.usage.body', price: 'landing.pricing.usage.price', note: 'landing.pricing.usage.note' },
 ];
 
 /**
@@ -251,16 +317,7 @@ const PRICES: { name: MessageKey; body: MessageKey; price: MessageKey; note?: Me
  */
 export function PricingAct({ on, acting }: ActProps) {
   const { t } = useI18n();
-  const [pointing, setPointing] = useState(false);
-  useLayoutEffect(() => {
-    if (!on || !acting) {
-      setPointing(false);
-      return;
-    }
-    cues.relayAt = now() + ACT_DELAY_MS;
-    const timers = [window.setTimeout(() => setPointing(true), ACT_DELAY_MS + RELAY.reach), window.setTimeout(() => setPointing(false), ACT_DELAY_MS + RELAY.reach + RELAY.step + RELAY.release)];
-    return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [on, acting]);
+  const pointing = usePointing(on, acting);
   return (
     <div className="landing-act is-relay is-pricing" data-content data-front data-testid="landing-pricing">
       <ol className="landing-prices">

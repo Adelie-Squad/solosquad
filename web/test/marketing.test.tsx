@@ -234,11 +234,15 @@ describe('the request modal', () => {
     const dialog = await open();
     expect((within(dialog).getByLabelText('데모 계정') as HTMLInputElement).checked).toBe(true);
     expect((within(dialog).getByLabelText('상담') as HTMLInputElement).checked).toBe(false);
-    for (const label of [/^회사 이름/, /^법인\(사업자\)등록번호/, /^업종/, /^나라/, /^담당자 이름/, /^이메일/, /^전화번호/, '메신저', '재무 관리', '상품 소싱', 'SNS 마케팅', '새 소식 받기(선택)']) expect(within(dialog).getByLabelText(label)).toBeTruthy();
+    for (const label of [/^회사 이름/, /^법인\(사업자\)등록번호/, /^업종/, /^나라/, /^담당자 이름/, /^이메일/, /^전화번호/, '국가 번호', '재무 관리', '상품 소싱', 'SNS 마케팅', '새 소식 받기(선택)']) expect(within(dialog).getByLabelText(label)).toBeTruthy();
     expect((within(dialog).getByLabelText(/^나라/) as HTMLSelectElement).value).toBe('kr');
-    const messenger = within(dialog).getByLabelText('메신저') as HTMLSelectElement;
-    expect(messenger.value).toBe('kakao');
-    expect([...messenger.options].map((o) => o.value)).toEqual(['kakao', 'wechat']);
+    // no messenger any more (2026-11-14) — the phone with its country code, +82 first
+    expect(within(dialog).queryByLabelText(/메신저/)).toBeNull();
+    expect(dialog.querySelector('[name="reach_value"]')).toBeNull();
+    const dial = within(dialog).getByLabelText('국가 번호') as HTMLSelectElement;
+    expect(dial.value).toBe('82');
+    expect([...dial.options].map((o) => o.value)).toEqual(['82', '86', '81', '1', '84', '852', '886', '65', 'other']);
+    expect([...dial.options].map((o) => o.textContent)).toEqual(['+82 한국', '+86 중국', '+81 일본', '+1 미국 · 캐나다', '+84 베트남', '+852 홍콩', '+886 대만', '+65 싱가포르', '기타(직접 입력)']);
     expect(within(dialog).getByRole('link', { name: '개인정보처리방침 보기' }).getAttribute('href')).toBe('/privacy');
     const trap = dialog.querySelector('input[name="website"]') as HTMLInputElement;
     expect(trap.tabIndex).toBe(-1);
@@ -253,7 +257,7 @@ describe('the request modal', () => {
     fireEvent.click(within(dialog).getByLabelText('데모 계정'));
     expect(within(dialog).queryByLabelText(/^데모 사용 기록/)).toBeNull();
     expect(within(dialog).queryByText('뒤 4자리가 데모 비밀번호에 들어가요. 숫자만 치면 돼요.')).toBeNull();
-    expect(phone(dialog).parentElement!.textContent).toContain('선택');
+    expect(phone(dialog).closest('.field')!.textContent).toContain('선택');
   });
 
   it('validation: marks every missing field and sends nothing', async () => {
@@ -353,15 +357,17 @@ describe('the request modal', () => {
     expect(p.placeholder).toBe('138-0013-8000');
     fireEvent.change(p, { target: { value: '13800138000' } });
     expect(p.value).toBe('138-0013-8000');
+    // the code follows the country: +86 beside it, so a pasted +86 is taken off what shows
+    expect((within(dialog).getByLabelText('국가 번호') as HTMLSelectElement).value).toBe('86');
     fireEvent.change(p, { target: { value: '+86 138 0013 8000' } });
-    expect(p.value).toBe('+86 138-0013-8000');
+    expect(p.value).toBe('138-0013-8000');
     await send(dialog);
     const body = calls.find((c) => c.url === '/api/inquiry')!.body!;
-    expect(body).toMatchObject({ country: 'cn', company_no: '91350100M000100Y43', phone: '8613800138000' });
+    expect(body).toMatchObject({ country: 'cn', company_no: '91350100M000100Y43', phone: '8613800138000', phone_dial: '86' });
     expect(body.company_no_kind).toBeUndefined();
   });
 
-  it('another country: letters and digits (4–20), no hyphens; the phone digits only; back to 한국 keeps the digits', async () => {
+  it('another country: letters and digits (4–20), no hyphens; the phone 기타 (the whole number, digits only); back to 한국 keeps the digits', async () => {
     const calls = stubSite();
     const dialog = await open();
     fill(dialog);
@@ -375,8 +381,10 @@ describe('the request modal', () => {
     fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'other' } });
     fireEvent.change(number(dialog), { target: { value: 'hrb-12345' } });
     fireEvent.change(phone(dialog), { target: { value: '+49 151 1234 5678' } });
+    expect((within(dialog).getByLabelText('국가 번호') as HTMLSelectElement).value).toBe('other');
+    expect(within(dialog).getByText('국가 번호부터 숫자로 적어 주세요.')).toBeTruthy();
     await send(dialog);
-    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ country: 'other', company_no: 'HRB12345', phone: '4915112345678' });
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ country: 'other', company_no: 'HRB12345', phone: '4915112345678', phone_dial: 'other' });
   });
 
   it('the phone: digits only, Korean hyphens as typed, checked', async () => {
@@ -401,6 +409,26 @@ describe('the request modal', () => {
     expect(calls.some((c) => c.url === '/api/inquiry')).toBe(false);
   });
 
+  it('the country code (2026-11-14): follows the company country until picked by hand; a picked code stays; the leading 0 may be left off', async () => {
+    const calls = stubSite();
+    const dialog = await open();
+    fill(dialog);
+    const dial = within(dialog).getByLabelText('국가 번호') as HTMLSelectElement;
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'cn' } });
+    expect(dial.value).toBe('86');
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'kr' } });
+    expect(dial.value).toBe('82');
+    fireEvent.change(dial, { target: { value: '81' } });
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'cn' } });
+    expect(dial.value).toBe('81');
+    fireEvent.change(within(dialog).getByLabelText(/^나라/), { target: { value: 'kr' } });
+    fireEvent.change(dial, { target: { value: '82' } });
+    fireEvent.change(phone(dialog), { target: { value: '1012345678' } });
+    expect(phone(dialog).value).toBe('10-1234-5678');
+    await send(dialog);
+    expect(calls.find((c) => c.url === '/api/inquiry')!.body).toMatchObject({ country: 'kr', phone: '1012345678', phone_dial: '82' });
+  });
+
   it('submits to /api/inquiry with source, requests, digits and the form token; no account back → the received state', async () => {
     const calls = stubSite();
     const dialog = await open();
@@ -420,6 +448,7 @@ describe('the request modal', () => {
       contact_name: '김민지',
       email: 'minji@example.com',
       phone: '01012345678',
+      phone_dial: '82',
       wants: ['finance'],
       requests: ['demo'],
       consent_required: true,
@@ -431,6 +460,7 @@ describe('the request modal', () => {
       form_token: '123.abc',
     });
     expect(sent.reach_value).toBeUndefined();
+    expect(sent.reach_kind).toBeUndefined();
   });
 
   it('the account comes back → the completion screen shows number, ID, password and end, and starts the demo login filled in (no password)', async () => {
@@ -501,7 +531,7 @@ describe('the request modal', () => {
     fireEvent.click(screen.getByTestId('demo-apply'));
     const dialog = await screen.findByRole('dialog', { name: title });
     const [company, no, kind, name, email, tel] = labels.map((l) => within(dialog).getByLabelText(new RegExp(`^${l}`)));
-    fireEvent.change(within(dialog).getByLabelText(new RegExp(`^${locale === 'en' ? 'Country' : '国家'}`)), { target: { value: 'kr' } });
+    fireEvent.change(within(dialog).getByLabelText(new RegExp(`^${locale === 'en' ? 'Country' : '国家'}$`)), { target: { value: 'kr' } });
     fireEvent.change(company, { target: { value: 'Ace' } });
     fireEvent.change(no, { target: { value: '1234567891' } });
     fireEvent.change(kind, { target: { value: 'retail' } });

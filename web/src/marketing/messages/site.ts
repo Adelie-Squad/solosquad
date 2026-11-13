@@ -7,7 +7,7 @@ import type { Locale } from '../../i18n';
 export const SITE = {
   brand: 'SoloSquad',
   /** 대표자 = 개인정보 보호책임자 */
-  owner: { ko: '정승원', en: 'Seungwon Jeong', 'zh-CN': 'Seungwon Jeong' } as Record<Locale, string>,
+  owner: { ko: '정승원', en: 'Seungwon Jung', 'zh-CN': 'Seungwon Jung' } as Record<Locale, string>,
   email: 'contact@toronchul.app',
   /** the privacy policy's 시행일 — move it (and CONSENT_VERSION in marketing/wrangler.toml) when the text changes */
   policyEffective: '2026-11-14',

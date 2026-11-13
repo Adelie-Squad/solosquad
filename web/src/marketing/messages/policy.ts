@@ -69,7 +69,7 @@ function ko(): PolicyDoc {
         {
           ul: [
             '데모 계정 발급과 데모 로그인 확인 — 신청한 이메일이 데모 아이디가 되고, 법인(사업자)등록번호와 비밀번호로 로그인하는 사람을 확인해요.',
-            '상담 연락 — 신청 내용을 확인하고 이메일 · 전화 · 메신저로 연락해요.',
+            '상담 연락 — 신청 내용을 확인하고 이메일 · 전화로 연락해요.',
             '상담 준비 — 데모 계정을 신청하며 동의한 분의 데모 사용 기록(본 화면 · 누른 버튼)을 상담할 때 참고해요.',
             '새 소식 안내 — ‘새 소식 받기’에 따로 동의한 분에게만 보내요.',
             '부정 이용 방지 — 같은 곳에서 지나치게 많은 신청 · 로그인 시도가 들어오는 것을 막아요.',
@@ -82,8 +82,8 @@ function ko(): PolicyDoc {
             head: ['언제', '항목', '필수 · 선택'],
             rows: [
               ['데모 계정 · 상담 신청', '회사 이름, 나라, 회사의 등록번호와 그 구분(한국 개인사업자의 사업자등록번호 · 한국 법인의 법인등록번호 · 중국 회사의 통일사회신용코드 · 다른 나라의 등록번호), 업종, 담당자 이름, 이메일, 맡기고 싶은 일, 원하는 것(데모 계정 · 상담), 동의 여부와 동의 문구의 버전', '필수'],
-              ['데모 계정을 원할 때', '전화번호 — 중국은 휴대전화 번호(뒤 4자리가 데모 비밀번호에 들어가요)', '필수'],
-              ['신청할 때 고를 수 있는 것', '전화번호(상담만 원할 때), 메신저 종류(카카오톡 · WeChat)와 메신저 ID, 더 알려 주실 것(직접 쓰는 글), 새 소식 받기 동의', '선택'],
+              ['데모 계정을 원할 때', '전화번호와 국가 번호(+82 등) — 중국은 휴대전화 번호(뒤 4자리가 데모 비밀번호에 들어가요)', '필수'],
+              ['신청할 때 고를 수 있는 것', '전화번호와 국가 번호(상담만 원할 때), 더 알려 주실 것(직접 쓰는 글), 새 소식 받기 동의', '선택'],
               ['신청과 함께 저절로', '화면 언어, 신청한 자리(첫 화면 · 가격 · 데모 로그인 등), 양식을 연 시각과 보낸 시각, 신청의 처리 기록(접수 · 발급 시각)', '—'],
               ['데모 계정', '아이디(신청한 이메일), 법인(사업자)등록번호와 그 구분, 회사 이름, 화면 언어, 비밀번호의 해시값(원래 비밀번호는 저장하지 않아요), 만든 · 바뀐 · 끝나는 시각', '—'],
               ['데모를 쓸 때(데모 계정 신청 시 동의)', '로그인 · 로그아웃 · 본 화면 · 누른 버튼(예: 예시 워크플로우 실행, 승인), 예시 워크플로우를 시작하고 끝까지 마쳤는지(승인 · 거절)와 그 시각. IP 주소 · 브라우저 정보 · 직접 쓴 글은 기록하지 않아요.', '데모 계정 신청 시 필수'],
@@ -234,7 +234,7 @@ function en(): PolicyDoc {
         {
           ul: [
             'Issuing demo accounts and checking demo logins — the email in your request becomes the demo ID, and the company registration number and password confirm who signs in.',
-            'Getting in touch — we read your request and contact you by email, phone or messenger.',
+            'Getting in touch — we read your request and contact you by email or phone.',
             'Preparing a consultation — if you agreed when asking for a demo account, we look at your demo usage (screens viewed, buttons pressed) before we talk.',
             'News — only for people who separately ticked “Get news”.',
             'Preventing abuse — stopping too many requests or login attempts from one place.',
@@ -247,8 +247,8 @@ function en(): PolicyDoc {
             head: ['When', 'What', 'Required or optional'],
             rows: [
               ['Demo account or consultation request', 'Company name, country, the company’s registration number and its kind (a Korean sole proprietor’s business registration number, a Korean corporation’s corporate registration number, a Chinese company’s unified social credit code, another country’s registration number), industry, contact name, email, what you want to hand over, what you ask for (demo account, consultation), your consents and the version of the consent text', 'Required'],
-              ['When you ask for a demo account', 'Phone number — a mobile number in China (its last four digits go into the demo password)', 'Required'],
-              ['Optional in the request', 'Phone number (consultation only), messenger (KakaoTalk, WeChat) and messenger ID, anything else you write, consent to news', 'Optional'],
+              ['When you ask for a demo account', 'Phone number and its country code (+82, …) — a mobile number in China (its last four digits go into the demo password)', 'Required'],
+              ['Optional in the request', 'Phone number and its country code (consultation only), anything else you write, consent to news', 'Optional'],
               ['Recorded with the request', 'Screen language, where you sent it from (home page, pricing, demo login, …), when the form was opened and sent, the handling record (received, issued)', '—'],
               ['Demo account', 'ID (your request email), company registration number and its kind, company name, screen language, a hash of the password (never the password itself), when it was made, changed and ends', '—'],
               ['Using the demo (agreed when requesting a demo account)', 'Login, logout, screens viewed and buttons pressed (e.g. running an example workflow, approving), whether an example workflow was started and run to its end (approved or declined), with their times. No IP address, browser details or anything you type.', 'Required for a demo account'],
@@ -399,7 +399,7 @@ function zhCN(): PolicyDoc {
         {
           ul: [
             '发放演示账号并核验演示登录——申请时填写的邮箱即演示账号 ID，并以企业注册号和密码确认登录者身份。',
-            '联系沟通——查看申请内容，并通过邮件、电话或通讯软件与您联系。',
+            '联系沟通——查看申请内容，并通过邮件或电话与您联系。',
             '准备咨询——对申请演示账号时同意的用户，咨询时参考其演示使用记录（查看的页面、点击的按钮）。',
             '新消息通知——仅发送给另行勾选“接收新消息”的用户。',
             '防止滥用——阻止来自同一来源的过多申请或登录尝试。',
@@ -412,8 +412,8 @@ function zhCN(): PolicyDoc {
             head: ['场景', '项目', '必填或选填'],
             rows: [
               ['申请演示账号或咨询', '公司名称、国家、企业注册号及其类型（韩国个人经营者的营业执照号、韩国法人的法人登记号、中国企业的统一社会信用代码、其他国家的注册号）、行业、联系人姓名、邮箱、想交给我们的工作、申请内容（演示账号、咨询）、同意情况及同意文本的版本', '必填'],
-              ['申请演示账号时', '电话号码——中国为手机号（后 4 位用于演示密码）', '必填'],
-              ['申请时可选', '电话号码（仅申请咨询时）、通讯软件（KakaoTalk、WeChat）及其 ID、补充说明（自行填写的内容）、接收新消息的同意', '选填'],
+              ['申请演示账号时', '电话号码及国家代码（+82 等）——中国为手机号（后 4 位用于演示密码）', '必填'],
+              ['申请时可选', '电话号码及国家代码（仅申请咨询时）、补充说明（自行填写的内容）、接收新消息的同意', '选填'],
               ['随申请自动记录', '界面语言、申请入口（首页、价格、演示登录等）、打开和提交表单的时间、申请的处理记录（受理、发放时间）', '—'],
               ['演示账号', 'ID（申请邮箱）、企业注册号及其类型、公司名称、界面语言、密码的哈希值（不保存密码原文）、创建、修改和到期时间', '—'],
               ['使用演示时（申请演示账号时同意）', '登录、退出、查看的页面、点击的按钮（如运行示例工作流、审批）、示例工作流是否开始并运行到结束（批准或拒绝）及其时间。不记录 IP 地址、浏览器信息或您输入的文字。', '申请演示账号时必填'],

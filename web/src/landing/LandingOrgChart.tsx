@@ -1,9 +1,10 @@
-// Section 3 of the landing (DESIGN.md `## 랜딩` — 조직도): the bundled team as the in-app org chart
-// draws it (`### 조직도`) — the owner, Chief under them, the teams side by side below, joined by the
-// same connector lines (components/orgGeometry.ts; one indented column on a phone), names in the
-// reader's language — and, under the business and brand teams, an example team member (a round
-// person, never a penguin; no name — PRD §3.5.2 ③: people and agents on one chart). Before login there is no live state, so the nodes carry no status chip and
-// are plain rows. Each team (and the top row) is one button that opens the team modal at that team:
+// Section 3 of the landing (DESIGN.md `## 랜딩` — AI 팀): the bundled team as a picture, joined by the
+// in-app org chart's connector lines (`### 조직도`, components/orgGeometry.ts) — the owner on top
+// with an approval check (people decide), Chief under them, the teams side by side below, each team
+// its name and a row of penguin faces (no names on the paper since 2026-11-14 — a few words only;
+// the names are in each face's tooltip and the team modal) and, in the business and brand teams, an
+// example team member (a round person, never a penguin — PRD §3.5.2 ③). Before login there is no
+// live state, so the nodes carry no status chip. Each team (and the top row) is one button that opens the team modal at that team:
 // the agent cards side by side, scrolling sideways. On the live landing the chart is the paper the
 // penguin unrolls (Acts.tsx `ScrollAct`).
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -47,7 +48,8 @@ export function LandingOrgChart({ onOpen }: { onOpen: (at: string | null) => voi
   const teams = TEAMS.filter((g) => g.team !== 'core');
   const ref = useRef<HTMLDivElement>(null);
   // the paper holds two columns at most (2 + 2); narrower than two readable columns it is the tree
-  const { mode, cols, lines, size } = useOrgLayout(ref, { count: teams.length, min: 150, gap: 12, max: 2, treeBelow: 400, key: locale, topAt: 'pin' });
+  // icons only: four columns side by side where the paper is wide, 2 + 2 on a phone — never the tree
+  const { mode, cols, lines, size } = useOrgLayout(ref, { count: teams.length, min: 96, gap: 12, max: 4, treeBelow: 200, key: locale, topAt: 'pin' });
 
   return (
     <div ref={ref} className="landing-org" data-testid="landing-org" data-layout={mode} style={{ '--org-cols': cols } as CSSProperties}>
@@ -57,10 +59,11 @@ export function LandingOrgChart({ onOpen }: { onOpen: (at: string | null) => voi
             <ICON.owner />
           </span>
           {t('role.owner')}
+          <ICON.done size={16} className="landing-org-approves" aria-hidden="true" />
         </span>
         {chief && (
           <span className="landing-org-node" data-org="chief">
-            <AgentIcon agent={chief.id} team="core" size={20} label="" />
+            <AgentIcon agent={chief.id} team="core" size={28} label="" />
             {agentName(chief.id, locale, chief)}
           </span>
         )}
@@ -79,19 +82,16 @@ export function LandingOrgChart({ onOpen }: { onOpen: (at: string | null) => voi
                 <span className="landing-org-label">
                   <span className="landing-dot" data-org-pin aria-hidden="true" />
                   {name}
-                  <span className="landing-org-count">{t('org.deptCount', { n: g.agents.length })}</span>
                 </span>
-                <span className="landing-org-members">
+                <span className="landing-org-faces">
                   {g.agents.map((a) => (
-                    <span className="landing-org-node" key={a.id}>
+                    <span className="landing-org-face" key={a.id} title={agentName(a.id, locale, a)}>
                       <AgentIcon agent={a.id} team={a.team} size={20} label="" />
-                      <span className="landing-org-name">{agentName(a.id, locale, a)}</span>
                     </span>
                   ))}
                   {(PEOPLE as readonly string[]).includes(g.team) && (
-                    <span className="landing-org-node is-person" data-person>
+                    <span className="landing-org-face is-person" data-person title={t('landing.org.person')}>
                       <PersonFace size={20} />
-                      <span className="landing-org-name">{t('landing.org.person')}</span>
                     </span>
                   )}
                 </span>

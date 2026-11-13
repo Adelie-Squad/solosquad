@@ -1,18 +1,21 @@
 // The landing's sections, their stops and how the scroll position picks one (DESIGN.md `## 랜딩`,
-// PRD v2.1.0 §3.5 — decision 61). A section is one slide; most hold one stop, the workflows hold
-// three (재무 관리 → 상품 소싱 → SNS 마케팅 — the same card, its content changes, the penguin stays).
+// PRD v2.1.0 §3.5 — decision 61; the story re-cut 2026-11-14: who it is for → the problem and why
+// now → the AI team → the workflows (the old 맡기기 folded in) → pricing → contact). A section is
+// one slide; most hold one stop, the workflows hold three (재무 관리 → 상품 소싱 → SNS 마케팅 — the same card, its content changes, the penguin stays).
 // What the penguin does in each is its `act` (acting.ts · staging.ts · arms.ts); how a gesture moves
 // between the stops is dwell.ts.
 import type { MessageKey } from '../i18n';
 
-export type SectionId = 'hero' | 'delegate' | 'org' | 'workflows' | 'pricing' | 'contact';
+export type SectionId = 'hero' | 'problem' | 'org' | 'workflows' | 'pricing' | 'contact';
 
 /**
  * What the penguin does with a section's content — one staging per act, shared where two sections
- * stage alike (the company card at the start and the last card both get the wave):
- * `wave` = behind the card's upper right, waving · `type` = over the prompt box, typing ·
+ * stage alike (the company card at the start and the last card both get the wave; the gap chart and
+ * the price cards both get the pointing): `wave` = behind the card's upper right, waving ·
  * `unroll` = peeking over the paper, unrolling it · `stamp` = outside the card's lower-left corner,
- * stamping the owner's approval · `point` = beside the cards' right edge, pointing at one.
+ * stamping the owner's approval · `point` = beside the content's right edge, pointing at one spot ·
+ * `type` = over a prompt box, typing (no section uses it since the 맡기기 section went into the
+ * workflows, 2026-11-14 — the staging stays for a prompt box to come back).
  */
 export type ActId = 'wave' | 'type' | 'unroll' | 'stamp' | 'point';
 
@@ -29,7 +32,7 @@ export interface Section {
 
 export const SECTIONS: Section[] = [
   { id: 'hero', label: 'landing.section.hero', act: 'wave' },
-  { id: 'delegate', label: 'landing.section.delegate', act: 'type' },
+  { id: 'problem', label: 'landing.section.problem', act: 'point' },
   { id: 'org', label: 'landing.section.org', act: 'unroll' },
   { id: 'workflows', label: 'landing.section.workflows', act: 'stamp', stops: WORKFLOWS },
   { id: 'pricing', label: 'landing.section.pricing', act: 'point' },
@@ -37,6 +40,9 @@ export const SECTIONS: Section[] = [
 ];
 
 export const sectionAnchor = (id: SectionId) => `landing-${id}`;
+
+/** Anchors of sections that are gone, and where they lead now (the 맡기기 section is part of the workflows). */
+export const MOVED_ANCHORS: Record<string, string> = { 'landing-delegate': 'landing-workflows' };
 
 /** One place the page stops at: a section, and which of its stops (0 for most). */
 export interface Stop {

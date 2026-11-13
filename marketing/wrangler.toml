@@ -31,7 +31,7 @@ crons = ["17 3 * * *"]
 [vars]
 # the consent text the request modal shows; bump it when the text changes (C52 · DM6) — and the
 # privacy policy with it (web/src/marketing/messages/site.ts policyEffective · policy.ts)
-CONSENT_VERSION = "2026-11-14.draft"
+CONSENT_VERSION = "2026-11-14.2.draft"
 # days an inquiry is kept (L9 — recommended one year; legal review pending)
 RETAIN_DAYS = "365"
 # Cloudflare Turnstile is off by default: it does not load from mainland China (L5)

@@ -196,25 +196,30 @@ describe('connector lines: the landing org chart', () => {
     );
   };
 
-  it('two columns on the paper (2 + 2, a bus per row), a tree on a phone', () => {
+  it('icons only (2026-11-14): four columns on the paper, 2 + 2 on a phone (a bus per row) — the tree only below that', () => {
     atWidth(444);
     draw();
     const org = screen.getByTestId('landing-org');
     expect(org.getAttribute('data-layout')).toBe('columns');
-    expect(org.style.getPropertyValue('--org-cols')).toBe('2');
+    expect(org.style.getPropertyValue('--org-cols')).toBe('4');
     expect(org.querySelector('svg.org-lines')!.getAttribute('aria-hidden')).toBe('true');
     expect([...org.querySelectorAll('[data-org]')].map((n) => n.getAttribute('data-org'))).toEqual(['owner', 'chief', 'dept', 'dept', 'dept', 'dept']);
     cleanup();
     atWidth(334); // the paper on a 390px phone
     draw();
+    expect(screen.getByTestId('landing-org').getAttribute('data-layout')).toBe('columns');
+    expect(screen.getByTestId('landing-org').style.getPropertyValue('--org-cols')).toBe('2');
+    cleanup();
+    atWidth(180);
+    draw();
     expect(screen.getByTestId('landing-org').getAttribute('data-layout')).toBe('tree');
     expect(screen.getByTestId('landing-org').querySelectorAll('[data-line="branch"]')).toHaveLength(4);
   });
 
-  it('the lines sit on the paper, so they unroll with it; the team spine is CSS', () => {
+  it('the lines sit on the paper, so they unroll with it; a team is its faces in a row', () => {
     expect(landingCss).toMatch(/\.landing-scroll-sheet \{[^}]*clip-path: inset\(0 -1px calc\(\(1 - var\(--unroll\)\) \* 100%\) -1px\);/);
     expect(rule(landingCss, '.landing-org .org-lines')).toMatch(/stroke: var\(--line-strong\);/);
-    expect(rule(landingCss, '.landing-org-members > .landing-org-node::before')).toMatch(/border-left: 1px solid var\(--line\);/);
+    expect(rule(landingCss, '.landing-org-faces')).toMatch(/flex-wrap: wrap;/);
     expect(rule(landingCss, '.landing-org[data-layout="tree"] .landing-org-teams > li')).toMatch(/padding-left: var\(--org-tree-indent\);/);
   });
 });

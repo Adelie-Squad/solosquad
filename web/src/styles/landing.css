@@ -310,15 +310,16 @@ html:has(.landing[data-mode="live"]) {
   width: 100%;
 }
 
-.landing-pin .landing-act.is-prompt {
-  width: min(100%, 480px);
-}
-
 /* the price cards sit left of the middle so the penguin beside their right edge — far enough out
    for its face to stay clear of them while it turns to act — and the cards are centred together */
 .landing-pin .landing-act.is-relay {
   width: min(60%, 400px);
   margin-right: min(32%, 240px);
+}
+
+/* the gap chart is the picture of its section: a little wider than the price cards */
+.landing-pin .landing-act.is-gap {
+  width: min(64%, 460px);
 }
 
 .landing-pin .landing-act.is-scroll {
@@ -379,71 +380,6 @@ html:has(.landing[data-mode="live"]) {
 .landing-static-mascot {
   display: grid;
   place-items: center;
-}
-
-/* ── hero: the prompt box — it never moves; the penguin patters above its top edge ── */
-.landing-prompt-box {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--card-pad);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-}
-
-.landing-prompt-to {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--accent);
-}
-
-/* a fixed height: the box never grows as it types (the penguin's spot is read from it) */
-.landing-prompt-text {
-  height: calc(2 * 1.5em);
-  margin: 0;
-  overflow: hidden;
-  font-size: 17px;
-  font-weight: 650;
-  line-height: 1.5;
-}
-
-.landing-caret {
-  display: inline-block;
-  width: 2px;
-  height: 1.05em;
-  margin-left: 2px;
-  vertical-align: -0.15em;
-  background: var(--accent);
-  animation: landing-blink 1s steps(1) infinite;
-}
-
-@keyframes landing-blink {
-  50% {
-    opacity: 0;
-  }
-}
-
-.landing-prompt-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin: 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-}
-
-.landing-prompt-send {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
 }
 
 /* price card 1's lower right: the far wing comes down to it in front of the belly, below the face */
@@ -577,8 +513,8 @@ html:has(.landing[data-mode="live"]) {
 .landing-org-top > .landing-org-node {
   grid-column: 2;
   justify-self: start;
-  max-width: calc(100% + 10px);
-  margin-left: -10px; /* half the 20px icon */
+  max-width: calc(100% + 14px);
+  margin-left: -14px; /* half the 28px icon */
 }
 
 .landing-org[data-layout="tree"] .landing-org-top {
@@ -610,12 +546,6 @@ html:has(.landing[data-mode="live"]) {
   font-weight: 600;
 }
 
-.landing-org-count {
-  color: var(--ink-2);
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-
 .landing-org-teams {
   display: grid;
   grid-template-columns: repeat(var(--org-cols, 2), minmax(0, 1fr));
@@ -640,50 +570,6 @@ html:has(.landing[data-mode="live"]) {
   position: relative;
 }
 
-.landing-org-team .landing-org-label::after {
-  position: absolute;
-  top: calc(50% + 4px);
-  bottom: calc(-1 * var(--lorg-gap));
-  left: var(--org-spine-x);
-  border-left: 1px solid var(--line);
-  content: "";
-}
-
-.landing-org-members {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.landing-org-members > .landing-org-node {
-  position: relative;
-  padding-left: var(--org-indent);
-}
-
-.landing-org-members > .landing-org-node::before {
-  position: absolute;
-  top: 0;
-  left: var(--org-spine-x);
-  width: calc(var(--org-indent) - var(--org-spine-x) - 3px);
-  height: 50%;
-  border-bottom: 1px solid var(--line);
-  border-left: 1px solid var(--line);
-  content: "";
-}
-
-.landing-org-members > .landing-org-node:last-child::before {
-  border-bottom-left-radius: 4px;
-}
-
-.landing-org-members > .landing-org-node:not(:last-child)::after {
-  position: absolute;
-  top: 50%;
-  bottom: 0;
-  left: var(--org-spine-x);
-  border-left: 1px solid var(--line);
-  content: "";
-}
-
 .landing-org-node {
   display: flex;
   align-items: center;
@@ -694,27 +580,37 @@ html:has(.landing[data-mode="live"]) {
   font-weight: 600;
 }
 
-.landing-org-name {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
 .landing-org-avatar {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: var(--surface-2);
   color: var(--ink-2);
 }
 
+/* the owner approves: an ok check beside 대표 */
+.landing-org-approves {
+  color: var(--ok);
+}
+
+/* a team's faces in one row under its name (the names are the tooltips and the team modal) */
+.landing-org-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-left: var(--org-indent);
+}
+
+.landing-org-face {
+  display: inline-flex;
+}
+
 .landing-org-avatar .icon {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
 }
 
 .landing-dot {
@@ -1160,121 +1056,149 @@ html:has(.landing[data-mode="live"]) {
   color: var(--accent);
 }
 
-.landing-chips {
-  display: flex;
-  flex-wrap: wrap;
+/* the three domains on the company card: an icon and a word each — no sentence */
+.landing-domains {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.landing-chips .chip {
-  padding: 4px 10px;
-  font-size: 13px;
-}
-
-/* ② 맡기기: the split under the prompt box — three rows' room kept from the start */
-.landing-prompt {
+.landing-domains li {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-}
-
-.landing-split {
-  display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.landing-domains li > .icon {
+  color: var(--accent);
+}
+
+/* ② 왜 지금: the gap chart — two lines from one start, a bracket where they part. A picture: no
+   axis values, no numbers. The plot keeps the SVG's 400 × 240 so the labels sit on its points. */
+.landing-gap {
+  margin: 0;
+  padding: var(--space-6) var(--space-8) var(--space-6) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  opacity: 0.4;
-  transition: opacity 0.3s ease;
 }
 
-.landing-split.is-on {
-  opacity: 1;
+.landing-gap-plot {
+  position: relative;
+  aspect-ratio: 400 / 240;
 }
 
-.landing-split-head {
-  display: flex;
+.landing-gap-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+}
+
+.landing-gap-lines path,
+.landing-gap-lines line {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.landing-gap-axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.landing-gap-team {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.landing-gap-sub {
+  stroke: var(--ink-3);
+  stroke-width: 2.5;
+}
+
+.landing-gap-bracket {
+  stroke: var(--warn);
+  stroke-width: 2;
+  transition: stroke-width 0.3s ease;
+}
+
+.landing-gap.is-on .landing-gap-bracket {
+  stroke-width: 3.5;
+}
+
+.landing-gap-start {
+  fill: var(--ink);
+}
+
+.landing-gap-end.is-team {
+  fill: var(--accent);
+}
+
+.landing-gap-end.is-sub {
+  fill: var(--ink-3);
+}
+
+.landing-gap-label {
+  position: absolute;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.landing-split-rows {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* a row coming in: an accent ring inside it; taken: an ok check (the app's colours) */
-.landing-split-row {
-  display: grid;
-  grid-template-columns: 20px auto minmax(0, 1fr) 16px;
-  align-items: center;
-  column-gap: var(--space-2);
-  min-height: 32px;
-  padding: 0 var(--space-2);
-  border-radius: 8px;
-  outline: 2px solid transparent;
-  outline-offset: -2px;
+  color: var(--ink);
   font-size: 13px;
-  opacity: 0;
-  transition:
-    opacity 0.3s ease,
-    outline-color 0.3s ease;
-}
-
-.landing-split-row.is-on {
-  opacity: 1;
-  outline-color: var(--accent);
-}
-
-.landing-split-row.is-done {
-  opacity: 1;
-}
-
-/* not come in yet: an empty bar keeps its place (what it will say is not shown before the typing ends) */
-.landing-split-row.is-waiting {
-  background: var(--surface-2);
-  opacity: 0.6;
-}
-
-.landing-split-row.is-waiting > * {
-  visibility: hidden;
-}
-
-.landing-split-row b {
   font-weight: 700;
   white-space: nowrap;
 }
 
-.landing-split-row > span:not(.landing-split-mark) {
-  min-width: 0;
-  overflow: hidden;
+/* above the climbing line's end: three penguins and "AI 팀" */
+.landing-gap-label.is-team {
+  translate: -70% calc(-100% - 10px);
+  color: var(--accent);
+}
+
+.landing-gap-faces {
+  display: inline-flex;
+}
+
+.landing-gap-faces > * + * {
+  margin-left: -6px;
+}
+
+/* under the flat line's end: the card that was paid for, and "구독만" */
+.landing-gap-label.is-sub {
+  translate: -70% 10px;
   color: var(--ink-2);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.landing-split-mark {
-  display: grid;
-  place-items: center;
-  color: var(--ok);
+.landing-gap-label.is-gap {
+  translate: 10px -50%;
+  color: var(--warn);
 }
 
-.landing-split-mark .icon {
-  width: 16px;
-  height: 16px;
+.landing-gap.is-on .landing-gap-label.is-gap {
+  font-weight: 800;
+}
+
+.landing-gap-label.is-now {
+  translate: -50% 6px;
+  color: var(--ink-2);
+  font-weight: 600;
 }
 
 /* ③ 조직도: the legend beside the message, the team member's row on the paper */
@@ -1298,10 +1222,6 @@ html:has(.landing[data-mode="live"]) {
   color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
-}
-
-.landing-org-node.is-person .landing-org-name {
-  color: var(--ink-2);
 }
 
 /* ④ 워크플로우: the workflow card — the same rows in all three, the owner's button at the lower left */
@@ -1352,104 +1272,143 @@ html:has(.landing[data-mode="live"]) {
   font-weight: 700;
 }
 
-.landing-workflow-title {
-  margin: 0;
-  color: var(--ink);
-  font-size: 17px;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-}
-
-.landing-workflow-part {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.landing-workflow-label {
-  color: var(--ink-3);
-}
-
-.landing-workflow-steps {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.landing-workflow-steps li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 24px;
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.landing-workflow-people {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px var(--space-2);
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: 8px;
-  background: var(--surface-2);
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.landing-workflow-people > .icon {
-  width: 16px;
-  height: 16px;
-}
-
-.landing-workflow-people b {
-  color: var(--ink);
-  font-weight: 700;
-}
-
-/* an approval: the tier chip (and, for the owner's, its state on the right), what it is under them */
+/* an approval, one row: the tier chip · what it is · (the owner's) its state */
 .landing-workflow-gate {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-1) var(--space-2);
+  gap: var(--space-2);
   padding-top: var(--space-3);
   border-top: 1px solid var(--line);
 }
 
-.landing-workflow-gate > .chip:first-child {
-  justify-self: start;
+.landing-workflow-gate > .chip {
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .landing-workflow-gate-words {
-  display: flex;
-  grid-row: 2;
-  grid-column: 1 / -1;
-  flex-direction: column;
-  gap: 2px;
   min-width: 0;
-  line-height: 1.35;
-}
-
-.landing-workflow-gate > .chip:last-child:not(:first-child) {
-  grid-row: 1;
-  grid-column: 2;
-}
-
-.landing-workflow-gate-words b {
+  overflow: hidden;
   color: var(--ink);
   font-size: 13.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.landing-workflow-gate-words span {
+/* ① the request, one line to Chief — two lines' room in every card, so the button stays put */
+.landing-workflow-ask {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-btn);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.landing-workflow-ask > .icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.landing-workflow-ask > span:last-child {
+  height: calc(2 * 1.45em);
+  overflow: hidden;
+}
+
+/* the line from the request down to Chief */
+.landing-workflow-ask::after {
+  position: absolute;
+  top: 100%;
+  left: 24px;
+  height: var(--space-3);
+  border-left: 1px solid var(--line-strong);
+  content: "";
+}
+
+/* ② · ③ Chief hands it out: Chief on the left, a spine, a tick into each piece of work */
+.landing-workflow-split {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-3);
+}
+
+.landing-workflow-chief {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 12px;
+}
+
+.landing-workflow-chief b {
+  font-weight: 700;
+}
+
+.landing-workflow-chief::after {
+  position: absolute;
+  top: 14px;
+  left: 100%;
+  width: var(--space-3);
+  border-top: 1px solid var(--line-strong);
+  content: "";
+}
+
+.landing-workflow-pieces {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  list-style: none;
+}
+
+.landing-workflow-pieces::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  border-left: 1px solid var(--line-strong);
+  content: "";
+}
+
+.landing-workflow-pieces li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.landing-workflow-pieces li::before {
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--space-4));
+  width: calc(var(--space-4) - 4px);
+  border-top: 1px solid var(--line-strong);
+  content: "";
+}
+
+.landing-workflow-pieces li > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .landing-workflow .landing-approval-actions {
@@ -1681,7 +1640,6 @@ html:has(.landing[data-mode="live"]) {
     padding: var(--space-4) 0;
   }
 
-  .landing-pin .landing-act.is-prompt,
   .landing-pin .landing-act.is-relay {
     width: 100%;
     margin-right: 0;
@@ -1710,18 +1668,29 @@ html:has(.landing[data-mode="live"]) {
 
   /* a phone screen has room for the title and the lead only: the rest of the message stays on the
      stacked page and the larger screens */
-  .landing-pin .landing-slide.is-workflows .landing-points,
-  .landing-pin .landing-slide.is-workflows .landing-aside,
-  .landing-pin .landing-slide.is-org .landing-aside {
+  .landing-pin .landing-slide .landing-points,
+  .landing-pin .landing-slide .landing-aside,
+  .landing-pin .landing-slide.is-org .landing-legend {
     display: none;
+  }
+
+  /* near the gap chart's upper right (the climbing line's end): the far wing reaches it from over the top */
+  .landing-hand.is-gap {
+    top: 8% !important;
+    left: 70% !important;
+  }
+
+  .landing-gap {
+    padding: var(--space-5) var(--space-6) var(--space-4) var(--space-3);
+  }
+
+  .landing-domains li {
+    padding: var(--space-2) var(--space-1);
+    font-size: 13px;
   }
 
   .landing-workflow {
     gap: var(--space-2);
-  }
-
-  .landing-workflow-title {
-    font-size: 15px;
   }
 
   .landing-workflow-tabs button {
@@ -1729,12 +1698,13 @@ html:has(.landing[data-mode="live"]) {
     font-size: 12px;
   }
 
-  .landing-workflow-steps {
-    gap: 2px;
-  }
-
   .landing-workflow-gate {
     padding-top: var(--space-2);
+  }
+
+  /* a narrow card: what the approval is wraps under its chip instead of being cut */
+  .landing-workflow-gate-words {
+    white-space: normal;
   }
 
   .landing-price {
@@ -1747,10 +1717,6 @@ html:has(.landing[data-mode="live"]) {
     flex-direction: row;
     align-items: baseline;
     gap: var(--space-2);
-  }
-
-  .landing-split {
-    padding: var(--space-2) var(--space-3);
   }
 
   .landing-pin .landing-copy {
@@ -1794,14 +1760,6 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-eyebrow {
     margin-bottom: 0;
-  }
-
-  .landing-prompt-box {
-    padding: var(--card-pad-compact);
-  }
-
-  .landing-prompt-text {
-    font-size: 15px;
   }
 
   .landing-act.is-sign {
@@ -1881,15 +1839,9 @@ html:has(.landing[data-mode="live"]) {
   .landing-pin .landing-slide,
   .landing-progress a,
   .landing-progress-mark,
-  .landing-split,
-  .landing-split-row,
   .landing-price,
   .landing-workflow-tabs button,
   .landing-top {
     transition: none;
-  }
-
-  .landing-caret {
-    animation: none;
   }
 }

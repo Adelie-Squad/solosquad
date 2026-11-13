@@ -74,9 +74,15 @@ and the same retention (`RETAIN_DAYS`).
 **The phone** (`phone`, 2026-11-13) is required when a demo account is asked for, stored as digits
 (`scripts/lib/phone.mjs`). Korean numbers get their hyphens as typed (`010-1234-5678`,
 `02-123-4567`, `031-123-4567`, `1588-1234`) and must be 02 + 7–8 digits, 0X(X) + 8–9, or 15xx–19xx
-+ 4; other countries' are 6–15 digits (a country code is just leading digits). The messenger
-(`reach_kind` kakao · wechat + `reach_value`) stays optional and separate; `reach_kind = phone` is
-still accepted from older pages.
++ 4; other countries' are 6–15 digits (a country code is just leading digits).
+Since 2026-11-14 the request has a **country-code select** beside the number (`phone_dial`: `82`
+(default) · `86` · `81` · `1` · `84` · `852` · `886` · `65`, or `other` = the whole international
+number, country code first) and the phone is **stored in E.164** (`+821012345678` — the national
+number's leading 0 dropped; a Korean number may be typed with or without it; a Chinese one is an
+11-digit mobile). `checkDialPhone` · `formatDialPhone` in `phone.mjs`; a request without
+`phone_dial` (an older page) uses the company country (kr → 82, cn → 86, else `other`). The demo
+password still takes the last four digits. **The messenger field is gone** — `reach_kind` ·
+`reach_value` are no longer read or stored (the columns stay, NULL, for older rows).
 
 **The demo account on the request** (2026-11-13, `src/demo.ts` `issueDemo`):
 - **ID** = the request's email, lower case.
@@ -107,7 +113,7 @@ still accepted from older pages.
   - id (ULID), created_at, updated_at
   - the form: company, company_no (digits; `0002`, NULL only on older rows — which may hold
     letters), company_no_kind (`business` · `corporate` · `foreign`; `0004`), business_type,
-    country, contact_name, email, phone (digits; `0004`), reach_kind, reach_value, wants, requests
+    country, contact_name, email, phone (E.164 since 2026-11-14, digits before; `0004`), reach_kind, reach_value (NULL since 2026-11-14 — no messenger field), wants, requests
     (`demo` · `consult`), message
   - consent: consent_required, consent_demo (DM6 ⓑ), consent_version, consent_news
   - locale, source (`landing_hero` · `landing_start` · `pricing` · `demo_login`), opened_at

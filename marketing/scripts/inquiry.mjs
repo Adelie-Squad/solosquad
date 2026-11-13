@@ -15,7 +15,7 @@
 //   node scripts/inquiry.mjs show <id>
 //   node scripts/inquiry.mjs review <id> [--note …]
 //   node scripts/inquiry.mjs reject <id> --note …
-//   node scripts/inquiry.mjs issue <id> [--days 14] [--company-no <number> --kind business|corporate|uscc|foreign] [--phone <digits>]
+//   node scripts/inquiry.mjs issue <id> [--days 14] [--company-no <number> --kind business|corporate|uscc|foreign] [--phone <number, E.164 or digits>]
 //   node scripts/inquiry.mjs extend <id> --days 7          (the request's demo account)
 //   node scripts/inquiry.mjs revoke <id>                   (the request's demo account)
 //   node scripts/inquiry.mjs demo list

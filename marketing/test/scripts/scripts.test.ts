@@ -7,7 +7,7 @@ import { workflowRuns, workflowRunsLine } from '../../scripts/lib/usage.mjs';
 import { lit, parseArgs, sql } from '../../scripts/lib/d1.mjs';
 import { demoPassword, FALLBACK_WORD, wordFor, WORDS } from '../../scripts/lib/demo-password.mjs';
 import { hashPassword, verifyPassword } from '../../scripts/lib/password.mjs';
-import { checkPhone, formatPhone } from '../../scripts/lib/phone.mjs';
+import { checkDialPhone, checkPhone, dialForCountry, dialMax, dialOf, DIAL_CODES, DIAL_OTHER, formatDialPhone, formatPhone, koreaLocal } from '../../scripts/lib/phone.mjs';
 import { checkCode, checkServer } from '../../scripts/lib/routes.mjs';
 import { companyNoOf } from '../../src/validate';
 
@@ -137,6 +137,40 @@ describe('the phone (scripts/lib/phone.mjs)', () => {
     for (const bad of ['23800138000', '1380013800', '138001380001', '010-1234-5678', '+86 0571 8888 8888']) expect(checkPhone(bad, 'cn').ok, bad).toBe(false);
     // the password's last four digits are the same with or without the country code
     expect(demoPassword('li@x.cn', '13800138000')).toBe(`${wordFor('li@x.cn')}8000`);
+  });
+
+  it('the country code (2026-11-14): +82 first, the company country picks the start, E.164 stored', () => {
+    expect(DIAL_CODES[0]).toBe('82');
+    expect(DIAL_CODES).toEqual(['82', '86', '81', '1', '84', '852', '886', '65']);
+    expect([dialForCountry('kr'), dialForCountry('cn'), dialForCountry('other')]).toEqual(['82', '86', null]);
+    // Korea: typed with or without the leading 0 (or pasted with 82), the 0 dropped in storage
+    expect(koreaLocal('1012345678')).toBe('01012345678');
+    expect(koreaLocal('821012345678')).toBe('01012345678');
+    expect(koreaLocal('15881234')).toBe('15881234');
+    expect(['010-1234-5678', '10-1234-5678', '+82 10 1234 5678'].map((p) => checkDialPhone(p, '82'))).toEqual(Array(3).fill({ ok: true, e164: '+821012345678' }));
+    expect(checkDialPhone('02-123-4567', '82')).toEqual({ ok: true, e164: '+8221234567' });
+    expect(formatDialPhone('01012345678', '82')).toBe('010-1234-5678');
+    expect(formatDialPhone('1012345678', '82')).toBe('10-1234-5678');
+    // China: an 11-digit mobile, shown 3-4-4
+    expect(checkDialPhone('138-0013-8000', '86')).toEqual({ ok: true, e164: '+8613800138000' });
+    expect(formatDialPhone('13800138000', '86')).toBe('138-0013-8000');
+    expect(checkDialPhone('0571-8888-8888', '86').ok).toBe(false);
+    // the other listed codes: the national number's length, a leading 0 dropped
+    expect(checkDialPhone('090-1234-5678', '81')).toEqual({ ok: true, e164: '+819012345678' });
+    expect(checkDialPhone('1 202 555 0123', '1')).toEqual({ ok: true, e164: '+12025550123' });
+    expect(checkDialPhone('5123 4567', '852')).toEqual({ ok: true, e164: '+85251234567' });
+    expect(checkDialPhone('0912-345-678', '886')).toEqual({ ok: true, e164: '+886912345678' });
+    expect(checkDialPhone('123', '65').ok).toBe(false);
+    // other: the whole number, country code first
+    expect(checkDialPhone('+44 20 7946 0958', DIAL_OTHER)).toEqual({ ok: true, e164: '+442079460958' });
+    expect(checkDialPhone('0044 20 7946 0958', DIAL_OTHER)).toEqual({ ok: true, e164: '+442079460958' });
+    expect(checkDialPhone('1234', DIAL_OTHER).ok).toBe(false);
+    expect(checkDialPhone('010-1234-5678', '999')).toEqual({ ok: false, error: 'invalid' });
+    expect(checkDialPhone('', '82')).toEqual({ ok: false, error: 'required' });
+    expect(dialMax('82')).toBeGreaterThanOrEqual(11);
+    expect([dialOf('+821012345678'), dialOf('+85251234567'), dialOf('+12025550123'), dialOf('+442079460958')]).toEqual(['82', '852', '1', DIAL_OTHER]);
+    // the demo password keeps the last four digits of the stored number
+    expect(demoPassword('abc@x.kr', '+821012345678')).toBe('apple5678');
   });
 });
 

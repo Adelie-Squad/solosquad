@@ -406,6 +406,7 @@
 
 .inquiry-phone select {
   width: auto;
+  max-width: 9.5em; /* "+82 한국" fits; a longer name is cut, the code stays readable */
 }
 
 .inquiry-wants legend {

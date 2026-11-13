@@ -95,8 +95,8 @@ export async function postInquiry(req: Request, env: Env, ctx?: ExecutionContext
       v.country,
       v.contact_name,
       v.email,
-      v.reach_kind,
-      v.reach_value,
+      null, // reach_kind — the messenger field is gone (2026-11-14); the columns stay for older rows
+      null, // reach_value
       JSON.stringify(v.wants),
       JSON.stringify(v.requests),
       v.message,
