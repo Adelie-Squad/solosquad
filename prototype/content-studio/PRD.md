@@ -8,7 +8,7 @@
 |---|---|---|
 | 레퍼런스 분석 | OpenMontage `video_analyzer`(yt-dlp · scene detect · 키프레임) + faster-whisper + 1초 컨택트시트 육안 판독 | 리포 밖 `~/Dev/OpenMontage` (AGPL-3.0 — 코드 복사 금지) |
 | 이미지 에셋 | 비즈라우터 `chat/completions` 이미지 편집(기본 `google/gemini-3.1-flash-image`) — 실제 제품 컷 위주, AI 는 배경·연출 컷만 | `scripts/gen-assets.mjs` |
-| 내레이션 | 비즈라우터 `/audio/speech`(`openai/gpt-4o-mini-tts`, `instructions` 로 화자·호흡·강조 지시). `voice.mode: "script"` 면 대본 전체를 한 번에 읽혀 문장 사이 호흡을 살리고, 컷 경계는 Whisper 단어 정렬 → 직전 무음에 맞춘다(없으면 무음 DP). 배속은 걸지 않는다(억양이 납작해짐) · -14 LUFS. Gemini TTS 는 비즈라우터에서 `instructions` 를 못 받고 지시문을 소리 내 읽어서 제외 | `scripts/gen-assets.mjs`, `scripts/words.py` |
+| 내레이션 | 비즈라우터 `/audio/speech`(`openai/gpt-4o-mini-tts`, `instructions` 로 화자·호흡·강조 지시). `voice.mode: "script"` 면 대본 전체를 한 번에 읽혀 문장 사이 호흡을 살리고, 컷 경계는 Whisper 단어 정렬 → 직전 무음에 맞춘다(없으면 무음 DP). 문장 사이 숨이 `breathSec` 보다 짧으면 무음을 끼워 넣고, `takes` 번 읽혀 비즈라우터 STT 일치도가 가장 높은 녹음을 쓴다. 배속은 걸지 않는다(억양이 납작해짐) · -14 LUFS. Gemini TTS 는 비즈라우터에서 `instructions` 를 못 받고 지시문을 소리 내 읽어서 제외 | `scripts/gen-assets.mjs`, `scripts/words.py` |
 | 렌더 | Remotion 4 (1080x1920, 30fps) | `src/` |
 | 업로드 | 채널 정책상 TikTok 은 사용자 업로드, YouTube 는 API 가능 → 업로드 키트(캡션·태그·링크) | `public/local/upload-kit.md` |
 

@@ -109,7 +109,12 @@ function silenceList(file) {
   return starts.map((s, i) => ({ start: s, end: ends[i] ?? s })).filter((g) => g.end > g.start);
 }
 
-const strip = (s) => s.replace(/[\s,.!?·~'"]/g, '');
+// 글자 수 비교용 정규화 — Whisper 는 '4리터'를 '4L' 로 적는 등 표기가 대본과 달라서 같은 꼴로 맞춘다
+const strip = (s) =>
+  s
+    .replace(/[\s,.!?·~'"]/g, '')
+    .replace(/리터/g, 'L')
+    .replace(/[lL]/g, 'L');
 
 // 1순위: 단어 정렬 — Whisper 단어 목록에서 각 줄의 첫 단어를 글자 수로 찾고, 그 단어 바로 앞 무음 가운데를 경계로.
 // 무음 길이만으로는 문장 사이 숨과 쉼표 쉼을 못 가르는 경우가 있어서(실측: 둘 다 0.2초) 텍스트 위치를 기준으로 삼는다.
@@ -184,6 +189,63 @@ function splitByBreaths(file, lines) {
   return [0, ...picked, total];
 }
 
+// 문장 사이 숨이 breathSec 보다 짧으면 그 경계에 무음을 끼워 넣는다 — TTS 가 숨 없이 붙여 읽을 때가 있어서(실측).
+// 반환: 새 파일 경로와 옮겨진 경계(끼운 무음의 가운데).
+function padBreaths(file, bounds, breathSec) {
+  const gaps = silenceList(file);
+  const dir = path.join(path.dirname(file), '.pad');
+  fs.mkdirSync(dir, { recursive: true });
+  const parts = [];
+  const newBounds = [0];
+  let shift = 0;
+  for (let i = 0; i < bounds.length - 1; i++) {
+    const seg = path.join(dir, `seg${i}.wav`);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-ss', String(bounds[i]), '-to', String(bounds[i + 1]), '-ar', '24000', '-ac', '1', seg]);
+    parts.push(seg);
+    if (i === bounds.length - 2) break;
+    const b = bounds[i + 1];
+    const gap = gaps.find((g) => g.start - 0.02 <= b && b <= g.end + 0.02);
+    const pad = Math.max(0, breathSec - (gap ? gap.end - gap.start : 0));
+    if (pad > 0.01) {
+      const sil = path.join(dir, `sil${i}.wav`);
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'anullsrc=r=24000:cl=mono', '-t', pad.toFixed(3), sil]);
+      parts.push(sil);
+    }
+    shift += pad;
+    newBounds.push(b + shift - pad / 2);
+  }
+  const list = path.join(dir, 'list.txt');
+  fs.writeFileSync(list, parts.map((p) => `file '${p}'`).join('\n'));
+  const out = file.replace(/\.mp3$/, '.paced.mp3');
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, out]);
+  newBounds.push(durationSec(out));
+  fs.rmSync(dir, { recursive: true, force: true });
+  return { file: out, bounds: newBounds };
+}
+
+// 비즈라우터 STT — 녹음 고르기용
+async function transcribe(file) {
+  const form = new FormData();
+  form.append('model', 'openai/gpt-transcribe');
+  form.append('language', 'ko');
+  form.append('file', new Blob([fs.readFileSync(file)]), path.basename(file));
+  const r = await fetch(`${BASE}/audio/transcriptions`, { method: 'POST', headers: AUTH, body: form });
+  if (!r.ok) throw new Error(`stt ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return (await r.json()).text ?? '';
+}
+
+// 대본과 전사의 글자 단위 일치도(1 − 편집거리/길이). 숫자는 한글로 읽힌 것과 비교하려고 지운다.
+function similarity(a, b) {
+  const n = (s) => strip(s).replace(/[0-9]/g, '');
+  const x = n(a);
+  const y = n(b);
+  const d = Array.from({ length: x.length + 1 }, (_, i) => [i, ...new Array(y.length).fill(0)]);
+  for (let j = 1; j <= y.length; j++) d[0][j] = j;
+  for (let i = 1; i <= x.length; i++)
+    for (let j = 1; j <= y.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (x[i - 1] === y[j - 1] ? 0 : 1));
+  return 1 - d[x.length][y.length] / Math.max(x.length, 1);
+}
+
 function durationSec(file) {
   return Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file]).toString().trim());
 }
@@ -231,17 +293,35 @@ if (scenario.voice.mode === 'script') {
   const raw = path.join(outDir, 'tts', `script-${voiceKey}.raw.mp3`);
   const file = path.join(outDir, 'tts', `script-${voiceKey}.mp3`);
   if (FORCE || !fs.existsSync(raw)) {
-    console.log(`[tts] script (${voiceKey}) — ${lines.length} lines`);
-    fs.writeFileSync(raw, await tts(lines.join('\n'), scenario.voice));
+    // 같은 대본도 녹음마다 발음이 조금씩 다르다 — takes 번 읽혀 STT 일치도가 가장 높은 녹음을 쓴다
+    const takes = scenario.voice.takes ?? 1;
+    const script = lines.join('\n');
+    let bestScore = -1;
+    for (let t = 1; t <= takes; t++) {
+      const takeRaw = raw.replace(/\.raw\.mp3$/, `.take${t}.raw.mp3`);
+      const takeFile = takeRaw.replace(/\.raw\.mp3$/, '.mp3');
+      fs.writeFileSync(takeRaw, await tts(script, scenario.voice));
+      trimAudio(takeRaw, takeFile);
+      const heard = takes > 1 ? await transcribe(takeFile) : script;
+      const score = similarity(script, heard);
+      console.log(`[tts] script (${voiceKey}) take ${t}/${takes} — 일치도 ${(score * 100).toFixed(1)}%  "${heard}"`);
+      if (score > bestScore) {
+        bestScore = score;
+        fs.copyFileSync(takeRaw, raw);
+      }
+      fs.rmSync(takeFile, { force: true });
+    }
   }
   trimAudio(raw, file);
-  const bounds = splitByWords(file, lines) ?? splitByBreaths(file, lines);
+  const found = splitByWords(file, lines) ?? splitByBreaths(file, lines);
+  const paced = padBreaths(file, found, scenario.voice.breathSec ?? 0.3);
+  const bounds = paced.bounds;
   const lead = scenario.voice.leadSec ?? 0.15;
   cuts.forEach((c, i) => {
     const end = i === cuts.length - 1 ? bounds[i + 1] + (scenario.cuts[i].tailSec ?? 1.0) : bounds[i + 1];
     c.durationInFrames = Math.round((end - bounds[i] + (i === 0 ? lead : 0)) * FPS);
   });
-  narration = { src: rel(file), startFrame: Math.round(lead * FPS) };
+  narration = { src: rel(paced.file), startFrame: Math.round(lead * FPS) };
   console.log('boundaries', bounds.map((b) => b.toFixed(2)).join(' '));
 }
 
