@@ -137,14 +137,40 @@ function splitByWords(file, lines) {
       wordChars += strip(words[wi].w).length;
       wi++;
     }
-    const start = words[wi].s;
-    const prev = bounds[bounds.length - 1];
-    const near = gaps.filter((g) => g.end > prev + 0.5 && Math.abs((g.start + g.end) / 2 - start) < 0.9);
-    const gap = near.sort((a, b) => Math.abs((a.start + a.end) / 2 - start) - Math.abs((b.start + b.end) / 2 - start))[0];
-    bounds.push(gap ? (gap.start + gap.end) / 2 : Math.max(prev + 0.5, start - 0.05));
+    // 이전 줄 마지막 단어(wi-1)와 다음 줄 첫 단어(wi) 사이 — 이 둘 사이에 있는 무음만 경계 후보.
+    // (예전엔 다음 단어 시작 ±0.9초 안 무음을 아무거나 잡아서, 문장 안 쉼표 쉼에 걸려 말이 끝나기 전에 컷이 넘어갔다)
+    const last = words[wi - 1];
+    const next = words[wi];
+    const lo = last ? last.s + (last.e - last.s) * 0.6 : 0;
+    const hi = next.s + 0.25;
+    const inside = gaps.filter((g) => g.start >= lo && g.end <= hi + 0.2);
+    const gap = inside.sort((a, b) => b.end - b.start - (a.end - a.start))[0];
+    // 무음이 없으면(숨 없이 붙여 읽음) 단어 경계 ±0.2초에서 소리가 가장 작은 곳을 자른다 — padBreaths 가 숨을 끼운다
+    const cut = gap ? (gap.start + gap.end) / 2 : quietestPoint(file, (last?.e ?? next.s) - 0.2, next.s + 0.2);
+    bounds.push(Math.max(bounds[bounds.length - 1] + 0.5, cut));
   }
   bounds.push(total);
   return bounds;
+}
+
+// [from, to] 구간에서 10ms 단위 RMS 가 가장 작은 시점
+function quietestPoint(file, from, to) {
+  const start = Math.max(0, from);
+  const pcm = execFileSync('ffmpeg', ['-v', 'error', '-ss', String(start), '-to', String(to), '-i', file, '-f', 's16le', '-ac', '1', '-ar', '16000', '-']);
+  const samples = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.length / 2));
+  const win = 160;
+  let best = start;
+  let bestRms = Infinity;
+  for (let i = 0; i + win <= samples.length; i += win) {
+    let sum = 0;
+    for (let j = i; j < i + win; j++) sum += samples[j] * samples[j];
+    const rms = Math.sqrt(sum / win);
+    if (rms < bestRms) {
+      bestRms = rms;
+      best = start + (i + win / 2) / 16000;
+    }
+  }
+  return best;
 }
 
 // 2순위(대체): 무음 DP. 문장 사이 숨은 대개 문장 안 쉼표 쉼보다 길다.
@@ -322,6 +348,74 @@ if (scenario.voice.mode === 'script') {
     c.durationInFrames = Math.round((end - bounds[i] + (i === 0 ? lead : 0)) * FPS);
   });
   narration = { src: rel(paced.file), startFrame: Math.round(lead * FPS) };
+  console.log('boundaries', bounds.map((b) => b.toFixed(2)).join(' '));
+}
+
+// voice.mode = "lines": 문장마다 따로 읽혀(앞 문장을 지시문에 맥락으로 넣어 억양을 잇는다) breathSec 숨을 두고 이어 붙인다.
+// 경계가 정확히 알려져 있어서 말하는 도중에 컷이 넘어갈 수 없다. 한 번에 읽은 녹음에서 경계를 찾는 건
+// Whisper 단어 시각이 0.2~0.4초씩 들쭉날쭉해서 문장 끝 음절이 다음 컷으로 넘어갔다(실측).
+if (scenario.voice.mode === 'lines') {
+  const lines = scenario.cuts.map((c) => c.narration ?? '');
+  const voiceKey = `${scenario.voice.voice}`;
+  const takes = scenario.voice.takes ?? 1;
+  const breath = scenario.voice.breathSec ?? 0.35;
+  const dir = path.join(outDir, 'tts', `lines-${voiceKey}`);
+  fs.mkdirSync(dir, { recursive: true });
+  const parts = [];
+  const bounds = [0];
+  let at = 0;
+  for (const [i, line] of lines.entries()) {
+    const raw = path.join(dir, `${i + 1}.raw.mp3`);
+    const file = path.join(dir, `${i + 1}.wav`);
+    if (FORCE || !fs.existsSync(raw)) {
+      const context =
+        `\nContext: 9문장짜리 광고 내레이션 중 ${i + 1}번째 문장이다.` +
+        (i > 0 ? ` 바로 앞 문장은 "${lines[i - 1]}" — 거기서 자연스럽게 이어지는 억양과 같은 에너지로.` : ' 첫 문장이니 시선을 끄는 밝은 첫마디로.') +
+        (i === lines.length - 1 ? ' 마지막 문장이니 끝을 확실히 내려 마무리한다.' : '');
+      const voice = { ...scenario.voice, instructions: scenario.voice.instructions + context };
+      let bestScore = -1;
+      for (let t = 1; t <= takes; t++) {
+        const takeRaw = raw.replace(/\.raw\.mp3$/, `.take${t}.mp3`);
+        fs.writeFileSync(takeRaw, await tts(line, voice));
+        const heard = takes > 1 ? await transcribe(takeRaw) : line;
+        const score = similarity(line, heard);
+        console.log(`[tts] ${i + 1}/${lines.length} take ${t} — ${(score * 100).toFixed(0)}%  "${heard}"`);
+        if (score > bestScore) {
+          bestScore = score;
+          fs.copyFileSync(takeRaw, raw);
+        }
+        fs.rmSync(takeRaw, { force: true });
+        if (score >= 0.999) break;
+      }
+    }
+    // 뒤 무음만 보수적으로 자르고 24kHz 모노로. 앞은 자르지 않는다 — '저' 같은 약한 첫소리가 잘려 '다'로 들렸다(실측).
+    // 음량은 이어 붙인 뒤 한 번에 맞춘다(문장마다 맞추면 들쭉날쭉)
+    const trimEnd = 'areverse,silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.05,areverse';
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-af', trimEnd, '-ar', '24000', '-ac', '1', file]);
+    parts.push(file);
+    at += durationSec(file);
+    if (i < lines.length - 1) {
+      const sil = path.join(dir, `breath${i + 1}.wav`);
+      execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'anullsrc=r=24000:cl=mono', '-t', String(breath), sil]);
+      parts.push(sil);
+      bounds.push(at + breath / 2);
+      at += breath;
+    }
+  }
+  const list = path.join(dir, 'list.txt');
+  fs.writeFileSync(list, parts.map((p) => `file '${p}'`).join('\n'));
+  const joined = path.join(dir, 'joined.wav');
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, joined]);
+  const file = path.join(outDir, 'tts', `lines-${voiceKey}.mp3`);
+  // 1패스 loudnorm 은 피크를 넘길 때가 있어(실측 -0.6dB, 0dB 샘플) 리미터로 -2dB 아래를 보장한다
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', joined, '-af', 'loudnorm=I=-16:TP=-2:LRA=11,alimiter=limit=0.79:level=false', file]);
+  bounds.push(durationSec(file));
+  const lead = scenario.voice.leadSec ?? 0.15;
+  cuts.forEach((c, i) => {
+    const end = i === cuts.length - 1 ? bounds[i + 1] + (scenario.cuts[i].tailSec ?? 1.0) : bounds[i + 1];
+    c.durationInFrames = Math.round((end - bounds[i] + (i === 0 ? lead : 0)) * FPS);
+  });
+  narration = { src: rel(file), startFrame: Math.round(lead * FPS) };
   console.log('boundaries', bounds.map((b) => b.toFixed(2)).join(' '));
 }
 

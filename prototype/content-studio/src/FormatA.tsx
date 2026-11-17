@@ -143,7 +143,8 @@ export function FormatA({ spec }: { spec: Spec }) {
 
       {spec.narration ? (
         <Sequence from={spec.narration.startFrame}>
-          <Audio src={staticFile(spec.narration.src)} />
+          {/* Remotion 믹스·AAC 인코딩에서 피크가 0dB 까지 올라가서(실측) 여유를 둔다 */}
+          <Audio src={staticFile(spec.narration.src)} volume={0.85} />
         </Sequence>
       ) : null}
 
