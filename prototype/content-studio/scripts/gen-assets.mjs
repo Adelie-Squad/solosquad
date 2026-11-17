@@ -249,6 +249,13 @@ function padBreaths(file, bounds, breathSec) {
   return { file: out, bounds: newBounds };
 }
 
+// 끝 억양 비율(말 끝 F0 / 그 앞 F0) — scripts/pitch.py, Whisper 와 같은 파이썬(OpenMontage venv)
+function endRise(file) {
+  const py = process.env.WHISPER_PYTHON || path.join(process.env.HOME ?? '', 'Dev/OpenMontage/.venv/bin/python');
+  const r = spawnSync(py, [path.join(ROOT, 'scripts', 'pitch.py'), file], { encoding: 'utf-8' });
+  return r.status === 0 ? Number(r.stdout.trim()) : NaN;
+}
+
 // 비즈라우터 STT — 녹음 고르기용
 async function transcribe(file) {
   const form = new FormData();
@@ -279,6 +286,10 @@ function durationSec(file) {
 const scenarioPath = path.resolve(ROOT, process.argv.find((a) => a.endsWith('.json')) ?? 'public/local/scenario.json');
 const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf-8'));
 const outDir = path.dirname(scenarioPath);
+// scenario.json → spec.json, scenario-b.json → spec-b.json (형식마다 시나리오 하나)
+const base = path.basename(scenarioPath, '.json');
+const specName = `${base.replace(/^scenario/, 'spec')}.json`;
+const ttsPrefix = base === 'scenario' ? '' : `${base}-`;
 const rel = (f) => path.relative(PUBLIC, f).split(path.sep).join('/');
 fs.mkdirSync(path.join(outDir, 'gen'), { recursive: true });
 fs.mkdirSync(path.join(outDir, 'tts'), { recursive: true });
@@ -309,7 +320,8 @@ for (const [i, cut] of scenario.cuts.entries()) {
     audio = rel(file);
     sec = Math.max(sec, durationSec(file) + TAIL_SEC);
   }
-  cuts.push({ id, image, caption: cut.caption ?? cut.narration ?? '', audio, durationInFrames: Math.round(sec * FPS), focus: cut.focus ?? 'center' });
+  // meta: 형식별 화면 정보(B 안의 카드 종류 · 체크 번호 등) — 렌더러가 그대로 받는다
+  cuts.push({ id, image, caption: cut.caption ?? cut.narration ?? '', audio, durationInFrames: Math.round(sec * FPS), focus: cut.focus ?? 'center', meta: cut.meta ?? null });
 }
 
 // voice.mode = "script": 대본 전체를 한 번에 읽혀 문장 사이 호흡·억양을 살리고, 컷 길이는 숨 구간에 맞춘다
@@ -360,7 +372,7 @@ if (scenario.voice.mode === 'lines') {
   const voiceKey = `${scenario.voice.voice}`;
   const takes = scenario.voice.takes ?? 1;
   const breath = scenario.voice.breathSec ?? 0.35;
-  const dir = path.join(outDir, 'tts', `lines-${voiceKey}`);
+  const dir = path.join(outDir, 'tts', `${ttsPrefix}lines-${voiceKey}`);
   fs.mkdirSync(dir, { recursive: true });
   const parts = [];
   const bounds = [0];
@@ -370,29 +382,44 @@ if (scenario.voice.mode === 'lines') {
     const file = path.join(dir, `${i + 1}.wav`);
     if (FORCE || !fs.existsSync(raw)) {
       const context =
-        `\nContext: 9문장짜리 광고 내레이션 중 ${i + 1}번째 문장이다.` +
+        `\nContext: ${lines.length}문장짜리 광고 내레이션 중 ${i + 1}번째 문장이다.` +
         (i > 0 ? ` 바로 앞 문장은 "${lines[i - 1]}" — 거기서 자연스럽게 이어지는 억양과 같은 에너지로.` : ' 첫 문장이니 시선을 끄는 밝은 첫마디로.') +
-        (i === lines.length - 1 ? ' 마지막 문장이니 끝을 확실히 내려 마무리한다.' : '');
+        (i === lines.length - 1 ? ' 마지막 문장이니 끝을 확실히 내려 마무리한다.' : '') +
+        // 문장별 추가 지시(예: 연결형이라 끝을 내리지 말 것, 빠르게)
+        (scenario.cuts[i].voiceNote ? `\nThis line: ${scenario.cuts[i].voiceNote}` : '');
       const voice = { ...scenario.voice, instructions: scenario.voice.instructions + context };
-      let bestScore = -1;
-      for (let t = 1; t <= takes; t++) {
+      let bestScore = -Infinity;
+      const lineTakes = scenario.cuts[i].takes ?? takes;
+      for (let t = 1; t <= lineTakes; t++) {
         const takeRaw = raw.replace(/\.raw\.mp3$/, `.take${t}.mp3`);
         fs.writeFileSync(takeRaw, await tts(line, voice));
-        const heard = takes > 1 ? await transcribe(takeRaw) : line;
-        const score = similarity(line, heard);
-        console.log(`[tts] ${i + 1}/${lines.length} take ${t} — ${(score * 100).toFixed(0)}%  "${heard}"`);
+        const heard = lineTakes > 1 ? await transcribe(takeRaw) : line;
+        const accuracy = similarity(line, heard);
+        // endPitch "up"(연결형): 발음 정확도가 같으면 끝이 덜 내려간 녹음을 고른다 — 지시문만으론 끝 억양이 안 바뀌었다(실측)
+        const rise = scenario.cuts[i].endPitch === 'up' ? endRise(takeRaw) : 0;
+        const score = accuracy + (Number.isFinite(rise) ? rise * 0.5 : 0);
+        console.log(`[tts] ${i + 1}/${lines.length} take ${t} — ${(accuracy * 100).toFixed(0)}%${rise ? ` 끝억양 ${rise.toFixed(2)}` : ''}  "${heard}"`);
         if (score > bestScore) {
           bestScore = score;
           fs.copyFileSync(takeRaw, raw);
         }
         fs.rmSync(takeRaw, { force: true });
-        if (score >= 0.999) break;
+        if (accuracy >= 0.999 && !scenario.cuts[i].endPitch) break;
       }
     }
     // 뒤 무음만 보수적으로 자르고 24kHz 모노로. 앞은 자르지 않는다 — '저' 같은 약한 첫소리가 잘려 '다'로 들렸다(실측).
     // 음량은 이어 붙인 뒤 한 번에 맞춘다(문장마다 맞추면 들쭉날쭉)
     const trimEnd = 'areverse,silenceremove=start_periods=1:start_threshold=-55dB:start_silence=0.05,areverse';
-    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-af', trimEnd, '-ar', '24000', '-ac', '1', file]);
+    // 문장별 손보기: maxPause — 문장 안 쉼을 이 길이로 줄인다(어절마다 길게 끊어 읽을 때),
+    // tempo — 이 문장만 살짝 빠르게(1.1 안팎. 전체에 걸면 억양이 납작해져서 문장 단위로만)
+    const { maxPause, tempo } = scenario.cuts[i];
+    const filters = [
+      // -50dB 로는 TTS 의 어절 사이 쉼(잔향)이 무음으로 안 잡혀 그대로 남았다(실측 0.26초) → -42dB
+      maxPause ? `silenceremove=stop_periods=-1:stop_duration=${maxPause}:stop_threshold=-42dB:stop_silence=${maxPause}` : null,
+      trimEnd,
+      tempo ? `atempo=${tempo}` : null,
+    ].filter(Boolean);
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-af', filters.join(','), '-ar', '24000', '-ac', '1', file]);
     parts.push(file);
     at += durationSec(file);
     if (i < lines.length - 1) {
@@ -407,7 +434,7 @@ if (scenario.voice.mode === 'lines') {
   fs.writeFileSync(list, parts.map((p) => `file '${p}'`).join('\n'));
   const joined = path.join(dir, 'joined.wav');
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, joined]);
-  const file = path.join(outDir, 'tts', `lines-${voiceKey}.mp3`);
+  const file = path.join(outDir, 'tts', `${ttsPrefix}lines-${voiceKey}.mp3`);
   // 1패스 loudnorm 은 피크를 넘길 때가 있어 리미터로 약 -1.5dB 아래를 보장한다
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', joined, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false', file]);
   bounds.push(durationSec(file));
@@ -420,7 +447,8 @@ if (scenario.voice.mode === 'lines') {
   console.log('boundaries', bounds.map((b) => b.toFixed(2)).join(' '));
 }
 
-const spec = { title: scenario.title, footer: scenario.footer, accent: scenario.accent, narration, cuts };
-fs.writeFileSync(path.join(outDir, 'spec.json'), JSON.stringify(spec, null, 2));
+// labels: 형식 B 체크리스트 항목명(짧은 말) — 없으면 렌더러가 item 자막을 쓴다
+const spec = { title: scenario.title, footer: scenario.footer, accent: scenario.accent, ...(scenario.labels ? { labels: scenario.labels } : {}), narration, cuts };
+fs.writeFileSync(path.join(outDir, specName), JSON.stringify(spec, null, 2));
 const total = cuts.reduce((s, c) => s + c.durationInFrames, 0) / FPS;
-console.log(`spec.json — ${cuts.length} cuts, ${total.toFixed(1)}s`);
+console.log(`${specName} — ${cuts.length} cuts, ${total.toFixed(1)}s`);

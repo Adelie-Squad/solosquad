@@ -1,0 +1,14 @@
+{
+  "title": ["모모 키친 살 때", "3가지만 체크!"],
+  "accent": "#FFD43B",
+  "footer": "momo-kitchen.example",
+  "labels": ["예시 항목 하나", "예시 항목 둘", "마지막 예시"],
+  "cuts": [
+    { "id": "b1", "image": null, "caption": "가상 브랜드 예시 — 훅", "audio": null, "durationInFrames": 75, "meta": { "kind": "hook" } },
+    { "id": "b2", "image": null, "caption": "마지막 건 끝까지 보세요", "audio": null, "durationInFrames": 60, "meta": { "kind": "preview", "highlight": ["마지막"] } },
+    { "id": "b3", "image": null, "caption": "첫째, 예시 항목 하나", "audio": null, "durationInFrames": 60, "meta": { "kind": "item", "n": 1 } },
+    { "id": "b4", "image": null, "caption": "둘째, 예시 항목 둘", "audio": null, "durationInFrames": 60, "meta": { "kind": "item", "n": 2 } },
+    { "id": "b5", "image": null, "caption": "마지막, 예시", "audio": null, "durationInFrames": 60, "meta": { "kind": "item", "n": 3 } },
+    { "id": "b6", "image": null, "caption": "댓글로 알려 주세요", "audio": null, "durationInFrames": 75, "meta": { "kind": "cta" } }
+  ]
+}

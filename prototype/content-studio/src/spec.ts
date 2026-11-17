@@ -14,6 +14,15 @@ export type Cut = {
   audio?: string | null;
   durationInFrames: number;
   focus?: Focus;
+  /** 형식별 화면 정보 — B 안: 카드 종류 · 체크 번호 · 노랑 강조어 */
+  meta?: CutMeta | null;
+};
+
+export type CutMeta = {
+  kind?: 'hook' | 'preview' | 'item' | 'cta';
+  /** item 의 체크리스트 번호(1부터) */
+  n?: number;
+  highlight?: string[];
 };
 
 export type Spec = {
@@ -21,6 +30,8 @@ export type Spec = {
   title: [string, string];
   accent: string;
   footer: string;
+  /** 형식 B 체크리스트 항목명 */
+  labels?: string[];
   /** 대본 한 번 읽기(voice.mode = script) — 있으면 컷별 audio 대신 이 한 트랙을 튼다 */
   narration?: { src: string; startFrame: number } | null;
   cuts: Cut[];
@@ -28,8 +39,9 @@ export type Spec = {
 
 export const FPS = 30;
 
-export async function loadSpec(): Promise<Spec> {
-  for (const file of ['local/spec.json', 'example/spec.json']) {
+/** name: 'spec'(형식 A) · 'spec-b'(형식 B) */
+export async function loadSpec(name = 'spec'): Promise<Spec> {
+  for (const file of [`local/${name}.json`, `example/${name}.json`]) {
     const res = await fetch(staticFile(file));
     if (res.ok) return (await res.json()) as Spec;
   }
