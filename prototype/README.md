@@ -38,3 +38,4 @@ SoloSquad 의 에이전트 팀으로 만들고, SoloSquad 자체가 그 과정�
 | 프로젝트 | 종류 | 내용 | 스택 |
 |---|---|---|---|
 | [`ax-agent-web/`](./ax-agent-web/PRD.md) | client | 소규모 비즈니스용 AI 직원 '하루' 웹 인터페이스 (랜딩 + Arc 레이아웃 서비스 페이지) | TypeScript · React · Vite |
+| [`content-studio/`](./content-studio/PRD.md) | feature | 숏폼 콘텐츠 자동화 — 레퍼런스 분석 → 이미지 에셋 · TTS → 9:16 렌더 → 업로드 키트 | Remotion · 비즈라우터 |

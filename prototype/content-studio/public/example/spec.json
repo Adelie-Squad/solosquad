@@ -1,0 +1,10 @@
+{
+  "title": ["모모 키친,", "오늘 저녁은 이걸로"],
+  "accent": "#C6FF3D",
+  "footer": "momo-kitchen.example",
+  "cuts": [
+    { "id": "c1", "image": null, "caption": "가상 브랜드 예시 — 이미지 자리", "audio": null, "durationInFrames": 75 },
+    { "id": "c2", "image": null, "caption": "public/local/spec.json 이 있으면 그걸 씁니다", "audio": null, "durationInFrames": 75 },
+    { "id": "c3", "image": null, "caption": "프로필 링크에서 확인하세요", "audio": null, "durationInFrames": 90 }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "content-studio",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "assets": "node scripts/gen-assets.mjs",
+    "render": "remotion render FormatA out/format-a.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.544",
+    "@remotion/google-fonts": "4.0.544",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "remotion": "4.0.544"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "typescript": "5.9.3"
+  }
+}

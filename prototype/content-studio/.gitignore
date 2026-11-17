@@ -1,0 +1,4 @@
+node_modules/
+out/
+# 실제 고객사 이미지 · 생성 에셋 · 스펙 — 공개 리포에 올리지 않는다
+public/local/
