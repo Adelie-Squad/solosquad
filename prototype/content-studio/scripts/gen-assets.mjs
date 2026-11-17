@@ -297,7 +297,8 @@ for (const [i, cut] of scenario.cuts.entries()) {
   }
   let audio = null;
   let sec = cut.seconds ?? MIN_CUT_SEC;
-  if (cut.narration && scenario.voice.mode !== 'script') {
+  // 컷별 음성은 mode 를 안 정했을 때만. (예전엔 '!== script' 라서 lines 모드에서도 붙어 음성이 두 겹으로 났다)
+  if (cut.narration && !scenario.voice.mode) {
     const raw = path.join(outDir, 'tts', `${id}.raw.mp3`);
     const file = path.join(outDir, 'tts', `${id}.mp3`);
     if (FORCE || !fs.existsSync(raw)) {
@@ -407,8 +408,8 @@ if (scenario.voice.mode === 'lines') {
   const joined = path.join(dir, 'joined.wav');
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, joined]);
   const file = path.join(outDir, 'tts', `lines-${voiceKey}.mp3`);
-  // 1패스 loudnorm 은 피크를 넘길 때가 있어(실측 -0.6dB, 0dB 샘플) 리미터로 -2dB 아래를 보장한다
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', joined, '-af', 'loudnorm=I=-16:TP=-2:LRA=11,alimiter=limit=0.79:level=false', file]);
+  // 1패스 loudnorm 은 피크를 넘길 때가 있어 리미터로 약 -1.5dB 아래를 보장한다
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', joined, '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=false', file]);
   bounds.push(durationSec(file));
   const lead = scenario.voice.leadSec ?? 0.15;
   cuts.forEach((c, i) => {

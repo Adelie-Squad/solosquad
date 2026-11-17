@@ -135,7 +135,8 @@ export function FormatA({ spec }: { spec: Spec }) {
             <Series.Sequence key={cut.id} durationInFrames={cut.durationInFrames}>
               <Caption text={cut.caption} last={last} />
               {last ? <LinkPill accent={spec.accent} /> : null}
-              {cut.audio ? <Audio src={staticFile(cut.audio)} /> : null}
+              {/* 한 트랙 내레이션이 있으면 컷별 음성은 틀지 않는다 — 둘 다 틀면 두 겹이 된다 */}
+              {cut.audio && !spec.narration ? <Audio src={staticFile(cut.audio)} /> : null}
             </Series.Sequence>
           );
         })}
@@ -143,8 +144,7 @@ export function FormatA({ spec }: { spec: Spec }) {
 
       {spec.narration ? (
         <Sequence from={spec.narration.startFrame}>
-          {/* Remotion 믹스·AAC 인코딩에서 피크가 0dB 까지 올라가서(실측) 여유를 둔다 */}
-          <Audio src={staticFile(spec.narration.src)} volume={0.85} />
+          <Audio src={staticFile(spec.narration.src)} />
         </Sequence>
       ) : null}
 
