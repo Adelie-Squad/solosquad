@@ -4,7 +4,7 @@
 
 import { loadFont as loadDisplay } from '@remotion/google-fonts/BlackHanSans';
 import { loadFont as loadBody } from '@remotion/google-fonts/NotoSansKR';
-import { AbsoluteFill, Audio, Img, Series, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Img, Sequence, Series, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import type { Cut, Focus, Spec } from './spec';
 
 const { fontFamily: display } = loadDisplay();
@@ -140,6 +140,12 @@ export function FormatA({ spec }: { spec: Spec }) {
           );
         })}
       </Series>
+
+      {spec.narration ? (
+        <Sequence from={spec.narration.startFrame}>
+          <Audio src={staticFile(spec.narration.src)} />
+        </Sequence>
+      ) : null}
 
       {/* 하단 도메인 표기 */}
       <div

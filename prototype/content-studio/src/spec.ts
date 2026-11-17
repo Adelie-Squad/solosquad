@@ -21,6 +21,8 @@ export type Spec = {
   title: [string, string];
   accent: string;
   footer: string;
+  /** 대본 한 번 읽기(voice.mode = script) — 있으면 컷별 audio 대신 이 한 트랙을 튼다 */
+  narration?: { src: string; startFrame: number } | null;
   cuts: Cut[];
 };
 

@@ -6,7 +6,7 @@
 //
 //   node scripts/gen-assets.mjs [public/local/scenario.json]
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -95,6 +95,95 @@ function tightenAudio(raw, out, tempo) {
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-af', `${trim},areverse,${trim},areverse,atempo=${tempo},loudnorm=I=-14:TP=-1.5:LRA=11`, out]);
 }
 
+// 앞뒤 무음만 자르고 음량만 맞춘다(속도는 건드리지 않음 — 억양이 납작해진다)
+function trimAudio(raw, out) {
+  const trim = 'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05';
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', raw, '-af', `${trim},areverse,${trim},areverse,loudnorm=I=-14:TP=-1.5:LRA=11`, out]);
+}
+
+// 문장 사이 숨 구간(무음) 목록 [{start,end}] — ffmpeg 는 stderr 로 쓴다
+function silenceList(file) {
+  const r = spawnSync('ffmpeg', ['-nostats', '-i', file, '-af', 'silencedetect=noise=-38dB:d=0.12', '-f', 'null', '-'], { encoding: 'utf-8' });
+  const starts = [...r.stderr.matchAll(/silence_start: ([\d.]+)/g)].map((m) => Number(m[1]));
+  const ends = [...r.stderr.matchAll(/silence_end: ([\d.]+)/g)].map((m) => Number(m[1]));
+  return starts.map((s, i) => ({ start: s, end: ends[i] ?? s })).filter((g) => g.end > g.start);
+}
+
+const strip = (s) => s.replace(/[\s,.!?·~'"]/g, '');
+
+// 1순위: 단어 정렬 — Whisper 단어 목록에서 각 줄의 첫 단어를 글자 수로 찾고, 그 단어 바로 앞 무음 가운데를 경계로.
+// 무음 길이만으로는 문장 사이 숨과 쉼표 쉼을 못 가르는 경우가 있어서(실측: 둘 다 0.2초) 텍스트 위치를 기준으로 삼는다.
+function splitByWords(file, lines) {
+  const py = process.env.WHISPER_PYTHON || path.join(process.env.HOME ?? '', 'Dev/OpenMontage/.venv/bin/python');
+  if (!fs.existsSync(py)) return null;
+  const r = spawnSync(py, [path.join(ROOT, 'scripts', 'words.py'), file], { encoding: 'utf-8' });
+  if (r.status !== 0) return null;
+  const words = JSON.parse(r.stdout.trim().split('\n').pop());
+  const total = durationSec(file);
+  const gaps = silenceList(file);
+  const bounds = [0];
+  let lineChars = 0;
+  let wi = 0;
+  let wordChars = 0;
+  for (let i = 0; i < lines.length - 1; i++) {
+    lineChars += strip(lines[i]).length;
+    // 앞까지의 글자 수가 lineChars 에 가장 가까운 단어 = 다음 줄의 첫 단어
+    while (wi < words.length - 1 && Math.abs(wordChars + strip(words[wi].w).length - lineChars) <= Math.abs(wordChars - lineChars)) {
+      wordChars += strip(words[wi].w).length;
+      wi++;
+    }
+    const start = words[wi].s;
+    const prev = bounds[bounds.length - 1];
+    const near = gaps.filter((g) => g.end > prev + 0.5 && Math.abs((g.start + g.end) / 2 - start) < 0.9);
+    const gap = near.sort((a, b) => Math.abs((a.start + a.end) / 2 - start) - Math.abs((b.start + b.end) / 2 - start))[0];
+    bounds.push(gap ? (gap.start + gap.end) / 2 : Math.max(prev + 0.5, start - 0.05));
+  }
+  bounds.push(total);
+  return bounds;
+}
+
+// 2순위(대체): 무음 DP. 문장 사이 숨은 대개 문장 안 쉼표 쉼보다 길다.
+// 무음 구간마다 "길이 − 글자 수 비례 추정 지점과의 거리" 점수를 주고, 순서를 지키는 (줄 수 − 1)개 조합 중
+// 합이 가장 큰 것을 고른다(DP). 무음이 모자라면 추정 지점을 그대로 쓴다.
+function splitByBreaths(file, lines) {
+  const total = durationSec(file);
+  const gaps = silenceList(file).map((g) => ({ mid: (g.start + g.end) / 2, len: g.end - g.start }));
+  const weights = lines.map((l) => l.replace(/[\s,.!?·]/g, '').length);
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const guesses = [];
+  let acc = 0;
+  for (let i = 0; i < lines.length - 1; i++) {
+    acc += weights[i];
+    guesses.push((acc / sum) * total);
+  }
+  const k = guesses.length;
+  const g = gaps.length;
+  if (g < k) return [0, ...guesses, total];
+  const score = (i, j) => gaps[j].len - 0.3 * Math.abs(gaps[j].mid - guesses[i]);
+  // best[i][j]: 경계 i 를 무음 j 에 둘 때 0..i 까지 최고 점수
+  const best = Array.from({ length: k }, () => new Array(g).fill(-Infinity));
+  const from = Array.from({ length: k }, () => new Array(g).fill(-1));
+  for (let j = 0; j < g; j++) best[0][j] = score(0, j);
+  for (let i = 1; i < k; i++) {
+    for (let j = i; j < g; j++) {
+      for (let p = i - 1; p < j; p++) {
+        const v = best[i - 1][p] + score(i, j);
+        if (v > best[i][j]) {
+          best[i][j] = v;
+          from[i][j] = p;
+        }
+      }
+    }
+  }
+  let j = best[k - 1].indexOf(Math.max(...best[k - 1]));
+  const picked = [];
+  for (let i = k - 1; i >= 0; i--) {
+    picked.unshift(gaps[j].mid);
+    j = from[i][j];
+  }
+  return [0, ...picked, total];
+}
+
 function durationSec(file) {
   return Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file]).toString().trim());
 }
@@ -120,7 +209,7 @@ for (const [i, cut] of scenario.cuts.entries()) {
   }
   let audio = null;
   let sec = cut.seconds ?? MIN_CUT_SEC;
-  if (cut.narration) {
+  if (cut.narration && scenario.voice.mode !== 'script') {
     const raw = path.join(outDir, 'tts', `${id}.raw.mp3`);
     const file = path.join(outDir, 'tts', `${id}.mp3`);
     if (FORCE || !fs.existsSync(raw)) {
@@ -134,7 +223,29 @@ for (const [i, cut] of scenario.cuts.entries()) {
   cuts.push({ id, image, caption: cut.caption ?? cut.narration ?? '', audio, durationInFrames: Math.round(sec * FPS), focus: cut.focus ?? 'center' });
 }
 
-const spec = { title: scenario.title, footer: scenario.footer, accent: scenario.accent, cuts };
+// voice.mode = "script": 대본 전체를 한 번에 읽혀 문장 사이 호흡·억양을 살리고, 컷 길이는 숨 구간에 맞춘다
+let narration = null;
+if (scenario.voice.mode === 'script') {
+  const lines = scenario.cuts.map((c) => c.narration ?? '');
+  const voiceKey = `${scenario.voice.voice}`;
+  const raw = path.join(outDir, 'tts', `script-${voiceKey}.raw.mp3`);
+  const file = path.join(outDir, 'tts', `script-${voiceKey}.mp3`);
+  if (FORCE || !fs.existsSync(raw)) {
+    console.log(`[tts] script (${voiceKey}) — ${lines.length} lines`);
+    fs.writeFileSync(raw, await tts(lines.join('\n'), scenario.voice));
+  }
+  trimAudio(raw, file);
+  const bounds = splitByWords(file, lines) ?? splitByBreaths(file, lines);
+  const lead = scenario.voice.leadSec ?? 0.15;
+  cuts.forEach((c, i) => {
+    const end = i === cuts.length - 1 ? bounds[i + 1] + (scenario.cuts[i].tailSec ?? 1.0) : bounds[i + 1];
+    c.durationInFrames = Math.round((end - bounds[i] + (i === 0 ? lead : 0)) * FPS);
+  });
+  narration = { src: rel(file), startFrame: Math.round(lead * FPS) };
+  console.log('boundaries', bounds.map((b) => b.toFixed(2)).join(' '));
+}
+
+const spec = { title: scenario.title, footer: scenario.footer, accent: scenario.accent, narration, cuts };
 fs.writeFileSync(path.join(outDir, 'spec.json'), JSON.stringify(spec, null, 2));
 const total = cuts.reduce((s, c) => s + c.durationInFrames, 0) / FPS;
 console.log(`spec.json — ${cuts.length} cuts, ${total.toFixed(1)}s`);
