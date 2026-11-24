@@ -84,20 +84,34 @@ export function actingWings(id: ActId, penguinX: number, contentCentreX: number)
  * rod's side; turning would hide the peeking face) and none for the near-wing stamp.
  */
 export const ACT_YAW = 0.5;
+/**
+ * The wave turns the body a little too (14°, the r12 wave): the wing is a hinge in the body's
+ * frontal plane, so seen straight on a raised wing shows only its edge — turned, its white inner
+ * face shows (asset contract §5: the wing never twists more than ±15°; the body turns instead).
+ */
+export const WAVE_YAW = 0.24;
 export const MAX_TURN = 0.72;
 export function actYaw(id: ActId, penguinX: number, contentCentreX: number): number {
-  if (id !== 'point') return 0;
-  return Math.sign(contentCentreX - penguinX) * ACT_YAW;
+  if (id === 'point') return Math.sign(contentCentreX - penguinX) * ACT_YAW;
+  if (id === 'wave') return Math.sign(contentCentreX - penguinX) * WAVE_YAW;
+  return 0;
 }
+
+/** The waving wing on its hinge (degrees from rest): raised to `WAVE_RAISE`, swinging ±`WAVE_SWING_DEG`, twisted `WAVE_TWIST` to show its face. */
+export const WAVE_RAISE = 96;
+export const WAVE_SWING_DEG = 12;
+export const WAVE_TWIST = -12;
 
 /** The body's whole turn: the spot's and the acting one, within natural limits (the face stays visible). */
 export const bodyTurn = (spotTurn: number, act: number) => Math.max(-MAX_TURN, Math.min(MAX_TURN, spotTurn + act));
 
 /**
- * How far a clay wing may stretch along its length to reach (1 = its own length). The far wing
- * reaches across the body, so it may need a little more than its own length; never more than this.
+ * How far a wing may stretch along its length to reach (1 = its own length). The v3 wing is a rigid
+ * leather paddle on a hinge (asset contract §5 — raise ≤ 112°, twist ±15°, no forward swing): it
+ * never stretches. What it cannot reach in its hinge plane it does not reach — the body turns
+ * instead (`actYaw`), and office/joint.ts clamps every aimed wing back onto its hinge.
  */
-export const MAX_STRETCH = 1.55;
+export const MAX_STRETCH = 1;
 export function stretchFor(distance: number, length: number): number {
   if (length <= 0) return 1;
   return Math.max(1, Math.min(MAX_STRETCH, (distance / length) * 1.02));

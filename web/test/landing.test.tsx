@@ -723,8 +723,8 @@ describe('where the penguin stands (staging)', () => {
 });
 
 describe('the acting', () => {
-  it('every act breathes on the idle clip — the office typing clip (the body bob behind the trembling) is not used', () => {
-    expect(ACT_CLIP).toEqual({ wave: 'idle', type: 'idle', unroll: 'idle', stamp: 'idle', point: 'idle' });
+  it('every act breathes on the standing clip — the office clips sit on a chair, and the office typing clip (the trembling) is not used', () => {
+    expect(ACT_CLIP).toEqual({ wave: 'stand', type: 'stand', unroll: 'stand', stamp: 'stand', point: 'stand' });
     expect(ACT_DELAY_MS).toBeGreaterThan(MOVE_MS); // the act starts once the penguin has arrived
   });
 
@@ -980,13 +980,17 @@ describe('what shows in front of the content (occlusion)', () => {
     // the body turns towards the content to bring the far wing round, within natural limits
     expect(actYaw('point', 1200, 900)).toBeLessThan(0);
     expect(actYaw('point', 400, 700)).toBeGreaterThan(0);
-    for (const id of ['type', 'unroll', 'stamp', 'wave'] as const) expect(actYaw(id, 1200, 900)).toBe(0);
+    for (const id of ['type', 'unroll', 'stamp'] as const) expect(actYaw(id, 1200, 900)).toBe(0);
+    // the wave turns the body a little so the raised wing's face shows (a hinge in the frontal plane)
+    expect(actYaw('wave', 1200, 900)).toBeLessThan(0);
+    expect(Math.abs(actYaw('wave', 1200, 900))).toBeLessThan(ACT_YAW);
     expect(Math.abs(bodyTurn(-0.18, -ACT_YAW))).toBeLessThanOrEqual(MAX_TURN);
     expect(Math.abs(bodyTurn(-0.6, -0.6))).toBe(MAX_TURN);
-    // a clay wing stretches to reach across the body, never past its limit
+    // the v3 wing is a rigid paddle on a hinge: it never stretches to reach (the body turns instead)
+    expect(MAX_STRETCH).toBe(1);
     expect(stretchFor(50, 100)).toBe(1);
-    expect(stretchFor(130, 100)).toBeCloseTo(1.326, 2);
-    expect(stretchFor(500, 100)).toBe(MAX_STRETCH);
+    expect(stretchFor(130, 100)).toBe(1);
+    expect(stretchFor(500, 100)).toBe(1);
     expect(ORDER.eraser).toBeLessThan(ORDER.front);
   });
 

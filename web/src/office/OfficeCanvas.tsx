@@ -186,7 +186,11 @@ function Scene({ agents, statuses, theme, reducedMotion, mobile, tags, teamTags,
       applyView(camera, zoom);
       shown.current = zoom.view;
     }
-    if (!reducedMotion) for (const seat of office.seats.values()) seat.mixer.update(Math.min(dt, 0.05));
+    if (!reducedMotion)
+      for (const seat of office.seats.values()) {
+        seat.mixer.update(Math.min(dt, 0.05));
+        seat.joints.update();
+      }
     const n = ++frameNo.current;
     // tags keep one pixel size at every zoom (DESIGN — 12px floor); below L3 a tag that would
     // cover a more important one is hidden instead of drawn smaller. During a drag the check runs

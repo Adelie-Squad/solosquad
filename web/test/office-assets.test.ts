@@ -56,7 +56,7 @@ describe('contract check', () => {
     expect(p.missing).toEqual(
       expect.arrayContaining(['clip idle_doze', 'clip typing', 'bone socket.hand.R', expect.stringMatching(/^prop prop\.sales\.card: custom property socket/)]),
     );
-    expect(p.warnings).toContain('clip Typing is not a state id — the web ignores it');
+    expect(p.warnings).toContain('clip Typing is neither a state id nor a standing extra — the web ignores it');
   });
 
   it('warns on the matte look and the budget, without failing', () => {
