@@ -1,0 +1,121 @@
+
+=== a1-horizontal-en.svg  (1403 bytes)
+viewBox 0 0 611.96 256 · aspect 2.39 (wide)
+colours 1: #111111 · gradients 0 · anchors 73
+margins L24.0 R24.0 T24.0 B24.0 · bbox fill 0.749
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== a1-horizontal-ko.svg  (1431 bytes)
+viewBox 0 0 591.79 256 · aspect 2.312 (wide)
+colours 1: #111111 · gradients 0 · anchors 80
+margins L24.0 R24.0 T24.0 B24.0 · bbox fill 0.747
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== a1-stacked.svg  (2430 bytes)
+viewBox 0 0 306.64 488 · aspect 0.628 (tall)
+colours 1: #111111 · gradients 0 · anchors 139
+margins L23.5 R24.0 T24.0 B24.0 · bbox fill 0.762
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 98/100 (heuristic)
+
+=== a1-symbol.svg  (403 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 14
+margins L24.0 R24.0 T24.0 B24.0 · bbox fill 0.66
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a2-horizontal-en.svg  (1417 bytes)
+viewBox 0 0 611.96 256 · aspect 2.39 (wide)
+colours 1: #111111 · gradients 0 · anchors 79
+margins L19.5 R24.0 T24.0 B24.0 · bbox fill 0.755
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== a2-horizontal-ko.svg  (1445 bytes)
+viewBox 0 0 591.79 256 · aspect 2.312 (wide)
+colours 1: #111111 · gradients 0 · anchors 86
+margins L19.5 R24.0 T24.0 B24.0 · bbox fill 0.753
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== a2-stacked.svg  (2477 bytes)
+viewBox 0 0 306.64 488 · aspect 0.628 (tall)
+colours 1: #111111 · gradients 0 · anchors 145
+margins L23.5 R24.0 T24.0 B24.0 · bbox fill 0.762
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 98/100 (heuristic)
+
+=== a2-symbol.svg  (417 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 20
+margins L19.5 R24.0 T24.0 B24.0 · bbox fill 0.675
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== c1-stacked.svg  (2232 bytes)
+viewBox 0 0 518.22 382.4 · aspect 1.355 (wide)
+colours 1: #111111 · gradients 0 · anchors 130
+margins L17.1 R18.0 T18.0 B18.0 · bbox fill 0.845
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== c1-symbol.svg  (884 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 41
+margins L40.7 R40.7 T30.0 B30.0 · bbox fill 0.522
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== c1-wordmark.svg  (1202 bytes)
+viewBox 0 0 518.22 256 · aspect 2.024 (wide)
+colours 1: #111111 · gradients 0 · anchors 71
+margins L17.1 R18.0 T18.0 B18.0 · bbox fill 0.801
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== c2-stacked.svg  (1882 bytes)
+viewBox 0 0 554 400 · aspect 1.385 (wide)
+colours 1: #111111 · gradients 0 · anchors 125
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.851
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== c2-symbol.svg  (634 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 21
+margins L78.4 R78.4 T34.0 B34.0 · bbox fill 0.284
+· INFO [small-in-canvas] The mark occupies little of its square canvas; tighten the viewBox or scale up.
+production-readiness score: 99/100 (heuristic)
+
+=== c2-wordmark.svg  (882 bytes)
+viewBox 0 0 554 256 · aspect 2.164 (wide)
+colours 1: #111111 · gradients 0 · anchors 59
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.804
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== wordmark-en-jeseul.svg  (1230 bytes)
+viewBox 0 0 842 256 · aspect 3.289 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 92
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.823
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== wordmark-en.svg  (880 bytes)
+viewBox 0 0 554 256 · aspect 2.164 (wide)
+colours 1: #111111 · gradients 0 · anchors 59
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.804
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== wordmark-ko.svg  (1142 bytes)
+viewBox 0 0 518.22 256 · aspect 2.024 (wide)
+colours 1: #111111 · gradients 0 · anchors 66
+margins L17.1 R18.0 T18.0 B18.0 · bbox fill 0.801
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
