@@ -1,0 +1,1492 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>펭귄 v3 시안</title>
+<style>
+  /* DESIGN.md `## 색` 토큰 — 라이트 · 다크는 시스템 설정을 따른다 */
+  :root {
+    --bg: #EEE9DF; --surface: #FBF9F4; --surface-2: #F3EFE6; --line: #DED6C6;
+    --ink: #1E1C17; --ink-2: #575143; --ink-3: #8A8371; --accent: #2867D0;
+    --warn: #A85A12; --cheek: #E01FAE;
+    --shadow-2: 0 4px 18px rgba(30,28,23,.08);
+    --radius: 12px; --measure: 46em;
+    --scene-light: #EEE9DF; --scene-evening: #15161B;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15161B; --surface: #1E1F26; --surface-2: #272832; --line: #353745;
+      --ink: #ECE8DF; --ink-2: #B7B2A6; --ink-3: #858174; --accent: #7FA6F5;
+      --warn: #F0AE5E; --cheek: #F25CC8;
+      --shadow-2: 0 0 0 1px var(--line);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 "Pretendard Variable", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    word-break: keep-all; overflow-wrap: break-word;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 48px 40px 64px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; color: var(--warn); border: 1px solid currentColor; border-radius: 999px; padding: 1px 10px; margin-bottom: 10px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px; }
+  header p { color: var(--ink-2); max-width: var(--measure); margin: 0 0 12px; text-wrap: pretty; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; }
+  nav a { color: var(--ink); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+  nav a:hover { border-color: var(--accent); }
+  section { margin-top: 36px; }
+  h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h3 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+  .lead { color: var(--ink-2); margin: 0 0 14px; max-width: var(--measure); text-wrap: pretty; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-2); padding: 20px; }
+  .grid { display: grid; gap: 16px; }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .g4, .g3 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .page { padding: 24px 16px 48px; } .g4, .g3, .g2 { grid-template-columns: 1fr; } }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border-radius: 8px; background: var(--scene-light); }
+  figcaption { font-size: 12px; line-height: 1.45; color: var(--ink-2); margin-top: 6px; }
+  figcaption b { color: var(--ink); font-weight: 600; font-size: 13px; display: block; }
+  .cmp-labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .cmp-labels span:nth-child(2) { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--ink-2); font-size: 13px; }
+  td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .q li { margin: 8px 0; }
+  .src { color: var(--ink-3); font-size: 12px; }
+  footer { margin-top: 40px; color: var(--ink-3); font-size: 13px; }
+  footer pre { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <span class="badge">시안 · 승인 대기 · 12차</span>
+  <h1>펭귄 v3 시안 — 초안 비율 · 두께 있는 3D · 붙어서 움직이는 관절</h1>
+  <p>사용자 초안(가죽 키링 사진)의 비율 · 곡선 · 눈과 몸의 비율을 가져와, 납작한 실물을 그대로 베끼지 않고 두께가 있는 가죽 인형으로 다시 만들었다. 소품은 없다.</p>
+  <p>날개와 발은 몸과 <b>한 장의 피부</b>다. 어깨 · 엉덩이에서 몸통이 그대로 이어져 나오고, 관절 뼈가 그 피부를 늘려서 움직인다. 아직 제품(사무실 장면 · 랜딩 · <code>penguin.glb</code>)은 바꾸지 않았다.</p>
+  <nav>
+    <a href="#r12">12차 수정</a><a href="#r11b">11차 보완</a><a href="#r11">11차 수정</a><a href="#r10">10차 수정</a><a href="#r9">9차 수정</a><a href="#r8">8차 수정</a><a href="#r7">7차 수정</a><a href="#r6">6차 수정</a><a href="#r5">5차 수정</a><a href="#r4">4차 수정</a><a href="#r3">3차 수정</a><a href="#r2">2차 수정</a><a href="#r1-head">1차 시안</a><a href="#compare">1차 비교</a><a href="#turnaround">턴어라운드</a><a href="#motion">관절 시험</a>
+    <a href="#ratio">비율</a><a href="#changes">가져온 것 · 바꾼 것</a><a href="#open">남은 일 · 질문</a>
+  </nav>
+</header>
+
+<section id="r12">
+  <span class="badge">12차 수정 · 2026-11-14</span>
+  <h2>12차 수정 — 띠가 아니라 한 덩어리: 몸이 그대로 날개로 이어지는 곡면</h2>
+  <p class="lead">"뭔가 접합부가, 저렇게 선이랑 몸통-접합부-날개 나눠지는게 아니라 쉐잎이어야돼. 그니까 몸통이랑 날개가 자연스럽게 이어져야 한다고."</p>
+  <div class="card">
+    <p>11차의 좁은 띠를 진짜 곡면으로 바꿨다. 날개 조각과 관절은 9차 그대로이고, 접합부에는 몸과 (그 각도로 든) 날개를 부드럽게 합친 면을 놓는다. 이 면은 날개 각도마다 모양키로 바뀌므로 피부가 늘어나지 않는다.</p>
+    <ul style="margin-top:8px">
+      <li><b>모양:</b> 단면마다 그 곡면을 따라 걸어가, 합친 면이 몸 · 날개와 정확히 같아지는 곳에서 멈춘다. 그래서 몸과 날개 양쪽에 접하게 이어진다.</li>
+      <li><b>색:</b> 접합 곡면은 몸 색이다. 흰 면은 곡면이 날개에 닿는 곳에서 한 곡선으로 시작한다. 이 경계는 곡면 메쉬의 날개 쪽 끝 3 줄에서 그려지고, 그 줄은 날개 뼈를 따라 움직이는 날개 좌표에서 픽셀마다 날개의 흰 면을 그대로 따른다.</li>
+      <li><b>선 없음:</b> 접합부에는 바느질과 홈이 없다(전용 재질).</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">스케치 — 반지름 8 · 12 · 18 mm (같은 카메라)</h3>
+  <p class="lead">왼쪽부터 9차 · 11차 보완 · 8 mm · 12 mm · 18 mm. 위부터 발 접합부(기준) · 쉬는 자세 아래에서 · 3/4 · 100° 들기 · 손 흔들기 최고점. 이 첫 시트는 색을 고치기 전이라, 들었을 때 흰 경계가 찢어져 보인다.</p>
+  <div class="card">
+    <figure><img src="r12/sketch-sheet.webp" alt="스케치: 반지름 8, 12, 18 mm" width="1372" height="1372"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(5,1fr)"><span>9차</span><span>11차 보완</span><span>8 mm</span><span>12 mm</span><span>18 mm</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r12/sketch-sheet-colour.webp" alt="스케치: 색 고친 뒤 8, 12 mm" width="1260" height="1260"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(4,1fr)"><span>9차</span><span>11차 보완</span><span>8 mm</span><span>12 mm · 채택</span></div>
+    <figcaption>색을 날개 좌표로 칠한 뒤(아래에서 · 3/4 · 들기 · 손 흔들기).</figcaption>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>스스로 검토 — "한 덩어리로 자연스럽게 이어지는가? 선 · 띠 · 잘린 면이 보이는가?"</h3>
+    <ul>
+      <li><b>8 mm:</b> 이어지기는 하지만 아직 좁은 골처럼 읽힌다. 아래에서 보면 몸과 날개 사이가 조금 파였다.</li>
+      <li><b>12 mm — 채택:</b> 몸이 그대로 날개로 자라 나오듯 이어진다. 들었을 때 위쪽이 오목하게 흐르고, 흰 면도 곡면을 따라 휘어 들어간다. 선 · 띠 · 잘린 면이 없다.</li>
+      <li><b>18 mm:</b> 너무 넓어 날개 뿌리에 물갈퀴처럼 막이 생긴다(날개가 몸에 가까이 붙어 있는 곳에서 멀리 번진다). 7차의 "근육"과 같은 문제다.</li>
+      <li><b>색 — 세 번 고침:</b> (1) 꼭짓점마다 쉬는 자세 기준으로 색을 고정했더니, 날개를 들면 격자가 곡면 위를 미끄러져 흰 경계가 찢어졌다. 그래서 흰 면 판정을 날개 좌표에서 픽셀마다 하도록 바꿨다. (2) 흰색을 곡면 한가운데에서 끝냈더니, 몸이 있던 자리까지 흰색이 덮였다. 흰 픽셀 검사가 최대 1017 px 로 실패시켰다. (3) 곡면 전체를 검정으로 하니, 흰 경계가 두 메쉬가 거의 접하며 겹치는 선이 되어 톱니가 생겼다. 최종: 곡면은 몸 색, 날개 쪽 끝 3 줄만 날개의 흰 면을 따른다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">최종 접합부 (11차 보완 | 12차, 같은 카메라)</h3>
+  <div class="card">
+    <figure><img src="r12/junction-r11b-r12.webp" alt="접합부 11차 보완과 12차" width="1076" height="2672"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>11차 보완</span><span>12차</span></div>
+    <figcaption>위부터 발 접합부(기준) · 쉬는 자세 아래에서 · 3/4 · 100° 들기 · 손 흔들기 최고점.</figcaption>
+  </div>
+
+  <h3 style="margin-top:24px">합격 기준 (11차 보완 / 12차)</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>기준</th><th>11차 보완</th><th>12차</th></tr></thead>
+    <tbody>
+      <tr><td><b>새</b> 접합부 양 끝에서 면이 꺾이는 각 (몸 · 날개, 6 자세 최대, 기준 ≤ 10°)</td><td class="n">몸 14–17° · 날개 20–33°</td><td class="n"><b>몸 ≤ 4.4° · 날개 ≤ 6.5°</b></td></tr>
+      <tr><td><b>새</b> 곡률이 뒤집히는 단면 (곡면 가운데에서 1° 넘게 반대로 꺾임, 160 단면 중)</td><td class="n">—</td><td class="n">0–8</td></tr>
+      <tr><td><b>새</b> 이음선 (회색 재질로 음영만, 곡면 가장자리 vs 가운데 밝기 차, 기준 ≤ 1.25 배)</td><td class="n">1.54 배 (띠 가장자리가 보임)</td><td class="n"><b>0.37 배</b></td></tr>
+      <tr><td>접합 곡면 폭 (6 자세 중앙 / 최대) — 뿌리 근처에만</td><td class="n">3.2–4.2 / 5.0 mm</td><td class="n">22.9–31.3 / 42.8 mm (7차 근육은 축에서 12 cm)</td></tr>
+      <tr><td>회귀 없음: 날개 흰 면 밖의 흰 픽셀 (≤ 4 px)</td><td class="n">0 px</td><td class="n"><b>0 px</b> (색 기준 검사, 아래)</td></tr>
+      <tr><td>회귀 없음: 가장자리 단차</td><td class="n">0.00 mm</td><td class="n">0.00 mm</td></tr>
+      <tr><td>회귀 없음: render_compare 11차 보완 → 12 (날개 + 접합부 밖)</td><td class="n">—</td><td class="n"><b>15 / 15 통과, 밖 0.0 %</b></td></tr>
+      <tr><td>회귀 없음: clearance_check (모든 동작 · 반 프레임 · 책상)</td><td class="n">14.4 mm</td><td class="n"><b>14.4 mm</b>, 교차 0</td></tr>
+      <tr><td>회귀 없음: 면 각도 · 흰 경계 · 피부 늘어남 · 비틀기 · 뿌리 단면</td><td class="n">—</td><td class="n">같음 (본체 메쉬는 9차 그대로)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p class="src" style="margin-top:8px">흰 픽셀 검사는 이번에 색 기준으로 바꿨다. 조명이 들어간 렌더로 재면, 곡면이 크리스를 메우면서 그늘에 있던 날개의 흰 면이 밝아진 것까지 "새 흰색"으로 셌다(17 px). 지금은 모든 재질을 자기 색 그대로(평면 발광) 렌더해서 비교한다. 이 방식으로 11차의 와셔는 여전히 걸린다(317 px). 이음선 검사도 새로 게이트에 넣었다(<code>--qa-max-seam-ratio</code>, 회색 재질로 음영만).</p>
+
+  <h3 style="margin-top:24px">날개를 든 모습 · 동작 모음</h3>
+  <div class="card">
+    <figure><img src="r12/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r12/poses.webp" alt="12차 동작 모음" width="2472" height="624"></figure>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r12/compare.webp" alt="초안 1, 12차 정면, 11차 보완 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>12차</span><span>11차 보완</span></div>
+  </div>
+  <div class="grid g4" style="margin-top:16px">
+    <figure><img src="r12/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r12/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r12/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r12/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+  </div>
+</section>
+
+<section id="r11b" style="margin-top:56px">
+  <span class="badge">11차 보완 · 2026-11-14</span>
+  <h2>11차 보완 — 띠가 따로 보이지 않게: 색은 날개의 흰 면 그대로, 가장자리는 면 위에</h2>
+  <div class="card">
+    <ul>
+      <li><b>흰 와셔(들기 · 손 흔들기):</b> 띠 색을 단면 둘레마다 하나로(크리스 위치의 날개 색) 칠해서, 몸 쪽 절반도 흰색이었다. 이제 꼭짓점마다 칠한다. 날개 쪽은 날개 면 위 가장 가까운 점의 흰 영역 값, 몸 쪽은 몸 색이다. 흰색은 날개와 몸이 만나는 선에서 정확히 끝난다.</li>
+      <li><b>흰 조각(쉬는 자세 아래에서):</b> 날개 색을 띠 위의 점(면에서 0.1–1 mm 떨어짐)에서 읽어 흰 영역이 테두리 밖으로 조금 넓었다. 날개 면 위 점에서 읽도록 고쳤다. 또 띠가 날개의 흰 가장자리를 지나는 곳은 띠를 가늘게(25 %) 했고, 단면 둘레를 따라 고르게 다듬었다(뒤틀린 단면이 흰 날개 끝에 홈을 냈다).</li>
+      <li><b>띠 가장자리:</b> 몸 · 날개 면 위에 정확히 놓인다(11차는 0.1–0.65 mm 떠서 입술처럼 보였다).</li>
+    </ul>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11b/junction-r11-r11b.webp" alt="접합부 11차와 11차 보완" width="1076" height="2672"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>11차</span><span>11차 보완</span></div>
+    <figcaption>위부터 발 접합부(기준) · 쉬는 자세 아래에서 · 3/4 · 100° 들기 · 손 흔들기 최고점.</figcaption>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11b/junction-zoom-r11-r11b.webp" alt="접합부 확대 11차와 11차 보완" width="996" height="1488"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>11차</span><span>11차 보완</span></div>
+    <figcaption>확대(4.5 cm): 들기 · 손 흔들기 · 쉬는 자세 아래에서.</figcaption>
+  </div>
+  <div class="card" style="margin-top:16px">
+  <table>
+    <thead><tr><th>기준</th><th>11차</th><th>11차 보완</th></tr></thead>
+    <tbody>
+      <tr><td><b>새</b> 날개 흰 면 밖의 흰 픽셀 (접합부 상자, 띠 있음 / 없음 비교, 정면 · 3/4 · 뒤 × 3 자세, 기준 ≤ 4 px)</td><td class="n">최대 541 px</td><td class="n"><b>0 px</b> (모든 뷰)</td></tr>
+      <tr><td><b>새</b> 띠가 뿌리 윤곽 밖으로 떠 있음 (가장자리 단차, 기준 ≤ 0.5 mm)</td><td class="n">최대 0.65 mm</td><td class="n"><b>0.00 mm</b></td></tr>
+      <tr><td>띠 폭 (6 자세 중앙)</td><td class="n">4.1–4.7 mm</td><td class="n">3.2–4.2 mm (흰 가장자리를 지나는 곳 0.7 mm 까지 가늘게)</td></tr>
+      <tr><td>render_compare 11 → 11차 보완 (바꾼 영역: 날개 + 접합부)</td><td class="n">—</td><td class="n"><b>15 / 15 통과, 밖 0.0 %</b></td></tr>
+      <tr><td>clearance_check (모든 동작 · 반 프레임 · 책상)</td><td class="n">14.4 mm</td><td class="n"><b>14.4 mm</b>, 교차 0</td></tr>
+      <tr><td>그 밖의 기준 (면 각도 · 흰 경계 · 피부 · 비틀기)</td><td class="n">—</td><td class="n">11차와 같음</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="src" style="margin-top:8px">흰 픽셀 검사는 이번에 렌더 게이트에 넣었다(<code>--qa-max-white</code>). 처음 640 px 전신 뷰로 재었을 때는 11차의 와셔(약 2 px)도 통과해서, 접합부 상자만 4 배 해상도로 렌더하고 배경은 투명도로 가르도록 바꿨다. 이 검사로 11차를 다시 재면 541 px 로 걸린다.</p>
+</section>
+
+<section id="r11" style="margin-top:56px">
+  <span class="badge">11차 수정 · 2026-11-14</span>
+  <h2>11차 수정 — 날개는 9차로, 몸과는 발처럼 단면을 따라 좁은 띠로</h2>
+  <p class="lead">"펭귄 날개는 지금 어이가 없는 상태임. 니가 봐도 이상한데 왜 만들고 보고하는거지? 만들기 전에 스케치같은 거라도 해서 이렇게 하는게 맞는지 판단하고 고쳐야하는거 아니야? 일단 날개는 9차로 되돌려서 다시 시작하는데, 접합 부분이 몸통이랑 발이 붙은 부분처럼 아주 좁게 띠처럼 붙는데, 날개의 단면을 따라서." · "렌더 스크립트에 붙여둬"</p>
+
+  <div class="card">
+    <p>10차의 공 · 목 · 테는 모두 지웠다. 날개 조각, 관절 위치, 격자는 9차 그대로다. 이번에는 바로 만들지 않고 순서대로 했다: 발이 몸에 붙은 곳을 먼저 같은 축척으로 보고, 띠 방식 몇 가지를 저해상도로 그려 비교하고, 각각을 스스로 검토한 뒤 하나를 골랐다.</p>
+  </div>
+
+  <h3 style="margin-top:24px">스케치 — 발 접합부와 날개 띠 후보 (같은 카메라 · 같은 축척 10 cm)</h3>
+  <p class="lead">위부터 발이 몸에 붙은 곳(기준) · 아래에서 본 날개 접합부(쉬는 자세) · 날개 100° 들기. 왼쪽부터 9차 · (A) 굴리는 공 모양 띠 · (B) 부드럽게 합친 띠 + 밑단 · (C) 부드럽게 합친 띠, 밑단 없음(채택).</p>
+  <div class="card">
+    <figure><img src="r11/sketch-sheet.webp" alt="스케치: 발 접합부와 날개 띠 후보" width="1260" height="948"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(4,1fr)"><span>9차</span><span>(A) 공 모양</span><span>(B) 띠 + 밑단</span><span>(C) 띠 · 채택</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/sketch-wave.webp" alt="스케치: 손 흔들기 최고점" width="948" height="324"></figure>
+    <div class="cmp-labels"><span>9차</span><span>(B) 띠 + 밑단</span><span>(C) 띠 · 채택</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/sketch-width.webp" alt="스케치: 띠 폭 3 · 4 · 5 mm" width="1260" height="636"></figure>
+    <div class="cmp-labels" style="grid-template-columns:repeat(4,1fr)"><span>9차</span><span>k 3 mm</span><span>k 4 mm</span><span>k 5 mm</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>스스로 검토</h3>
+    <ul>
+      <li><b>(A) 굴리는 공 모양 띠 — 탈락.</b> 단면은 지키고 띠도 좁다. 하지만 날개를 들면 위쪽에 검은 혹이 생기고, 쉬는 자세에서는 어깨 위에 흰 조각이 솟는다. 날개 가장자리처럼 곡률이 큰 곳에서는 평면 공 가정이 맞지 않아, 닿는 점이 실제 면을 벗어난다. 발 접합부처럼 보이지 않는다.</li>
+      <li><b>(B) 부드럽게 합친 띠 + 밑단 — 탈락.</b> 혹은 사라졌고 단면도 따른다(폭 4–5 mm). 그러나 면 밑으로 0.8 mm 접어 넣은 밑단이 띠 가장자리 음영을 바꿔, 띠가 날개 뿌리에 끼운 테두리(입술)처럼 따로 보인다. 발처럼 이어지지 않는다.</li>
+      <li><b>(C) 부드럽게 합친 띠, 밑단 없음 — 채택.</b> 날개 단면 그대로 몸에 닿고, 그 둘레에 4–5 mm 의 좁은 오목한 띠가 생겨 몸에서 날개로 넘어간다. 안쪽은 흰색, 바깥은 검정으로 날개 색을 따른다. 혹, 목, 잘린 면이 없다. 발보다는 조금 또렷한 선이다(아래 "발 기준 수치").</li>
+      <li><b>폭:</b> 3 mm 는 9차와 거의 같아 보이고, 5 mm 부터는 띠가 굵은 테로 읽혀 4 mm 를 골랐다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">최종 접합부 (9차 | 11차, 같은 카메라)</h3>
+  <p class="lead">위부터 발이 몸에 붙은 곳(기준) · 아래에서(쉬는 자세) · 3/4 앞(쉬는 자세) · 날개 100° 들기 · 손 흔들기 최고점.</p>
+  <div class="card">
+    <figure><img src="r11/junction-r9-r11.webp" alt="최종 접합부 9차와 11차, 발 접합부 기준" width="1076" height="2672"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>9차</span><span>11차</span></div>
+  </div>
+  <p class="src" style="margin-top:8px">남은 작은 흠: 쉬는 자세 아래에서 볼 때 띠가 날개 위쪽 가장자리로 돌아가는 곳에 짧은 흰 조각이 보이고, 들었을 때 흰 띠 아래 끝이 가늘게 뾰족하다.</p>
+
+  <h3 style="margin-top:24px">전 / 후 — 겨드랑이 (9차 | 11차)</h3>
+  <div class="card">
+    <figure><img src="r11/beforeafter-armpit.webp" alt="겨드랑이 9차와 11차" width="1488" height="2960"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>9차</span><span>11차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">합격 기준 (9차 / 11차)</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>기준</th><th>9차</th><th>11차</th></tr></thead>
+    <tbody>
+      <tr><td><b>새</b> 접합 띠 폭 (중앙, 6 자세: 쉬는 · 40° · 80°+비틀기 · 100° · 112°+비틀기 · −8°; 목표 2–6 mm)</td><td class="n">0 (잘린 면)</td><td class="n"><b>4.1–4.7 mm</b> (최소 2.7, 최대 5.4)</td></tr>
+      <tr><td><b>새</b> 띠가 몸 · 날개에 붙는 각도 (가장자리, 최대)</td><td class="n">면끼리 110° (잘림)</td><td class="n"><b>몸 14–17° · 날개 20–33°</b></td></tr>
+      <tr><td><b>새</b> 볼록 튀어나옴 (띠가 두 면 바깥으로 선 최대, 목표 ≤ 2 mm)</td><td class="n">—</td><td class="n"><b>1.0 mm</b></td></tr>
+      <tr><td><b>새</b> 날개 뿌리 단면 유지 (뿌리 / 중간, 목표 ≥ 90 %)</td><td class="n">폭 107 % · 두께 99.5 %</td><td class="n"><b>폭 107 % · 두께 99.5 %</b> (9차와 같음)</td></tr>
+      <tr><td>회귀 없음: 면 각도 상위 1 % / 최대 (쉬는 · 손 흔들기 · 들기)</td><td class="n">21.6/37.9 · 20.4/35.8 · 20.4/30.7°</td><td class="n">같음</td></tr>
+      <tr><td>회귀 없음: 흰 경계 흔들림 · 흰색 ~ 접합부 검정 띠 · 날개 따라 움직이는 몸 피부</td><td class="n">0.53 mm · 0 · 없음</td><td class="n">같음 (띠는 날개 색을 따름)</td></tr>
+      <tr><td>회귀 없음: 최소 간격 (clearance_check, 모든 동작 · 반 프레임, 책상 포함)</td><td class="n">14.3 mm</td><td class="n"><b>14.4 mm</b>, 교차 0</td></tr>
+      <tr><td>회귀 없음: 비틀기 / 앞으로 간 거리</td><td class="n">10.1° / 0</td><td class="n">10.1° / 0</td></tr>
+      <tr><td>회귀 없음: 날개 · 어깨 영역 밖 변경 (render_compare 9 → 11)</td><td class="n">—</td><td class="n"><b>15 / 15 통과, 0.0 %</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="src" style="margin-top:8px">발 기준 수치: 이 모델의 발은 3 cm 블렌드로 몸에 합쳐져 있어(보이는 부분 평균 폭 29 mm, 최대 7.5 mm 튀어나옴), 그 모양을 그대로 따르면 7차의 "근육"이 다시 생긴다. 발이 "좁은 띠"로 보이는 것은 색 경계가 발의 윤곽을 따라 또렷하게 지나가기 때문이라, 날개는 4–5 mm 의 좁은 형상 띠에 색 경계를 날개 단면에 맞췄다.</p>
+
+  <h3 style="margin-top:24px">렌더 스크립트에 붙인 검사</h3>
+  <div class="card">
+    <p><code>identity_v3_renders.py</code> 가 렌더 전에 먼저 돈다(<code>--qa-skills</code> 를 주면): 라운드를 QA <code>.blend</code> 로 굽고(기준 카메라 복사), 고정 QA 카메라 5 개 × 3 자세를 렌더하고, 이전 라운드와 같은 카메라로 비교(<code>render_compare</code>, 바꿔도 되는 영역은 <code>--qa-edit</code>), 모든 동작에 간격 검사(<code>clearance_check</code>, 8 mm, 책상 포함)를 한다. 하나라도 걸리면 <code>qa/gate.md</code> 를 남기고 렌더하지 않는다. 이번 라운드의 기록은 <code>r11/qa/gate.md</code>.</p>
+  </div>
+
+  <h3 style="margin-top:24px">날개를 든 모습 · 동작 모음</h3>
+  <div class="card">
+    <figure><img src="r11/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/poses.webp" alt="11차 동작 모음" width="2472" height="624"></figure>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r11/compare.webp" alt="초안 1, 11차 정면, 9차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>11차</span><span>9차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 · 앉은 자세 · 동작</h3>
+  <div class="grid g4">
+    <figure><img src="r11/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r11/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r11/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r11/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r11/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r11/seated/seated-desk-iso.webp" alt="책상 세트" loading="lazy"><figcaption><b>책상 세트</b></figcaption></figure>
+    <figure><img src="r11/motion/wave-strip.webp" alt="손 흔들기 키 프레임" loading="lazy"><figcaption><b>손 흔들기</b></figcaption></figure>
+    <figure><img src="r11/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"><figcaption><b>뛰기</b></figcaption></figure>
+  </div>
+</section>
+
+<section id="r10" style="margin-top:56px">
+  <span class="badge">10차 수정 · 2026-11-14</span>
+  <h2>10차 수정 — 발목처럼: 목 → 둥근 관절 → 몸으로 이어지는 곡선</h2>
+  <p class="lead">"펭귄 날개는 날개랑 몸통 접합 부분에서 발목 부분처럼 자연스러운 곡선으로."</p>
+
+  <h3>무엇을 바꿨나</h3>
+  <div class="card">
+    <p>9차의 꿰맨 날개 조각은 뿌리가 그대로 몸에 박혀, 날개를 들면 판이 몸에 꽂힌 것처럼 보였다(날개 면과 몸 면 사이 각도 약 110°). 10차는 날개 끝부분을 그대로 두고 뿌리만 바꿨다.</p>
+    <ul style="margin-top:8px">
+      <li><b>목:</b> 날개가 관절 쪽으로 가늘어진다(폭 35 %, 관절에서 4 → 12 cm 사이에 원래 폭으로).</li>
+      <li><b>둥근 관절:</b> 목 끝에 관절 중심을 중심으로 한 공(반지름 3.2 cm)이 붙어 있다. 공은 자기 중심으로 돌면 모양이 그대로라, 날개를 어느 각도로 들어도 몸과 닿는 곳이 같다.</li>
+      <li><b>몸 쪽 둥근 테:</b> 몸은 그 공을 둥글게 감싸는 고정된 테를 가진다(5 cm 블렌드). 몸 → 테 → 공 → 목 → 날개가 모든 각도에서 한 곡선이고, 움직이는 피부는 여전히 없다.</li>
+      <li>테는 공보다 7 mm 작은 공을 감싼다. 더 작게(1.5 mm) 하면 거의 같은 면 두 개가 엇갈려 경계가 톱니처럼 보였다.</li>
+      <li>관절 중심을 몸 옆에서 1.3 cm 바깥으로 옮겨(공이 몸을 만나도록), 날개 전체가 1.3 cm 바깥으로 갔다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">먼저 그려 본 비교 (같은 카메라 · 저해상도)</h3>
+  <p class="lead">왼쪽부터 9차 · (b) 각도별 교정 모양(몸 피부를 날개 쪽으로 메우기, 탈락) · (a) 목 + 둥근 관절 + 몸 쪽 테(채택). 위부터 3/4 쉬는 자세 · 아래에서 · 100° 들기 · 손 흔들기 정면 · 3/4.</p>
+  <div class="card">
+    <figure><img src="r10/previz.webp" alt="9차, (b), (a) 미리보기" width="948" height="1572"></figure>
+    <div class="cmp-labels"><span>9차</span><span>(b) 교정 모양 · 탈락</span><span>(a) 목 + 관절 · 채택</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <ul>
+      <li><b>(b) 탈락 이유:</b> 몸과 날개를 부드럽게 합친 면은 원래 면보다 최대 7.5 mm 바깥으로 나오는데, 날개 밑으로 숨긴 깊이(2 mm)보다 커서 메운 피부가 날개를 뚫고 나와 더 날카로운 새 경계를 만들었다(경계 각 108–114°, 면이 뒤집힌 곳 최대 172°). 더 깊이 숨기면 메운 부분이 보이지 않는다.</li>
+      <li><b>(a) 중간 단계:</b> 공만 붙이면 폭 13.7 cm 의 날개 뿌리를 둥글게 못 한다(2.8 cm 공). 목이 있어야 발목처럼 보인다. 목을 너무 가늘게(25 %) 하면 막대에 공이 달린 것처럼 보여서 35 % 로 했다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 겨드랑이 · 접합부 (9차 | 10차)</h3>
+  <p class="lead">위부터 3/4 쉬는 자세 · 아래에서 · 날개 든 모습 · 손 흔들기 가장 높이(정면). 같은 카메라(9차 관절 위치에 고정).</p>
+  <div class="card">
+    <figure><img src="r10/beforeafter-armpit.webp" alt="겨드랑이와 접합부 9차, 10차" width="1488" height="2960"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>9차</span><span>10차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">합격 기준 (8차 / 9차 / 10차)</h3>
+  <p class="lead">같은 측정 스크립트, 왼쪽 날개. 접합부 각도 = 날개 조각이 몸으로 들어가는 선을 따라 두 면의 법선 사이 각도(0° 면 이어짐, 90° 직각으로 꽂힘). 8차는 그런 선이 없어서 피부가 섞이는 띠의 이웃 면 각도.</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>기준</th><th>자세</th><th>8차</th><th>9차</th><th>10차</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3"><b>새 기준</b> 접합부 각도 (중앙 / 상위 5 % / 최대)</td><td>쉬는 자세</td><td class="n">띠 30.2 / 82.6°</td><td class="n">111 / 143 / 144°</td><td class="n"><b>29 / 71 / 75°</b></td></tr>
+      <tr><td>손 흔들기 최고점</td><td class="n">띠 84.4 / 151.5°</td><td class="n">111 / 132 / 132°</td><td class="n"><b>28 / 55 / 56°</b></td></tr>
+      <tr><td>날개 100° 들기</td><td class="n">띠 84.2 / 149.3°</td><td class="n">110 / 138 / 138°</td><td class="n"><b>29 / 62 / 64°</b></td></tr>
+      <tr><td><b>새 기준</b> 실루엣 가장 좁은 오목 반지름 (QA 정면 · 뒤 · 3/4 × 3 자세 × 양쪽, 중앙 / 최소)</td><td>18 곳</td><td class="n">7.3 / 4.1 mm</td><td class="n">7.5 / 3.8 mm</td><td class="n"><b>8.2 / 4.3 mm</b></td></tr>
+      <tr><td rowspan="3">회귀 없음: 면 각도 상위 1 % / 최대</td><td>쉬는 자세</td><td class="n">44.4 / 112.1°</td><td class="n">21.6 / 37.9°</td><td class="n"><b>10.4 / 15.4°</b></td></tr>
+      <tr><td>손 흔들기 최고점</td><td class="n">107.0 / 175.3°</td><td class="n">20.4 / 35.8°</td><td class="n"><b>10.3 / 12.9°</b></td></tr>
+      <tr><td>날개 100° 들기</td><td class="n">112.4 / 177.2°</td><td class="n">20.4 / 30.7°</td><td class="n"><b>10.3 / 12.9°</b></td></tr>
+      <tr><td>회귀 없음: 흰 경계 흔들림 (6 / 3 / 1.5 mm 창)</td><td>모든 자세</td><td class="n">1.25 mm</td><td class="n">0.91 / 0.79 / 0.57 mm</td><td class="n">1.07 / <b>0.63 / 0.44</b> mm</td></tr>
+      <tr><td>회귀 없음: 흰색 ~ 접합부 검정 띠 (기준 ≤ 2 mm)</td><td>모든 자세</td><td class="n">12.7–53.2 mm</td><td class="n">0 mm</td><td class="n"><b>0 mm</b></td></tr>
+      <tr><td>회귀 없음: 날개를 따라 움직이는 몸 피부</td><td>—</td><td class="n">5.4 cm · 44 %</td><td class="n">없음</td><td class="n"><b>없음</b></td></tr>
+      <tr><td>회귀 없음: 최소 간격 (clearance_check, 기준 ≥ 8 mm)</td><td>모든 동작 · 반 프레임</td><td class="n">11.9 mm</td><td class="n">14.3 mm</td><td class="n"><b>31.0 mm</b></td></tr>
+      <tr><td>회귀 없음: 최대 비틀기 / 앞으로 간 거리</td><td>모든 동작</td><td class="n">15.0° / 30.1 mm</td><td class="n">10.1° / 0 mm</td><td class="n"><b>10.1° / 0 mm</b></td></tr>
+      <tr><td>회귀 없음: 날개 · 어깨 영역 밖 변경 (render_compare, ≤ 0.2 %)</td><td>QA 뷰 15 개</td><td class="n">—</td><td class="n">—</td><td class="n"><b>9 → 10: 15 / 15 통과</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="src" style="margin-top:8px">흰 경계 흔들림 6 mm 창에서 10차가 9차보다 큰 것(1.07 vs 0.91 mm)은 흰 경계가 관절 공을 따라 휘는 곡선 때문이다. 창을 좁히면 10차가 가장 고르고(3 mm 창 0.63 mm, 1.5 mm 창 0.44 mm), 이웃 점 사이 잔차도 가장 작다(2.24 mm, 9차 2.38 mm, 7차 3.56 mm). 실루엣 반지름은 640 px QA 렌더의 해상도 한계(약 4 mm)에 걸려 보조 지표로만 쓴다. 정면에서는 들기 4.0 → 6.5 mm, 손 흔들기 4.5 → 9.5 mm 로 좋아졌고, 3/4 들기 왼쪽은 10.0 → 4.3 mm 로 줄었다.</p>
+
+  <h3 style="margin-top:24px">날개를 든 모습 (정면 | 3/4)</h3>
+  <div class="card">
+    <figure><img src="r10/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">동작 모음 (위: 정면, 아래: 3/4)</h3>
+  <div class="card">
+    <figure><img src="r10/poses.webp" alt="10차 동작 모음" width="2472" height="624"></figure>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r10/compare.webp" alt="초안 1, 10차 정면, 9차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>10차</span><span>9차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음)</h3>
+  <div class="grid g4">
+    <figure><img src="r10/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r10/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r10/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r10/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r10/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r10/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r10/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b></figcaption></figure>
+    <figure><img src="r10/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r10/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r10/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r10/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r10/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r10/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r10/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r10/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r10/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r10/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r10/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r10/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r10/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>관절 공 때문에 쉬는 자세에서 어깨가 살짝 둥글게 튀어나온다(발목뼈처럼). 날개가 1.3 cm 바깥으로 갔다</li>
+        <li>동작 타이밍의 튐/꺾임(motion_path: 뛰기 24 · 손 흔들기 52 · 걷기 7)은 3–4차 타이밍 그대로다. 따로 다듬을 일로 남김</li>
+        <li>삼각형 108,692 → 116,372 (피부 + 날개 조각 94,100 · 얼굴 조각 22,272): 날개 조각 격자 4.5 → 3.5 mm</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>목을 더 가늘게(더 발목처럼) 혹은 더 굵게(덜 관절처럼) 할까? 지금 원래 폭의 35 %</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r9" style="margin-top:56px">
+  <span class="badge">9차 수정 · 2026-11-13</span>
+  <h2>9차 수정 — 날개를 따로 꿰맨 조각으로: 매끈한 겨드랑이 · 뿌리까지 흰색 · 뚫지 않는 동작</h2>
+  <p class="lead">"겨드랑이 부분이 또 7차는 매끈했는데 오히려 찌글찌글해졌고, 여전히 흰색 영역은 겨드랑이까지 가지 못함. … 겨드랑이 내 요구사항 반영해서 수정하고, 모션 같은 경우 팔이 몸통에 들어온다든지, 다른 요소 같은거 뚫고 나가지 않게 움직임 설계해."</p>
+
+  <h3>무엇을 바꿨나</h3>
+  <div class="card">
+    <p>1–8차는 날개를 몸 피부에서 부드럽게 자라 나오게 만들고, 그 이음 피부를 관절이 늘리는 방식이었다. 그래서 날개를 들 때마다 이음 피부가 늘어나거나 접혔고, 흰색은 그 주름 앞에서 멈춰야 했다. 무게 띠를 넓히면 근육처럼 보였고(7차), 좁히면 주름이 생겼다(8차).</p>
+    <p style="margin-top:8px">9차는 날개를 <b>따로 꿰맨 가죽 조각</b>으로 만들었다(초안 키링처럼). 날개 뿌리는 어깨축 둘레로 몸 옆에 살짝 박혀 있고, 날개는 경첩으로 통째로 돈다. 늘어나는 피부가 없으니 겨드랑이는 몸 표면과 날개가 만나는 깨끗한 선이고, 날개 안쪽 흰색은 뿌리(몸 속)까지 이어진다. 날개는 몸통의 앞뒤 축으로 옆으로만 들고(8차는 날개 자체 축이라 끝이 6 cm 앞으로 나왔다), 비틀기는 ±15° 이내다.</p>
+  </div>
+
+  <h3 style="margin-top:24px">먼저 그려 본 비교 (7차 | 8차 | 9차, 같은 카메라 · 저해상도)</h3>
+  <p class="lead">위부터: 3/4 앞(쉬는 자세) · 아래에서 본 겨드랑이(쉬는 자세) · 날개 100° 들기 · 손 흔들기 가장 높이(정면) · 같은 순간 3/4. 피부 이음 방식(7 · 8차)과 꿰맨 조각 방식(9차)을 비교해 9차 방식으로 정했다.</p>
+  <div class="card">
+    <figure><img src="r9/previz.webp" alt="7차, 8차, 9차 겨드랑이 미리보기" width="1068" height="1772"></figure>
+    <div class="cmp-labels"><span>7차</span><span>8차</span><span>9차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">합격 기준 (측정값)</h3>
+  <p class="lead">세 회차를 같은 측정 스크립트(<code>identity_v3_metrics.py</code>)로 쟀다. 왼쪽 날개 기준. 매끈함 = 어깨축 9 cm 안에서 이웃한 면 법선 사이 각도(보이는 면만), 흰 경계 흔들림 = 흰 경계선이 자기 자신을 부드럽게 편 곡선에서 벗어난 최대 거리.</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>기준</th><th>자세</th><th>7차</th><th>8차</th><th>9차</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="3">1. 매끈함: 면 각도 상위 1 % / 최대</td><td>쉬는 자세</td><td class="n">28.5° / 48.1°</td><td class="n">44.4° / 112.1°</td><td class="n"><b>21.6° / 37.9°</b></td></tr>
+      <tr><td>손 흔들기 가장 높이</td><td class="n">36.4° / 151.6°</td><td class="n">107.0° / 175.3°</td><td class="n"><b>20.4° / 35.8°</b></td></tr>
+      <tr><td>날개 100° 들기</td><td class="n">47.8° / 163.6°</td><td class="n">112.4° / 177.2°</td><td class="n"><b>20.4° / 30.7°</b></td></tr>
+      <tr><td>1. 흰 경계 흔들림</td><td>모든 자세</td><td class="n">0.97 mm</td><td class="n">1.25 mm</td><td class="n"><b>0.52 mm</b></td></tr>
+      <tr><td rowspan="3">2. 흰색 ~ 주름 사이 검정 띠 (중앙 / 최대, 기준 ≤ 2 mm)</td><td>쉬는 자세</td><td class="n">10.8 / 51.9 mm</td><td class="n">12.7 / 42.4 mm</td><td class="n"><b>0 / 0 mm</b></td></tr>
+      <tr><td>손 흔들기 가장 높이</td><td class="n">7.3 / 88.2 mm</td><td class="n">45.2 / 54.9 mm</td><td class="n"><b>0 / 0 mm</b></td></tr>
+      <tr><td>날개 100° 들기</td><td class="n">67.0 / 80.3 mm</td><td class="n">53.2 / 55.2 mm</td><td class="n"><b>0 / 0 mm</b></td></tr>
+      <tr><td>3. 날개를 따라 움직이는 몸 피부 (무게 &gt; 0.5)</td><td>—</td><td class="n">축에서 9.5 cm · 키 40 % 까지</td><td class="n">5.4 cm · 44 % 까지</td><td class="n"><b>없음</b> (날개는 조각)</td></tr>
+      <tr><td>4. 날개와 다른 것 사이 최소 간격 (기준 ≥ 8 mm, clearance_check)</td><td>모든 동작 · 반 프레임</td><td class="n">교차 (머리 속)</td><td class="n">11.9 mm</td><td class="n"><b>14.3 mm</b></td></tr>
+      <tr><td rowspan="2">5. 움직임</td><td>최대 비틀기</td><td class="n">57.0°</td><td class="n">15.0°</td><td class="n"><b>10.1°</b></td></tr>
+      <tr><td>날개 끝이 앞으로 간 거리</td><td class="n">28.4 mm (앉기)</td><td class="n">30.1 mm (손 흔들기)</td><td class="n"><b>0 mm</b></td></tr>
+      <tr><td>6. 회귀 없음: 날개 · 어깨 영역 밖에서 바뀐 픽셀 (기준 ≤ 0.2 %)</td><td>고정 QA 카메라 5 개 × 3 프레임</td><td class="n">—</td><td class="n">기준(8 → 9)</td><td class="n"><b>15 / 15 통과, 최대 0.0 %</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin-top:24px">스킬 절차로 다시 검사 (3d-previz-edit · rig-motion-clearance)</h3>
+  <div class="card">
+    <ul>
+      <li><b>기준선 고정:</b> 7차 · 8차 · 9차를 각각 <code>.blend</code> 로 굽고(모든 동작을 한 타임라인에, 사무실 책상 세트 포함), 7차에서 만든 QA 카메라 5 개(정면 · 옆 · 뒤 · 3/4 · 위)를 8 · 9차에 그대로 복사해 같은 카메라로 렌더(<code>qa_render.py</code>, 선 자세 · 손 흔들기 가장 높이 · 최대로 든 날개).</li>
+      <li><b>한 번에 한 부위 · 회귀 비교:</b> <code>render_compare.py</code> 로 날개 + 어깨 9 cm 영역 밖이 그대로인지 확인. 8 → 9차: 15 개 뷰 모두 통과(밖에서 바뀐 픽셀 0.0 %). 7 → 9차: 손 흔들기 프레임 4 개 뷰가 1.3 % 로 걸리는데, 7 → 8차도 같은 뷰가 같은 값(1.31 %)으로 걸린다 — 8차에서 의도해 바꾼 "몸 전체 14° 돌리기"이고 9차가 더한 변화는 없다(<code>r9/qa/compare_*.md</code>).</li>
+      <li><b>간격 검사:</b> <code>clearance_check.py</code> 로 모든 동작 · 모든 프레임(반 프레임까지), 날개 끝 × 머리 · 몸 · 눈/볼/부리 · 발 · 반대 날개 · 책상 세트. 9차 최소 <b>14.3 mm</b>(뛰기, 몸), 교차 0. 7차는 손 흔들기(67 프레임)와 최대로 든 날개에서 머리 · 몸과 교차로 실패, 8차는 통과(최소 11.9 mm)(<code>r9/qa/clearance_check.md</code>).<br>
+        <span class="src">주의: 스킬의 원본 스크립트는 거리 부호를 가장 가까운 면의 법선으로 정하는데, 정점 그룹으로 나눈 부위(머리 · 몸)는 열린 껍데기라 부호가 뒤집혀 선 자세에서도 "−0.49 m"가 나온다. 스킬 문서의 주의대로 교차(BVH 겹침) 열을 기준으로 하고 거리는 부호 없이 쟀다(<code>clearance_check_r09_stock_signed.md</code> 에 원본 출력).</span></li>
+      <li><b>궤적:</b> <code>motion_path.py</code> 는 뛰기 · 손 흔들기 · 걷기에서 튐/꺾임을 7 · 8 · 9차 모두 거의 같은 수로 표시한다(뛰기 24–26, 손 흔들기 51–52, 걷기 9): 빠르게 드는 구간과 흔들기 끝의 방향 전환. 동작 타이밍은 3–4차 그대로라 이번 수정과 무관하고, 다음에 따로 다듬을 일로 남긴다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">동작별 간격 검사 (9차, 모든 프레임)</h3>
+  <p class="lead">날개(관절 7 cm 바깥)와 몸통 · 머리 · 눈 · 볼 · 부리 · 발, 책상 앞에 앉았을 때는 책상 세트까지의 가장 가까운 거리. 8 mm 미만이면 렌더가 실패한다(<code>r9/clearance.txt</code>).</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>동작</th><th>최소 간격</th><th>가장 가까운 것</th><th>최대 비틀기</th><th>앞으로 간 거리</th></tr></thead>
+    <tbody>
+      <tr><td>뛰기</td><td class="n">13.4 mm</td><td>몸통</td><td class="n">5.9°</td><td class="n">0 mm</td></tr>
+      <tr><td>손 흔들기</td><td class="n">13.2 mm</td><td>머리</td><td class="n">10.1°</td><td class="n">0 mm</td></tr>
+      <tr><td>걷기</td><td class="n">24.9 mm</td><td>머리</td><td class="n">2.4°</td><td class="n">0 mm</td></tr>
+      <tr><td>앉기</td><td class="n">27.8 mm</td><td>몸통</td><td class="n">0.5°</td><td class="n">0 mm</td></tr>
+      <tr><td>책상 앞에 앉기 (책상 세트 포함)</td><td class="n">27.8 mm</td><td>몸통</td><td class="n">0.5°</td><td class="n">0 mm</td></tr>
+      <tr><td>최대로 든 날개 (112°, 비틀기 −15°)</td><td class="n">22.0 mm</td><td>몸통</td><td class="n">7.4°</td><td class="n">0 mm</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 겨드랑이 (7차 | 8차 | 9차)</h3>
+  <p class="lead">위부터 3/4 앞(쉬는 자세) · 아래에서 본 겨드랑이(쉬는 자세) · 날개를 옆으로 든 모습. 같은 카메라.</p>
+  <div class="card">
+    <figure><img src="r9/beforeafter-armpit.webp" alt="겨드랑이 7차, 8차, 9차" width="2224" height="2224"></figure>
+    <div class="cmp-labels"><span>7차</span><span>8차</span><span>9차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">날개를 든 모습 (정면 | 3/4)</h3>
+  <div class="card">
+    <figure><img src="r9/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">동작 모음 (위: 정면, 아래: 3/4)</h3>
+  <p class="lead">선 자세 · 손 흔들기(가장 높이) · 손 흔들기(흔드는 중) · 뛰기 준비 · 뛰기(공중) · 걷기 · 앉기 · 최대로 든 날개.</p>
+  <div class="card">
+    <figure><img src="r9/poses.webp" alt="9차 동작 모음" width="2472" height="624"></figure>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r9/compare.webp" alt="초안 1, 9차 정면, 8차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>9차</span><span>8차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음)</h3>
+  <div class="grid g4">
+    <figure><img src="r9/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r9/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r9/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r9/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r9/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r9/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r9/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b></figcaption></figure>
+    <figure><img src="r9/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r9/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r9/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r9/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r9/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r9/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r9/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r9/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r9/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r9/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r9/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r9/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure><figcaption>날개는 옆으로 들어 위아래로 흔들고, 몸이 살짝 돈다.</figcaption>
+      <figure style="margin-top:12px"><img src="r9/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <h3 style="margin-top:24px">바꾼 것 / 그대로 둔 것</h3>
+  <div class="card">
+  <ul>
+    <li><b>바꾼 것:</b> 날개 = 따로 꿰맨 조각(<code>WING_PIECE</code>, 날개 메쉬 4.5 mm 격자), 흰색 위끝을 몸 속 3 cm 까지(<code>PIECE_CUT</code> −0.030, 8차 <code>WING_CUT</code> 0.012), 들기 축 = 몸통 앞뒤 축(8차: 날개 폭 축). 피부 이음 · 경첩 고리 무게(8차 <code>HINGE_*</code>, <code>WING_K</code>)는 조각 방식에서는 쓰이지 않는다(1–8차를 다시 만들 때만).</li>
+    <li><b>그대로:</b> 8차 얼굴(눈 · 볼 · 미간 56.1 mm), 7 · 8차 몸 · 흰 배 · 허리 실루엣 · 관자 곡선, 동작 제한(들기 112° · 비틀기 ±15°), 손 흔들기의 몸 돌리기 14°.</li>
+    <li>삼각형: 8차 97,868 → 9차 108,692 (피부 + 날개 조각 86,420 · 얼굴 조각 22,272; 날개 조각의 몸 속 뿌리 포함).</li>
+  </ul>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>날개와 몸이 만나는 선은 이제 두 조각이 맞닿는 또렷한 선이다(꿰맨 인형처럼). 그 둘레에 바느질 고리를 더할 수 있다</li>
+        <li>몸 속에 박힌 날개 뿌리는 보이지 않는 면이다(삼각형 수에 포함)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>날개 뿌리 둘레에 바느질 고리를 둘까?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r8" style="margin-top:56px">
+  <span class="badge">8차 수정 · 2026-11-13</span>
+  <h2>8차 수정 — 눈 · 볼 조금 크게 · 미간 조금 좁게 · 발목 같은 어깨 관절 · 위아래로만 움직이는 날개</h2>
+  <p class="lead">"눈이랑 볼 조금씩만 더 키우면서 미간 조금만 더 붙도록 해줘. 겨드랑이는 좀 이상해진게 발목처럼 날개의 두께만큼 붙어서 가동하기만 하면 되는데 근육이 허리까지 내려온 것 처럼 보임. 그리고 그래서인지 날개 안쪽 흰색 영역이 다시 작아졌고, 팔을 들어올리면 머리 안에 팔이 들어가는 것처럼 보임. 그니까 팔이 상하로 움직이고 조금만 비틀 수 있어야 하는데 너무 앞으로 팔을 돌리는거같음. 펭귄의 특성상 날개 안쪽을 앞으로 보이려면 날개를 많이 못 비트니까 몸 전체를 같이 트는 방식으로 가고, 사실 날개 안쪽을 너무 보여주지 않으려고 해도 됨."</p>
+
+  <h3>날개를 든 모습 (정면 | 3/4)</h3>
+  <p class="lead">날개는 어깨 경첩을 축으로 옆으로 들어 올리고, 비틀기는 12° 뿐이다. 안쪽을 보여 주는 대신 몸 전체가 14° 돈다. 날개가 머리 · 몸과 늘 떨어져 있다(아래 간격 표).</p>
+  <div class="card">
+    <figure><img src="r8/raised.webp" alt="날개를 든 모습 정면과 3/4" width="1448" height="732"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>정면</span><span>3/4</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">동작 모음 (위: 정면, 아래: 3/4)</h3>
+  <p class="lead">왼쪽부터 선 자세 · 손 흔들기(가장 높이) · 손 흔들기(흔드는 중) · 뛰기 준비 · 뛰기(공중) · 걷기 · 앉기 · 최대로 든 날개.</p>
+  <div class="card">
+    <figure><img src="r8/poses.webp" alt="8차 동작 모음" width="2472" height="624"></figure>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r8/poses-r7.webp" alt="7차 동작 모음(비교용)" width="2472" height="624"></figure>
+    <figcaption><b>7차 (비교용)</b>손 흔들기에서 날개가 앞 · 안쪽으로 돌아 머리 속으로 들어갔다(아래 간격 −59 mm).</figcaption>
+  </div>
+
+  <h3 style="margin-top:24px">날개와 머리 · 몸 사이 가장 가까운 거리 (자동 검사)</h3>
+  <p class="lead">각 동작의 모든 프레임에서, 날개(관절 7 cm 바깥)의 피부 점과 몸통 · 머리 표면 사이 거리 중 가장 작은 값. 0 이하면 날개가 몸 안에 들어간 것이고, 렌더 스크립트가 실패한다.</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>동작</th><th>7차</th><th>8차</th></tr></thead>
+    <tbody>
+      <tr><td>뛰기</td><td class="n">13.3 mm</td><td class="n">13.8 mm</td></tr>
+      <tr><td>손 흔들기</td><td class="n"><b>−59.0 mm</b> (머리 속)</td><td class="n"><b>13.2 mm</b></td></tr>
+      <tr><td>걷기</td><td class="n">25.4 mm</td><td class="n">25.2 mm</td></tr>
+      <tr><td>앉기</td><td class="n">24.4 mm</td><td class="n">28.2 mm</td></tr>
+      <tr><td>최대로 든 날개 (7차 128° · 비틀기 78° / 8차 112° · 15°)</td><td class="n"><b>−26.8 mm</b></td><td class="n"><b>11.9 mm</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 겨드랑이 (7차 | 8차)</h3>
+  <p class="lead">위부터 3/4 앞(쉬는 자세), 아래에서 본 겨드랑이(쉬는 자세), 날개를 옆으로 든 모습. 8차는 날개 두께만큼의 짧은 고리에서만 몸과 섞이고, 그 아래 몸 옆은 몸 그대로다. 흰색은 다시 관절까지.</p>
+  <div class="card">
+    <figure><img src="r8/beforeafter-armpit.webp" alt="겨드랑이 7차와 8차 나란히" width="1488" height="2224"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>7차</span><span>8차</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>왜 근육이 허리까지 내려온 것처럼 보였나</h3>
+    <p>7차에서 흰 경계를 날개와 함께 단단히 움직이려고, 몸 피부에도 "날개까지의 거리"로 날개 무게를 주었다(경계 바깥 6 cm 까지). 그런데 날개는 몸 옆에 바짝 붙어 내려오기 때문에, 날개 옆에 있는 몸 피부가 전부 그 거리 안에 들었다. 그래서 어깨축(키의 50 %)에서 <b>키의 40 %</b>까지, 축에서 12 cm 떨어진 몸 피부가 날개를 따라 움직여 옆구리로 근육 띠처럼 늘어났다. 날개 뿌리의 부드러운 이음(9 cm)도 같은 띠를 만들었다. 8차는 날개 무게를 <b>어깨축에서 3 → 6 cm 안의 고리</b>에서만 몸으로 넘기고(그 바깥 몸 피부는 무게 0), 이음은 3.5 cm 로 줄였다. 날개 무게가 0.5 를 넘는 몸 피부: 7차 축에서 9.5 cm · 키 40 % 까지 → 8차 5.4 cm · 44 % 까지.</p>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 얼굴 (7차 | 8차)</h3>
+  <p class="lead">눈 · 볼을 5 % 키우고 눈 중심은 그대로 둬서 미간이 조금 좁아졌다.</p>
+  <div class="card">
+    <figure><img src="r8/beforeafter-face.webp" alt="얼굴 7차와 8차 나란히" width="1488" height="752"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>7차</span><span>8차</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+  <table>
+    <thead><tr><th></th><th>5차</th><th>6차</th><th>7차</th><th>8차</th></tr></thead>
+    <tbody>
+      <tr><td>눈 지름</td><td class="n">0.290 W · 118.9 mm</td><td class="n">0.262 W · 107.4 mm</td><td class="n">0.262 W · 107.4 mm</td><td class="n"><b>0.275 W · 112.8 mm</b></td></tr>
+      <tr><td>볼 지름 (눈 × 0.75)</td><td class="n">89.2 mm</td><td class="n">80.6 mm</td><td class="n">80.6 mm</td><td class="n"><b>84.6 mm</b></td></tr>
+      <tr><td>눈 중심 사이</td><td class="n">0.44 W</td><td class="n">0.44 W</td><td class="n">0.412 W</td><td class="n">0.412 W</td></tr>
+      <tr><td>미간 (두 눈 안쪽 가장자리)</td><td class="n">61.5 mm</td><td class="n">73.0 mm</td><td class="n">61.5 mm</td><td class="n"><b>56.1 mm</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 날개</h3>
+  <div class="card">
+    <figure><img src="r8/beforeafter-wing.webp" alt="날개 7차와 8차 나란히" width="1488" height="1488"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>7차</span><span>8차</span></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r8/compare.webp" alt="초안 1, 8차 정면, 7차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>8차</span><span>7차</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r8/samescale.webp" alt="초안 1과 8차 정면을 같은 축척으로 나란히" width="1568" height="1032"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>초안 draft_1</span><span>8차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음)</h3>
+  <div class="grid g4">
+    <figure><img src="r8/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r8/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r8/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r8/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r8/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r8/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r8/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b></figcaption></figure>
+    <figure><img src="r8/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r8/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r8/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r8/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r8/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r8/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r8/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r8/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r8/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r8/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r8/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r8/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure><figcaption>날개는 옆으로 들어 위아래로 흔들고, 몸이 살짝 돈다.</figcaption>
+      <figure style="margin-top:12px"><img src="r8/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>7차</th><th>8차</th></tr></thead>
+    <tbody>
+      <tr><td>눈 · 볼 조금 크게, 미간 조금 좁게</td><td>눈 반지름 0.131 W, 미간 61.5 mm</td><td>눈 반지름 <b>0.1376 W</b>(+5 %, 볼은 눈 × 0.75 그대로), 눈 중심 ±0.206 W 그대로 → 미간 <b>56.1 mm</b></td></tr>
+      <tr><td>발목처럼 짧은 어깨 관절</td><td>몸 피부에 날개까지의 거리로 날개 무게(경계 바깥 6 cm), 날개 · 몸 이음 9 cm, 무게 평활 14 회</td><td>날개가 가진 피부는 전부 날개와 함께, 몸 쪽 섞임은 <b>어깨축 3 → 6 cm 고리</b> 안에서만(폭 4.5 cm, 주름 너머 1 cm 까지 단단히), 이음 0.045 → <b>0.030</b> · 길이 9 → <b>3.5 cm</b>, 날개 무게 평활 <b>3 회</b>. 고리 위에는 바느질을 두지 않음(늘어나는 피부)</td></tr>
+      <tr><td>날개 안쪽 흰색 다시 관절까지</td><td>위끝 2.2 cm, 주름 컷 0.010</td><td>위끝 <b>1.2 cm</b>(6차와 같음), 주름 컷 <b>0.008</b>. 경계는 7차처럼 한 곡선</td></tr>
+      <tr><td>위아래로만, 조금만 비틀기, 앞으로 돌리지 않기</td><td>앞뒤 축(Y)으로 최대 145° 들기 + 비틀기 −78°</td><td>날개는 <b>자기 폭 방향 경첩축</b>으로만 들기(최대 <b>112°</b>, 몸 쪽 8°), 비틀기 <b>±15° 제한</b>. 손 흔들기: 100° + 흔들기 ±12°, 비틀기 −12°, 대신 <b>몸 전체가 14° 돎</b>. 뛰기 · 걷기 · 앉기도 같은 경첩으로(앉기의 앞으로 8° 돌리기 제거)</td></tr>
+      <tr><td>삼각형</td><td>97,108</td><td>97,868 (피부 75,596 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>날개를 끝까지 들면 어깨 고리의 검정 피부가 짧게 늘어난다(고리 안에서만)</li>
+        <li>동작은 지금 뛰기 · 손 흔들기 · 걷기 · 앉기만 있다. 다른 동작을 만들 때도 같은 경첩 · 제한 · 간격 검사를 쓴다</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>손 흔들기에서 몸이 도는 정도(14°)가 괜찮은지</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r7" style="margin-top:56px">
+  <span class="badge">7차 수정 · 2026-11-13</span>
+  <h2>7차 수정 — 실루엣 허리 · 흰 배는 5차로 · 미간 5차로 · 겨드랑이 정리</h2>
+  <p class="lead">"펭귄 6차 수정에서 허리 오목하게 하라는거는 흰색이 아니라 실루엣 얘기하는 거였어. 횐색 배는 5차로 되돌리고 실루엣 형태를 오목하게 다시 수정. 눈이랑 볼을 같이 미간 사이 5차 수준으로 다시 좁혀. 날개 안 쪽 겨드랑이 되게 지글지글한데 왜 그런거야? 깔끔하게 떨어지도록 다듬어."</p>
+
+  <h3>실루엣 겹쳐 보기 (6차 / 7차)</h3>
+  <p class="lead">같은 카메라에서 6차 윤곽(주황)과 7차 윤곽(파랑)을 7차 렌더 위에 겹쳤다. 정면 · 3/4 에서 가슴과 엉덩이 사이 옆선이 한 번 안으로 들어간다. 옆모습은 몸 깊이를 바꾸지 않아 두 선이 겹친다(날개만 짧고 낮음).</p>
+  <div class="card">
+    <figure><img src="r7/silhouette.webp" alt="6차와 7차 윤곽 겹침: 정면, 3/4, 옆" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>정면</span><span>3/4 앞</span><span>옆</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 겨드랑이 (6차 | 7차)</h3>
+  <p class="lead">위부터 3/4 앞(쉬는 자세), 아래에서 본 겨드랑이(쉬는 자세), 날개를 옆으로 든 모습. 왼쪽 6차, 오른쪽 7차.</p>
+  <div class="card">
+    <figure><img src="r7/beforeafter-armpit.webp" alt="겨드랑이 6차와 7차 나란히" width="1488" height="2224"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>6차</span><span>7차</span></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>왜 지글지글했나</h3>
+    <ul>
+      <li><b>날개를 들 때:</b> 흰 경계가 몸 · 날개 무게가 섞이는 띠 한가운데 있었다. 날개를 들면 그 띠의 면이 3–4 배로 늘어나고, 꼭짓점마다 저장한 색 경계가 길고 가는 면을 따라 보간되어 톱니가 됐다.</li>
+      <li><b>쉬는 자세:</b> 날개 앞 · 뒤 가장자리가 어깨 주름으로 녹아드는 곳에서 흰색 경계 필드가 꼭짓점마다 5–12 mm 씩 튀었다. 경계 바깥 5.8 mm 에 있는 바느질선이 그 값에 걸려 얼룩처럼 흩어졌고, 바느질 간격도 날개 테두리 각도로 정해서 관절 쪽 짧은 구간에 3 배로 몰렸다.</li>
+    </ul>
+    <h3 style="margin-top:12px">고친 것</h3>
+    <ul>
+      <li>흰 면과 경계 바깥 8 mm 까지는 날개와 함께 단단히 움직이고, 그 바깥 6 cm 에 걸쳐 몸 쪽으로 서서히 넘어가게 했다. 늘어나는 피부는 경계가 아니라 그 아래 검정 겨드랑이 쪽이다.</li>
+      <li>경계 바깥 검정 쪽(3 mm 이상)만 필드를 표면을 따라 고르게 폈다. 흰 경계 자체는 그대로.</li>
+      <li>바느질 간격은 메쉬에서 실제 흰 경계선을 뽑아 그 길이로 나눔(앞판과 같은 방식). 주름에서 자르는 곳은 6 mm 위로 올리고(0.002 → 0.010) 모서리를 둥글게(반경 0.012 → 0.030) 해서 가는 흰 조각이 남지 않게 했다.</li>
+    </ul>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 얼굴 (미간)</h3>
+  <p class="lead">눈 · 볼 크기는 6차 그대로 두고 둘을 함께 안쪽으로 옮겼다. 두 눈 안쪽 가장자리 사이(미간): 5차 0.150 W(6.2 cm) · 6차 0.178 W(7.3 cm) · <b>7차 0.150 W(6.2 cm)</b>.</p>
+  <div class="card">
+    <figure><img src="r7/beforeafter-face.webp" alt="얼굴 6차와 7차 나란히" width="1488" height="752"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>6차</span><span>7차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 날개</h3>
+  <div class="card">
+    <figure><img src="r7/beforeafter-wing.webp" alt="날개 6차와 7차 나란히" width="1488" height="1488"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>6차</span><span>7차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">초안과 같은 축척으로 나란히</h3>
+  <div class="card">
+    <figure><img src="r7/samescale.webp" alt="초안 1과 7차 정면을 같은 축척으로 나란히" width="1568" height="1032"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>초안 draft_1</span><span>7차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">같은 높이에서 잰 폭</h3>
+  <p class="lead">값 = 몸 최대 반폭을 1 로 한 반폭, 모델 식에서 바로 잼(날개 제외).</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>높이(몸 키 대비)</th><th>5차 몸</th><th>6차 몸</th><th>7차 몸</th><th>5차 흰색</th><th>6차 흰색</th><th>7차 흰색</th></tr></thead>
+    <tbody>
+      <tr><td>0.75 (눈)</td><td class="n">0.99</td><td class="n">0.99</td><td class="n">0.99</td><td class="n">0.86</td><td class="n">0.82</td><td class="n">0.82</td></tr>
+      <tr><td>0.65 (볼)</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">0.86</td><td class="n">0.82</td><td class="n">0.81</td></tr>
+      <tr><td>0.55</td><td class="n">0.99</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">0.77</td><td class="n">0.79</td><td class="n">0.75</td></tr>
+      <tr><td>0.50</td><td class="n">0.95</td><td class="n">0.97</td><td class="n">0.98</td><td class="n">0.72</td><td class="n">0.76</td><td class="n">0.71</td></tr>
+      <tr><td>0.45</td><td class="n">0.93</td><td class="n">0.93</td><td class="n">0.95</td><td class="n">0.67</td><td class="n">0.73</td><td class="n">0.66</td></tr>
+      <tr><td>0.40</td><td class="n">0.95</td><td class="n">0.93</td><td class="n"><b>0.93</b></td><td class="n">0.62</td><td class="n">0.70</td><td class="n">0.62</td></tr>
+      <tr><td>0.35 (허리)</td><td class="n">0.97</td><td class="n">0.96</td><td class="n"><b>0.93</b></td><td class="n">0.59</td><td class="n">0.70</td><td class="n"><b>0.59</b></td></tr>
+      <tr><td>0.30</td><td class="n">0.97</td><td class="n">0.97</td><td class="n"><b>0.94</b></td><td class="n">0.58</td><td class="n">0.72</td><td class="n"><b>0.58</b></td></tr>
+      <tr><td>0.25</td><td class="n">0.97</td><td class="n">0.97</td><td class="n">0.96</td><td class="n">0.59</td><td class="n">0.76</td><td class="n">0.59</td></tr>
+      <tr><td>0.20 (엉덩이)</td><td class="n">0.98</td><td class="n">0.98</td><td class="n">0.98</td><td class="n">0.63</td><td class="n">0.81</td><td class="n">0.63</td></tr>
+      <tr><td>0.10</td><td class="n">0.98</td><td class="n">0.98</td><td class="n">0.98</td><td class="n">0.79</td><td class="n">0.84</td><td class="n">0.79</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r7/compare.webp" alt="초안 1, 7차 정면, 6차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>7차</span><span>6차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음) · 뒤 · 아래</h3>
+  <div class="grid g4">
+    <figure><img src="r7/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>가슴과 엉덩이 사이 옆선이 안으로, 흰 배는 5차 모양</figcaption></figure>
+    <figure><img src="r7/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r7/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b></figcaption></figure>
+    <figure><img src="r7/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r7/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r7/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r7/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b></figcaption></figure>
+    <figure><img src="r7/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r7/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r7/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r7/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r7/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r7/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r7/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r7/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r7/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r7/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r7/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r7/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure><figcaption>날개를 들어도 흰 경계가 한 곡선으로 떨어진다.</figcaption>
+      <figure style="margin-top:12px"><img src="r7/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>6차</th><th>7차</th></tr></thead>
+    <tbody>
+      <tr><td>흰 배는 5차로</td><td>4차 값: 허리 (−0.052, −0.60, 0.25), 아래 퍼짐 (0.028, −1.00, 0.16)</td><td><b>5차 값</b>: (−0.110, −0.72, 0.38), (0.045, −1.10, 0.14) — 30 % 높이 0.58. 얼굴 쪽 흰색(6차의 축소 · 관자 곡선)은 그대로</td></tr>
+      <tr><td>실루엣 허리 오목하게</td><td>겨드랑이 오목 (0.070, 43 %, 0.075) + 허리 (0.030, 27 %, 0.14): 30 % 높이 0.97</td><td>한 번의 매끈한 오목으로: 허리 <b>(0.065, 33 %, 0.115)</b> + 남은 겨드랑이 (0.030, 44 %, 0.070). 35–40 % 높이 <b>0.93</b>, 30 % 0.94, 엉덩이(10–20 %) 0.98 · 얼굴 1.00 그대로. 변곡점 2 개(오목 하나). 옆모습 깊이는 그대로</td></tr>
+      <tr><td>미간을 5차 수준으로</td><td>눈 중심 ±0.22 W, 미간 0.178 W</td><td>눈 중심 <b>±0.206 W</b>(볼도 같이 이동) → 미간 <b>0.150 W</b> = 5차. 눈 · 볼 크기는 6차 그대로</td></tr>
+      <tr><td>겨드랑이 정리</td><td>위 "왜 지글지글했나"</td><td>흰 면 + 바깥 8 mm 단단히, 6 cm 에 걸쳐 몸으로(<code>ARM_RIGID</code> 0.060), 주름 컷 0.002 → <b>0.010</b>, 모서리 반경 0.012 → <b>0.030</b>, 흰 위끝 1.2 → <b>2.2 cm</b>(1.2 cm 이면 모서리에 가는 조각), 검정 쪽 필드 표면 평활(12 회), 바느질 간격은 실제 경계선 길이로</td></tr>
+      <tr><td>삼각형</td><td>97,308</td><td>97,108 (피부 75,348 · 조각 21,760)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>날개를 크게 들면 흰 면이 단단히 따라가는 대신 그 아래 검정 겨드랑이 피부가 부드럽게 부푼다(접히거나 톱니지지 않음)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>허리를 더 들어가게(0.90) 할까? 지금 0.93</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r6" style="margin-top:56px">
+  <span class="badge">6차 수정 · 2026-11-12</span>
+  <h2>6차 수정 — 얼굴 조금 작게 · 관자 곡선 · 날개 낮고 짧게 · 허리는 4차로</h2>
+  <p class="lead">"펭귄 눈, 볼, 입 조금씩만 줄이고, 얼굴 부분 흰색 부분을 조금 작게 할거임. 지금 눈썹-관자-볼 내려오는 부분에서 관자 부분에 조금 직선이 보이는데 곡선으로 다듬어줘. 날개 안쪽 겨드랑이 부분인가 관절부분까지 흰색 영역 확장. 날개 길이 조금 짧게 하면서 관절이랑 같이 몸통 조금 아래로 위치 이동. 허리 4차처럼 되돌리기"</p>
+
+  <h3>전 / 후 — 얼굴</h3>
+  <p class="lead">같은 카메라 · 같은 축척으로 찍은 5차(왼쪽)와 6차(오른쪽). 눈 · 볼 · 부리 10 % 작게, 얼굴 흰색 약 5 % 좁게, 관자놀이의 곧은 구간이 없어지고 눈썹에서 볼까지 한 곡선.</p>
+  <div class="card">
+    <figure><img src="r6/beforeafter-face.webp" alt="얼굴 5차와 6차 나란히" width="1488" height="752"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>5차</span><span>6차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">전 / 후 — 날개</h3>
+  <p class="lead">위: 3/4 앞에서 본 날개 안쪽. 아래: 날개를 옆으로 든 모습(겨드랑이 · 관절). 6차는 어깨가 2.1 cm 낮고 날개가 9 % 짧으며(끝 높이는 그대로), 안쪽 흰색이 관절 주름까지 올라간다.</p>
+  <div class="card">
+    <figure><img src="r6/beforeafter-wing.webp" alt="날개 5차와 6차 나란히" width="1488" height="1488"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>5차</span><span>6차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">초안과 같은 축척으로 나란히</h3>
+  <p class="lead">5차와 같은 방법: 두 몸통(정수리 → 몸 바닥, 발 제외)을 같은 높이로, 바닥 · 가운데 선을 맞춤. 파란 선 = 몸 높이의 0 · 25 · 50 · 75 · 100 %.</p>
+  <div class="card">
+    <figure><img src="r6/samescale.webp" alt="초안 1과 6차 정면을 같은 축척으로 나란히" width="1568" height="1032"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>초안 draft_1</span><span>6차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">같은 높이에서 잰 폭 (5차 / 6차)</h3>
+  <p class="lead">값 = 몸 최대 반폭을 1 로 한 반폭, 모델의 식에서 바로 잼(날개 제외). 허리(0.45 이하)의 흰색은 4차 값과 같다.</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>높이(몸 키 대비)</th><th>5차 몸</th><th>6차 몸</th><th>4차 흰색</th><th>5차 흰색</th><th>6차 흰색</th></tr></thead>
+    <tbody>
+      <tr><td>0.85 (관자놀이)</td><td class="n">0.91</td><td class="n">0.91</td><td class="n">–</td><td class="n">0.71</td><td class="n"><b>0.65</b></td></tr>
+      <tr><td>0.80</td><td class="n">0.96</td><td class="n">0.96</td><td class="n">–</td><td class="n">0.83</td><td class="n">0.78</td></tr>
+      <tr><td>0.75 (눈)</td><td class="n">0.99</td><td class="n">0.99</td><td class="n">0.82</td><td class="n">0.86</td><td class="n"><b>0.82</b></td></tr>
+      <tr><td>0.65 (볼)</td><td class="n">1.00</td><td class="n">1.00</td><td class="n">0.89</td><td class="n">0.86</td><td class="n">0.82</td></tr>
+      <tr><td>0.55</td><td class="n">0.99</td><td class="n">1.00</td><td class="n">0.85</td><td class="n">0.77</td><td class="n">0.79</td></tr>
+      <tr><td>0.45 (겨드랑이)</td><td class="n">0.93</td><td class="n">0.93</td><td class="n">0.74</td><td class="n">0.67</td><td class="n">0.73</td></tr>
+      <tr><td>0.35</td><td class="n">0.97</td><td class="n">0.96</td><td class="n">0.70</td><td class="n">0.59</td><td class="n"><b>0.70</b></td></tr>
+      <tr><td>0.30 (허리)</td><td class="n">0.97</td><td class="n">0.97</td><td class="n">0.72</td><td class="n">0.58</td><td class="n"><b>0.72</b></td></tr>
+      <tr><td>0.20</td><td class="n">0.98</td><td class="n">0.98</td><td class="n">0.81</td><td class="n">0.63</td><td class="n"><b>0.81</b></td></tr>
+      <tr><td>0.10</td><td class="n">0.98</td><td class="n">0.98</td><td class="n">0.84</td><td class="n">0.79</td><td class="n"><b>0.84</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r6/compare.webp" alt="초안 1, 6차 정면, 5차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>6차</span><span>5차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음) · 뒤 · 아래</h3>
+  <div class="grid g4">
+    <figure><img src="r6/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>눈썹 → 관자 → 볼이 한 곡선, 허리는 4차처럼 완만하게</figcaption></figure>
+    <figure><img src="r6/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r6/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>어깨 · 날개가 조금 아래로, 날개는 조금 짧게</figcaption></figure>
+    <figure><img src="r6/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r6/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r6/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r6/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b></figcaption></figure>
+    <figure><img src="r6/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r6/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r6/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r6/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r6/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r6/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r6/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r6/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r6/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r6/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r6/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r6/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure><figcaption>날개 안쪽 흰색이 겨드랑이 관절 주름까지 올라간다.</figcaption>
+      <figure style="margin-top:12px"><img src="r6/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>5차</th><th>6차</th></tr></thead>
+    <tbody>
+      <tr><td>눈 · 볼 · 입 조금씩 작게</td><td>눈 지름 0.29 W, 볼 = 눈 × 0.75, 부리 반폭 5.0 · 위 5.0 · 아래 5.8 cm, 튀어나옴 3.8 cm</td><td>모두 <b>−10 %</b>: 눈 지름 0.262 W, 볼은 눈을 따라 −10 %(눈과의 자리 관계 그대로), 부리 4.5 · 4.5 · 5.2 cm, 튀어나옴 3.4 cm. 눈 · 부리 중심 높이는 그대로</td></tr>
+      <tr><td>얼굴 흰색 조금 작게</td><td>눈썹 원 중심 (0.205, 0.057) W · 반지름 0.225 W, 눈 높이 흰 폭 0.86</td><td>눈썹 원을 눈 중심 기준 <b>0.95 배</b>(0.195, 0.054 · 0.214), 얼굴 옆 부풀림 0.045 → 0.015: 눈 높이 흰 폭 <b>0.82</b>(−5 %), 관자 0.71 → 0.65</td></tr>
+      <tr><td>관자의 직선을 곡선으로</td><td>눈썹 원의 가장 바깥 점에서 세로 직선으로 나와 옆선에 섞임 → 관자에서 곡률 0(살짝 오목)인 짧은 직선</td><td>눈썹 원을 바깥 점 30° 위에서 떠나, 옆선(눈 아래 0.15 W)까지 <b>위치 · 기울기 · 곡률이 양 끝에서 모두 맞는 5차 곡선</b>으로 이음(G2). 곡률이 눈썹 → 볼로 줄곧 양수, 곧거나 오목한 구간 없음</td></tr>
+      <tr><td>날개 안쪽 흰색을 겨드랑이 · 관절까지</td><td>흰색 위끝이 어깨축에서 4.5 cm, 그 위는 몸에 붙는 쪽 검정(소유 판정으로 자름)</td><td>위끝 <b>1.2 cm</b> — 관절 주름까지. 주름에서의 끝은 날개 · 몸 거리장으로 부드럽게 잘라 한 곡선(지그재그 없음)</td></tr>
+      <tr><td>날개 조금 짧게, 관절과 함께 조금 아래로</td><td>어깨축 몸 키의 53.5 %, 날개 길이(축 → 끝) 26.5 cm, 겨드랑이 오목 46 %</td><td>어깨축 <b>50.5 %</b>(2.1 cm 아래), 날개 <b>24.1 cm</b>(−9 %, 끝 높이는 그대로), 겨드랑이 오목도 따라 <b>43 %</b></td></tr>
+      <tr><td>허리 4차처럼</td><td>흰색 허리 오목이 깊고 낮음(키 30 % 에서 0.58)</td><td><b>4차 값으로 되돌림</b>: 허리 (−0.052, −0.60, 0.25), 아래 퍼짐 (0.028, −1.00, 0.16) — 30 % 높이 0.72, 10 % 0.84(4차와 같음). 몸 실루엣 · 엉덩이 · 머리 위 곡선은 5차 그대로</td></tr>
+      <tr><td>삼각형</td><td>98,660</td><td>97,308 (피부 75,548 · 조각 21,760)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>날개를 크게 들면 겨드랑이 피부가 접힌다(제품용이면 교정 모양키). 흰색이 관절까지 올라와 그 주름 바로 옆에 흰 경계가 있다</li>
+        <li>"허리"는 정면의 흰 배 오목으로 보고 4차로 되돌렸다. 몸 실루엣의 허리는 4차 · 5차가 거의 같다(0.30 높이 둘 다 0.97)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>얼굴 흰색을 더 줄일까? 지금 눈 높이 0.82(5차 0.86)</li>
+        <li>날개를 더 내릴까? 지금 어깨축 50.5 %</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r5" style="margin-top:56px">
+  <span class="badge">5차 수정 · 2026-11-11</span>
+  <h2>5차 수정 — 초안과 같은 축척으로 맞춤</h2>
+  <p class="lead">"관자놀이가 들어가고 볼이 너무 튀어나옴 · 배 오목한 부분은 더 아래로 · 날개는 겨드랑이만 들어가고, 날개 위 머리 · 어깨가 떠 보이지 않게 · 흰색은 엉덩이까지 말고 발 뒤꿈치 위까지만, 엉덩이는 더 위로 올라가며 둥글게 · 날개 안쪽 삼두 부분 흰색 더 채우기"</p>
+
+  <h3>초안과 같은 축척으로 나란히</h3>
+  <p class="lead">두 몸통(정수리 → 몸 바닥, 발 제외)을 같은 높이로 맞추고 바닥 · 가운데 선을 맞췄다. 파란 선 = 몸 높이의 0 · 25 · 50 · 75 · 100 %. 초안이 더 가늘어 보이는 것은 키 : 폭 비율 차이다(초안 1.88, 시안 1.72 — 1차에 정한 1.65–1.75 범위).</p>
+  <div class="card">
+    <figure><img src="r5/samescale.webp" alt="초안 1과 5차 정면을 같은 축척으로 나란히" width="1568" height="1032"></figure>
+    <div class="cmp-labels" style="grid-template-columns:1fr 1fr"><span>초안 draft_1</span><span>5차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">같은 높이에서 잰 폭 (전 / 후)</h3>
+  <p class="lead">값 = 각자의 몸 최대 반폭을 1 로 한 반폭. 초안 몸 윤곽은 사진에서 손으로 짚었다(검정 가죽과 청바지 배경이 자동으로 안 갈림, 날개에 가린 높이는 –). 초안 흰 경계는 왼쪽(펭귄 오른쪽)에서 자동으로 쟀고, 시안 값은 모델의 몸 식에서 바로 잰 것(날개 제외).</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>높이(몸 키 대비)</th><th>초안 몸</th><th>4차 몸</th><th>5차 몸</th><th>초안 흰색</th><th>4차 흰색</th><th>5차 흰색</th></tr></thead>
+    <tbody>
+      <tr><td>0.95 (정수리 근처)</td><td class="n">0.59</td><td class="n">0.55</td><td class="n">0.61</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.90</td><td class="n">0.80</td><td class="n">0.75</td><td class="n">0.79</td><td class="n">–</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.85 (관자놀이)</td><td class="n">0.89</td><td class="n">0.87</td><td class="n">0.90</td><td class="n">0.75</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.80</td><td class="n">0.95</td><td class="n">0.94</td><td class="n">0.96</td><td class="n">0.85</td><td class="n">–</td><td class="n">–</td></tr>
+      <tr><td>0.75 (눈)</td><td class="n">0.97</td><td class="n">0.99</td><td class="n">0.99</td><td class="n"><b>0.89</b></td><td class="n">0.82</td><td class="n"><b>0.86</b></td></tr>
+      <tr><td>0.65 (볼)</td><td class="n">1.00</td><td class="n">0.99</td><td class="n">1.00</td><td class="n">0.85</td><td class="n"><b>0.89</b></td><td class="n">0.86</td></tr>
+      <tr><td>0.55</td><td class="n">–</td><td class="n">0.95</td><td class="n">0.98</td><td class="n">0.73</td><td class="n">0.85</td><td class="n">0.77</td></tr>
+      <tr><td>0.45 (겨드랑이)</td><td class="n">–</td><td class="n"><b>0.93</b></td><td class="n">0.93</td><td class="n">0.60</td><td class="n">0.74</td><td class="n">0.67</td></tr>
+      <tr><td>0.35</td><td class="n">–</td><td class="n">0.95</td><td class="n">0.97</td><td class="n">0.54</td><td class="n">0.70</td><td class="n">0.59</td></tr>
+      <tr><td>0.30 (배 가장 오목)</td><td class="n">0.96</td><td class="n">0.97</td><td class="n">0.97</td><td class="n"><b>0.54</b></td><td class="n">0.72</td><td class="n"><b>0.58</b></td></tr>
+      <tr><td>0.20</td><td class="n">0.96</td><td class="n">1.00</td><td class="n">0.98</td><td class="n">0.59</td><td class="n">0.81</td><td class="n">0.63</td></tr>
+      <tr><td>0.10</td><td class="n">0.96</td><td class="n">0.96</td><td class="n">0.97</td><td class="n">0.75</td><td class="n">0.84</td><td class="n">0.79</td></tr>
+      <tr><td>0.05</td><td class="n">0.94</td><td class="n">0.84</td><td class="n">0.89</td><td class="n">0.86</td><td class="n">–</td><td class="n">–</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <figure><img src="r5/compare.webp" alt="초안 1, 5차 정면, 4차 정면" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>5차</span><span>4차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음) · 뒤 · 아래</h3>
+  <div class="grid g4">
+    <figure><img src="r5/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>머리 옆이 정수리부터 볼까지 한 호, 옆선은 거의 곧게</figcaption></figure>
+    <figure><img src="r5/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b></figcaption></figure>
+    <figure><img src="r5/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>엉덩이가 더 위로 둥글게, 흰색은 발 뒤꿈치 위까지</figcaption></figure>
+    <figure><img src="r5/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b></figcaption></figure>
+    <figure><img src="r5/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>검정 엉덩이, 흰색은 바닥 가장자리에 낮은 선만</figcaption></figure>
+    <figure><img src="r5/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b></figcaption></figure>
+    <figure><img src="r5/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래</b>흰 바닥 + 평평한 발바닥</figcaption></figure>
+    <figure><img src="r5/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r5/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r5/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b></figcaption></figure>
+    <figure><img src="r5/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r5/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card"><figure><img src="r5/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure><figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r5/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r5/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure><figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r5/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r5/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r5/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure></div>
+    <div class="card"><figure><img src="r5/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure><figcaption>날개 안쪽 흰색이 삼두 부분(뿌리 쪽 앞뒤 가장자리)까지 차고, 겨드랑이에서 둥근 곡선으로 끝난다.</figcaption>
+      <figure style="margin-top:12px"><img src="r5/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure></div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>4차</th><th>5차</th></tr></thead>
+    <tbody>
+      <tr><td>관자놀이 · 볼</td><td>머리 위가 원형(가늘어 관자놀이가 들어가 보임), 얼굴 아래가 불룩(모래시계), 흰색은 볼에서 가장 넓음(0.89)</td><td>머리 위를 초안처럼 더 꽉 찬 곡선으로(지수 2 → <b>2.2</b>, 정수리 0.95 높이 반폭 0.55 → 0.61, 초안 0.59), 모래시계 제거: 옆선은 눈 높이부터 바닥까지 0.97–1.00. 흰색은 <b>눈 높이에서 가장 넓고</b>(0.86) 볼까지 그대로(0.86) — 눈썹 원 반지름 0.210 → 0.225 W, V 꼭짓점 높이는 그대로</td></tr>
+      <tr><td>배 오목을 더 아래로</td><td>가장 오목한 곳 키의 약 38 %, 폭 0.70</td><td>가장 오목한 곳 <b>키의 30 %</b>(25–35 % 구간 0.58–0.59, 초안 0.54–0.55), 엉덩이 쪽으로 짧게 퍼짐(10 % 높이 0.79, 초안 0.75)</td></tr>
+      <tr><td>날개: 겨드랑이만 들어가게</td><td>날개 자리 전체가 7 % 들어가 머리 · 어깨가 떠 보임</td><td>몸 옆선은 곧게, <b>겨드랑이 바로 아래(키의 46 %)만 7 %</b> 좁아지는 국소 오목(폭 ±7.5 %). 머리가 몸통보다 넓지 않음(얼굴 1.00 · 몸통 0.97–0.98)</td></tr>
+      <tr><td>흰색은 발 뒤꿈치 위까지, 엉덩이는 더 올라가고 둥글게</td><td>엉덩이로 올라가는 흰 아치(가운데 234°)</td><td>흰색은 바닥을 감싸고 뒤에서 <b>196–203°</b> 에서 끝남(발 뒤꿈치 바로 위 낮은 선). 엉덩이는 검정으로, 등 깊이 +6 %(키의 21 %) 더해 더 높고 둥글게, 바닥에서 −7 %(3 %) 들어 올림. 옆에서 잰 뒤쪽 깊이: 10 % 높이 0.376 → <b>0.405 W</b>, 18 % 0.402 → <b>0.443 W</b></td></tr>
+      <tr><td>날개 안쪽 삼두 부분 흰색 더 채우기</td><td>타원 0.18 × 0.10 m(뿌리 쪽이 좁아 앞뒤 가장자리가 검정)</td><td>타원 <b>0.20 × 0.20 m</b> — 위끝이 넓고 평평한 호가 되어 뿌리 쪽 앞뒤 가장자리까지 흰색, 검정은 바깥 테두리 5 mm 와 끝만. 위끝 어깨축에서 4.5 cm, 날개는 2.5 cm 부터 단단히 붙음(몸에 붙어 찢어지던 막 없음)</td></tr>
+      <tr><td>삼각형</td><td>97,924</td><td>98,660 (피부 76,388 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>초안은 키 : 폭이 1.88 로 더 가늘다. 시안은 1차에 정한 1.72 를 유지했다</li>
+        <li>날개를 크게 들면 겨드랑이 피부가 접힌다(제품용이면 교정 모양키)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>몸을 초안처럼 더 가늘게(키 : 폭 1.8 이상) 할까?</li>
+        <li>배의 흰색을 초안만큼(0.54) 더 좁힐까? 지금 0.58</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r4" style="margin-top:56px">
+  <span class="badge">4차 수정 · 2026-11-11</span>
+  <h2>4차 수정 — 이어지는 곡선 · 모래시계 실루엣 · 흰 엉덩이</h2>
+  <p class="lead">"흰색 얼굴 배 곡선을 더 곡선적으로 · 날개 위치 조금 내리고 날개 부분이 들어가며 얼굴 · 엉덩이가 둥글게 · 옆모습도 엉덩이가 들어오며 전체가 유려한 곡선 · 흰색이 발을 지나 엉덩이까지 · 날개 안쪽 흰색을 겨드랑이까지 크게 · 발바닥 평평하게"</p>
+
+  <div class="card">
+    <figure><img src="r4/compare.webp" alt="초안 1, 4차 정면, 3차 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>4차</span><span>3차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음) + 아래</h3>
+  <div class="grid g4">
+    <figure><img src="r4/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>얼굴 · 엉덩이가 둥글게 나오고 날개 자리가 살짝 들어간 실루엣</figcaption></figure>
+    <figure><img src="r4/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>흰 앞판 옆선이 끊김 없는 곡선</figcaption></figure>
+    <figure><img src="r4/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>이마 → 정수리 → 뒤통수 → 등 → 엉덩이가 한 곡선, 엉덩이까지 흰색</figcaption></figure>
+    <figure><img src="r4/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>엉덩이의 흰 아치</figcaption></figure>
+    <figure><img src="r4/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>검정 등과 흰 엉덩이가 둥근 아치로 만남</figcaption></figure>
+    <figure><img src="r4/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>아래쪽이 앞</figcaption></figure>
+    <figure><img src="r4/turnaround/bottom-light.webp" alt="아래" loading="lazy"><figcaption><b>아래 (새로)</b>바닥에서 올려다봄, 위쪽이 앞 — 흰 바닥 + 평평한 검정 발바닥</figcaption></figure>
+    <figure><img src="r4/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세</h3>
+  <div class="grid g4">
+    <figure><img src="r4/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r4/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b>평평한 발바닥이 앞에</figcaption></figure>
+    <figure><img src="r4/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r4/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b>발은 좌판 앞</figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 · 뛰기 · 날개 흔들기</h3>
+  <div class="grid g2">
+    <div class="card">
+      <figure><img src="r4/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure>
+      <figcaption><b>걷기 · 정면</b></figcaption>
+      <figure style="margin-top:12px"><img src="r4/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r4/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure>
+      <figcaption><b>걷기 · 3/4</b></figcaption>
+      <figure style="margin-top:12px"><img src="r4/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r4/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r4/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r4/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure>
+      <figcaption>날개 안쪽 흰 면이 겨드랑이까지, 검정은 바깥 테두리 · 끝에만.</figcaption>
+      <figure style="margin-top:12px"><img src="r4/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>3차</th><th>4차</th></tr></thead>
+    <tbody>
+      <tr><td>흰 얼굴 · 배 곡선을 더 곡선적으로</td><td>점 11개를 지나는 스플라인(구간마다 직선처럼 보임)</td><td>옆선을 <b>가우스 곡선 세 개의 합</b> 하나의 식으로 만들고, 눈썹 원에서 smootherstep 으로 이어 곡률까지 연속(G2) — 직선 구간 · 꺾임 없음. 흰 앞판 반폭: 얼굴 옆 0.445 W → 배 0.349 W → 엉덩이 0.424 W</td></tr>
+      <tr><td>날개 위치 조금 내리기</td><td>어깨축 키의 56 %</td><td><b>53.5 %</b>(−2.5 %, 약 1.8 cm 아래)</td></tr>
+      <tr><td>정면 실루엣: 날개 부분이 들어가고 얼굴 · 엉덩이가 둥글게</td><td>거의 곧은 캡슐</td><td>폭 = 0.93 + 엉덩이(키의 18 %) +0.07 + 얼굴(72 %) +0.07 − 날개 자리(42 %) 0.015. 실측 반폭: 엉덩이 0.500 W · 날개 자리 0.463 W · 얼굴 0.499 W(<b>7 % 오목</b>)</td></tr>
+      <tr><td>옆모습: 엉덩이 들어오고 한 곡선</td><td>등만 불룩(+12 %)</td><td>정면 모래시계를 옆 깊이에서 나눠 없애고, 깊이 모양만 남김: 배 +10 %(34 %), 등 +7 %(50 %), 엉덩이 −7 %(10 %), 머리 +5 %. 실측(몸 폭 W 기준, 앞 / 뒤): 키 10 % 0.31 / 0.38 · 34 % 0.34 / 0.43 · 50 % 0.33 / 0.44 · 72 % 0.31 / 0.43 · 85 % 0.29 / 0.39. 최대 깊이 0.77 W(42 %)</td></tr>
+      <tr><td>흰색이 발을 지나 엉덩이까지</td><td>바닥 밑 158° 에서 끝남</td><td>바닥 전체를 지나 엉덩이로 올라감: 옆에서는 208°, 가운데는 234°(등 아래)까지, 뒤로 갈수록 42 % 좁아지며 <b>둥근 아치</b>로 검정 등과 만남. 박음질은 그 경계의 검정 쪽</td></tr>
+      <tr><td>날개 안쪽 흰색을 겨드랑이까지</td><td>어깨축에서 9.5 cm 부터</td><td><b>3.5 cm</b> 부터(겨드랑이), 타원 0.18 × 0.10 m 가 끝을 넘어가 검정은 바깥 테두리(5 mm)와 끝에만. 겨드랑이 피부가 몸에 붙지 않게 어깨축 x 0.198 → 0.202 m, 벌어짐 27 → 31°</td></tr>
+      <tr><td>발바닥 평평하게</td><td>숨은 다리 캡슐이 발바닥 밑으로 6 mm 튀어나옴</td><td>발목 높이 0.018 → 0.030 m, 그리고 몸 전체를 땅 평면에서 잘라(가장자리 4 mm 둥글게) <b>완전히 평평</b>. 아래 · 옆 · 앉은 자세에서 확인</td></tr>
+      <tr><td>삼각형</td><td>97,344</td><td>97,924 (피부 75,652 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>날개를 크게 들면 겨드랑이 피부가 접히며 늘어난다(흰 면이 거기까지 오므로 3차보다 잘 보인다). 제품용이면 교정 모양키</li>
+        <li>날개를 31° 벌려서, 정면 실루엣에서 날개 끝이 3차보다 바깥으로 나온다</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>엉덩이 흰 아치 높이가 적당한가, 더 낮게 / 높게?</li>
+        <li>정면 모래시계(7 % 오목)를 더 뚜렷하게 할까?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r3" style="margin-top:56px">
+  <span class="badge">3차 수정 · 2026-11-11</span>
+  <h2>3차 수정 — 곡선 · 부피 · 걷기</h2>
+  <p class="lead">"앉았을 때 발 의자 앞으로 · 윗부리와 아랫부리를 구분하는 선, 아랫부리가 좀 더 들어간 모양 · 볼 박음질은 볼 색으로 · 뒤뚱뒤뚱 걷기 · 배랑 등 더 두껍게 곡선으로 · 엉덩이 덜 각지게 · 흰색/검정 경계는 얼굴 옆 볼록 · 배 오목 · 엉덩이로 다시 퍼지는 곡선 · 팔 안쪽 경계는 겨드랑이로 떨어지는 곡선"</p>
+
+  <div class="card">
+    <figure><img src="r3/compare.webp" alt="초안 1, 3차 정면, 2차 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>3차</span><span>2차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">걷기 — 뒤뚱뒤뚱 (새로 추가)</h3>
+  <div class="grid g2">
+    <div class="card">
+      <figure><img src="r3/motion/walk-front.webp" alt="걷기 정면" loading="lazy"></figure>
+      <figcaption><b>정면</b>딛는 발 쪽으로 몸이 ±7° 기울고, 반대 발이 2.6 cm 들려 앞으로 나간다. 날개는 균형 잡듯 벌어진다.</figcaption>
+      <figure style="margin-top:12px"><img src="r3/motion/walk-front-strip.webp" alt="걷기 정면 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r3/motion/walk-3q.webp" alt="걷기 3/4" loading="lazy"></figure>
+      <figcaption><b>3/4</b>한 바퀴 = 두 걸음, 32프레임(1.07초) 반복. 제자리 걸음(앞으로 나아가는 이동은 웹에서 붙인다).</figcaption>
+      <figure style="margin-top:12px"><img src="r3/motion/walk-3q-strip.webp" alt="걷기 3/4 키 프레임" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음)</h3>
+  <div class="grid g4">
+    <figure><img src="r3/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>흰 앞판 옆선: 얼굴 옆 볼록 → 배 오목 → 엉덩이로 다시 퍼짐</figcaption></figure>
+    <figure><img src="r3/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>45° — 아랫부리가 들어간 계단</figcaption></figure>
+    <figure><img src="r3/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>배 · 등이 불룩한 곡선, 둥근 엉덩이</figcaption></figure>
+    <figure><img src="r3/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135° — 날개 안쪽 흰 면이 매끈한 곡선</figcaption></figure>
+    <figure><img src="r3/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b></figcaption></figure>
+    <figure><img src="r3/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>아래쪽이 앞</figcaption></figure>
+    <figure><img src="r3/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세 — 발은 의자 앞으로</h3>
+  <div class="grid g4">
+    <figure><img src="r3/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b></figcaption></figure>
+    <figure><img src="r3/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b>발바닥이 앞쪽에 평평하게</figcaption></figure>
+    <figure><img src="r3/seated/seated-desk-front.webp" alt="책상 세트 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b></figcaption></figure>
+    <figure><img src="r3/seated/seated-desk-iso.webp" alt="책상 세트 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b>발이 좌판 앞 가장자리에</figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">뛰기 · 날개 흔들기 (다시 확인)</h3>
+  <div class="grid g2">
+    <div class="card">
+      <figure><img src="r3/motion/hop.webp" alt="뛰기" loading="lazy"></figure>
+      <figure style="margin-top:12px"><img src="r3/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r3/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure>
+      <figcaption>날개 안쪽 흰 면이 겨드랑이 쪽에서 둥근 호로 끝난다(지그재그 없음).</figcaption>
+      <figure style="margin-top:12px"><img src="r3/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>2차</th><th>3차</th></tr></thead>
+    <tbody>
+      <tr><td>앉을 때 발은 의자 앞</td><td>좌판 앞에 내놓음</td><td>그대로(다리 27° 앞 · 발바닥 평평, 좌판 0.42 m)</td></tr>
+      <tr><td>윗부리 · 아랫부리 구분선, 아랫부리 들어감</td><td>한 조각 피라미드</td><td>한 조각 그대로(정면 마름모), 가로 대각선에 검정 구분선(1.6 mm). 아랫부리는 높이의 <b>15 % 뒤로</b>(끝에서 약 6 mm) 들어가 옆 · 3/4 에서 윗부리가 살짝 덮는다</td></tr>
+      <tr><td>볼 박음질은 볼 색</td><td>검정 실</td><td>진한 자홍 실 <code>#A8127F</code></td></tr>
+      <tr><td>뒤뚱뒤뚱 걷기</td><td>없음</td><td>새 동작 <code>walk</code>: 32프레임 반복, 몸 좌우 ±7°(딛는 발을 축으로) · 비틀기 ±3.5° · 위아래 0.8 cm · 발 앞뒤 ±2.2 cm · 드는 발 2.6 cm · 날개 9–18° 벌어짐 · 머리 반대로 기울임</td></tr>
+      <tr><td>배 · 등 두껍게 곡선</td><td>깊이 0.295 m (0.72 W), 머리 쪽 +10 %</td><td>배(키의 34 %) 앞 깊이 +14 %, 등(키의 46 %) 뒤 깊이 +12 %, 머리는 +4 % 로 줄임. 몸통 최대 깊이 <b>0.330 m = 0.80 W</b>, 머리 0.305 m(0.74 W) — 한 캡슐 안에서 배 · 등이 부풀고 머리 쪽으로 부드럽게</td></tr>
+      <tr><td>엉덩이 덜 각지게</td><td>바닥 모서리 반지름 0.075 m</td><td><b>0.115 m</b> — 바닥으로 둥글게 말려 들어가고, 평평한 바닥 폭은 0.18 m(서고 앉기에 충분)</td></tr>
+      <tr><td>흰/검정 경계 곡선(초안처럼)</td><td>옆선이 거의 직선(0.79–0.82 W)</td><td>흰 앞판 폭: 얼굴 옆 <b>0.86 W</b>(볼록) → 배 <b>0.71 W</b>(오목) → 엉덩이 <b>0.82 W</b>(다시 퍼짐). 이마 V · 둥근 눈썹은 2차 그대로, 박음질은 새 곡선을 따라 검정 쪽</td></tr>
+      <tr><td>팔 안쪽 경계, 겨드랑이 곡선</td><td>정점마다 소유를 나눠 지그재그</td><td>날개 평면의 해석적 타원(0.12 × 0.09 m)으로 끝냄: 흰 면 위끝이 어깨축에서 9.5 cm, 모서리 1.2 cm 둥글게. 날개 뿌리가 몸 옆에 붙어 생기던 막(웹)을 없애려 어깨축 0.190 → 0.198 m, 벌어짐 22 → 27°, 뿌리 두께는 키우지 않음(폭만 1.18배). 흰 면 정점의 날개 가중치 ≥ 0.999</td></tr>
+      <tr><td>삼각형</td><td>94,160</td><td>97,344 (피부 75,072 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>걷기는 제자리 걸음이다. 사무실에서 걸어 다닐 때의 이동 속도(한 걸음 ≈ 4.4 cm × 2)는 웹 쪽에서 맞춘다</li>
+        <li>날개를 크게 들면(128°) 어깨 피부가 늘어나며 주름이 진다. 제품용이면 교정 모양키</li>
+        <li>흰 앞판이 엉덩이 쪽에서 퍼지는 만큼, 정면에서 아래쪽 검정 띠가 얇아졌다</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>걷기 기울기 ±7° · 발 높이 2.6 cm — 더 뒤뚱거리게(±10°) 할까, 차분하게(±5°) 할까?</li>
+        <li>배의 오목한 정도(흰 앞판 0.71 W)가 적당한가, 더 들어가게 할까?</li>
+        <li>아랫부리 들어간 정도(약 6 mm)가 적당한가?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r2" style="margin-top:56px">
+  <span class="badge">2차 수정 · 2026-11-11</span>
+  <h2>2차 수정 — 사용자 피드백 반영</h2>
+  <p class="lead">"사무실에서는 앉아있을 것임 · 부리는 하나로(정면 마름모, 옆에서 튀어나오게) · 볼 조금 더 크게 · 뒤는 원통처럼 통통하게, 이마 · 뒤통수 더 둥글게 · 몸색 더 까맣게 · 박음질은 검정 쪽에 · 날개 뿌리 넓게 · 발목 없애고 발 넓게 · 발바닥 납작하게 · 눈썹 더 원에 가깝게, 이마 V 는 뾰족하게"</p>
+
+  <div class="card">
+    <figure><img src="r2/compare.webp" alt="초안 1, 2차 정면, 1차 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>2차</span><span>1차</span></div>
+  </div>
+
+  <h3 style="margin-top:24px">앉은 자세 (사무실)</h3>
+  <p class="lead">의자 좌판 0.42 m · 책상 0.72 m(계약 §2). 몸 바닥이 좌판에 닿고, 다리가 엉덩이에서 27° 앞으로 돌아 평평한 발바닥이 좌판 앞쪽에 놓인다. 사무실 카메라(30° · 45°)에서 얼굴이 노트북 뚜껑 위로 보인다. 오른쪽 두 장은 office-kit <code>desk.set</code> 그대로.</p>
+  <div class="grid g4">
+    <figure><img src="r2/seated/seated-alone-front.webp" alt="앉은 자세 정면" loading="lazy"><figcaption><b>앉은 자세 · 정면</b>소품 · 가구 없이</figcaption></figure>
+    <figure><img src="r2/seated/seated-alone-iso.webp" alt="앉은 자세 사무실 각도" loading="lazy"><figcaption><b>앉은 자세 · 30° / 45°</b>사무실 카메라 각도</figcaption></figure>
+    <figure><img src="r2/seated/seated-desk-front.webp" alt="책상 세트에 앉은 정면" loading="lazy"><figcaption><b>책상 세트 · 정면 30°</b>얼굴 · 부리가 뚜껑 위</figcaption></figure>
+    <figure><img src="r2/seated/seated-desk-iso.webp" alt="책상 세트에 앉은 사무실 각도" loading="lazy"><figcaption><b>책상 세트 · 30° / 45°</b>사무실 장면과 같은 시점</figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">턴어라운드 (선 자세, 소품 없음)</h3>
+  <div class="grid g4">
+    <figure><img src="r2/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b></figcaption></figure>
+    <figure><img src="r2/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>45°</figcaption></figure>
+    <figure><img src="r2/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>부리가 튀어나옴 · 둥근 뒤 · 넓은 날개 뿌리</figcaption></figure>
+    <figure><img src="r2/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135°</figcaption></figure>
+    <figure><img src="r2/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>원통처럼 둥근 등</figcaption></figure>
+    <figure><img src="r2/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>아래쪽이 앞 — 앞은 살짝 평평, 뒤는 반원</figcaption></figure>
+    <figure><img src="r2/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b>몸색 <code>#474855</code></figcaption></figure>
+  </div>
+
+  <h3 style="margin-top:24px">관절 시험 (다시 확인)</h3>
+  <div class="grid g2">
+    <div class="card">
+      <figure><img src="r2/motion/hop.webp" alt="뛰기 동작" loading="lazy"></figure>
+      <figcaption><b>뛰기</b>발목이 거의 안 보이지만, 다리 뼈가 늘어나면 발이 몸 밑에서 내려와 같이 움직인다. 공중에서 발끝이 접히고 착지하며 평평해진다.</figcaption>
+      <figure style="margin-top:12px"><img src="r2/motion/hop-strip.webp" alt="뛰기 키 프레임" loading="lazy"></figure>
+    </div>
+    <div class="card">
+      <figure><img src="r2/motion/wave.webp" alt="날개 흔들기" loading="lazy"></figure>
+      <figcaption><b>날개 흔들기</b>넓어진 어깨 뿌리가 몸과 한 피부로 늘어난다. 흰 안쪽 면이 앞을 본다.</figcaption>
+      <figure style="margin-top:12px"><img src="r2/motion/wave-strip.webp" alt="날개 흔들기 키 프레임" loading="lazy"></figure>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">항목별로 바꾼 것</h3>
+  <div class="card">
+  <table>
+    <thead><tr><th>요청</th><th>1차</th><th>2차</th></tr></thead>
+    <tbody>
+      <tr><td>사무실에서 앉음</td><td>선 자세만</td><td>앉은 자세 추가: 몸 바닥 = 좌판 0.42 m, 눈 높이 0.93 m(책상 0.72 m 위 0.21 m), 다리 27° 앞으로 + 발 −27° 로 발바닥 평평. 선 턴어라운드는 그대로</td></tr>
+      <tr><td>부리 하나로 · 정면 마름모 · 옆에서 튀어나옴</td><td>두 삼각형 사이 틈, 높이 1 cm</td><td>한 조각 마름모(폭 0.10 m = 0.24 W, 위 0.050 · 아래 0.058 m). 네 면 피라미드로 <b>3.8 cm</b> 튀어나옴, 검정 테두리(2.6 mm) + 박음질</td></tr>
+      <tr><td>볼 조금 더 크게</td><td>눈의 0.65</td><td>눈의 <b>0.75</b>(지름 0.089 m = 0.22 W)</td></tr>
+      <tr><td>뒤 원통처럼 통통 · 이마 · 뒤통수 둥글게</td><td>앞뒤 같은 단면, 깊이 0.27 m(0.66 W)</td><td>앞 반쪽 0.125 m(살짝 평평, 지수 2.6) + 뒤 반쪽 0.170 m(반원, 지수 2.0) = 깊이 <b>0.295 m = 0.72 W</b>. 머리 쪽은 최대 10 % 더 깊음(0.79 W). 머리 위 반축 0.24 → 0.21 m(거의 반원)</td></tr>
+      <tr><td>몸색 더 까맣게</td><td><code>#2B2A26</code> · 반사 0.32</td><td><code>#1E1D1A</code> · 반사(Specular) 0.22 · 거칠기 0.50 (흰 앞판 0.62)</td></tr>
+      <tr><td>박음질은 검정 쪽에</td><td>흰 앞판 안쪽 6 mm</td><td>흰 경계 <b>바깥 5.8 mm, 검정 가죽 위</b>. 실은 살짝 광택(거칠기 0.30)이라 검정 위에서도 보인다. 날개 흰 안쪽의 솔기도 검정 테두리 쪽. 눈 · 볼 · 부리 박음질은 각자 조각 위 그대로</td></tr>
+      <tr><td>날개 뿌리 넓게</td><td>뿌리가 가늘고 끝이 넓음</td><td>폭 · 두께 배율 뿌리 1.18 → 끝 0.80(뿌리가 끝의 약 1.5배), 날개 반축 0.165 · 0.058 · 0.024 m, 어깨 주름 0.035 → 0.045 m</td></tr>
+      <tr><td>발목 없애고 발 넓게 · 발등 둥글게 · 발바닥 납작</td><td>둥근 갓 + 보이는 기둥</td><td>발 폭 0.10 → <b>0.12 m</b>, 길이 0.16 m, 발등 높이 4 cm 둥근 반구 + 평평한 발바닥(가장자리 반경 8 mm). 몸 바닥을 0.04 → 0.03 m 로 내려 발등이 1 cm 몸속으로 들어감. 다리는 몸속 캡슐(반경 2.4 cm)</td></tr>
+      <tr><td>눈썹 더 원에 가깝게 · 이마 V 뾰족</td><td>스플라인 곡선, 둥근 V</td><td>눈 위 흰 덩이 = <b>반지름 0.21 W 원호</b> 그대로. 두 원이 가운데에서 만나 V 꼭짓점 각 약 36°. 박음질은 꼭짓점 1.2–1.7 cm 앞에서 끝나 끝이 뭉개지지 않음</td></tr>
+      <tr><td>전체 높이 · 삼각형</td><td>0.745 m · 89,064</td><td>0.735 m · 94,160 (피부 71,888 · 조각 22,272)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>남은 것</h3>
+      <ul>
+        <li>앉은 자세에서 발 뒤쪽 절반이 배 아래 모서리 속으로 들어간다(겉에서는 안 보임). 제품용이면 앉은 자세 교정 모양키가 필요하다</li>
+        <li>정면 높이 0°에서 보면 노트북 뚜껑이 부리를 가린다. 사무실 카메라(30°)에서는 얼굴 전체가 보인다</li>
+        <li>흰 앞판 아래 모서리의 꺾임, 저녁 정면이 푸르게 밝은 것은 1차와 같다</li>
+        <li>제품 LOD 계획은 1차와 같음(피부 6–7k + 조각 0.8k, 앞판 · 솔기는 텍스처로 굽기)</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li>앉을 때 발을 좌판 앞에 <b>내놓을까</b>(지금), 몸 밑에 <b>숨길까</b>?</li>
+        <li>부리 3.8 cm 돌출 — 옆에서 더 뾰족하게(더 길게) 갈까, 지금이 좋은가?</li>
+        <li>검정 위 박음질이 지금 정도(은은하게 광택)면 되는가, 실을 회색으로 더 보이게 할까?</li>
+        <li>몸색 <code>#1E1D1A</code> 를 제품(DESIGN.md · 2D 아이콘 <code>#2B2A26</code>)에도 맞출까?</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="r1-head" style="margin-top:56px">
+  <span class="badge" style="color:var(--ink-3)">1차 시안 · 2026-11-10</span>
+  <h2>1차 시안 (비교용으로 남김)</h2>
+  <p class="lead">아래는 1차 그대로다(커밋 <code>c9c4e89</code> 의 스크립트). 위 2차와 비교해 보도록 남겨 둔다.</p>
+</section>
+
+<section id="compare">
+  <h2>나란히 보기</h2>
+  <p class="lead">왼쪽 초안 · 가운데 v3 · 오른쪽 지금 v2. 초안은 사진이라 크기 · 원근이 다르다. v3 · v2 는 같은 정면 정사영 카메라.</p>
+  <div class="card">
+    <figure><img src="r1/compare.webp" alt="초안 1, v3 정면, 현재 v2 정면을 나란히 놓은 그림" width="1984" height="832"></figure>
+    <div class="cmp-labels"><span>초안 draft_1</span><span>v3 1차</span><span>현재 v2</span></div>
+  </div>
+</section>
+
+<section id="turnaround">
+  <h2>턴어라운드 (소품 없음)</h2>
+  <p class="lead">모든 방향이 같은 정사영 틀(폭 0.98 m · 중심 높이 0.40 m)이다. 라이트 조명 + 저녁 정면 한 장. 1200 px.</p>
+  <div class="grid g4">
+    <figure><img src="r1/turnaround/front-light.webp" alt="정면" loading="lazy"><figcaption><b>정면</b>앞</figcaption></figure>
+    <figure><img src="r1/turnaround/three-quarter-front-left-light.webp" alt="3/4 앞" loading="lazy"><figcaption><b>3/4 앞</b>펭귄의 왼쪽으로 45°</figcaption></figure>
+    <figure><img src="r1/turnaround/side-left-light.webp" alt="옆" loading="lazy"><figcaption><b>옆</b>펭귄의 왼쪽 90° — 두께 · 어깨 주름 · 발</figcaption></figure>
+    <figure><img src="r1/turnaround/three-quarter-back-left-light.webp" alt="3/4 뒤" loading="lazy"><figcaption><b>3/4 뒤</b>135° — 날개 안쪽 흰 면이 살짝 보인다</figcaption></figure>
+    <figure><img src="r1/turnaround/back-light.webp" alt="뒤" loading="lazy"><figcaption><b>뒤</b>180°</figcaption></figure>
+    <figure><img src="r1/turnaround/top-light.webp" alt="위" loading="lazy"><figcaption><b>위</b>정수리에서 — 아래쪽이 앞</figcaption></figure>
+    <figure><img src="r1/turnaround/front-evening.webp" alt="저녁 정면" loading="lazy" style="background:var(--scene-evening)"><figcaption><b>저녁 정면</b>몸색 <code>#474855</code> + 화면 빛 채움광</figcaption></figure>
+  </div>
+</section>
+
+<section id="motion">
+  <h2>관절 시험</h2>
+  <p class="lead">날개 · 발이 몸에 붙은 채로 뼈가 움직이는지 보는 시험 동작이다. 움직이는 그림은 30 fps 로 반복된다.</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3>뛰기 (1.2초)</h3>
+      <figure><img src="r1/motion/hop.webp" alt="뛰기 동작" loading="lazy"></figure>
+      <figcaption>준비하며 몸을 눌렀다가(squash) → 다리가 밀어 몸이 늘어나고 → 공중에서 발이 들리며 발끝이 접히고 → 착지하며 다시 눌린다. 땅에 닿아 있는 동안 다리가 늘어나 발이 바닥에 붙어 있는다.</figcaption>
+      <figure style="margin-top:12px"><img src="r1/motion/hop-strip.webp" alt="뛰기 키 프레임 12장" loading="lazy"><figcaption>3프레임마다 한 장, 왼쪽 위 → 오른쪽 아래</figcaption></figure>
+    </div>
+    <div class="card">
+      <h3>날개 흔들기 (1.6초)</h3>
+      <figure><img src="r1/motion/wave.webp" alt="날개 흔들기 동작" loading="lazy"></figure>
+      <figcaption>왼쪽 날개(화면 오른쪽)가 어깨에서 들려 두 번 흔든다. 들면서 날개를 비틀어 흰 안쪽 면이 앞을 본다(초안의 든 날개). 어깨 피부가 늘어나며 몸과 이어진다.</figcaption>
+      <figure style="margin-top:12px"><img src="r1/motion/wave-strip.webp" alt="날개 흔들기 키 프레임 12장" loading="lazy"><figcaption>4프레임마다 한 장</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="ratio">
+  <h2>비율</h2>
+  <p class="lead">W = 몸 폭(날개 빼고) 0.41 m 기준. 값은 <code>penguin_v3.py</code> 맨 위 상수에서 옮겼다.</p>
+  <div class="card">
+  <table>
+    <thead><tr><th>항목</th><th>v3 시안</th><th>초안에서 잰 값</th><th>지금 v2</th></tr></thead>
+    <tbody>
+      <tr><td>키 : 폭 (몸)</td><td class="n">1.72 (0.705 / 0.41 m)</td><td class="n">≈ 1.8–1.9 (납작해서 길어 보임)</td><td class="n">1.59</td></tr>
+      <tr><td>깊이 : 폭</td><td class="n">0.66 (0.27 m)</td><td class="n">— (납작)</td><td class="n">0.68</td></tr>
+      <tr><td>몸 모양</td><td>둥근 캡슐: 옆이 거의 곧고 살짝 불룩, 큰 둥근 머리, 바닥이 넓고 살짝 평평</td><td>같음</td><td>서양배(달걀)</td></tr>
+      <tr><td>눈 지름</td><td class="n">0.29 W</td><td class="n">≈ 0.30–0.34 W</td><td class="n">0.15 W</td></tr>
+      <tr><td>눈 사이(중심 간)</td><td class="n">0.44 W</td><td class="n">≈ 0.44 W</td><td class="n">0.29 W</td></tr>
+      <tr><td>눈 높이</td><td class="n">몸 키의 72 %</td><td class="n">≈ 75 %</td><td class="n">70 %</td></tr>
+      <tr><td>볼 지름</td><td class="n">0.65 × 눈</td><td class="n">≈ 0.8 × 눈</td><td class="n">0.78 × 눈</td></tr>
+      <tr><td>볼 자리</td><td>눈 중심에서 바깥 0.20 · 아래 0.58 눈지름 — 눈 아래 가장자리에 반쯤 들어감</td><td>같음</td><td>눈 바깥 아래, 떨어져 있음</td></tr>
+      <tr><td>부리</td><td>폭 0.28 W · 윗 삼각형(꼭짓점 위 · 살짝 왼쪽) + 더 작은 아래 삼각형(살짝 내려가고 기울어짐) · 검정 테두리 + 박음질</td><td>같음</td><td>마름모 한 조각</td></tr>
+      <tr><td>흰 앞판 폭 (정면에서)</td><td class="n">눈 높이 0.82 W · 배 0.79 W</td><td class="n">≈ 0.85 W · 0.75 W</td><td class="n">0.68 W</td></tr>
+      <tr><td>이마 V 꼭짓점</td><td class="n">눈 중심 위 0.15 W (눈 윗선 높이) · 볼록한 두 덩이는 0.28 W 위</td><td class="n">≈ 0.15 W · 0.28 W</td><td>둥근 아치</td></tr>
+      <tr><td>날개</td><td class="n">길이 0.38 × 키 · 폭 0.25 W · 두께 0.044 m · 22° 벌어짐</td><td class="n">≈ 0.37 × 키</td><td>몸 옆 납작한 타원(따로 떠 있음)</td></tr>
+      <tr><td>전체 높이 (발 포함)</td><td class="n">0.745 m · 날개 포함 폭 ≈ 0.62 m</td><td>—</td><td class="n">0.70 m(앉은 키)</td></tr>
+      <tr><td>삼각형</td><td class="n">89,064 (피부 68,328 · 눈 · 볼 · 부리 20,736)</td><td>—</td><td class="n">7,368</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="changes">
+  <h2>초안에서 가져온 것 / 3D 로 바꾼 것</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>draft에서 가져온 것</h3>
+      <ul>
+        <li>위로 긴 둥근 캡슐 실루엣, 옆은 거의 곧고 바닥은 넓다</li>
+        <li>검은 후드: 등 · 머리 · 옆을 감싸고, 이마 가운데로 V 자로 내려온다</li>
+        <li>흰 앞판이 앞면 대부분을 덮고 발 바로 위까지 내려온다. 눈 옆은 매끈한 곡선</li>
+        <li>아주 큰 검은 정원 눈, 높고 가깝게</li>
+        <li>볼은 눈 아래 바깥, 눈 가장자리에 반쯤 깔린 자홍 정원</li>
+        <li>흰 부리 두 조각: 큰 윗 삼각형 + 작고 비스듬한 아랫 삼각형, 검정 테두리</li>
+        <li>날개 안쪽은 흰색(초안의 든 날개)</li>
+        <li>몸 밑으로 나온 작은 검은 발</li>
+        <li>가장자리마다 박음질 — 가죽 조각을 꿰맨 느낌 (style-moto 는 질감 참고만)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>3D로 바꾼 것</h3>
+      <ul>
+        <li>납작한 판 대신 깊이 0.66 W 의 쿠션: 앞 · 뒤가 둥글고 단면은 둥근 사각</li>
+        <li>날개 · 다리 · 발을 몸과 한 장의 피부로 이었다(부드러운 주름으로 합침). 따로 떠 있는 조각 없음</li>
+        <li>날개는 아래로 늘어뜨리되 22° 벌리고 15° 앞으로 돌려, 정면에서도 노 모양이 읽힌다. 흰 안쪽은 들 때 보인다</li>
+        <li>발은 몸 밑에 반쯤 숨고, 짧은 다리로 몸에 붙는다. 다리 뼈가 늘어나고 발 뼈가 꺾인다</li>
+        <li>흰 앞판 가장자리 = 파인 솔기 + 실 땀(셰이더, 해상도와 상관없이 선명). 육각 칩 조각 없음</li>
+        <li>흰 앞판이 바닥 밑으로 조금 말려 들어간다</li>
+        <li>눈 · 볼 · 부리는 도톰한 덧댄 조각(아플리케), 정면 방향으로 몸에 붙여 정면에서 정원으로 보인다. 128 분할</li>
+        <li>무광-새틴 가죽: 아주 옅은 가죽 결(절차적 범프)</li>
+        <li>초안의 꼬리표(hj!) · 고리 · 별 장식은 넣지 않았다</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="open">
+  <h2>남은 일 · 정해 줄 것</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>더 고치고 싶은 것</h3>
+      <ul>
+        <li>발: 정면에서 버섯처럼(납작한 갓 + 짧은 기둥) 보인다. 초안처럼 더 납작한 노 모양 · 발가락 끝 살짝 넓게</li>
+        <li>날개를 들 때 어깨 피부가 조금 울퉁불퉁 늘어난다. 어깨에 보조 뼈 하나(또는 교정 모양키)를 두면 매끈해진다</li>
+        <li>날개 안쪽 흰 면이 뒤 · 3/4 뒤에서 보인다(진짜 펭귄과 같음). 싫으면 쉴 때 날개를 덜 돌린다</li>
+        <li>흰 앞판 아래 모서리가 바닥으로 꺾이는 곳이 살짝 각져 있다</li>
+        <li>저녁 정면은 흰 앞판이 화면 빛에 푸르게 밝다. 사무실 조명으로 다시 맞춰야 한다</li>
+        <li>제품용 LOD: 지금 89k 삼각형. 리토폴로지로 피부 ≈ 6–7k, 눈 · 볼 · 부리 ≈ 0.8k(48 분할) = 8k 예산 안. 흰 앞판 · 솔기 · 땀은 셰이더 대신 텍스처(알베도 + 노멀) 1024 px 로 구워야 glTF 로 나간다</li>
+      </ul>
+    </div>
+    <div class="card q">
+      <h3>질문</h3>
+      <ul>
+        <li><b>서 있는 펭귄</b>으로 만들었다(초안처럼). 사무실에서는 의자에 앉는데, 앉은 자세도 같은 몸으로 갈까, 아니면 사무실은 서서 일하는 걸로 바꿀까?</li>
+        <li><b>눈 크기</b> 0.29 W(초안은 0.30–0.34 W). 더 키울까?</li>
+        <li><b>볼</b>을 눈의 0.65 로 했다(초안은 0.8 정도로 더 큼). 초안만큼 키울까?</li>
+        <li><b>부리</b> 두 조각 사이 틈(살짝 벌린 입)이 좋은가, 붙인 마름모가 좋은가?</li>
+        <li><b>깊이</b> 0.66 W — 더 납작한(키링에 가까운) 쪽, 더 통통한 쪽?</li>
+        <li><b>몸 검정</b>: 지금 <code>#2B2A26</code> 그대로인데 가죽 광택 때문에 진회색으로 보인다. 더 까맣게 갈까?</li>
+        <li>뼈 이름 계약에 <code>leg.L/R</code> 를 더해도 될까? (발 <code>foot.*</code> 는 이제 <code>leg.*</code> 의 자식)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>1차 2026-11-10 · 2–5차 2026-11-11 · 참고 이미지 <code>identity/character/reference/</code>(draft_1 · draft_2 · style-moto) · 원본은 스크립트(<code>.blend</code> 없음)</p>
+<pre>B=/Applications/Blender.app/Contents/MacOS/Blender
+dwebp identity/character/reference/draft_1.webp -o /tmp/draft_1.png
+dwebp identity/_drafts/penguin-v3/r4/turnaround/front-light.webp -o /tmp/v3r4-front.png
+$B -b -P assets/office/scripts/identity_v3_renders.py -- --out identity/_build/v3 --draft /tmp/draft_1.png --right /tmp/v3r4-front.png
+python3 assets/office/scripts/identity_v3_pack.py identity/_build/v3 identity/_drafts/penguin-v3/r5
+# 4차 = 94e1fdb (r4/), 3차 = dbdf4d5 (r3/), 2차 = a540271 (r2/), 1차 = c9c4e89 (r1/)</pre>
+</footer>
+</div>
+</body>
+</html>

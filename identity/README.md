@@ -27,6 +27,7 @@ identity/
   character/         펭귄 — 현황 기록(spec.md) · 팔레트 · 렌더 · 턴어라운드 · 2D SVG
   motion/            동작 클립 미리보기 · 키 포즈 · 랜딩 전용 모션
   logo/              (비어 있음) 로고가 들어올 자리
+  _drafts/           승인 전 시안(지금 penguin-v3/) — 승인되면 character/ 로 옮긴다(_drafts/README.md)
 ```
 
 `_build/`(Blender 원본 PNG) · `_preview/`(페이지 스크린샷)는 다시 만드는 것이라 커밋하지 않는다(`.gitignore`).
