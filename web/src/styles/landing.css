@@ -1,9 +1,10 @@
-/* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. A pinned stage one screen high: the
-   section names at the left edge, the message, and the scene where each section's content sits
-   in the middle; the 3D penguin walks to a spot by the content and acts on it (landing/staging.ts).
+/* Landing (`/`, outside the shell) — DESIGN.md `## 랜딩`. The sections one screen each, in the page's
+   own flow: the section names at the left edge, the message, and the scene where each section's
+   content sits in the middle; the 3D penguin's canvas stays over the screen and the penguin walks to
+   the section nearest the middle and acts on it (landing/staging.ts).
    Tokens only; no gradients, tinted bands or shadows; nothing under 12px.
-   data-mode="live" = pinned slides + 3D + the step controller (landing/dwell.ts) ·
-   "static" = the same sections stacked, 2D penguin, native scroll. */
+   data-mode="live" = sections in the flow + 3D + the smoothed wheel (landing/smooth.ts — nothing
+   pins or holds, 2026-11-24) · "static" = the same sections stacked, 2D penguin, native scroll. */
 
 .landing {
   /* the left margin holds the section names (.landing-progress) */
@@ -18,11 +19,6 @@
   background: var(--bg);
   color: var(--ink);
   overflow-x: clip;
-}
-
-/* live: the step controller moves the page (no CSS snap — a hard flick would glide past the stops) */
-html:has(.landing[data-mode="live"]) {
-  overscroll-behavior-y: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -106,38 +102,33 @@ html:has(.landing[data-mode="live"]) {
   gap: 0;
 }
 
-/* ── the track: one screen of scroll per section, the stage pinned in it ─ */
-.landing-track {
+/* ── live: the sections in the page's flow (2026-11-24 — no pinned stage, no stops held) ── */
+.landing-flow {
+  position: relative;
+}
+
+/* a section with several stops (the workflows): one screen per stop, its slide sticky inside, so
+   the page keeps scrolling while the example changes */
+.landing-steps {
   position: relative;
   height: calc(var(--steps) * 100vh);
   height: calc(var(--steps) * 100svh);
 }
 
-/* one stop per section — where the controller glides to, what the progress links point at */
-.landing-stop {
+/* the later stops of such a section — what the section names and the tabs glide to */
+.landing-substop {
   position: absolute;
   top: calc(var(--n) * 100vh);
   top: calc(var(--n) * 100svh);
   left: 0;
   width: 1px;
-  height: 100vh;
-  height: 100svh;
+  height: 1px;
   pointer-events: none;
 }
 
-/* the stage's layers: the slides (2) < the 3D canvas (3) — no 2D poster on the live page */
-.landing-pin {
-  position: sticky;
-  top: 0;
-  z-index: 0;
-  height: 100vh;
-  height: 100svh;
-  overflow: hidden;
-}
-
-/* thin grid: the message column's edges, hairlines in --line (none inside the scene) */
+/* thin grid: the message column's edges, hairlines in --line (none inside the scene) — on the screen, not the page */
 .landing-grid {
-  position: absolute;
+  position: fixed;
   inset: var(--landing-gnb) 0 0;
   width: var(--landing-w);
   margin: 0 auto;
@@ -154,10 +145,11 @@ html:has(.landing[data-mode="live"]) {
   border-right: 1px solid var(--line);
 }
 
-/* ── the penguin: one canvas over the scene column; it walks to each section's spot ── */
-/* no z-index here — the canvas takes its own layer in the pin */
+/* ── the penguin: one canvas over the scene column, fixed to the screen; it walks to the spot of
+   the section nearest the middle, which moves with the page ── */
 .landing-stage {
-  position: absolute;
+  position: fixed;
+  z-index: 3;
   inset: var(--landing-gnb) 0 0;
   width: var(--landing-w);
   margin: 0 auto;
@@ -255,28 +247,52 @@ html:has(.landing[data-mode="live"]) {
   min-width: 0;
 }
 
-/* slides only fade — nothing slides under the penguin while it walks */
-.landing-pin .landing-slide {
-  position: absolute;
-  inset: var(--landing-gnb) 0 0;
+/* a section: one screen high (at least), in the flow — it scrolls by like the rest of the page */
+.landing-flow .landing-slide {
+  position: relative;
   z-index: 2;
+  box-sizing: border-box;
   width: var(--landing-w);
+  min-height: 100vh;
+  min-height: 100svh;
   margin: 0 auto;
-  opacity: 0;
-  pointer-events: none;
-  /* the outgoing slide clears first, the incoming one follows — a short overlap, never two titles on top of each other */
-  transition: opacity 0.28s ease;
+  padding-top: var(--landing-gnb);
 }
 
-.landing-pin .landing-slide.is-on {
-  opacity: 1;
-  transition-duration: 0.45s;
-  transition-delay: 0.18s;
+/* the workflows' slide stays on the screen through its three screens */
+.landing-steps > .landing-slide {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
 }
 
-.landing-pin .landing-slide.is-on .landing-copy,
-.landing-pin .landing-slide.is-on .landing-act {
-  pointer-events: auto;
+/* the message rises in as its section comes onto the screen — by scroll position, not time (it
+   rewinds); browsers without scroll-driven animations simply show it */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .landing-flow .landing-copy {
+      animation: landing-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 35%;
+    }
+
+    .landing-steps .landing-copy {
+      animation: none;
+    }
+  }
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0.2;
+    translate: 0 40px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
 .landing-copy {
@@ -296,10 +312,11 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* the content block sits in the middle of the scene; the penguin finds its own spot around it */
-.landing-pin .landing-scene {
+.landing-flow .landing-scene {
   position: relative;
   display: grid;
   place-items: center;
+  min-height: calc(100svh - var(--landing-gnb));
   height: 100%;
   padding: var(--space-6) var(--space-8);
 }
@@ -312,31 +329,27 @@ html:has(.landing[data-mode="live"]) {
 
 /* the price cards sit left of the middle so the penguin beside their right edge — far enough out
    for its face to stay clear of them while it turns to act — and the cards are centred together */
-.landing-pin .landing-act.is-relay {
+.landing-flow .landing-act.is-relay {
   width: min(60%, 400px);
   margin-right: min(32%, 240px);
 }
 
 /* the gap chart is the picture of its section: a little wider than the price cards */
-.landing-pin .landing-act.is-gap {
+.landing-flow .landing-act.is-gap {
   width: min(64%, 460px);
 }
 
-.landing-pin .landing-act.is-scroll {
+.landing-flow .landing-act.is-scroll {
   width: min(84%, 520px);
 }
 
 /* the workflow card, centred; the penguin stands behind its top edge, over the prompt box (type) */
-.landing-pin .landing-act.is-flow {
+.landing-flow .landing-act.is-flow {
   width: min(100%, 460px);
 }
 
-.landing-pin .landing-act.is-sign {
+.landing-flow .landing-act.is-sign {
   width: min(100%, 460px);
-}
-
-.landing-pin .landing-act.is-company {
-  width: min(100%, 500px);
 }
 
 /* where a wing goes (empty, aria-hidden) */
@@ -409,12 +422,12 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* acting: rolled up while away (once the slide has faded), unrolled on entry — UNROLL_MS · ACT_DELAY_MS (acting.ts) */
-.landing-pin.is-acting .landing-scroll {
+.landing-flow.is-acting .landing-scroll {
   --unroll: 0;
   transition: --unroll 0s linear 0.3s;
 }
 
-.landing-pin.is-acting .landing-slide.is-on .landing-scroll {
+.landing-flow.is-acting .landing-slide.is-on .landing-scroll {
   --unroll: 1;
   transition: --unroll 1600ms cubic-bezier(0.33, 1, 0.5, 1) 840ms;
 }
@@ -896,28 +909,6 @@ html:has(.landing[data-mode="live"]) {
   text-wrap: balance;
 }
 
-.landing-faces {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* the fifteen agents in their team colours, a little overlapped */
-.landing-faces-row {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.landing-faces-row > * + * {
-  margin-left: -6px;
-}
-
-.landing-faces-label {
-  color: var(--ink-2);
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .landing-final-cta {
   min-height: 52px;
   padding: 0 var(--space-8);
@@ -980,9 +971,8 @@ html:has(.landing[data-mode="live"]) {
   text-decoration: underline;
 }
 
-/* the site footer under the last section (2026-11-14, site.css .site-footer): after the scroll
-   track on the live page — below the last stop, the browser's own scroll (dwell.ts tail) — and
-   after the stacked sections on the static one; the message column's width */
+/* the site footer under the last section (2026-11-14, site.css .site-footer): after the sections on
+   both pages; the message column's width */
 .landing-footer.site-footer {
   position: relative;
   z-index: 1;
@@ -1047,42 +1037,6 @@ html:has(.landing[data-mode="live"]) {
 .landing-person-face .icon {
   width: 62%;
   height: 62%;
-}
-
-/* ① 시작: the company card — the name, the faces, the promises */
-.landing-company-name {
-  color: var(--accent);
-}
-
-/* the three domains on the company card: an icon and a word each — no sentence */
-.landing-domains {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-2);
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.landing-domains li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-btn);
-  background: var(--surface-2);
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-  word-break: keep-all;
-}
-
-.landing-domains li > .icon {
-  color: var(--accent);
 }
 
 /* ② 왜 지금: the gap chart — two lines from one start, a bracket where they part. A picture: no
@@ -1196,29 +1150,6 @@ html:has(.landing[data-mode="live"]) {
 .landing-gap-label.is-now {
   translate: -50% 6px;
   color: var(--ink-2);
-  font-weight: 600;
-}
-
-/* ③ 조직도: the legend beside the message, the team member's row on the paper */
-.landing-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.landing-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 4px 12px 4px 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--ink-2);
-  font-size: 13px;
   font-weight: 600;
 }
 
@@ -1490,7 +1421,7 @@ html:has(.landing[data-mode="live"]) {
 }
 
 /* ④ the approvals wait, faint, until the work is handed out */
-.landing-pin.is-acting .landing-slide.is-on .landing-workflow-gate:not(.is-up) {
+.landing-flow.is-acting .landing-slide.is-on .landing-workflow-gate:not(.is-up) {
   opacity: 0.45;
 }
 
@@ -1610,14 +1541,14 @@ html:has(.landing[data-mode="live"]) {
 
 /* no rod without the 3D penguin: the paper is a plain card */
 .landing-stack .landing-scroll-sheet,
-.landing-pin:not(.is-acting) .landing-scroll-sheet {
+.landing-flow:not(.is-acting) .landing-scroll-sheet {
   padding-top: var(--space-5);
   border-top: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
 .landing-stack .landing-scroll-roll,
-.landing-pin:not(.is-acting) .landing-scroll-roll {
+.landing-flow:not(.is-acting) .landing-scroll-roll {
   display: none;
 }
 
@@ -1643,31 +1574,31 @@ html:has(.landing[data-mode="live"]) {
 /* ── phone and narrow ─────────────────────────────────────────────────── */
 /* a low screen: the org chart's rows close up so the paper still fits */
 @media (max-height: 820px) {
-  .landing-pin .landing-scroll-sheet {
+  .landing-flow .landing-scroll-sheet {
     padding-top: var(--space-6);
     padding-bottom: var(--space-3);
   }
 
-  .landing-pin .landing-org {
+  .landing-flow .landing-org {
     gap: var(--space-2);
   }
 
-  .landing-pin .landing-org-top,
-  .landing-pin .landing-org-team {
+  .landing-flow .landing-org-top,
+  .landing-flow .landing-org-team {
     --lorg-gap: var(--space-1);
     padding: var(--space-1) var(--space-2);
   }
 
-  .landing-pin .landing-org-top {
+  .landing-flow .landing-org-top {
     row-gap: var(--space-3);
   }
 
-  .landing-pin .landing-org-node {
+  .landing-flow .landing-org-node {
     min-height: 20px;
     font-size: 13px;
   }
 
-  .landing-pin .landing-org-teams {
+  .landing-flow .landing-org-teams {
     row-gap: var(--space-3);
     padding-top: var(--space-2);
   }
@@ -1714,12 +1645,12 @@ html:has(.landing[data-mode="live"]) {
   }
 
   /* the scene first (the content centred in what is left), the message under it */
-  .landing-pin .landing-slide {
+  .landing-flow .landing-slide {
     display: flex;
     flex-direction: column;
   }
 
-  .landing-pin .landing-scene {
+  .landing-flow .landing-scene {
     order: -1;
     flex: 1 1 auto;
     min-height: 0;
@@ -1727,7 +1658,7 @@ html:has(.landing[data-mode="live"]) {
     padding: var(--space-4) 0;
   }
 
-  .landing-pin .landing-act.is-relay {
+  .landing-flow .landing-act.is-relay {
     width: 100%;
     margin-right: 0;
   }
@@ -1738,23 +1669,22 @@ html:has(.landing[data-mode="live"]) {
     right: 14%;
   }
 
-  .landing-pin .landing-act.is-scroll {
+  .landing-flow .landing-act.is-scroll {
     width: calc(100% - 40px);
   }
 
-  .landing-pin .landing-act.is-flow {
+  .landing-flow .landing-act.is-flow {
     width: calc(100% - 24px);
   }
 
-  .landing-pin .landing-act.is-sign {
+  .landing-flow .landing-act.is-sign {
     width: calc(100% - 24px);
   }
 
   /* a phone screen has room for the title and the lead only: the rest of the message stays on the
      stacked page and the larger screens */
-  .landing-pin .landing-slide .landing-points:not(.landing-domain-lines),
-  .landing-pin .landing-slide .landing-aside,
-  .landing-pin .landing-slide.is-org .landing-legend {
+  .landing-flow .landing-slide .landing-points:not(.landing-domain-lines),
+.landing-flow .landing-slide .landing-aside {
     display: none;
   }
 
@@ -1766,11 +1696,6 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-gap {
     padding: var(--space-5) var(--space-6) var(--space-4) var(--space-3);
-  }
-
-  .landing-domains li {
-    padding: var(--space-2) var(--space-1);
-    font-size: 13px;
   }
 
   .landing-workflow {
@@ -1803,7 +1728,7 @@ html:has(.landing[data-mode="live"]) {
     gap: var(--space-2);
   }
 
-  .landing-pin .landing-copy {
+  .landing-flow .landing-copy {
     flex: none;
     align-self: stretch;
     padding: 0 0 var(--space-6);
@@ -1855,16 +1780,12 @@ html:has(.landing[data-mode="live"]) {
     font-size: 19px;
   }
 
-  .landing-faces-row > * + * {
-    margin-left: -12px;
-  }
-
   .landing-points {
     gap: var(--space-2);
   }
 
   /* a phone screen has no room for it; the org chart's rows open the same modal */
-  .landing-pin .landing-org-all {
+  .landing-flow .landing-org-all {
     display: none;
   }
 
@@ -1920,7 +1841,7 @@ html:has(.landing[data-mode="live"]) {
 
 @media (prefers-reduced-motion: reduce) {
   .landing-canvas,
-  .landing-pin .landing-slide,
+  .landing-flow .landing-slide,
   .landing-progress a,
   .landing-progress-mark,
   .landing-price,
@@ -1931,5 +1852,18 @@ html:has(.landing[data-mode="live"]) {
 
   .landing-caret {
     animation: none;
+  }
+}
+
+/* ① 시작 (2026-11-24): no card — the box is the penguin (staging.ts standSpot), a little larger than elsewhere */
+.landing-flow .landing-act.is-stand {
+  width: auto;
+  height: min(52svh, 440px);
+  aspect-ratio: 0.7;
+}
+
+@media (max-width: 860px) {
+  .landing-flow .landing-act.is-stand {
+    height: min(40svh, 280px);
   }
 }
