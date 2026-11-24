@@ -1854,3 +1854,134 @@
     height: min(40svh, 280px);
   }
 }
+
+/* ② 문제 (2026-11-25 ②): a question and the general AI's answer, and under them the company's four
+   steps still undone — dashed boxes with gaps. Five words; the answer's grey lines fill in by scroll */
+.landing-flow .landing-act.is-ask {
+  width: min(64%, 440px);
+}
+
+.landing-ask {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.landing-ask-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* the question: a short bar on the right */
+.landing-ask-q {
+  align-self: flex-end;
+  width: 46%;
+  height: 28px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--surface-2);
+}
+
+/* the answer: who answers, then three grey lines that fill in */
+.landing-ask-a {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 82%;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+}
+
+.landing-ask-a b {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.landing-ask-line {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+/* the work: four steps, dashed (not done), the links between them broken */
+.landing-ask-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-ask-steps li {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-btn);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.landing-ask-steps li + li::before {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 3px);
+  width: calc(var(--space-4) - 6px);
+  border-top: 1.5px dashed var(--line-strong);
+  content: "";
+}
+
+/* pointed at: the undone steps show up in the attention colour */
+.landing-ask.is-on .landing-ask-steps li {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+/* the steps' right end: the far wing reaches there from beside the card */
+.landing-hand.is-ask {
+  right: var(--space-8);
+  bottom: calc(var(--space-6) + 22px);
+}
+
+@media (max-width: 860px) {
+  .landing-flow .landing-act.is-ask {
+    width: 100%;
+  }
+
+  .landing-ask {
+    gap: var(--space-5);
+    padding: var(--space-4);
+  }
+
+  .landing-ask-steps {
+    gap: var(--space-2);
+  }
+
+  .landing-ask-steps li + li::before {
+    width: calc(var(--space-2) - 4px);
+  }
+
+  .landing-hand.is-ask {
+    top: 0;
+    right: 14%;
+    bottom: auto;
+  }
+}

@@ -230,12 +230,13 @@ describe('stepping the slides', () => {
     const { container } = landing();
     const main = container.querySelector('.landing')!;
     expect(main.getAttribute('data-mode')).toBe('live');
-    expect(SECTIONS.map((s) => s.id)).toEqual(['hero', 'problem', 'org', 'workflows', 'pricing', 'contact']);
+    expect(SECTIONS.map((s) => s.id)).toEqual(['hero', 'problem', 'now', 'org', 'workflows', 'pricing', 'contact']);
     // every stop is a real place on the page: the sections, the workflows' block and its later thirds
     const stops = STOPS.map((s) => document.getElementById(s.anchor)!);
     expect(stops.map((s) => s.id)).toEqual([
       'landing-hero',
       'landing-problem',
+      'landing-now',
       'landing-org',
       'landing-workflows',
       'landing-workflows-sourcing',
@@ -244,7 +245,7 @@ describe('stepping the slides', () => {
       'landing-contact',
     ]);
     // every section is a block with its scene sticky inside (2026-11-25); the workflows' thirds are spans
-    expect(stops.map((s) => s.tagName)).toEqual(['DIV', 'DIV', 'DIV', 'DIV', 'SPAN', 'SPAN', 'DIV', 'DIV']);
+    expect(stops.map((s) => s.tagName)).toEqual(['DIV', 'DIV', 'DIV', 'DIV', 'DIV', 'SPAN', 'SPAN', 'DIV', 'DIV']);
     for (const sec of SECTIONS) {
       const block = document.getElementById(`landing-${sec.id}`)!;
       expect(block.classList.contains('landing-steps'), sec.id).toBe(true);
@@ -269,7 +270,7 @@ describe('stepping the slides', () => {
     expect(workflow()).toBe('sourcing');
     scrollTo(Y('landing-workflows-sns'));
     expect(workflow()).toBe('sns');
-    expect(container.querySelectorAll('.landing-slide.is-passed')).toHaveLength(3);
+    expect(container.querySelectorAll('.landing-slide.is-passed')).toHaveLength(4);
     scrollTo(Y('landing-pricing'));
     expect(on()).toBe('pricing');
     scrollTo(Y('landing-contact'));
@@ -296,12 +297,12 @@ describe('stepping the slides', () => {
     expect(links[1].className).toBe('is-on');
     expect(links[0].getAttribute('aria-current')).toBeNull();
     // section names only — no numbers (user, 2026-11-09)
-    expect(links.map((a) => a.textContent)).toEqual(['Intro', 'Why now', 'AI team', 'Workflows', 'Pricing', 'Contact']);
+    expect(links.map((a) => a.textContent)).toEqual(['Intro', 'The problem', 'Now', 'AI team', 'Workflows', 'Pricing', 'Contact']);
     // under 워크플로우: a small dot per workflow, pointing at its stop; the one up is marked
     const dots = within(nav).getAllByRole('link', { name: /^(Finance|Sourcing|Social media)$/ });
     expect(dots.map((a) => a.getAttribute('href'))).toEqual(['#landing-workflows', '#landing-workflows-sourcing', '#landing-workflows-sns']);
     scrollTo(Y('landing-workflows-sourcing'));
-    expect(links[3].getAttribute('aria-current')).toBe('step');
+    expect(links[4].getAttribute('aria-current')).toBe('step');
     expect(dots.map((a) => a.getAttribute('aria-current'))).toEqual([null, 'step', null]);
     expect(nav.textContent).not.toMatch(/\d/);
     expect(nav.querySelector('.landing-progress-index')).toBeNull();
@@ -323,9 +324,10 @@ describe('stepping the slides', () => {
   it('every heading is plain HTML, the section number above it is gone', () => {
     live();
     landing();
-    expect(screen.getByRole('heading', { level: 1, name: 'We build your company an AI team that does the work' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Make your company an AI agent company' })).toBeTruthy();
     for (const name of [
       'You pay for AI. Is the work still the same?',
+      'The companies that start now pull ahead',
       'An AI team shaped to your company, working beside your people',
       'Ask in one line; it stops where you approve',
       'Builds from ₩6,000,000. The call is free.',
@@ -425,7 +427,7 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
   it('on the page: every wheel turn moves the live landing on — through the sections, never held at one', () => {
     liveOnClock();
     stubScroll();
-    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 20, configurable: true });
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 40, configurable: true });
     const { container } = landing();
     act(() => void vi.advanceTimersByTime(50));
     const on = () => container.querySelector('.landing-slide.is-on')!.getAttribute('data-slide');
@@ -441,7 +443,7 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
     for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThan(400);
     act(() => void vi.advanceTimersByTime(2000));
     expect(window.scrollY).toBe(450 * 8);
-    expect(on()).toBe('org');
+    expect(on()).toBe('problem');
     // a pinch-zoom or a modal keeps its wheel
     const zoom = new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, cancelable: true });
     window.dispatchEvent(zoom);
@@ -456,7 +458,7 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
   it('the section names and the workflow tabs glide to their place (the hash stays for back)', () => {
     liveOnClock();
     stubScroll();
-    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 20, configurable: true });
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 40, configurable: true });
     landing();
     act(() => void vi.advanceTimersByTime(50));
     const nav = screen.getByRole('navigation', { name: 'Sections' });
@@ -496,7 +498,8 @@ describe('the scene: the content centred, the penguin around it', () => {
       expect(scene.querySelectorAll('[data-content]'), s.id).toHaveLength(1);
     }
     expect(within(screen.getByTestId('landing-scene-hero')).getByTestId('landing-hero-penguin')).toBeTruthy();
-    expect(within(screen.getByTestId('landing-scene-problem')).getByTestId('landing-gap')).toBeTruthy();
+    expect(within(screen.getByTestId('landing-scene-problem')).getByTestId('landing-ask')).toBeTruthy();
+    expect(within(screen.getByTestId('landing-scene-now')).getByTestId('landing-gap')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-org')).getByTestId('landing-org')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-workflows')).getAllByTestId('landing-workflow')).toHaveLength(1);
     expect(within(screen.getByTestId('landing-scene-pricing')).getAllByRole('heading', { level: 3 })).toHaveLength(3);
@@ -542,10 +545,13 @@ describe('the scene: the content centred, the penguin around it', () => {
     const pricing = screen.getByTestId('landing-scene-pricing');
     expect(pricing.querySelector('li')!.querySelector('[data-hand]')).toBeTruthy();
     expect(pricing.querySelectorAll('[data-hand]')).toHaveLength(1);
-    // the gap: a wing goes out to the bracket between the two lines
+    // the gap: a wing goes out to the bracket between the two lines; 문제: to the undone steps
+    const now = screen.getByTestId('landing-scene-now');
+    expect(now.querySelectorAll('[data-hand]')).toHaveLength(1);
+    expect(now.querySelector('[data-hand]')!.classList.contains('is-gap')).toBe(true);
     const problem = screen.getByTestId('landing-scene-problem');
     expect(problem.querySelectorAll('[data-hand]')).toHaveLength(1);
-    expect(problem.querySelector('[data-hand]')!.classList.contains('is-gap')).toBe(true);
+    expect(problem.querySelector('[data-hand]')!.classList.contains('is-ask')).toBe(true);
     const org = screen.getByTestId('landing-scene-org');
     expect(org.querySelector('[data-rod]')).toBeTruthy();
     expect(org.querySelectorAll('[data-front]')).toHaveLength(2); // the paper shown so far + the roll
@@ -554,7 +560,7 @@ describe('the scene: the content centred, the penguin around it', () => {
     expect(workflows.querySelector('[data-hand]')).toBeNull();
     // each section's staging (sections.ts — one act per section, the two cards share the wave)
     // the workflows type (2026-11-14 ②): the prompt box is the card's top row; the stamp is the card's own animation
-    expect(Object.fromEntries(SECTIONS.map((x) => [x.id, x.act]))).toEqual({ hero: 'wave', problem: 'point', org: 'unroll', workflows: 'type', pricing: 'point', contact: 'wave' });
+    expect(Object.fromEntries(SECTIONS.map((x) => [x.id, x.act]))).toEqual({ hero: 'wave', problem: 'point', now: 'point', org: 'unroll', workflows: 'type', pricing: 'point', contact: 'wave' });
   });
 
   it('phone: the scene first with the content centred in what is left, the message under it; the canvas covers the stage', () => {
@@ -743,7 +749,7 @@ describe('the acting', () => {
     const askChars = Array.from(ask).length;
     const total = flowLength(askChars, 3);
     /** the block's progress at `ms` into example `at`'s timeline (scene.ts workflowAt, inverted) */
-    const at = (example: number, ms: number) => (example + 0.04 + 0.82 * (ms / total)) / 3;
+    const at = (example: number, ms: number) => (example + 0.04 + 0.7 * (ms / total)) / 3;
     const scrub = (pr: number) => act(() => setProgress('workflows', pr));
     render(
       <I18nProvider locale="en">
@@ -763,13 +769,13 @@ describe('the acting', () => {
     expect(cues.typing).toBe(true); // the penguin patters while it types
     expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
     const handOut = askChars * per + HOLD_TYPED_MS + ASSIGN_FIRST_MS;
-    scrub(at(0, handOut + 10));
+    scrub(at(0, handOut + 60));
     expect(shown()).toBe(ask);
     expect(cues.typing).toBe(false);
     expect(pieces()).toEqual(['on', 'waiting', 'waiting']);
-    scrub(at(0, handOut + ASSIGN_STEP_MS + 10));
+    scrub(at(0, handOut + ASSIGN_STEP_MS + 60));
     expect(pieces()).toEqual(['done', 'on', 'waiting']);
-    scrub(at(0, handOut + 3 * ASSIGN_STEP_MS + TEAM_MS + 10));
+    scrub(at(0, handOut + 3 * ASSIGN_STEP_MS + TEAM_MS + 60));
     expect(pieces()).toEqual(['done', 'done', 'done']);
     expect(card().querySelectorAll('.landing-workflow-gate.is-up')).toHaveLength(2);
     scrub(at(0, total - 1));
@@ -844,7 +850,7 @@ describe('the acting', () => {
     expect(lit()).toEqual([false, false, false]);
   });
 
-  it('the gap (왜 지금): by the scroll — the lines draw in, then the wing points at the bracket, which lights up and is looked at', () => {
+  it('the gap (지금): by the scroll — the lines draw in, then the wing points at the bracket, which lights up and is looked at', () => {
     render(
       <I18nProvider locale="en">
         <GapAct on acting />
@@ -853,9 +859,9 @@ describe('the acting', () => {
     const chart = () => document.querySelector('.landing-gap')!;
     const team = () => Number(chart().querySelector('.landing-gap-team')!.getAttribute('stroke-dashoffset'));
     const toMs = (ms: number) => {
-      for (let pr = 0; pr <= 1; pr += 0.001) if (sceneMs('problem', pr) >= ms) return act(() => setProgress('problem', pr));
+      for (let pr = 0; pr <= 1; pr += 0.001) if (sceneMs('now', pr) >= ms) return act(() => setProgress('now', pr));
     };
-    act(() => setProgress('problem', 0));
+    act(() => setProgress('now', 0));
     expect(team()).toBe(1); // not drawn yet
     toMs(GAP_DRAW_MS / 2);
     expect(team()).toBeGreaterThan(0.4);
@@ -1468,21 +1474,44 @@ describe('section 3: the AI team (the org chart — agents and team members) and
   });
 });
 
-describe('section 2: 왜 지금 — the problem and the stakes (2026-11-14)', () => {
-  it('names the pain (paying for AI, not using it; multi-agent too hard to set up) and the stakes (competitors, the gap, now) — no numbers', () => {
+describe('문제 · 지금 — the pain and the stakes (2026-11-14, split 2026-11-25 ②)', () => {
+  it('문제: general-purpose AI answers but does not get the work done — it does not know the company, carry the work on or stop where it must', () => {
     landing('ko');
     const slide = document.querySelector('[data-slide="problem"]') as HTMLElement;
     expect(within(slide).getByRole('heading', { level: 2 }).textContent).toBe('AI 는 결제했는데, 일은 그대로인가요?');
     const copy = slide.querySelector('.landing-copy')!.textContent!;
-    expect(copy).toContain('ChatGPT · Claude 구독');
-    expect(copy).toContain("'멀티 에이전트'");
-    expect([...slide.querySelectorAll('.landing-points b')].map((b) => b.textContent)).toEqual(['경쟁사는 이미 시작했어요', '격차는 저절로 줄지 않아요', '지금 시작하면 앞설 수 있어요']);
-    // no statistic anywhere on the slide (no source to cite — so no numbers at all)
+    expect(copy).toContain('ChatGPT · Claude 같은 범용 AI');
+    expect(copy).toContain('여러 AI 에이전트가 일을 나눠 맡게');
+    expect([...slide.querySelectorAll('.landing-points b')].map((b) => b.textContent)).toEqual(['우리 회사를 몰라요', '이어서 하지 못해요', '멈출 곳을 몰라요']);
+    // the picture: a question, the general AI's answer, and four steps still undone — five words
+    const ask = within(slide).getByTestId('landing-ask');
+    expect(ask.querySelector('.landing-ask-a b')!.textContent).toBe('범용 AI');
+    expect([...ask.querySelectorAll('.landing-ask-steps li')].map((li) => li.textContent)).toEqual(['자료', '순서', '인계', '승인']);
+    expect(ask.querySelector('figure')!.getAttribute('aria-label')).toMatch(/^범용 AI 가 질문에 답하는 동안/);
+    expect(SECTIONS.find((x) => x.id === 'problem')!.act).toBe('point');
+  });
+
+  it('지금: the industry has started, the gap widens faster, start now — no numbers in either section', () => {
+    landing('ko');
+    const slide = document.querySelector('[data-slide="now"]') as HTMLElement;
+    expect(within(slide).getByRole('heading', { level: 2 }).textContent).toBe('지금 시작한 회사가 앞서 나가요');
+    expect([...slide.querySelectorAll('.landing-points b')].map((b) => b.textContent)).toEqual(['업계는 이미 시작했어요', '격차는 점점 더 빠르게 벌어져요', '지금 시작하면 앞설 수 있어요']);
+    expect(document.querySelector('.landing-progress')!.textContent).toContain('지금');
+    expect(document.querySelector('.landing-progress')!.textContent).not.toContain('왜 지금');
+    // no statistic anywhere (no source to cite — so no numbers at all)
     for (const locale of ['ko', 'en', 'zh-CN'] as const) {
       cleanup();
       landing(locale);
-      expect(document.querySelector('[data-slide="problem"]')!.textContent, locale).not.toMatch(/\d|%/);
+      for (const id of ['problem', 'now']) expect(document.querySelector(`[data-slide="${id}"]`)!.textContent, `${locale} ${id}`).not.toMatch(/\d|%/);
     }
+  });
+
+  it('the copy the user gave (2026-11-25 ②): the hero line, no "(워크플로우)", AI 에이전트가', () => {
+    landing('ko');
+    expect(screen.getByText('소규모 비즈니스 AX 솔루션').closest('[data-slide="hero"]')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('우리 회사를 AI 에이전트 회사로');
+    expect(document.querySelector('.landing')!.textContent).not.toContain('(워크플로우)');
+    expect(document.querySelector('.landing')!.textContent).not.toMatch(/AI 가 /);
   });
 
   it('the picture: two lines from one start, a bracket where they part, four words — no axis values', () => {
@@ -1501,7 +1530,6 @@ describe('section 2: 왜 지금 — the problem and the stakes (2026-11-14)', ()
   it('who it is for: the three domains in the first section and, one line each, in the AI team (what that business hands over) — the workflows are shared examples', () => {
     landing('ko');
     expect(DOMAINS).toEqual(['logistics', 'commerce', 'it']);
-    expect(screen.getByText('물류 · 커머스 · IT 서비스 소규모 비즈니스를 위해').closest('[data-slide="hero"]')).toBeTruthy();
     // "업종은 AI 팀 섹션에서 다뤄" (2026-11-14): the lines sit in the AI team's message, not the workflows'
     const lines = [...screen.getByTestId('landing-domain-lines').querySelectorAll('li')];
     expect(screen.getByTestId('landing-domain-lines').closest('[data-slide="org"]')).toBeTruthy();
@@ -1657,9 +1685,7 @@ describe('section 1: the penguin alone (2026-11-24 — "첫번째 섹션은 인�
     expect(standSpot(box)).toEqual({ x: 950, y: 640, h: 440, lean: 0, turn: 0 });
     expect(standSpot(box).h).toBeGreaterThan(penguinHeight({ width: 720, height: 836 }, false));
     expect(SECTIONS[0].act).toBe('wave');
-    // plain words: no "AX" (2026-11-14)
-    expect(document.querySelector('[data-slide="hero"]')!.textContent).not.toMatch(/\bAX\b/);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('우리 회사 일을 하는 AI 팀을 만들어 드려요');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('우리 회사를 AI 에이전트 회사로');
     expect(TEAMS.length).toBe(5);
   });
 
@@ -1707,7 +1733,7 @@ describe('the buttons', () => {
     const start = document.querySelector('[data-slide="contact"]') as HTMLElement;
     expect(within(start).getByRole('heading', { name: 'Try it, then decide' })).toBeTruthy();
     // no other slide has a link (the workflow tabs and the price button are buttons)
-    for (const id of ['problem', 'org', 'workflows', 'pricing']) expect(within(document.querySelector(`[data-slide="${id}"]`) as HTMLElement).queryAllByRole('link'), id).toEqual([]);
+    for (const id of ['problem', 'now', 'org', 'workflows', 'pricing']) expect(within(document.querySelector(`[data-slide="${id}"]`) as HTMLElement).queryAllByRole('link'), id).toEqual([]);
     fireEvent.click(within(start).getByRole('button', { name: 'No demo account yet? Apply for one' }));
     const dialog = await screen.findByRole('dialog', { name: 'Apply for a demo account' });
     // opened from the last section: a demo account is pre-checked

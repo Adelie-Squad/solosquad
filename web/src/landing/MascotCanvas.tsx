@@ -40,7 +40,7 @@ import { makeMorph, type Morph } from './morph';
 import { makeRod, makeStamp, STAMP_LENGTH } from './props';
 import { aim, atDepth, fitEraser, makeEraser, ORDER, rayAt, reach, useFrontPass, type Side } from './rig';
 import type { ActId, SectionId } from './sections';
-import { GAP_DRAW_MS, progressOf, sceneAt, sceneMs } from './scene';
+import { ASK_MS, GAP_DRAW_MS, progressOf, sceneAt, sceneMs } from './scene';
 import { BODY, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
 
 preloadPenguin();
@@ -411,7 +411,8 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
     // the act by the scroll through its block (scene.ts) — rewinds with it; none while walking
     const progress = boxes[onB ? at + 1 : at] ? progressOf(boxes[onB ? at + 1 : at], screenH) : 0;
     const ms = section === 'workflows' ? 0 : sceneMs(section, progress);
-    const relayMs = section === 'problem' ? ms - GAP_DRAW_MS : ms;
+    // the pointing starts after the scene's lead-in (문제: the answer; 지금: the graph drawing)
+    const relayMs = section === 'now' ? ms - GAP_DRAW_MS : section === 'problem' ? ms - ASK_MS : ms;
     const settled = handover === 0;
     const live = acting && settled;
     pp.typing += ((live && act === 'type' && cues.typing ? 1 : 0) - pp.typing) * k(5);

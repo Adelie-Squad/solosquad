@@ -6,7 +6,7 @@
 // between the stops is the page's own scroll (smooth.ts only eases the wheel — 2026-11-24).
 import type { MessageKey } from '../i18n';
 
-export type SectionId = 'hero' | 'problem' | 'org' | 'workflows' | 'pricing' | 'contact';
+export type SectionId = 'hero' | 'problem' | 'now' | 'org' | 'workflows' | 'pricing' | 'contact';
 
 /**
  * What the penguin does with a section's content — one staging per act, shared where two sections
@@ -33,6 +33,7 @@ export interface Section {
 export const SECTIONS: Section[] = [
   { id: 'hero', label: 'landing.section.hero', act: 'wave' },
   { id: 'problem', label: 'landing.section.problem', act: 'point' },
+  { id: 'now', label: 'landing.section.now', act: 'point' },
   { id: 'org', label: 'landing.section.org', act: 'unroll' },
   { id: 'workflows', label: 'landing.section.workflows', act: 'type', stops: WORKFLOWS },
   { id: 'pricing', label: 'landing.section.pricing', act: 'point' },

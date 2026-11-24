@@ -11,13 +11,18 @@ import type { SectionId } from './sections';
 
 /** How many screens of scroll each section's block is (the scene holds the screen for `len − 1`). */
 export const SCENE_LEN: Record<SectionId, number> = {
-  hero: 1.6,
-  problem: 2.2,
-  org: 2,
-  workflows: 4.6,
-  pricing: 1.8,
-  contact: 1.4,
+  // longer holds (2026-11-25 ② — "섹션별로 머무는 시간 좀 늘려줘"): the act ends at ACT_TO, the rest holds
+  hero: 2.6,
+  problem: 3,
+  now: 3.4,
+  org: 3.2,
+  workflows: 7,
+  pricing: 2.8,
+  contact: 2.2,
 };
+
+/** 문제: the question and the general AI's answer come in first (ms), then the penguin points at the undone steps. */
+export const ASK_MS = 1200;
 
 /** 왜 지금: the two lines and the bracket draw in first (ms), then the penguin points at the gap. */
 export const GAP_DRAW_MS = 1200;
@@ -28,15 +33,16 @@ export const WAVE_TOTAL_MS = WAVE_MS + 500;
 /** How long each scene's act is, in act ms (the workflows play their three examples — flow.ts). */
 export const SCENE_MS: Record<Exclude<SectionId, 'workflows'>, number> = {
   hero: WAVE_TOTAL_MS,
-  problem: GAP_DRAW_MS + POINT_MS,
+  problem: ASK_MS + POINT_MS,
+  now: GAP_DRAW_MS + POINT_MS,
   org: UNROLL_MS + 200,
   pricing: POINT_MS,
   contact: WAVE_TOTAL_MS,
 };
 
-/** The act runs over this part of the scene's hold — a breath before it, a moment after it. */
+/** The act runs over this part of the scene's hold — a breath before it, then the finished picture holds a while. */
 export const ACT_FROM = 0.06;
-export const ACT_TO = 0.88;
+export const ACT_TO = 0.7;
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
@@ -61,7 +67,7 @@ export function workflowAt(progress: number, examples: number): { at: number; lo
   const x = clamp01(progress) * examples;
   // (a hair of slack: a stop anchor sits exactly on a third, and the progress is rounded)
   const at = Math.min(examples - 1, Math.floor(x + 0.005));
-  return { at, local: clamp01((x - at - 0.04) / 0.82) };
+  return { at, local: clamp01((x - at - 0.04) / 0.7) };
 }
 
 /**

@@ -16,7 +16,7 @@ import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import { cues, easeOut, RELAY, UNROLL_MS } from './acting';
 import { flowAt, flowLength, flowStill, type FlowFrame } from './flow';
 import { useProgress } from './progress';
-import { GAP_DRAW_MS, sceneMs, workflowAt } from './scene';
+import { ASK_MS, GAP_DRAW_MS, sceneMs, workflowAt } from './scene';
 import { byId } from './catalog';
 import { LandingOrgChart } from './LandingOrgChart';
 import { TIER, TIER_LABEL, WORKFLOW_EXAMPLES, type Domain, type WorkflowExample } from './workflows';
@@ -48,6 +48,49 @@ export function StandAct(_props: ActProps) {
  */
 export const pointingAt = (ms: number) => ms >= RELAY.reach && ms < RELAY.reach + RELAY.step + RELAY.release;
 
+/** The undone steps under the general AI's answer (문제). */
+export const ASK_STEPS = ['data', 'order', 'handoff', 'approval'] as const;
+
+/**
+ * 문제 (2026-11-25 ② — "범용 ai로 업무를 해결할 수 없다"): a question and the general AI's answer
+ * (grey lines, no words — the lines fill in with the scroll), and under it the company's four steps
+ * still undone — dashed boxes with gaps between them (자료 · 순서 · 인계 · 승인). The penguin points at
+ * them from beside the card's right edge. Five words on it.
+ */
+export function AskAct({ acting }: ActProps) {
+  const { t } = useI18n();
+  const p = useProgress('problem');
+  const ms = acting ? sceneMs('problem', p) : ASK_MS + RELAY.reach + RELAY.step + RELAY.release;
+  const answered = Math.min(1, ms / ASK_MS);
+  const pointing = acting && pointingAt(ms - ASK_MS);
+  const lines = [0.92, 0.78, 0.55];
+  return (
+    <div className="landing-act is-relay is-ask" data-content data-front data-testid="landing-ask">
+      <figure className={`landing-ask ${pointing ? 'is-on' : ''}`} aria-label={t('landing.problem.chart')}>
+        <div className="landing-ask-chat" aria-hidden="true">
+          <span className="landing-ask-q" />
+          <span className="landing-ask-a">
+            <b>
+              <ICON.chat size={14} />
+              {t('landing.problem.chart.ai')}
+            </b>
+            {lines.map((w, i) => (
+              // each line of the answer fills in turn as the page scrolls
+              <span key={i} className="landing-ask-line" style={{ width: `${w * 100 * Math.max(0, Math.min(1, answered * lines.length - i))}%` }} />
+            ))}
+          </span>
+        </div>
+        <ol className="landing-ask-steps" data-gaze={pointing ? '' : undefined}>
+          {ASK_STEPS.map((k) => (
+            <li key={k}>{t(`landing.problem.step.${k}`)}</li>
+          ))}
+        </ol>
+        <span className="landing-hand is-ask" data-hand="R" aria-hidden="true" />
+      </figure>
+    </div>
+  );
+}
+
 /** The gap chart's lines (viewBox 400 × 240): one start, the AI team climbing, the subscription staying flat. */
 export const GAP = {
   start: { x: 40, y: 176 },
@@ -64,8 +107,8 @@ export const GAP = {
  */
 export function GapAct({ acting }: ActProps) {
   const { t } = useI18n();
-  const p = useProgress('problem');
-  const ms = acting ? sceneMs('problem', p) : GAP_DRAW_MS + RELAY.reach + RELAY.step + RELAY.release;
+  const p = useProgress('now');
+  const ms = acting ? sceneMs('now', p) : GAP_DRAW_MS + RELAY.reach + RELAY.step + RELAY.release;
   // the lines draw in first (by the scroll), then the penguin points at the gap
   const drawn = Math.min(1, ms / GAP_DRAW_MS);
   const pointing = acting && pointingAt(ms - GAP_DRAW_MS);
@@ -76,7 +119,7 @@ export function GapAct({ acting }: ActProps) {
   const pct = (x: number, y: number) => ({ left: `${(x / 400) * 100}%`, top: `${(y / 240) * 100}%` });
   return (
     <div className="landing-act is-relay is-gap" data-content data-front data-testid="landing-gap">
-      <figure className={`landing-gap ${pointing ? 'is-on' : ''}`} aria-label={t('landing.problem.chart')}>
+      <figure className={`landing-gap ${pointing ? 'is-on' : ''}`} aria-label={t('landing.now.chart')}>
         <div className="landing-gap-plot">
         <svg className="landing-gap-lines" viewBox="0 0 400 240" aria-hidden="true">
           <line className="landing-gap-axis" x1={start.x} y1={208} x2={372} y2={208} />
@@ -93,17 +136,17 @@ export function GapAct({ acting }: ActProps) {
               <AgentIcon key={id} agent={id} size={20} label="" />
             ))}
           </span>
-          {t('landing.problem.chart.team')}
+          {t('landing.now.chart.team')}
         </span>
         <span className="landing-gap-label is-sub" style={{ ...pct(sub.x, sub.y), opacity: shown }}>
           <ICON.subscription size={18} />
-          {t('landing.problem.chart.sub')}
+          {t('landing.now.chart.sub')}
         </span>
         <span className="landing-gap-label is-gap" style={{ ...pct(bracket, (team.y + sub.y) / 2), opacity: shown }}>
-          {t('landing.problem.chart.gap')}
+          {t('landing.now.chart.gap')}
         </span>
         <span className="landing-gap-label is-now" style={pct(start.x, 208)}>
-          {t('landing.problem.chart.now')}
+          {t('landing.now.chart.now')}
         </span>
         <span className="landing-hand is-gap" style={pct(bracket, (team.y + sub.y) / 2)} data-hand="R" aria-hidden="true" />
         </div>

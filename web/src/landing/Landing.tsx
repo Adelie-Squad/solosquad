@@ -7,7 +7,7 @@ import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { hasWebGL, isMobile, prefersReducedMotion, webglForcedOff } from '../office/OfficeStage';
 import { useTheme } from '../theme';
-import { DOMAIN_ICON, GapAct, PricingAct, ScrollAct, SignAct, StandAct, WorkflowAct } from './Acts';
+import { AskAct, DOMAIN_ICON, GapAct, PricingAct, ScrollAct, SignAct, StandAct, WorkflowAct } from './Acts';
 import { SmoothScroll, wheelPixels } from './smooth';
 import { useInquiry } from '../marketing/Inquiry';
 import { SiteFooter } from '../marketing/SiteFooter';
@@ -116,11 +116,18 @@ function useSmoothScroll(enabled: boolean) {
 
 type Point = { icon: keyof typeof ICON; title: MessageKey; body: MessageKey };
 
-/** 왜 지금: what is at stake — competitors who started, a gap that keeps growing, the chance now. No numbers. */
+/** 문제: what general-purpose AI does not do — know the company, carry the work on, stop where it must. */
 const PROBLEM_POINTS: Point[] = [
-  { icon: 'growth', title: 'landing.problem.point1.title', body: 'landing.problem.point1.body' },
-  { icon: 'schedule', title: 'landing.problem.point2.title', body: 'landing.problem.point2.body' },
-  { icon: 'forward', title: 'landing.problem.point3.title', body: 'landing.problem.point3.body' },
+  { icon: 'org', title: 'landing.problem.point1.title', body: 'landing.problem.point1.body' },
+  { icon: 'workflows', title: 'landing.problem.point2.title', body: 'landing.problem.point2.body' },
+  { icon: 'warn', title: 'landing.problem.point3.title', body: 'landing.problem.point3.body' },
+];
+
+/** 지금: what is at stake — competitors who started, a gap that keeps growing, the chance now. No numbers. */
+const NOW_POINTS: Point[] = [
+  { icon: 'growth', title: 'landing.now.point1.title', body: 'landing.now.point1.body' },
+  { icon: 'schedule', title: 'landing.now.point2.title', body: 'landing.now.point2.body' },
+  { icon: 'forward', title: 'landing.now.point3.title', body: 'landing.now.point3.body' },
 ];
 
 function Points({ points }: { points: Point[] }) {
@@ -336,7 +343,18 @@ export function Landing() {
         <p className="landing-lead">{t('landing.problem.lead')}</p>
         <Points points={PROBLEM_POINTS} />
       </>,
-      <GapAct on={isOn('problem')} acting={acting} />,
+      <AskAct on={isOn('problem')} acting={acting} />,
+    ),
+    slide(
+      'now',
+      <>
+        <h2 id="landing-now-title" className="landing-title">
+          {t('landing.now.title')}
+        </h2>
+        <p className="landing-lead">{t('landing.now.lead')}</p>
+        <Points points={NOW_POINTS} />
+      </>,
+      <GapAct on={isOn('now')} acting={acting} />,
     ),
     slide(
       'org',
