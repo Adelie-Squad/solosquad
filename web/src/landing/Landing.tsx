@@ -7,15 +7,14 @@ import { useI18n, type MessageKey } from '../i18n';
 import { ICON } from '../icons';
 import { hasWebGL, isMobile, prefersReducedMotion, webglForcedOff } from '../office/OfficeStage';
 import { useTheme } from '../theme';
-import { CompanyAct, DOMAIN_ICON, GapAct, PricingAct, ScrollAct, SignAct, WorkflowAct } from './Acts';
-import { keyStep, ownsKeys, SETTLE_MS, Stepper, wheelPixels } from './dwell';
+import { DOMAIN_ICON, GapAct, PricingAct, ScrollAct, SignAct, StandAct, WorkflowAct } from './Acts';
+import { SmoothScroll, wheelPixels } from './smooth';
 import { useInquiry } from '../marketing/Inquiry';
 import { SiteFooter } from '../marketing/SiteFooter';
 import '../marketing/messages';
 import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
-import { PersonFace } from './people';
 import { firstStop, MOVED_ANCHORS, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
 import { DOMAINS, WORKFLOW_EXAMPLES } from './workflows';
 import '../styles/landing.css';
@@ -67,84 +66,43 @@ function useStep(enabled: boolean) {
 }
 
 const inDialog = (target: EventTarget | null) => target instanceof Element && !!target.closest('[role="dialog"], [role="alertdialog"]');
-/** Space on a focused button or link presses it — never a page step. */
-const pressable = (target: EventTarget | null) => target instanceof Element && !!target.closest('button, a, summary, [role="button"]');
 
 /**
- * The step controller on the live landing (dwell.ts): one wheel or touch gesture = one stop,
- * then a hold; the keyboard and the progress links go through it too. `?landing-debug` keeps a log
- * of the steps at `window.__landingLog`.
+ * The live landing's scroll (2026-11-24): native, never held — the wheel is only smoothed (smooth.ts,
+ * like the reference's Lenis), touch · keys · the scrollbar are the browser's. `to(y)` glides there
+ * (the section names, the workflow tabs).
  */
-function useStepper(enabled: boolean) {
-  const stepper = useRef<Stepper | null>(null);
+function useSmoothScroll(enabled: boolean) {
+  const smooth = useRef<SmoothScroll | null>(null);
   useEffect(() => {
     if (!enabled) return;
-    const debug = new URLSearchParams(window.location.search).has('landing-debug');
-    const log: string[] = [];
-    if (debug) (window as unknown as { __landingLog?: string[] }).__landingLog = log;
-    const s = new Stepper({
+    const s = new SmoothScroll({
       now: () => performance.now(),
       scrollY: () => window.scrollY,
+      maxY: () => document.documentElement.scrollHeight - window.innerHeight,
       scrollTo: (y) => window.scrollTo({ top: y, left: 0, behavior: 'instant' }),
       frame: (cb) => requestAnimationFrame(cb),
       cancel: (id) => cancelAnimationFrame(id),
-      stops: stopOffsets,
-      locked: scrollLocked,
-      onLog: debug ? (line) => log.push(line) : undefined,
     });
-    stepper.current = s;
-
+    smooth.current = s;
     const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || inDialog(e.target) || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
-      if (debug) log.push(`${Math.round(performance.now())}ms wheel ${Math.round(e.deltaY)}`);
-      if (s.wheel(wheelPixels(e, window.innerHeight)) && e.cancelable) e.preventDefault();
-    };
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1 || inDialog(e.target)) return s.touchEnd();
-      s.touchStart(e.touches[0].clientY);
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      if (s.touchMove(e.touches[0].clientY) && e.cancelable) e.preventDefault();
-    };
-    const onTouchEnd = () => s.touchEnd();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || scrollLocked() || ownsKeys(e.target)) return;
-      if ((e.key === ' ' || e.key === 'Spacebar') && pressable(e.target)) return;
-      const to = keyStep(e, s.current(), STOPS.length - 1);
-      if (to === null) return;
+      // pinch-zoom, sideways, a modal or anything that scrolls on its own keeps the wheel
+      if (e.ctrlKey || scrollLocked() || inDialog(e.target) || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      if (!e.cancelable) return;
       e.preventDefault();
-      s.go(to, 'key');
+      s.wheel(wheelPixels(e, window.innerHeight));
     };
-    let settle = 0;
-    const onScroll = () => {
-      window.clearTimeout(settle);
-      if (!s.gliding()) settle = window.setTimeout(() => s.settle(), SETTLE_MS);
-    };
-
+    const onScroll = () => s.sync();
     window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd);
-    window.addEventListener('touchcancel', onTouchEnd);
-    window.addEventListener('keydown', onKey);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
     return () => {
       window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('touchcancel', onTouchEnd);
-      window.removeEventListener('keydown', onKey);
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      window.clearTimeout(settle);
       s.stop();
-      stepper.current = null;
+      smooth.current = null;
     };
   }, [enabled]);
-  return stepper;
+  return smooth;
 }
 
 type Point = { icon: keyof typeof ICON; title: MessageKey; body: MessageKey };
@@ -154,12 +112,6 @@ const PROBLEM_POINTS: Point[] = [
   { icon: 'growth', title: 'landing.problem.point1.title', body: 'landing.problem.point1.body' },
   { icon: 'schedule', title: 'landing.problem.point2.title', body: 'landing.problem.point2.body' },
   { icon: 'forward', title: 'landing.problem.point3.title', body: 'landing.problem.point3.body' },
-];
-
-/** AI 팀: what the company gets — people deciding, everything on record (the team shaped to the business is the domain lines above them). */
-const ORG_POINTS: Point[] = [
-  { icon: 'person', title: 'landing.org.point2.title', body: 'landing.org.point2.body' },
-  { icon: 'artifacts', title: 'landing.org.point3.title', body: 'landing.org.point3.body' },
 ];
 
 function Points({ points }: { points: Point[] }) {
@@ -205,16 +157,18 @@ function movedAnchor() {
  * exact quote on request) · 문의 (the last card). Each section is the message on one side and, on
  * the other, one picture that carries its point with a few words; the 3D penguin walks to a spot by
  * it and acts on it (waves from behind the company card, points at the gap, peeks over the scroll,
- * stamps each workflow's owner approval from the card's corner, points at the build price, waves
- * from behind the last card). One
- * wheel or swipe moves one stop and the page holds there a moment. Reduced motion, no WebGL and short
+ * types the workflow request in, points at the build price, waves from behind the last card). The
+ * page scrolls naturally (2026-11-24 — like the reference: nothing pins or holds, the wheel only
+ * smoothed): the sections flow by, the penguin's canvas stays over the screen and the penguin goes
+ * with the section nearest the middle — it walks to that section's content and plays its act as
+ * the section comes in. The workflows are three screens tall with their slide sticky inside, one
+ * example per third of the way through. Reduced motion, no WebGL and short
  * screens get the same sections stacked (the three workflows one under another) with the 2D penguin
  * and native scroll. The landing is the marketing site's only (decision 62 — customer servers open
  * on their login): 데모 체험하기 (primary, `/demo`) and 로그인 (`/login`, the login router) in the top
  * bar (beside the language select, no label), the first section and the last; the price section's
  * button and the line under the last card open the request modal. No arrows. The site footer
- * (대표 · email · 개인정보처리방침, 2026-11-14) follows the last section — after the scroll track,
- * where the browser scrolls on its own (dwell.ts `tail`).
+ * (대표 · email · 개인정보처리방침, 2026-11-14) follows the last section.
  */
 export function Landing() {
   const { t } = useI18n();
@@ -231,7 +185,7 @@ export function Landing() {
   const active: SectionId = stop.section;
   const fail = useCallback(() => setMode('static'), []);
   const onReady = useCallback(() => setReady(true), []);
-  const stepper = useStepper(live);
+  const smooth = useSmoothScroll(live);
   const team = useTeamModal();
   useEffect(movedAnchor, []);
 
@@ -266,37 +220,21 @@ export function Landing() {
     };
   }, [live]);
 
-  // Tab into a slide that is not up (its content stays in the page for keyboards and screen
-  // readers) brings that slide up through the step controller — at its first stop
   const stage = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = stage.current;
-    if (!live || !el) return;
-    const onFocus = (e: FocusEvent) => {
-      const slide = (e.target as HTMLElement).closest<HTMLElement>('[data-slide]');
-      const id = slide?.dataset.slide as SectionId | undefined;
-      if (!id || id === active) return;
-      const i = firstStop(id);
-      if (i < 0) return;
-      if (stepper.current) stepper.current.go(i, 'focus');
-      else document.getElementById(STOPS[i].anchor)?.scrollIntoView({ block: 'start' });
-    };
-    el.addEventListener('focusin', onFocus);
-    return () => el.removeEventListener('focusin', onFocus);
-  }, [live, active, stepper]);
 
-  /** To stop `i` through the step controller (the progress links, the workflow tabs). */
+  /** Glide to stop `i` (the section names, the workflow tabs) — the hash stays for the back button. */
   const goTo = useCallback(
     (i: number) => {
-      const s = stepper.current;
-      if (!s) return;
+      const s = smooth.current;
+      const el = document.getElementById(STOPS[i].anchor);
+      if (!s || !el) return;
       window.history.pushState(null, '', `#${STOPS[i].anchor}`);
-      s.go(i, 'link');
+      s.to(el.getBoundingClientRect().top + window.scrollY);
     },
-    [stepper],
+    [smooth],
   );
   const onProgress = (i: number) => (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!stepper.current || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (!smooth.current || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
     goTo(i);
   };
@@ -318,10 +256,11 @@ export function Landing() {
   const slide = (id: SectionId, copy: ReactNode, act: ReactNode) => {
     const on = !live || active === id;
     const passed = live && SECTIONS.findIndex((s) => s.id === id) < SECTIONS.findIndex((s) => s.id === active);
-    return (
+    const stops = SECTIONS.find((s) => s.id === id)?.stops;
+    const body = (
       <section
         key={id}
-        id={live ? undefined : sectionAnchor(id)}
+        id={live && stops ? undefined : sectionAnchor(id)}
         data-slide={id}
         className={`landing-slide is-${id} ${on ? 'is-on' : ''} ${passed ? 'is-passed' : ''}`}
         aria-labelledby={`landing-${id}-title`}
@@ -331,6 +270,18 @@ export function Landing() {
           {act}
         </div>
       </section>
+    );
+    if (!live || !stops) return body;
+    // a section with several stops (the workflows): a screen per stop, the slide sticky inside —
+    // the page keeps scrolling while the example changes at each third (like the reference's film)
+    const first = firstStop(id);
+    return (
+      <div key={id} id={sectionAnchor(id)} className="landing-steps" style={{ '--steps': stops.length } as CSSProperties} data-testid={`landing-steps-${id}`}>
+        {stops.slice(1).map((_, i) => (
+          <span key={i} id={STOPS[first + i + 1].anchor} className="landing-substop" style={{ '--n': i + 1 } as CSSProperties} aria-hidden="true" />
+        ))}
+        {body}
+      </div>
     );
   };
 
@@ -349,14 +300,13 @@ export function Landing() {
           {login('btn landing-cta')}
         </div>
       </>,
-      <>
-        {!live && (
-          <div className="landing-static-mascot" aria-hidden="true" data-testid="landing-static-mascot">
-            <Mascot size={160} />
-          </div>
-        )}
-        <CompanyAct on={isOn('hero')} acting={acting} />
-      </>,
+      live ? (
+        <StandAct on={isOn('hero')} acting={acting} />
+      ) : (
+        <div className="landing-static-mascot" aria-hidden="true" data-testid="landing-static-mascot">
+          <Mascot size={240} />
+        </div>
+      ),
     ),
     slide(
       'problem',
@@ -390,17 +340,6 @@ export function Landing() {
               </li>
             );
           })}
-        </ul>
-        <Points points={ORG_POINTS} />
-        <ul className="landing-legend">
-          <li>
-            <Mascot size={20} />
-            {t('landing.org.legend.agent')}
-          </li>
-          <li>
-            <PersonFace size={20} />
-            {t('landing.org.legend.person')}
-          </li>
         </ul>
         <button type="button" className="btn landing-org-all" onClick={() => team.open(null)}>
           <ICON.team />
@@ -514,23 +453,16 @@ export function Landing() {
       </nav>
 
       {live ? (
-        <div className="landing-track" style={{ '--steps': STOPS.length } as CSSProperties}>
-          {STOPS.map((s, i) => (
-            <span key={s.anchor} id={s.anchor} className="landing-stop" style={{ '--n': i } as CSSProperties} data-testid={`landing-stop-${s.anchor.slice('landing-'.length)}`} />
-          ))}
-          <div className={`landing-pin ${acting ? 'is-acting' : ''}`} ref={stage}>
-            <div className="landing-grid" aria-hidden="true">
-              <span />
-              <span />
-            </div>
-            <MascotStage section={active} acting={acting} theme={theme} mobile={mobile} pointer={pointer} touch={touch} pin={stage} onReady={onReady} onFail={fail} />
-            {slides}
+        <div className={`landing-flow ${acting ? 'is-acting' : ''}`} ref={stage}>
+          <div className="landing-grid" aria-hidden="true">
+            <span />
+            <span />
           </div>
-        </div>
-      ) : (
-        <div className="landing-stack">
+          <MascotStage section={active} acting={acting} theme={theme} mobile={mobile} pointer={pointer} touch={touch} pin={stage} onReady={onReady} onFail={fail} />
           {slides}
         </div>
+      ) : (
+        <div className="landing-stack">{slides}</div>
       )}
       <SiteFooter className="landing-footer" />
       {team.modal}

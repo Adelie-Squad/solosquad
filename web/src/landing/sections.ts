@@ -3,7 +3,7 @@
 // now → the AI team → the workflows (the old 맡기기 folded in) → pricing → contact). A section is
 // one slide; most hold one stop, the workflows hold three (재무 관리 → 상품 소싱 → SNS 마케팅 — the same card, its content changes, the penguin stays).
 // What the penguin does in each is its `act` (acting.ts · staging.ts · arms.ts); how a gesture moves
-// between the stops is dwell.ts.
+// between the stops is the page's own scroll (smooth.ts only eases the wheel — 2026-11-24).
 import type { MessageKey } from '../i18n';
 
 export type SectionId = 'hero' | 'problem' | 'org' | 'workflows' | 'pricing' | 'contact';

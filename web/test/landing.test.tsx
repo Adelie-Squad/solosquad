@@ -48,9 +48,9 @@ import { GAP, GapAct, PricingAct, WorkflowAct } from '../src/landing/Acts';
 import { fitEraser, makeEraser, ORDER } from '../src/landing/rig';
 import { makeStamp } from '../src/landing/props';
 import { paletteFor } from '../src/office/palette';
-import { BODY, centreOffset, faceX, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
+import { BODY, centreOffset, faceX, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
 import { AGENT_COUNT, TEAMS } from '../src/landing/catalog';
-import { DWELL_MS, GESTURE_GAP_MS, GLIDE_MS, keyStep, Stepper, WheelGesture, type StepperEnv } from '../src/landing/dwell';
+import { follow as followScroll, FOLLOW_RATE, SmoothScroll, wheelPixels, type SmoothEnv } from '../src/landing/smooth';
 import { drawState, follow, GIVE_UP_SECONDS, LIMITS, lookAt, wander } from '../src/landing/gaze';
 import { ACT_YAW, actingWings, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETCH, MAX_TURN, nearWing, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint } from '../src/landing/arms';
 import { claimIntro, DROP, INTRO, INTRO_MS, introAt, resetIntro, REST, SQUASH_MAX } from '../src/landing/intro';
@@ -109,12 +109,12 @@ function stubWebGL() {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((() => ({ getExtension: () => null })) as never);
 }
 
-/** jsdom lays nothing out: each section stop sits one screen (900px) below the last. */
+/** jsdom lays nothing out: each stop (a section, or a later stop of the workflows) sits one screen (900px) below the last. */
 const SCREEN = 900;
 function stubLayout() {
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-    const n = Number((this as HTMLElement).style?.getPropertyValue('--n') || 0);
-    const top = this.classList.contains('landing-stop') ? n * SCREEN - window.scrollY : 0;
+    const i = STOPS.findIndex((st) => st.anchor === this.id);
+    const top = i >= 0 ? i * SCREEN - window.scrollY : 0;
     return { top, bottom: top + SCREEN, left: 0, right: 0, width: 0, height: SCREEN, x: 0, y: top, toJSON() {} } as DOMRect;
   });
 }
@@ -170,7 +170,7 @@ const live = () => {
   vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
 };
 
-/** Live landing on a fake clock (timers, frames and `performance.now`) — for the step controller. */
+/** Live landing on a fake clock (timers, frames and `performance.now`) — for the smoothed wheel. */
 const liveOnClock = () => {
   stubMotion(false);
   stubWebGL();
@@ -205,13 +205,14 @@ describe('stepping the slides', () => {
     expect(stepAt(10, [])).toBe(0);
   });
 
-  it('live: six sections in order, one stop each and three for the workflows, the stage pinned, the slide from the native scroll position', () => {
+  it('live (2026-11-24): six sections in the page flow, one stop each and three for the workflows, the canvas fixed, the section from the native scroll position', () => {
     live();
     const { container } = landing();
     const main = container.querySelector('.landing')!;
     expect(main.getAttribute('data-mode')).toBe('live');
     expect(SECTIONS.map((s) => s.id)).toEqual(['hero', 'problem', 'org', 'workflows', 'pricing', 'contact']);
-    const stops = [...container.querySelectorAll('.landing-stop')];
+    // every stop is a real place on the page: the sections, the workflows' block and its later thirds
+    const stops = STOPS.map((s) => document.getElementById(s.anchor)!);
     expect(stops.map((s) => s.id)).toEqual([
       'landing-hero',
       'landing-problem',
@@ -222,8 +223,9 @@ describe('stepping the slides', () => {
       'landing-pricing',
       'landing-contact',
     ]);
-    expect(stops.map((s) => s.id)).toEqual(STOPS.map((s) => s.anchor));
-    expect(container.querySelector('.landing-pin .landing-stage')).toBeTruthy();
+    expect(stops.map((s) => s.tagName)).toEqual(['SECTION', 'SECTION', 'SECTION', 'DIV', 'SPAN', 'SPAN', 'SECTION', 'SECTION']);
+    expect(document.getElementById('landing-workflows')!.querySelector('[data-slide="workflows"]')).toBeTruthy();
+    expect(container.querySelector('.landing-flow .landing-stage')).toBeTruthy();
     const on = () => container.querySelector('.landing-slide.is-on')!.getAttribute('data-slide');
     const workflow = () => screen.getByTestId('landing-workflow').getAttribute('data-workflow');
     expect(on()).toBe('hero');
@@ -245,10 +247,13 @@ describe('stepping the slides', () => {
     expect(on()).toBe('pricing');
     scrollTo(SCREEN * 7);
     expect(on()).toBe('contact');
-    expect(css).toMatch(/\.landing-pin \{[^}]*position: sticky;/);
-    // CSS snap is gone: a hard flick glided straight past mandatory stops — the controller steps instead
+    // nothing pinned but the workflows' slide inside its three screens; the canvas stays on the screen
+    expect(rule('.landing-flow .landing-slide')).toMatch(/position: relative;[\s\S]*min-height: 100svh;/);
+    expect(rule('.landing-steps > .landing-slide')).toMatch(/position: sticky;/);
+    expect(rule('.landing-steps')).toMatch(/height: calc\(var\(--steps\) \* 100svh\);/);
+    expect(rule('.landing-stage')).toMatch(/position: fixed;/);
     expect(css).not.toMatch(/scroll-snap-type: y/);
-    expect(css).not.toMatch(/\.landing-stop \{[^}]*scroll-snap/);
+    expect(css).not.toMatch(/\.landing-track|\.landing-stop\b/);
   });
 
   it('the progress nav points at the stops and marks the slide that is up', () => {
@@ -257,7 +262,7 @@ describe('stepping the slides', () => {
     const nav = screen.getByRole('navigation', { name: 'Sections' });
     const links = [...nav.querySelectorAll<HTMLAnchorElement>(':scope > ol > li > a')];
     expect(links.map((a) => a.getAttribute('href'))).toEqual(SECTIONS.map((s) => `#landing-${s.id}`));
-    for (const a of within(nav).getAllByRole('link')) expect(document.querySelector(a.getAttribute('href')!)!.classList.contains('landing-stop')).toBe(true);
+    for (const a of within(nav).getAllByRole('link')) expect(STOPS.map((st) => `#${st.anchor}`)).toContain(a.getAttribute('href'));
     expect(links[0].getAttribute('aria-current')).toBe('step');
     scrollTo(SCREEN);
     expect(links[1].getAttribute('aria-current')).toBe('step');
@@ -307,17 +312,16 @@ describe('stepping the slides', () => {
   });
 });
 
-/** A page of five stops, a fake clock and frames that run when the clock passes 16 ms. */
+/** A page 5000px long, a fake clock and frames that run when the clock passes 16 ms. */
 function fakePage(start = 0) {
   let t = 0;
   let y = start;
-  let locked = false;
   const frames: { at: number; cb: () => void; id: number }[] = [];
   let nextId = 1;
-  const log: string[] = [];
-  const env: StepperEnv = {
+  const env: SmoothEnv = {
     now: () => t,
     scrollY: () => y,
+    maxY: () => 5000,
     scrollTo: (to) => void (y = to),
     frame: (cb) => {
       const id = nextId++;
@@ -328,9 +332,6 @@ function fakePage(start = 0) {
       const i = frames.findIndex((f) => f.id === id);
       if (i >= 0) frames.splice(i, 1);
     },
-    stops: () => [0, 900, 1800, 2700, 3600],
-    locked: () => locked,
-    onLog: (l) => log.push(l),
   };
   const advance = (ms: number) => {
     const end = t + ms;
@@ -339,215 +340,119 @@ function fakePage(start = 0) {
       for (const f of frames.splice(0).filter((f) => (f.at <= t ? true : (frames.push(f), false)))) f.cb();
     }
   };
-  return { env, advance, y: () => y, lock: (v: boolean) => (locked = v), log, at: () => t };
+  return { env, advance, y: () => y, jump: (to: number) => void (y = to) };
 }
 
-describe('one gesture, one section (dwell)', () => {
-  it('a hard flick — a burst of wheel events with its inertia tail — moves exactly one section', () => {
+describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서 자연스러워야")', () => {
+  it('a wheel turn always moves the page by its own amount — nothing is held or swallowed — gliding, not jumping', () => {
     const page = fakePage();
-    const s = new Stepper(page.env);
-    // 60 events 16 ms apart: rising for 5, then the long decaying tail of a trackpad
-    for (let i = 0; i < 60; i++) {
-      s.wheel(i < 5 ? 30 * (i + 1) : 150 * 0.9 ** (i - 5));
-      page.advance(16);
-    }
-    page.advance(GLIDE_MS + DWELL_MS);
-    expect(page.y()).toBe(900);
-    expect(page.log.filter((l) => l.includes('->'))).toEqual([expect.stringMatching(/wheel -> section 2$/)]);
-  });
-
-  it('holds at the section: a new gesture inside the glide or the dwell is ignored, after it it steps', () => {
-    const page = fakePage();
-    const s = new Stepper(page.env);
-    s.wheel(120);
-    expect(s.busy()).toBe(true);
-    page.advance(GLIDE_MS + 50);
-    expect(page.y()).toBe(900);
-    // the dwell: a fresh flick after a quiet gap still does nothing
-    page.advance(GESTURE_GAP_MS + 20);
-    s.wheel(120);
-    page.advance(GLIDE_MS);
-    expect(page.y()).toBe(900);
-    expect(s.busyUntil).toBeGreaterThan(0);
-    // once the hold is over, the next flick moves on
-    page.advance(DWELL_MS);
-    expect(s.busy()).toBe(false);
-    s.wheel(-120);
-    page.advance(GLIDE_MS + DWELL_MS);
-    expect(page.y()).toBe(0);
-  });
-
-  it('a second flick on top of the first one’s inertia (the deltas rise again) is a new gesture', () => {
-    const g = new WheelGesture();
-    let now = 0;
-    const feed = (d: number, busy = false) => g.feed(d, (now += 16), busy);
-    expect(feed(10)).toBe(0);
-    expect(feed(30)).toBe(1);
-    for (let i = 0; i < 20; i++) expect(feed(60 * 0.85 ** i)).toBe(0); // the tail, decaying
-    expect(feed(70)).toBe(1); // rises sharply: a new flick
-    expect(feed(-200, true)).toBe(0); // the page is busy: spent, whatever it is
-  });
-
-  it('a resting finger’s jitter never steps; a mouse notch does', () => {
-    const g = new WheelGesture();
-    expect(g.feed(3, 0, false)).toBe(0);
-    expect(g.feed(-2, 20, false)).toBe(0);
-    expect(g.feed(4, 40, false)).toBe(0);
-    expect(g.feed(100, 1000, false)).toBe(1);
-  });
-
-  it('the keyboard steps through the same controller and retargets at once (two presses, two sections)', () => {
-    const page = fakePage();
-    const s = new Stepper(page.env);
-    const key = (k: string, shiftKey = false) => {
-      const to = keyStep({ key: k, shiftKey, altKey: false, ctrlKey: false, metaKey: false }, s.current(), 4);
-      if (to !== null) s.go(to, 'key');
-    };
-    key('PageDown');
-    page.advance(100);
-    key('ArrowDown');
+    const s = new SmoothScroll(page.env);
+    s.wheel(400);
+    page.advance(16);
+    expect(page.y()).toBeGreaterThan(0);
+    expect(page.y()).toBeLessThan(400); // a glide, not a jump
+    page.advance(120);
+    expect(page.y()).toBeGreaterThan(200); // half the way in ~0.11 s, like the reference
     page.advance(1200);
-    expect(page.y()).toBe(1800);
-    key(' ');
-    page.advance(1200);
-    expect(page.y()).toBe(2700);
-    key(' ', true);
-    page.advance(1200);
-    expect(page.y()).toBe(1800);
-    key('End');
-    page.advance(1200);
-    expect(page.y()).toBe(3600);
-    key('Home');
-    page.advance(1200);
-    expect(page.y()).toBe(0);
-    expect(keyStep({ key: 'a', shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, 0, 4)).toBeNull();
-    expect(keyStep({ key: 'ArrowDown', shiftKey: false, altKey: false, ctrlKey: true, metaKey: false }, 0, 4)).toBeNull();
-  });
-
-  it('a scroll that rests between two stops (scrollbar, resize, history) settles on the nearest', () => {
-    const page = fakePage(1300);
-    const s = new Stepper(page.env);
-    s.settle();
-    page.advance(1200);
-    expect(page.y()).toBe(900);
-  });
-
-  it('past the last stop is the footer: down from the last stop scrolls natively, up from below glides back to it, no settling there', () => {
-    const page = fakePage(2700);
-    const s = new Stepper(page.env);
-    // arriving at the last stop: the same gesture's tail is still held (glide + dwell)
-    expect(s.wheel(120)).toBe(true);
-    page.advance(GLIDE_MS + 50);
-    expect(page.y()).toBe(3600);
-    expect(s.wheel(120)).toBe(true);
-    page.advance(DWELL_MS + GESTURE_GAP_MS);
-    // resting on the last stop: down is the browser's own scroll (to the footer)
-    expect(s.wheel(120)).toBe(false);
-    s.touchStart(500);
-    expect(s.touchMove(420)).toBe(false);
-    s.touchEnd();
-    // below the last stop (the footer in view): down stays native, nothing settles it back
-    const below = fakePage(3720);
-    const b = new Stepper(below.env);
-    expect(b.wheel(80)).toBe(false);
-    b.settle();
-    below.advance(1500);
-    expect(below.y()).toBe(3720);
-    // up glides back to the last stop — the last section, whole
-    expect(b.wheel(-80)).toBe(true);
-    below.advance(GLIDE_MS + 50);
-    expect(below.y()).toBe(3600);
-    // a swipe up from below does the same
-    const swipe = new Stepper(fakePage(3700).env);
-    swipe.touchStart(300);
-    expect(swipe.touchMove(360)).toBe(true);
-  });
-
-  it('while a modal holds the page, the wheel is the modal’s — the controller lets it be', () => {
-    const page = fakePage();
-    const s = new Stepper(page.env);
-    page.lock(true);
-    expect(s.wheel(200)).toBe(false);
+    expect(page.y()).toBe(400);
+    // every turn counts, also while the page is still moving — no hold, no "one gesture = one section"
+    s.wheel(400);
+    page.advance(50);
+    s.wheel(400);
     page.advance(1500);
-    expect(page.y()).toBe(0);
+    expect(page.y()).toBe(1200);
+    for (let i = 0; i < 12; i++) {
+      s.wheel(400);
+      page.advance(500);
+    }
+    page.advance(1500);
+    expect(page.y()).toBe(5000); // within the page
+    s.wheel(-300);
+    page.advance(1500);
+    expect(page.y()).toBe(4700);
   });
 
-  it('on the page: a wheel burst on the live landing glides one section and holds; a burst in the hold is ignored', () => {
+  it('the ease is an exponential follow: half the gap in ln2 / rate, smooth, there in the end', () => {
+    const half = (Math.LN2 / FOLLOW_RATE) * 1000;
+    expect(half).toBeGreaterThan(90);
+    expect(half).toBeLessThan(140);
+    expect(followScroll(0, 100, half)).toBeCloseTo(50, 0);
+    expect(followScroll(99.8, 100, 16)).toBe(100);
+    expect(wheelPixels({ deltaY: 3, deltaMode: 1 }, 900)).toBe(48);
+    expect(wheelPixels({ deltaY: 1, deltaMode: 2 }, 900)).toBe(900);
+  });
+
+  it('keys, the scrollbar and touch are the browser’s: after one, the next turn starts from where the page is', () => {
+    const page = fakePage();
+    const s = new SmoothScroll(page.env);
+    page.jump(2000); // the scrollbar, a key, a swipe
+    s.sync();
+    s.wheel(100);
+    page.advance(1500);
+    expect(page.y()).toBe(2100);
+    s.to(300); // a section name, a tab
+    page.advance(1500);
+    expect(page.y()).toBe(300);
+  });
+
+  it('on the page: every wheel turn moves the live landing on — through the sections, never held at one', () => {
     liveOnClock();
-    const scrolled = stubScroll();
+    stubScroll();
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 10, configurable: true });
     const { container } = landing();
     act(() => void vi.advanceTimersByTime(50));
     const on = () => container.querySelector('.landing-slide.is-on')!.getAttribute('data-slide');
-    const burst = () => {
-      for (let i = 0; i < 20; i++) {
-        const e = new WheelEvent('wheel', { deltaY: 90, cancelable: true });
-        window.dispatchEvent(e);
-        expect(e.defaultPrevented).toBe(true); // the page never scrolls natively under the controller
-        act(() => void vi.advanceTimersByTime(16));
-      }
-    };
-    burst();
-    act(() => void vi.advanceTimersByTime(GLIDE_MS + 100));
-    expect(window.scrollY).toBe(SCREEN);
-    expect(on()).toBe('problem');
-    burst(); // inside the dwell
-    act(() => void vi.advanceTimersByTime(GLIDE_MS + 100));
-    expect(window.scrollY).toBe(SCREEN);
-    act(() => void vi.advanceTimersByTime(DWELL_MS));
-    act(() => void vi.advanceTimersByTime(GESTURE_GAP_MS + 10));
-    burst();
-    act(() => void vi.advanceTimersByTime(GLIDE_MS + 100));
-    expect(window.scrollY).toBe(SCREEN * 2);
-    expect(on()).toBe('org');
-    // the keyboard goes through it too
-    fireEvent.keyDown(window, { key: 'PageUp' });
-    act(() => void vi.advanceTimersByTime(GLIDE_MS + 100));
-    expect(window.scrollY).toBe(SCREEN);
-    // and a modal holds it still
+    const ys: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      const e = new WheelEvent('wheel', { deltaY: 450, cancelable: true });
+      window.dispatchEvent(e);
+      expect(e.defaultPrevented).toBe(true); // smoothed by us, never dropped
+      act(() => void vi.advanceTimersByTime(700));
+      ys.push(window.scrollY);
+    }
+    // ~450 more every turn (the glide nearly there after 0.7 s), right through the section boundaries
+    for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThan(400);
+    act(() => void vi.advanceTimersByTime(2000));
+    expect(window.scrollY).toBe(450 * 8);
+    expect(on()).toBe('workflows');
+    // a pinch-zoom or a modal keeps its wheel
+    const zoom = new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, cancelable: true });
+    window.dispatchEvent(zoom);
+    expect(zoom.defaultPrevented).toBe(false);
     const release = lockScroll();
     const held = new WheelEvent('wheel', { deltaY: 200, cancelable: true });
     window.dispatchEvent(held);
-    act(() => void vi.advanceTimersByTime(2000));
-    expect(window.scrollY).toBe(SCREEN);
+    expect(held.defaultPrevented).toBe(false);
     release();
-    expect(scrolled).toHaveBeenCalled();
   });
 
-  it('the progress links and Tab go through the controller too (native scroll position stays the truth)', () => {
+  it('the section names and the workflow tabs glide to their place (the hash stays for back)', () => {
     liveOnClock();
     stubScroll();
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 10, configurable: true });
     landing();
     act(() => void vi.advanceTimersByTime(50));
-    const link = screen.getByRole('link', { name: 'AI team' });
-    fireEvent.click(link);
-    act(() => void vi.advanceTimersByTime(1100));
-    expect(window.scrollY).toBe(SCREEN * 2);
-    expect(window.location.hash).toBe('#landing-org');
-    // a workflow dot and a tab on the workflow card go to that workflow's stop
-    fireEvent.click(screen.getByRole('link', { name: 'Social media' }));
-    act(() => void vi.advanceTimersByTime(1100));
-    expect(window.scrollY).toBe(SCREEN * 5);
-    expect(window.location.hash).toBe('#landing-workflows-sns');
-    fireEvent.click(screen.getByRole('tab', { name: 'Sourcing' }));
-    act(() => void vi.advanceTimersByTime(1100));
-    expect(window.scrollY).toBe(SCREEN * 4);
-    expect(screen.getByRole('tab', { name: 'Sourcing' }).getAttribute('aria-selected')).toBe('true');
-    // Tab into a slide that is not up brings it up, at its first stop
-    const login = document.querySelector<HTMLElement>('[data-slide="contact"] .landing-final-cta')!;
-    act(() => login.focus());
-    act(() => void vi.advanceTimersByTime(1100));
-    expect(window.scrollY).toBe(SCREEN * (STOPS.length - 1));
-    expect(firstStop('contact')).toBe(STOPS.length - 1);
+    const nav = screen.getByRole('navigation', { name: 'Sections' });
+    fireEvent.click(within(nav).getByRole('link', { name: 'Pricing' }));
+    expect(window.location.hash).toBe('#landing-pricing');
+    act(() => void vi.advanceTimersByTime(2000));
+    expect(window.scrollY).toBe(SCREEN * firstStop('pricing'));
+    fireEvent.click(screen.getByTestId('landing-workflow-tab-sns'));
+    act(() => void vi.advanceTimersByTime(2000));
+    expect(window.scrollY).toBe(SCREEN * (firstStop('workflows') + 2));
   });
 
-  it('the stacked page keeps plain native scroll — no controller, the wheel untouched', () => {
+  it('the stacked page keeps plain native scroll — the wheel untouched', () => {
     stubMotion(true);
-    stubWebGL();
     landing();
-    const e = new WheelEvent('wheel', { deltaY: 200, cancelable: true });
+    const e = new WheelEvent('wheel', { deltaY: 400, cancelable: true });
     window.dispatchEvent(e);
     expect(e.defaultPrevented).toBe(false);
-    expect(css).toMatch(/html:has\(\.landing\[data-mode="static"\]\) \{\s*scroll-behavior: smooth;/);
+  });
+
+  it('the message rises in with its section by scroll position (it rewinds), not by a timer', () => {
+    expect(css).toMatch(/@supports \(animation-timeline: view\(\)\)/);
+    expect(css).toMatch(/\.landing-flow \.landing-copy \{[^}]*animation: landing-rise linear both;[^}]*animation-timeline: view\(\);/);
   });
 });
 
@@ -563,7 +468,7 @@ describe('the scene: the content centred, the penguin around it', () => {
       // one centred block per scene — the penguin's spot is read from it
       expect(scene.querySelectorAll('[data-content]'), s.id).toHaveLength(1);
     }
-    expect(within(screen.getByTestId('landing-scene-hero')).getByTestId('landing-company')).toBeTruthy();
+    expect(within(screen.getByTestId('landing-scene-hero')).getByTestId('landing-hero-penguin')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-problem')).getByTestId('landing-gap')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-org')).getByTestId('landing-org')).toBeTruthy();
     expect(within(screen.getByTestId('landing-scene-workflows')).getAllByTestId('landing-workflow')).toHaveLength(1);
@@ -573,17 +478,16 @@ describe('the scene: the content centred, the penguin around it', () => {
   });
 
   it('the content block sits in the middle of its scene (CSS), and nothing slides under the penguin', () => {
-    expect(rule('.landing-pin .landing-scene')).toMatch(/display: grid;[\s\S]*place-items: center;[\s\S]*height: 100%;/);
+    expect(rule('.landing-flow .landing-scene')).toMatch(/display: grid;[\s\S]*place-items: center;[\s\S]*min-height: calc\(100svh - var\(--landing-gnb\)\);/);
     // the slide only fades: a slide that moved would move the spot the penguin walks to
-    expect(rule('.landing-pin .landing-slide')).not.toMatch(/transform|translate/);
-    expect(rule('.landing-pin .landing-slide.is-on')).not.toMatch(/transform|translate/);
+    expect(rule('.landing-flow .landing-slide')).not.toMatch(/transform|translate/);
     // the canvas covers the scene column (a little past it), the same grid as the slides
     expect(rule('.landing-stage')).toMatch(/grid-template-columns: var\(--landing-cols\);/);
     expect(rule('.landing-mascot')).toMatch(/grid-column: 2;[\s\S]*height: 100%;/);
     expect(rule('.landing-scene')).toMatch(/grid-column: 2;/);
     // layers: the content, the 3D canvas over it, never catching clicks — and no 2D poster at all
     expect(css).not.toMatch(/\.landing-poster/);
-    expect(rule('.landing-pin .landing-slide')).toMatch(/z-index: 2;/);
+    expect(rule('.landing-flow .landing-slide')).toMatch(/z-index: 2;/);
     expect(rule('.landing-canvas')).toMatch(/z-index: 3;[\s\S]*pointer-events: none;/);
     // the request line keeps two lines' room in every workflow, so the card (and the button the stamp
     // lands on) stays the same size from stop to stop
@@ -602,9 +506,11 @@ describe('the scene: the content centred, the penguin around it', () => {
   it('the marks the canvas reads: the content, what hides the body, the wings’ targets', () => {
     live();
     landing();
-    for (const s of SECTIONS) expect(screen.getByTestId(`landing-scene-${s.id}`).querySelector('[data-front]'), s.id).toBeTruthy();
-    // the penguin stands behind the company card and the last card: nothing of it shows under them either
-    for (const id of ['hero', 'workflows', 'contact']) expect(screen.getByTestId(`landing-scene-${id}`).querySelector('[data-front="ground"]'), id).toBeTruthy();
+    // (the first section has nothing in front of the penguin since 2026-11-24 — it stands on its own)
+    for (const s of SECTIONS.filter((x) => x.id !== 'hero')) expect(screen.getByTestId(`landing-scene-${s.id}`).querySelector('[data-front]'), s.id).toBeTruthy();
+    expect(screen.getByTestId('landing-scene-hero').querySelector('[data-front]')).toBeNull();
+    // the penguin stands behind the workflow card and the last card: nothing of it shows under them either
+    for (const id of ['workflows', 'contact']) expect(screen.getByTestId(`landing-scene-${id}`).querySelector('[data-front="ground"]'), id).toBeTruthy();
     // the price: a wing goes out to card 1, the build price (which wing comes from the geometry — arms.ts)
     const pricing = screen.getByTestId('landing-scene-pricing');
     expect(pricing.querySelector('li')!.querySelector('[data-hand]')).toBeTruthy();
@@ -626,7 +532,7 @@ describe('the scene: the content centred, the penguin around it', () => {
 
   it('phone: the scene first with the content centred in what is left, the message under it; the canvas covers the stage', () => {
     const phone = css.slice(css.indexOf('@media (max-width: 860px)'));
-    expect(phone).toMatch(/\.landing-pin \.landing-scene \{[^}]*order: -1;[^}]*flex: 1 1 auto;/);
+    expect(phone).toMatch(/\.landing-flow \.landing-scene \{[^}]*order: -1;[^}]*flex: 1 1 auto;/);
     expect(phone).toMatch(/\.landing-mascot \{[^}]*position: absolute;[^}]*inset: 0;/);
   });
 });
@@ -948,7 +854,8 @@ describe('the acting', () => {
 
   it('every act animation waits for acting — the poster and the stacked page show the finished picture', () => {
     const gated = [...css.matchAll(/\n([^\n{}]+)\{[^}]*(animation: landing-|--unroll: 0)/g)].map((m) => m[1].trim());
-    for (const sel of gated) expect(sel).toMatch(/^\.landing-pin\.is-acting |^\.landing-approval:not|caret/);
+    // (the message's rise is scroll-driven, not an act — it is the same with or without the penguin)
+    for (const sel of gated) expect(sel).toMatch(/^\.landing-flow\.is-acting |^\.landing-approval:not|caret|^\.landing-flow \.landing-copy|^@supports \(animation-timeline/);
     expect(css).not.toMatch(/(^|\n)\.landing-act \{[^}]*opacity: 0/);
     expect(css).not.toMatch(/(^|\n)\.landing-slide \{[^}]*opacity: 0/);
   });
@@ -1122,8 +1029,8 @@ describe('the penguin', () => {
   it('acts only once the 3D penguin has drawn', async () => {
     live();
     const { container } = landing();
-    expect(container.querySelector('.landing-pin.is-acting')).toBeNull();
-    await waitFor(() => expect(container.querySelector('.landing-pin.is-acting')).toBeTruthy());
+    expect(container.querySelector('.landing-flow.is-acting')).toBeNull();
+    await waitFor(() => expect(container.querySelector('.landing-flow.is-acting')).toBeTruthy());
   });
 
   it('looks at the cursor with the head, the body following a little, within limits and damped', () => {
@@ -1202,7 +1109,7 @@ describe('regression: the penguin that appeared, then disappeared', () => {
     // the content shows as usual (the finished pictures — no acting yet)
     expect(screen.getByTestId('landing-gap')).toBeTruthy();
     expect(screen.getByTestId('landing-workflow').getAttribute('data-state')).toBe('waiting');
-    expect(container.querySelector('.landing-pin.is-acting')).toBeNull();
+    expect(container.querySelector('.landing-flow.is-acting')).toBeNull();
   });
 
   it('a 3D layer that gives up falls back to the stacked page with the 2D penguin', async () => {
@@ -1313,16 +1220,16 @@ describe('the site footer (2026-11-14)', () => {
     expect(footer.textContent).toContain('서울 강남구 언주로134길 18, 5층 라32호');
   };
 
-  it('live: after the scroll track — outside the stage, every stop and anchor where it was', () => {
+  it('live: after the sections — outside the flow, every stop and anchor where it was', () => {
     live();
     const { container } = landing('ko');
     const footer = screen.getByTestId('site-footer');
     check(footer, '대표 정승원', '개인정보처리방침');
     expect(footer.className).not.toContain('is-compact');
-    expect(footer.previousElementSibling!.classList.contains('landing-track')).toBe(true);
-    expect(footer.closest('.landing-pin')).toBeNull();
-    expect(container.querySelectorAll('.landing-stop')).toHaveLength(STOPS.length);
-    expect(document.getElementById('landing-contact')!.classList.contains('landing-stop')).toBe(true);
+    expect(footer.previousElementSibling!.classList.contains('landing-flow')).toBe(true);
+    expect(footer.closest('.landing-flow')).toBeNull();
+    for (const st of STOPS) expect(container.querySelector(`#${st.anchor}`), st.anchor).toBeTruthy();
+    expect(document.getElementById('landing-contact')!.getAttribute('data-slide')).toBe('contact');
   });
 
   it('stacked: after the last section; en names the representative in Latin letters', () => {
@@ -1343,7 +1250,7 @@ describe('stacked fallback', () => {
     const { container } = landing();
     expect(container.querySelector('.landing')!.getAttribute('data-mode')).toBe('static');
     expect(container.querySelector('.landing-stage')).toBeNull();
-    expect(container.querySelector('.landing-stop')).toBeNull();
+    expect(container.querySelector('.landing-steps')).toBeNull();
     expect(container.querySelector('.landing-stack')).toBeTruthy();
     for (const s of SECTIONS) expect(document.getElementById(`landing-${s.id}`)!.tagName).toBe('SECTION');
     expect(container.querySelectorAll('.landing-slide.is-on')).toHaveLength(SECTIONS.length);
@@ -1419,16 +1326,17 @@ describe('section 3: the AI team (the org chart — agents and team members) and
       expect(n.querySelector('.landing-person-face')).toBeTruthy();
       expect(n.querySelector('svg.penguin')).toBeNull();
     }
-    // the legend beside the message: 에이전트 · 사람 팀원
-    const legend = document.querySelector('[data-slide="org"] .landing-legend')!;
-    expect([...legend.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['에이전트', '사람 팀원']);
-    expect(legend.closest('.landing-copy')).toBeTruthy();
-    // the message is the solution: what the company gets, with the hard words explained at first use
+    // the message (2026-11-24 — "결정은 사람, 모든 일이 남아요, 에이전트/사람 태그 제거. 설명도 () 제거해서 좀 줄여"):
+    // the title, a short plain lead, the three domain lines, see all — no legend, no other lines, no brackets
     const copy = document.querySelector('[data-slide="org"] .landing-copy')!;
     expect(copy.querySelector('h2')!.textContent).toBe('회사에 맞춘 AI 팀이 팀원 옆에서 일해요');
-    expect(copy.textContent).toContain('에이전트(일을 맡아 하는 AI)');
-    expect(copy.textContent).toContain('임원(AI 팀을 이끄는 AI)');
-    expect([...copy.querySelectorAll('.landing-points:not(.landing-domain-lines) b')].map((b) => b.textContent)).toEqual(['결정은 사람이 해요', '모든 일이 남아요']);
+    expect(copy.querySelector('.landing-lead')!.textContent).toBe('구축할 때 회사가 하는 일을 듣고 AI 팀을 꾸려요. 업종마다 맡기는 일이 달라요.');
+    expect(copy.textContent).not.toMatch(/[()（）]/);
+    expect(copy.querySelector('.landing-legend')).toBeNull();
+    expect(copy.querySelectorAll('.landing-points')).toHaveLength(1);
+    expect(copy.querySelector('.landing-points')!.classList.contains('landing-domain-lines')).toBe(true);
+    expect(copy.textContent).not.toContain('결정은 사람이 해요');
+    expect(copy.textContent).not.toContain('모든 일이 남아요');
   });
 
   it('a team opens the modal at that team: the agent cards side by side, scrolling sideways', async () => {
@@ -1515,7 +1423,6 @@ describe('section 2: 왜 지금 — the problem and the stakes (2026-11-14)', ()
     landing('ko');
     expect(DOMAINS).toEqual(['logistics', 'commerce', 'it']);
     expect(screen.getByText('물류 · 커머스 · IT 서비스 소규모 비즈니스를 위해').closest('[data-slide="hero"]')).toBeTruthy();
-    expect([...screen.getByTestId('landing-domains').querySelectorAll('li')].map((li) => li.textContent)).toEqual(['물류', '커머스', 'IT 서비스']);
     // "업종은 AI 팀 섹션에서 다뤄" (2026-11-14): the lines sit in the AI team's message, not the workflows'
     const lines = [...screen.getByTestId('landing-domain-lines').querySelectorAll('li')];
     expect(screen.getByTestId('landing-domain-lines').closest('[data-slide="org"]')).toBeTruthy();
@@ -1534,7 +1441,7 @@ describe('section 2: 왜 지금 — the problem and the stakes (2026-11-14)', ()
     expect(workflows.textContent).toContain('아래 세 가지는 업종과 관계없이 쓰는 예시예요.');
     // the domain lines stay on a phone (the other lines of the message do not)
     const phone = css.slice(css.indexOf('@media (max-width: 860px)'));
-    expect(phone).toMatch(/\.landing-pin \.landing-slide \.landing-points:not\(\.landing-domain-lines\)/);
+    expect(phone).toMatch(/\.landing-flow \.landing-slide \.landing-points:not\(\.landing-domain-lines\)/);
   });
 
   it('the old 맡기기 anchor opens the workflows (that is where the request went)', () => {
@@ -1654,24 +1561,34 @@ describe('section 5: pricing (user decision 2026-11-12)', () => {
   });
 });
 
-describe('section 1: the company card', () => {
-  it('the three domains (an icon and a word each), the AI team and two team members in one row; the buttons beside it in the message', () => {
+describe('section 1: the penguin alone (2026-11-24 — "첫번째 섹션은 인포그래픽 제거하고 펭귄만 조금 큰 사이즈로")', () => {
+  it('no card on the right — an empty box the size of the (larger) penguin, which stands on its bottom edge and waves', () => {
+    live();
     landing('ko');
-    const card = screen.getByTestId('landing-company');
-    expect(card.querySelectorAll('.landing-faces-row > *')).toHaveLength(AGENT_COUNT + 2);
-    expect(card.querySelectorAll('.landing-person-face')).toHaveLength(2);
-    expect(within(card).getByText(`AI 팀 ${AGENT_COUNT} · 팀원`)).toBeTruthy();
-    expect([...card.querySelectorAll('.landing-domains li')].map((li) => [li.getAttribute('data-domain'), li.textContent, !!li.querySelector('svg')])).toEqual([
-      ['logistics', '물류', true],
-      ['commerce', '커머스', true],
-      ['it', 'IT 서비스', true],
-    ]);
-    expect(card.querySelector('.landing-chips')).toBeNull();
-    expect(within(card).queryAllByRole('link')).toEqual([]);
+    const scene = screen.getByTestId('landing-scene-hero');
+    expect(scene.querySelector('.landing-company, .landing-domains, .landing-faces')).toBeNull();
+    const stand = within(scene).getByTestId('landing-hero-penguin');
+    expect(stand.hasAttribute('data-content')).toBe(true);
+    expect(stand.hasAttribute('data-stand')).toBe(true);
+    expect(stand.hasAttribute('data-front')).toBe(false); // nothing in front of it
+    expect(stand.textContent).toBe('');
+    expect(rule('.landing-flow .landing-act.is-stand')).toMatch(/height: min\(52svh, 440px\);/);
+    // the spot: the feet at the middle of the bottom edge, as tall as the box — taller than elsewhere
+    const box = { left: 800, top: 200, width: 300, height: 440 };
+    expect(standSpot(box)).toEqual({ x: 950, y: 640, h: 440, lean: 0, turn: 0 });
+    expect(standSpot(box).h).toBeGreaterThan(penguinHeight({ width: 720, height: 836 }, false));
+    expect(SECTIONS[0].act).toBe('wave');
     // plain words: no "AX" (2026-11-14)
     expect(document.querySelector('[data-slide="hero"]')!.textContent).not.toMatch(/\bAX\b/);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('우리 회사 일을 하는 AI 팀을 만들어 드려요');
     expect(TEAMS.length).toBe(5);
+  });
+
+  it('stacked: a large 2D penguin in its place', () => {
+    stubMotion(true);
+    landing('ko');
+    expect(screen.getByTestId('landing-static-mascot').querySelector('svg.penguin')).toBeTruthy();
+    expect(screen.queryByTestId('landing-hero-penguin')).toBeNull();
   });
 });
 

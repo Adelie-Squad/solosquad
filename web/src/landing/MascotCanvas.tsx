@@ -40,7 +40,7 @@ import { makeMorph, type Morph } from './morph';
 import { makeRod, makeStamp, STAMP_LENGTH } from './props';
 import { aim, atDepth, fitEraser, makeEraser, ORDER, rayAt, reach, useFrontPass, type Side } from './rig';
 import type { ActId, SectionId } from './sections';
-import { headOf, moveAt, MOVE_MS, penguinHeight, spotFor, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
+import { BODY, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
 
 preloadPenguin();
 
@@ -382,9 +382,12 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
     const slide = stage?.querySelector<HTMLElement>(`[data-slide="${section}"]`) ?? null;
     const content = boxOf(slide?.querySelector('[data-content]'));
     const sceneBox = boxOf(slide?.querySelector('.landing-scene'));
+    // the first section (2026-11-24): no card — the penguin stands on its own, the box is its size
+    const standing = !!slide?.querySelector('[data-content][data-stand]');
     const m = move.current;
     let target = m.cur;
-    if (content && sceneBox) target = spotFor(act, content, penguinHeight(sceneBox, mobile), mobile);
+    if (content && standing) target = standSpot(content);
+    else if (content && sceneBox) target = spotFor(act, content, penguinHeight(sceneBox, mobile), mobile);
     if (!target) return;
     if (m.act !== section) {
       m.from = m.cur ?? target;
@@ -416,7 +419,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
       if (!pose.done) {
         const h = dims.current.height;
         // the ball rests on the top edge of the content the penguin stands behind, else on its feet
-        const behind = content && cur.x > content.left && cur.x < content.left + content.width && cur.y > content.top;
+        const behind = !standing && content && cur.x > content.left && cur.x < content.left + content.width && cur.y > content.top;
         const floor = behind ? Math.min(0.6 * h, Math.max(0, (cur.y - content.top) / zoom)) : 0;
         tmp.ball.copy(mo.core);
         tmp.ball.y = Math.max(mo.core.y, floor + mo.radius);
@@ -490,10 +493,12 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
     const { wings: actingSet, wave } = actingWings(act, cur.x, contentCx);
     const stampSide: Side = actingSet[0] ?? 'R';
     if (live && content) {
-      const edge = content.top + 0.015 * H;
+      // standing on its own: the wings rest at its sides, a little below the shoulders (nothing to lean on)
+      const edge = standing ? cur.y - (1 - BODY.shoulder - 0.2) * H : content.top + 0.015 * H;
+      const reachOut = standing ? REACH + 0.1 : REACH;
       if (act === 'type' || act === 'wave') {
-        marks.L = { x: cur.x + REACH * H, y: edge };
-        marks.R = { x: cur.x - REACH * H, y: edge };
+        marks.L = { x: cur.x + reachOut * H, y: edge };
+        marks.R = { x: cur.x - reachOut * H, y: edge };
       } else if (actTarget) marks[actingSet[0]] = actTarget;
     }
 
@@ -563,8 +568,10 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
       const holding = act === 'stamp' && side === stampSide;
       const hang = holding ? STAMP_GRIP * STAMP_LENGTH + stampLift(stampMs) : 0;
       let stretchTo = 1;
-      if (wing.u > 0 && wing.to && wing.rect) {
-        const via = viaPoint(wing.rect, shoulderPt, wing.to, EDGE_MARGIN * H);
+      // nothing in front of a standing penguin: the wing goes straight out (no edge to go round)
+      const viaOf = (to: Pt) => (wing.rect ? viaPoint(wing.rect, shoulderPt, to, EDGE_MARGIN * H) : { x: (rest.x + to.x) / 2, y: (rest.y + to.y) / 2 });
+      if (wing.u > 0 && wing.to && (wing.rect || standing)) {
+        const via = viaOf(wing.to);
         const at = pathAt({ from: rest, via, to: wing.to }, wing.u);
         // the far wing reaches across the body: a clay stretch when the point is past its length
         stretchTo = stretchFor(Math.hypot(at.x - shoulderPt.x, at.y - hang * zoom - shoulderPt.y), r * zoom);
@@ -575,8 +582,8 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
         bone.updateMatrixWorld(true);
         bone.localToWorld(tmp.tip.copy(tmp.tipLocal).multiplyScalar(handLength));
       }
-      if (wing.u > 0 && wing.to && wing.rect) {
-        const via = viaPoint(wing.rect, shoulderPt, wing.to, EDGE_MARGIN * H);
+      if (wing.u > 0 && wing.to && (wing.rect || standing)) {
+        const via = viaOf(wing.to);
         const at = pathAt({ from: rest, via, to: wing.to }, wing.u);
         const reachR = r * wing.stretch;
         if (act === 'point') {
@@ -646,11 +653,16 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
       stamp.group.quaternion.setFromEuler(tmp.e.set(stampMs > 0 && stampMs < STAMP_TOTAL_MS ? stampTilt(stampMs) : 0, 0, 0));
     }
 
-    // wipe the body out behind the content of each slide that is showing (two while they cross-fade)
-    // — from the first frame, so the entrance is hidden behind the content like the penguin is
+    // wipe the body out behind the content of each section on screen (the page scrolls freely since
+    // 2026-11-24 — the next section's card may pass in front of the penguin) — the one up first
     let used = 0;
     if (stage) {
-      for (const el of stage.querySelectorAll<HTMLElement>('.landing-slide')) {
+      const onScreen = [...stage.querySelectorAll<HTMLElement>('.landing-slide')].filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.bottom > rect.top && r.top < rect.bottom;
+      });
+      onScreen.sort((a, b) => (a === slide ? -1 : b === slide ? 1 : 0));
+      for (const el of onScreen) {
         if (used >= erasers.length) break;
         const opacity = parseFloat(getComputedStyle(el).opacity || '0');
         if (opacity < 0.01) continue;

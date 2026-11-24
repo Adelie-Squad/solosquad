@@ -15,10 +15,9 @@ import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import { ACT_DELAY_MS, cues, now, RELAY } from './acting';
 import { flowAt, flowLength, flowStill, type FlowFrame } from './flow';
-import { AGENT_COUNT, byId, TEAMS } from './catalog';
+import { byId } from './catalog';
 import { LandingOrgChart } from './LandingOrgChart';
-import { PEOPLE, PersonFace } from './people';
-import { DOMAINS, TIER, TIER_LABEL, WORKFLOW_EXAMPLES, type Domain, type WorkflowExample } from './workflows';
+import { TIER, TIER_LABEL, WORKFLOW_EXAMPLES, type Domain, type WorkflowExample } from './workflows';
 
 export interface ActProps {
   /** The section is on stage. */
@@ -38,42 +37,14 @@ function useWave(on: boolean, acting: boolean) {
 }
 
 /**
- * 시작: the company card — "your company", the three domains it can be (물류 · 커머스 · IT 서비스, an
- * icon and a word each — 2026-11-14, in place of the four promise chips), and the AI team in one
- * row with two team members; the penguin's first entrance lands on its top edge and it waves from
- * behind its upper right.
+ * 시작 (2026-11-24 — "첫번째 섹션은 인포그래픽 제거하고 펭귄만 조금 큰 사이즈로"): no card, only the
+ * penguin, a little larger than in the other sections — an empty box the size of the penguin
+ * (`data-stand`: its feet at the middle of the bottom edge, staging.ts `standSpot`). It waves. Nothing
+ * stands in front of it, so nothing hides it.
  */
-export function CompanyAct({ on, acting }: ActProps) {
-  const { t } = useI18n();
+export function StandAct({ on, acting }: ActProps) {
   useWave(on, acting);
-  const agents = TEAMS.flatMap((g) => g.agents);
-  return (
-    <div className="landing-act is-sign is-company" data-content data-front="ground" data-testid="landing-company">
-      <p className="landing-mono landing-company-name">{t('landing.hero.card')}</p>
-      <ul className="landing-domains" data-testid="landing-domains">
-        {DOMAINS.map((d) => {
-          const Icon = ICON[DOMAIN_ICON[d]];
-          return (
-            <li key={d} data-domain={d}>
-              <Icon size={22} />
-              <span>{t(`landing.domain.${d}`)}</span>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="landing-faces" aria-hidden="true">
-        <span className="landing-faces-row">
-          {agents.map((a) => (
-            <AgentIcon key={a.id} agent={a.id} team={a.team} size={28} label="" />
-          ))}
-          {PEOPLE.map((team) => (
-            <PersonFace key={team} />
-          ))}
-        </span>
-        <span className="landing-faces-label">{t('landing.hero.faces', { n: AGENT_COUNT })}</span>
-      </div>
-    </div>
-  );
+  return <div className="landing-act is-stand" data-content data-stand aria-hidden="true" data-testid="landing-hero-penguin" />;
 }
 
 /**

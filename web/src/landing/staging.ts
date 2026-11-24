@@ -90,6 +90,14 @@ export function spotFor(id: ActId, c: Box, h: number, mobile: boolean): Spot {
   }
 }
 
+/**
+ * Standing on its own (the first section since 2026-11-24 — no card, the penguin a little larger):
+ * the box is the penguin — its feet at the middle of the bottom edge, its height the box's.
+ */
+export function standSpot(c: Box): Spot {
+  return { x: cx(c), y: bottom(c), h: c.height, lean: 0, turn: 0 };
+}
+
 /** How far a block's centre is from its area's centre (px) — 0, 0 = centred. */
 export function centreOffset(block: Box, area: Box): { x: number; y: number } {
   return { x: block.left + block.width / 2 - (area.left + area.width / 2), y: block.top + block.height / 2 - (area.top + area.height / 2) };
@@ -103,7 +111,7 @@ export function headOf(s: Spot): { x: number; y: number } {
 
 // ── the move between sections ──────────────────────────────────────────
 
-/** The move from one spot to the next (ms) — eased, about as long as the page's glide (dwell.ts GLIDE_MS). */
+/** The move from one spot to the next (ms) — eased, about as long as the page's glide (a wheel notch's ease, smooth.ts). */
 export const MOVE_MS = 720;
 /** A small hop over the way (fraction of the height) and a lean into the direction of travel (rad). */
 export const MOVE_ARC = 0.05;
