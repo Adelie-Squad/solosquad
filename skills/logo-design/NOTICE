@@ -1,0 +1,18 @@
+logo-design (SoloSquad bundled skill)
+
+Portions of this skill are adapted from logo-design-skill
+  https://github.com/kaankiziltug/logo-design-skill
+  commit e9eaddc07895575253d6663320354a708f53e955
+  Copyright (c) 2026 kaankiziltug — MIT License (see LICENSE in this folder).
+
+Adapted files: scripts/svglib.py, svg_audit.py, preview_sheet.py, concept_sheet.py,
+presentation_board.py, render_png.py, export_variants.py; references/principles.md,
+discovery-brief.md, mark-types.md, visual-techniques.md, typography.md, svg-construction.md,
+testing-checklist.md, color.md, critique.md; templates/brand-guidelines-template.md,
+templates/presentation-spec.example.json. Changes are listed in UPSTREAM.md.
+
+Not included: the upstream reference library of real logos (assets/library/). Those logos are
+trademarks of their owners and, per the upstream TRADEMARKS.md, are not covered by the MIT licence.
+
+SoloSquad-authored: SKILL.md, UPSTREAM.md, references/production.md, references/fonts-korean.md,
+references/rights.md, scripts/svgo.config.mjs.
