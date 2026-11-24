@@ -93,7 +93,8 @@ export const WAVE_YAW = 0.24;
 export const MAX_TURN = 0.72;
 export function actYaw(id: ActId, penguinX: number, contentCentreX: number): number {
   if (id === 'point') return Math.sign(contentCentreX - penguinX) * ACT_YAW;
-  if (id === 'wave') return Math.sign(contentCentreX - penguinX) * WAVE_YAW;
+  // the waving (far) wing's side comes forward — also when the penguin stands on its own (no offset)
+  if (id === 'wave') return (farWing(penguinX, contentCentreX) === 'L' ? -1 : 1) * WAVE_YAW;
   return 0;
 }
 
