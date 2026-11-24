@@ -55,14 +55,18 @@ export function makeMorph(penguin: THREE.Object3D, holder: THREE.Object3D): Morp
     const m = o as THREE.SkinnedMesh;
     if (m.isSkinnedMesh && !m.userData.landingFront && !isProp(m)) meshes.push(m);
   });
-  const body = meshes.find((m) => (Array.isArray(m.material) ? m.material : [m.material]).some((x) => x.name.startsWith('penguin.body')));
+  // the penguin's own mesh (named `penguin`), not the joint fillets that share its body material
+  const hasBody = (m: THREE.SkinnedMesh) => (Array.isArray(m.material) ? m.material : [m.material]).some((x) => x.name.startsWith('penguin.body'));
+  // (a multi-material mesh loads as a group of primitives: the name is on the group)
+  const named = (o: THREE.Object3D | null) => ((o?.userData?.name as string | undefined) ?? o?.name) === 'penguin';
+  const body = meshes.find((m) => (named(m) || named(m.parent)) && hasBody(m)) ?? meshes.find(hasBody);
   if (!body) return null;
   holder.updateMatrixWorld(true);
   const toHolder = (m: THREE.Object3D) => new THREE.Matrix4().copy(holder.matrixWorld).invert().multiply(m.matrixWorld);
 
   // the body's bounds without the wings and the feet: the trunk and the head
   const sk = body.skeleton;
-  const skip = [boneIndex(sk, ['wing.L', 'wingL']), boneIndex(sk, ['wing.R', 'wingR']), boneIndex(sk, ['foot.L', 'footL']), boneIndex(sk, ['foot.R', 'footR'])].filter((i) => i >= 0);
+  const skip = [boneIndex(sk, ['wing.L', 'wingL']), boneIndex(sk, ['wing.R', 'wingR']), boneIndex(sk, ['foot.L', 'footL']), boneIndex(sk, ['foot.R', 'footR']), boneIndex(sk, ['leg.L', 'legL']), boneIndex(sk, ['leg.R', 'legR'])].filter((i) => i >= 0);
   const pos = body.geometry.getAttribute('position');
   const idx = body.geometry.getAttribute('skinIndex');
   const wgt = body.geometry.getAttribute('skinWeight');

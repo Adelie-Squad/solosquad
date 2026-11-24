@@ -1,0 +1,13 @@
+frame,moving,against,clearance,crossing,at
+168.0,penguin_v3:wing_tip_L,penguin_v3:head,0.035345,False,"(0.2324, -0.0064, 0.4607)"
+168.0,penguin_v3:wing_tip_L,penguin_v3:body,0.022013,False,"(0.2266, -0.0154, 0.4533)"
+168.0,penguin_v3:wing_tip_L,penguin_v3:face,0.098181,False,"(0.2325, -0.0571, 0.4437)"
+168.0,penguin_v3:wing_tip_L,penguin_v3:feet,0.411115,False,"(0.256, -0.0353, 0.4267)"
+168.0,penguin_v3:wing_tip_L,penguin_v3:wing_tip_R,0.453772,False,"(0.2266, -0.0154, 0.4533)"
+168.0,penguin_v3:wing_tip_L,prop_00_desk.set,4.172014,False,"(0.3498, -0.0257, 0.5726)"
+168.0,penguin_v3:wing_tip_R,penguin_v3:head,0.035353,False,"(-0.205, -0.005, 0.483)"
+168.0,penguin_v3:wing_tip_R,penguin_v3:body,0.022428,False,"(-0.2272, -0.0105, 0.4543)"
+168.0,penguin_v3:wing_tip_R,penguin_v3:face,0.098045,False,"(-0.2302, -0.0526, 0.445)"
+168.0,penguin_v3:wing_tip_R,penguin_v3:feet,0.410755,False,"(-0.2477, -0.056, 0.4305)"
+168.0,penguin_v3:wing_tip_R,penguin_v3:wing_tip_L,0.453772,False,"(-0.227, -0.0269, 0.4523)"
+168.0,penguin_v3:wing_tip_R,prop_00_desk.set,4.753305,False,"(-0.227, -0.0269, 0.4523)"

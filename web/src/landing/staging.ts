@@ -29,12 +29,13 @@ export interface Spot {
 
 /**
  * Where things are on the penguin, as fractions of its height from the top of its head (measured
- * on penguin.glb in the landing frame): the eyes, the shoulders (wing roots), the beak, and half
+ * on penguin.glb in the landing frame — the v3 penguin standing, 0.735 m to the top of its head):
+ * the eyes, the shoulders (wing hinges), the beak, and half
  * its width with the wings. `shoulderX` = how far a shoulder is from the middle, sideways (facing
  * the reader); `face` = half the face's width and how far the face sits in front of the body's
  * axis (a turn moves it sideways by `face.depth · sin(turn)`).
  */
-export const BODY = { eyes: 0.3, shoulder: 0.4, beak: 0.385, halfWidth: 0.34, shoulderX: 0.27, face: { half: 0.15, depth: 0.25 } } as const;
+export const BODY = { eyes: 0.27, shoulder: 0.47, beak: 0.36, halfWidth: 0.47, shoulderX: 0.27, face: { half: 0.23, depth: 0.19 } } as const;
 
 /** Where the middle of the face is on screen for a body turned by `turn` (+ = towards the reader's right). */
 export const faceX = (x: number, h: number, turn: number) => x + BODY.face.depth * Math.sin(turn) * h;
@@ -73,9 +74,11 @@ export function spotFor(id: ActId, c: Box, h: number, mobile: boolean): Spot {
     case 'type':
       return { x: cx(c), y: c.top + (1 - BODY.shoulder - 0.1) * h, h, lean: 0, turn: 0 };
     case 'point':
-      return mobile ? { x: right(c) - 0.42 * h, y: c.top + 0.52 * h, h, lean: 0, turn: -0.15 } : { x: right(c) + 0.24 * h, y: c.top + 0.6 * h, h, lean: 0, turn: -0.18 };
+      // the near (pointing) shoulder just outside the right edge, turned to the content (v3 — arms.ts pointTip)
+      return mobile ? { x: right(c) - 0.48 * h, y: c.top + 0.52 * h, h, lean: 0, turn: -0.15 } : { x: right(c) + besideEdge(0.18) * h, y: c.top + 0.62 * h, h, lean: 0, turn: -0.18 };
     case 'unroll':
-      return { x: c.left + (mobile ? 0.38 : 0.3) * h, y: c.top + 0.54 * h, h, lean: 0.32, turn: -0.1 };
+      // v3: behind the paper's top edge in the middle, both wings out on the rod (the typing spot)
+      return { x: cx(c), y: c.top + (1 - BODY.shoulder - 0.1) * h, h, lean: 0, turn: 0 };
     case 'stamp':
       if (mobile) {
         // a phone has no room at the card's side for a full-size penguin: a smaller one, and the card

@@ -10,6 +10,8 @@ export type IconSize = 20 | 28 | 40 | 64;
 
 const L = C.line;
 const SW = 0.9;
+/** Glasses rims sit just round the (large, v3) eyes. */
+const RIM = EYES[0].r + 0.8;
 
 /**
  * How the stitch is drawn at a size. From 40px up it is a dashed seam; below that a dash would be
@@ -44,9 +46,9 @@ function PropArt({ prop, accent }: { prop: Prop; accent: string }): ReactNode {
       const frame = prop === 'gold-glasses' ? C.gold : L;
       return (
         <>
-          <circle cx={EYES[0].cx} cy={EYES[0].cy} r="2.9" fill="none" stroke={frame} strokeWidth={1.1} />
-          <circle cx={EYES[1].cx} cy={EYES[1].cy} r="2.9" fill="none" stroke={frame} strokeWidth={1.1} />
-          <path d="M19.1 18.2h1.8" stroke={frame} strokeWidth={1.1} />
+          <circle cx={EYES[0].cx} cy={EYES[0].cy} r={RIM} fill="none" stroke={frame} strokeWidth={1.1} />
+          <circle cx={EYES[1].cx} cy={EYES[1].cy} r={RIM} fill="none" stroke={frame} strokeWidth={1.1} />
+          <path d={`M${EYES[0].cx + RIM} ${EYES[0].cy - 0.4}H${EYES[1].cx - RIM}`} stroke={frame} strokeWidth={1.1} />
           {prop === 'gold-glasses' && (
             <g>
               <rect x="27" y="27" width="7" height="9" rx="1" fill={C.metal} stroke={L} strokeWidth={SW} />
@@ -166,8 +168,9 @@ export function Penguin({
       <path d={FRONT} fill={C.face} />
       <path d={FRONT_STITCH} fill="none" stroke={C.stitch} strokeWidth={st.width} strokeDasharray={st.dash} strokeLinecap="round" strokeLinejoin="round" data-part="stitch" />
       {full && FEET.map((f, i) => <ellipse key={i} cx={f.cx} cy={f.cy} rx={f.rx} ry={f.ry} fill={C.feet} stroke={L} strokeWidth={SW} data-part="foot" />)}
-      {EYES.map((e, i) => <circle key={i} cx={e.cx} cy={e.cy} r={e.r} fill={C.eye} data-part="eye" />)}
+      {/* the cheeks tuck under the eyes (v3): drawn first */}
       {CHEEKS.map((c, i) => <circle key={i} cx={c.cx} cy={c.cy} r={c.r} style={{ fill: 'var(--cheek)' }} data-part="cheek" />)}
+      {EYES.map((e, i) => <circle key={i} cx={e.cx} cy={e.cy} r={e.r} fill={C.eye} data-part="eye" />)}
       {/* white diamond beak, its outer edge sewn in black */}
       <path d={BEAK_PATH} fill={C.beak} data-part="beak" />
       <path d={BEAK_SEAM} stroke={C.faceShade} strokeWidth={0.45} strokeLinecap="round" />

@@ -6,7 +6,9 @@ Steps
   kit:     build modules -> per-module materials `<palette key>#<module>` -> UV maps
            `uv_main` (TEXCOORD_0) + `uv_ao` (TEXCOORD_1) -> bake AO per module in Cycles ->
            wire it to glTF occlusion -> GLB (WebP textures)
-  penguin: mesh + rig + 19 role props on socket bones + 7 state clips (one NLA track each)
+  penguin: penguin_prod.py — the confirmed v3 design (penguin_v3.py round 12) at web resolution:
+           mesh + joint fillets (morph targets) + rig + 19 role props on socket bones + baked
+           seam detail / relief maps + 7 state clips and 4 standing extras (one NLA track each)
   both:    meshopt compression with @gltf-transform/cli (same version the web pins)
 
 Room pieces (`room.*`) get no AO map: a lone flat slab or wall bakes to plain white, and
@@ -21,11 +23,9 @@ import tempfile
 import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import anim  # noqa: E402
 import kit  # noqa: E402
 import lib  # noqa: E402
-import penguin  # noqa: E402
-import props  # noqa: E402
+import penguin_prod  # noqa: E402
 
 GLTF_TRANSFORM = '@gltf-transform/cli@4.5.1'
 
@@ -165,16 +165,11 @@ def export_kit(out_dir, tmpdir):
 def export_penguin(out_dir, tmpdir):
     reset()
     col = lib.collection('penguin')
-    mesh = penguin.build(col)
-    prop_obs = props.build_all(col, mesh)
-    rig = penguin.rig(col, mesh)
-    for ob in prop_obs.values():
-        props.attach(ob, rig)
-    for m in bpy.data.materials:
-        lib.principled(m).inputs['Metallic'].default_value = 0.0
-    anim.build_actions(rig)
+    mesh, joints, rig, _ = penguin_prod.build_all(col, texture_dir=tmpdir)
+    print('penguin triangles', mesh['tri_total'], '(skin', mesh['tri_skin'], '· wings', mesh['tri_wings'],
+          '· appliques', mesh['tri_appliques'], '· joints', penguin_prod.tri_count(joints), ')')
     path = os.path.join(tmpdir, 'penguin.glb')
-    _gltf(path, animations=True)
+    penguin_prod.export_glb(path)
     return path
 
 
@@ -205,7 +200,9 @@ def main(argv):
         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'export')
     os.makedirs(out_dir, exist_ok=True)
     tmpdir = tempfile.mkdtemp(prefix='office-export-')
-    raw = [export_kit(out_dir, tmpdir), export_penguin(out_dir, tmpdir)]
+    only = argv[argv.index('--only') + 1].split(',') if '--only' in argv else ['kit', 'penguin']
+    raw = ([export_kit(out_dir, tmpdir)] if 'kit' in only else []) + \
+        ([export_penguin(out_dir, tmpdir)] if 'penguin' in only else [])
     for src in raw:
         dst = os.path.join(out_dir, os.path.basename(src))
         if '--no-meshopt' in argv:
@@ -215,7 +212,7 @@ def main(argv):
         print('exported', dst, os.path.getsize(dst))
     if '--keep-ao' in argv:
         for f in os.listdir(tmpdir):
-            if f.endswith('_ao.png'):
+            if f.endswith('_ao.png') or f.startswith('penguin_'):
                 shutil.copy(os.path.join(tmpdir, f), os.path.join(out_dir, f))
 
 

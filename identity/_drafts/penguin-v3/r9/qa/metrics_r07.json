@@ -1,0 +1,92 @@
+{
+ "tris": 97108,
+ "poses": {
+  "rest": {
+   "normal_max_deg": 48.070717112611334,
+   "normal_p99_deg": 28.536912311425688,
+   "edge_dev_mm": 0.974263221453419,
+   "band_median_mm": 10.846225544810295,
+   "band_max_mm": 51.8726147711277,
+   "n": 48
+  },
+  "wave-peak": {
+   "normal_max_deg": 151.56387739323154,
+   "normal_p99_deg": 36.44566330389703,
+   "edge_dev_mm": 0.9742631968875495,
+   "band_median_mm": 7.281002588570118,
+   "band_max_mm": 88.17589282989502,
+   "n": 47
+  },
+  "raise-100": {
+   "normal_max_deg": 163.56315625600988,
+   "normal_p99_deg": 47.811590800113706,
+   "edge_dev_mm": 0.9742631411914234,
+   "band_median_mm": 66.95698946714401,
+   "band_max_mm": 80.34757524728775,
+   "n": 56
+  }
+ },
+ "hinge": {
+  "w>0.05": {
+   "verts": 556,
+   "reach_cm": 12.099612649701443,
+   "lowest_pct": 35.31915515872604
+  },
+  "w>0.5": {
+   "verts": 163,
+   "reach_cm": 9.470350742915501,
+   "lowest_pct": 39.57036978809546
+  },
+  "pivot_pct": 50.499999999999986
+ },
+ "clearance": [
+  {
+   "clip": "hop",
+   "min_mm": 13.301444677893164,
+   "frame": 5,
+   "nearest": "body",
+   "twist_max_deg": 5.85850814056515,
+   "forward_max_mm": 3.166496753692627e-05
+  },
+  {
+   "clip": "wave",
+   "min_mm": -58.979541084051775,
+   "frame": 27,
+   "nearest": "body",
+   "twist_max_deg": 57.02919963098441,
+   "forward_max_mm": 0.00030919909477233887
+  },
+  {
+   "clip": "walk",
+   "min_mm": 25.39151000863415,
+   "frame": 24,
+   "nearest": "head",
+   "twist_max_deg": 2.419000827148272,
+   "forward_max_mm": 1.4901161193847656e-05
+  },
+  {
+   "clip": "seated",
+   "min_mm": 24.39401862628186,
+   "frame": 0,
+   "nearest": "body",
+   "twist_max_deg": 3.9847802934182357,
+   "forward_max_mm": 28.43736857175827
+  },
+  {
+   "clip": "seated-desk",
+   "min_mm": 24.39401202046459,
+   "frame": 0,
+   "nearest": "body",
+   "twist_max_deg": 3.9847802934182357,
+   "forward_max_mm": 28.437361121177673
+  },
+  {
+   "clip": "raise-max",
+   "min_mm": -26.842631140681895,
+   "frame": 0,
+   "nearest": "body",
+   "twist_max_deg": 47.42779280458177,
+   "forward_max_mm": 0.00030919909477233887
+  }
+ ]
+}

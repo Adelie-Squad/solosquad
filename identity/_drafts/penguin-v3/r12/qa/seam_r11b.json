@@ -1,0 +1,6 @@
+{
+ "edge_p95": 0.1126086207389832,
+ "control_p95": 0.07309850544691071,
+ "edge_samples": 1561,
+ "control_samples": 929
+}

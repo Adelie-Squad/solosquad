@@ -7,6 +7,7 @@ import type * as THREE from 'three';
 import kitUrl from 'office-asset:office-kit.glb';
 import penguinUrl from 'office-asset:penguin.glb';
 import { dressPenguin } from './kit';
+import { makeJoints, type Joints } from './joint';
 import { lazyMeshopt } from './meshopt';
 
 export { kitUrl, penguinUrl };
@@ -18,20 +19,22 @@ export const withMeshopt = (loader: { setMeshoptDecoder: (d: never) => unknown }
 /** Start fetching penguin.glb (and nothing else). */
 export const preloadPenguin = () => useGLTF.preload(penguinUrl, false, false, withMeshopt);
 
-const solo = new WeakMap<object, THREE.Object3D>();
+const solo = new WeakMap<object, { penguin: THREE.Object3D; joints: Joints }>();
 
 /**
  * One penguin on its own — the landing's mascot. A skinned clone of the cached GLB (the office
  * may use the same cache later, so the source is never changed), with no role prop at all
  * (DESIGN.md `## 에이전트 캐릭터` — 마스코트 = 소품 없는 기본 펭귄). Suspends while loading.
  */
-export function useSoloPenguin(): { penguin: THREE.Object3D; source: THREE.Object3D; clips: THREE.AnimationClip[] } {
+export function useSoloPenguin(): { penguin: THREE.Object3D; joints: Joints; source: THREE.Object3D; clips: THREE.AnimationClip[] } {
   const gltf = useGLTF(penguinUrl, false, false, withMeshopt);
-  let penguin = solo.get(gltf);
-  if (!penguin) {
-    penguin = cloneSkinned(gltf.scene);
+  let own = solo.get(gltf);
+  if (!own) {
+    const penguin = cloneSkinned(gltf.scene);
     dressPenguin(penguin, '', true);
-    solo.set(gltf, penguin);
+    // the joints read the rest pose — now, before any clip has moved a bone
+    own = { penguin, joints: makeJoints(penguin) };
+    solo.set(gltf, own);
   }
-  return { penguin, source: gltf.scene, clips: gltf.animations };
+  return { ...own, source: gltf.scene, clips: gltf.animations };
 }

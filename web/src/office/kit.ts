@@ -7,6 +7,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { teamColor } from '../characters/colors';
 import { canonical } from '../characters/roster';
 import { ANCHORS, CLIPS, LAMP_LIGHT, lampOffset, paletteKey, PENGUIN_MESH, ROLE_PROPS, SCARF, SEAT_OFFSET, SOCKETS, propNode, socketBone, type ClipName, type ModuleName, type Socket } from './contract';
+import { makeJoints, type Joints } from './joint';
 import { layoutOffice, PROP_SPOTS, propPlace, roomFor, roomTiles, type Footprint, type Pod, type Room, type SeatAgent } from './layout';
 import { CROSSFADE, clipFor, phaseOf, STILL_TIME } from './motion';
 import type { ClayMaterial, OfficePalette } from './palette';
@@ -169,6 +170,8 @@ export interface Seat {
   tagAnchor: THREE.Object3D;
   mixer: THREE.AnimationMixer;
   actions: Map<ClipName, THREE.AnimationAction>;
+  /** The wing joints' fillets, re-weighted from the wings after every mixer step (joint.ts). */
+  joints: Joints;
   current: THREE.AnimationAction | null;
   status: AgentStatus | null;
   phase: number;
@@ -328,6 +331,7 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
       root.add(penguin);
       penguin.updateMatrixWorld(true);
       dressPenguin(penguin, d.agent);
+      const joints = makeJoints(penguin);
       swap(penguin, 'team_accent', (m) => bank.variant(m, team));
       const bodies = swap(penguin, 'penguin.body', (m) => m);
       for (const mesh of meshes(penguin)) {
@@ -366,6 +370,7 @@ export function buildOffice(src: Sources, agents: SeatAgent[], bank: MaterialBan
         tagAnchor,
         mixer,
         actions,
+        joints,
         current: null,
         status: null,
         phase: phaseOf(d.agent, index++),
@@ -625,6 +630,7 @@ export function playStatus(seat: Seat, status: AgentStatus, evening: boolean, re
     if (reduced) {
       next.time = STILL_TIME;
       seat.mixer.update(0);
+      seat.joints.update();
     }
     return;
   }
@@ -636,5 +642,8 @@ export function playStatus(seat: Seat, status: AgentStatus, evening: boolean, re
   if (prev && !reduced) next.crossFadeFrom(prev, CROSSFADE, false);
   else prev?.stop();
   seat.current = next;
-  if (reduced) seat.mixer.update(0);
+  if (reduced) {
+    seat.mixer.update(0);
+    seat.joints.update();
+  }
 }

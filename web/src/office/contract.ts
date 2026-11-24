@@ -79,6 +79,18 @@ export const PENGUIN_MATERIALS = [
 export const PENGUIN_MESH = 'penguin';
 export const PENGUIN_RIG = 'penguin_rig';
 export const BONES = ['root', 'body', 'head', 'wing.L', 'wing.R', 'foot.L', 'foot.R'] as const;
+
+/**
+ * The wing joint (§5): a rigid wing on a hinge. Raise about the body's front–back axis up to
+ * `raise`°, lowered towards the body up to `lower`°, twist about its own length within ±`twist`°;
+ * no forward swing (a pose that wants the wing in front turns the whole body). The build script
+ * (assets/office/scripts/penguin_prod.py) keys every clip within these, and the web clamps any wing
+ * it aims to them (office/joint.ts).
+ */
+export const WING_LIMITS = { raise: 112, lower: 8, twist: 15 } as const;
+
+/** The smooth-union fillet between the body and each wing: `penguin.joint.L` · `penguin.joint.R`, morph targets per (raise, twist). */
+export const JOINT_MESH = 'penguin.joint';
 export const SOCKETS = ['head', 'chest', 'hand.R'] as const;
 export type Socket = (typeof SOCKETS)[number];
 export const socketBone = (s: Socket): string => `socket.${s}`;
@@ -111,7 +123,9 @@ export const ALL_PROPS: string[] = [
 
 /** Animation clips = state ids (§6). `idle_doze` is the evening's idle. */
 export const CLIPS = ['idle', 'idle_doze', 'thinking', 'typing', 'waiting', 'done', 'error'] as const;
-export type ClipName = (typeof CLIPS)[number];
+/** Standing clips beside the seated state clips (§6): the landing stands (`stand`), and walk · hop · wave are there for anyone on its feet. */
+export const EXTRA_CLIPS = ['stand', 'walk', 'hop', 'wave'] as const;
+export type ClipName = (typeof CLIPS)[number] | (typeof EXTRA_CLIPS)[number];
 
 /** §8 budget. */
 export const BUDGET = {
@@ -285,7 +299,9 @@ export function checkGltf(json: GltfJson, kind: AssetKind): ContractReport {
       const [lo, hi] = BUDGET.clipSeconds;
       if (length < lo - 0.05 || length > hi + 0.05) warnings.push(`clip ${c}: ${length.toFixed(2)} s (contract: ${lo}–${hi} s)`);
     }
-    for (const name of clips.keys()) if (!(CLIPS as readonly string[]).includes(name)) warnings.push(`clip ${name} is not a state id — the web ignores it`);
+    for (const c of EXTRA_CLIPS) if (!clips.has(c)) warnings.push(`clip ${c} (standing extra) missing — the landing falls back to idle`);
+    for (const name of clips.keys()) if (!(CLIPS as readonly string[]).includes(name) && !(EXTRA_CLIPS as readonly string[]).includes(name)) warnings.push(`clip ${name} is neither a state id nor a standing extra — the web ignores it`);
+    for (const side of ['L', 'R']) if (!nodeNames.has(`${JOINT_MESH}.${side}`)) warnings.push(`node ${JOINT_MESH}.${side} missing — no fillet where the wing meets the body`);
   }
   warnings.push(...matteWarnings(json), ...compressionWarnings(json));
   return { kind, missing, warnings };

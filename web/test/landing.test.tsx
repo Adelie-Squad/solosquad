@@ -53,7 +53,7 @@ import { GAP_DRAW_MS, progressOf, sceneAt, SCENE_LEN, sceneMs, workflowAt } from
 import { resetProgress, setProgress } from '../src/landing/progress';
 import { follow as followScroll, FOLLOW_RATE, SmoothScroll, wheelPixels, type SmoothEnv } from '../src/landing/smooth';
 import { drawState, follow, GIVE_UP_SECONDS, LIMITS, lookAt, wander } from '../src/landing/gaze';
-import { ACT_YAW, actingWings, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETCH, MAX_TURN, nearWing, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint } from '../src/landing/arms';
+import { ACT_YAW, actingWings, pointTip, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETCH, MAX_TURN, nearWing, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint } from '../src/landing/arms';
 import { claimIntro, DROP, INTRO, INTRO_MS, introAt, resetIntro, REST, SQUASH_MAX } from '../src/landing/intro';
 import { makeMorph } from '../src/landing/morph';
 import { useHolder } from '../src/landing/holder';
@@ -594,24 +594,27 @@ describe('where the penguin stands (staging)', () => {
     expect(s.lean).toBe(0);
   });
 
-  it('point (가격): beside the price cards on their right, turned to them; on a phone over their upper right', () => {
+  it('point (문제 · 지금 · 가격, v3): beside the content on its right, turned to it, the near (pointing) shoulder outside the edge; on a phone over the upper right', () => {
     const s = spotFor('point', box, h, false);
     expect(s.x).toBeGreaterThan(right);
     expect(s.turn).toBeLessThan(0);
+    // the near wing is the one that points (v3 — no wing crosses the body): its shoulder stands outside
+    expect(s.x - BODY.shoulderX * Math.cos(s.turn) * h).toBeGreaterThan(right);
     const p = spotFor('point', box, 170, true);
     expect(p.x).toBeLessThan(right);
     expect(p.x + BODY.halfWidth * 170).toBeLessThanOrEqual(right + 2);
     expect(headOf(p).y).toBeLessThan(box.top);
   });
 
-  it('unroll (조직도): behind the paper’s upper-left corner, leaning out to the left; the eyes above the rod', () => {
+  it('unroll (AI 팀, v3): behind the middle of the paper’s top edge, upright, both wings out on the rod; the face above it', () => {
     const s = spotFor('unroll', box, h, false);
-    expect(s.x).toBeGreaterThan(box.left); // the body is behind the paper
-    expect(s.lean).toBeGreaterThan(0.2); // leaning out to the reader's left
-    expect(headOf(s).x).toBeLessThan(s.x);
-    const eyes = s.y - Math.cos(s.lean) * (1 - BODY.eyes) * h;
-    expect(eyes).toBeLessThan(box.top); // the face peeks over the top edge
+    expect(s.x).toBe(box.left + box.width / 2); // behind the paper, in the middle
+    expect(s.lean).toBe(0);
+    const eyes = s.y - (1 - BODY.eyes) * h;
+    expect(eyes).toBeLessThan(box.top); // the face above the rod
+    expect(s.y - (1 - BODY.shoulder) * h).toBeLessThan(box.top); // the shoulders too — the wings come out over the edge
     expect(s.y).toBeLessThan(bottom); // the feet are hidden behind the paper
+    expect(actingWings('unroll', s.x, s.x).wings).toEqual(['L', 'R']);
   });
 
   it('stamp (워크플로우): just outside the card’s lower-left corner, turned to it', () => {
@@ -632,10 +635,11 @@ describe('where the penguin stands (staging)', () => {
     expect(s.y).toBeLessThan(bottom);
   });
 
-  it('every act has its own spot', () => {
-    const spots = ACTS.map((a) => spotFor(a, box, h, false));
+  it('every act has its own spot (the scroll holds its rod where the prompt box is typed — the same spot behind a top edge)', () => {
+    const spots = ACTS.filter((a) => a !== 'unroll').map((a) => spotFor(a, box, h, false));
     const keys = new Set(spots.map((s) => `${Math.round(s.x)}:${Math.round(s.y)}`));
-    expect(keys.size).toBe(ACTS.length);
+    expect(keys.size).toBe(ACTS.length - 1);
+    expect(spotFor('unroll', box, h, false)).toEqual(spotFor('type', box, h, false));
   });
 
   it('walks between spots in ~0.7 s, eased at both ends, with a small hop — no jump', () => {
@@ -662,8 +666,8 @@ describe('where the penguin stands (staging)', () => {
 });
 
 describe('the acting', () => {
-  it('every act breathes on the idle clip — the office typing clip (the body bob behind the trembling) is not used', () => {
-    expect(ACT_CLIP).toEqual({ wave: 'idle', type: 'idle', unroll: 'idle', stamp: 'idle', point: 'idle' });
+  it('every act breathes on the standing clip — the office clips sit on a chair, and the office typing clip (the trembling) is not used', () => {
+    expect(ACT_CLIP).toEqual({ wave: 'stand', type: 'stand', unroll: 'stand', stamp: 'stand', point: 'stand' });
     expect(ACT_DELAY_MS).toBeGreaterThan(MOVE_MS); // the act starts once the penguin has arrived
   });
 
@@ -960,29 +964,40 @@ describe('what shows in front of the content (occlusion)', () => {
     const box = { left: 700, top: 300, width: 380, height: 260 };
     const cx = box.left + box.width / 2;
     const picked = Object.fromEntries(ACTS.map((a) => [a, actingWings(a, spotFor(a, box, h, false).x, cx)]));
-    // point: the penguin is right of the price cards → its far (left) wing; unroll: the paper is to its
-    // right → its far (right) wing, on the knob at the paper's left end; type: both; wave: the far one waves
-    expect(picked.point.wings).toEqual(['L']);
-    expect(picked.unroll.wings).toEqual(['R']);
+    // point (v3): the penguin is right of the cards → its NEAR wing (its right, on the reader's left) —
+    // the far one cannot cross the body any more; unroll: both wings on the rod; type: both; wave: the far one waves
+    expect(ARM_CHOICE.point).toBe('near');
+    expect(picked.point.wings).toEqual(['R']);
+    expect(picked.unroll.wings).toEqual(['L', 'R']);
     expect(picked.type.wings).toEqual(['L', 'R']);
     expect(picked.wave).toEqual({ wings: ['L', 'R'], wave: 'L' });
     // the workflow card is the measured exception: the near wing stamps (ARM_CHOICE)
     expect(ARM_CHOICE.stamp).toBe('near');
     expect(picked.stamp.wings).toEqual(['L']);
     // mirrored content flips every choice — it comes from where things are, not from the section
-    expect(actingWings('point', 400, 700).wings).toEqual(['R']);
+    expect(actingWings('point', 400, 700).wings).toEqual(['L']);
+    // the pointing tip stops just outside the content on the line to the mark — never into the card
+    const card = { left: 700, top: 300, right: 1080, bottom: 560 };
+    const tip = pointTip({ x: 1150, y: 300 }, { x: 900, y: 300 }, card, 10);
+    expect(tip).toEqual({ x: 1090, y: 300 });
+    expect(segmentHits({ x: 1150, y: 300 }, tip, card)).toBe(false);
+    expect(pointTip({ x: 1150, y: 250 }, { x: 900, y: 450 }, card, 0).x).toBeGreaterThanOrEqual(card.right - 1e-9);
     expect(actingWings('stamp', 1200, 900).wings).toEqual(['R']);
     expect(actingWings('wave', 500, 800).wave).toBe('R');
     // the body turns towards the content to bring the far wing round, within natural limits
     expect(actYaw('point', 1200, 900)).toBeLessThan(0);
     expect(actYaw('point', 400, 700)).toBeGreaterThan(0);
-    for (const id of ['type', 'unroll', 'stamp', 'wave'] as const) expect(actYaw(id, 1200, 900)).toBe(0);
+    for (const id of ['type', 'unroll', 'stamp'] as const) expect(actYaw(id, 1200, 900)).toBe(0);
+    // the wave turns the body a little so the raised wing's face shows (a hinge in the frontal plane)
+    expect(actYaw('wave', 1200, 900)).toBeLessThan(0);
+    expect(Math.abs(actYaw('wave', 1200, 900))).toBeLessThan(ACT_YAW);
     expect(Math.abs(bodyTurn(-0.18, -ACT_YAW))).toBeLessThanOrEqual(MAX_TURN);
     expect(Math.abs(bodyTurn(-0.6, -0.6))).toBe(MAX_TURN);
-    // a clay wing stretches to reach across the body, never past its limit
+    // the v3 wing is a rigid paddle on a hinge: it never stretches to reach (the body turns instead)
+    expect(MAX_STRETCH).toBe(1);
     expect(stretchFor(50, 100)).toBe(1);
-    expect(stretchFor(130, 100)).toBeCloseTo(1.326, 2);
-    expect(stretchFor(500, 100)).toBe(MAX_STRETCH);
+    expect(stretchFor(130, 100)).toBe(1);
+    expect(stretchFor(500, 100)).toBe(1);
     expect(ORDER.eraser).toBeLessThan(ORDER.front);
   });
 

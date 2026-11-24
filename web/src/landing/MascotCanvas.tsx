@@ -32,7 +32,7 @@ import { paletteFor } from '../office/palette';
 import { preloadPenguin, useSoloPenguin } from '../office/penguinAsset';
 import { SkyLight } from '../office/SkyLight';
 import { ACT_CLIP, cues, now, relayHand, squashAt, STAMP_TOTAL_MS, stampAside, stampLift, stampTilt, tugAt, WAVE_SWING, waveAt, WING_GLIDE } from './acting';
-import { actingWings, actYaw, ARM_MS, bodyTurn, EDGE_MARGIN, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint, type Pt, type Rect } from './arms';
+import { actingWings, pointTip, actYaw, ARM_MS, WAVE_RAISE, WAVE_SWING_DEG, WAVE_TWIST, bodyTurn, EDGE_MARGIN, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint, type Pt, type Rect } from './arms';
 import { drawState, follow, GAZE_ACTING, lookAt, wander, type Look, type Pointer } from './gaze';
 import { useHolder } from './holder';
 import { claimIntro, introAt, REST, type IntroPose } from './intro';
@@ -204,7 +204,7 @@ const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia
 const SIDES = ['L', 'R'] as const;
 
 function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
-  const { penguin, clips } = useSoloPenguin();
+  const { penguin, joints, clips } = useSoloPenguin();
   const palette = paletteFor(theme);
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const gl = useThree((s) => s.gl);
@@ -250,7 +250,7 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
   );
   const current = useRef<THREE.AnimationAction | null>(null);
   useLayoutEffect(() => {
-    const next = actions.get(ACT_CLIP[clipAct]) ?? actions.get('idle') ?? null;
+    const next = actions.get(ACT_CLIP[clipAct] as ClipName) ?? actions.get('idle') ?? null;
     if (!next || next === current.current) return;
     const prev = current.current;
     next.reset();
@@ -497,9 +497,22 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
       const c = centre(rodMark);
       rodWidth = sheet.getBoundingClientRect().width / zoom;
       const dir = cur.x < c.x ? -1 : 1;
-      knob = { x: c.x + dir * (rodWidth / 2 + 0.022) * zoom, y: c.y };
+      // v3: both wings hold the rod from above (no wing reaches the far knob) — the rod's middle sets its depth
+      knob = { x: c.x + 0 * dir, y: c.y };
     }
-    if (act === 'point' && handMark) actTarget = centre(handMark);
+    if (act === 'point' && handMark) {
+      // the near wing points from outside the content: its tip stops just before the card's edge on the
+      // line to the mark (v3 — arms.ts pointTip), from the near shoulder's spot
+      const near = actingWings(act, cur.x, content ? content.left + content.width / 2 : cur.x).wings[0];
+      const sx = cur.x + (near === 'R' ? -1 : 1) * BODY.shoulderX * cur.h * Math.cos(cur.turn);
+      const shoulder0 = { x: sx, y: cur.y - (1 - BODY.shoulder) * cur.h };
+      const occ = slide ? occluderOf(slide, rect.bottom) : null;
+      // aimed level with the shoulder (or above it), so the wing is raised out to the side and reads as
+      // pointing — a wing aimed down at the card would only hang
+      const markPt = centre(handMark);
+      const aimAt = { x: markPt.x, y: Math.min(markPt.y, shoulder0.y + 0.02 * cur.h) };
+      actTarget = occ ? pointTip(shoulder0, aimAt, occ, 0.04 * cur.h) : aimAt;
+    }
     else if (act === 'stamp' && stampMark) {
       // the stamp lands on the button's end nearest the penguin (it comes from beside the card)
       const r = stampMark.getBoundingClientRect();
@@ -514,9 +527,12 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
       // standing on its own: the wings rest at its sides, a little below the shoulders (nothing to lean on)
       const edge = standing ? cur.y - (1 - BODY.shoulder - 0.2) * H : content.top + 0.015 * H;
       const reachOut = standing ? REACH + 0.1 : REACH;
-      if (act === 'type' || act === 'wave') {
-        marks.L = { x: cur.x + reachOut * H, y: edge };
-        marks.R = { x: cur.x - reachOut * H, y: edge };
+      if (act === 'type' || act === 'wave' || act === 'unroll') {
+        // unroll (v3): the wings further out along the rod, just above the paper's top edge
+        const out = act === 'unroll' ? reachOut + 0.34 : reachOut;
+        const y = act === 'unroll' ? content.top - 0.06 * H : edge;
+        marks.L = { x: cur.x + out * H, y };
+        marks.R = { x: cur.x - out * H, y };
       } else if (actTarget) marks[actingSet[0]] = actTarget;
     }
 
@@ -528,7 +544,9 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
       rodBone.getWorldPosition(tmp.shoulder);
       const r = handLength * (rodBone.getWorldScale(tmp.w).y || 1);
       reach(rayAt(knob.x, knob.y, rect, camera, tmp.ray), tmp.shoulder, r, tmp.goal);
-      toWorld(c.x, c.y, tmp.goal.z, rod.group.position);
+      // v3: the penguin stands behind the paper, so the rod lies in front of its chest — a little nearer
+      // the camera than the wing tips that hold it
+      toWorld(c.x, c.y, tmp.goal.z + 0.06, rod.group.position);
       rod.group.position.y += tugAt(ms) * dims.current.height;
       rod.setLength(rodWidth);
     }
@@ -605,8 +623,8 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
         const at = pathAt({ from: rest, via, to: wing.to }, wing.u);
         const reachR = r * wing.stretch;
         if (act === 'point') {
-          // the far wing sweeps out at full length (round the belly, not foreshortened towards the
-          // camera, where it would pass in front of the face)
+          // the pointing wing goes out at full length (raised sideways on its hinge, not foreshortened
+          // towards the camera — the v3 wing has no forward swing)
           const dx = at.x - shoulderPt.x;
           const dy = at.y - shoulderPt.y;
           const len = Math.hypot(dx, dy);
@@ -624,6 +642,15 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
         // fully on the path once it has left the rest pose a little (the start is behind anyway)
         const weight = Math.min(1, wing.u / 0.12);
         aim(bone, tmp.shoulder, tmp.tip, tmp.goal, weight);
+        // a rigid wing on its hinge: keep only the raise and the twist, within the limits (contract §5)
+        joints.clamp(side);
+        if (act === 'wave' && side === wave) {
+          // the wave itself is a hinge pose (penguin_prod `c_wave`): raised, swinging, the face turned out
+          const w = waveAt(ms);
+          const now = joints.angles(side);
+          const k = Math.min(1, w.raise);
+          joints.set(side, now.raise + (WAVE_RAISE + WAVE_SWING_DEG * w.swing - now.raise) * k, now.twist + (WAVE_TWIST - now.twist) * k);
+        }
         tipPt = toPage(bone.localToWorld(tmp.tip.copy(tmp.tipLocal).multiplyScalar(handLength)));
       }
       tips[side] = tipPt;
@@ -646,6 +673,8 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
       pathNow[side] = Math.round(wing.u * 100) / 100;
     }
     front.set(frontNow);
+    // the joint fillets follow the wings' final pose this frame
+    joints.update();
 
     // props: grow in for their act, shrink away after; the stamp is drawn in front only with its wing
     pp.stamp += ((act === 'stamp' && live ? 1 : 0) - pp.stamp) * k(6);

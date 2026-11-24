@@ -35,16 +35,17 @@ export function resetCues() {
 }
 
 /**
- * The clip under the wings in every act: `idle` (a slow breath). The office's `typing` clip is not
- * used here — it bobs the body six times a second and flaps the wings, made for a desk-sized
- * penguin; at landing size it read as trembling (the 2026-11-09 "덜덜 떨림").
+ * The clip under the wings in every act: `stand` (a slow breath on its feet — the office clips are
+ * seated, on a chair). The office's `typing` clip is not used here — made for a desk-sized penguin;
+ * at landing size a fast patter read as trembling (the 2026-11-09 "덜덜 떨림"). The landing falls back
+ * to `idle` on a GLB without `stand`.
  */
 export const ACT_CLIP = {
-  wave: 'idle',
-  type: 'idle',
-  unroll: 'idle',
-  stamp: 'idle',
-  point: 'idle',
+  wave: 'stand',
+  type: 'stand',
+  unroll: 'stand',
+  stamp: 'stand',
+  point: 'stand',
 } as const satisfies Record<ActId, string>;
 
 /** How long after a slide comes in its act starts (ms) — after the penguin has walked over. */
