@@ -40,6 +40,7 @@ import { makeMorph, type Morph } from './morph';
 import { makeRod, makeStamp, STAMP_LENGTH } from './props';
 import { aim, atDepth, fitEraser, makeEraser, ORDER, rayAt, reach, useFrontPass, type Side } from './rig';
 import type { ActId, SectionId } from './sections';
+import { GAP_DRAW_MS, progressOf, sceneAt, sceneMs } from './scene';
 import { BODY, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
 
 preloadPenguin();
@@ -202,7 +203,7 @@ function occluderOf(slide: Element, bottom: number): Rect | null {
 const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const SIDES = ['L', 'R'] as const;
 
-function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
+function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onReady, onFail, stats }: MascotCanvasProps) {
   const { penguin, clips } = useSoloPenguin();
   const palette = paletteFor(theme);
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
@@ -249,7 +250,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
   );
   const current = useRef<THREE.AnimationAction | null>(null);
   useLayoutEffect(() => {
-    const next = actions.get(ACT_CLIP[act]) ?? actions.get('idle') ?? null;
+    const next = actions.get(ACT_CLIP[clipAct]) ?? actions.get('idle') ?? null;
     if (!next || next === current.current) return;
     const prev = current.current;
     next.reset();
@@ -257,7 +258,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
     next.play();
     if (prev) next.crossFadeFrom(prev, CROSSFADE, false);
     current.current = next;
-  }, [act, actions]);
+  }, [clipAct, actions]);
 
   const rig = useMemo(
     () => ({
@@ -328,7 +329,6 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
     scale: (rig.body?.scale ?? new THREE.Vector3(1, 1, 1)).clone(),
   });
   const p = useRef({ stamp: 0, rod: 0, acting: 0, typing: 0, yaw: 0 });
-  const move = useRef<{ act: SectionId | null; from: Spot | null; at: number; cur: Spot | null }>({ act: null, from: null, at: 0, cur: null });
   const fps = useRef({ n: 0, at: 0 });
   const drawn = useRef<'waiting' | 'drawn' | 'empty'>('waiting');
   const running = useRef(0);
@@ -374,30 +374,47 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
 
     const pp = p.current;
     pp.acting += ((acting ? 1 : 0) - pp.acting) * k(4);
-    pp.typing += ((acting && act === 'type' && cues.typing ? 1 : 0) - pp.typing) * k(5);
 
-    // ── where the penguin stands: the spot for this section's content, walked to over MOVE_MS ──
+    // ── where the penguin stands (2026-11-25): by the scroll, every frame, no catch-up ──
+    // The scene holding the screen (A) and the next one coming in (B): the spot is measured from both
+    // scenes' live boxes and the penguin walks from A to B by how far B has come in — so it moves with
+    // the page and is never left behind off the screen (scene.ts `sceneAt`).
     const rect = gl.domElement.getBoundingClientRect();
     const stage = pin.current;
-    const slide = stage?.querySelector<HTMLElement>(`[data-slide="${section}"]`) ?? null;
+    const screenH = window.innerHeight;
+    const blocks = stage ? [...stage.querySelectorAll<HTMLElement>('.landing-steps')] : [];
+    const boxes = blocks.map((b) => b.getBoundingClientRect());
+    const { i: at, handover } = sceneAt(boxes, screenH);
+    const slideOf = (n: number) => blocks[n]?.querySelector<HTMLElement>('[data-slide]') ?? null;
+    const spotOf = (sl: HTMLElement | null): Spot | null => {
+      const c = boxOf(sl?.querySelector('[data-content]'));
+      const sceneBox = boxOf(sl?.querySelector('.landing-scene'));
+      if (!c || !sceneBox) return null;
+      // the first section (2026-11-24): no card — the penguin stands on its own, the box is its size
+      if (sl?.querySelector('[data-content][data-stand]')) return standSpot(c);
+      return spotFor((sl?.dataset.act as ActId) ?? 'wave', c, penguinHeight(sceneBox, mobile), mobile);
+    };
+    const slideA = slideOf(at);
+    const slideB = handover > 0 ? slideOf(at + 1) : null;
+    const spotA = spotOf(slideA);
+    const spotB = slideB ? spotOf(slideB) : null;
+    if (!spotA) return;
+    let cur = spotB ? moveAt(spotA, spotB, handover * MOVE_MS) : spotA;
+    // while it walks, keep it on the screen (the head below the top bar, the feet not far past the bottom)
+    if (spotB) cur = { ...cur, y: Math.max(rect.top + 0.75 * cur.h, Math.min(rect.bottom + 0.1 * cur.h, cur.y)) };
+    const onB = !!slideB && handover >= 0.5;
+    const slide = onB ? slideB : slideA;
+    const section = (slide?.dataset.slide as SectionId) ?? 'hero';
+    const act = (slide?.dataset.act as ActId) ?? 'wave';
     const content = boxOf(slide?.querySelector('[data-content]'));
-    const sceneBox = boxOf(slide?.querySelector('.landing-scene'));
-    // the first section (2026-11-24): no card — the penguin stands on its own, the box is its size
     const standing = !!slide?.querySelector('[data-content][data-stand]');
-    const m = move.current;
-    let target = m.cur;
-    if (content && standing) target = standSpot(content);
-    else if (content && sceneBox) target = spotFor(act, content, penguinHeight(sceneBox, mobile), mobile);
-    if (!target) return;
-    if (m.act !== section) {
-      m.from = m.cur ?? target;
-      m.at = m.cur ? t : -Infinity;
-      m.act = section;
-    }
-    const cur = moveAt(m.from ?? target, target, t - m.at);
-    m.cur = cur;
-    const settled = t - m.at >= MOVE_MS;
+    // the act by the scroll through its block (scene.ts) — rewinds with it; none while walking
+    const progress = boxes[onB ? at + 1 : at] ? progressOf(boxes[onB ? at + 1 : at], screenH) : 0;
+    const ms = section === 'workflows' ? 0 : sceneMs(section, progress);
+    const relayMs = section === 'problem' ? ms - GAP_DRAW_MS : ms;
+    const settled = handover === 0;
     const live = acting && settled;
+    pp.typing += ((live && act === 'type' && cues.typing ? 1 : 0) - pp.typing) * k(5);
 
     const H = cur.h;
     const zoom = H / dims.current.height;
@@ -437,7 +454,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
     }
 
     // the stamp's hit squashes the body a little
-    const stampMs = t - cues.stampAt;
+    const stampMs = -1; // no section stamps since 2026-11-14 ② (the card's own animation)
     if (rig.body && act === 'stamp') {
       const sy = squashAt(stampMs);
       if (sy !== 1) rig.body.scale.multiply(tmp.v.set(1 / Math.sqrt(sy), sy, 1 / Math.sqrt(sy)));
@@ -511,7 +528,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
       const r = handLength * (rodBone.getWorldScale(tmp.w).y || 1);
       reach(rayAt(knob.x, knob.y, rect, camera, tmp.ray), tmp.shoulder, r, tmp.goal);
       toWorld(c.x, c.y, tmp.goal.z, rod.group.position);
-      rod.group.position.y += tugAt(t - cues.unrollAt) * dims.current.height;
+      rod.group.position.y += tugAt(ms) * dims.current.height;
       rod.setLength(rodWidth);
     }
 
@@ -534,7 +551,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
 
       // along the path: out and in over ARM_MS; the relay's hand follows its own curve (out · beat · back)
       const before = wing.u;
-      if (act === 'point' && actingSet.includes(side) && live) wing.u = relayHand(t - cues.relayAt);
+      if (act === 'point' && actingSet.includes(side) && live) wing.u = relayHand(relayMs);
       else wing.u = Math.max(0, Math.min(1, wing.u + ((goalMark ? 1 : -1) * dt * 1000) / ARM_MS));
       const du = wing.u - before;
 
@@ -549,7 +566,7 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
           // pretend typing: small alternating strokes above the keys, eased in and out with the box
           y += pp.typing * (-STROKE_LIFT * H + (STROKE_LIFT + STROKE_DEPTH) * H * strokeAt(t / 1000, side));
         } else if (act === 'wave' && side === wave) {
-          const w = waveAt(t - cues.waveAt);
+          const w = waveAt(ms);
           const out = side === 'L' ? 1 : -1;
           x += out * (w.raise * 0.17 * H + w.swing * WAVE_SWING * H);
           y -= w.raise * 0.42 * H;
@@ -651,7 +668,9 @@ function Mascot({ section, act, acting, theme, mobile, pointer, touch, pin, onRe
         return r.bottom > rect.top && r.top < rect.bottom;
       });
       onScreen.sort((a, b) => (a === slide ? -1 : b === slide ? 1 : 0));
-      for (const el of onScreen) {
+      // mid-walk between two scenes the penguin is in the open, over both — nothing hides it (it stays seen)
+      const walking = handover > 0.12 && handover < 0.88;
+      for (const el of walking ? [] : onScreen) {
         if (used >= erasers.length) break;
         const opacity = parseFloat(getComputedStyle(el).opacity || '0');
         if (opacity < 0.01) continue;

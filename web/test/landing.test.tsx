@@ -40,16 +40,17 @@ import {
   stampLift,
   stampState,
   tugAt,
-  UNROLL_MS,
   WAVE_HZ,
   waveAt,
 } from '../src/landing/acting';
-import { GAP, GapAct, PricingAct, WorkflowAct } from '../src/landing/Acts';
+import { GAP, GapAct, PricingAct, ScrollAct, WorkflowAct } from '../src/landing/Acts';
 import { fitEraser, makeEraser, ORDER } from '../src/landing/rig';
 import { makeStamp } from '../src/landing/props';
 import { paletteFor } from '../src/office/palette';
 import { BODY, centreOffset, faceX, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
 import { AGENT_COUNT, TEAMS } from '../src/landing/catalog';
+import { GAP_DRAW_MS, progressOf, sceneAt, SCENE_LEN, sceneMs, workflowAt } from '../src/landing/scene';
+import { resetProgress, setProgress } from '../src/landing/progress';
 import { follow as followScroll, FOLLOW_RATE, SmoothScroll, wheelPixels, type SmoothEnv } from '../src/landing/smooth';
 import { drawState, follow, GIVE_UP_SECONDS, LIMITS, lookAt, wander } from '../src/landing/gaze';
 import { ACT_YAW, actingWings, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETCH, MAX_TURN, nearWing, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint } from '../src/landing/arms';
@@ -58,7 +59,7 @@ import { makeMorph } from '../src/landing/morph';
 import { useHolder } from '../src/landing/holder';
 import { InquiryProvider } from '../src/marketing/Inquiry';
 import { Landing } from '../src/landing/Landing';
-import { firstStop, MOVED_ANCHORS, SECTIONS, stepAt, STOPS, type ActId } from '../src/landing/sections';
+import { MOVED_ANCHORS, SECTIONS, stepAt, STOPS, type ActId } from '../src/landing/sections';
 import { DOMAINS, TIER, WORKFLOW_EXAMPLES } from '../src/landing/workflows';
 import { APPROVED_AFTER_MS, ASSIGN_FIRST_MS, ASSIGN_STEP_MS, charMs, flowAt, flowLength, flowStill, HOLD_TYPED_MS, STAMP_MS, TEAM_MS, TYPE_MAX_MS, TYPE_MS } from '../src/landing/flow';
 
@@ -109,13 +110,32 @@ function stubWebGL() {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((() => ({ getExtension: () => null })) as never);
 }
 
-/** jsdom lays nothing out: each stop (a section, or a later stop of the workflows) sits one screen (900px) below the last. */
+/**
+ * jsdom lays nothing out: the page as the CSS lays it (2026-11-25) — a screen of 900px, each section a
+ * block SCENE_LEN screens tall one after another, the workflows' later stops at the thirds of its hold.
+ */
 const SCREEN = 900;
+const BLOCK_TOP: Record<string, number> = {};
+{
+  let y = 0;
+  for (const sec of SECTIONS) {
+    BLOCK_TOP[sec.id] = y;
+    y += SCENE_LEN[sec.id] * SCREEN;
+  }
+}
+/** Where a stop is on the page (px from the top). */
+const Y = (anchor: string) => {
+  const st = STOPS.find((x) => x.anchor === anchor)!;
+  const n = SECTIONS.find((x) => x.id === st.section)!.stops?.length ?? 1;
+  return BLOCK_TOP[st.section] + (st.sub / n) * (SCENE_LEN[st.section] - 1) * SCREEN;
+};
 function stubLayout() {
+  Object.defineProperty(window, 'innerHeight', { value: SCREEN, configurable: true });
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-    const i = STOPS.findIndex((st) => st.anchor === this.id);
-    const top = i >= 0 ? i * SCREEN - window.scrollY : 0;
-    return { top, bottom: top + SCREEN, left: 0, right: 0, width: 0, height: SCREEN, x: 0, y: top, toJSON() {} } as DOMRect;
+    const st = STOPS.find((x) => x.anchor === this.id);
+    const top = st ? Y(st.anchor) - window.scrollY : 0;
+    const height = st && this.classList.contains('landing-steps') ? SCENE_LEN[st.section] * SCREEN : SCREEN;
+    return { top, bottom: top + height, left: 0, right: 0, width: 0, height, x: 0, y: top, toJSON() {} } as DOMRect;
   });
 }
 
@@ -223,34 +243,41 @@ describe('stepping the slides', () => {
       'landing-pricing',
       'landing-contact',
     ]);
-    expect(stops.map((s) => s.tagName)).toEqual(['SECTION', 'SECTION', 'SECTION', 'DIV', 'SPAN', 'SPAN', 'SECTION', 'SECTION']);
+    // every section is a block with its scene sticky inside (2026-11-25); the workflows' thirds are spans
+    expect(stops.map((s) => s.tagName)).toEqual(['DIV', 'DIV', 'DIV', 'DIV', 'SPAN', 'SPAN', 'DIV', 'DIV']);
+    for (const sec of SECTIONS) {
+      const block = document.getElementById(`landing-${sec.id}`)!;
+      expect(block.classList.contains('landing-steps'), sec.id).toBe(true);
+      expect(block.style.getPropertyValue('--len')).toBe(String(SCENE_LEN[sec.id]));
+      expect(block.querySelector(`[data-slide="${sec.id}"]`)!.getAttribute('data-act')).toBe(sec.act);
+    }
     expect(document.getElementById('landing-workflows')!.querySelector('[data-slide="workflows"]')).toBeTruthy();
     expect(container.querySelector('.landing-flow .landing-stage')).toBeTruthy();
     const on = () => container.querySelector('.landing-slide.is-on')!.getAttribute('data-slide');
     const workflow = () => screen.getByTestId('landing-workflow').getAttribute('data-workflow');
     expect(on()).toBe('hero');
-    scrollTo(SCREEN * 2);
+    scrollTo(Y('landing-org'));
     expect(on()).toBe('org');
     expect(main.getAttribute('data-section')).toBe('org');
     expect(container.querySelector('.landing-slide.is-hero')!.classList.contains('is-passed')).toBe(true);
-    scrollTo(SCREEN * 3 + 300);
+    scrollTo(Y('landing-workflows') + 100);
     expect(on()).toBe('workflows');
     expect(workflow()).toBe('finance');
     // the next two stops keep the same slide and card; only the workflow changes
-    scrollTo(SCREEN * 4);
+    scrollTo(Y('landing-workflows-sourcing'));
     expect(on()).toBe('workflows');
     expect(workflow()).toBe('sourcing');
-    scrollTo(SCREEN * 5);
+    scrollTo(Y('landing-workflows-sns'));
     expect(workflow()).toBe('sns');
     expect(container.querySelectorAll('.landing-slide.is-passed')).toHaveLength(3);
-    scrollTo(SCREEN * 6);
+    scrollTo(Y('landing-pricing'));
     expect(on()).toBe('pricing');
-    scrollTo(SCREEN * 7);
+    scrollTo(Y('landing-contact'));
     expect(on()).toBe('contact');
     // nothing pinned but the workflows' slide inside its three screens; the canvas stays on the screen
     expect(rule('.landing-flow .landing-slide')).toMatch(/position: relative;[\s\S]*min-height: 100svh;/);
     expect(rule('.landing-steps > .landing-slide')).toMatch(/position: sticky;/);
-    expect(rule('.landing-steps')).toMatch(/height: calc\(var\(--steps\) \* 100svh\);/);
+    expect(rule('.landing-steps')).toMatch(/height: calc\(var\(--len\) \* 100svh\);/);
     expect(rule('.landing-stage')).toMatch(/position: fixed;/);
     expect(css).not.toMatch(/scroll-snap-type: y/);
     expect(css).not.toMatch(/\.landing-track|\.landing-stop\b/);
@@ -264,7 +291,7 @@ describe('stepping the slides', () => {
     expect(links.map((a) => a.getAttribute('href'))).toEqual(SECTIONS.map((s) => `#landing-${s.id}`));
     for (const a of within(nav).getAllByRole('link')) expect(STOPS.map((st) => `#${st.anchor}`)).toContain(a.getAttribute('href'));
     expect(links[0].getAttribute('aria-current')).toBe('step');
-    scrollTo(SCREEN);
+    scrollTo(Y('landing-problem'));
     expect(links[1].getAttribute('aria-current')).toBe('step');
     expect(links[1].className).toBe('is-on');
     expect(links[0].getAttribute('aria-current')).toBeNull();
@@ -273,7 +300,7 @@ describe('stepping the slides', () => {
     // under 워크플로우: a small dot per workflow, pointing at its stop; the one up is marked
     const dots = within(nav).getAllByRole('link', { name: /^(Finance|Sourcing|Social media)$/ });
     expect(dots.map((a) => a.getAttribute('href'))).toEqual(['#landing-workflows', '#landing-workflows-sourcing', '#landing-workflows-sns']);
-    scrollTo(SCREEN * 4);
+    scrollTo(Y('landing-workflows-sourcing'));
     expect(links[3].getAttribute('aria-current')).toBe('step');
     expect(dots.map((a) => a.getAttribute('aria-current'))).toEqual([null, 'step', null]);
     expect(nav.textContent).not.toMatch(/\d/);
@@ -398,7 +425,7 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
   it('on the page: every wheel turn moves the live landing on — through the sections, never held at one', () => {
     liveOnClock();
     stubScroll();
-    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 10, configurable: true });
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 20, configurable: true });
     const { container } = landing();
     act(() => void vi.advanceTimersByTime(50));
     const on = () => container.querySelector('.landing-slide.is-on')!.getAttribute('data-slide');
@@ -414,7 +441,7 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
     for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThan(400);
     act(() => void vi.advanceTimersByTime(2000));
     expect(window.scrollY).toBe(450 * 8);
-    expect(on()).toBe('workflows');
+    expect(on()).toBe('org');
     // a pinch-zoom or a modal keeps its wheel
     const zoom = new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, cancelable: true });
     window.dispatchEvent(zoom);
@@ -429,17 +456,17 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
   it('the section names and the workflow tabs glide to their place (the hash stays for back)', () => {
     liveOnClock();
     stubScroll();
-    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 10, configurable: true });
+    Object.defineProperty(document.documentElement, 'scrollHeight', { value: SCREEN * 20, configurable: true });
     landing();
     act(() => void vi.advanceTimersByTime(50));
     const nav = screen.getByRole('navigation', { name: 'Sections' });
     fireEvent.click(within(nav).getByRole('link', { name: 'Pricing' }));
     expect(window.location.hash).toBe('#landing-pricing');
     act(() => void vi.advanceTimersByTime(2000));
-    expect(window.scrollY).toBe(SCREEN * firstStop('pricing'));
+    expect(window.scrollY).toBe(Y('landing-pricing'));
     fireEvent.click(screen.getByTestId('landing-workflow-tab-sns'));
     act(() => void vi.advanceTimersByTime(2000));
-    expect(window.scrollY).toBe(SCREEN * (firstStop('workflows') + 2));
+    expect(window.scrollY).toBe(Y('landing-workflows-sns'));
   });
 
   it('the stacked page keeps plain native scroll — the wheel untouched', () => {
@@ -710,66 +737,71 @@ describe('the acting', () => {
     expect(flowLength(chars, 3)).toBe(all + TEAM_MS + STAMP_MS + APPROVED_AFTER_MS);
     expect(flowStill(chars, 3)).toMatchObject({ typed: chars, pieces: ['done', 'done', 'done'], stamp: 'waiting' });
 
-    // on the card
-    vi.useFakeTimers();
-    const { rerender } = render(
+    // on the card — by the scroll through the workflows' block (2026-11-25): a third per example,
+    // the card's timeline across its third; scrolling back rewinds it
+    const ask = 'Sort out this month’s profit and loss, and see to the supplier payments';
+    const askChars = Array.from(ask).length;
+    const total = flowLength(askChars, 3);
+    /** the block's progress at `ms` into example `at`'s timeline (scene.ts workflowAt, inverted) */
+    const at = (example: number, ms: number) => (example + 0.04 + 0.82 * (ms / total)) / 3;
+    const scrub = (pr: number) => act(() => setProgress('workflows', pr));
+    render(
       <I18nProvider locale="en">
-        <WorkflowAct on acting at={0} stacked={false} />
+        <WorkflowAct on acting stacked={false} />
       </I18nProvider>,
     );
     const card = () => screen.getByTestId('landing-workflow');
     const shown = () => card().querySelector('.landing-workflow-typed')!.textContent;
     const pieces = () => [...card().querySelectorAll('.landing-workflow-pieces li')].map((li) => li.getAttribute('data-state'));
-    const ask = 'Sort out this month’s profit and loss, and see to the supplier payments';
-    const per = charMs(Array.from(ask).length);
+    const per = charMs(askChars);
+    scrub(0);
     expect(shown()).toBe('');
     expect(card().getAttribute('data-state')).toBe('waiting');
-    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + per * 10 + 60));
-    expect(shown()!.length).toBeGreaterThan(5);
-    expect(shown()!.length).toBeLessThan(ask.length);
+    scrub(at(0, per * 10.5));
+    expect(shown()!.length).toBe(10);
     expect(card().querySelector('.landing-caret')).toBeTruthy();
     expect(cues.typing).toBe(true); // the penguin patters while it types
-    // not yet handed out: no words in the empty chips
     expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
-    act(() => void vi.advanceTimersByTime(TYPE_MAX_MS + HOLD_TYPED_MS + ASSIGN_FIRST_MS + 50));
+    const handOut = askChars * per + HOLD_TYPED_MS + ASSIGN_FIRST_MS;
+    scrub(at(0, handOut + 10));
     expect(shown()).toBe(ask);
     expect(cues.typing).toBe(false);
     expect(pieces()).toEqual(['on', 'waiting', 'waiting']);
-    act(() => void vi.advanceTimersByTime(ASSIGN_STEP_MS));
+    scrub(at(0, handOut + ASSIGN_STEP_MS + 10));
     expect(pieces()).toEqual(['done', 'on', 'waiting']);
-    act(() => void vi.advanceTimersByTime(2 * ASSIGN_STEP_MS + TEAM_MS));
+    scrub(at(0, handOut + 3 * ASSIGN_STEP_MS + TEAM_MS + 10));
     expect(pieces()).toEqual(['done', 'done', 'done']);
     expect(card().querySelectorAll('.landing-workflow-gate.is-up')).toHaveLength(2);
-    act(() => void vi.advanceTimersByTime(STAMP_MS + APPROVED_AFTER_MS + 100));
+    scrub(at(0, total - 1));
     expect(card().getAttribute('data-state')).toBe('approved');
     expect(within(card()).getByText('Approved')).toBeTruthy();
     expect(card().querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
+    // scrolling back rewinds it
+    scrub(at(0, per * 3.5));
+    expect(shown()!.length).toBe(3);
+    expect(card().getAttribute('data-state')).toBe('waiting');
     // the buttons come last in the card
     expect(card().lastElementChild!.className).toBe('landing-approval-actions');
     expect(css).toMatch(/\.landing-approval\.is-pressed \.landing-approve \{[^}]*translate: 0 1px;/);
     expect(css).toMatch(/\.landing-approval:not\(\.is-waiting\) \.landing-stamp-mark \{[^}]*opacity: 0\.9;/);
-    // the hand-out reads in the app's colours: going out = accent ring, set down = ok check
     expect(css).toMatch(/\.landing-workflow-pieces li\.is-on \.landing-task-chip \{[^}]*outline-color: var\(--accent\);/);
     expect(css).toMatch(/\.landing-task-chip > \.icon \{[^}]*color: var\(--ok\);/);
-    // the next stop: the next workflow types in from the start
-    rerender(
-      <I18nProvider locale="en">
-        <WorkflowAct on acting at={1} stacked={false} />
-      </I18nProvider>,
-    );
-    act(() => void vi.advanceTimersByTime(50));
+    // the next third: the next workflow types in from the start
+    scrub(1 / 3 + 0.01);
     expect(card().getAttribute('data-workflow')).toBe('sourcing');
     expect(shown()).toBe('');
     expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
+    scrub(0.99);
+    expect(card().getAttribute('data-workflow')).toBe('sns');
     cleanup();
     resetCues();
+    resetProgress();
     // not acting: the finished picture — typed, handed out, waiting for the owner; no patter
     render(
       <I18nProvider locale="en">
-        <WorkflowAct on acting={false} at={0} stacked={false} />
+        <WorkflowAct on acting={false} stacked={false} />
       </I18nProvider>,
     );
-    act(() => void vi.advanceTimersByTime(10_000));
     expect(shown()).toBe(ask);
     expect(card().querySelector('.landing-caret')).toBeNull();
     expect(pieces()).toEqual(['done', 'done', 'done']);
@@ -777,72 +809,95 @@ describe('the acting', () => {
     expect(cues.typing).toBe(false);
   });
 
-  it('the pointing: the wing goes out to price card 1, which lights up while it is there, then back — once', () => {
+  it('the pointing (가격): by the scroll — the wing goes out to price card 1, which lights up while it is there, then back; it rewinds', () => {
     expect(relayAt(0)).toBe(-1);
     expect(relayAt(RELAY.reach)).toBe(0);
     expect(relayHand(-1)).toBe(0);
     expect(relayHand(RELAY.reach)).toBeCloseTo(1);
     expect(relayHand(RELAY.reach + 2000)).toBe(0);
-    vi.useFakeTimers();
     render(
       <I18nProvider locale="en">
         <PricingAct on acting />
       </I18nProvider>,
     );
     const lit = () => [...document.querySelectorAll('.landing-price')].map((li) => li.classList.contains('is-on'));
-    expect(cues.relayAt).toBeGreaterThan(-Infinity);
+    const toMs = (ms: number) => {
+      // invert scene.ts sceneMs for the pricing scene
+      for (let pr = 0; pr <= 1; pr += 0.001) if (sceneMs('pricing', pr) >= ms) return act(() => setProgress('pricing', pr));
+    };
     expect(lit()).toEqual([false, false, false]);
-    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + RELAY.reach + 10));
+    toMs(RELAY.reach + 20);
     expect(lit()).toEqual([true, false, false]);
     expect(document.querySelector('[data-gaze]')).toBe(document.querySelectorAll('.landing-price')[0]);
-    act(() => void vi.advanceTimersByTime(RELAY.step + RELAY.release));
+    toMs(RELAY.reach + RELAY.step + RELAY.release + 20);
     expect(lit()).toEqual([false, false, false]);
-    act(() => void vi.advanceTimersByTime(10_000));
-    expect(lit()).toEqual([false, false, false]); // no repeat
+    toMs(RELAY.reach + 20); // scrolled back: lit again
+    expect(lit()).toEqual([true, false, false]);
     expect(css).toMatch(/\.landing-price\.is-on \{[^}]*outline-color: var\(--accent\);/);
-    // without acting: nothing lit, no cue
     cleanup();
-    resetCues();
+    resetProgress();
     render(
       <I18nProvider locale="en">
         <PricingAct on acting={false} />
       </I18nProvider>,
     );
     expect(lit()).toEqual([false, false, false]);
-    expect(cues.relayAt).toBe(-Infinity);
   });
 
-  it('the gap (왜 지금): the same pointing — the wing goes to the bracket between the two lines, which lights up and is looked at, once', () => {
-    vi.useFakeTimers();
+  it('the gap (왜 지금): by the scroll — the lines draw in, then the wing points at the bracket, which lights up and is looked at', () => {
     render(
       <I18nProvider locale="en">
         <GapAct on acting />
       </I18nProvider>,
     );
     const chart = () => document.querySelector('.landing-gap')!;
-    expect(cues.relayAt).toBeGreaterThan(-Infinity);
+    const team = () => Number(chart().querySelector('.landing-gap-team')!.getAttribute('stroke-dashoffset'));
+    const toMs = (ms: number) => {
+      for (let pr = 0; pr <= 1; pr += 0.001) if (sceneMs('problem', pr) >= ms) return act(() => setProgress('problem', pr));
+    };
+    act(() => setProgress('problem', 0));
+    expect(team()).toBe(1); // not drawn yet
+    toMs(GAP_DRAW_MS / 2);
+    expect(team()).toBeGreaterThan(0.4);
+    expect(team()).toBeLessThan(0.6);
     expect(chart().classList.contains('is-on')).toBe(false);
-    act(() => void vi.advanceTimersByTime(ACT_DELAY_MS + RELAY.reach + 10));
+    toMs(GAP_DRAW_MS + RELAY.reach + 20);
+    expect(team()).toBe(0);
     expect(chart().classList.contains('is-on')).toBe(true);
     expect(document.querySelector('[data-gaze]')).toBe(document.querySelector('.landing-gap-bracket'));
-    act(() => void vi.advanceTimersByTime(RELAY.step + RELAY.release + 10_000));
+    toMs(GAP_DRAW_MS + RELAY.reach + RELAY.step + RELAY.release + 20);
     expect(chart().classList.contains('is-on')).toBe(false);
     // the hand mark sits on the bracket, halfway between the two lines' ends
     const hand = document.querySelector<HTMLElement>('[data-hand]')!;
     expect(hand.style.left).toBe(`${(GAP.bracket / 400) * 100}%`);
     expect(hand.style.top).toBe(`${((GAP.team.y + GAP.sub.y) / 2 / 240) * 100}%`);
     cleanup();
-    resetCues();
+    resetProgress();
     render(
       <I18nProvider locale="en">
         <GapAct on acting={false} />
       </I18nProvider>,
     );
-    expect(cues.relayAt).toBe(-Infinity);
+    expect(team()).toBe(0); // not acting: drawn
   });
 
-  it('the scroll unrolls once the penguin has arrived, on the same clock as the wing; the wave is slow', () => {
-    expect(css).toContain(`transition: --unroll ${UNROLL_MS}ms cubic-bezier(0.33, 1, 0.5, 1) ${ACT_DELAY_MS}ms;`);
+  it('the paper unrolls by the scroll through the AI team (it rewinds); the tug and the wave stay small and slow', () => {
+    render(
+      <I18nProvider locale="en">
+        <ScrollAct on acting onOpen={() => {}} />
+      </I18nProvider>,
+    );
+    const unroll = () => Number((document.querySelector('.landing-scroll') as HTMLElement).style.getPropertyValue('--unroll'));
+    act(() => setProgress('org', 0));
+    expect(unroll()).toBe(0);
+    act(() => setProgress('org', 0.4));
+    expect(unroll()).toBeGreaterThan(0.3);
+    expect(unroll()).toBeLessThan(1);
+    act(() => setProgress('org', 1));
+    expect(unroll()).toBe(1);
+    act(() => setProgress('org', 0.1));
+    expect(unroll()).toBeLessThan(0.3);
+    expect(css).not.toMatch(/transition: --unroll/);
     expect(css).toMatch(/@property --unroll \{[^}]*initial-value: 1;/);
     expect(css).toMatch(/\.landing-scroll-sheet \{[^}]*clip-path: inset\(0 -1px calc\(\(1 - var\(--unroll\)\) \* 100%\) -1px\);/);
     expect(tugAt(-1)).toBe(0);
@@ -850,6 +905,34 @@ describe('the acting', () => {
     expect(WAVE_HZ).toBeLessThan(STROKE_LIMITS.min / 2);
     expect(waveAt(-1)).toEqual({ swing: 0, raise: 0 });
     expect(waveAt(5000).raise).toBe(0);
+  });
+
+  it('a scene holds the screen while the scroll through its block plays its act; the penguin walks over by how far the next has come in', () => {
+    // progress through a block: 0 when its top reaches the top of the screen, 1 when it is about to leave
+    expect(progressOf({ top: 0, height: 2 * SCREEN }, SCREEN)).toBe(0);
+    expect(progressOf({ top: -SCREEN / 2, height: 2 * SCREEN }, SCREEN)).toBe(0.5);
+    expect(progressOf({ top: -SCREEN, height: 2 * SCREEN }, SCREEN)).toBe(1);
+    expect(progressOf({ top: 300, height: 2 * SCREEN }, SCREEN)).toBe(0);
+    // the act runs over most of the hold, from a breath in to a moment before the end
+    expect(sceneMs('hero', 0)).toBe(0);
+    expect(sceneMs('hero', 1)).toBeGreaterThan(0);
+    expect(sceneMs('hero', 0.5)).toBeLessThan(sceneMs('hero', 0.6));
+    // the workflows: a third each
+    expect(workflowAt(0.1, 3).at).toBe(0);
+    expect(workflowAt(0.5, 3).at).toBe(1);
+    expect(workflowAt(0.9, 3).at).toBe(2);
+    // the walk: how far the next block has come up the screen — none while it is below, all at the top
+    const blocks = [
+      { top: -1000, height: 1800 }, // its bottom at 800: the next one is 100px into the screen
+      { top: 800, height: 1800 },
+    ];
+    expect(sceneAt(blocks, SCREEN)).toEqual({ i: 0, handover: 100 / SCREEN });
+    expect(sceneAt([{ top: -100, height: 1800 }, { top: 1700, height: 1800 }], SCREEN)).toEqual({ i: 0, handover: 0 });
+    expect(sceneAt([{ top: -1800, height: 1800 }, { top: 0, height: 1800 }], SCREEN)).toEqual({ i: 1, handover: 0 });
+    // every block is a few screens: long enough for its act (the workflows three examples)
+    for (const sec of SECTIONS) expect(SCENE_LEN[sec.id], sec.id).toBeGreaterThanOrEqual(1.4);
+    expect(SCENE_LEN.workflows).toBeGreaterThan(4);
+    expect(rule('.landing-steps > .landing-slide')).toMatch(/position: sticky;[\s\S]*top: 0;/);
   });
 
   it('every act animation waits for acting — the poster and the stacked page show the finished picture', () => {
@@ -1016,7 +1099,7 @@ describe('the penguin', () => {
     const mascot = () => screen.getByTestId('landing-mascot');
     const before = mascot();
     for (let i = 0; i < SECTIONS.length; i++) {
-      scrollTo(SCREEN * i);
+      scrollTo(Y(`landing-${SECTIONS[i].id}`));
       expect(mascot()).toBe(before);
     }
     expect(container.querySelectorAll('.landing-mascot')).toHaveLength(1);
@@ -1225,7 +1308,7 @@ describe('the site footer (2026-11-14)', () => {
     expect(footer.previousElementSibling!.classList.contains('landing-flow')).toBe(true);
     expect(footer.closest('.landing-flow')).toBeNull();
     for (const st of STOPS) expect(container.querySelector(`#${st.anchor}`), st.anchor).toBeTruthy();
-    expect(document.getElementById('landing-contact')!.getAttribute('data-slide')).toBe('contact');
+    expect(document.getElementById('landing-contact')!.querySelector('[data-slide]')!.getAttribute('data-slide')).toBe('contact');
   });
 
   it('stacked: after the last section; en names the representative in Latin letters', () => {
@@ -1521,7 +1604,7 @@ describe('section 4: three workflows — what runs on its own, where it stops fo
       ['Sourcing', 'false'],
       ['Social media', 'false'],
     ]);
-    scrollTo(SCREEN * 5);
+    scrollTo(Y('landing-workflows-sns'));
     expect(screen.getByRole('tab', { name: 'Social media' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getAllByTestId('landing-workflow')).toHaveLength(1);
   });

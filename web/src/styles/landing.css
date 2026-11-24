@@ -107,19 +107,19 @@
   position: relative;
 }
 
-/* a section with several stops (the workflows): one screen per stop, its slide sticky inside, so
-   the page keeps scrolling while the example changes */
+/* a section (2026-11-25): a block `--len` screens tall (scene.ts SCENE_LEN), its scene sticky inside —
+   the scene holds the screen while the scroll through the block plays its act, then the next one
+   comes in. The page is never held: the scroll is the browser's */
 .landing-steps {
   position: relative;
-  height: calc(var(--steps) * 100vh);
-  height: calc(var(--steps) * 100svh);
+  height: calc(var(--len) * 100vh);
+  height: calc(var(--len) * 100svh);
 }
 
-/* the later stops of such a section — what the section names and the tabs glide to */
+/* the later stops of a section (the workflows' examples, at its thirds — top set inline) — what the
+   section names and the tabs glide to */
 .landing-substop {
   position: absolute;
-  top: calc(var(--n) * 100vh);
-  top: calc(var(--n) * 100svh);
   left: 0;
   width: 1px;
   height: 1px;
@@ -259,7 +259,7 @@
   padding-top: var(--landing-gnb);
 }
 
-/* the workflows' slide stays on the screen through its three screens */
+/* every scene stays on the screen through its block */
 .landing-steps > .landing-slide {
   position: sticky;
   top: 0;
@@ -275,10 +275,6 @@
       animation: landing-rise linear both;
       animation-timeline: view();
       animation-range: entry 0% cover 35%;
-    }
-
-    .landing-steps .landing-copy {
-      animation: none;
     }
   }
 }
@@ -421,16 +417,7 @@
   position: relative;
 }
 
-/* acting: rolled up while away (once the slide has faded), unrolled on entry — UNROLL_MS · ACT_DELAY_MS (acting.ts) */
-.landing-flow.is-acting .landing-scroll {
-  --unroll: 0;
-  transition: --unroll 0s linear 0.3s;
-}
-
-.landing-flow.is-acting .landing-slide.is-on .landing-scroll {
-  --unroll: 1;
-  transition: --unroll 1600ms cubic-bezier(0.33, 1, 0.5, 1) 840ms;
-}
+/* acting: `--unroll` is set inline from the scroll through the section (Acts.tsx ScrollAct — rewinds) */
 
 .landing-scroll-sheet {
   /* the wings hang over the top of the paper — the chart starts below them */

@@ -17,6 +17,8 @@ import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
 import { firstStop, MOVED_ANCHORS, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
 import { DOMAINS, WORKFLOW_EXAMPLES } from './workflows';
+import { resetProgress, setProgress } from './progress';
+import { progressOf, SCENE_LEN } from './scene';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
@@ -48,7 +50,13 @@ function useStep(enabled: boolean) {
     const measure = () => {
       frame = 0;
       setScrolled(window.scrollY > 4);
-      if (enabled) setStep(stepAt(window.scrollY, stopOffsets()));
+      if (!enabled) return;
+      setStep(stepAt(window.scrollY, stopOffsets()));
+      // how far through each section's block (its scene's act plays by it — scene.ts)
+      for (const s of SECTIONS) {
+        const el = document.getElementById(sectionAnchor(s.id));
+        if (el) setProgress(s.id, progressOf(el.getBoundingClientRect(), window.innerHeight));
+      }
     };
     const on = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -60,6 +68,7 @@ function useStep(enabled: boolean) {
       window.removeEventListener('scroll', on);
       window.removeEventListener('resize', on);
       if (frame) cancelAnimationFrame(frame);
+      resetProgress();
     };
   }, [enabled]);
   return { step, scrolled };
@@ -256,12 +265,13 @@ export function Landing() {
   const slide = (id: SectionId, copy: ReactNode, act: ReactNode) => {
     const on = !live || active === id;
     const passed = live && SECTIONS.findIndex((s) => s.id === id) < SECTIONS.findIndex((s) => s.id === active);
-    const stops = SECTIONS.find((s) => s.id === id)?.stops;
+    const section = SECTIONS.find((s) => s.id === id)!;
     const body = (
       <section
         key={id}
-        id={live && stops ? undefined : sectionAnchor(id)}
+        id={live ? undefined : sectionAnchor(id)}
         data-slide={id}
+        data-act={section.act}
         className={`landing-slide is-${id} ${on ? 'is-on' : ''} ${passed ? 'is-passed' : ''}`}
         aria-labelledby={`landing-${id}-title`}
       >
@@ -271,14 +281,23 @@ export function Landing() {
         </div>
       </section>
     );
-    if (!live || !stops) return body;
-    // a section with several stops (the workflows): a screen per stop, the slide sticky inside —
-    // the page keeps scrolling while the example changes at each third (like the reference's film)
+    if (!live) return body;
+    // every section (2026-11-25): a block `len` screens tall, its scene sticky inside — the scene holds
+    // the screen while the scroll through the block plays its act (scene.ts), then the next one comes in
+    const len = SCENE_LEN[id];
     const first = firstStop(id);
+    const subs = section.stops?.slice(1) ?? [];
     return (
-      <div key={id} id={sectionAnchor(id)} className="landing-steps" style={{ '--steps': stops.length } as CSSProperties} data-testid={`landing-steps-${id}`}>
-        {stops.slice(1).map((_, i) => (
-          <span key={i} id={STOPS[first + i + 1].anchor} className="landing-substop" style={{ '--n': i + 1 } as CSSProperties} aria-hidden="true" />
+      <div key={id} id={sectionAnchor(id)} className="landing-steps" style={{ '--len': len } as CSSProperties} data-testid={`landing-steps-${id}`}>
+        {subs.map((_, i) => (
+          <span
+            key={i}
+            id={STOPS[first + i + 1].anchor}
+            className="landing-substop"
+            // where that example's third of the hold starts
+            style={{ top: `calc(${(((i + 1) / (subs.length + 1)) * (len - 1) * 100).toFixed(3)}svh)` }}
+            aria-hidden="true"
+          />
         ))}
         {body}
       </div>
@@ -359,7 +378,7 @@ export function Landing() {
           {t('landing.workflows.examples')} {t('landing.workflows.note')}
         </p>
       </>,
-      <WorkflowAct on={isOn('workflows')} acting={acting} at={active === 'workflows' ? stop.sub : 0} stacked={!live} onPick={(i) => goTo(workflowsAt + i)} />,
+      <WorkflowAct on={isOn('workflows')} acting={acting} stacked={!live} onPick={(i) => goTo(workflowsAt + i)} />,
     ),
     slide(
       'pricing',

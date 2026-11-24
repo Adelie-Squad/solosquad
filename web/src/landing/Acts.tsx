@@ -6,15 +6,17 @@
 // where the stamp lands, `data-gaze` = what the penguin looks at. Without acting (no 3D yet, the
 // stacked page) every act is its plain, finished composition. The content itself never moves with
 // the penguin — no nudge, no shake (user, 2026-11-09).
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, type CSSProperties, type ReactNode } from 'react';
 import { AgentIcon } from '../characters/PenguinIcon';
 import { useI18n, type MessageKey } from '../i18n';
 import { ICON, type IconName } from '../icons';
 import { agentName } from '../lib/agentNames';
 import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
-import { ACT_DELAY_MS, cues, now, RELAY } from './acting';
+import { cues, easeOut, RELAY, UNROLL_MS } from './acting';
 import { flowAt, flowLength, flowStill, type FlowFrame } from './flow';
+import { useProgress } from './progress';
+import { GAP_DRAW_MS, sceneMs, workflowAt } from './scene';
 import { byId } from './catalog';
 import { LandingOrgChart } from './LandingOrgChart';
 import { TIER, TIER_LABEL, WORKFLOW_EXAMPLES, type Domain, type WorkflowExample } from './workflows';
@@ -29,42 +31,22 @@ export interface ActProps {
 /** The three kinds of small business the landing speaks to, as the icons the page draws them with. */
 export const DOMAIN_ICON: Record<Domain, IconName> = { logistics: 'logistics', commerce: 'commerce', it: 'itService' };
 
-/** Starts the wave on the card each time the section comes in (the canvas plays it from `waveAt`). */
-function useWave(on: boolean, acting: boolean) {
-  useLayoutEffect(() => {
-    if (on && acting) cues.waveAt = now() + ACT_DELAY_MS;
-  }, [on, acting]);
-}
-
 /**
  * 시작 (2026-11-24 — "첫번째 섹션은 인포그래픽 제거하고 펭귄만 조금 큰 사이즈로"): no card, only the
  * penguin, a little larger than in the other sections — an empty box the size of the penguin
  * (`data-stand`: its feet at the middle of the bottom edge, staging.ts `standSpot`). It waves. Nothing
  * stands in front of it, so nothing hides it.
  */
-export function StandAct({ on, acting }: ActProps) {
-  useWave(on, acting);
+export function StandAct(_props: ActProps) {
   return <div className="landing-act is-stand" data-content data-stand aria-hidden="true" data-testid="landing-hero-penguin" />;
 }
 
 /**
- * The pointing (the gap chart and the price cards): `cues.relayAt` starts the far wing out to the
- * mark (`data-hand`), and `pointing` is on while the wing is there — the spot it points at lights up
- * and the penguin looks at it (`data-gaze`). Once each time the section comes in.
+ * The pointing (the gap chart and the price cards), by the scene's act ms (scene.ts — the scroll
+ * through the section): the far wing goes out to the mark (`data-hand`), and while it is there the
+ * spot it points at lights up and the penguin looks at it (`data-gaze`). Rewinds with the scroll.
  */
-function usePointing(on: boolean, acting: boolean) {
-  const [pointing, setPointing] = useState(false);
-  useLayoutEffect(() => {
-    if (!on || !acting) {
-      setPointing(false);
-      return;
-    }
-    cues.relayAt = now() + ACT_DELAY_MS;
-    const timers = [window.setTimeout(() => setPointing(true), ACT_DELAY_MS + RELAY.reach), window.setTimeout(() => setPointing(false), ACT_DELAY_MS + RELAY.reach + RELAY.step + RELAY.release)];
-    return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [on, acting]);
-  return pointing;
-}
+export const pointingAt = (ms: number) => ms >= RELAY.reach && ms < RELAY.reach + RELAY.step + RELAY.release;
 
 /** The gap chart's lines (viewBox 400 × 240): one start, the AI team climbing, the subscription staying flat. */
 export const GAP = {
@@ -80,9 +62,16 @@ export const GAP = {
  * points at from beside the chart's right edge. A picture, not data: no axis, no numbers (the copy
  * makes no statistical claim). Four words on it: AI 팀 · 구독만 · 격차 · 지금.
  */
-export function GapAct({ on, acting }: ActProps) {
+export function GapAct({ acting }: ActProps) {
   const { t } = useI18n();
-  const pointing = usePointing(on, acting);
+  const p = useProgress('problem');
+  const ms = acting ? sceneMs('problem', p) : GAP_DRAW_MS + RELAY.reach + RELAY.step + RELAY.release;
+  // the lines draw in first (by the scroll), then the penguin points at the gap
+  const drawn = Math.min(1, ms / GAP_DRAW_MS);
+  const pointing = acting && pointingAt(ms - GAP_DRAW_MS);
+  const line = { pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 - drawn };
+  // the words and the bracket come once the lines are nearly there
+  const shown = Math.max(0, Math.min(1, (drawn - 0.6) / 0.4));
   const { start, team, sub, bracket } = GAP;
   const pct = (x: number, y: number) => ({ left: `${(x / 400) * 100}%`, top: `${(y / 240) * 100}%` });
   return (
@@ -91,14 +80,14 @@ export function GapAct({ on, acting }: ActProps) {
         <div className="landing-gap-plot">
         <svg className="landing-gap-lines" viewBox="0 0 400 240" aria-hidden="true">
           <line className="landing-gap-axis" x1={start.x} y1={208} x2={372} y2={208} />
-          <path className="landing-gap-sub" d={`M${start.x} ${start.y} C 140 174, 230 168, ${sub.x} ${sub.y}`} />
-          <path className="landing-gap-team" d={`M${start.x} ${start.y} C 150 172, 240 128, ${team.x} ${team.y}`} />
-          <path className="landing-gap-bracket" d={`M${bracket - 8} ${team.y + 4} H${bracket} V${sub.y - 4} H${bracket - 8}`} data-gaze={pointing ? '' : undefined} />
+          <path className="landing-gap-sub" d={`M${start.x} ${start.y} C 140 174, 230 168, ${sub.x} ${sub.y}`} {...line} />
+          <path className="landing-gap-team" d={`M${start.x} ${start.y} C 150 172, 240 128, ${team.x} ${team.y}`} {...line} />
+          <path className="landing-gap-bracket" d={`M${bracket - 8} ${team.y + 4} H${bracket} V${sub.y - 4} H${bracket - 8}`} data-gaze={pointing ? '' : undefined} opacity={shown} />
           <circle className="landing-gap-start" cx={start.x} cy={start.y} r={5} />
           <circle className="landing-gap-end is-team" cx={team.x} cy={team.y} r={5} />
           <circle className="landing-gap-end is-sub" cx={sub.x} cy={sub.y} r={5} />
         </svg>
-        <span className="landing-gap-label is-team" style={pct(team.x, team.y)}>
+        <span className="landing-gap-label is-team" style={{ ...pct(team.x, team.y), opacity: shown }}>
           <span className="landing-gap-faces" aria-hidden="true">
             {['finance', 'marketer', 'researcher'].map((id) => (
               <AgentIcon key={id} agent={id} size={20} label="" />
@@ -106,11 +95,11 @@ export function GapAct({ on, acting }: ActProps) {
           </span>
           {t('landing.problem.chart.team')}
         </span>
-        <span className="landing-gap-label is-sub" style={pct(sub.x, sub.y)}>
+        <span className="landing-gap-label is-sub" style={{ ...pct(sub.x, sub.y), opacity: shown }}>
           <ICON.subscription size={18} />
           {t('landing.problem.chart.sub')}
         </span>
-        <span className="landing-gap-label is-gap" style={pct(bracket, (team.y + sub.y) / 2)}>
+        <span className="landing-gap-label is-gap" style={{ ...pct(bracket, (team.y + sub.y) / 2), opacity: shown }}>
           {t('landing.problem.chart.gap')}
         </span>
         <span className="landing-gap-label is-now" style={pct(start.x, 208)}>
@@ -128,14 +117,14 @@ export function GapAct({ on, acting }: ActProps) {
  * the paper's upper-left corner, its wing on the rod's knob, and the paper unrolls downwards.
  * `--unroll` (landing.css) is how far it is down; the rod is 3D.
  */
-export function ScrollAct({ on, acting, onOpen }: ActProps & { onOpen: (at: string | null) => void }) {
-  useLayoutEffect(() => {
-    if (on && acting) cues.unrollAt = now() + ACT_DELAY_MS;
-  }, [on, acting]);
+export function ScrollAct({ acting, onOpen }: ActProps & { onOpen: (at: string | null) => void }) {
+  const p = useProgress('org');
+  // the paper comes down as the page scrolls through the section (rewinds); not acting: unrolled
+  const unroll = acting ? easeOut(Math.min(1, sceneMs('org', p) / UNROLL_MS)) : 1;
   return (
     <div className="landing-act is-scroll" data-content>
       <span className="landing-rod" data-rod aria-hidden="true" />
-      <div className="landing-scroll">
+      <div className="landing-scroll" style={{ '--unroll': unroll } as CSSProperties}>
         <span className="landing-scroll-extent" data-front aria-hidden="true" />
         <div className="landing-scroll-sheet">
           <LandingOrgChart onOpen={onOpen} />
@@ -236,34 +225,16 @@ function WorkflowCard({ w, f, tabs }: { w: WorkflowExample; f: FlowFrame; tabs?:
   );
 }
 
-/** How often the card's timeline re-renders while it plays (ms). */
-const FLOW_TICK_MS = 40;
-
 /**
- * The card's timeline for one stop: starts once the penguin has arrived (`ACT_DELAY_MS`), again at
- * every stop; tells the canvas whether the box is typing (`cues.typing` — the penguin's patter).
- * Not acting: the finished picture.
+ * The card's timeline at `local` (0 … 1 through its third of the workflows' block — scene.ts
+ * `workflowAt`): by the scroll, so it rewinds; tells the canvas whether the box is typing
+ * (`cues.typing` — the penguin's patter). Not acting: the finished picture.
  */
-function useFlow(live: boolean, w: WorkflowExample): FlowFrame {
+function useFlow(live: boolean, w: WorkflowExample, local: number): FlowFrame {
   const { t } = useI18n();
   const chars = Array.from(t(w.ask)).length;
   const pieces = w.split.length;
-  const [ms, setMs] = useState(-1);
-  useEffect(() => {
-    if (!live) return;
-    setMs(-1);
-    // the wall clock (Date — the timers' clock too), not performance: the card only needs the
-    // timeline's step, and the tests drive it with fake timers
-    const start = Date.now() + ACT_DELAY_MS;
-    const end = flowLength(chars, pieces);
-    const id = window.setInterval(() => {
-      const at = Date.now() - start;
-      setMs(at);
-      if (at > end) window.clearInterval(id);
-    }, FLOW_TICK_MS);
-    return () => window.clearInterval(id);
-  }, [live, w.id, chars, pieces]);
-  const f = live ? flowAt(ms, chars, pieces) : flowStill(chars, pieces);
+  const f = live ? flowAt(local * flowLength(chars, pieces), chars, pieces) : flowStill(chars, pieces);
   useLayoutEffect(() => {
     cues.typing = live && f.typing;
   }, [live, f.typing]);
@@ -278,10 +249,16 @@ function useFlow(live: boolean, w: WorkflowExample): FlowFrame {
  * and the approvals follow on the card. The stacked page shows the three cards one under another
  * (no tabs), finished. `onPick` = a tab was pressed (the live page moves to that stop).
  */
-export function WorkflowAct({ on, acting, at, stacked, onPick }: ActProps & { at: number; stacked: boolean; onPick?: (i: number) => void }) {
+export function WorkflowAct({ acting, stacked, onPick }: ActProps & { stacked: boolean; onPick?: (i: number) => void }) {
   const { t } = useI18n();
+  const p = useProgress('workflows');
+  const live = acting && !stacked;
+  // a third of the block per example (scene.ts) — finished while the penguin is not acting yet
+  const sweep = workflowAt(p, WORKFLOW_EXAMPLES.length);
+  const at = stacked ? 0 : sweep.at;
+  const local = live ? sweep.local : 1;
   const w = WORKFLOW_EXAMPLES[at] ?? WORKFLOW_EXAMPLES[0];
-  const f = useFlow(on && acting && !stacked, w);
+  const f = useFlow(live, w, local);
   if (stacked) {
     return (
       <div className="landing-act is-flow is-stacked" data-content data-front>
@@ -326,9 +303,10 @@ const PRICES: { name: MessageKey; body: MessageKey; price: MessageKey; note?: Me
  * its far wing comes round in front of the belly to card 1 (the build price) and rests there a
  * moment, then goes back. Played once each time the section comes in.
  */
-export function PricingAct({ on, acting }: ActProps) {
+export function PricingAct({ acting }: ActProps) {
   const { t } = useI18n();
-  const pointing = usePointing(on, acting);
+  const p = useProgress('pricing');
+  const pointing = acting && pointingAt(sceneMs('pricing', p));
   return (
     <div className="landing-act is-relay is-pricing" data-content data-front data-testid="landing-pricing">
       <ol className="landing-prices">
@@ -354,9 +332,8 @@ export function PricingAct({ on, acting }: ActProps) {
  * 문의: the last card — the product line and the two buttons, centred; the penguin pops up behind its
  * upper right and waves.
  */
-export function SignAct({ on, acting, cta }: ActProps & { cta: ReactNode }) {
+export function SignAct({ cta }: ActProps & { cta: ReactNode }) {
   const { t } = useI18n();
-  useWave(on, acting);
   return (
     <div className="landing-act is-sign" data-content data-front="ground">
       <p className="landing-statement">{t('landing.statement')}</p>
