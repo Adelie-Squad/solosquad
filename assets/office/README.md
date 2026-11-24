@@ -61,7 +61,7 @@ inspection.
 
   | Item | Triangles | Budget |
   |---|---|---|
-  | `penguin` | 7,368 (body + wings 2,576 · front 1,748 · stitches 1,540 · beak 528 · eyes 320 · cheeks 320 · feet 336) | 8k |
+  | `penguin` (v3, 2026-11-25) | 7,384 (skin with the cut colour regions 3,298 · wing paddles 1,418 · eyes, cheeks, beak 1,516 · joint fillets 1,152) | 8k |
   | `desk.set` / `desk.chief` | 2,636 | 3k |
   | `lamp.desk` | 1,228 | 2k |
   | `prop.sofa` / `prop.plant` / `prop.shelf` | 1,880 / 1,804 / 1,664 | 2k |
@@ -74,8 +74,8 @@ inspection.
 | File | Size (meshopt) | Contents |
 |---|---|---|
 | `export/office-kit.glb` | 651 KB | 12 module roots; 29 materials `<key>#<module>`; 8 AO maps `<module>_ao` (WebP; 1024 px for desks, sofa and shelf, 512 for coffee bar, plant and whiteboard, 256 for the lamp) |
-| `export/penguin.glb` | 186 KB | Skinned `penguin` + `penguin_rig` (10 joints); 19 props parented to socket bones with extras `socket`; 7 clips |
-| **Total** | **822 KB** | Budget 5 MB |
+| `export/penguin.glb` | 760 KB | v3 (`penguin_prod.py`): skinned `penguin` + joint fillets `penguin.joint.L/R` (51 morph targets each) + `penguin_rig` (12 joints); 2 WebP maps (`penguin_detail`, `penguin_relief`, 1024 px); 19 props on socket bones with extras `socket`; 7 state clips + 4 standing clips |
+| **Total** | **1.37 MB** | Budget 5 MB |
 
 - **Kit materials** are per module, named `<palette key>#<module>` (contract §4, PR #57): for
   example `clay.furniture#desk.set` and `team_sticker#desk.chief`. Match the palette key with
@@ -90,17 +90,16 @@ inspection.
   does not re-tint it per theme).
 - **No glTF extensions** beyond meshopt, quantization and WebP: specular is left at the glTF
   default, so `KHR_materials_specular` is not emitted.
-- **Clips** (30 fps, frame 0 = the pose that stands for the state, last frame = frame 0):
-
-  | Clip | Length | Motion |
-  |---|---|---|
-  | `idle` | 2 s | slow breath, slight head bob |
-  | `idle_doze` | 2 s | head bowed, nodding, slow breath |
-  | `thinking` | 2 s | looks up, sways side to side, right wing tapping the chin |
-  | `typing` | 1 s | leans in, wings alternate on the desk 3× per second |
-  | `waiting` | 1 s | right wing raised and waving, two small hops |
-  | `done` | 1 s | both wings up, one jump with a squash on landing |
-  | `error` | 2 s | head down, nearly still, heavy breath |
+- **Clips** (v3, 30 fps, seamless loops; `penguin_prod.py` `CLIPS`). Seated (the body bottom on the
+  chair seat, legs forward, soles on the seat): `idle` 2 s breath · `idle_doze` 2 s nodding ·
+  `thinking` 2 s sway, right wing up · `typing` 2 s lean in, wings patter 2× a second each ·
+  `waiting` 2 s right wing up and waving · `done` 1 s hop off the seat, wings up · `error` 2 s
+  slumped. Standing: `stand` 2 s · `walk` 1.07 s waddle · `hop` 1.2 s · `wave` 1.6 s. The motion
+  gate (`penguin_prod_qa.py`) result is `qa/penguin-gate.md`.
+- **Rebuild the penguin** (Blender 5.2, ~1 min with the bake):
+  `$B -b -P assets/office/scripts/export.py -- --out assets/office/export --only penguin`, then
+  `$B -b --factory-startup -P assets/office/scripts/penguin_prod_qa.py -- --skills <rig-motion-clearance scripts> --out assets/office/qa`
+  and `$B -b --factory-startup -P assets/office/scripts/penguin_2d.py` for the 2D values.
 
 ## Measured palette (style frames, sRGB)
 
