@@ -48,7 +48,7 @@ function ko(): PolicyDoc {
   const email = SITE.email;
   const [y, m, d] = SITE.policyEffective.split('-').map(Number);
   return doc(
-    `${SITE.brand}(이하 ‘저희’)는 이 사이트(첫 화면 · 데모 계정 신청 · 데모 로그인 · 데모)에서 받는 개인정보를 「개인정보 보호법」에 따라 처리해요. 이 방침은 어떤 정보를 왜 받고, 얼마 동안 두었다가 어떻게 지우는지, 그리고 정보주체가 어떤 권리를 어떻게 쓸 수 있는지 알려 드려요. 회사 서버에 설치한 ${SITE.brand} 는 그 회사가 직접 운영하므로, 그 안의 정보는 이 방침이 아니라 그 회사의 방침을 따라요.`,
+    `${SITE.company}(이하 ‘저희’)은 ${SITE.brand} 사이트(첫 화면 · 데모 계정 신청 · 데모 로그인 · 데모)에서 받는 개인정보를 「개인정보 보호법」에 따라 처리해요. 이 방침은 어떤 정보를 왜 받고, 얼마 동안 두었다가 어떻게 지우는지, 그리고 정보주체가 어떤 권리를 어떻게 쓸 수 있는지 알려 드려요. 회사 서버에 설치한 ${SITE.brand} 는 그 회사가 직접 운영하므로, 그 안의 정보는 이 방침이 아니라 그 회사의 방침을 따라요.`,
     [
       '1. 개인정보의 처리 목적',
       '2. 처리하는 개인정보의 항목',
@@ -213,7 +213,7 @@ function en(): PolicyDoc {
   const email = SITE.email;
   const date = new Date(`${SITE.policyEffective}T00:00:00Z`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
   return doc(
-    `${SITE.brand} (“we”) handles the personal information it receives on this site (the home page, the demo account request, the demo login and the demo) under Korea’s Personal Information Protection Act. This policy explains what we collect and why, how long we keep it and how we delete it, and what rights you have and how to use them. ${SITE.brand} installed on a company’s own server is run by that company, so the information there follows that company’s policy, not this one.`,
+    `${SITE.company} (“we”), which runs ${SITE.brand}, handles the personal information it receives on this site (the home page, the demo account request, the demo login and the demo) under Korea’s Personal Information Protection Act. This policy explains what we collect and why, how long we keep it and how we delete it, and what rights you have and how to use them. ${SITE.brand} installed on a company’s own server is run by that company, so the information there follows that company’s policy, not this one.`,
     [
       '1. Why we process personal information',
       '2. What we process',
@@ -378,7 +378,7 @@ function zhCN(): PolicyDoc {
   const email = SITE.email;
   const [y, m, d] = SITE.policyEffective.split('-').map(Number);
   return doc(
-    `${SITE.brand}（以下简称“我们”）依照韩国《个人信息保护法》处理在本网站（首页、演示账号申请、演示登录及演示）收到的个人信息。本政策说明我们收集哪些信息、为何收集、保存多久、如何删除，以及您享有哪些权利、如何行使。安装在企业自有服务器上的 ${SITE.brand} 由该企业自行运营，其中的信息适用该企业的政策，而非本政策。`,
+    `${SITE.company}（${SITE.brand} 运营方，以下简称“我们”）依照韩国《个人信息保护法》处理在本网站（首页、演示账号申请、演示登录及演示）收到的个人信息。本政策说明我们收集哪些信息、为何收集、保存多久、如何删除，以及您享有哪些权利、如何行使。安装在企业自有服务器上的 ${SITE.brand} 由该企业自行运营，其中的信息适用该企业的政策，而非本政策。`,
     [
       '1. 个人信息的处理目的',
       '2. 处理的个人信息项目',

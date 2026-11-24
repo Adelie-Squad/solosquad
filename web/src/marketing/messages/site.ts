@@ -6,6 +6,10 @@ import type { Locale } from '../../i18n';
 
 export const SITE = {
   brand: 'SoloSquad',
+  /** 상호 (user, 2026-11-24) — the legal name, shown as is in every language */
+  company: '주식회사 제슬',
+  /** 사업장 주소 (user, 2026-11-24) — shown as is in every language */
+  address: '서울 강남구 언주로134길 18, 5층 라32호',
   /** 대표자 = 개인정보 보호책임자 */
   owner: { ko: '정승원', en: 'Seungwon Jung', 'zh-CN': 'Seungwon Jung' } as Record<Locale, string>,
   email: 'contact@toronchul.app',

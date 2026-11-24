@@ -1304,7 +1304,9 @@ describe('the site footer (2026-11-14)', () => {
     expect(within(footer).getByText(owner)).toBeTruthy();
     expect(within(footer).getByRole('link', { name: 'contact@toronchul.app' }).getAttribute('href')).toBe('mailto:contact@toronchul.app');
     expect(within(footer).getByRole('link', { name: policy }).getAttribute('href')).toBe('/privacy');
-    expect(footer.textContent).toContain(`© ${new Date().getFullYear()} SoloSquad`);
+    expect(footer.textContent).toContain(`© ${new Date().getFullYear()} 주식회사 제슬`);
+    expect(footer.textContent).toContain('주식회사 제슬');
+    expect(footer.textContent).toContain('서울 강남구 언주로134길 18, 5층 라32호');
   };
 
   it('live: after the scroll track — outside the stage, every stop and anchor where it was', () => {

@@ -137,6 +137,7 @@ export const zhCN: Record<MarketingKey, string> = {
   'policy.back': '返回首页',
   'footer.label': '网站信息',
   'footer.owner': '代表 {name}',
+  'footer.address': '地址 {address}',
   'footer.policy': '隐私政策',
   'landing.cta.login': "登录",
   'landing.apply.requests': "你需要什么",

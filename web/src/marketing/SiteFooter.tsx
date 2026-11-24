@@ -15,14 +15,16 @@ export function SiteFooter({ compact = false, className = '' }: { compact?: bool
     <footer className={`site-footer ${compact ? 'is-compact' : ''} ${className}`.trim()} aria-label={t('footer.label')} data-testid="site-footer">
       <p className="site-footer-brand">{SITE.brand}</p>
       <ul className="site-footer-items">
+        <li>{SITE.company}</li>
         <li>{t('footer.owner', { name: SITE.owner[locale] })}</li>
+        <li>{t('footer.address', { address: SITE.address })}</li>
         <li>
           <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
         </li>
         <li>
           <Link to={SITE.policyPath}>{t('footer.policy')}</Link>
         </li>
-        <li className="site-footer-copy">{`${COPYRIGHT} ${new Date().getFullYear()} ${SITE.brand}`}</li>
+        <li className="site-footer-copy">{`${COPYRIGHT} ${new Date().getFullYear()} ${SITE.company}`}</li>
       </ul>
     </footer>
   );

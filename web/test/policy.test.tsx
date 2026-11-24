@@ -84,8 +84,11 @@ describe('/privacy', () => {
     const shape = (l: Locale) => policyFor(l).sections.map((s) => [s.id, s.blocks.map((b) => Object.keys(b)[0])]);
     expect(shape('en')).toEqual(shape('ko'));
     expect(shape('zh-CN')).toEqual(shape('ko'));
-    expect(text('en')).not.toMatch(/[가-힣]/);
-    expect(text('zh-CN')).not.toMatch(/[가-힣]/);
+    // the legal name and address are shown as registered (Hangul) in every language; nothing else is
+    const legal = (t: string) => t.split(SITE.company).join('').split(SITE.address).join('');
+    expect(text('en')).toContain(SITE.company);
+    expect(legal(text('en'))).not.toMatch(/[가-힣]/);
+    expect(legal(text('zh-CN'))).not.toMatch(/[가-힣]/);
   });
 });
 

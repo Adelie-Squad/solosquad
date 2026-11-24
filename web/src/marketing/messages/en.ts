@@ -137,6 +137,7 @@ export const en: Record<MarketingKey, string> = {
   'policy.back': 'Back to the start',
   'footer.label': 'About this site',
   'footer.owner': 'Representative {name}',
+  'footer.address': 'Address {address}',
   'footer.policy': 'Privacy policy',
   'landing.cta.login': "Log in",
   'landing.apply.requests': "What would you like",

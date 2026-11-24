@@ -135,6 +135,7 @@ export const ko = {
   'policy.back': '처음으로',
   'footer.label': '사이트 정보',
   'footer.owner': '대표 {name}',
+  'footer.address': '주소 {address}',
   'footer.policy': '개인정보처리방침',
   'landing.cta.login': "로그인",
   'landing.apply.requests': "무엇을 원하세요",
