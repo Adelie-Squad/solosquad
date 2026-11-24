@@ -15,6 +15,8 @@ KIT_ROOTS = {'room.floor_tile', 'room.wall_left', 'room.wall_back', 'room.corner
 BONES = {'root', 'body', 'head', 'wing.L', 'wing.R', 'foot.L', 'foot.R',
          'socket.head', 'socket.chest', 'socket.hand.R'}
 CLIPS = {'idle', 'idle_doze', 'thinking', 'typing', 'waiting', 'done', 'error'}
+EXTRA_CLIPS = {'stand', 'walk', 'hop', 'wave'}   # standing extras (contract §6)
+JOINTS = {'penguin.joint.L', 'penguin.joint.R'}   # the wing joint fillets (contract §5)
 PROPS = {'prop.chief.crown', 'prop.chief.bowtie', 'prop.product-manager.clipboard',
          'prop.product-designer.beret', 'prop.researcher.glasses', 'prop.data-analyst.chart',
          'prop.frontend-engineer.beanie', 'prop.backend-engineer.headset',
@@ -66,8 +68,15 @@ def main(d):
         errs.append(f'props differ: missing {PROPS - set(props)}, extra {set(props) - PROPS}')
     errs += [f'{n}: no socket extra' for n, s in props.items() if s not in ('head', 'chest', 'hand.R')]
     anims = {a['name'] for a in p['animations']}
-    if anims != CLIPS:
-        errs.append(f'clips differ: missing {CLIPS - anims}, extra {anims - CLIPS}')
+    if not CLIPS <= anims or not anims <= CLIPS | EXTRA_CLIPS:
+        errs.append(f'clips differ: missing {CLIPS - anims}, unknown {anims - CLIPS - EXTRA_CLIPS}')
+    have = {n.get('name') for n in p['nodes']}
+    if not JOINTS <= have:
+        errs.append(f'missing joint fillets {JOINTS - have}')
+    tri = sum(p['accessors'][pr['indices']]['count'] // 3 for m in p['meshes'] if not m['name'].startswith('prop.')
+              for pr in m['primitives'])
+    if tri > 8000:
+        errs.append(f'penguin {tri} triangles > 8k')
     if not any('skin' in n for n in p['nodes']):
         errs.append('penguin mesh node is not skinned')
     size = sum(os.path.getsize(os.path.join(d, f)) for f in ('office-kit.glb', 'penguin.glb'))
@@ -75,7 +84,7 @@ def main(d):
         errs.append(f'total {size} bytes > 5 MB')
     print(f'kit: {len(roots)} modules, {len(k["materials"])} materials, {len(occ)} with AO '
           f'(no AO: {", ".join(no_ao)}), images {sorted(mimes)}')
-    print(f'penguin: {len(joints)} joints, {len(props)} props, clips {sorted(anims)}')
+    print(f'penguin: {tri} triangles, {len(joints)} joints, {len(props)} props, clips {sorted(anims)}')
     print(f'total {size / 1024:.0f} KB')
     for e in errs:
         print('FAIL', e)
