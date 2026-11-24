@@ -99,6 +99,86 @@ margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.804
 ✔ no issues found
 production-readiness score: 100/100 (heuristic)
 
+=== r2-n1-horizontal-en.svg  (1503 bytes)
+viewBox 0 0 611.96 256 · aspect 2.39 (wide)
+colours 1: #111111 · gradients 0 · anchors 84
+margins L21.0 R24.0 T48.0 B44.0 · bbox fill 0.594
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-n1-horizontal-ko.svg  (1531 bytes)
+viewBox 0 0 591.79 256 · aspect 2.312 (wide)
+colours 1: #111111 · gradients 0 · anchors 91
+margins L21.0 R24.0 T48.0 B44.0 · bbox fill 0.592
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-n1-stacked.svg  (2536 bytes)
+viewBox 0 0 306.64 488 · aspect 0.628 (tall)
+colours 1: #111111 · gradients 0 · anchors 150
+margins L23.5 R24.0 T48.0 B24.0 · bbox fill 0.72
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [off-centre-y] Vertical margins differ (top 48.0, bottom 24.0). Remember the optical centre sits slightly above the geometric centre.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 97/100 (heuristic)
+
+=== r2-n1-symbol.svg  (503 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 25
+margins L21.0 R20.6 T48.0 B44.0 · bbox fill 0.537
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-n2-horizontal-en.svg  (1371 bytes)
+viewBox 0 0 611.96 256 · aspect 2.39 (wide)
+colours 1: #111111 · gradients 0 · anchors 73
+margins L32.1 R24.0 T13.9 B24.0 · bbox fill 0.774
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-n2-horizontal-ko.svg  (1399 bytes)
+viewBox 0 0 591.79 256 · aspect 2.312 (wide)
+colours 1: #111111 · gradients 0 · anchors 80
+margins L32.1 R24.0 T13.9 B24.0 · bbox fill 0.771
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-n2-stacked.svg  (2440 bytes)
+viewBox 0 0 306.64 488 · aspect 0.628 (tall)
+colours 1: #111111 · gradients 0 · anchors 139
+margins L23.5 R24.0 T13.9 B24.0 · bbox fill 0.779
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 98/100 (heuristic)
+
+=== r2-n2-symbol.svg  (371 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 14
+margins L32.1 R36.0 T13.9 B24.0 · bbox fill 0.625
+· INFO [off-centre-y] Vertical margins differ (top 13.9, bottom 24.0). Remember the optical centre sits slightly above the geometric centre.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-n3-stacked.svg  (2269 bytes)
+viewBox 0 0 848.22 364.8 · aspect 2.325 (wide)
+colours 1: #111111 · gradients 0 · anchors 131
+margins L17.1 R18.0 T18.0 B18.0 · bbox fill 0.864
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-n3-symbol.svg  (941 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 42
+margins L18.0 R18.0 T58.1 B58.1 · bbox fill 0.47
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-n3-wordmark.svg  (1239 bytes)
+viewBox 0 0 848.22 256 · aspect 3.313 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 72
+margins L17.1 R18.0 T18.0 B18.0 · bbox fill 0.824
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
 === wordmark-en-jeseul.svg  (1230 bytes)
 viewBox 0 0 842 256 · aspect 3.289 (horizontal)
 colours 1: #111111 · gradients 0 · anchors 92

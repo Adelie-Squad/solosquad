@@ -44,6 +44,30 @@ python3 $D/scripts/build_board.py 3960                  # board.html + board.png
   `scripts/draw.py` 심볼과 록업, `scripts/build_board.py` 보드.
 - 획이 맞닿는 곳은 한 외곽선(`path_stroke`)이거나 2 단위 겹치게 그려 이음새가 없다. 키트 단계에서 Inkscape/SVGO 로 합친다(`skills/logo-design/references/production.md`).
 
+## 2차 — 'but why' 감성 (board-2)
+**보기: [`board-2.html`](board-2.html)** · `board-2.png` · `board-2.pdf` (1차 A1 을 비교로 함께 둠)
+
+감성 참고: 남극 다큐멘터리에서 무리를 떠나 먼 산맥으로 혼자 걸어가는 한 마리('but why' 밈). **분위기만** 옮겼다 —
+펭귄 그림 · 영상 스틸 · 밈 이미지와 글자는 쓰지 않았다.
+
+| 안 | 패밀리 | 파일 |
+|---|---|---|
+| N1 다섯 번째 획 | A + B | `svg/r2-n1-symbol.svg` · `r2-n1-horizontal-ko.svg` · `r2-n1-horizontal-en.svg` · `r2-n1-stacked.svg` |
+| N2 왜 — 능선 물음표 | A + B | `svg/r2-n2-symbol.svg` · `r2-n2-horizontal-ko.svg` · `r2-n2-horizontal-en.svg` · `r2-n2-stacked.svg` |
+| N3 제슬 ———— 지평선 | C | `svg/r2-n3-wordmark.svg` · `r2-n3-stacked.svg` · `r2-n3-symbol.svg`(작은 크기 컷) |
+| 색 | D1 · D2 | `svg/colour/r2-n{1,2,3}-d{1,2}.svg` |
+
+스케치 `sketch-2/`: 무리도 기운 획(n1-3) · 지평선과 점과 산(n2-3) · JES L 이탈(n4-1) 은 탈락.
+```sh
+python3 $D/scripts/draw_round2.py sketch     # sketch-2/
+python3 $D/scripts/draw_round2.py            # svg/r2-* + svg/colour/r2-*
+python3 $S/preview_sheet.py $D/svg/a1-symbol.svg $D/svg/r2-n1-symbol.svg $D/svg/r2-n2-symbol.svg $D/svg/r2-n3-symbol.svg \
+  --name 제슬 --brand-color "#111111" --refs-generic 8 -o $D/tests/round2-symbols-test.html
+python3 $S/preview_sheet.py $D/svg/r2-n3-wordmark.svg $D/svg/r2-n1-horizontal-ko.svg $D/svg/r2-n2-horizontal-ko.svg \
+  --name 제슬 --brand-color "#111111" --refs-generic 6 -o $D/tests/round2-wordmarks-test.html
+python3 $D/scripts/build_board2.py 4300      # board-2.html/png/pdf
+```
+
 ## 테스트 결과
 - svg_audit: SVG 17개 모두 FAIL · WARN 0.
 - 테스트 시트(`tests/`): A1 은 16px 에서도 J 음각이 남는다. A2 는 16px 에서 별표처럼 뭉칠 수 있다. C1 '슬' 컷은 24px 아래에서 뭉친다.
