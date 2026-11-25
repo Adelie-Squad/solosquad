@@ -137,6 +137,8 @@ ARM_CREASE = 0.008              # the white stops this far (body field) up the w
                                 # 0.012 the white is back up to the joint, off the valley floor)
 WING_ROUND = 0.012             # softness of the underside panel's corners
 WING_RIM = 0.005                # ...and this far in from the rim, so the rim stays black
+ROOT_TAPER = 0.006              # round 13: the rim inset widens by this much towards the root (wing_rim)
+ROOT_U0, ROOT_U1 = -0.03, 0.05  # ... fully at u <= ROOT_U0, not at all past ROOT_U1
 WING_K = 0.030                  # shoulder crease softness (round 8: 0.045 -> 0.030)
 WING_K_U = (0.0, 0.035)         # ...faded out along the wing between these u (round 8: (0.02, 0.09) - a
                                 # 9 cm web of shared skin down the wing root read as a muscle)
@@ -187,7 +189,8 @@ WELT_SKIRT = 0.0                # no tuck: a folded skirt shaded the band edges 
 WELT_SMOOTH = 6                 # round 11b: smoothing passes of the band along the loop
 WELT_EDGE_MIN = 1.0             # round 11b thinned the band at the wing's white edge (0.25); a
                                 # full fillet must not pinch there (round 12)
-WELT_WHITE_ROWS = 3             # round 12: fillet rows next to the wing that carry its white face
+WELT_WHITE_ROWS = 7             # round 12: fillet rows next to the wing that carry its white face
+WELT_CORNER = 0.0015            # round 13: radius of the fillet white's corners (smin of rows and face)
 WELT_TRIM = 0.00005             # the fillet ends where it is this close to the body / the wing
 WELT_STATS = {}
 WELT_RAISE = tuple(range(-8, 121, 8))
@@ -1174,9 +1177,20 @@ def leather_material(name, base_key, inset, region=False, piping=0.0, thread=Non
             tc.object = frame_obj
             sep = T.node('ShaderNodeSeparateXYZ')
             T.link(tc.outputs['Object'], sep.inputs[0])
-            face = T.math('GREATER_THAN', T.math('SUBTRACT', T.math('MULTIPLY', sep.outputs['Z'], -1.0),
-                                                 WING_RIM), 0.0)
-            white = T.math('MULTIPLY', white, face)
+            # round 13: white = smin(rows, face, WELT_CORNER) > 0 - the white's corners where the row
+            # cut meets the face's rim line are rounded (they were a sharp white tip)
+            mr = T.node('ShaderNodeMapRange', interpolation_type='SMOOTHERSTEP')
+            T.link(sep.outputs['X'], mr.inputs['Value'])
+            mr.inputs['From Min'].default_value = ROOT_U0
+            mr.inputs['From Max'].default_value = ROOT_U1
+            mr.inputs['To Min'].default_value = WING_RIM + ROOT_TAPER
+            mr.inputs['To Max'].default_value = WING_RIM
+            face_t = T.math('SUBTRACT', T.math('MULTIPLY', sep.outputs['Z'], -1.0), mr.outputs['Result'])
+            kk = WELT_CORNER
+            hh = T.math('DIVIDE', T.math('MAXIMUM', T.math('SUBTRACT', kk, T.math('ABSOLUTE', T.math('SUBTRACT', d, face_t))),
+                                         0.0), kk)
+            sm = T.math('SUBTRACT', T.math('MINIMUM', d, face_t), T.math('MULTIPLY', T.math('MULTIPLY', hh, hh), kk * 0.25))
+            white = T.math('GREATER_THAN', sm, 0.0)
         feet = T.math('GREATER_THAN', T.attr('feet'), 0.0)
         rgb = T.node('ShaderNodeRGB')
         rgb.name = 'body_color'          # identity_v3_renders swaps it for the evening body tone
@@ -1227,7 +1241,7 @@ HI = (0.36, 0.20, Z1 + 0.02)
 PIECE_MAT = {'eye': 1, 'cheek': 2, 'beak': 3}
 
 
-def wing_under_piece(V, side):
+def wing_under_piece(V, side, taper=True):
     """White underside of the sewn-on wing piece (> 0 inside): the inner face, 5 mm in from the
     rim, from an arc top that sits inside the body (PIECE_CUT) - so on the visible wing it reaches
     the root. No crease cut: the piece meets the body as a separate surface."""
@@ -1235,7 +1249,16 @@ def wing_under_piece(V, side):
     c = PIECE_CUT + ARM_AU
     qe = np.stack([(q[:, 0] - c) / ARM_AU, q[:, 1] / ARM_AV], 1)
     arc = (1 - np.linalg.norm(qe, axis=1)) * min(ARM_AU, ARM_AV)
-    return _smin(-q[:, 2] - WING_RIM, arc, WING_ROUND)
+    rim = wing_rim(q[:, 0]) if taper else WING_RIM
+    return _smin(-q[:, 2] - rim, arc, WING_ROUND)
+
+
+def wing_rim(u):
+    """How far in from the paddle's rim the white face starts, along the wing (u from the hinge):
+    WING_RIM, widening by ROOT_TAPER towards the root, so the white face narrows into the joint in a
+    curve instead of meeting it in a sharp corner (round 13, 2026-11-25: "날개 뿌리 모서리 다듬어").
+    The body meets the paddle at u -0.033 ... +0.040 over the hinge range, so the taper spans it."""
+    return WING_RIM + ROOT_TAPER * (1 - _smootherstep(ROOT_U0, ROOT_U1, u))
 
 
 def build_wing_piece(side):
@@ -1254,7 +1277,11 @@ def build_wing_piece(side):
     blend = _smoothstep(-0.003, -0.006, d)
     d = d + blend * (_smooth_values(d, edges, SEAM_SMOOTH) - d)
     th_tab, s_tab = _wing_rim_table()
-    edge = _zero_loop(V, Fq, d)
+    # round 13: the thread's dash spacing follows round 12's (untapered) edge loop, so rounding the
+    # root corners moves no dash along the rest of the wing
+    d12 = wing_under_piece(V, side, taper=False)
+    d12 = d12 + _smoothstep(-0.003, -0.006, d12) * (_smooth_values(d12, edges, SEAM_SMOOTH) - d12)
+    edge = _zero_loop(V, Fq, d12)
     if edge is not None:
         _, s_e, tot = _polyline_distance(V, edge)
         phase, nseam = s_e / tot, max(1, round(tot / PERIOD_WING))
@@ -1488,8 +1515,16 @@ def build_welt(col, side, mat, name):
     # clean row line of the fillet itself. (White ending in the fillet's middle put white where the
     # body had been - white check up to 1017 px; an all-black fillet left the edge to the
     # near-tangent overlap of two meshes - a sawtooth.)
-    rows = np.arange(m)
-    sd = np.repeat(np.where(rows >= m - WELT_WHITE_ROWS, 0.02, -0.02)[None, :], n, 0).ravel()
+    # round 13: a signed distance (m, along each profile, rest pose) from the cut between the black
+    # rows and the WELT_WHITE_ROWS white ones, so the shader can round the white's corners where that
+    # cut meets the wing's rim line (smin, WELT_CORNER) - round 12 stepped +-0.02 per row and the two
+    # lines met in a sharp white tip at the root of a raised wing ("날개 뿌리 모서리 다듬어")
+    P_ = base.reshape(n, m, 3)
+    cum = np.concatenate([np.zeros((n, 1)), np.cumsum(np.linalg.norm(np.diff(P_, axis=1), axis=2), axis=1)], 1)
+    j = m - WELT_WHITE_ROWS
+    sd = cum - 0.5 * (cum[:, j - 1:j] + cum[:, j:j + 1])
+    sd[cum[:, -1] < 1e-6] = -0.02                      # columns buried in the body
+    sd = sd.ravel()
     attrs = {'seam_d': sd, 'line_d': np.ones(len(V)), 'stitch_on': np.zeros(len(V)),
              'seam_c': np.ones(len(V)), 'seam_sn': np.zeros(len(V)), 'seam_n': np.ones(len(V)),
              'feet': np.full(len(V), -1.0)}

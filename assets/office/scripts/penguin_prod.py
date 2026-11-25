@@ -29,7 +29,8 @@ seams; this script turns it into the web asset (≤ 8k triangles) and keeps what
   shading ring where it meets the body; its white is the draft's per-pixel rule — the rows next to
   the wing (attribute `_joint_white`) AND inside the wing's white face in the posed wing's frame,
   tested in the shader from the wing bone (attribute `_joint_side`, extras `joint_pivot` ·
-  `joint_ew` · `joint_rim`) — so it continues the wing's own white edge in every pose; its loop
+  `joint_eu` · `joint_ev` · `joint_ew` · `joint_rim` · `joint_arc` · `joint_taper` · `joint_corner`:
+  penguin_v3.wing_under_piece and round 13's rounded root corners) — so it continues the wing's own white edge in every pose; its loop
   angles are snapped onto that edge. Material `penguin.body#joint` (painted as `penguin.body`).
 * **Rig and clips** follow the contract: bones root · body · head · wing.L/R · leg.L/R ·
   foot.L/R + sockets; the wing is a hinge (raise ≤ 112°, lowered ≤ 8°, twist ±15°, Limit Rotation
@@ -53,12 +54,11 @@ import penguin_v3 as pv3
 # ---------------------------------------------------------------------------
 # Budget (contract §8: penguin 8k triangles)
 # ---------------------------------------------------------------------------
-SKIN_TRIS = 1800          # decimation target for the body skin before the colour cuts
+SKIN_TRIS = 1600          # decimation target for the body skin before the colour cuts
 WING_TRIS = 260           # ... per wing piece
 REFINE_PASSES = 1         # subdivisions of the triangles that straddle a colour edge
 REFINE_BAND = 0.0         # ... a triangle is refined when |field| < this x its longest edge (0 = only where it crosses)
-JOINT_N, JOINT_M = 40, 9  # fillet resolution: points round the wing x rows across (draft 160 x 21)
-JOINT_WHITE_ROWS = 0.5       # face rows on the wing's half of the fillet carry its white (the colour edge sits in the crease, where the two surfaces meet: a black row lying near-tangent over the coarse white wing face showed as a sawtooth)
+JOINT_N, JOINT_M = 64, 9  # fillet resolution: points round the wing x rows across (draft 160 x 21)
 TEX = 1024                # baked texture size (contract: <= 1024 px)
 UV_SCALE = 0.94           # the islands live in u < 0.94; the strip beyond holds the plain patches
 PATCH_BODY = (0.97, 0.03)   # uv of a plain texel: multiplier 1, flat normal
@@ -445,6 +445,7 @@ def build_low(col, name='penguin'):
 
 
 _ORIG_ROOT_LOOP = pv3.wing_root_loop
+JOINT_CUT = 0.0           # where the fillet's white rows start: -1 body edge, 0 midline, 1 wing edge
 JOINT_MATERIAL = 'penguin.body#joint'
 JOINT_NORMALS = {}        # joint object name -> {'pos': basis positions, 'keys': {key name: normals}}
 JOINT_ROOT_U = 0.03       # where along the wing (from the hinge) the fillet meets it
@@ -639,12 +640,26 @@ def build_joints(col, mesh_ob):
             wterm = pv3.wing_under_piece(Jc, side)
             wterm[np.abs(wterm) < 2e-4] = 0.0                     # the snapped columns sit on the edge
             wterm[~pv3.WELT_STATS['exits']] = -1.0
-            # ... and the rows: the wing's side of the crease (the draft: the outer rows)
-            rterm = (np.arange(m) - (m - 1 - JOINT_WHITE_ROWS - 0.5)) * 0.004
-            # the white per pixel is the draft's rule: these rows AND inside the wing's white face in
-            # the posed wing's own frame - the web computes the second half in the shader from the
-            # wing bone (office/joint.ts); the mesh carries the row term and its side
-            field = np.repeat(rterm[None, :], n, 0)
+            # ... and the rows: a signed distance (m, along each profile, rest pose) from the cut where
+            # the draft's white rows start (penguin_v3 round 13: WELT_WHITE_ROWS of WELT_M_R13 rows,
+            # the same place along the profile at this resolution), so the shader can round the
+            # white's corners where that cut meets the rim (smin, WELT_CORNER)
+            P_ = np.array([v.co[:] for v in me.vertices]).reshape(n, m, 3)
+            cum = np.concatenate([np.zeros((n, 1)), np.cumsum(np.linalg.norm(np.diff(P_, axis=1), axis=2), axis=1)], 1)
+            # the cut sits at the fillet's midline (the crease bisector): at web resolution the fillet's
+            # wing half lies near-tangent over the coarse wing, so a cut further out left black fillet
+            # rows interleaving with the wing's white (a sawtooth); from the midline the fillet's white
+            # covers that overlap and its rounded corners are the white's end
+            cut = (m - 1) / 2 + JOINT_CUT * (m - 1) / 2
+            i0 = min(int(np.floor(cut)), m - 2)
+            s_cut = cum[:, i0] + (cut - i0) * (cum[:, i0 + 1] - cum[:, i0])
+            field = cum - s_cut[:, None]
+            # columns buried in the body (no profile) take their nearest live neighbour's rows, so the
+            # field runs on smoothly round the loop (a -0.02 there stepped the white's end per column)
+            live = np.nonzero(cum[:, -1] > 1e-6)[0]
+            for i in np.nonzero(cum[:, -1] <= 1e-6)[0]:
+                k = live[np.argmin(np.minimum(np.abs(live - i), n - np.abs(live - i)))]
+                field[i] = field[k]
             sd = me.attributes.get('_joint_side') or me.attributes.new('_joint_side', 'FLOAT', 'POINT')
             sd.data.foreach_set('value', np.full(n * m, 1.0 if side == 'L' else -1.0, np.float32))
             _ = wterm
@@ -668,6 +683,16 @@ def build_joints(col, mesh_ob):
             ob['joint_pivot'] = [float(piv_[0]), float(piv_[2]), float(-piv_[1])]
             ob['joint_ew'] = [float(ax2[2][0]), float(ax2[2][2]), float(-ax2[2][1])]
             ob['joint_rim'] = float(pv3.WING_RIM)
+            # the rest of the wing's white rule (penguin_v3.wing_under_piece, round 13): the root arc
+            # (centre u, semi-axes) and the rounding radius where it meets the rim
+            ob['joint_eu'] = [float(ax2[0][0]), float(ax2[0][2]), float(-ax2[0][1])]
+            ob['joint_ev'] = [float(ax2[1][0]), float(ax2[1][2]), float(-ax2[1][1])]
+            ob['joint_arc'] = [float(pv3.PIECE_CUT + pv3.ARM_AU), float(pv3.ARM_AU), float(pv3.ARM_AV),
+                               float(pv3.WING_ROUND)]
+            # round 13: the rim inset widens towards the root (penguin_v3.wing_rim), and the fillet's
+            # white rounds its corners where its row cut meets the rim (WELT_CORNER)
+            ob['joint_taper'] = [float(pv3.ROOT_TAPER), float(pv3.ROOT_U0), float(pv3.ROOT_U1)]
+            ob['joint_corner'] = float(pv3.WELT_CORNER)
             out.append(ob)
     finally:
         pv3.WELT_N, pv3.WELT_M = keep
