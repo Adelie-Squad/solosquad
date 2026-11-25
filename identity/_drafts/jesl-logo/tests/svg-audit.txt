@@ -179,6 +179,142 @@ margins L17.1 R18.0 T18.0 B18.0 · bbox fill 0.824
 · INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
 production-readiness score: 99/100 (heuristic)
 
+=== r3-a-horizontal-en.svg  (2428 bytes)
+viewBox 0 0 598.02 256 · aspect 2.336 (wide)
+colours 1: #111111 · gradients 0 · anchors 88
+margins L24.0 R33.4 T40.4 B48.4 · bbox fill 0.591
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-a-horizontal-ko.svg  (2838 bytes)
+viewBox 0 0 541.26 256 · aspect 2.114 (wide)
+colours 1: #111111 · gradients 0 · anchors 103
+margins L24.0 R32.2 T40.4 B48.4 · bbox fill 0.585
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-a-stacked.svg  (4490 bytes)
+viewBox 0 0 259.89 420 · aspect 0.619 (tall)
+colours 1: #111111 · gradients 0 · anchors 168
+margins L25.9 R25.9 T40.4 B23.7 · bbox fill 0.678
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [complexity] 168 anchor points (library median 75.0, p75 155.0). Check every point earns its place.
+· INFO [off-centre-y] Vertical margins differ (top 40.4, bottom 23.7). Remember the optical centre sits slightly above the geometric centre.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 96/100 (heuristic)
+
+=== r3-a-symbol-small.svg  (808 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 23
+margins L24.0 R24.0 T39.7 B47.7 · bbox fill 0.535
+· INFO [off-centre-y] Vertical margins differ (top 39.7, bottom 47.7). Remember the optical centre sits slightly above the geometric centre.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-a-symbol.svg  (803 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 23
+margins L24.0 R24.0 T40.4 B48.4 · bbox fill 0.531
+· INFO [off-centre-y] Vertical margins differ (top 40.4, bottom 48.4). Remember the optical centre sits slightly above the geometric centre.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-b-horizontal-en.svg  (2492 bytes)
+viewBox 0 0 598.02 256 · aspect 2.336 (wide)
+colours 1: #111111 · gradients 0 · anchors 90
+margins L36.4 R33.4 T20.0 B28.0 · bbox fill 0.718
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-b-horizontal-ko.svg  (2902 bytes)
+viewBox 0 0 541.26 256 · aspect 2.114 (wide)
+colours 1: #111111 · gradients 0 · anchors 105
+margins L36.4 R32.2 T20.0 B28.0 · bbox fill 0.71
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-b-stacked.svg  (4548 bytes)
+viewBox 0 0 259.89 420 · aspect 0.619 (tall)
+colours 1: #111111 · gradients 0 · anchors 170
+margins L27.4 R27.4 T20.0 B23.7 · bbox fill 0.707
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [complexity] 170 anchor points (library median 75.0, p75 155.0). Check every point earns its place.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 97/100 (heuristic)
+
+=== r3-b-symbol-small.svg  (881 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 25
+margins L36.0 R36.0 T20.0 B28.0 · bbox fill 0.584
+· INFO [off-centre-y] Vertical margins differ (top 20.0, bottom 28.0). Remember the optical centre sits slightly above the geometric centre.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-b-symbol.svg  (867 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 25
+margins L36.4 R36.4 T20.0 B28.0 · bbox fill 0.581
+· INFO [off-centre-y] Vertical margins differ (top 20.0, bottom 28.0). Remember the optical centre sits slightly above the geometric centre.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-c-horizontal-en.svg  (2711 bytes)
+viewBox 0 0 598.02 256 · aspect 2.336 (wide)
+colours 1: #111111 · gradients 0 · anchors 100
+margins L24.0 R33.4 T75.4 B79.4 · bbox fill 0.357
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-c-horizontal-ko.svg  (3121 bytes)
+viewBox 0 0 541.26 256 · aspect 2.114 (wide)
+colours 1: #111111 · gradients 0 · anchors 115
+margins L24.0 R32.2 T75.4 B78.2 · bbox fill 0.358
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r3-c-stacked.svg  (4771 bytes)
+viewBox 0 0 259.89 420 · aspect 0.619 (tall)
+colours 1: #111111 · gradients 0 · anchors 180
+margins L25.9 R25.9 T75.4 B23.7 · bbox fill 0.611
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [complexity] 180 anchor points (library median 75.0, p75 155.0). Check every point earns its place.
+· INFO [off-centre-y] Vertical margins differ (top 75.4, bottom 23.7). Remember the optical centre sits slightly above the geometric centre.
+· INFO [tall] Tall proportions (<0.8:1) are awkward in headers and app icons; consider a squarer symbol.
+production-readiness score: 96/100 (heuristic)
+
+=== r3-c-symbol-small.svg  (1083 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 35
+margins L24.0 R24.0 T74.0 B82.0 · bbox fill 0.317
+· INFO [off-centre-y] Vertical margins differ (top 74.0, bottom 82.0). Remember the optical centre sits slightly above the geometric centre.
+· INFO [small-in-canvas] The mark occupies little of its square canvas; tighten the viewBox or scale up.
+production-readiness score: 98/100 (heuristic)
+
+=== r3-c-symbol.svg  (1086 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #111111 · gradients 0 · anchors 35
+margins L24.0 R24.0 T75.4 B83.4 · bbox fill 0.309
+· INFO [off-centre-y] Vertical margins differ (top 75.4, bottom 83.4). Remember the optical centre sits slightly above the geometric centre.
+· INFO [small-in-canvas] The mark occupies little of its square canvas; tighten the viewBox or scale up.
+production-readiness score: 98/100 (heuristic)
+
+=== r3-wordmark-en.svg  (1302 bytes)
+viewBox 0 0 578 222 · aspect 2.604 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 65
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.786
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r3-wordmark-jeseul.svg  (2135 bytes)
+viewBox 0 0 800 234 · aspect 3.419 (horizontal)
+colours 1: #111111 · gradients 0 · anchors 99
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.808
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r3-wordmark-ko.svg  (1859 bytes)
+viewBox 0 0 537.04 254 · aspect 2.114 (wide)
+colours 1: #111111 · gradients 0 · anchors 80
+margins L18.0 R18.0 T18.0 B18.0 · bbox fill 0.801
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
 === wordmark-en-jeseul.svg  (1230 bytes)
 viewBox 0 0 842 256 · aspect 3.289 (horizontal)
 colours 1: #111111 · gradients 0 · anchors 92

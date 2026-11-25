@@ -68,6 +68,28 @@ python3 $S/preview_sheet.py $D/svg/r2-n3-wordmark.svg $D/svg/r2-n1-horizontal-ko
 python3 $D/scripts/build_board2.py 4300      # board-2.html/png/pdf
 ```
 
+## 3차 — ㅈ + ㅅ 을 한 줄의 둥근 선으로 (board-3)
+**보기: [`board-3.html`](board-3.html)** · `board-3.png` · `board-3.pdf`
+
+요청: "로고는 ㅈ이랑 ㅅ 초성을 활용하되, 메타 로고 같은 느낌으로 디자인해줘. 선인데 둥근 형태". 메타 로고에서는 성질만 가져왔다
+(끊기지 않는 한 줄, 고른 굵기, 둥근 끝, 한 번의 겹침). 무한대 · 뫼비우스 모양은 쓰지 않았다.
+
+| 안 | 파일 |
+|---|---|
+| R3-A 돌아 오르는 ㅈ | `svg/r3-a-symbol.svg` · `-symbol-small.svg` · `-horizontal-ko.svg` · `-horizontal-en.svg` · `-stacked.svg` |
+| R3-B 꼬아 오르는 ㅈ | `svg/r3-b-*` (같은 구성) |
+| R3-C ㅈㅅ 한 줄 | `svg/r3-c-*` (같은 구성) |
+| 둥근 워드마크 | `svg/r3-wordmark-ko.svg` · `r3-wordmark-en.svg` · `r3-wordmark-jeseul.svg` |
+| 색 | `svg/colour/r3-{a,b,c}-k1.svg`(주홍 단색) · `-k2.svg`(먹 + 주홍 나눔) |
+
+- `scripts/pen.py`: 직선 + 원호 중심선을 둥근 끝의 외곽선 하나로 바꾼다(원호의 오프셋은 정확한 원호).
+- 스케치 `sketch-3/` 17개: 다리가 교차하는 고리형(s1 · s3 · s6 · s7 · s8)은 인식 리본 꼴이라 탈락, s5 삼각형 · s4 지그재그 · i3c 기운 가로획도 탈락.
+```sh
+python3 $D/scripts/draw_round3.py sketch   # sketch-3/
+python3 $D/scripts/draw_round3.py          # svg/r3-* + svg/colour/r3-*
+python3 $D/scripts/build_board3.py 4420    # board-3.html/png/pdf
+```
+
 ## 테스트 결과
 - svg_audit: SVG 17개 모두 FAIL · WARN 0.
 - 테스트 시트(`tests/`): A1 은 16px 에서도 J 음각이 남는다. A2 는 16px 에서 별표처럼 뭉칠 수 있다. C1 '슬' 컷은 24px 아래에서 뭉친다.
