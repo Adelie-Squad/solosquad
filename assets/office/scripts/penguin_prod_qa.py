@@ -83,6 +83,13 @@ def build():
         if ob.name.startswith('prop.'):
             bpy.data.objects.remove(ob, do_unlink=True)
     groups(mesh)
+    # the fillets: only their body half is a pair for the wing tips - the wing half is sewn onto the
+    # wing and moves with it (a seam, not a pair - skills/rig-motion-clearance §1)
+    for j in joints:
+        m = j['welt_m']
+        n = len(j.data.vertices) // m
+        vg = j.vertex_groups.new(name='body_half')
+        vg.add([i * m + r for i in range(n) for r in range((m + 1) // 2)], 1.0, 'REPLACE')
     kcol = lib.collection('kit')
     desk = kit.desk_set(kcol)
     desk.name = 'desk.set'
@@ -138,9 +145,9 @@ def main():
     B = bpy.app.binary_path
     moving = 'penguin:wing_tip_L,penguin:wing_tip_R'
     against = ('penguin:head,penguin:body,penguin:face,penguin:feet,penguin:wing_tip_L,penguin:wing_tip_R,'
-               'penguin.joint.L,penguin.joint.R,desk.set,card')
+               'penguin.joint.L:body_half,penguin.joint.R:body_half,desk.set,card')
     lines = ['# Production penguin — motion gate', '',
-             f'clearance_check: wing tips vs head · body · face · feet · other tip · both fillets · desk.set '
+             f"clearance_check: wing tips vs head · body · face · feet · other tip · the fillets' body halves · desk.set "
              f'(seated clips) · card plane (standing clips); min {MIN_CLEARANCE} m, 2 subframes.',
              'motion_path: wing.L / wing.R tips + head top; pop > 2.5x median spacing, kink > 60 deg.',
              f'hinge limits: raise -{pp.LOWER_MAX}..{pp.RAISE_MAX} deg, twist +-{pp.TWIST_MAX} deg.', '',

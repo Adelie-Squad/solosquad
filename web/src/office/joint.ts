@@ -75,10 +75,16 @@ const sign = (v: number, digits: number) => `${v < 0 ? '-' : '+'}${String(Math.a
 /** What the fillet shader needs of both wings: each wing's bone index in the skeleton and its rest frame (rig space). */
 export interface JointFrames {
   idx: Record<Side, number>;
-  /** The wing's face-normal distance as a linear function of the fillet's bind-space position: w = a · p + c. */
-  a: Record<Side, THREE.Vector3>;
-  c: Record<Side, number>;
+  /** The wing-local (u, v, w) of the fillet's bind-space position p: m · p + c (rows u, v, w). */
+  m: Record<Side, THREE.Matrix3>;
+  c: Record<Side, THREE.Vector3>;
   rim: number;
+  /** The root arc: centre u, semi-axes (u, v), and the rounding radius where it meets the rim. */
+  arc: THREE.Vector4;
+  /** The rim inset's widening towards the root: (extra, u0, u1) — penguin_v3 `wing_rim`. */
+  taper: THREE.Vector3;
+  /** The radius the fillet's white corners are rounded by (its row cut against the rim). */
+  corner: number;
 }
 
 /**
@@ -105,37 +111,59 @@ export function installJointWhite(mesh: THREE.Mesh, frames: JointFrames): void {
         uJointWhite: { value: JOINT_WHITE },
         uJointIdxL: { value: frames.idx.L },
         uJointIdxR: { value: frames.idx.R },
-        uJointAL: { value: frames.a.L },
-        uJointAR: { value: frames.a.R },
+        uJointML: { value: frames.m.L },
+        uJointMR: { value: frames.m.R },
         uJointCL: { value: frames.c.L },
         uJointCR: { value: frames.c.R },
+        uJointArc: { value: frames.arc },
+        uJointTaper: { value: frames.taper },
+        uJointCorner: { value: frames.corner },
         uJointRim: { value: frames.rim },
       });
       shader.vertexShader = shader.vertexShader
         .replace(
           '#include <common>',
-          ['#include <common>', 'attribute float _joint_white;', 'attribute float _joint_side;', 'uniform float uJointIdxL;', 'uniform float uJointIdxR;', 'uniform vec3 uJointAL;', 'uniform vec3 uJointAR;', 'uniform float uJointCL;', 'uniform float uJointCR;', 'varying float vJointRow;', 'varying float vJointW;'].join('\n'),
+          ['#include <common>', 'attribute float _joint_white;', 'attribute float _joint_side;', 'uniform float uJointIdxL;', 'uniform float uJointIdxR;', 'uniform mat3 uJointML;', 'uniform mat3 uJointMR;', 'uniform vec3 uJointCL;', 'uniform vec3 uJointCR;', 'varying float vJointRow;', 'varying vec3 vJointQ;'].join('\n'),
         )
         .replace(
           '#include <skinning_vertex>',
           [
             '#include <skinning_vertex>',
             'vJointRow = _joint_white;',
-            'vJointW = 1.0;',
+            'vJointQ = vec3(0.0, 0.0, 1.0);',
             '#ifdef USE_SKINNING',
             '{',
             '  bool jl = _joint_side > 0.0;',
             '  mat4 jm = getBoneMatrix(jl ? uJointIdxL : uJointIdxR);',
             // back through the wing's skin matrix: mesh space -> bind space (skinned = bindMatrixInverse · jm · bindMatrix · bind)
             '  vec4 jp = inverse(bindMatrix) * inverse(jm) * inverse(bindMatrixInverse) * vec4(transformed, 1.0);',
-            '  vJointW = dot(jp.xyz, jl ? uJointAL : uJointAR) + (jl ? uJointCL : uJointCR);',
+            '  vJointQ = (jl ? uJointML : uJointMR) * jp.xyz + (jl ? uJointCL : uJointCR);',
             '}',
             '#endif',
           ].join('\n'),
         );
       shader.fragmentShader = shader.fragmentShader
-        .replace('#include <common>', ['#include <common>', 'uniform vec3 uJointWhite;', 'uniform float uJointRim;', 'varying float vJointRow;', 'varying float vJointW;'].join('\n'))
-        .replace('#include <map_fragment>', ['#include <map_fragment>', 'if (vJointRow > 0.0 && -vJointW - uJointRim > 0.0) diffuseColor.rgb = uJointWhite;'].join('\n'));
+        .replace('#include <common>', ['#include <common>', 'uniform vec3 uJointWhite;', 'uniform float uJointRim;', 'uniform vec4 uJointArc;', 'uniform vec3 uJointTaper;', 'uniform float uJointCorner;', 'varying float vJointRow;', 'varying vec3 vJointQ;'].join('\n'))
+        .replace(
+          '#include <map_fragment>',
+          [
+            '#include <map_fragment>',
+            // penguin_v3.wing_under_piece: smin(rim inset, root arc, round) > 0
+            '{',
+            '  float jt = clamp((vJointQ.x - uJointTaper.y) / (uJointTaper.z - uJointTaper.y), 0.0, 1.0);',
+            '  jt = jt * jt * jt * (jt * (jt * 6.0 - 15.0) + 10.0);',
+            '  float jr = -vJointQ.z - (uJointRim + uJointTaper.x * (1.0 - jt));',
+            '  vec2 je = vec2((vJointQ.x - uJointArc.x) / uJointArc.y, vJointQ.y / uJointArc.z);',
+            '  float ja = (1.0 - length(je)) * min(uJointArc.y, uJointArc.z);',
+            '  float jh = max(uJointArc.w - abs(jr - ja), 0.0) / uJointArc.w;',
+            '  float jw = min(jr, ja) - jh * jh * uJointArc.w * 0.25;',
+            // round 13: the row cut and the face meet in a rounded corner (smin), not a sharp white tip
+            '  float jk = max(uJointCorner, 1e-5);',
+            '  float jg = max(jk - abs(vJointRow - jw), 0.0) / jk;',
+            '  if (min(vJointRow, jw) - jg * jg * jk * 0.25 > 0.0) diffuseColor.rgb = uJointWhite;',
+            '}',
+          ].join('\n'),
+        );
     };
     mat.customProgramCacheKey = () => `${prevKey.call(mat)}|joint-white`;
     mat.needsUpdate = true;
@@ -180,7 +208,16 @@ export function makeJoints(penguin: THREE.Object3D): Joints {
   const body = findNode(penguin, 'body');
   const rigQ = rig.getWorldQuaternion(new THREE.Quaternion());
   const wings: Wing[] = [];
-  const frames: JointFrames = { idx: { L: -1, R: -1 }, a: { L: new THREE.Vector3(), R: new THREE.Vector3() }, c: { L: 0, R: 0 }, rim: 0.005 };
+  const frames: JointFrames = {
+    idx: { L: -1, R: -1 },
+    m: { L: new THREE.Matrix3(), R: new THREE.Matrix3() },
+    c: { L: new THREE.Vector3(), R: new THREE.Vector3() },
+    rim: 0.005,
+    // no arc in the GLB: one that never cuts (the rim rule alone)
+    arc: new THREE.Vector4(0, 1e3, 1e3, 1e-3),
+    taper: new THREE.Vector3(0, 0, 1),
+    corner: 0,
+  };
   for (const side of SIDES) {
     const bone = findNode(penguin, `wing.${side}`);
     if (!bone || !body) continue;
@@ -203,8 +240,11 @@ export function makeJoints(penguin: THREE.Object3D): Joints {
       const index = extras.joint_twist.map((t) => extras.joint_raise!.map((r) => dict[targetName(r, t)] ?? -1));
       joint = { meshes, raise: extras.joint_raise, twist: extras.joint_twist, index };
     }
-    const ex = (node?.userData ?? {}) as { joint_pivot?: number[]; joint_ew?: number[]; joint_rim?: number };
+    const ex = (node?.userData ?? {}) as { joint_pivot?: number[]; joint_eu?: number[]; joint_ev?: number[]; joint_ew?: number[]; joint_rim?: number; joint_arc?: number[]; joint_taper?: number[]; joint_corner?: number };
     if (typeof ex.joint_rim === 'number') frames.rim = ex.joint_rim;
+    if (ex.joint_arc?.length === 4) frames.arc.fromArray(ex.joint_arc);
+    if (ex.joint_taper?.length === 3) frames.taper.fromArray(ex.joint_taper);
+    if (typeof ex.joint_corner === 'number') frames.corner = ex.joint_corner;
     const skinned = meshes.find((m) => (m as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh | undefined;
     if (skinned && ex.joint_pivot && ex.joint_ew) {
       const i = skinned.skeleton.bones.findIndex((b) => b === bone);
@@ -213,11 +253,15 @@ export function makeJoints(penguin: THREE.Object3D): Joints {
       // identity: meshopt quantization folds the dequantisation into the inverse bind matrices.
       const d = new THREE.Matrix4().multiplyMatrices(bone.matrixWorld, skinned.skeleton.boneInverses[i]);
       d.premultiply(skinned.bindMatrixInverse).multiply(skinned.bindMatrix);
-      const ew = new THREE.Vector3().fromArray(ex.joint_ew);
       const piv = new THREE.Vector3().fromArray(ex.joint_pivot);
+      const ew = new THREE.Vector3().fromArray(ex.joint_ew);
+      const eu = ex.joint_eu ? new THREE.Vector3().fromArray(ex.joint_eu) : new THREE.Vector3();
+      const ev = ex.joint_ev ? new THREE.Vector3().fromArray(ex.joint_ev) : new THREE.Vector3();
+      // q = A · (L · p + t − piv), A = rows (eu, ev, ew)
+      const A = new THREE.Matrix3().set(eu.x, eu.y, eu.z, ev.x, ev.y, ev.z, ew.x, ew.y, ew.z);
       const lin = new THREE.Matrix3().setFromMatrix4(d);
-      frames.a[side].copy(ew).applyMatrix3(lin.clone().transpose());
-      frames.c[side] = new THREE.Vector3().setFromMatrixPosition(d).sub(piv).dot(ew);
+      frames.m[side].multiplyMatrices(A, lin);
+      frames.c[side].setFromMatrixPosition(d).sub(piv).applyMatrix3(A);
     }
     wings.push({ side, bone, e0, rel0, body0, joint });
   }
