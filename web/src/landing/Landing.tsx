@@ -17,8 +17,8 @@ import type { Pointer } from './MascotCanvas';
 import { MascotStage } from './MascotStage';
 import { firstStop, MOVED_ANCHORS, SECTIONS, sectionAnchor, stepAt, STOPS, type SectionId } from './sections';
 import { DOMAINS, WORKFLOW_EXAMPLES } from './workflows';
-import { resetProgress, setProgress } from './progress';
-import { progressOf, SCENE_LEN } from './scene';
+import { resetClock, startAct } from './clock';
+import { progressOf, sceneAt, SCENE_LEN, workflowAt } from './scene';
 import '../styles/landing.css';
 
 export type LandingMode = 'live' | 'static';
@@ -41,7 +41,11 @@ export function landingMode(): LandingMode {
 
 const stopOffsets = () => STOPS.map((s) => document.getElementById(s.anchor)).map((el) => (el ? el.getBoundingClientRect().top + window.scrollY : 0));
 
-/** Which stop is up: the one nearest the scroll position (`stepAt`) — native scroll is the truth. */
+/**
+ * Which stop is up (native scroll is the truth). Live: the section whose scene holds the screen — the
+ * next one once it has come more than half way in (scene.ts `sceneAt`, the same as the penguin) — and,
+ * in the workflows, the example whose third of the block the page is in. Stacked: the nearest stop.
+ */
 function useStep(enabled: boolean) {
   const [step, setStep] = useState(0);
   const [scrolled, setScrolled] = useState(false);
@@ -51,12 +55,17 @@ function useStep(enabled: boolean) {
       frame = 0;
       setScrolled(window.scrollY > 4);
       if (!enabled) return;
-      setStep(stepAt(window.scrollY, stopOffsets()));
-      // how far through each section's block (its scene's act plays by it — scene.ts)
-      for (const s of SECTIONS) {
-        const el = document.getElementById(sectionAnchor(s.id));
-        if (el) setProgress(s.id, progressOf(el.getBoundingClientRect(), window.innerHeight));
+      const blocks = SECTIONS.map((s) => document.getElementById(sectionAnchor(s.id)));
+      if (blocks.some((b) => !b)) {
+        setStep(stepAt(window.scrollY, stopOffsets()));
+        return;
       }
+      const boxes = blocks.map((b) => b!.getBoundingClientRect());
+      const { i, handover } = sceneAt(boxes, window.innerHeight);
+      const n = Math.min(SECTIONS.length - 1, handover >= 0.5 ? i + 1 : i);
+      const sec = SECTIONS[n];
+      const sub = sec.stops ? workflowAt(progressOf(boxes[n], window.innerHeight), sec.stops.length).at : 0;
+      setStep(firstStop(sec.id) + sub);
     };
     const on = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -68,7 +77,7 @@ function useStep(enabled: boolean) {
       window.removeEventListener('scroll', on);
       window.removeEventListener('resize', on);
       if (frame) cancelAnimationFrame(frame);
-      resetProgress();
+      resetClock();
     };
   }, [enabled]);
   return { step, scrolled };
@@ -199,6 +208,10 @@ export function Landing() {
   const { step, scrolled } = useStep(live);
   const stop = live ? STOPS[step] : STOPS[0];
   const active: SectionId = stop.section;
+  // the section (and example) that arrives starts its act's clock (clock.ts) — on time, not by scroll
+  useEffect(() => {
+    if (live) startAct(stop.section, stop.sub);
+  }, [live, stop.section, stop.sub]);
   const fail = useCallback(() => setMode('static'), []);
   const onReady = useCallback(() => setReady(true), []);
   const smooth = useSmoothScroll(live);

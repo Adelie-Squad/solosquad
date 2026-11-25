@@ -49,8 +49,9 @@ import { makeStamp } from '../src/landing/props';
 import { paletteFor } from '../src/office/palette';
 import { BODY, centreOffset, faceX, easeInOutCubic, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, STROKE_LIMITS, STROKE_RATE, strokeAt } from '../src/landing/staging';
 import { AGENT_COUNT, TEAMS } from '../src/landing/catalog';
-import { GAP_DRAW_MS, progressOf, sceneAt, SCENE_LEN, sceneMs, workflowAt } from '../src/landing/scene';
-import { resetProgress, setProgress } from '../src/landing/progress';
+import { GAP_DRAW_MS, progressOf, sceneAt, SCENE_LEN, SCENE_MS, workflowAt } from '../src/landing/scene';
+import { ACT_LEAD_MS, actMsOf, clock, resetClock, startAct } from '../src/landing/clock';
+import { gazeTurn, GAZE_TURN } from '../src/landing/gaze';
 import { follow as followScroll, FOLLOW_RATE, SmoothScroll, wheelPixels, type SmoothEnv } from '../src/landing/smooth';
 import { drawState, follow, GIVE_UP_SECONDS, LIMITS, lookAt, wander } from '../src/landing/gaze';
 import { ACT_YAW, actingWings, pointTip, actYaw, ARM_CHOICE, bodyTurn, farWing, MAX_STRETCH, MAX_TURN, nearWing, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint } from '../src/landing/arms';
@@ -443,7 +444,7 @@ describe('natural scroll (2026-11-24 — "스크롤할 때마다 내려가면서
     for (let i = 1; i < ys.length; i++) expect(ys[i] - ys[i - 1]).toBeGreaterThan(400);
     act(() => void vi.advanceTimersByTime(2000));
     expect(window.scrollY).toBe(450 * 8);
-    expect(on()).toBe('problem');
+    expect(on()).toBe('now');
     // a pinch-zoom or a modal keeps its wheel
     const zoom = new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, cancelable: true });
     window.dispatchEvent(zoom);
@@ -665,6 +666,13 @@ describe('where the penguin stands (staging)', () => {
   });
 });
 
+/** A fake clock for the act timers (clock.ts runs on performance.now and animation frames). */
+const actClock = () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date', 'performance', 'requestAnimationFrame', 'cancelAnimationFrame'] });
+  resetClock();
+  return (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+};
+
 describe('the acting', () => {
   it('every act breathes on the standing clip — the office clips sit on a chair, and the office typing clip (the trembling) is not used', () => {
     expect(ACT_CLIP).toEqual({ wave: 'stand', type: 'stand', unroll: 'stand', stamp: 'stand', point: 'stand' });
@@ -747,14 +755,10 @@ describe('the acting', () => {
     expect(flowLength(chars, 3)).toBe(all + TEAM_MS + STAMP_MS + APPROVED_AFTER_MS);
     expect(flowStill(chars, 3)).toMatchObject({ typed: chars, pieces: ['done', 'done', 'done'], stamp: 'waiting' });
 
-    // on the card — by the scroll through the workflows' block (2026-11-25): a third per example,
-    // the card's timeline across its third; scrolling back rewinds it
+    // on the card (2026-11-26): on time from when its example comes up — not by the scroll
+    const go = actClock();
     const ask = 'Sort out this month’s profit and loss, and see to the supplier payments';
     const askChars = Array.from(ask).length;
-    const total = flowLength(askChars, 3);
-    /** the block's progress at `ms` into example `at`'s timeline (scene.ts workflowAt, inverted) */
-    const at = (example: number, ms: number) => (example + 0.04 + 0.7 * (ms / total)) / 3;
-    const scrub = (pr: number) => act(() => setProgress('workflows', pr));
     render(
       <I18nProvider locale="en">
         <WorkflowAct on acting stacked={false} />
@@ -764,48 +768,49 @@ describe('the acting', () => {
     const shown = () => card().querySelector('.landing-workflow-typed')!.textContent;
     const pieces = () => [...card().querySelectorAll('.landing-workflow-pieces li')].map((li) => li.getAttribute('data-state'));
     const per = charMs(askChars);
-    scrub(0);
+    act(() => startAct('workflows', 0));
     expect(shown()).toBe('');
-    expect(card().getAttribute('data-state')).toBe('waiting');
-    scrub(at(0, per * 10.5));
+    go(ACT_LEAD_MS + per * 10 + 5);
     expect(shown()!.length).toBe(10);
     expect(card().querySelector('.landing-caret')).toBeTruthy();
     expect(cues.typing).toBe(true); // the penguin patters while it types
     expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
     const handOut = askChars * per + HOLD_TYPED_MS + ASSIGN_FIRST_MS;
-    scrub(at(0, handOut + 60));
+    go(handOut - per * 10 + 10);
     expect(shown()).toBe(ask);
     expect(cues.typing).toBe(false);
     expect(pieces()).toEqual(['on', 'waiting', 'waiting']);
-    scrub(at(0, handOut + ASSIGN_STEP_MS + 60));
+    go(ASSIGN_STEP_MS);
     expect(pieces()).toEqual(['done', 'on', 'waiting']);
-    scrub(at(0, handOut + 3 * ASSIGN_STEP_MS + TEAM_MS + 60));
+    go(2 * ASSIGN_STEP_MS + TEAM_MS);
     expect(pieces()).toEqual(['done', 'done', 'done']);
     expect(card().querySelectorAll('.landing-workflow-gate.is-up')).toHaveLength(2);
-    scrub(at(0, total - 1));
+    go(STAMP_MS + APPROVED_AFTER_MS + 50);
     expect(card().getAttribute('data-state')).toBe('approved');
     expect(within(card()).getByText('Approved')).toBeTruthy();
     expect(card().querySelector('[data-testid="landing-stamp-mark"]')).toBeTruthy();
-    // scrolling back rewinds it
-    scrub(at(0, per * 3.5));
-    expect(shown()!.length).toBe(3);
-    expect(card().getAttribute('data-state')).toBe('waiting');
-    // the buttons come last in the card
     expect(card().lastElementChild!.className).toBe('landing-approval-actions');
     expect(css).toMatch(/\.landing-approval\.is-pressed \.landing-approve \{[^}]*translate: 0 1px;/);
     expect(css).toMatch(/\.landing-approval:not\(\.is-waiting\) \.landing-stamp-mark \{[^}]*opacity: 0\.9;/);
     expect(css).toMatch(/\.landing-workflow-pieces li\.is-on \.landing-task-chip \{[^}]*outline-color: var\(--accent\);/);
     expect(css).toMatch(/\.landing-task-chip > \.icon \{[^}]*color: var\(--ok\);/);
-    // the next third: the next workflow types in from the start
-    scrub(1 / 3 + 0.01);
+    // the next example (the next third of the block): it starts from the beginning, at the same speed
+    act(() => startAct('workflows', 1));
     expect(card().getAttribute('data-workflow')).toBe('sourcing');
     expect(shown()).toBe('');
-    expect(pieces()).toEqual(['waiting', 'waiting', 'waiting']);
-    scrub(0.99);
+    go(ACT_LEAD_MS + per * 4 + 5);
+    expect(shown()!.length).toBeGreaterThan(2); // typing again, at its own speed
+    // left before it finished (the page went on to 가격): it stops — the finished picture, no rush
+    act(() => startAct('pricing'));
     expect(card().getAttribute('data-workflow')).toBe('sns');
+    expect(pieces()).toEqual(['done', 'done', 'done']);
+    expect(cues.typing).toBe(false);
+    // back again: plays from the start
+    act(() => startAct('workflows', 0));
+    expect(shown()).toBe('');
     cleanup();
     resetCues();
-    resetProgress();
+    resetClock();
     // not acting: the finished picture — typed, handed out, waiting for the owner; no patter
     render(
       <I18nProvider locale="en">
@@ -819,33 +824,38 @@ describe('the acting', () => {
     expect(cues.typing).toBe(false);
   });
 
-  it('the pointing (가격): by the scroll — the wing goes out to price card 1, which lights up while it is there, then back; it rewinds', () => {
+  it('the pointing (가격): on time from the section’s arrival — the wing goes out to price card 1, which lights while it is there, then back; leaving stops it', () => {
     expect(relayAt(0)).toBe(-1);
     expect(relayAt(RELAY.reach)).toBe(0);
     expect(relayHand(-1)).toBe(0);
     expect(relayHand(RELAY.reach)).toBeCloseTo(1);
     expect(relayHand(RELAY.reach + 2000)).toBe(0);
+    const go = actClock();
     render(
       <I18nProvider locale="en">
         <PricingAct on acting />
       </I18nProvider>,
     );
     const lit = () => [...document.querySelectorAll('.landing-price')].map((li) => li.classList.contains('is-on'));
-    const toMs = (ms: number) => {
-      // invert scene.ts sceneMs for the pricing scene
-      for (let pr = 0; pr <= 1; pr += 0.001) if (sceneMs('pricing', pr) >= ms) return act(() => setProgress('pricing', pr));
-    };
+    act(() => startAct('pricing'));
     expect(lit()).toEqual([false, false, false]);
-    toMs(RELAY.reach + 20);
+    go(ACT_LEAD_MS + RELAY.reach + 20);
     expect(lit()).toEqual([true, false, false]);
     expect(document.querySelector('[data-gaze]')).toBe(document.querySelectorAll('.landing-price')[0]);
-    toMs(RELAY.reach + RELAY.step + RELAY.release + 20);
+    go(RELAY.step + RELAY.release);
     expect(lit()).toEqual([false, false, false]);
-    toMs(RELAY.reach + 20); // scrolled back: lit again
+    go(10_000);
+    expect(lit()).toEqual([false, false, false]); // once
+    // re-entered and left half way: the light goes out with the section
+    act(() => startAct('workflows', 2));
+    act(() => startAct('pricing'));
+    go(ACT_LEAD_MS + RELAY.reach + 20);
     expect(lit()).toEqual([true, false, false]);
+    act(() => startAct('contact'));
+    expect(lit()).toEqual([false, false, false]);
     expect(css).toMatch(/\.landing-price\.is-on \{[^}]*outline-color: var\(--accent\);/);
     cleanup();
-    resetProgress();
+    resetClock();
     render(
       <I18nProvider locale="en">
         <PricingAct on acting={false} />
@@ -854,7 +864,8 @@ describe('the acting', () => {
     expect(lit()).toEqual([false, false, false]);
   });
 
-  it('the gap (지금): by the scroll — the lines draw in, then the wing points at the bracket, which lights up and is looked at', () => {
+  it('the gap (지금): on time — the lines draw in, then the wing points at the bracket, which lights up and is looked at', () => {
+    const go = actClock();
     render(
       <I18nProvider locale="en">
         <GapAct on acting />
@@ -862,27 +873,30 @@ describe('the acting', () => {
     );
     const chart = () => document.querySelector('.landing-gap')!;
     const team = () => Number(chart().querySelector('.landing-gap-team')!.getAttribute('stroke-dashoffset'));
-    const toMs = (ms: number) => {
-      for (let pr = 0; pr <= 1; pr += 0.001) if (sceneMs('now', pr) >= ms) return act(() => setProgress('now', pr));
-    };
-    act(() => setProgress('now', 0));
-    expect(team()).toBe(1); // not drawn yet
-    toMs(GAP_DRAW_MS / 2);
+    act(() => startAct('problem')); // the section before: not begun yet
+    expect(team()).toBe(1);
+    act(() => startAct('now'));
+    expect(team()).toBe(1);
+    go(ACT_LEAD_MS + GAP_DRAW_MS / 2);
     expect(team()).toBeGreaterThan(0.4);
     expect(team()).toBeLessThan(0.6);
     expect(chart().classList.contains('is-on')).toBe(false);
-    toMs(GAP_DRAW_MS + RELAY.reach + 20);
+    go(GAP_DRAW_MS / 2 + RELAY.reach + 20);
     expect(team()).toBe(0);
     expect(chart().classList.contains('is-on')).toBe(true);
     expect(document.querySelector('[data-gaze]')).toBe(document.querySelector('.landing-gap-bracket'));
-    toMs(GAP_DRAW_MS + RELAY.reach + RELAY.step + RELAY.release + 20);
+    go(RELAY.step + RELAY.release);
     expect(chart().classList.contains('is-on')).toBe(false);
     // the hand mark sits on the bracket, halfway between the two lines' ends
     const hand = document.querySelector<HTMLElement>('[data-hand]')!;
     expect(hand.style.left).toBe(`${(GAP.bracket / 400) * 100}%`);
     expect(hand.style.top).toBe(`${((GAP.team.y + GAP.sub.y) / 2 / 240) * 100}%`);
+    // passed: drawn, still
+    act(() => startAct('org'));
+    expect(team()).toBe(0);
+    expect(chart().classList.contains('is-on')).toBe(false);
     cleanup();
-    resetProgress();
+    resetClock();
     render(
       <I18nProvider locale="en">
         <GapAct on acting={false} />
@@ -891,22 +905,25 @@ describe('the acting', () => {
     expect(team()).toBe(0); // not acting: drawn
   });
 
-  it('the paper unrolls by the scroll through the AI team (it rewinds); the tug and the wave stay small and slow', () => {
+  it('the paper unrolls on time when the AI team arrives; passed it stays unrolled, ahead it is rolled; the tug and the wave stay small and slow', () => {
+    const go = actClock();
     render(
       <I18nProvider locale="en">
         <ScrollAct on acting onOpen={() => {}} />
       </I18nProvider>,
     );
     const unroll = () => Number((document.querySelector('.landing-scroll') as HTMLElement).style.getPropertyValue('--unroll'));
-    act(() => setProgress('org', 0));
+    act(() => startAct('now'));
+    expect(unroll()).toBe(0); // ahead: rolled
+    act(() => startAct('org'));
     expect(unroll()).toBe(0);
-    act(() => setProgress('org', 0.4));
+    go(ACT_LEAD_MS + 600);
     expect(unroll()).toBeGreaterThan(0.3);
     expect(unroll()).toBeLessThan(1);
-    act(() => setProgress('org', 1));
+    go(2000);
     expect(unroll()).toBe(1);
-    act(() => setProgress('org', 0.1));
-    expect(unroll()).toBeLessThan(0.3);
+    act(() => startAct('workflows', 0));
+    expect(unroll()).toBe(1); // passed: unrolled
     expect(css).not.toMatch(/transition: --unroll/);
     expect(css).toMatch(/@property --unroll \{[^}]*initial-value: 1;/);
     expect(css).toMatch(/\.landing-scroll-sheet \{[^}]*clip-path: inset\(0 -1px calc\(\(1 - var\(--unroll\)\) \* 100%\) -1px\);/);
@@ -917,16 +934,32 @@ describe('the acting', () => {
     expect(waveAt(5000).raise).toBe(0);
   });
 
-  it('a scene holds the screen while the scroll through its block plays its act; the penguin walks over by how far the next has come in', () => {
+  it('the act clock (2026-11-26 — "섹션에 도달하면 정해진 속도"): time since the section arrived, the same however fast the page scrolls; passed = finished, ahead = not begun', () => {
+    resetClock();
+    startAct('now', 0, 1000);
+    expect(clock).toMatchObject({ section: 'now', sub: 0, startedAt: 1000 });
+    expect(actMsOf('now', 1000 + ACT_LEAD_MS + 700)).toBe(700);
+    expect(actMsOf('now', 1000)).toBe(0); // the lead
+    expect(actMsOf('problem', 5000)).toBe(Infinity); // above: finished
+    expect(actMsOf('pricing', 5000)).toBe(0); // below: not begun
+    // the same section again does not restart it (a scroll inside the hold)
+    startAct('now', 0, 3000);
+    expect(clock.startedAt).toBe(1000);
+    // a new example in the workflows does
+    startAct('workflows', 0, 4000);
+    startAct('workflows', 1, 6000);
+    expect(clock.startedAt).toBe(6000);
+    // every act has a length (the workflows: each example its own)
+    for (const id of ['hero', 'problem', 'now', 'org', 'pricing', 'contact'] as const) expect(SCENE_MS[id], id).toBeGreaterThan(1000);
+    resetClock();
+  });
+
+  it('a scene holds the screen while the page scrolls through its block; the penguin walks over by how far the next has come in', () => {
     // progress through a block: 0 when its top reaches the top of the screen, 1 when it is about to leave
     expect(progressOf({ top: 0, height: 2 * SCREEN }, SCREEN)).toBe(0);
     expect(progressOf({ top: -SCREEN / 2, height: 2 * SCREEN }, SCREEN)).toBe(0.5);
     expect(progressOf({ top: -SCREEN, height: 2 * SCREEN }, SCREEN)).toBe(1);
     expect(progressOf({ top: 300, height: 2 * SCREEN }, SCREEN)).toBe(0);
-    // the act runs over most of the hold, from a breath in to a moment before the end
-    expect(sceneMs('hero', 0)).toBe(0);
-    expect(sceneMs('hero', 1)).toBeGreaterThan(0);
-    expect(sceneMs('hero', 0.5)).toBeLessThan(sceneMs('hero', 0.6));
     // the workflows: a third each
     expect(workflowAt(0.1, 3).at).toBe(0);
     expect(workflowAt(0.5, 3).at).toBe(1);
@@ -942,6 +975,7 @@ describe('the acting', () => {
     // every block is a few screens: long enough for its act (the workflows three examples)
     for (const sec of SECTIONS) expect(SCENE_LEN[sec.id], sec.id).toBeGreaterThanOrEqual(1.4);
     expect(SCENE_LEN.workflows).toBeGreaterThan(4);
+    expect(SCENE_LEN.hero).toBeLessThanOrEqual(2); // 2026-11-26: the acts no longer need scroll distance
     expect(rule('.landing-steps > .landing-slide')).toMatch(/position: sticky;[\s\S]*top: 0;/);
   });
 
@@ -1151,6 +1185,39 @@ describe('the penguin', () => {
       expect(Math.abs(p.x)).toBeLessThanOrEqual(1);
       expect(Math.abs(p.y)).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe('the look keeps the body’s shape (2026-11-26 — "몸 형태는 원래 형태를 유지하고 시선만")', () => {
+  it('the gaze is a rigid turn of the whole penguin — never a bone bent inside the one skinned body', () => {
+    // the look a cursor asks for becomes a yaw and a small tilt of the whole model, within the turn limit
+    const far = lookAt({ x: 1, y: 1 });
+    const g = gazeTurn(far);
+    expect(g.yaw).toBeCloseTo((far.body + far.yaw) * GAZE_TURN.yaw);
+    expect(g.pitch).toBeCloseTo(far.pitch * GAZE_TURN.pitch);
+    expect(Math.abs(bodyTurn(0, g.yaw))).toBeLessThanOrEqual(MAX_TURN);
+    expect(gazeTurn(lookAt({ x: 0, y: 0 }))).toEqual({ yaw: 0, pitch: 0 });
+    // applied to a group (the holder), a rotation changes no scale and no shape: the head and body
+    // bones under it keep their own transforms — only the whole thing turns
+    const holder = new THREE.Group();
+    const body = new THREE.Bone();
+    const head = new THREE.Bone();
+    head.position.set(0, 0.4, 0);
+    body.add(head);
+    holder.add(body);
+    const before = { head: head.quaternion.clone(), headScale: head.scale.clone(), body: body.quaternion.clone(), bodyScale: body.scale.clone() };
+    holder.rotation.set(g.pitch, g.yaw, 0);
+    holder.updateMatrixWorld(true);
+    expect(head.quaternion.equals(before.head)).toBe(true);
+    expect(body.quaternion.equals(before.body)).toBe(true);
+    expect(head.scale.equals(before.headScale)).toBe(true);
+    expect(body.scale.equals(before.bodyScale)).toBe(true);
+    const ws = head.getWorldScale(new THREE.Vector3());
+    for (const v of [ws.x, ws.y, ws.z]) expect(v).toBeCloseTo(1, 10); // no squash or stretch anywhere
+    // and the canvas no longer turns the head bone with the gaze (that bent the face and upper body)
+    const canvasSrc = readFileSync(join(process.cwd(), 'src', 'landing', 'MascotCanvas.tsx'), 'utf8');
+    expect(canvasSrc).not.toMatch(/rig\.head\?\.quaternion\.multiply/);
+    expect(canvasSrc).toMatch(/holder\.rotation\.set\(gaze\.pitch, bodyTurn\(cur\.turn \+ pp\.yaw, gaze\.yaw\), cur\.lean\)/);
   });
 });
 

@@ -14,9 +14,9 @@ import { agentName } from '../lib/agentNames';
 import { teamName } from '../lib/names';
 import { STATUS_CHIP, STATUS_LABEL } from '../office/OfficeStage';
 import { cues, easeOut, RELAY, UNROLL_MS } from './acting';
-import { flowAt, flowLength, flowStill, type FlowFrame } from './flow';
-import { useProgress } from './progress';
-import { ASK_MS, GAP_DRAW_MS, sceneMs, workflowAt } from './scene';
+import { flowAt, flowStill, type FlowFrame } from './flow';
+import { useActMs } from './clock';
+import { ASK_MS, GAP_DRAW_MS, SCENE_MS } from './scene';
 import { byId } from './catalog';
 import { LandingOrgChart } from './LandingOrgChart';
 import { TIER, TIER_LABEL, WORKFLOW_EXAMPLES, type Domain, type WorkflowExample } from './workflows';
@@ -59,8 +59,9 @@ export const ASK_STEPS = ['data', 'order', 'handoff', 'approval'] as const;
  */
 export function AskAct({ acting }: ActProps) {
   const { t } = useI18n();
-  const p = useProgress('problem');
-  const ms = acting ? sceneMs('problem', p) : ASK_MS + RELAY.reach + RELAY.step + RELAY.release;
+  // on time from the section's arrival (clock.ts); not acting: the finished picture
+  const clockMs = useActMs('problem', SCENE_MS.problem).ms;
+  const ms = acting ? clockMs : Infinity;
   const answered = Math.min(1, ms / ASK_MS);
   const pointing = acting && pointingAt(ms - ASK_MS);
   const lines = [0.92, 0.78, 0.55];
@@ -107,8 +108,8 @@ export const GAP = {
  */
 export function GapAct({ acting }: ActProps) {
   const { t } = useI18n();
-  const p = useProgress('now');
-  const ms = acting ? sceneMs('now', p) : GAP_DRAW_MS + RELAY.reach + RELAY.step + RELAY.release;
+  const clockMs = useActMs('now', SCENE_MS.now).ms;
+  const ms = acting ? clockMs : Infinity;
   // the lines draw in first (by the scroll), then the penguin points at the gap
   const drawn = Math.min(1, ms / GAP_DRAW_MS);
   const pointing = acting && pointingAt(ms - GAP_DRAW_MS);
@@ -161,9 +162,9 @@ export function GapAct({ acting }: ActProps) {
  * `--unroll` (landing.css) is how far it is down; the rod is 3D.
  */
 export function ScrollAct({ acting, onOpen }: ActProps & { onOpen: (at: string | null) => void }) {
-  const p = useProgress('org');
-  // the paper comes down as the page scrolls through the section (rewinds); not acting: unrolled
-  const unroll = acting ? easeOut(Math.min(1, sceneMs('org', p) / UNROLL_MS)) : 1;
+  // the paper comes down at its own speed once the section arrives (clock.ts); not acting: unrolled
+  const clockMs = useActMs('org', SCENE_MS.org).ms;
+  const unroll = acting ? easeOut(Math.min(1, clockMs / UNROLL_MS)) : 1;
   return (
     <div className="landing-act is-scroll" data-content>
       <span className="landing-rod" data-rod aria-hidden="true" />
@@ -269,15 +270,14 @@ function WorkflowCard({ w, f, tabs }: { w: WorkflowExample; f: FlowFrame; tabs?:
 }
 
 /**
- * The card's timeline at `local` (0 … 1 through its third of the workflows' block — scene.ts
- * `workflowAt`): by the scroll, so it rewinds; tells the canvas whether the box is typing
- * (`cues.typing` — the penguin's patter). Not acting: the finished picture.
+ * The card's timeline at `ms` (clock.ts — from when its example came up, at its own speed); tells the
+ * canvas whether the box is typing (`cues.typing` — the penguin's patter). Not acting: finished.
  */
-function useFlow(live: boolean, w: WorkflowExample, local: number): FlowFrame {
+function useFlow(live: boolean, w: WorkflowExample, ms: number): FlowFrame {
   const { t } = useI18n();
   const chars = Array.from(t(w.ask)).length;
   const pieces = w.split.length;
-  const f = live ? flowAt(local * flowLength(chars, pieces), chars, pieces) : flowStill(chars, pieces);
+  const f = live ? flowAt(ms, chars, pieces) : flowStill(chars, pieces);
   useLayoutEffect(() => {
     cues.typing = live && f.typing;
   }, [live, f.typing]);
@@ -294,14 +294,12 @@ function useFlow(live: boolean, w: WorkflowExample, local: number): FlowFrame {
  */
 export function WorkflowAct({ acting, stacked, onPick }: ActProps & { stacked: boolean; onPick?: (i: number) => void }) {
   const { t } = useI18n();
-  const p = useProgress('workflows');
   const live = acting && !stacked;
-  // a third of the block per example (scene.ts) — finished while the penguin is not acting yet
-  const sweep = workflowAt(p, WORKFLOW_EXAMPLES.length);
-  const at = stacked ? 0 : sweep.at;
-  const local = live ? sweep.local : 1;
+  // the third of the block the page is in picks the example (clock.ts `sub`); its motion runs on time
+  const clockAct = useActMs('workflows', 12_000);
+  const at = stacked ? 0 : clockAct.sub < 0 ? WORKFLOW_EXAMPLES.length - 1 : clockAct.sub;
   const w = WORKFLOW_EXAMPLES[at] ?? WORKFLOW_EXAMPLES[0];
-  const f = useFlow(live, w, local);
+  const f = useFlow(live, w, clockAct.ms);
   if (stacked) {
     return (
       <div className="landing-act is-flow is-stacked" data-content data-front>
@@ -348,8 +346,7 @@ const PRICES: { name: MessageKey; body: MessageKey; price: MessageKey; note?: Me
  */
 export function PricingAct({ acting }: ActProps) {
   const { t } = useI18n();
-  const p = useProgress('pricing');
-  const pointing = acting && pointingAt(sceneMs('pricing', p));
+  const pointing = acting && pointingAt(useActMs('pricing', SCENE_MS.pricing).ms);
   return (
     <div className="landing-act is-relay is-pricing" data-content data-front data-testid="landing-pricing">
       <ol className="landing-prices">

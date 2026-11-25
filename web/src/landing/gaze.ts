@@ -1,6 +1,7 @@
 // Where the landing penguin looks (DESIGN.md `## 랜딩` — 시선). Plain numbers, no three.js, so the
-// limits and the damping are testable: the head carries the gaze (the eyes are part of the head
-// mesh — the rig has no eye bones), the body follows a little, all of it damped.
+// limits and the damping are testable. The eyes are part of the one body mesh (no eye bones) and the
+// head bone would bend that mesh, so the look is shown by turning the whole penguin a little
+// (`gazeTurn`, 2026-11-26), damped.
 
 /** The cursor on the page, client px (the canvas measures it from the penguin's head). */
 export interface Pointer {
@@ -37,6 +38,17 @@ export function lookAt(p: Aim): Look {
   const x = clamp(p.x, -1, 1);
   const y = clamp(p.y, -1, 1);
   return { body: x * LIMITS.body, yaw: x * (LIMITS.yaw - LIMITS.body), pitch: y * LIMITS.pitch };
+}
+
+/**
+ * How the look is shown (2026-11-26): as a rigid turn of the whole penguin — yaw (left/right) and a
+ * small tilt (pitch) — never by bending a bone inside the body. The v3 penguin is one skinned body:
+ * turning its head bone pulled the face and the upper body out of shape ("몸이랑 얼굴이 약간
+ * 찌그러져있음"). A rotation of the whole model keeps every vertex where it is relative to the others.
+ */
+export const GAZE_TURN = { yaw: 0.8, pitch: 0.6 } as const;
+export function gazeTurn(l: Look): { yaw: number; pitch: number } {
+  return { yaw: (l.body + l.yaw) * GAZE_TURN.yaw, pitch: l.pitch * GAZE_TURN.pitch };
 }
 
 /** One damped step from `from` towards `to` over `dt` seconds. */

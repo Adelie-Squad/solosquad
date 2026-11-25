@@ -33,14 +33,15 @@ import { preloadPenguin, useSoloPenguin } from '../office/penguinAsset';
 import { SkyLight } from '../office/SkyLight';
 import { ACT_CLIP, cues, now, relayHand, squashAt, STAMP_TOTAL_MS, stampAside, stampLift, stampTilt, tugAt, WAVE_SWING, waveAt, WING_GLIDE } from './acting';
 import { actingWings, pointTip, actYaw, ARM_MS, WAVE_RAISE, WAVE_SWING_DEG, WAVE_TWIST, bodyTurn, EDGE_MARGIN, nextFront, outside, pathAt, rectsOverlap, segmentHits, stretchFor, viaPoint, type Pt, type Rect } from './arms';
-import { drawState, follow, GAZE_ACTING, lookAt, wander, type Look, type Pointer } from './gaze';
+import { drawState, follow, GAZE_ACTING, gazeTurn, lookAt, wander, type Look, type Pointer } from './gaze';
 import { useHolder } from './holder';
 import { claimIntro, introAt, REST, type IntroPose } from './intro';
 import { makeMorph, type Morph } from './morph';
 import { makeRod, makeStamp, STAMP_LENGTH } from './props';
 import { aim, atDepth, fitEraser, makeEraser, ORDER, rayAt, reach, useFrontPass, type Side } from './rig';
 import type { ActId, SectionId } from './sections';
-import { ASK_MS, GAP_DRAW_MS, progressOf, sceneAt, sceneMs } from './scene';
+import { ASK_MS, GAP_DRAW_MS, sceneAt } from './scene';
+import { actMsOf } from './clock';
 import { BODY, headOf, moveAt, MOVE_MS, penguinHeight, spotFor, standSpot, STROKE_DEPTH, STROKE_LIFT, strokeAt, type Box, type Spot } from './staging';
 
 preloadPenguin();
@@ -409,8 +410,8 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
     const content = boxOf(slide?.querySelector('[data-content]'));
     const standing = !!slide?.querySelector('[data-content][data-stand]');
     // the act by the scroll through its block (scene.ts) — rewinds with it; none while walking
-    const progress = boxes[onB ? at + 1 : at] ? progressOf(boxes[onB ? at + 1 : at], screenH) : 0;
-    const ms = section === 'workflows' ? 0 : sceneMs(section, progress);
+    // the act on time from the section's arrival (clock.ts — never by the scroll); none while walking
+    const ms = section === 'workflows' ? 0 : actMsOf(section, t);
     // the pointing starts after the scene's lead-in (문제: the answer; 지금: the graph drawing)
     const relayMs = section === 'now' ? ms - GAP_DRAW_MS : section === 'problem' ? ms - ASK_MS : ms;
     const settled = handover === 0;
@@ -477,8 +478,11 @@ function Mascot({ act: clipAct, acting, theme, mobile, pointer, touch, pin, onRe
     // the body turns towards the content while acting, so the far wing comes round in front of it
     const contentCx = content ? content.left + content.width / 2 : cur.x;
     pp.yaw += ((live ? actYaw(act, cur.x, contentCx) : 0) - pp.yaw) * k(3);
-    holder.rotation.set(0, bodyTurn(cur.turn + pp.yaw, l.body), cur.lean);
-    rig.head?.quaternion.multiply(tmp.q.setFromEuler(tmp.e.set(l.pitch, l.yaw, 0, 'YXZ')));
+    // the gaze turns the whole penguin, rigidly (2026-11-26 — "몸 형태는 원래 형태를 유지하고 시선만"): the
+    // v3 penguin is one skinned body, so turning the head bone bent the face and the upper body out of
+    // shape; the head bone is left to its clip
+    const gaze = gazeTurn(l);
+    holder.rotation.set(gaze.pitch, bodyTurn(cur.turn + pp.yaw, gaze.yaw), cur.lean);
     holder.updateMatrixWorld(true);
 
     // ── the wings: which act (the one on the content's side), each one's target on the page ──
