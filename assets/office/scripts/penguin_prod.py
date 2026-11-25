@@ -22,7 +22,15 @@ seams; this script turns it into the web asset (≤ 8k triangles) and keeps what
   at a lower resolution, with one shape key per (raise, twist) grid point (raise -8..120 step 8,
   twist -15/0/15), skinned to the body bone. The web sets the morph weights from the wing bone
   each frame (web/src/office/joint.ts — the same bilinear rule as `penguin_v3.update_welt`).
-  Extras on the joint node carry the grid and the hinge frame.
+  Extras on the joint node carry the grid and the hinge frame. So that the joint reads as ONE
+  shape on the web (2026-11-25 — the r8 / r11 / r12 complaints: jagged white, a lip, a ring):
+  its edge rows are snapped onto the web skin and the web wing; its normals are the exact surface
+  normals in every shape key (patched into the GLB, web/scripts/patch-penguin-joints.mjs), so no
+  shading ring where it meets the body; its white is the draft's per-pixel rule — the rows next to
+  the wing (attribute `_joint_white`) AND inside the wing's white face in the posed wing's frame,
+  tested in the shader from the wing bone (attribute `_joint_side`, extras `joint_pivot` ·
+  `joint_ew` · `joint_rim`) — so it continues the wing's own white edge in every pose; its loop
+  angles are snapped onto that edge. Material `penguin.body#joint` (painted as `penguin.body`).
 * **Rig and clips** follow the contract: bones root · body · head · wing.L/R · leg.L/R ·
   foot.L/R + sockets; the wing is a hinge (raise ≤ 112°, lowered ≤ 8°, twist ±15°, Limit Rotation
   is enforced by `_wing_raise`); seated state clips (body bottom on the origin = the chair seat)
@@ -49,8 +57,8 @@ SKIN_TRIS = 1800          # decimation target for the body skin before the colou
 WING_TRIS = 260           # ... per wing piece
 REFINE_PASSES = 1         # subdivisions of the triangles that straddle a colour edge
 REFINE_BAND = 0.0         # ... a triangle is refined when |field| < this x its longest edge (0 = only where it crosses)
-JOINT_N, JOINT_M = 36, 9  # fillet resolution: points round the wing x rows across (draft 160 x 21)
-JOINT_WHITE_ROWS = 1      # face rows next to the wing that carry its white face (draft: the outer ~30 %)
+JOINT_N, JOINT_M = 40, 9  # fillet resolution: points round the wing x rows across (draft 160 x 21)
+JOINT_WHITE_ROWS = 0.5       # face rows on the wing's half of the fillet carry its white (the colour edge sits in the crease, where the two surfaces meet: a black row lying near-tangent over the coarse white wing face showed as a sawtooth)
 TEX = 1024                # baked texture size (contract: <= 1024 px)
 UV_SCALE = 0.94           # the islands live in u < 0.94; the strip beyond holds the plain patches
 PATCH_BODY = (0.97, 0.03)   # uv of a plain texel: multiplier 1, flat normal
@@ -115,7 +123,8 @@ def _arrays(ob):
     return V, F
 
 
-def decimate(V, F, target, name, col):
+def decimate(V, F, target, name, col, weight=None):
+    """Quadric collapse to ~target triangles; `weight` (per vertex, 0 = keep, 1 = free) protects a region."""
     ob = _obj_from(V, F, name, col)
     bm = bmesh.new()
     bm.from_mesh(ob.data)
@@ -126,8 +135,14 @@ def decimate(V, F, target, name, col):
     mod = ob.modifiers.new('dec', 'DECIMATE')
     mod.decimate_type = 'COLLAPSE'
     mod.ratio = min(1.0, target / n)
-    mod.use_symmetry = True
+    mod.use_symmetry = weight is None
     mod.symmetry_axis = 'X'
+    if weight is not None:
+        vg = ob.vertex_groups.new(name='free')
+        for i, w in enumerate(weight):
+            vg.add([i], float(w), 'REPLACE')
+        mod.vertex_group = 'free'
+        mod.vertex_group_factor = 1.0
     dg = bpy.context.evaluated_depsgraph_get()
     ev = ob.evaluated_get(dg)
     me2 = bpy.data.meshes.new_from_object(ev)
@@ -301,6 +316,8 @@ def low_wing(col, side):
     V = pv3._project(fn, V, iters=5)
     Fq = pv3._orient_faces(V, Fq, fn)
     V = pv3._relax(V, Fq, fn, iters=2)
+    # the root, where the fillet lands on the wing, keeps the draft's density: a coarse paddle there
+    # sank below the fillet's wing edge and the fillet showed through as a sawtooth (2026-11-25)
     Vd, Fd = decimate(V, Fq, WING_TRIS, 'wing_dec', col)
     proj = lambda P: pv3._project(fn, P, iters=4, max_step=0.004)   # noqa: E731
     Vd = proj(Vd)
@@ -427,25 +444,157 @@ def build_low(col, name='penguin'):
     return ob
 
 
-JOINT_SINK = 0.0015       # the fillet's two edge rows tuck this far under the body / the wing
+_ORIG_ROOT_LOOP = pv3.wing_root_loop
+JOINT_MATERIAL = 'penguin.body#joint'
+JOINT_NORMALS = {}        # joint object name -> {'pos': basis positions, 'keys': {key name: normals}}
+JOINT_ROOT_U = 0.03       # where along the wing (from the hinge) the fillet meets it
 
 
-def _sink_edges(ob, side, n, m):
-    """Tuck the fillet's edge rows a little under the surfaces they leave (every shape key). The
-    draft's fillet ends 0.05 mm above the exact surfaces; the web body and wing are chords of
-    those surfaces (up to ~0.5 mm inside), so an untucked edge stands proud as a lip."""
+def _exact_normals(ob, side):
+    """The fillet's exact surface normal at every vertex of every shape key: the gradient of the
+    smooth union smin(body, posed wing, WELT_K) it lies on (its edge rows get the body's / the
+    wing's own normal). Blender's exporter would give face-averaged normals from 9 rows across - a
+    visible ring where the fillet meets the body, whose normals are exact too. Patched into the GLB
+    by web/scripts/patch-penguin-joints.mjs."""
+    out = {}
+    kk = pv3.WELT_K
     for kb in ob.data.shape_keys.key_blocks:
-        if kb.name == 'Basis':
-            rd, tw = 0, 0
-        else:
-            rd, tw = (int(x) for x in kb.name.split('.')[1:3])
+        rd, tw = (0, 0) if kb.name == 'Basis' else (int(x) for x in kb.name.split('.')[1:3])
         Mi = np.linalg.inv(np.array(pv3._wing_raise(side, rd, tw)))
         fw = lambda X: pv3.f_wing(X @ Mi[:3, :3].T + Mi[:3, 3], side)   # noqa: E731
+        F = lambda X: pv3._smin(pv3.f_body(X), fw(X), kk)   # noqa: E731
+        P = np.array([v.co[:] for v in kb.data])
+        g = pv3._grad(F, P, eps=2e-4)
+        g /= np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-9)
+        out[kb.name] = g
+    return {'pos': np.array([v.co[:] for v in ob.data.shape_keys.key_blocks['Basis'].data]), 'keys': out}
+
+
+def _white_arc(side, u=JOINT_ROOT_U, n=720):
+    """The two angles round the wing's cross-section (wing-local (v, w) plane, as wing_root_loop
+    samples it) where its white inner face starts and ends: -w - WING_RIM = 0."""
+    piv, ax = pv3.wing_frame(side)
+    phi = np.linspace(0, 2 * math.pi, n, endpoint=False)
+    dirs = np.stack([np.zeros(n), np.cos(phi), np.sin(phi)], 1)
+    base = np.stack([np.full(n, u), np.zeros(n), np.zeros(n)], 1)
+    rr = pv3._bisect(lambda r: pv3.f_wing(piv + (base + dirs * r[:, None]) @ ax, side), np.zeros(n), np.full(n, 0.15))
+    inside = -(rr * np.sin(phi)) - pv3.WING_RIM > 0
+    out = []
+    for i in range(n):
+        if inside[i] != inside[i - 1]:
+            out.append(phi[i])
+    return out
+
+
+def _wing_root_loop_at(phi):
+    """penguin_v3.wing_root_loop with the loop angles given (same body as the draft's)."""
+    def loop(side, raise_deg, twist_deg, n=None):
+        n = len(phi)
+        piv, ax = pv3.wing_frame(side)
+        M = np.array(pv3._wing_raise(side, raise_deg, twist_deg))
+        R, t = M[:3, :3], M[:3, 3]
+        dirs = np.stack([np.zeros(n), np.cos(phi), np.sin(phi)], 1)
+
+        def surf(u):
+            base = np.stack([u, np.zeros(n), np.zeros(n)], 1)
+            rr = pv3._bisect(lambda r: pv3.f_wing(piv + (base + dirs * r[:, None]) @ ax, side),
+                             np.zeros(n), np.full(n, 0.15))
+            return piv + (base + dirs * rr[:, None]) @ ax
+
+        def fb_at(u):
+            return pv3.f_body(surf(u) @ R.T + t)
+        us = np.linspace(-0.05, 0.24, 59)
+        vals = np.stack([fb_at(np.full(n, u)) for u in us], 1)
+        exits = (vals > 0).any(1)
+        pv3.WELT_STATS['buried'] = int((~exits).sum())
+        k = np.clip(np.argmax(vals > 0, axis=1), 1, len(us) - 1)
+        u_star = pv3._bisect(lambda u: fb_at(u), us[k - 1].copy(), us[k].copy(), it=24)
+        Jr = surf(u_star)
+        J = Jr @ R.T + t
+        nb = pv3._grad(pv3.f_body, J)
+        nb /= np.linalg.norm(nb, axis=1, keepdims=True)
+        nw = pv3._grad(lambda X: pv3.f_wing(X, side), Jr) @ R.T
+        nw /= np.linalg.norm(nw, axis=1, keepdims=True)
+        J[~exits] = (surf(np.full(n, -0.02)) @ R.T + t)[~exits]
+        nb[~exits] = nw[~exits]
+        pv3.WELT_STATS['exits'] = exits
+        return J, nb, nw, phi
+    return loop
+
+
+def _white_edges_at_crease(side, dense=720):
+    """The loop angles where the wing's white face starts / ends along the line the wing enters the
+    body (rest pose) - where the fillet's white must end to continue the wing's own white edge."""
+    phi = np.linspace(0, 2 * math.pi, dense, endpoint=False)
+    J, _, _, _ = _wing_root_loop_at(phi)(side, 0, 0)
+    exits = pv3.WELT_STATS['exits']
+    d = pv3.wing_under_piece(J, side)
+    d[~exits] = -1.0
+    out = []
+    for i in range(1, dense):
+        a, b = d[i - 1], d[i]
+        if (a > 0) != (b > 0):
+            t = a / (a - b)
+            out.append(phi[i - 1] + t * (phi[i] - phi[i - 1]))
+    return out or _white_arc(side)
+
+
+def _joint_phis(side, n=None):
+    """n loop angles, uniform except the ones nearest the white face's edges snapped onto them, so
+    the fillet's columns meet the wing's white edge exactly."""
+    n = n or JOINT_N
+    phi = np.linspace(0, 2 * math.pi, n, endpoint=False)
+    for p in _white_edges_at_crease(side):
+        d = np.abs(((phi - p) + math.pi) % (2 * math.pi) - math.pi)
+        phi[np.argmin(d)] = p
+    return np.sort(phi)
+
+
+def _part_bvh(mesh_ob, side=None):
+    """BVH of the web mesh's skin (side None) or of one wing piece, at rest."""
+    me = mesh_ob.data
+    gi = {g.name: g.index for g in mesh_ob.vertex_groups}
+    wing = np.zeros((len(me.vertices), 2))
+    for v in me.vertices:
+        for g in v.groups:
+            if g.group == gi.get('wing.L'):
+                wing[v.index, 0] = g.weight
+            elif g.group == gi.get('wing.R'):
+                wing[v.index, 1] = g.weight
+    col = None if side is None else (0 if side == 'L' else 1)
+    skin_keys = {MAT_KEYS.index(k) for k in ('penguin.body', 'penguin.face', 'penguin.feet')}
+    polys = []
+    for p in me.polygons:
+        vs = list(p.vertices)
+        if col is None:
+            if p.material_index in skin_keys and wing[vs].max() < 0.99:
+                polys.append(vs)
+        elif wing[vs, col].min() > 0.99:
+            polys.append(vs)
+    return BVHTree.FromPolygons([v.co.copy() for v in me.vertices], polys)
+
+
+def _snap_edges(ob, side, n, m, mesh_ob):
+    """Put the fillet's two edge rows exactly on the web meshes it leaves: row 0 on the low-poly
+    skin, the last row on the low-poly wing (in the wing's own frame, every shape key). The draft's
+    fillet ends on the exact surfaces; the web meshes are chords of them, so the edge either
+    floated (a dark ring) or the near-tangent fillet showed through the coarse wing (a sawtooth
+    white edge, 2026-11-25)."""
+    skin = _part_bvh(mesh_ob)
+    wing = _part_bvh(mesh_ob, side)
+    for kb in ob.data.shape_keys.key_blocks:
+        rd, tw = (0, 0) if kb.name == 'Basis' else (int(x) for x in kb.name.split('.')[1:3])
+        M = np.array(pv3._wing_raise(side, rd, tw))
+        Mi = np.linalg.inv(M)
         P = np.array([v.co[:] for v in kb.data]).reshape(n, m, 3)
-        for row, fn in ((0, pv3.f_body), (m - 1, fw)):
-            g = pv3._grad(fn, P[:, row])
-            g /= np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-9)
-            P[:, row] -= g * JOINT_SINK
+        for i in range(n):
+            hit = skin.find_nearest(Vector(P[i, 0]))
+            if hit[0] is not None:
+                P[i, 0] = hit[0][:]
+            r = Mi[:3, :3] @ P[i, m - 1] + Mi[:3, 3]
+            hit = wing.find_nearest(Vector(r))
+            if hit[0] is not None:
+                P[i, m - 1] = M[:3, :3] @ np.array(hit[0][:]) + M[:3, 3]
         kb.data.foreach_set('co', P.reshape(-1).astype(np.float32))
     ob.data.vertices.foreach_set('co', np.array([v.co[:] for v in ob.data.shape_keys.key_blocks['Basis'].data],
                                                 np.float32).reshape(-1))
@@ -458,13 +607,15 @@ def build_joints(col, mesh_ob):
     out = []
     try:
         for side in 'LR':
+            phis = _joint_phis(side)
+            pv3.wing_root_loop = _wing_root_loop_at(phis)
             ob = pv3.build_welt(col, side, bpy.data.materials['penguin.body'], f'penguin.joint.{side}')
             ob['welt_of'] = mesh_ob.name
             me = ob.data
             me.materials.append(bpy.data.materials['penguin.face'])
             m = ob['welt_m']
             n = len(me.vertices) // m
-            _sink_edges(ob, side, n, m)
+            _snap_edges(ob, side, n, m, mesh_ob)
             # outward winding by a vote over every loop point that comes out of the body (the build
             # script checks one point only; at this resolution it can be a buried one -> the web,
             # which culls back faces, drew the far side of the fillet)
@@ -475,39 +626,52 @@ def build_joints(col, mesh_ob):
             if (vote < 0).sum() > (vote > 0).sum():
                 me.flip_normals()
                 me.update()
-            # white faces: the rows next to the wing that lie inside the wing's white face in the
-            # wing's own frame in EVERY pose (the draft tests that per pixel in the posed frame; a
-            # static colour can only keep the faces where every pose agrees - else a white strip
-            # stands off the wing's white edge when the wing is raised)
-            inside = np.ones((n, m - 1), bool)
-            for kb in ob.data.shape_keys.key_blocks[1:]:
-                rd, tw = (int(x) for x in kb.name.split('.')[1:3])
-                Mi = np.linalg.inv(np.array(pv3._wing_raise(side, rd, tw)))
-                P = np.array([v.co[:] for v in kb.data])
-                q = pv3._wing_local(P @ Mi[:3, :3].T + Mi[:3, 3], side)
-                wv = (-q[:, 2] - pv3.WING_RIM).reshape(n, m)
-                face = 0.25 * (wv[:, :-1] + wv[:, 1:] + np.roll(wv, -1, 0)[:, :-1] + np.roll(wv, -1, 0)[:, 1:])
-                inside &= face > 0
-            idx = []
-            for i in range(n):
-                for j in range(m - 1):
-                    idx.append(1 if (j >= m - 1 - JOINT_WHITE_ROWS and inside[i, j]) else 0)
-            me.polygons.foreach_set('material_index', np.array(idx, np.int32))
+            # the white of the fillet = the draft's own rule, per pixel (penguin_v3 round 12): the rows
+            # next to the wing AND inside the wing's white face. A per-vertex field `_joint_white`
+            # (> 0 = white) = min(row term, the wing's white field at that loop angle); the web
+            # thresholds its interpolation per pixel (office/joint.ts). The loop angles are snapped
+            # onto the white face's edges, so the fillet's white ends exactly where the wing's does,
+            # and where the fillet lies tangent over the wing the two are the same colour - no
+            # sawtooth (per-face colours did that, 2026-11-25).
+            # the wing's white field where each column lands on the wing (the fillet's wing edge, rest
+            # pose - the cross-section turns with the wing, so it holds in every pose) ...
+            Jc, _, _, _ = pv3.wing_root_loop(side, 0, 0)          # the crease line, rest (the loop's angles)
+            wterm = pv3.wing_under_piece(Jc, side)
+            wterm[np.abs(wterm) < 2e-4] = 0.0                     # the snapped columns sit on the edge
+            wterm[~pv3.WELT_STATS['exits']] = -1.0
+            # ... and the rows: the wing's side of the crease (the draft: the outer rows)
+            rterm = (np.arange(m) - (m - 1 - JOINT_WHITE_ROWS - 0.5)) * 0.004
+            # the white per pixel is the draft's rule: these rows AND inside the wing's white face in
+            # the posed wing's own frame - the web computes the second half in the shader from the
+            # wing bone (office/joint.ts); the mesh carries the row term and its side
+            field = np.repeat(rterm[None, :], n, 0)
+            sd = me.attributes.get('_joint_side') or me.attributes.new('_joint_side', 'FLOAT', 'POINT')
+            sd.data.foreach_set('value', np.full(n * m, 1.0 if side == 'L' else -1.0, np.float32))
+            _ = wterm
+            at = me.attributes.get('_joint_white') or me.attributes.new('_joint_white', 'FLOAT', 'POINT')
+            at.data.foreach_set('value', field.ravel().astype(np.float32))
+            me.polygons.foreach_set('material_index', np.zeros(len(me.polygons), np.int32))
             # uv: plain patches (no seam detail on the fillet)
             uv = me.uv_layers.new(name='UVMap')
             for p in me.polygons:
                 patch = PATCH_FACE if p.material_index == 1 else PATCH_BODY
                 for li in p.loop_indices:
                     uv.data[li].uv = patch
+            JOINT_NORMALS[ob.name] = _exact_normals(ob, side)
             ob['joint_side'] = side
             ob['joint_raise'] = list(pv3.WELT_RAISE)
             ob['joint_twist'] = list(pv3.WELT_TWIST)
             _, ax = pv3.wing_frame(side)
             e0 = ax[0]
             ob['joint_e0'] = [float(e0[0]), float(e0[2]), float(-e0[1])]   # glTF axes
+            piv_, ax2 = pv3.wing_frame(side)
+            ob['joint_pivot'] = [float(piv_[0]), float(piv_[2]), float(-piv_[1])]
+            ob['joint_ew'] = [float(ax2[2][0]), float(ax2[2][2]), float(-ax2[2][1])]
+            ob['joint_rim'] = float(pv3.WING_RIM)
             out.append(ob)
     finally:
         pv3.WELT_N, pv3.WELT_M = keep
+        pv3.wing_root_loop = _ORIG_ROOT_LOOP
     return out
 
 
@@ -1152,6 +1316,12 @@ def build_all(col, bake=True, texture_dir=None, clips=True):
     if bake:
         detail, relief = bake_textures(mesh, texture_dir)
         wire_textures(detail, relief)
+    # the fillets' own instance of the body material (`penguin.body#joint` — the web paints it as
+    # `penguin.body` by its palette key and gives it a depth offset, office/joint.ts)
+    jm = bpy.data.materials['penguin.body'].copy()
+    jm.name = JOINT_MATERIAL
+    for j in joints:
+        j.material_slots[0].material = jm
     rig = pv3.rig(col, mesh, name='penguin_rig')
     prop_obs = build_props(col, mesh, rig)
     for m in bpy.data.materials:
@@ -1165,12 +1335,37 @@ def build_all(col, bake=True, texture_dir=None, clips=True):
     return mesh, joints, rig, prop_obs
 
 
+def write_joint_normals(path):
+    import json
+    to_gl = lambda a: np.stack([a[:, 0], a[:, 2], -a[:, 1]], 1)   # noqa: E731
+    data = {}
+    for name, d in JOINT_NORMALS.items():
+        data[name] = {'pos': np.round(to_gl(d['pos']), 6).tolist(),
+                      'keys': {k: np.round(to_gl(v), 5).tolist() for k, v in d['keys'].items()}}
+    with open(path, 'w') as fh:
+        json.dump(data, fh)
+
+
 def export_glb(path):
+    """The GLB, then the joint fillets' exact normals patched in (node, @gltf-transform)."""
+    import subprocess
+    _export_glb(path)
+    if JOINT_NORMALS:
+        js = path + '.joint-normals.json'
+        write_joint_normals(js)
+        web = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'web')
+        subprocess.run(['node', os.path.join('scripts', 'patch-penguin-joints.mjs'), os.path.abspath(path), js],
+                       cwd=web, check=True)
+        os.remove(js)
+
+
+def _export_glb(path):
     bpy.ops.export_scene.gltf(
         filepath=path, export_format='GLB', export_yup=True, export_apply=False,
         export_extras=True, export_image_format='WEBP', export_texcoords=True, export_normals=True,
         export_materials='EXPORT', export_cameras=False, export_lights=False,
-        export_tangents=True,       # the relief map was baked in MikkTSpace: ship the same tangents
+        export_tangents=True,
+        export_attributes=True,     # `_joint_white`: the fillet's per-pixel white (office/joint.ts)       # the relief map was baked in MikkTSpace: ship the same tangents
         export_morph=True, export_morph_normal=True, export_morph_animation=False,
         export_animations=True, export_animation_mode='NLA_TRACKS', export_skins=True,
         export_def_bones=False, export_force_sampling=True, export_frame_range=False,
