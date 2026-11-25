@@ -96,7 +96,7 @@ inspection.
   `waiting` 2 s right wing up and waving · `done` 1 s hop off the seat, wings up · `error` 2 s
   slumped. Standing: `stand` 2 s · `walk` 1.07 s waddle · `hop` 1.2 s · `wave` 1.6 s. The motion
   gate (`penguin_prod_qa.py`) result is `qa/penguin-gate.md`.
-- **Rebuild the penguin** (Blender 5.2, ~1 min with the bake):
+- **Rebuild the penguin** (Blender 5.2, ~1 min with the bake; the export step patches the joint fillets' exact normals with `web/scripts/patch-penguin-joints.mjs`, so `web/node_modules` must be installed):
   `$B -b -P assets/office/scripts/export.py -- --out assets/office/export --only penguin`, then
   `$B -b --factory-startup -P assets/office/scripts/penguin_prod_qa.py -- --skills <rig-motion-clearance scripts> --out assets/office/qa`
   and `$B -b --factory-startup -P assets/office/scripts/penguin_2d.py` for the 2D values.

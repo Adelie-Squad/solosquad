@@ -10,6 +10,7 @@
 // All angles are measured in the rig's own frame (the GLB's armature node, glTF axes: x = the
 // penguin's left, y = up, z = its front). three.js only; part of the lazily loaded 3D chunks.
 import * as THREE from 'three';
+import { PENGUIN_2D } from '../characters/colors';
 import { JOINT_MESH, PENGUIN_RIG, WING_LIMITS } from './contract';
 
 /** A descendant by asset name (three strips `.` from names; the GLB's own name stays in userData — kit.ts `nameOf`). */
@@ -25,6 +26,10 @@ export type Side = 'L' | 'R';
 const SIDES: readonly Side[] = ['L', 'R'];
 const DEG = Math.PI / 180;
 const Z = new THREE.Vector3(0, 0, 1);
+/** The fillet's white (the wing's inner face, fixed — DESIGN.md: the face white never follows the theme). */
+const JOINT_WHITE = new THREE.Color(PENGUIN_2D.face);
+
+const installed = new WeakSet<THREE.Material>();
 
 /** Raise and twist (degrees) of an armature-space wing rotation `l`; `e0` = the wing's rest axis (shoulder → tip). */
 export function hingeAngles(l: THREE.Quaternion, e0: THREE.Vector3, side: Side): { raise: number; twist: number } {
@@ -67,6 +72,76 @@ export function bracket(grid: readonly number[], x: number): [number, number, nu
 export const targetName = (raise: number, twist: number) => `welt.${sign(raise, 3)}.${sign(twist, 2)}`;
 const sign = (v: number, digits: number) => `${v < 0 ? '-' : '+'}${String(Math.abs(v)).padStart(digits, '0')}`;
 
+/** What the fillet shader needs of both wings: each wing's bone index in the skeleton and its rest frame (rig space). */
+export interface JointFrames {
+  idx: Record<Side, number>;
+  /** The wing's face-normal distance as a linear function of the fillet's bind-space position: w = a · p + c. */
+  a: Record<Side, THREE.Vector3>;
+  c: Record<Side, number>;
+  rim: number;
+}
+
+/**
+ * The fillet's white, per pixel — the draft's own rule (penguin_v3 round 12): the rows next to the
+ * wing (vertex attribute `_joint_white` > 0) AND inside the wing's white face, tested in the POSED
+ * wing's own frame: the vertex shader takes the skinned position back through the wing bone's skin
+ * matrix to the wing's rest frame and measures it along the wing's face normal (`-w - rim > 0`, the
+ * same field as the wing's own white edge). So the fillet's white continues the wing's white edge
+ * exactly in every pose. Per-face colours left a sawtooth where the fillet lies over the wing.
+ * Installed on whatever material the fillet wears now — the office swaps in theme variants, the
+ * landing its own copies (chained onto their onBeforeCompile, not replacing it).
+ */
+export function installJointWhite(mesh: THREE.Mesh, frames: JointFrames): void {
+  if (!mesh.geometry.getAttribute('_joint_white') || !mesh.geometry.getAttribute('_joint_side')) return;
+  for (const mat of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+    // a WeakSet, not userData: a clone copies userData but not onBeforeCompile
+    if (installed.has(mat)) continue;
+    installed.add(mat);
+    const prev = mat.onBeforeCompile;
+    const prevKey = mat.customProgramCacheKey;
+    mat.onBeforeCompile = (shader, renderer) => {
+      prev.call(mat, shader, renderer);
+      Object.assign(shader.uniforms, {
+        uJointWhite: { value: JOINT_WHITE },
+        uJointIdxL: { value: frames.idx.L },
+        uJointIdxR: { value: frames.idx.R },
+        uJointAL: { value: frames.a.L },
+        uJointAR: { value: frames.a.R },
+        uJointCL: { value: frames.c.L },
+        uJointCR: { value: frames.c.R },
+        uJointRim: { value: frames.rim },
+      });
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          '#include <common>',
+          ['#include <common>', 'attribute float _joint_white;', 'attribute float _joint_side;', 'uniform float uJointIdxL;', 'uniform float uJointIdxR;', 'uniform vec3 uJointAL;', 'uniform vec3 uJointAR;', 'uniform float uJointCL;', 'uniform float uJointCR;', 'varying float vJointRow;', 'varying float vJointW;'].join('\n'),
+        )
+        .replace(
+          '#include <skinning_vertex>',
+          [
+            '#include <skinning_vertex>',
+            'vJointRow = _joint_white;',
+            'vJointW = 1.0;',
+            '#ifdef USE_SKINNING',
+            '{',
+            '  bool jl = _joint_side > 0.0;',
+            '  mat4 jm = getBoneMatrix(jl ? uJointIdxL : uJointIdxR);',
+            // back through the wing's skin matrix: mesh space -> bind space (skinned = bindMatrixInverse · jm · bindMatrix · bind)
+            '  vec4 jp = inverse(bindMatrix) * inverse(jm) * inverse(bindMatrixInverse) * vec4(transformed, 1.0);',
+            '  vJointW = dot(jp.xyz, jl ? uJointAL : uJointAR) + (jl ? uJointCL : uJointCR);',
+            '}',
+            '#endif',
+          ].join('\n'),
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', ['#include <common>', 'uniform vec3 uJointWhite;', 'uniform float uJointRim;', 'varying float vJointRow;', 'varying float vJointW;'].join('\n'))
+        .replace('#include <map_fragment>', ['#include <map_fragment>', 'if (vJointRow > 0.0 && -vJointW - uJointRim > 0.0) diffuseColor.rgb = uJointWhite;'].join('\n'));
+    };
+    mat.customProgramCacheKey = () => `${prevKey.call(mat)}|joint-white`;
+    mat.needsUpdate = true;
+  }
+}
+
 interface Wing {
   side: Side;
   bone: THREE.Object3D;
@@ -105,6 +180,7 @@ export function makeJoints(penguin: THREE.Object3D): Joints {
   const body = findNode(penguin, 'body');
   const rigQ = rig.getWorldQuaternion(new THREE.Quaternion());
   const wings: Wing[] = [];
+  const frames: JointFrames = { idx: { L: -1, R: -1 }, a: { L: new THREE.Vector3(), R: new THREE.Vector3() }, c: { L: 0, R: 0 }, rim: 0.005 };
   for (const side of SIDES) {
     const bone = findNode(penguin, `wing.${side}`);
     if (!bone || !body) continue;
@@ -127,8 +203,25 @@ export function makeJoints(penguin: THREE.Object3D): Joints {
       const index = extras.joint_twist.map((t) => extras.joint_raise!.map((r) => dict[targetName(r, t)] ?? -1));
       joint = { meshes, raise: extras.joint_raise, twist: extras.joint_twist, index };
     }
+    const ex = (node?.userData ?? {}) as { joint_pivot?: number[]; joint_ew?: number[]; joint_rim?: number };
+    if (typeof ex.joint_rim === 'number') frames.rim = ex.joint_rim;
+    const skinned = meshes.find((m) => (m as THREE.SkinnedMesh).isSkinnedMesh) as THREE.SkinnedMesh | undefined;
+    if (skinned && ex.joint_pivot && ex.joint_ew) {
+      const i = skinned.skeleton.bones.findIndex((b) => b === bone);
+      frames.idx[side] = i;
+      // bind space -> the mesh's own (rig) space at rest: the bone's skin matrix at rest. It is not the
+      // identity: meshopt quantization folds the dequantisation into the inverse bind matrices.
+      const d = new THREE.Matrix4().multiplyMatrices(bone.matrixWorld, skinned.skeleton.boneInverses[i]);
+      d.premultiply(skinned.bindMatrixInverse).multiply(skinned.bindMatrix);
+      const ew = new THREE.Vector3().fromArray(ex.joint_ew);
+      const piv = new THREE.Vector3().fromArray(ex.joint_pivot);
+      const lin = new THREE.Matrix3().setFromMatrix4(d);
+      frames.a[side].copy(ew).applyMatrix3(lin.clone().transpose());
+      frames.c[side] = new THREE.Vector3().setFromMatrixPosition(d).sub(piv).dot(ew);
+    }
     wings.push({ side, bone, e0, rel0, body0, joint });
   }
+  for (const w of wings) for (const m of w.joint?.meshes ?? []) installJointWhite(m, frames);
 
   /** The wing's armature-space delta from rest: body0 · (body⁻¹ · wing) · rel0⁻¹ · body0⁻¹. */
   const delta = (w: Wing, out: THREE.Quaternion) => {
@@ -167,6 +260,7 @@ export function makeJoints(penguin: THREE.Object3D): Joints {
         const j = w.joint;
         if (!j) continue;
         const { raise, twist } = hingeAngles(delta(w, qc), w.e0, w.side);
+        for (const m of j.meshes) installJointWhite(m, frames);
         const inf = j.meshes[0].morphTargetInfluences!;
         inf.fill(0);
         const [ri, rw, rj, rt] = bracket(j.raise, raise);
