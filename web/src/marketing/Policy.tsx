@@ -7,6 +7,7 @@ import { LocalePicker } from '../components/LocalePicker';
 import { useI18n } from '../i18n';
 import { policyFor, type PolicyBlock } from './messages/policy';
 import { SITE } from './messages/site';
+import { BrandMark } from './BrandMark';
 import { SiteFooter } from './SiteFooter';
 
 const anchor = (id: string) => `policy-${id}`;
@@ -55,7 +56,7 @@ export function Policy() {
     <div className="site-policy-page">
       <header className="site-policy-top">
         <Link className="site-policy-brand" to="/">
-          {SITE.brand}
+          <BrandMark />
         </Link>
         <LocalePicker />
       </header>

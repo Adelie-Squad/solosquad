@@ -13,7 +13,7 @@ export const en: Record<MarketingKey, string> = {
   'landing.team.all': 'See all agents',
   'landing.team.prev': 'Previous agents',
   'landing.team.next': 'Next agents',
-  'landing.statement': "SoloSquad is an AI team that shares out the work of a small business.",
+  'landing.statement': "agenxy is an AI team that shares out the work of a small business.",
   'landing.start.title': "Try it, then decide",
   'landing.start.lead': "See the three workflows run in a demo office set up for a sample company. Your demo account comes as soon as you ask for one.",
   'landing.section.org': "AI team",

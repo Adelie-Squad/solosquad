@@ -8,6 +8,8 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SITE } from '../src/marketing/messages/site';
+import { marketingMessages } from '../src/marketing/messages';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider, type Locale } from '../src/i18n';
 import { MarketingApp } from '../src/marketing/MarketingApp';
@@ -585,9 +587,34 @@ describe('the other pages and the build', () => {
     expect(within(footer).getByRole('link', { name: '개인정보처리방침' }).getAttribute('href')).toBe('/privacy');
   });
 
+  it('the public brand is agenxy (2026-11-27): lower case, one BrandMark, the page head of the marketing build — the product inside stays SoloSquad', async () => {
+    expect(SITE.brand).toBe('agenxy');
+    const { marketingHtml, MARKETING_HEAD } = await import('../vite.config');
+    const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+    expect(html).toContain('<title>SoloSquad</title>'); // the customer app's page is unchanged
+    const page = marketingHtml(html);
+    expect(page).toContain('<title>agenxy</title>');
+    expect(page).toContain('<meta property="og:site_name" content="agenxy" />');
+    expect(page).toContain('<meta property="og:title" content="agenxy" />');
+    expect(page).toContain(`<meta name="description" content="${MARKETING_HEAD.description}" />`);
+    expect(page).not.toContain('SoloSquad');
+    expect(page).not.toContain('rel="manifest"'); // the installable app's manifest names the product
+    expect(page).toContain('/src/marketing/main.tsx');
+    // no marketing word, in any language, names the product
+    for (const [locale, words] of Object.entries(marketingMessages)) {
+      for (const [key, text] of Object.entries(words)) expect(text, `${locale} ${key}`).not.toMatch(/SoloSquad/i);
+    }
+    // the privacy page and the footer show the mark
+    stubSite();
+    site('/privacy');
+    const marks = await screen.findAllByTestId('brand-mark');
+    expect(marks.map((m) => m.textContent)).toEqual(['agenxy', 'agenxy']); // the page's top and its footer
+    expect(document.body.textContent).not.toMatch(/SoloSquad/);
+  });
+
   it('the marketing build swaps the entry and writes to marketing/public; the customer build is unchanged', () => {
     const cfg = readFileSync(join(process.cwd(), 'vite.config.ts'), 'utf8');
-    expect(cfg).toContain("html.replace('/src/main.tsx', '/src/marketing/main.tsx')");
+    expect(cfg).toContain(".replace('/src/main.tsx', '/src/marketing/main.tsx')");
     expect(cfg).toMatch(/outDir: join\(here, '\.\.', 'marketing', 'public'\)/);
     expect(cfg).toContain("outDir: 'dist'");
     const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as { scripts: Record<string, string> };

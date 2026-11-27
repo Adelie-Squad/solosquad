@@ -11,6 +11,7 @@ import { AskAct, DOMAIN_ICON, GapAct, PricingAct, ScrollAct, SignAct, StandAct, 
 import { SmoothScroll, wheelPixels } from './smooth';
 import { useInquiry } from '../marketing/Inquiry';
 import { SiteFooter } from '../marketing/SiteFooter';
+import { BrandMark } from '../marketing/BrandMark';
 import '../marketing/messages';
 import { useTeamModal } from './LandingOrgChart';
 import type { Pointer } from './MascotCanvas';
@@ -456,7 +457,9 @@ export function Landing() {
     <main className="landing" data-mode={mode} data-section={active}>
       <header className={`landing-top ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="landing-top-inner">
-          <p className="landing-brand">SoloSquad</p>
+          <p className="landing-brand">
+            <BrandMark />
+          </p>
           <div className="landing-top-actions">
             <LocalePicker />
             {demo('btn is-primary landing-top-cta')}

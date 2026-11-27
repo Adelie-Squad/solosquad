@@ -1,5 +1,11 @@
 # SoloSquad marketing site (`marketing/`)
 
+> **Public brand: agenxy** (decided 2026-11-27). The product is SoloSquad internally (the app, the
+> engine, the CLI, the demo app under `/demo/app`); the marketing site the public sees — the landing,
+> the login router, the demo login, the request modal, `/privacy`, the page title and Open Graph
+> tags — says **agenxy**, always lower case. One constant: `web/src/marketing/messages/site.ts`
+> `SITE.brand`, drawn by `web/src/marketing/BrandMark.tsx` (a text wordmark until the logo SVG lands).
+
 The outward-facing site (decision 62, PRD v2.1.0 §3.6): the landing, the login router, the demo
 login, **the demo itself** and the demo account request. Company servers never serve these. A
 company server's `/` is its own login, and the customer web build carries none of this code, copy

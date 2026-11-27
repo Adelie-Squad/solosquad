@@ -95,8 +95,33 @@ function marketingEntry(): Plugin {
   return {
     name: 'solosquad-marketing-entry',
     // 'pre': before Vite reads the entry script out of the page
-    transformIndexHtml: { order: 'pre', handler: (html) => html.replace('/src/main.tsx', '/src/marketing/main.tsx') },
+    transformIndexHtml: { order: 'pre', handler: (html) => marketingHtml(html) },
   };
+}
+
+/**
+ * The marketing page's head (2026-11-27): the public brand is agenxy (lower case — the product inside
+ * stays SoloSquad, the customer build keeps index.html as it is) — the title, a description and the
+ * Open Graph tags for link previews.
+ */
+export const MARKETING_HEAD = {
+  title: 'agenxy',
+  description: '소규모 비즈니스 AX 솔루션 — 우리 회사를 AI 에이전트 회사로.',
+} as const;
+export function marketingHtml(html: string): string {
+  const { title, description } = MARKETING_HEAD;
+  const meta = [
+    `<meta name="description" content="${description}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:site_name" content="${title}" />`,
+    `<meta property="og:title" content="${title}" />`,
+    `<meta property="og:description" content="${description}" />`,
+  ].join('\n    ');
+  return html
+    .replace('/src/main.tsx', '/src/marketing/main.tsx')
+    // the app's web manifest names the product (SoloSquad, installable office) — not this site
+    .replace(/\s*<link rel="manifest"[^>]*>/, '')
+    .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>\n    ${meta}`);
 }
 
 // The engine serves the build from the same origin (PRD v2.1.0 W5 · I2). In development,

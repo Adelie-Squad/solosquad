@@ -3,6 +3,7 @@
 // /login/help · /demo. Who and which address: messages/site.ts.
 import { Link } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import { BrandMark } from './BrandMark';
 import { SITE } from './messages/site';
 
 /** The copyright sign — a legal mark drawn as text, not an icon; written as a char code because the
@@ -13,7 +14,9 @@ export function SiteFooter({ compact = false, className = '' }: { compact?: bool
   const { t, locale } = useI18n();
   return (
     <footer className={`site-footer ${compact ? 'is-compact' : ''} ${className}`.trim()} aria-label={t('footer.label')} data-testid="site-footer">
-      <p className="site-footer-brand">{SITE.brand}</p>
+      <p className="site-footer-brand">
+        <BrandMark />
+      </p>
       <ul className="site-footer-items">
         <li>{SITE.company}</li>
         <li>{t('footer.owner', { name: SITE.owner[locale] })}</li>

@@ -1822,6 +1822,21 @@ describe('the buttons', () => {
     expect((within(dialog).getByLabelText('A demo account') as HTMLInputElement).checked).toBe(true);
   });
 
+  it('the brand in the top bar, on the last card and in the footer is agenxy — lower case in every language, Korean particles after a vowel', () => {
+    for (const [locale, line] of [
+      ['ko', 'agenxy는 소규모 비즈니스의 일을 나눠 맡는 AI 팀이에요.'],
+      ['en', 'agenxy is an AI team that shares out the work of a small business.'],
+      ['zh-CN', 'agenxy 是一支为小企业分担工作的 AI 团队。'],
+    ] as const) {
+      cleanup();
+      landing(locale);
+      expect(document.querySelector('.landing-top .landing-brand')!.textContent).toBe('agenxy');
+      expect(screen.getByText(line)).toBeTruthy();
+      expect(screen.getByTestId('site-footer').querySelector('[data-testid="brand-mark"]')!.textContent).toBe('agenxy');
+      expect(document.body.textContent).not.toMatch(/SoloSquad/);
+    }
+  });
+
   it('the landing asks the engine nothing (it is the marketing site only)', () => {
     const fetch = vi.fn(async (_url: string) => new Response('{}'));
     vi.stubGlobal('fetch', fetch);

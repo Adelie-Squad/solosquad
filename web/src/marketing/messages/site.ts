@@ -5,7 +5,12 @@
 import type { Locale } from '../../i18n';
 
 export const SITE = {
-  brand: 'SoloSquad',
+  /**
+   * The public brand (2026-11-27 — user: "랜딩페이지에서 solosquad 이름을 agenxy로 바꿔줘"): the marketing site
+   * says agenxy, always lower case (in every language, at a sentence start too); the product inside
+   * (the app, the engine, the CLI) stays SoloSquad for now. Shown through BrandMark.
+   */
+  brand: 'agenxy',
   /** 상호 (user, 2026-11-24) — the legal name, shown as is in every language */
   company: '주식회사 제슬',
   /** 사업장 주소 (user, 2026-11-24) — shown as is in every language */

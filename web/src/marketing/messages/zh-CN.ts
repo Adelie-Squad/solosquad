@@ -13,7 +13,7 @@ export const zhCN: Record<MarketingKey, string> = {
   'landing.team.all': '查看全部代理',
   'landing.team.prev': '上一组代理',
   'landing.team.next': '下一组代理',
-  'landing.statement': "SoloSquad 是一支为小企业分担工作的 AI 团队。",
+  'landing.statement': "agenxy 是一支为小企业分担工作的 AI 团队。",
   'landing.start.title': "先试用，再决定",
   'landing.start.lead': "在为示例公司搭建的演示办公室里，看三个工作流如何运行。提交申请后即可获得演示账号。",
   'landing.section.org': "AI 团队",

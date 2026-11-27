@@ -11,7 +11,7 @@ export const ko = {
   'landing.team.all': '에이전트 모두 보기',
   'landing.team.prev': '이전 에이전트',
   'landing.team.next': '다음 에이전트',
-  'landing.statement': "SoloSquad 는 소규모 비즈니스의 일을 나눠 맡는 AI 팀이에요.",
+  'landing.statement': "agenxy는 소규모 비즈니스의 일을 나눠 맡는 AI 팀이에요.",
   'landing.start.title': "직접 써 보고 정하세요",
   'landing.start.lead': "예시 회사로 꾸민 데모 사무실에서 세 워크플로우가 도는 모습을 볼 수 있어요. 데모 계정은 신청하면 바로 나와요.",
   'landing.section.org': "AI 팀",
