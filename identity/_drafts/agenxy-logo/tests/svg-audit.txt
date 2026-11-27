@@ -1,0 +1,134 @@
+
+=== a-horizontal.svg  (3647 bytes)
+viewBox 0 0 1109.48 256 · aspect 4.334 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 133
+margins L44.0 R40.6 T44.0 B20.1 · bbox fill 0.692
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== a-symbol-small.svg  (934 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 28
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a-symbol.svg  (963 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 28
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a-wordmark-small.svg  (2299 bytes)
+viewBox 0 0 820 194 · aspect 4.227 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 105
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.802
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a-wordmark.svg  (2305 bytes)
+viewBox 0 0 796 190 · aspect 4.189 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 105
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.798
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== b-horizontal.svg  (3962 bytes)
+viewBox 0 0 1231.85 256 · aspect 4.812 (extra-wide)
+colours 1: #1e1c17 · gradients 0 · anchors 147
+margins L44.0 R40.6 T46.7 B18.1 · bbox fill 0.696
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+· INFO [extra-wide] Extra-wide lockup (>4.5:1) shrinks badly; provide a stacked lockup and a standalone symbol.
+production-readiness score: 98/100 (heuristic)
+
+=== b-symbol-small.svg  (793 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 18
+margins L40.0 R40.0 T42.6 B42.6 · bbox fill 0.458
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== b-symbol.svg  (790 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 18
+margins L44.0 R44.0 T46.7 B46.7 · bbox fill 0.417
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== b-wordmark-small.svg  (2389 bytes)
+viewBox 0 0 938 196 · aspect 4.786 (extra-wide)
+colours 1: #1e1c17 · gradients 0 · anchors 129
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.808
+· INFO [extra-wide] Extra-wide lockup (>4.5:1) shrinks badly; provide a stacked lockup and a standalone symbol.
+production-readiness score: 99/100 (heuristic)
+
+=== b-wordmark.svg  (2378 bytes)
+viewBox 0 0 914 192 · aspect 4.76 (extra-wide)
+colours 1: #1e1c17 · gradients 0 · anchors 129
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.804
+· INFO [extra-wide] Extra-wide lockup (>4.5:1) shrinks badly; provide a stacked lockup and a standalone symbol.
+production-readiness score: 99/100 (heuristic)
+
+=== c-wordmark-small.svg  (1994 bytes)
+viewBox 0 0 828.61 194 · aspect 4.271 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 92
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.803
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== c-wordmark.svg  (1989 bytes)
+viewBox 0 0 808.61 190 · aspect 4.256 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 92
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.799
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== d-wordmark.svg  (2493 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 98
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a-symbol-accent.svg  (897 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #2867d0 · gradients 0 · anchors 28
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== a-wordmark-accent.svg  (2372 bytes)
+viewBox 0 0 796 190 · aspect 4.189 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 105
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.798
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== b-symbol-accent.svg  (684 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #2867d0 · gradients 0 · anchors 18
+margins L44.0 R44.0 T46.7 B46.7 · bbox fill 0.417
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== b-wordmark-accent.svg  (2405 bytes)
+viewBox 0 0 914 192 · aspect 4.76 (extra-wide)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 129
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.804
+· INFO [extra-wide] Extra-wide lockup (>4.5:1) shrinks badly; provide a stacked lockup and a standalone symbol.
+production-readiness score: 99/100 (heuristic)
+
+=== c-wordmark-accent.svg  (2008 bytes)
+viewBox 0 0 808.608 190 · aspect 4.256 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 92
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.799
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== d-wordmark-accent.svg  (2542 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 98
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
