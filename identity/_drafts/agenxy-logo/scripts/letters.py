@@ -73,7 +73,20 @@ def shapes_to_paths(shapes: list[tuple], t: float) -> list[str]:
             out.append(ring_path(s[1], s[2], s[3], t))
         elif s[0] == "rrect":
             out.append(rrect_ring(*s[1:], t))
+        elif s[0] == "dot":
+            out.append(dot_path(s[1], s[2], s[3]))
+        elif s[0] == "diamond":
+            _, cx, cy, hw, hh = s
+            y = F - cy
+            out.append(f"M{_f(cx)} {_f(y - hh)} L{_f(cx + hw)} {_f(y)} L{_f(cx)} {_f(y + hh)} L{_f(cx - hw)} {_f(y)} Z")
     return out
+
+
+def dot_path(cx: float, cy: float, r: float) -> str:
+    """Filled circle (an agent's head, the AX core) — radius is absolute, not tied to the stroke."""
+    y = F - cy
+    return (f"M{_f(cx + r)} {_f(y)} A{_f(r)} {_f(r)} 0 1 1 {_f(cx - r)} {_f(y)} "
+            f"A{_f(r)} {_f(r)} 0 1 1 {_f(cx + r)} {_f(y)} Z")
 
 
 def shapes_bbox(shapes: list[tuple], t: float) -> tuple[float, float, float, float]:
@@ -84,6 +97,12 @@ def shapes_bbox(shapes: list[tuple], t: float) -> tuple[float, float, float, flo
         elif s[0] == "ring":
             _, cx, cy, r = s
             b = (cx - r - t / 2, cy - r - t / 2, cx + r + t / 2, cy + r + t / 2)
+        elif s[0] == "dot":
+            _, cx, cy, r = s
+            b = (cx - r, cy - r, cx + r, cy + r)
+        elif s[0] == "diamond":
+            _, cx, cy, hw, hh = s
+            b = (cx - hw, cy - hh, cx + hw, cy + hh)
         else:
             _, x, y, w, h, _r = s
             b = (x - t / 2, y - t / 2, x + w + t / 2, y + h + t / 2)

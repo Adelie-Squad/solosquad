@@ -37,6 +37,29 @@ python3 $D/scripts/build_board.py 4260   # board.html/png/pdf
 ```
 `scripts/pen.py` · `geom.py` 는 `identity/_drafts/jesl-logo/scripts/` 에서 복사(둥근 선 → 외곽선). `letters.py` 가 직접 그린 소문자.
 
+## 2차 — A · D 디벨롭 + 추가 펭귄 (board-2)
+**보기: [`board-2.html`](board-2.html)** · `board-2.png` · `board-2.pdf`
+
+이름의 뜻: 에이전트(agent)들이 모여 에이전시(agency) + AX(AI 전환) → agen·x·y, x 가 AX.
+
+| 안 | 무엇 | 파일 |
+|---|---|---|
+| D1 엇갈린 x | 워드마크 안의 x 가 심볼, 따로 쓰면 그 x | `svg/r2-d1-wordmark.svg` · `-wordmark-small.svg` · `-point.svg` |
+| D2 걷는 x | x 의 한 획 + 머리 = 걷는 에이전트 | `svg/r2-d2-*` |
+| D3 핵이 있는 x | 네 획이 가운데 핵(AX)에서 멈춤 | `svg/r2-d3-*` |
+| A1 모이는 넷 | 머리 + 몸 넷이 가운데로 — 꼴이 x | `svg/r2-a1-symbol.svg` · `-symbol-small.svg` · `-horizontal.svg` (+ `svg/r2-a-wordmark*.svg`) |
+| A2 머리를 맞댄 넷 | 머리 넷이 가운데, 몸이 x | `svg/r2-a2-*` |
+| A3 한 점을 둘러싼 넷 | 위에서 본 넷이 한 점을 둘러쌈 | `svg/r2-a3-*` |
+| P1 펭귄 a (추가) | a 의 그릇에 눈 둘 + 마름모 부리 | `svg/r2-p1-*` |
+| P2 펭귄 마크 (추가) | 검은 몸 + 흰 앞판 음각 + 눈 + 부리 | `svg/r2-p2-*` · 볼 색 변형 `svg/colour/r2-p2-symbol-cheek.svg`(DESIGN.md 예외 필요) |
+| P3 부리 x (추가) | x 의 네 획이 마름모 부리에서 만남 | `svg/r2-p3-*` |
+
+스케치 `sketch-2/`: 바람개비(a4)는 卍 꼴 위험으로 탈락. 부리는 로고용으로 45° 마름모로 단순화(캐릭터는 아랫부리가 조금 더 김).
+```sh
+python3 $D/scripts/draw_round2.py sketch && python3 $D/scripts/draw_round2.py
+python3 $D/scripts/build_board2.py 7880
+```
+
 ## 테스트 · 남은 일
 - svg_audit FAIL · WARN 0. 얇은 워드마크는 24px 이상에서 깨끗, 그 아래는 `-small` 컷. 심볼 A · B 는 16px 유지.
 - 상표 조사 안 함 — 'agenxy' 문자 · 도형을 KIPRIS · USPTO(9 · 35 · 42류)에서 확인. AI 보조 탐색본, 최종본은 사람이 다듬은 벡터.

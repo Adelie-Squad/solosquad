@@ -91,6 +91,209 @@ margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
 ✔ no issues found
 production-readiness score: 100/100 (heuristic)
 
+=== r2-a-wordmark-small.svg  (1986 bytes)
+viewBox 0 0 820 194 · aspect 4.227 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 91
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.802
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a-wordmark.svg  (1999 bytes)
+viewBox 0 0 796 190 · aspect 4.189 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 91
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.798
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a1-horizontal.svg  (3639 bytes)
+viewBox 0 0 1109.48 256 · aspect 4.334 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 131
+margins L44.0 R40.6 T44.0 B20.1 · bbox fill 0.692
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-a1-symbol-small.svg  (1313 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 40
+margins L36.0 R36.0 T36.0 B36.0 · bbox fill 0.517
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a1-symbol.svg  (1310 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 40
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a2-horizontal.svg  (3552 bytes)
+viewBox 0 0 1109.48 256 · aspect 4.334 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 131
+margins L44.0 R40.6 T44.0 B20.1 · bbox fill 0.692
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-a2-symbol-small.svg  (1334 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 40
+margins L36.0 R36.0 T36.0 B36.0 · bbox fill 0.517
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a2-symbol.svg  (1223 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 40
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a3-horizontal.svg  (3779 bytes)
+viewBox 0 0 1109.48 256 · aspect 4.334 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 134
+margins L44.0 R40.6 T44.0 B20.1 · bbox fill 0.692
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-a3-symbol-small.svg  (1508 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 43
+margins L36.0 R36.0 T36.0 B36.0 · bbox fill 0.517
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a3-symbol.svg  (1450 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 43
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d1-point.svg  (787 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 21
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d1-wordmark-small.svg  (2757 bytes)
+viewBox 0 0 865 201.5 · aspect 4.293 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 98
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.81
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-d1-wordmark.svg  (2483 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 98
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d2-point.svg  (678 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 17
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d2-wordmark-small.svg  (2703 bytes)
+viewBox 0 0 884.77 221.27 · aspect 3.999 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 94
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.824
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-d2-wordmark.svg  (2509 bytes)
+viewBox 0 0 847.21 206.21 · aspect 4.108 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 94
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.813
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-d3-point.svg  (1054 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 31
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d3-wordmark-small.svg  (3033 bytes)
+viewBox 0 0 865 201.5 · aspect 4.293 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 108
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.81
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-d3-wordmark.svg  (2741 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 108
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p1-point.svg  (792 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 24
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p1-wordmark-small.svg  (2175 bytes)
+viewBox 0 0 820 194 · aspect 4.227 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 102
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.802
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p1-wordmark.svg  (2181 bytes)
+viewBox 0 0 796 190 · aspect 4.189 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 102
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.798
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p2-horizontal.svg  (2948 bytes)
+viewBox 0 0 1109.48 256 · aspect 4.334 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 116
+margins L56.0 R40.6 T38.0 B20.1 · bbox fill 0.706
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-p2-symbol-small.svg  (639 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 25
+margins L56.0 R56.0 T38.0 B38.0 · bbox fill 0.396
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p2-symbol.svg  (612 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 25
+margins L56.0 R56.0 T38.0 B38.0 · bbox fill 0.396
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p3-point.svg  (1022 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #1e1c17 · gradients 0 · anchors 33
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p3-wordmark-small.svg  (3005 bytes)
+viewBox 0 0 865 201.5 · aspect 4.293 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 110
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.81
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-p3-wordmark.svg  (2709 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 1: #1e1c17 · gradients 0 · anchors 110
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
 === a-symbol-accent.svg  (897 bytes)
 viewBox 0 0 256 256 · aspect 1.0 (square)
 colours 1: #2867d0 · gradients 0 · anchors 28
@@ -129,6 +332,90 @@ production-readiness score: 99/100 (heuristic)
 === d-wordmark-accent.svg  (2542 bytes)
 viewBox 0 0 838 197 · aspect 4.254 (horizontal)
 colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 98
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a1-symbol-accent.svg  (1293 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 40
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a2-symbol-accent.svg  (1215 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 40
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-a3-symbol-accent.svg  (1453 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 43
+margins L44.0 R44.0 T44.0 B44.0 · bbox fill 0.431
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d1-point-accent.svg  (695 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #2867d0 · gradients 0 · anchors 21
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d1-wordmark-accent.svg  (2542 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 98
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d2-point-accent.svg  (589 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #2867d0 · gradients 0 · anchors 17
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d2-wordmark-accent.svg  (2573 bytes)
+viewBox 0 0 847.206 206.206 · aspect 4.109 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 94
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.813
+· INFO [fractional-viewbox] viewBox has fractional values; integer canvases are easier to grid.
+production-readiness score: 99/100 (heuristic)
+
+=== r2-d3-point-accent.svg  (988 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 1: #2867d0 · gradients 0 · anchors 31
+margins L40.0 R40.0 T40.0 B40.0 · bbox fill 0.473
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-d3-wordmark-accent.svg  (2826 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 108
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p1-wordmark-accent.svg  (2273 bytes)
+viewBox 0 0 796 190 · aspect 4.189 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 102
+margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.798
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p2-symbol-cheek.svg  (751 bytes)
+viewBox 0 0 256 256 · aspect 1.0 (square)
+colours 2: #1e1c17 #e01fae · gradients 0 · anchors 31
+margins L56.0 R56.0 T38.0 B38.0 · bbox fill 0.396
+✔ no issues found
+production-readiness score: 100/100 (heuristic)
+
+=== r2-p3-wordmark-accent.svg  (2801 bytes)
+viewBox 0 0 838 197 · aspect 4.254 (horizontal)
+colours 2: #1e1c17 #2867d0 · gradients 0 · anchors 110
 margins L16.0 R16.0 T16.0 B16.0 · bbox fill 0.806
 ✔ no issues found
 production-readiness score: 100/100 (heuristic)
